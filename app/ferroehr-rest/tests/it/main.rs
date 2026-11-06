@@ -103,6 +103,7 @@ mod served_openapi_snapshot;
 mod server_tls;
 mod service_query;
 mod smart_http;
+mod smart_metadata_file;
 mod spec_profile_http;
 mod stored_query_definition_http;
 mod subject_query_privacy;

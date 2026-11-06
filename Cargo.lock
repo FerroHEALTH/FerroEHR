@@ -2655,9 +2655,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-ui"
-version = "0.6.8"
+version = "0.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "324410c86f113769aedd7812b6eb8dc2bd9b2b157357e1e12eab00db6299cbde"
+checksum = "e8ceb285b787e15cf540a37db0202f7f3443b5063d2a609aabd1aad3bba2d387"
 dependencies = [
  "askama",
  "axum",

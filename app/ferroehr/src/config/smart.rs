@@ -28,14 +28,14 @@ use url::Url;
 #[serde(default, deny_unknown_fields)]
 pub struct SmartConfig {
     /// Serve the `/.well-known/smart-configuration` document (default
-    /// `false`). The document is built from the first `[auth]` issuer's
-    /// metadata: read from the issuer, or from [`Self::issuer_metadata_file`]
-    /// when the issuer's key set is a `jwks_file`.
+    /// `false`). The document is built from one `[auth]` issuer's metadata:
+    /// the issuer [`Self::issuer_metadata_file`] names, else the first whose
+    /// metadata is read from it, else the first.
     pub enabled: bool,
 
-    /// The RFC 8414 §2 authorization-server metadata of the first `[auth]`
-    /// issuer when its key set is a `jwks_file`, which carries none: a JSON
-    /// document naming that issuer, read at boot. SMART App Launch 2.2.0,
+    /// The RFC 8414 §2 authorization-server metadata of the `[auth]` issuer
+    /// it names, whose key set is a `jwks_file` and carries none: a JSON
+    /// document read at boot. SMART App Launch 2.2.0,
     /// Conformance, §Metadata requires the `token_endpoint` it names.
     pub issuer_metadata_file: Option<String>,
 

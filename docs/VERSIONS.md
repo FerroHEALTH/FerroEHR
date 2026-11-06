@@ -309,9 +309,9 @@ a crate with `dep.workspace = true`; do not hand-pin a version at the crate
 level.
 
 The viewer's component library, `ferrohealth-ui` (FerroUI), is pinned exactly
-(`=0.6.8`; it renders HTML on the server and ships its own scripts, with no
+(`=0.6.9`; it renders HTML on the server and ships its own scripts, with no
 Leptos and no WebAssembly), and its rules, guide and design are read at the
-matching tag (`v0.6.8`); the viewer moves to a new FerroUI release in a
+matching tag (`v0.6.9`); the viewer moves to a new FerroUI release in a
 change of its own.
 
 ## CI tools

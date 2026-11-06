@@ -27,3 +27,9 @@
 - An array of tables, such as `[[auth.issuer]]`, is set from the environment
   by element index (`FERROEHR__AUTH__ISSUER__0__ISSUER`), through
   `ferrohealth-config` 0.2.10.
+- `[smart] issuer_metadata_file` is the metadata of the `[auth]` issuer it
+  names, wherever that issuer stands in the list, and a file naming no
+  `[auth]` issuer refuses the start. The SMART discovery document describes
+  the first introspected issuer, else that named issuer, else the first
+  issuer whose metadata is read from it, else the first issuer, so a Basic
+  users' issuer listed first no longer takes the discovery document.

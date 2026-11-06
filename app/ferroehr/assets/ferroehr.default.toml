@@ -517,13 +517,14 @@ enabled = false
 # (master08 §Resource Scopes); this section decides what beside the route
 # table: the discovery document, and whose grants count for what.
 [smart]
-# Serve /.well-known/smart-configuration, built from the first [auth] issuer's
-# metadata. A jwks_file issuer carries none, so it serves the document only
-# with issuer_metadata_file set.
+# Serve /.well-known/smart-configuration, built from one [auth] issuer's
+# metadata: the issuer issuer_metadata_file names, else the first whose
+# metadata is read from it, else the first. A jwks_file issuer carries none,
+# so it serves the document only with issuer_metadata_file set.
 enabled = false
-# The RFC 8414 §2 authorization-server metadata of the first [auth] issuer when
-# its key set is a jwks_file: a JSON document naming that issuer and at least
-# its token_endpoint, read at boot.
+# The RFC 8414 §2 authorization-server metadata of the [auth] issuer it names,
+# whose key set is a jwks_file: a JSON document naming that issuer and at
+# least its token_endpoint, read at boot.
 #? issuer_metadata_file = "/etc/ferroehr/issuer-metadata.json"
 #? platform_base_url = "/gateway/v1"
 #? public_base_url = "https://cdr.example.com"   # REQUIRED when enabled: the external origin the absolute services.*.baseUrl values are built from (master04 §Services)

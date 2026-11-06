@@ -6,7 +6,7 @@
 //!
 //! Serves `GET /.well-known/smart-configuration` relative to the SMART platform
 //! base URL (master04 §Service Discovery ¶3-4). The `ferrohealth-smart` crate
-//! builds the document from the first `[auth]` issuer's metadata (SMART App
+//! builds the document from the described `[auth]` issuer's metadata (SMART App
 //! Launch 2.2.0, Conformance, §Metadata); FerroEHR adds the `services` map with
 //! the required `org.openehr.rest`, the openEHR capabilities it enforces, the
 //! permission capabilities its route table enforces, and the scopes it honours.
@@ -235,7 +235,7 @@ pub fn router(cfg: &AppConfig, rest_root: &str, authenticator: &Authenticator) -
                         'Responses to `/.well-known/smart-configuration` \
                         endpoint must be served with the `application/json` \
                         MIME type'). The authorization-server members come from \
-                        the first `[auth]` issuer's metadata (SMART App Launch \
+                        the described `[auth]` issuer's metadata (SMART App Launch \
                         2.2.0, Conformance, §Metadata): `grant_types_supported` \
                         names only `authorization_code` and `client_credentials`, \
                         and `code_challenge_methods_supported` always carries \

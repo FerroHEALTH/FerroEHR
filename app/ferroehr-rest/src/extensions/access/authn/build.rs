@@ -68,15 +68,19 @@ impl Authenticator {
     /// and key set are read here, so an authorization server that cannot be
     /// reached refuses the start rather than the first request.
     ///
-    /// The first issuer takes `[smart] issuer_metadata_file` as its metadata
-    /// when its key set is a `jwks_file`, so its discovery document can name a
-    /// `token_endpoint`. Every caller an issuer admits carries `patient_claim`,
-    /// the live ABAC patient claim, as the `ferrohealth-smart` `PatientClaim`.
+    /// `[smart] issuer_metadata_file` is the metadata of the issuer it names,
+    /// whose key set is a `jwks_file`, so its discovery document can name a
+    /// `token_endpoint`. The SMART discovery document describes the first
+    /// introspected issuer, else the issuer the metadata file names, else the
+    /// first issuer whose metadata was read, else the first issuer. Every
+    /// caller an issuer admits carries `patient_claim`, the live ABAC patient
+    /// claim, as the `ferrohealth-smart` `PatientClaim`.
     ///
     /// # Errors
     /// A message naming the refused setting, the issuer that could not be
-    /// read, or the metadata file that could not be read or does not fit the
-    /// first issuer, or a `patient_claim` that names no claim.
+    /// read, the metadata file that could not be read, names no `[auth]`
+    /// issuer or does not fit the issuer it names, or a `patient_claim` that
+    /// names no claim.
     pub async fn new(config: &AppConfig, patient_claim: Option<&str>) -> Result<Arc<Self>, String> {
         let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
@@ -107,15 +111,18 @@ impl Authenticator {
                 Some(path) => Some(issuer::issuer_metadata(path).await?),
                 None => None,
             };
+            let mut described = Described::default();
             for settings in resolved.issuers {
                 let issuer = settings.issuer.clone();
+                let read = settings.jwks_file.is_none();
                 let mut server = ResourceServer::discover(settings)
                     .await
                     .map_err(|e| issuer::unreadable_issuer(&issuer, &e))?;
-                if let Some(metadata) = supplied.take() {
+                let named = supplied.as_ref().is_some_and(|m| m.issuer == issuer);
+                if let Some(metadata) = supplied.take_if(|_| named) {
                     server = server.with_metadata(metadata).map_err(|e| {
                         format!(
-                            "smart.issuer_metadata_file does not fit the first [auth] issuer \
+                            "smart.issuer_metadata_file does not fit the [auth] issuer \
                              {issuer}: {}",
                             ferroehr::error::ErrorChain::new(&e)
                         )
@@ -125,8 +132,17 @@ impl Authenticator {
                     server = server.with_extension(claim.clone());
                 }
                 let server = Arc::new(server);
-                primary.get_or_insert_with(|| Primary::Jwt(Arc::clone(&server)));
+                described.offer(&server, named, read);
                 issuers = issuers.with(server);
+            }
+            if let Some(metadata) = supplied {
+                return Err(format!(
+                    "smart.issuer_metadata_file names the issuer {}, which is no [auth] issuer",
+                    metadata.issuer
+                ));
+            }
+            if let Some(server) = described.chosen() {
+                primary.get_or_insert(Primary::Jwt(server));
             }
             if !issuers.is_empty() {
                 gate = gate.with_bearer(Arc::new(issuers));
@@ -166,5 +182,38 @@ impl Authenticator {
             primary,
             role_issuers: RoleIssuers::of(config),
         }))
+    }
+}
+
+/// The JWT issuer the SMART discovery document describes: the one
+/// `[smart] issuer_metadata_file` names, else the first whose metadata was
+/// read from it, else the first. No specification governs the choice: our
+/// own design.
+#[derive(Debug, Default)]
+struct Described {
+    /// The issuer the metadata file names.
+    named: Option<Arc<ResourceServer>>,
+    /// The first issuer whose metadata was read.
+    read: Option<Arc<ResourceServer>>,
+    /// The first issuer.
+    first: Option<Arc<ResourceServer>>,
+}
+
+impl Described {
+    /// Offers `server`, which the metadata file names when `named` and whose
+    /// metadata was read from it when `read`.
+    fn offer(&mut self, server: &Arc<ResourceServer>, named: bool, read: bool) {
+        if named {
+            self.named.get_or_insert_with(|| Arc::clone(server));
+        }
+        if read {
+            self.read.get_or_insert_with(|| Arc::clone(server));
+        }
+        self.first.get_or_insert_with(|| Arc::clone(server));
+    }
+
+    /// Returns the issuer chosen.
+    fn chosen(self) -> Option<Arc<ResourceServer>> {
+        self.named.or(self.read).or(self.first)
     }
 }
