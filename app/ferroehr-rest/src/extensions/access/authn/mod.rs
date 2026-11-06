@@ -326,8 +326,8 @@ impl AuthError {
     }
 }
 
-/// The check of the first issuer, whose metadata the SMART discovery document
-/// is built from.
+/// The check of the described issuer, whose metadata the SMART discovery
+/// document is built from.
 enum Primary {
     /// A JWT access token checked against the issuer's keys.
     Jwt(Arc<ResourceServer>),
@@ -372,7 +372,7 @@ impl Authenticator {
         self.gate.schemes().bearer
     }
 
-    /// The SMART discovery document of the first issuer under `options`, or
+    /// The SMART discovery document of the described issuer under `options`, or
     /// `None` when no issuer's metadata was read.
     pub(crate) fn smart_configuration(&self, options: &SmartOptions) -> Option<serde_json::Value> {
         self.primary.as_ref().map(|primary| match primary {

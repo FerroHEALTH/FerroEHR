@@ -2,21 +2,28 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Quickstart config guard: the inline configurations of docker-compose.yml are
-# readable by the images the file pins (#4380).
+# readable by the server that will run them (#4380, #5003).
 #
-# The quickstart pins the last published images while its inline
-# configurations can already use keys only the next server reads; a downloader
-# then gets a server that refuses its own configuration and never turns
-# healthy. This guard resolves the file with `docker compose config`, writes
-# every `ferroehr-config*` block and the `ferropix-config` block to a file, and
-# runs the `config check` of the image each service pins over it, with the
-# service's own environment, on no network. A refusal fails the guard.
+# A downloader whose server refuses its own configuration gets a stack that
+# never turns healthy. This guard resolves the file with `docker compose
+# config`, writes every `ferroehr-config*` block and the `ferropix-config`
+# block to a file, and runs `config check` over it with the service's own
+# environment, on no network. A refusal fails the guard.
 #
-# A FerroEHR tag the registry does not hold yet is the release in flight (the
-# release cut moves the pin to the version it is about to publish); that one
-# is skipped with a notice, since the release lane publishes it from this tree.
+# On main the quickstart pins the `:main` FerroEHR image and carries the
+# configuration main reads, so its blocks are checked by the image built from
+# the tree under test: FERROEHR_CONFIG_IMAGE names it (CI packages it from this
+# change's server binary), and a `:main` pin without it is refused, since the
+# registry's `:main` is the previous commit's server. A versioned pin (the
+# copy a release attaches, checked with QUICKSTART_COMPOSE naming it) is
+# checked by the image it pins; a FerroEHR tag the registry does not hold yet
+# is the release in flight and is skipped with a notice. FerroPIX is always
+# checked by the image the file pins.
 #
 # Usage: scripts/checks/quickstart-config-image.sh   (no arguments)
+#   FERROEHR_CONFIG_IMAGE  the FerroEHR image built from this tree, required
+#                          for a `:main` pin
+#   QUICKSTART_COMPOSE     the compose file to check (default docker-compose.yml)
 # Needs docker with the compose plugin, and jq.
 set -euo pipefail
 
@@ -28,7 +35,8 @@ cd "$(dirname "$0")/../.." || exit 1
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-docker compose -f docker-compose.yml config --format json >"$work/compose.json"
+compose="${QUICKSTART_COMPOSE:-docker-compose.yml}"
+docker compose -f "$compose" config --format json >"$work/compose.json"
 version="$(awk -F'"' '/^version = /{print $2; exit}' Cargo.toml)"
 fail=0
 
@@ -49,7 +57,15 @@ service_env() {
 
 # ── FerroEHR ─────────────────────────────────────────────────────────────────
 ehr_image="$(jq -r '.services.ferroehr.image' "$work/compose.json")"
-if pulled "$ehr_image"; then
+if [[ "$ehr_image" == *":main" ]]; then
+  if [[ -z "${FERROEHR_CONFIG_IMAGE:-}" ]]; then
+    echo "::error file=$compose::$compose pins $ehr_image: set FERROEHR_CONFIG_IMAGE to the FerroEHR image built from this tree, which reads its configuration." >&2
+    exit 1
+  fi
+  echo "  $ehr_image is main's image: checking with $FERROEHR_CONFIG_IMAGE, built from this tree"
+  ehr_image="$FERROEHR_CONFIG_IMAGE"
+fi
+if [[ -n "${FERROEHR_CONFIG_IMAGE:-}" && "$ehr_image" == "$FERROEHR_CONFIG_IMAGE" ]] || pulled "$ehr_image"; then
   service_env ferroehr >"$work/ferroehr.env"
   echo "FERROEHR__USAGE_REPORT__ENABLED=false" >>"$work/ferroehr.env"
   target="$(jq -r '.services.ferroehr.configs[0].target' "$work/compose.json")"
@@ -58,21 +74,21 @@ if pulled "$ehr_image"; then
   while IFS= read -r block; do
     suffix="${block#ferroehr-config}"
     FERROEHR_EHR_INDEX="${suffix#-}" \
-      docker compose -f docker-compose.yml config --format json </dev/null \
+      docker compose -f "$compose" config --format json </dev/null \
       | jq -r --arg b "$block" '.configs[$b].content | gsub("\\$\\$"; "$")' >"$work/$block.toml"
     if docker run --rm --network none --env-file "$work/ferroehr.env" \
       -v "$work/$block.toml:$target:ro" "$ehr_image" config check </dev/null >"$work/$block.out" 2>&1; then
       echo "  ok: $block reads under $ehr_image"
     else
-      echo "::error file=docker-compose.yml::$ehr_image refuses the inline configuration $block:" >&2
+      echo "::error file=$compose::$ehr_image refuses the inline configuration $block:" >&2
       cat "$work/$block.out" >&2
       fail=1
     fi
-  done < <(grep -o "^  ferroehr-config[a-z-]*:" docker-compose.yml | tr -d " :")
+  done < <(grep -o "^  ferroehr-config[a-z-]*:" "$compose" | tr -d " :")
 elif [[ "$ehr_image" == *":$version" ]]; then
   echo "::notice::$ehr_image is not published yet: it is the release in flight, which the release lane publishes from this tree."
 else
-  echo "::error file=docker-compose.yml::$ehr_image cannot be pulled." >&2
+  echo "::error file=$compose::$ehr_image cannot be pulled." >&2
   fail=1
 fi
 
@@ -92,7 +108,7 @@ if pulled "$pix_image"; then
       ferropix-config) args+=(-v "$work/ferropix.toml:$target:ro") ;;
       ferropix-db-url) args+=(-v "$work/db-url:$target:ro") ;;
       *)
-        echo "::error file=docker-compose.yml::ferropix mounts the config $source, which this check does not stage" >&2
+        echo "::error file=$compose::ferropix mounts the config $source, which this check does not stage" >&2
         exit 1
         ;;
     esac
@@ -102,12 +118,12 @@ if pulled "$pix_image"; then
   if docker run "${args[@]}" "$pix_image" config check >"$work/ferropix.out" 2>&1; then
     echo "  ok: ferropix-config reads under $pix_image"
   else
-    echo "::error file=docker-compose.yml::$pix_image refuses the inline configuration ferropix-config:" >&2
+    echo "::error file=$compose::$pix_image refuses the inline configuration ferropix-config:" >&2
     cat "$work/ferropix.out" >&2
     fail=1
   fi
 else
-  echo "::error file=docker-compose.yml::$pix_image cannot be pulled." >&2
+  echo "::error file=$compose::$pix_image cannot be pulled." >&2
   fail=1
 fi
 

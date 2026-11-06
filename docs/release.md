@@ -57,6 +57,17 @@ check; it is never skipped.
 To add a release fact, add a function and a line to the list in
 `scripts/release/plan.sh`. The plan job and the preflight both pick it up.
 
+The quickstart has one copy. On `main`, `docker-compose.yml` pulls the
+FerroEHR images at `:main` and carries the configuration `main` reads, and
+`compose-version-guard` refuses any FerroEHR release tag in it. The
+`quickstart-config` job checks its configuration with the server image built
+from the change under test. A release never edits the file: the `github-release`
+job writes the tag's version in place of `:main` in the copy it attaches
+(`scripts/release/quickstart-compose.sh`), and refuses the copy if one FerroEHR
+image still names `:main` or another version. The plan job runs the same
+rewrite on a scratch copy, so a tag whose quickstart cannot be pinned is
+refused before anything is published.
+
 ## Recovering the chart leg
 
 A chart version in the registry is never pushed twice. When the chart leg

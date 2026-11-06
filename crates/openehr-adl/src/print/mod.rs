@@ -321,7 +321,9 @@ impl<'a> Parts<'a> {
                     flat: false,
                     is_overlay: false,
                     archetype_id: &o.archetype_id,
-                    parent_archetype_id: o.parent_archetype_id.as_deref(),
+                    // NOTE: OPT2 master03 §Artefact Structure: an OPT states no
+                    // specialisation, though its model carries the parent (AOM2 §3.6.6).
+                    parent_archetype_id: None,
                     adl_version: o.adl_version.as_deref(),
                     rm_release: Some(&o.rm_release),
                     uid: o.uid.as_ref(),

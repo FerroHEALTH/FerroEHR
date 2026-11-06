@@ -1694,6 +1694,74 @@ fn order_by_keeps_the_flat_shape() {
     assert!(!sql.contains("JOIN LATERAL"), "flat under ORDER BY");
 }
 
+/// One EHR's lab results ordered by event time, pinned by a WHERE conjunct:
+/// the query of #5076, whose flat shape cost the planner 40 to 60 ms.
+const PINNED_LAB_QUERY: &str = "SELECT o/data[at0001]/events[at0002]/time/value, \
+     a/items[at0001]/value \
+     FROM EHR e CONTAINS COMPOSITION c \
+     CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.laboratory_test_result.v1] \
+     CONTAINS CLUSTER a[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1] \
+     WHERE e/ehr_id/value = '0192e2a4-7c1d-7d8e-9f00-000000000001' \
+     AND c/archetype_details/template_id/value = 'Generic lab test result' \
+     ORDER BY o/data[at0001]/events[at0002]/time/value DESC";
+
+/// Whether `sql` is the streaming shape: the version spine is the one FROM
+/// item and every contained source hangs off it as a lateral.
+fn streams(sql: &str) -> bool {
+    sql.contains(r#"FROM "version" AS "v"#) && sql.contains("JOIN LATERAL")
+}
+
+/// A query pinned to one EHR by an `ehr_id/value` equality streams under
+/// `ORDER BY`, with or without a LIMIT: its full row set is one EHR's, which
+/// the spine reaches through the `ehr_id` index, so the planner never searches
+/// the flat shape's join orders.
+#[test]
+fn an_ehr_pinned_order_by_streams() {
+    let limited = build_sql_limited(PINNED_LAB_QUERY);
+    assert!(streams(&limited), "pinned and limited: {limited}");
+    assert!(limited.contains("ORDER BY"), "the sort survives");
+    let unlimited = build_sql(PINNED_LAB_QUERY);
+    assert!(streams(&unlimited), "pinned without a limit: {unlimited}");
+}
+
+/// The pin may sit in the EHR operand's own predicate or in any top-level
+/// conjunct of the WHERE clause, and beside `DISTINCT` or an aggregate.
+#[test]
+fn every_form_of_the_ehr_pin_streams() {
+    for aql in [
+        "SELECT c/uid/value FROM EHR e[ehr_id/value='0192e2a4-7c1d-7d8e-9f00-000000000001'] \
+         CONTAINS COMPOSITION c ORDER BY c/context/start_time/value DESC",
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+         WHERE c/name/value = 'x' AND e/ehr_id/value = '0192e2a4-7c1d-7d8e-9f00-000000000001' \
+         ORDER BY c/context/start_time/value",
+        "SELECT DISTINCT c/name/value FROM EHR e CONTAINS COMPOSITION c \
+         WHERE e/ehr_id/value = '0192e2a4-7c1d-7d8e-9f00-000000000001'",
+        "SELECT COUNT(c/uid/value) FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.laboratory_test_result.v1] \
+         WHERE e/ehr_id/value = '0192e2a4-7c1d-7d8e-9f00-000000000001'",
+    ] {
+        let sql = build_sql_limited(aql);
+        assert!(streams(&sql), "{aql} lowered to {sql}");
+    }
+}
+
+/// An `ehr_id` equality under `OR`, or an inequality, pins no single EHR, so
+/// an ordered query keeps the flat shape.
+#[test]
+fn an_unpinned_ehr_id_condition_keeps_the_flat_shape() {
+    for aql in [
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+         WHERE e/ehr_id/value = '0192e2a4-7c1d-7d8e-9f00-000000000001' \
+         OR c/name/value = 'x' ORDER BY c/uid/value",
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+         WHERE e/ehr_id/value != '0192e2a4-7c1d-7d8e-9f00-000000000001' \
+         ORDER BY c/uid/value",
+    ] {
+        let sql = build_sql_limited(aql);
+        assert!(!sql.contains("JOIN LATERAL"), "{aql} lowered to {sql}");
+    }
+}
+
 /// Without a LIMIT there is nothing to stream toward — flat.
 #[test]
 fn no_limit_keeps_the_flat_shape() {
@@ -1701,24 +1769,46 @@ fn no_limit_keeps_the_flat_shape() {
     assert!(!sql.contains("JOIN LATERAL"), "flat without LIMIT");
 }
 
-/// An EHR-scoped execution is already bounded by the `ehr_id` indexes — flat.
+/// An execution aimed at EHRs its caller named (the ITS-REST `ehr_id`
+/// parameter) reads those EHRs' versions only: it streams, ordered or not, and
+/// binds the `ehr_ids` scope on the version spine, where the `ehr_id` index
+/// serves it. A population subset keeps the flat shape (#5076).
 #[test]
-fn ehr_scoped_execution_keeps_the_flat_shape() {
-    let ir = plan_ok(WARD_QUERY);
-    let ctx = SqlCtx {
+fn a_named_ehr_scope_streams_on_its_spine() {
+    let ir = plan_ok(&format!("{WARD_QUERY} ORDER BY c/uid/value"));
+    let scoped = |kind| SqlCtx {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: vec![ferroehr::ids::EhrId(uuid::Uuid::nil())],
-        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
+        ehr_scope_kind: kind,
         subject_scope: None,
         ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
         limit: Some(50),
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
     };
-    let sql = ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
-        .unwrap_or_else(|e| panic!("SQL build failed: {e}"))
-        .sql;
-    assert!(!sql.contains("JOIN LATERAL"), "flat when EHR-scoped");
+    let named = ferroehr::aql::sql::build(
+        &ir,
+        &Params::default(),
+        &scoped(ferroehr::aql::sql::EhrScopeKind::Named),
+    )
+    .unwrap_or_else(|e| panic!("SQL build failed: {e}"))
+    .sql;
+    assert!(streams(&named), "a named EHR streams: {named}");
+    assert!(
+        named.contains(r#""v1"."ehr_id" = ANY("#),
+        "the scope binds the spine: {named}"
+    );
+    let subset = ferroehr::aql::sql::build(
+        &ir,
+        &Params::default(),
+        &scoped(ferroehr::aql::sql::EhrScopeKind::PopulationSubset),
+    )
+    .unwrap_or_else(|e| panic!("SQL build failed: {e}"))
+    .sql;
+    assert!(
+        !subset.contains("JOIN LATERAL"),
+        "a population subset stays flat"
+    );
 }
 
 /// Aggregates and DISTINCT consume the full row set — flat.
@@ -2889,6 +2979,30 @@ fn a_composition_template_predicate_reads_the_version_column() {
         build_sql("SELECT c/archetype_details/template_id/value FROM EHR e CONTAINS COMPOSITION c");
     assert!(sql.contains("node_archetype_details("), "{sql}");
     assert!(!sql.contains(r#""v1"."template_id" = "#), "{sql}");
+}
+
+/// A `LIKE` on a COMPOSITION's template id, with a literal or a bound
+/// pattern, also compares the indexed `version.template_id` and walks no node
+/// (QUERY master03 §Operators/LIKE; #5082).
+#[test]
+fn a_composition_template_like_reads_the_version_column() {
+    let params = Params::default().with(
+        "pattern",
+        ParamValue::Str("discharge_report.v1.*".to_owned()),
+    );
+    for q in [
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+         WHERE c/archetype_details/template_id/value LIKE 'discharge_report.v1.*'",
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+         WHERE c/archetype_details/template_id/value LIKE 'discharge_report.v1.?.0'",
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+         WHERE c/archetype_details/template_id/value LIKE $pattern",
+    ] {
+        let sql = build_sql_with(q, &params);
+        assert!(sql.contains(r#""v1"."template_id" LIKE "#), "{q}\n{sql}");
+        assert!(!sql.contains("jsonpath"), "{q}\n{sql}");
+        assert!(!sql.contains("node_archetype_details("), "{q}\n{sql}");
+    }
 }
 
 // ── a lookup by an ELEMENT value (#4437) ─────────────────────────────────────

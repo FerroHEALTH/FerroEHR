@@ -20,8 +20,10 @@ outside local evaluation.
 
 You need Docker with the Compose plugin (2.23.1 or newer). Download
 `docker-compose.yml` (attached to every
-[release](https://github.com/FerroHEALTH/FerroEHR/releases/latest)) into an
-empty directory and start it:
+[release](https://github.com/FerroHEALTH/FerroEHR/releases/latest), and
+pulling that release's images) into an empty directory and start it. The copy
+in the repository pulls the `:main` images built from `main` and carries
+`main`'s configuration, for running `main`:
 
 ```shell
 docker compose up

@@ -319,6 +319,14 @@ jobs:
           TAG: ${{ needs.plan.outputs.tag }}
         run: bash scripts/release/accompanying-documents.sh "$TAG" .
 
+      # On main the quickstart pulls the :main images; the copy this release
+      # attaches pulls the images this tag publishes, and is refused if one
+      # FerroEHR image still names :main or another version (#5003).
+      - name: Pin the attached quickstart to this release
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: bash scripts/release/quickstart-compose.sh "$VERSION" docker-compose.yml
+
       - name: Create the GitHub release as a draft
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:

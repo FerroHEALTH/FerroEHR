@@ -455,14 +455,14 @@ impl<'a> Builder<'a> {
     }
 }
 
-/// Whether the LIMIT-streaming FROM shape may apply. QUERY master03 §LIMIT:
-/// without `ORDER BY`, "deterministic behavior" is explicitly not required —
-/// which rows return is unconstrained, so a lazy streaming scan is
-/// conformant. With `ORDER BY`, `DISTINCT`, or aggregates the full row set
-/// is needed anyway; an EHR-scoped query (`ehr_ids`) is already bounded by
-/// the `ehr_id` indexes and keeps the flat shape. A population query that only
-/// counts its root objects takes the streaming shape too, for its version
-/// spine ([`stream::StreamPlan::counts_roots`]).
+/// Whether the LIMIT-streaming FROM shape may apply to a population query.
+/// QUERY master03 §LIMIT: without `ORDER BY`, "deterministic behavior" is
+/// explicitly not required — which rows return is unconstrained, so a lazy
+/// streaming scan is conformant. With `ORDER BY`, `DISTINCT`, or aggregates
+/// the full row set is needed anyway, and a population query keeps the flat
+/// shape for it. A population query that only counts its root objects takes
+/// the streaming shape for its version spine
+/// ([`stream::StreamPlan::counts_roots`]).
 fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
     ctx.limit.is_some()
         && ctx.ehr_ids.is_empty()
@@ -484,8 +484,14 @@ fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
 pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuery, AqlError> {
     from::refuse_negated_reads(ir)?;
     let mut b = Builder::new(ir, params, ctx);
+    // A query aimed at named EHRs, or pinned to one by its own text, reads only
+    // those EHRs' versions, which the spine enters through the `ehr_id` index,
+    // so it streams whatever its clauses: the flat shape left the planner a
+    // join search that cost 40 to 60 ms against a 1 ms execution (#5076).
     let plan = stream::streaming_plan(ir).filter(|plan| {
-        streaming_eligible(ir, ctx) || (ctx.ehr_ids.is_empty() && plan.counts_roots(ir))
+        streaming_eligible(ir, ctx)
+            || ctx.names_ehrs()
+            || (ctx.ehr_ids.is_empty() && (plan.counts_roots(ir) || plan.pins_one_ehr(ir)))
     });
     match plan {
         Some(plan) => b.build_from_streaming(&plan)?,

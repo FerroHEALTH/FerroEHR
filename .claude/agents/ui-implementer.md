@@ -17,7 +17,7 @@ You implement one bounded task in the `app/ferroehr-viewer` crate, exactly
 as specified by the orchestrator's prompt. You do not spawn subagents.
 
 **First, read FerroUI, which leads the viewer's UI.** The viewer pins
-`ferrohealth-ui` in the root `Cargo.toml` (`=0.6.8` today, tag `v0.6.8`).
+`ferrohealth-ui` in the root `Cargo.toml` (`=0.6.9` today, tag `v0.6.9`).
 Read, at the tag matching the pin, from a FerroUI checkout or from GitHub
 (FerroHEALTH/FerroUI): the component rules `.claude/rules/console-ui.md`,
 the consumer guide `docs/consoles.md`, `docs/migration-0.6.md` and the
