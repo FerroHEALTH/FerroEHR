@@ -107,7 +107,10 @@ fn refusal(outcome: &Outcome) -> Option<AuthError> {
         // party until it is read here.
         _ => "refused-unbound",
     };
-    Some(AuthError::PartyRefused { code })
+    Some(AuthError::PartyRefused {
+        code,
+        principal: None,
+    })
 }
 
 /// The `Retry-After` of an adapter failure that is the identity provider's
@@ -169,7 +172,7 @@ mod tests {
             ),
         ] {
             assert!(
-                matches!(refusal(&outcome), Some(AuthError::PartyRefused { code: c }) if c == code),
+                matches!(refusal(&outcome), Some(AuthError::PartyRefused { code: c, .. }) if c == code),
                 "{outcome:?}"
             );
             assert_ne!(detail(code), detail("refused-unbound"), "{code}");
@@ -194,7 +197,8 @@ mod tests {
         assert!(matches!(
             refusal(&claim),
             Some(AuthError::PartyRefused {
-                code: "refused-groups-unavailable"
+                code: "refused-groups-unavailable",
+                ..
             })
         ));
     }

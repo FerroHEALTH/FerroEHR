@@ -270,6 +270,22 @@ async fn a_bound_professional_is_served_and_the_unusable_outcomes_are_refused() 
         "a bound professional is served: {body}"
     );
     refused(&app, &token(twice, &json!({})), "refused-ambiguous").await;
+    // The refusal carries the refused caller, which the failed-authentication
+    // record names.
+    let response = tower::ServiceExt::oneshot(
+        app.clone(),
+        common::req("GET", format!("{BASE}/definition/template/adl1.4"))
+            .auth(token(twice, &json!({})))
+            .accept("application/json")
+            .build(),
+    )
+    .await
+    .expect("the router answers");
+    let principal = response
+        .extensions()
+        .get::<ferroehr_rest::extensions::access::authn::Principal>()
+        .expect("the refusal names its caller");
+    assert_eq!(principal.subject, twice);
     refused(&app, &token(inactive, &json!({})), "refused-inactive").await;
     refused(&app, &token(abandoned, &json!({})), "refused-abandoned").await;
     refused(&app, &token(deleted, &json!({})), "refused-deprovisioned").await;

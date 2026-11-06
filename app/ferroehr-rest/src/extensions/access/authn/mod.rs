@@ -225,6 +225,9 @@ pub enum AuthError {
     PartyRefused {
         /// The binding code, such as `refused-ambiguous`.
         code: &'static str,
+        /// The caller whose login was refused, so the failed-authentication
+        /// record names who was refused.
+        principal: Option<Box<Principal>>,
     },
     /// The party source or the identity provider could not answer, so the
     /// server cannot decide (RFC 9110 §15.6.4).
@@ -317,7 +320,7 @@ impl AuthError {
             AuthError::KeyResolution => "key_resolution",
             AuthError::Forbidden(_) => "forbidden",
             AuthError::VerificationUnavailable(_) => "verification_unavailable",
-            AuthError::PartyRefused { code } => code,
+            AuthError::PartyRefused { code, .. } => code,
             AuthError::PartyUnavailable { .. } => "party_unavailable",
         }
     }
@@ -406,7 +409,9 @@ impl Authenticator {
             .await
             .map_err(|denied| AuthError::from_refusal(denied.refusal()))?;
         let access = match &self.party {
-            Some(binding) => party::bind(binding, access).await?,
+            Some(binding) => party::bind(binding, access.clone())
+                .await
+                .map_err(|refusal| self.naming_caller(refusal, &access))?,
             None => access,
         };
         let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
@@ -417,6 +422,20 @@ impl Authenticator {
         let fresh = caller.via() == Via::Basic && !caller.cached();
         let principal = Principal::new(access.clone(), roles, honoured);
         Ok(Authenticated { principal, fresh })
+    }
+
+    /// Returns `refusal` naming the caller of `access` when the login binding
+    /// refused it, so the failed-authentication record carries who was refused.
+    fn naming_caller(&self, refusal: AuthError, access: &Access) -> AuthError {
+        let AuthError::PartyRefused { code, .. } = refusal else {
+            return refusal;
+        };
+        let principal = access.caller().map(|caller| {
+            let roles = self.role_issuers.roles(caller);
+            let honoured = self.gate.honoured(access);
+            Box::new(Principal::new(access.clone(), roles, honoured))
+        });
+        AuthError::PartyRefused { code, principal }
     }
 }
 
@@ -543,7 +562,17 @@ pub(crate) async fn middleware(
             }
             resp
         }
-        Err(e) => refusal_response(auth, req.headers(), &e),
+        Err(e) => {
+            let mut resp = refusal_response(auth, req.headers(), &e);
+            if let AuthError::PartyRefused {
+                principal: Some(principal),
+                ..
+            } = e
+            {
+                resp.extensions_mut().insert(*principal);
+            }
+            resp
+        }
     }
 }
 
