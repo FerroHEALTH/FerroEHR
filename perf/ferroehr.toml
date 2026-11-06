@@ -2,14 +2,29 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 # The server configuration of the performance gate (scripts/perf/gate.sh):
-# the shipped defaults with one Basic user for the request set and the EHR
-# index kept local, so the gate measures FerroEHR and no FerroPIX. The
-# background workers run as the defaults start them.
+# the shipped defaults with one Basic user for the request set, bound as the
+# development configuration binds its users, and the EHR index kept local, so
+# the gate measures FerroEHR and no FerroPIX. The background workers run as
+# the defaults start them.
 
 deployment_profile = "sandbox"
 
 [auth]
 enabled = true
+
+# The issuer the Basic user binds under. It signs nothing: its key set, which
+# every FerroEHR image carries, is the public half of a key pair whose private
+# key was discarded.
+[[auth.issuer]]
+issuer = "https://basic-users.ferroehr.invalid"
+kind = "persons"
+audience = ["ferroehr-basic-users"]
+jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
+
+[[auth.party]]
+issuer = "https://basic-users.ferroehr.invalid"
+identifier_issuer = "urn:ferroehr:basic-user"
+identifier_type = "login"
 
 # ferroehr / ferroehr (Argon2id), the request set's one caller.
 [[auth.basic.users]]
@@ -20,6 +35,14 @@ roles = ["ADMIN", "USER"]
 
 [authz.rbac]
 enabled = false
+
+[authz.party_binding]
+provider = { issuer = "urn:oid:2.999.7.9", id = "perf" }
+
+[[authz.party_binding.basic_user]]
+user = "ferroehr"
+key_issuer = "urn:ferroehr:basic-user"
+key = "ferroehr"
 
 [ehr_index]
 provider = "local"
