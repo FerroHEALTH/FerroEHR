@@ -341,10 +341,12 @@ fn create_opt_reproduces_the_master10_worked_example() {
     // The kept element survives.
     assert!(items.iter().any(|c| object_node_id(c) == "at0001"));
 
-    // master02: "no specialisation statement — an OPT is … 'top-level'".
-    assert!(
-        opt.parent_archetype_id.is_none(),
-        "the OPT has no specialise parent"
+    // AOM2 §3.6.6 (`OPERATIONAL_TEMPLATE` invariant `is_specialised`): the OPT
+    // carries the template's parent, resolved to its full id (master02).
+    assert_eq!(
+        opt.parent_archetype_id.as_deref(),
+        Some("openEHR-EHR-COMPOSITION.discharge.v1.0.0"),
+        "the OPT carries its template's specialisation parent"
     );
     assert!(opt.is_generated, "the OPT is a generated artefact");
 
@@ -392,6 +394,17 @@ fn opt_round_trips_through_printer_and_parser() {
         AuthoredArchetype::OperationalTemplate(Box::new(opt1.clone())),
     )))
     .expect("print the built OPT");
+
+    // OPT2 master03 §Artefact Structure: the printed OPT has no `specialize`
+    // section, although the model carries the parent (AOM2 §3.6.6).
+    assert!(
+        opt1.parent_archetype_id.is_some(),
+        "the OPT carries a parent"
+    );
+    assert!(
+        !printed1.lines().any(|line| line.trim() == "specialize"),
+        "the printed OPT states no specialisation:\n{printed1}"
+    );
 
     // The printed OPT re-parses (the operational_template + inline
     // C_ARCHETYPE_ROOT-with-body forms both round-trip through the parser).

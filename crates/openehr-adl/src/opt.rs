@@ -23,8 +23,11 @@
 //! * all `closed` slots removed;
 //! * every `existence matches {0}` attribute and `occurrences matches {0}`
 //!   object removed;
-//! * no sibling-order markers, no `specialise` section (a top-level standalone
-//!   artefact, master02);
+//! * no sibling-order markers, and no `specialise` section in the printed form
+//!   (a top-level standalone artefact, master02, master03 §Artefact Structure);
+//! * the root template's specialisation parent kept as the OPT's
+//!   `parent_archetype_id`, resolved to its full id (AOM2 §3.6.6: an
+//!   `OPERATIONAL_TEMPLATE` is specialised, invariant `is_specialised`);
 //! * the flat `terminology` of every constituent (other than the root) gathered
 //!   into `component_terminologies` (master03 §Terminology);
 //! * the specialisation parent of every inlined template overlay recorded in
@@ -40,11 +43,12 @@
 //! implemented — a request for it returns
 //! [`OptError::NodeSubstitutionUnsupported`].
 //!
-//! NOTE: master02's "no specialisation statement" bullet is followed here (the
-//! OPT is emitted as a top-level standalone artefact with no `specialize`
-//! section); the master10 worked-example listing prints a residual `specialize`
-//! line, which contradicts master02/master03 §Artefact Structure — the
-//! normative checklist wins over the illustrative listing.
+//! NOTE: master02's "no specialisation statement" bullet governs the printed
+//! form (the printer emits no `specialize` section for an OPT), while the
+//! model keeps the parent AOM2 §3.6.6 requires; the master10 worked-example
+//! listing prints a residual `specialize` line, which contradicts
+//! master02 and master03 §Artefact Structure: the normative checklist wins over
+//! the illustrative listing.
 
 use std::collections::BTreeMap;
 
@@ -192,9 +196,7 @@ pub fn create_opt(
     }
 
     Ok(OperationalTemplate {
-        // A top-level standalone artefact — no specialisation parent
-        // (master02: "no specialisation statement").
-        parent_archetype_id: None,
+        parent_archetype_id: root_parent(root, &work),
         archetype_id: parts.archetype_id,
         is_differential: false,
         definition: opt_def,
@@ -216,6 +218,26 @@ pub fn create_opt(
         component_terminologies: (!components.is_empty()).then_some(components),
         terminology_extracts: None,
     })
+}
+
+/// The specialisation parent of `root`, as the full id of the archetype it
+/// resolves to in `work`.
+///
+/// AOM2 §3.6.6 makes an `OPERATIONAL_TEMPLATE` specialised (invariant
+/// `is_specialised`), and OPT2 `master02` resolves every archetype reference
+/// to its full version. A reference `work` cannot resolve, as an ADL 1.4
+/// authored flat root may state, stays as written: AOM2 `ARCHETYPE`
+/// `parent_archetype_id` admits the interface form.
+fn root_parent(root: &Archetype, work: &ArchetypeRepository) -> Option<String> {
+    let root_view = view(root);
+    let parent_id = root_view.parent_archetype_id?;
+    Some(
+        work.resolve(parent_id, root_view.archetype_id.namespace.as_deref())
+            .map_or_else(
+                || parent_id.to_owned(),
+                |parent| view(parent).archetype_id.to_string(),
+            ),
+    )
 }
 
 /// Every archetype the operational template of `root` needs and `repo` does
