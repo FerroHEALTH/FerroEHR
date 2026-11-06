@@ -95,9 +95,14 @@ async fn router_over(
     source: Arc<dyn PartySource>,
 ) -> Router {
     let config = config(person_key);
-    let authenticator = Authenticator::new(&config, None, Some(source))
-        .await
-        .expect("the binding builds");
+    let authenticator = Authenticator::new(
+        &config,
+        None,
+        Some(source),
+        Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+    )
+    .await
+    .expect("the binding builds");
     let observability = Observability::default();
     observability.lifecycle.booted();
     let state = AppState::with_parts(config, svc, None, observability);

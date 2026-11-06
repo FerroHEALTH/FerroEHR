@@ -896,6 +896,11 @@ mod tests {
 
     use std::time::Duration;
 
+    /// A replay store of this process alone, which these tests share no proof through.
+    fn memory() -> Arc<dyn ferrohealth_smart::sender::replay::ReplayStore> {
+        Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new())
+    }
+
     use crate::config::AppConfig;
     use argon2::password_hash::PasswordHasher;
     use argon2::{Argon2, PasswordHash};
@@ -976,6 +981,7 @@ mod tests {
             },
             None,
             None,
+            memory(),
         )
         .await
         .expect("an introspecting authenticator");
@@ -1045,11 +1051,11 @@ mod tests {
         for bearer in [false, true] {
             let config =
                 introspecting_through(&issuer.base_url, bearer, Some(issuer.ca_file.clone()));
-            Authenticator::new(&config, None, None)
+            Authenticator::new(&config, None, None, memory())
                 .await
                 .unwrap_or_else(|e| panic!("bearer={bearer}: read trusting ca_file: {e}"));
             let untrusted = introspecting_through(&issuer.base_url, bearer, None);
-            let refused = Authenticator::new(&untrusted, None, None)
+            let refused = Authenticator::new(&untrusted, None, None, memory())
                 .await
                 .expect_err("the platform roots alone do not trust the private authority");
             assert!(
@@ -1058,7 +1064,7 @@ mod tests {
             );
             let no_certificate =
                 introspecting_through(&issuer.base_url, bearer, Some(empty.clone()));
-            let refused = Authenticator::new(&no_certificate, None, None)
+            let refused = Authenticator::new(&no_certificate, None, None, memory())
                 .await
                 .expect_err("a ca_file without a certificate refuses the start");
             assert!(
@@ -1117,7 +1123,7 @@ mod tests {
     }
 
     async fn basic_only() -> Arc<Authenticator> {
-        Authenticator::new(&basic_config(60), None, None)
+        Authenticator::new(&basic_config(60), None, None, memory())
             .await
             .expect("a Basic-only authenticator")
     }
@@ -1130,6 +1136,7 @@ mod tests {
             },
             None,
             None,
+            memory(),
         )
         .await
         .expect("a bearer authenticator")
@@ -1156,7 +1163,7 @@ mod tests {
     #[tokio::test]
     async fn a_cached_credential_never_admits_a_wrong_password() {
         for ttl in [60, 0] {
-            let auth = Authenticator::new(&basic_config(ttl), None, None)
+            let auth = Authenticator::new(&basic_config(ttl), None, None, memory())
                 .await
                 .unwrap();
             let h = headers("Basic YWxpY2U6cHc="); // alice:pw
@@ -1269,7 +1276,9 @@ mod tests {
         {
             alice.roles = vec!["admin".to_owned(), "user".to_owned()];
         }
-        let auth = Authenticator::new(&config, None, None).await.unwrap();
+        let auth = Authenticator::new(&config, None, None, memory())
+            .await
+            .unwrap();
         let p = auth
             .authenticate(&headers("Basic YWxpY2U6cHc="))
             .await
@@ -1489,6 +1498,7 @@ mod tests {
             },
             None,
             None,
+            memory(),
         )
         .await
         .expect("authenticator");
@@ -1729,7 +1739,7 @@ mod tests {
             ..AppConfig::default()
         };
         let layer = AuthLayer {
-            authenticator: Authenticator::new(&config, None, None)
+            authenticator: Authenticator::new(&config, None, None, memory())
                 .await
                 .expect("authenticator"),
             authz: None,
@@ -1826,7 +1836,7 @@ mod tests {
             ..AppConfig::default()
         };
         config.smart.issuer_metadata_file = file.map(|file| file.0.display().to_string());
-        Authenticator::new(&config, None, None).await
+        Authenticator::new(&config, None, None, memory()).await
     }
 
     /// SMART App Launch 2.2.0, Conformance, §Metadata requires a
@@ -1964,6 +1974,7 @@ mod tests {
                 },
                 None,
                 None,
+                memory(),
             )
             .await
         }

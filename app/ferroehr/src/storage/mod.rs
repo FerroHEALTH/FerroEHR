@@ -57,6 +57,7 @@
 //! - [`stored_query_repo`] — the registered queries of `stored_query`.
 //! - [`dump_repo`] — the rows the admin dump writes to an archive and the load
 //!   writes back.
+//! - [`dpop_replay`] — the `DPoP` proof replay store every replica shares.
 //! - [`erasure`] — the physical erasure of an EHR or a party: what the cascade
 //!   leaves behind, what it reads first, and the erasure tombstone.
 //!
@@ -73,6 +74,7 @@ pub mod codec;
 pub mod cohort_predicate;
 pub mod compact;
 pub mod ddl_template;
+pub mod dpop_replay;
 pub mod dump_repo;
 pub mod ehr_repo;
 pub mod erasure;

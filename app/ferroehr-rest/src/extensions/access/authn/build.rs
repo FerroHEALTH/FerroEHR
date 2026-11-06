@@ -14,7 +14,7 @@ use ferrohealth_smart::party::source::PartySource;
 use ferrohealth_smart::resource::introspection::Introspector;
 use ferrohealth_smart::resource::{Caller, Honoured, IssuerSet, PatientClaim, ResourceServer};
 use ferrohealth_smart::sender::proof::ProofCheck;
-use ferrohealth_smart::sender::replay::MemoryReplayStore;
+use ferrohealth_smart::sender::replay::ReplayStore;
 
 use super::{Authenticator, Primary, issuer, upper_cased};
 use crate::config::AppConfig;
@@ -75,7 +75,9 @@ impl Authenticator {
     /// introspected issuer, else the issuer the metadata file names, else the
     /// first issuer whose metadata was read, else the first issuer. Every
     /// caller an issuer admits carries `patient_claim`, the live ABAC patient
-    /// claim, as the `ferrohealth-smart` `PatientClaim`.
+    /// claim, as the `ferrohealth-smart` `PatientClaim`. The `DPoP` proof
+    /// check of `[auth.dpop]` records each accepted proof in `replay`, which
+    /// the server builds over the clinical pool every replica shares.
     ///
     /// With a party `source` and an `[[auth.party]]` table, every caller is
     /// looked up in the party binding the tables and `[authz.party_binding]`
@@ -90,6 +92,7 @@ impl Authenticator {
         config: &AppConfig,
         patient_claim: Option<&str>,
         source: Option<Arc<dyn PartySource>>,
+        replay: Arc<dyn ReplayStore>,
     ) -> Result<Arc<Self>, String> {
         let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
@@ -157,10 +160,8 @@ impl Authenticator {
             if !issuers.is_empty() {
                 gate = gate.with_bearer(Arc::new(issuers));
             }
-            // NOTE: RFC 9449 §11.1, the replay store holds one process's proofs;
-            // the shared store over PostgreSQL is #5072.
             if let Some(settings) = resolved.dpop {
-                let check = ProofCheck::new(settings, Arc::new(MemoryReplayStore::new()))
+                let check = ProofCheck::new(settings, replay)
                     .map_err(|e| format!("auth.dpop is refused: {e}"))?;
                 gate = gate.with_dpop(Arc::new(check));
             }
