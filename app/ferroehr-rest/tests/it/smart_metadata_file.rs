@@ -9,9 +9,9 @@ use axum::body::Body;
 use http::{Request, StatusCode, header};
 use serde_json::Value;
 
-use ferrohealth_smart::config::IssuerEntry;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
+use ferrohealth_smart::config::IssuerEntry;
 
 use crate::common;
 
@@ -77,7 +77,10 @@ async fn the_metadata_file_describes_the_issuer_it_names_behind_another() {
     let (status, _, body) = common::send(&app, req).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let doc: Value = serde_json::from_str(&body).unwrap();
-    assert_eq!(doc["authorization_endpoint"], "https://as.cnf.test/authorize", "{doc}");
+    assert_eq!(
+        doc["authorization_endpoint"], "https://as.cnf.test/authorize",
+        "{doc}"
+    );
     assert_eq!(doc["token_endpoint"], "https://as.cnf.test/token", "{doc}");
 }
 
