@@ -252,23 +252,23 @@ async fn the_audit_log_pages_through_the_post_pager() {
     login_basic_as(&h, &user, &pass).await;
     let rows = "main table tbody a.fui-row-link";
     h.goto("/audit").await;
-    wait_text_contains(&h, &format!("{PAGER} [role='status']"), "1-25 of").await;
+    wait_text_contains(&h, &format!("{PAGER} output"), "1-25 of").await;
     let first = first_row(&h, rows).await;
     h.shot(1, "audit-first-page").await;
 
     step(&h, "next").await;
-    wait_text_contains(&h, &format!("{PAGER} [role='status']"), "26-50 of").await;
+    wait_text_contains(&h, &format!("{PAGER} output"), "26-50 of").await;
     assert!(
         h.current_url().await.ends_with("/audit"),
         "the page is kept out of the address"
     );
     assert_ne!(first_row(&h, rows).await, first, "the window moved");
     h.goto("/audit").await;
-    wait_text_contains(&h, &format!("{PAGER} [role='status']"), "26-50 of").await;
+    wait_text_contains(&h, &format!("{PAGER} output"), "26-50 of").await;
     h.shot(2, "audit-second-page-kept").await;
 
     step(&h, "first").await;
-    wait_text_contains(&h, &format!("{PAGER} [role='status']"), "1-25 of").await;
+    wait_text_contains(&h, &format!("{PAGER} output"), "1-25 of").await;
     h.assert_console_clean(&["401", "Failed to load resource"])
         .await;
     h.finish().await;
