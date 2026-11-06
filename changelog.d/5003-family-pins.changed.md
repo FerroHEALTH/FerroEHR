@@ -4,3 +4,5 @@
   `ferrohealth-server` 0.5.1 and `ferrohealth-ui` 0.6.8. `ihe-atna` and
   `ehds-logging` now escape every control and bidirectional formatting
   character of a value they write as its code point.
+- The terminology client moves to `ferrobridge-term` 0.1.143 (FerroBRIDGE
+  v0.0.22), which takes the `ferrohealth-smart` 0.9 token source.

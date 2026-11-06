@@ -29,13 +29,6 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::config::auth_section::AuthConfig;
 
-/// The `PARTY_REF.namespace` a bound party is written under by default.
-///
-/// The ITS-REST overview names it in its example committer
-/// (`Requests_and_responses.md` §openehr-version and openehr-audit-details,
-/// `committer.external_ref.namespace="demographic"`).
-pub const DEFAULT_NAMESPACE: &str = "demographic";
-
 /// The `[authz.party_binding]` table.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -60,7 +53,9 @@ impl Default for PartyBindingConfig {
     fn default() -> Self {
         Self {
             provider: None,
-            namespace: DEFAULT_NAMESPACE.to_owned(),
+            // NOTE: ITS-REST overview, Requests_and_responses.md §openehr-version, names
+            // `committer.external_ref.namespace="demographic"` in its example.
+            namespace: "demographic".to_owned(),
             basic_user: Vec::new(),
             enabled: None,
         }
