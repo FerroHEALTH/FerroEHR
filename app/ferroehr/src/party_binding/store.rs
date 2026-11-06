@@ -143,6 +143,25 @@ pub(crate) async fn reindex_loaded(
     }
 }
 
+/// The statement `sql` with the six parameters the selector derivations
+/// share: the parties `$1`, the kind `$2`, the canonical template `$3`, and
+/// the selector's path `$4`, variables `$5` and type `$6`.
+fn selected<'q>(
+    sql: &'static str,
+    ids: Option<&'q [Uuid]>,
+    kind: Kind,
+    template: &'q str,
+    selector: &'q IdentifierSelector,
+) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
+    sqlx::query(sql)
+        .bind(ids)
+        .bind(kind.as_str())
+        .bind(template)
+        .bind(&selector.json_path)
+        .bind(&selector.variables)
+        .bind(&selector.identifier_type)
+}
+
 /// Rebuilds every row of the side table from the party versions alone, on
 /// `tx`.
 ///
@@ -293,7 +312,8 @@ async fn insert_keys(
     template: &str,
     key: &IdentifierSelector,
 ) -> Result<(), StorageError> {
-    sqlx::query(concat!(
+    selected(
+        concat!(
         heads!(),
         ", professional AS ( \
              SELECT p.vo_id, range_agg(party.binding_validity(rv.body::jsonb -> 'time_validity')) \
@@ -332,13 +352,12 @@ async fn insert_keys(
              WHERE b.representative_id = p.vo_id AND b.retired_at IS NULL) AS present) AS rep \
          WHERE id ->> 'type' = $6 AND id ->> 'issuer' IS NOT NULL AND id ->> 'id' IS NOT NULL \
            AND (NOT isempty(coalesce(pr.dates, '{}')) OR rep.present)"
-    ))
-    .bind(ids)
-    .bind(Kind::Person.as_str())
-    .bind(template)
-    .bind(&key.json_path)
-    .bind(&key.variables)
-    .bind(&key.identifier_type)
+        ),
+        ids,
+        Kind::Person,
+        template,
+        key,
+    )
     .bind(mapping.professional_role.as_deref())
     .execute(&mut *tx)
     .await?;
@@ -354,13 +373,14 @@ async fn insert_tombstones(
     template: &str,
     key: &IdentifierSelector,
 ) -> Result<(), StorageError> {
-    sqlx::query(concat!(
-        "INSERT INTO binding_identifier \
+    selected(
+        concat!(
+            "INSERT INTO binding_identifier \
              (party_id, selector, issuer, identifier_type, value, lifecycle_state, \
               retired_at, deprovisioned_at) \
          SELECT DISTINCT h.vo_id, 'key', id ->> 'issuer', id ->> 'type', ",
-        canonical_value!("id"),
-        ", last.lifecycle_state, now(), now() \
+            canonical_value!("id"),
+            ", last.lifecycle_state, now(), now() \
          FROM vo_head h \
          CROSS JOIN LATERAL ( \
              SELECT v.body::jsonb AS body, v.lifecycle_state FROM version v \
@@ -374,13 +394,12 @@ async fn insert_tombstones(
            AND NOT EXISTS ( \
                SELECT 1 FROM binding_identifier t \
                WHERE t.party_id = h.vo_id AND t.deprovisioned_at IS NOT NULL)"
-    ))
-    .bind(ids)
-    .bind(Kind::Person.as_str())
-    .bind(template)
-    .bind(&key.json_path)
-    .bind(&key.variables)
-    .bind(&key.identifier_type)
+        ),
+        ids,
+        Kind::Person,
+        template,
+        key,
+    )
     .execute(&mut *tx)
     .await?;
     Ok(())
@@ -408,21 +427,21 @@ async fn reindex_groups(
         .execute(&mut *tx)
         .await?;
     }
-    sqlx::query(concat!(
-        heads!(),
-        "INSERT INTO binding_identifier \
+    selected(
+        concat!(
+            heads!(),
+            "INSERT INTO binding_identifier \
              (party_id, selector, issuer, identifier_type, value, lifecycle_state) \
          SELECT p.vo_id, 'group_external_id', id ->> 'issuer', id ->> 'type', id ->> 'id', \
                 p.lifecycle_state \
          FROM p CROSS JOIN LATERAL jsonb_path_query(p.body, $4::jsonpath, $5::jsonb) AS id \
          WHERE id ->> 'type' = $6 AND id ->> 'issuer' IS NOT NULL AND id ->> 'id' IS NOT NULL"
-    ))
-    .bind(ids)
-    .bind(Kind::Group.as_str())
-    .bind(template)
-    .bind(&external_id.json_path)
-    .bind(&external_id.variables)
-    .bind(&external_id.identifier_type)
+        ),
+        ids,
+        Kind::Group,
+        template,
+        external_id,
+    )
     .execute(&mut *tx)
     .await?;
     sqlx::query(concat!(

@@ -90,24 +90,7 @@ impl Authenticator {
     ) -> Result<Arc<Self>, String> {
         let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
-        let party = match source {
-            Some(source) if resolved.enabled && !resolved.party.is_empty() => {
-                let binding = ferroehr::config::binding::party_binding(
-                    &config.auth,
-                    &config.party_binding,
-                    &resolved,
-                    source,
-                )
-                .map_err(|e| {
-                    format!(
-                        "authz.party_binding: {}",
-                        ferroehr::error::ErrorChain::new(&e)
-                    )
-                })?;
-                Some(Arc::new(binding))
-            }
-            _ => None,
-        };
+        let party = super::party::binding(config, &resolved, source)?;
         let mut gate = Gate::open();
         let mut primary = None;
         let claim = patient_claim

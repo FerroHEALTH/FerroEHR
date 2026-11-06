@@ -19,10 +19,35 @@ use std::time::Duration;
 
 use ferrohealth_smart::party::adapter::AdapterError;
 use ferrohealth_smart::party::binding::PartyBinding;
+use ferrohealth_smart::party::source::PartySource;
 use ferrohealth_smart::party::{GroupsCause, Outcome};
 use ferrohealth_smart::resource::{Access, Caller};
 
 use super::AuthError;
+
+/// Returns the party binding of `config`'s `[[auth.party]]` tables and
+/// `[authz.party_binding]`, looking logins up in `source`; `None` without a
+/// source, or when `[auth]` is off or binds no issuer.
+///
+/// # Errors
+/// A message naming what the shared crate refuses in the binding.
+pub(super) fn binding(
+    config: &crate::config::AppConfig,
+    resolved: &ferrohealth_smart::config::Resolved,
+    source: Option<Arc<dyn PartySource>>,
+) -> Result<Option<Arc<PartyBinding>>, String> {
+    let Some(source) = source.filter(|_| resolved.enabled && !resolved.party.is_empty()) else {
+        return Ok(None);
+    };
+    ferroehr::config::binding::party_binding(&config.auth, &config.party_binding, resolved, source)
+        .map(|binding| Some(Arc::new(binding)))
+        .map_err(|e| {
+            format!(
+                "authz.party_binding: {}",
+                ferroehr::error::ErrorChain::new(&e)
+            )
+        })
+}
 
 /// Looks the caller of `access` up in `binding`, returning the access whose
 /// caller carries the outcome ([`Caller::party`]).
