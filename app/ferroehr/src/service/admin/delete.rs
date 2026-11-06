@@ -408,6 +408,7 @@ impl FerroEhrService {
         // either end (an erased party is neither a source nor a target), and
         // their head rows, which carry the archive marker.
         erasure::delete_object_index_rows(&mut tx, &vo_ids).await?;
+        crate::party_binding::store::erase(&mut tx, &vo_ids).await?;
 
         self.write_party_erase_tombstone(&mut tx, party_id, kind.as_deref(), &vo_ids)
             .await?;

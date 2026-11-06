@@ -778,6 +778,8 @@ async fn commit_import_scoped(
         crate::storage::version_repo::import::sync_heads(tx, &[container.vo_id]).await?;
         if container.kind.is_party() {
             crate::storage::party_reverse::reindex(tx, container.vo_id).await?;
+            crate::party_binding::store::reindex(tx, ctx.binding, container.kind, container.vo_id)
+                .await?;
         }
     }
     if ctx.outbox_enabled && !outbox_versions.is_empty() {

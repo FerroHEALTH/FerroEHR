@@ -64,6 +64,7 @@ use std::sync::Arc;
 
 use ferroehr::service::FerroEhrService;
 use ferrohealth_server::serve::{Drained, Listener};
+use ferrohealth_smart::party::source::PartySource;
 use tokio::net::TcpListener;
 
 use crate::config::AppConfig;
@@ -100,7 +101,8 @@ pub async fn build_with(
     config: AppConfig,
     backend: Arc<FerroEhrService>,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = build_authenticator(&config, None).await?;
+    let authenticator =
+        build_authenticator(&config, None, Some(party_source(&config, &backend))).await?;
     let state = AppState::with_backend(config, backend);
     state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
@@ -121,14 +123,19 @@ pub async fn build_full(
     authz: Option<Arc<AuthzHandle>>,
     observability: Observability,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = build_authenticator(&config, authz.as_deref()).await?;
+    let authenticator = build_authenticator(
+        &config,
+        authz.as_deref(),
+        Some(party_source(&config, &backend)),
+    )
+    .await?;
     let state = AppState::with_parts(config, backend, authz, observability);
     state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
 }
 
 /// Builds the [`Authenticator`] of `config`, reading each `[auth]` issuer's
-/// metadata and key set.
+/// metadata and key set, looking every caller up in the party `source`.
 ///
 /// The role-claim paths are `[auth] role_claims`, which `ferrohealth-smart`
 /// reads whether or not an authorization gate is wired. A served SMART discovery document needs the issuer's
@@ -141,11 +148,12 @@ pub async fn build_full(
 async fn build_authenticator(
     config: &AppConfig,
     authz: Option<&AuthzHandle>,
+    source: Option<Arc<dyn PartySource>>,
 ) -> Result<Arc<Authenticator>, ServeError> {
     let claim = authz
         .and_then(AuthzHandle::abac)
         .and_then(|abac| abac.patient_claim.as_deref());
-    let authenticator = Authenticator::new(config, claim)
+    let authenticator = Authenticator::new(config, claim, source)
         .await
         .map_err(ServeError::Auth)?;
     if config.smart.enabled
@@ -162,6 +170,12 @@ async fn build_authenticator(
         ));
     }
     Ok(authenticator)
+}
+
+/// The local party source over `backend`'s party pool, naming each party
+/// under `[authz.party_binding] namespace`.
+fn party_source(config: &AppConfig, backend: &FerroEhrService) -> Arc<dyn PartySource> {
+    Arc::new(backend.party_source(config.party_binding.namespace.clone()))
 }
 
 /// Builds and serves the application with full observability until the
@@ -227,7 +241,12 @@ pub async fn serve_on<F>(
 where
     F: Future<Output = ()> + Send + 'static,
 {
-    let authenticator = build_authenticator(&config, authz.as_deref()).await?;
+    let authenticator = build_authenticator(
+        &config,
+        authz.as_deref(),
+        Some(party_source(&config, &backend)),
+    )
+    .await?;
     let section = config.server.clone();
     let state = AppState::with_parts(config, backend, authz, observability);
     let lifecycle = state.observability().lifecycle.clone();
@@ -394,7 +413,7 @@ mod tests {
             }),
             ..AppConfig::default()
         };
-        let authenticator = build_authenticator(&config, None)
+        let authenticator = build_authenticator(&config, None, None)
             .await
             .expect("authenticator");
         let mut claims = test_support::claims("alice", "user/composition-*.r");

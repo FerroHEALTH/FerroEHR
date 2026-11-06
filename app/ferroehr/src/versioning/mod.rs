@@ -224,4 +224,7 @@ pub(crate) struct SigningCtx<'a> {
     /// equals the current version's answers with that version and commits
     /// nothing (#4415).
     pub(crate) skip_identical_resend: bool,
+    /// The part of the shared party mapping the binding side table is
+    /// derived under ([`crate::party_binding::store`]); empty derives no row.
+    pub(crate) binding: &'a crate::party_binding::BindingMapping,
 }

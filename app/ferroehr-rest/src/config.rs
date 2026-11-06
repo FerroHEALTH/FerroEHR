@@ -49,6 +49,28 @@ pub struct AppConfig {
     /// runs; the demographic ingress boundary reads it (the stable
     /// generation's released surface differs from the typed core's).
     pub spec_profile: ferroehr::config::profile::SpecProfile,
+    /// `[authz.party_binding]` — the namespace a bound party is named under
+    /// and the key each Basic user is bound by.
+    pub party_binding: ferroehr::config::binding::PartyBindingConfig,
+}
+
+impl From<&ferroehr::config::FerroEhrConfig> for AppConfig {
+    /// The REST adapter's runtime view of the platform configuration tree.
+    fn from(config: &ferroehr::config::FerroEhrConfig) -> Self {
+        Self {
+            server: config.server.clone(),
+            rest: config.rest.clone(),
+            auth: config.auth.clone(),
+            admin: config.admin.clone(),
+            smart: config.smart.clone(),
+            terminology_api_enabled: config.terminology.api_enabled,
+            audit_organization_claim: config.authz.abac.organization_claim().map(str::to_owned),
+            rbac: config.authz.rbac.clone(),
+            assurance: config.authz.assurance.clone(),
+            spec_profile: config.spec_profile,
+            party_binding: config.authz.party_binding.clone(),
+        }
+    }
 }
 
 #[cfg(test)]

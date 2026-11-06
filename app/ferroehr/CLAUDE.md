@@ -8,7 +8,10 @@ engine), `versioning` (change control + VERSION `signature` signing),
 scheduled hash-chain check `chain_check`), `support` (the release's support
 period, embedded from the changelog by `build.rs`), `privacy`,
 `identifier_protection` (national identifiers sealed out of party bodies and
-expanded for an authorised reader), `origins` (the
+expanded for an authorised reader), `party_binding` (the local party source
+of the login binding: the binding side table derived in each party commit,
+its refill, and the `ferrohealth-smart` `PartySource` over it, no cache),
+`origins` (the
 `[origins]` register of recognised data origins, EHDS Annex II 3.4),
 `licence`, `ids`, `extensions`, `banner`, `decommission` (the `ferroehr db
 erase` operation: blobs first, then `db::erase_schema` drops every schema,

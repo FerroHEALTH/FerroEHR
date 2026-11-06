@@ -1237,19 +1237,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
 
     let authz = wire_authz(&config, &pool, &service)?;
 
-    // Assemble the REST adapter's runtime config view from the tree.
-    let app_config = AppConfig {
-        server: config.server.clone(),
-        rest: config.rest.clone(),
-        auth: config.auth.clone(),
-        admin: config.admin.clone(),
-        smart: config.smart.clone(),
-        terminology_api_enabled: config.terminology.api_enabled,
-        audit_organization_claim: config.authz.abac.organization_claim().map(str::to_owned),
-        rbac: config.authz.rbac.clone(),
-        assurance: config.authz.assurance.clone(),
-        spec_profile: config.spec_profile,
-    };
+    let app_config = AppConfig::from(&config);
 
     // RFC 9110 §11.6.1: a 401 challenge must name a scheme applicable to the
     // target resource, and a server with no mechanism has none to name.

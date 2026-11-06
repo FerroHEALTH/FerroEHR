@@ -10,6 +10,7 @@
 use std::sync::Arc;
 
 use ferrohealth_smart::guard::Gate;
+use ferrohealth_smart::party::source::PartySource;
 use ferrohealth_smart::resource::introspection::Introspector;
 use ferrohealth_smart::resource::{Caller, Honoured, IssuerSet, PatientClaim, ResourceServer};
 use ferrohealth_smart::sender::proof::ProofCheck;
@@ -76,14 +77,23 @@ impl Authenticator {
     /// caller an issuer admits carries `patient_claim`, the live ABAC patient
     /// claim, as the `ferrohealth-smart` `PatientClaim`.
     ///
+    /// With a party `source` and an `[[auth.party]]` table, every caller is
+    /// looked up in the party binding the tables and `[authz.party_binding]`
+    /// describe, on every request.
+    ///
     /// # Errors
     /// A message naming the refused setting, the issuer that could not be
     /// read, the metadata file that could not be read, names no `[auth]`
-    /// issuer or does not fit the issuer it names, or a `patient_claim` that
-    /// names no claim.
-    pub async fn new(config: &AppConfig, patient_claim: Option<&str>) -> Result<Arc<Self>, String> {
+    /// issuer or does not fit the issuer it names, a `patient_claim` that
+    /// names no claim, or a party binding the shared crate refuses.
+    pub async fn new(
+        config: &AppConfig,
+        patient_claim: Option<&str>,
+        source: Option<Arc<dyn PartySource>>,
+    ) -> Result<Arc<Self>, String> {
         let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
+        let party = super::party::binding(config, &resolved, source)?;
         let mut gate = Gate::open();
         let mut primary = None;
         let claim = patient_claim
@@ -181,6 +191,7 @@ impl Authenticator {
             realm: ferroehr::config::auth::realm(&config.auth.shared).to_owned(),
             primary,
             role_issuers: RoleIssuers::of(config),
+            party,
         }))
     }
 }

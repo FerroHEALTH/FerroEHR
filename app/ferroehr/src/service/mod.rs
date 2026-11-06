@@ -234,6 +234,10 @@ pub struct FerroEhrService {
     /// The demographic definitions of the shared party mapping; empty in
     /// [`Self::new`], which validates no party against a template.
     pub(in crate::service) party_templates: Arc<demographic::template::MappedPartyTemplates>,
+    /// The part of the shared party mapping the binding side table is derived
+    /// under; empty in [`Self::new`], which derives no row, so every login is
+    /// unbound until the mapping is installed.
+    pub(in crate::service) binding: Arc<crate::party_binding::BindingMapping>,
 }
 
 impl FerroEhrService {
@@ -290,6 +294,7 @@ impl FerroEhrService {
             ehr_index: ehr_index::provider::EhrIndexProvider::Unconfigured,
             access_delay: None,
             party_templates: Arc::default(),
+            binding: Arc::default(),
         }
     }
 
@@ -553,6 +558,7 @@ impl FerroEhrService {
             identifiers: self.identifiers.as_deref(),
             outbox_enabled: self.outbox_enabled,
             skip_identical_resend: self.skip_identical_resend,
+            binding: &self.binding,
             access_delay: self.access_delay.as_deref(),
             direct_origin: self.origins.direct_origin(
                 crate::versioning::committer::current_committer()

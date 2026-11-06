@@ -87,7 +87,7 @@ async fn the_metadata_file_describes_the_issuer_it_names_behind_another() {
 #[tokio::test]
 async fn a_metadata_file_naming_no_issuer_refuses_the_boot() {
     let cfg = config(vec![file_issuer(BASIC_ISSUER, "ferroehr-basic-users")]);
-    let error = Authenticator::new(&cfg, None)
+    let error = Authenticator::new(&cfg, None, None)
         .await
         .expect_err("metadata naming no [auth] issuer is refused");
     assert!(

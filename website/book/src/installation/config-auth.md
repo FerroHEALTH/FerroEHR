@@ -248,6 +248,29 @@ key_issuer = "urn:example:staff-login"
 key = "3f2b0c1e-0000-4000-8000-000000000001"
 ```
 
+#### How a login is looked up
+
+Every request of a person is looked up in the binding side table of the
+party store, on the party database role, with no cache, so a change to a
+party takes effect on the next request on every instance. The table holds
+the binding key of each `PERSON` of a mapped template that performs a
+professional `ROLE` (a `ROLE` of the mapped role template that its `roles`
+list, that names it as `performer`, whose state is `complete` or
+`incomplete` and whose `time_validity` holds today's date in UTC) or that
+is the source of a representation relationship. A key of type `guid` or
+`uuid` is compared in lower case. The table is written in each party
+commit's transaction and can be rebuilt from the party versions alone.
+
+The request is refused with `403` and the binding code in the problem body
+when the login matches two parties (`refused-ambiguous`), when its party is
+`inactive` (`refused-inactive`) or `abandoned` (`refused-abandoned`), when
+its key belongs to a deleted party (`refused-deprovisioned`), when the token
+carries no key claim (`refused-key-claim-missing`), when the party lacks the
+marker the caller's kind needs (`refused-wrong-marker`) and when the groups a
+token asserts cannot be read (`refused-groups-unavailable`). A party store
+or an identity provider that cannot answer is answered `503`, with
+`Retry-After` when the identity provider gave one.
+
 ### `[authz.import]` and `[[authz.system_client]]`
 
 `[authz.import] trusted_systems` lists the `creating_system_id` values whose
