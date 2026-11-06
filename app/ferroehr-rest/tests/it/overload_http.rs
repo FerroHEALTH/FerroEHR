@@ -38,7 +38,6 @@ use tower::ServiceExt;
 use ferroehr::config::rest::RestConfig;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_server::section::ServerSection;
-use ferrohealth_smart::config::AuthSection;
 
 use crate::common;
 
@@ -58,11 +57,7 @@ fn config(max_in_flight: usize) -> AppConfig {
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
-        auth: AuthSection {
-            enabled: false,
-            basic: None,
-            ..AuthSection::default()
-        },
+        auth: common::auth_off(),
         ..Default::default()
     }
 }

@@ -2042,9 +2042,9 @@ dependencies = [
 
 [[package]]
 name = "ehds-logging"
-version = "0.3.3"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8a31b1841c26a94db2d1f3346db0fa2102756f5cc27f109391f0824aea1eb57"
+checksum = "70cd1eefa36dd8f2d001702176dcf70192e5c832cdbe5afa87d17aa5c8b1e850"
 dependencies = [
  "async-trait",
  "ihe-atna",
@@ -2249,9 +2249,9 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "ferrobridge-term"
-version = "0.1.141"
+version = "0.1.143"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6314ce377533b51f21e40c7434752d4aa01b41a3de09ac8e1a557d26ebb46cb7"
+checksum = "cf3e291f60cabe42330dde066287f1eb6cb858ae38487da57c7fa5f21efd5c03"
 dependencies = [
  "async-trait",
  "backon",
@@ -2494,9 +2494,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-authz"
-version = "0.2.2"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7af425b7fa742ab0a9d8f954e384b6a7536ab1abf4d5aec154c37674218896d8"
+checksum = "54aba46e6a9f806cdbc4e0891ffe813190f6d41cf6234d380ed731c299f42a9c"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -2513,9 +2513,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-config"
-version = "0.2.9"
+version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43fce09cf320e16a77da56adef2b2f4a12a197380a1248edd68d30efde101509"
+checksum = "b43a5b1b1feb60993918bccfc6146c9e8555ee8c0191808404a75a761f8bcc4f"
 dependencies = [
  "ferrohealth-secret",
  "percent-encoding",
@@ -2549,9 +2549,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-server"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6885df5f86820bd8d78ab1c75479ba0015a68d479a8256170e9a83dc21638af"
+checksum = "86bd2ac04c00ff5697e78615cc674222f393707d4c63839a292c920d2c3b63a8"
 dependencies = [
  "axum",
  "clap",
@@ -2580,9 +2580,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-session"
-version = "0.2.3"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04aa8c9099b2c793cbcdbdb350f729e0c74503966aa1bdb96b98398d4fa9edfd"
+checksum = "2aaad26775b4be3f6bb86add085d220fb687167a102cc302b06b2305977d9e7d"
 dependencies = [
  "aws-lc-rs",
  "axum",
@@ -2604,9 +2604,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-smart"
-version = "0.8.9"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "302d8403aabe988cc6cbf014a35f0aa1f90f832ba73a404f2956a46a96829d0c"
+checksum = "fee5a70dfd6d43a71ac78bd92b2cedc202179526ac31ce1279ef71aefa49872c"
 dependencies = [
  "argon2 0.6.0",
  "aws-lc-rs",
@@ -2622,6 +2622,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
+ "toml",
  "tower",
  "tracing",
  "url",
@@ -2654,9 +2655,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-ui"
-version = "0.6.6"
+version = "0.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cccd00441a79a90a57ab6baa2af1725d6c621b0374effce55a1057e341e49f60"
+checksum = "e8ceb285b787e15cf540a37db0202f7f3443b5063d2a609aabd1aad3bba2d387"
 dependencies = [
  "askama",
  "axum",
@@ -3613,9 +3614,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-atna"
-version = "0.3.3"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9aca996fcfe65f5b550fefc5b5e88618b6b4cd09d490a2dfada8b770e2469598"
+checksum = "ed5b92cbd44c5afbfd60f084fb8350a85a20f5a13f055af7e9da1f9145a17681"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -3640,9 +3641,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-iti"
-version = "0.0.74"
+version = "0.0.76"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2017e683cfdb0deb841f1e76f3d4224d8870fe732d8e5aca0a6adc6a4fb73c38"
+checksum = "e9d96d70a6025af4301bb4311bcfdf50160e8f6762716982f213e5adbe7c7312"
 dependencies = [
  "ferrohealth-smart",
  "fhir-types",

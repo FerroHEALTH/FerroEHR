@@ -88,8 +88,10 @@ self-provisions and a restart is a no-op.
 ## Bringing up the stack
 
 Download `docker-compose.yml` (attached to every
-[release](https://github.com/FerroHEALTH/FerroEHR/releases/latest)) into an
-empty directory and start it:
+[release](https://github.com/FerroHEALTH/FerroEHR/releases/latest), and
+pulling that release's images) into an empty directory and start it. The copy
+in the repository pulls the `:main` images built from `main` and carries
+`main`'s configuration, for running `main`:
 
 ```shell
 docker compose up
@@ -220,9 +222,10 @@ evaluation, not for production:
 
 To change any of it without editing the Compose file, add `FERROEHR__*`
 variables to the `ferroehr` service's `environment:` block; the environment
-layer wins over the inline file. The Basic-auth user store is the one setting
-the environment cannot express (it is an array of tables), so replacing the
-users means editing the inline config or mounting your own TOML file.
+layer wins over the inline file. An array of tables, such as the Basic-auth
+user store, is set by element index (`FERROEHR__AUTH__BASIC__USERS__0__USER`),
+key by key over the file's; replacing the users is usually clearer in the
+inline config or your own mounted TOML file.
 
 ## The patient identity source (FerroPIX)
 
@@ -338,8 +341,10 @@ the CA's private key; the server (`[auth] ca_file`) and the viewer
 `docker compose down --volumes` deletes the volume, and the next `up`
 generates a new CA. Keycloak also answers plain HTTP on port 8081 for the token
 call below, and the tokens it mints there name the HTTPS issuer. Keycloak's
-access tokens carry `typ: JWT`, so the overlay sets
-`FERROEHR__AUTH__TOKEN_PROFILE=jwt`.
+access tokens carry `typ: JWT`, so the overlay adds the realm as a second
+`[[auth.issuer]]` table with `profile = "keycloak"`
+(`FERROEHR__AUTH__ISSUER__1__PROFILE=keycloak`), beside the issuer the
+quickstart's Basic user binds under.
 
 Start the viewer too and sign in at <http://localhost:3000> as any user below:
 
@@ -408,8 +413,9 @@ TOKEN=$(curl -s -d client_id=ferroehr-service -d client_secret=ferroehr-service-
 > [!WARNING]
 > The realm, the client secret, the user passwords and the CA are demo values,
 > served by a Keycloak in `start-dev` mode. For a real deployment, drop this
-> overlay and point `[auth]` (or `FERROEHR__AUTH__ISSUER` and
-> `FERROEHR__AUTH__AUDIENCE`) at your own issuer over HTTPS.
+> overlay and point an `[[auth.issuer]]` table (or
+> `FERROEHR__AUTH__ISSUER__0__ISSUER` and its siblings) at your own issuer over
+> HTTPS.
 
 ## The terminology overlay (FerroTERM)
 

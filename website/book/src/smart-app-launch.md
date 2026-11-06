@@ -110,19 +110,26 @@ GET /ferroehr/rest/.well-known/smart-configuration
 ```
 
 (relative to the REST root, or to `[smart] platform_base_url` when set). The
-document is built from the first `[auth]` issuer's metadata, read at boot: the
+document is built from the metadata of one `[auth]` issuer, read at boot: the
+first introspected issuer, else the issuer `[smart] issuer_metadata_file`
+names, else the first issuer whose metadata is read from it, else the first
+issuer. It carries the
 authorization, token, registration, introspection and revocation endpoints,
 the grant types and client authentication methods it supports, and its
 `jwks_uri`. It therefore needs an issuer whose metadata names a
 `token_endpoint`, which the document requires (SMART App Launch 2.2.0,
 Conformance, §Metadata). An issuer read from a `jwks_file` has no metadata of
 its own: `[smart] issuer_metadata_file` names a JSON file with its RFC 8414 §2
-metadata, which must name that issuer and hold every endpoint to `https` (a
-loopback host excepted). Without it, `enabled = true` refuses the start.
+metadata, which must name an `[auth]` issuer read from a `jwks_file` and hold
+every endpoint to `https` (a loopback host excepted). The issuer it names may
+stand anywhere in the list, beside a Basic users' issuer listed first. Without
+it, `enabled = true` refuses the start.
 
 ```bash
-export FERROEHR__AUTH__ISSUER=https://as.example/realms/ferroehr
-export FERROEHR__AUTH__AUDIENCE=ferroehr-api
+export FERROEHR__AUTH__ISSUER__0__ISSUER=https://as.example/realms/ferroehr
+export FERROEHR__AUTH__ISSUER__0__KIND=persons
+export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
+export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=my-smart-app
 export FERROEHR__SMART__ENABLED=true
 # The external origin absolute service URLs are built from; required.
 export FERROEHR__SMART__PUBLIC_BASE_URL=https://cdr.example.com

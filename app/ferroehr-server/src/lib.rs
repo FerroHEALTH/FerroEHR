@@ -488,7 +488,7 @@ async fn verify_schema_and_isolation(
 fn run_config_check(config: Option<&Path>, set: &[(String, String)]) -> anyhow::Result<()> {
     let (loaded, cfg) = ferroehr::config::load_with_provenance(config, set)?;
     cfg.validate()?;
-    ferroehr::config::auth::require_mechanism(&cfg.auth)?;
+    ferroehr::config::auth::require_mechanism(&cfg.auth.shared)?;
     let rendered = ferrohealth_config::report::check_report(&loaded)?;
     print!("{rendered}");
     // The resolved placement of the four storage domains, so an
@@ -640,7 +640,7 @@ fn wire_authz(
     pool: &PgPool,
     service: &Arc<FerroEhrService>,
 ) -> anyhow::Result<Option<Arc<AuthzHandle>>> {
-    if !config.auth.enabled {
+    if !config.auth.shared.enabled {
         return Ok(None);
     }
     // `validate` has already refused a category map that does not compile.
@@ -693,8 +693,8 @@ fn log_resolved_posture(
     management: &ManagementConfig,
 ) {
     tracing::info!(
-        mechanisms = %ferroehr::config::auth::advertised_mechanisms(&app_config.auth),
-        enabled = app_config.auth.enabled,
+        mechanisms = %ferroehr::config::auth::advertised_mechanisms(&app_config.auth.shared),
+        enabled = app_config.auth.shared.enabled,
         "authentication configured"
     );
     if audit_enabled {
@@ -827,6 +827,7 @@ async fn stamp_subject_posture(
 }
 
 fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
+    ferroehr::config::binding::BindingPosture::of(config).log();
     if config.db.is_dev_default() {
         tracing::warn!(
             url = db::DEFAULT_URL,
@@ -1058,8 +1059,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
             .resolve(std::io::stdout().is_terminal()),
     );
 
-    let build_info =
-        BuildInfo::for_profile(config.spec_profile).with_audit(AuditPosture::of(&config.audit));
+    let build_info = BuildInfo::for_config(&config);
     let mut telemetry = telemetry::init(
         &config.telemetry,
         config.management.flame_file.as_deref(),
@@ -1182,6 +1182,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         )?;
     }
 
+    service.unheld_written_templates(&config.authz).await??;
     // The retention register keys category periods on the map in force, so it
     // is mirrored before the listener takes traffic. `validate` has already
     // refused a map that does not compile.
@@ -1247,13 +1248,12 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         audit_organization_claim: config.authz.abac.organization_claim().map(str::to_owned),
         rbac: config.authz.rbac.clone(),
         assurance: config.authz.assurance.clone(),
-        professional: config.authz.professional.clone(),
         spec_profile: config.spec_profile,
     };
 
     // RFC 9110 §11.6.1: a 401 challenge must name a scheme applicable to the
     // target resource, and a server with no mechanism has none to name.
-    ferroehr::config::auth::require_mechanism(&app_config.auth)?;
+    ferroehr::config::auth::require_mechanism(&app_config.auth.shared)?;
     log_resolved_posture(
         &app_config,
         audit_enabled,

@@ -592,6 +592,7 @@ refusal_registry_gate() {
   local -a registry=(
     "deployment.yaml|no authentication mechanism is configured|${base}|--set config.auth.issuer=null|config.auth.basic.users;config.auth.issuer"
     "migration-job.yaml|requires migrations.job.existingSecret|${base}|--set migrations.job.enabled=true|migrations.job.existingSecret"
+    "deployment.yaml|is held by the replica that accepted it alone|${base}|--set config.auth.issuer[0].sender_constraint=required|replicaCount: 1;autoscaling.enabled: false"
     "deployment.yaml|server.tls.client_auth is|${tls}|--set config.server.tls.client_auth=required|config.server.tls.client_auth;optional"
     "ingress.yaml|ingress.backendTlsAnnotations is empty|${tls}|--set ingress.backendTlsAnnotations=null|ingress.backendTlsAnnotations;nginx.ingress.kubernetes.io/backend-protocol"
     "hpa.yaml|with every target utilisation at 0|${base}|--set autoscaling.enabled=true --set autoscaling.targetCPUUtilizationPercentage=0 --set autoscaling.targetMemoryUtilizationPercentage=0|autoscaling.targetCPUUtilizationPercentage;autoscaling.targetMemoryUtilizationPercentage"
@@ -1012,6 +1013,20 @@ unknown_config_key_gate() {
     FAIL=1
   else
     echo "  audit.syslog.transport refused by name"
+  fi
+  # The [auth] shape of ferrohealth-smart 0.8, its issuer settings at the
+  # section level, which 0.9 moved onto each [[auth.issuer]] table (#5003).
+  helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" \
+    -f "${CI_DIR}/default-values.yaml" --set 'config.auth.audience={ferroehr}' > "$rendered"
+  if out="$(bash "$(dirname "$0")/gates/config-keys.sh" "$rendered" "$RELEASE_NAME")"; then
+    red "  NOT REFUSED: the section-level auth.audience passed the config-keys gate"
+    FAIL=1
+  elif ! grep -qx 'auth.audience is not a key of ferroehr.default.toml' <<<"$out"; then
+    red "  the gate failed, but did not name auth.audience:"
+    printf '%s\n' "$out" | sed 's/^/    /'
+    FAIL=1
+  else
+    echo "  the section-level auth.audience of the old [auth] shape refused by name"
   fi
   rm -f "$rendered"
 }

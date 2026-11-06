@@ -6,7 +6,7 @@
 //!
 //! Serves `GET /.well-known/smart-configuration` relative to the SMART platform
 //! base URL (master04 §Service Discovery ¶3-4). The `ferrohealth-smart` crate
-//! builds the document from the first `[auth]` issuer's metadata (SMART App
+//! builds the document from the described `[auth]` issuer's metadata (SMART App
 //! Launch 2.2.0, Conformance, §Metadata); FerroEHR adds the `services` map with
 //! the required `org.openehr.rest`, the openEHR capabilities it enforces, the
 //! permission capabilities its route table enforces, and the scopes it honours.
@@ -81,7 +81,7 @@ pub fn options(cfg: &AppConfig) -> SmartOptions {
     if smart.launch_base64_json {
         capabilities.push(LAUNCH_BASE64_JSON.to_owned());
     }
-    for added in &cfg.auth.capabilities {
+    for added in &cfg.auth.shared.capabilities {
         if !capabilities.contains(added) {
             capabilities.push(added.clone());
         }
@@ -127,8 +127,8 @@ fn absolute_base(cfg: &SmartConfig, base: &str) -> String {
 /// App Launch 2.2.0, Conformance, §Metadata), so a `patient/` scope is listed
 /// only when an issuer is bound for it.
 fn scopes_supported(cfg: &AppConfig) -> Vec<String> {
-    if !cfg.auth.scopes_supported.is_empty() {
-        return cfg.auth.scopes_supported.clone();
+    if !cfg.auth.shared.scopes_supported.is_empty() {
+        return cfg.auth.shared.scopes_supported.clone();
     }
     let mut scopes: Vec<String> = [
         "openid",
@@ -180,7 +180,9 @@ pub fn discovery_path(cfg: &SmartConfig, rest_root: &str) -> String {
 /// Whether the document is served: `smart.enabled` with authentication on and
 /// an `[auth]` issuer whose metadata the server reads at boot.
 fn served(cfg: &AppConfig) -> bool {
-    cfg.smart.enabled && cfg.auth.enabled && ferroehr::config::auth::has_bearer(&cfg.auth)
+    cfg.smart.enabled
+        && cfg.auth.shared.enabled
+        && ferroehr::config::auth::has_bearer(&cfg.auth.shared)
 }
 
 /// The document, serialized once at assembly.
@@ -233,7 +235,7 @@ pub fn router(cfg: &AppConfig, rest_root: &str, authenticator: &Authenticator) -
                         'Responses to `/.well-known/smart-configuration` \
                         endpoint must be served with the `application/json` \
                         MIME type'). The authorization-server members come from \
-                        the first `[auth]` issuer's metadata (SMART App Launch \
+                        the described `[auth]` issuer's metadata (SMART App Launch \
                         2.2.0, Conformance, §Metadata): `grant_types_supported` \
                         names only `authorization_code` and `client_credentials`, \
                         and `code_challenge_methods_supported` always carries \
@@ -407,7 +409,7 @@ mod tests {
     #[test]
     fn operator_scopes_are_used_verbatim() {
         let mut cfg = enabled_cfg();
-        cfg.auth.scopes_supported = vec!["openid".to_owned(), "user/aql-*.s".to_owned()];
+        cfg.auth.shared.scopes_supported = vec!["openid".to_owned(), "user/aql-*.s".to_owned()];
         assert_eq!(
             options(&cfg).scopes_supported,
             vec!["openid", "user/aql-*.s"]
@@ -417,7 +419,7 @@ mod tests {
     #[test]
     fn operator_capabilities_append_deduplicated() {
         let mut cfg = enabled_cfg();
-        cfg.auth.capabilities = vec![
+        cfg.auth.shared.capabilities = vec![
             "launch-ehr".to_owned(),
             CONTEXT_OPENEHR_EHR.to_owned(), // duplicate of a derived one
         ];

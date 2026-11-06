@@ -179,7 +179,9 @@ for f in $files; do
   while read -r form; do
     [[ -n "$form" ]] || continue
     case "$form" in *__) continue ;; *) ;; esac
-    grep -qxF "$form" "$work/env" \
+    # An array of tables is set by element index (FERROEHR__AUTH__ISSUER__0__KIND),
+    # which names the key the path without the index names.
+    grep -qxF "$(sed -E 's/__[0-9]+__/__/g' <<<"$form")" "$work/env" \
       || report "$f" "documents \`$form\`, which is not a key in $TOML"
   done < <(grep -ohE 'FERROEHR__[A-Z0-9_]+' "$f" | sort -u)
 done

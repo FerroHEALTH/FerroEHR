@@ -62,11 +62,10 @@ fn rest_config() -> AppConfig {
         &mut config,
         &[("user", &["USER"]), ("root", &["ADMIN"]), ("noroles", &[])],
     );
-    let basic = config.auth.basic.take();
-    config.auth = ferrohealth_smart::config::AuthSection {
-        basic,
-        ..common::issuer_auth(ISSUER, AUDIENCE)
-    };
+    let basic = config.auth.shared.basic.take();
+    config.auth = common::issuer_auth(ISSUER, AUDIENCE);
+    config.auth.shared.basic = basic;
+    config.rbac.role_issuers = vec![ISSUER.to_owned()];
     config
 }
 

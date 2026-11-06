@@ -12,14 +12,25 @@ environment-name grammar, and file discovery are on the
 
 Authentication: bearer tokens of one or more trusted issuers, Basic
 credentials, or both. `[auth]` is the section every FerroHEALTH product shares,
-checked by the `ferrohealth-smart` crate. FerroEHR is a resource server: it
-checks tokens and never issues them.
+checked by the `ferrohealth-smart` crate (0.9). FerroEHR is a resource server:
+it checks tokens and never issues them. Every person a request comes from is
+bound to a demographic `PERSON` (see [`[authz.party_binding]`](#authzparty_binding)).
 
 ```toml
 [auth]
 enabled = true
-issuer = "https://keycloak.example.com/realms/ferroehr"
+
+[[auth.issuer]]
+issuer = "https://keycloak.example.com/realms/staff"
+kind = "persons"
+profile = "keycloak"
 audience = ["ferroehr"]
+first_party_clients = ["ferroehr-viewer"]
+
+[[auth.party]]
+issuer = "https://keycloak.example.com/realms/staff"
+identifier_issuer = "urn:example:staff-login"
+identifier_type = "uuid"
 
 [[auth.basic.users]]
 user = "clinician"
@@ -27,26 +38,66 @@ password_hash = "$argon2id$v=19$m=19456,t=2,p=1$…$…"   # never a plaintext p
 scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds"]
 ```
 
+The section keys:
+
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `true` | Master switch. `false` = all requests pass unauthenticated (development only). With `true` and **no mechanism configured the server refuses to start**; see below. |
-| `issuer` | string, or `[[auth.issuer]]` tables | unset | The issuer whose tokens are accepted. Its metadata is read at boot, at the RFC 8414 §3 location first and the OpenID Connect Discovery 1.0 §4 location after a `404`, and with it the key set at its `jwks_uri`, so an authorization server that cannot be reached refuses the start. An `https` URL with no query and no fragment and no user name or password; plain `http` is accepted on a loopback host only. Several issuers are `[[auth.issuer]]` tables, each carrying the keys from `issuer` to `jwks_file`. |
-| `audience` | list of string | **required with an issuer** | Accepted `aud` values; a token naming none of them is refused (RFC 9068 §4, RFC 8725 §3.9). |
+| `issuer` | `[[auth.issuer]]` tables | none | The trusted issuers, one table each; see below. The flat `issuer = "…"` form is refused at boot, naming the table form. |
+| `ca_file` | path | unset | A PEM bundle of certificate authorities trusted in addition to the platform roots, on every platform, for an issuer behind a private PKI: every issuer's metadata and key set are read trusting it, and under `mode = "introspection"` the introspection and token calls too. A file that cannot be read, holds no certificate, or does not parse refuses the start. |
+| `realm` | string | `""` ⇒ `ferroehr` | The realm every `WWW-Authenticate` challenge names. |
+| `scopeless_subjects` | list of `{ issuer, sub }` | `[]` | The subjects whose token, when it carries no resource scope of either the SMART on openEHR or the SMART on FHIR grammar, meets every SMART on openEHR requirement. Only a system (app-only) caller of that issuer is admitted by an entry. A token that carries resource scopes gets only its scopes, and the allowlist reaches neither the ADMIN API nor the DEMOGRAPHIC API, which need the product scope. A string entry refuses the start. |
+| `capabilities` | list of string | `[]` | SMART capabilities the discovery document adds: one SMART App Launch or the SMART on openEHR draft lists, or a full URI. |
+| `scopes_supported` | list of string | `[]` | The scopes the discovery document lists. Empty, it lists the scopes the route table honours. |
+| `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the bearer clients in `[smart] demographic_clients`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
+
+The keys `audience`, `algorithms`, `token_profile`, `clock_skew_seconds`,
+`jwks_max_age_seconds`, `jwks_refresh_interval_seconds`, `jwks_file`,
+`timeout_ms`, `mode`, `introspection`, `role_claims`, `acting_for_claim` and
+`client_tokens` are refused at the section level, each naming what replaces
+it: the first ones live on each `[[auth.issuer]]` table, and the caller
+classification replaces the last two.
+
+### `[[auth.issuer]]`: the trusted issuers
+
+Each issuer's metadata is read at boot, at the RFC 8414 §3 location first and
+the OpenID Connect Discovery 1.0 §4 location after a `404`, and with it the key
+set at its `jwks_uri`, so an authorization server that cannot be reached
+refuses the start. Every setting of an issuer lives on its own table. No two
+issuers of one node share an audience, so one audience is one issuer and one
+token form; the node's audience must also differ from every other node's, an
+operator rule boot cannot see.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `issuer` | string | required | The issuer identifier: an `https` URL with no query, no fragment and no user name or password; plain `http` on a loopback host only. |
+| `kind` | `persons`, `patients`, `machines` or `federation` | **required** | Whose tokens it signs. `persons` signs the deployment's own people (and the app-only tokens of its machines), `patients` tokens naming only the record subject, `machines` client credentials tokens only, and `federation` another party's professionals or organisation. One issuer is one kind, so patients and professionals sign in at separate issuers, a realm or tenant each. |
+| `profile` | `rfc9068`, `entra`, `keycloak`, `okta` or `nl` | `rfc9068` | The preset of what the issuer's tokens look like, each value labelled with its source in the crate. Every profile key below may be set on the table over it. |
+| `audience` | list of string | **required** | Accepted `aud` values; a token naming none of them is refused (RFC 9068 §4, RFC 8725 §3.9). |
 | `algorithms` | list of string | `["RS256","RS384","PS256","PS384","ES256","ES384"]` | Accepted signature algorithms. Asymmetric only: an `HS*` algorithm is a boot error, and `none` is no algorithm at all (RFC 8725 §3.1, §3.2). |
-| `token_profile` | `rfc9068` or `jwt` | `rfc9068` | `rfc9068` requires `typ` `at+jwt` and the `client_id`, `iat` and `jti` claims (RFC 9068 §2.2, §4). `jwt` admits a plain JWT bearer token (`typ` absent or `JWT`) for an issuer that mints no RFC 9068 tokens, and reads a `scp` array when `scope` is absent. A token typed as another kind of JWT is refused under either. |
-| `mode` | `jwt` or `introspection` | `jwt` | How a bearer token is checked. `jwt` checks it as a JWT against the issuer's key set. `introspection` posts an opaque token to the issuer's RFC 7662 endpoint (see [Opaque tokens](#opaque-tokens-by-introspection)); it needs a flat `issuer`, and an `[auth.introspection]` table beside `jwt` is a boot error. |
 | `clock_skew_seconds` | int | `60` | Leeway on `exp`, `nbf` and `iat`. At most `300`. |
 | `jwks_max_age_seconds` | int | `600` | A key set older than this is read again. |
 | `jwks_refresh_interval_seconds` | int | `60` | A token naming an unknown `kid` reads the key set again at most once per interval. |
 | `jwks_file` | path | `""` | A JWK Set of public keys handed over out of band, read instead of the issuer's metadata. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error. An issuer read from a file has no metadata, so it serves the SMART discovery document only with [`[smart] issuer_metadata_file`](#smart) set. |
 | `timeout_ms` | int | `10000` | One call to the authorization server. |
-| `ca_file` | path | unset | A PEM bundle of certificate authorities trusted in addition to the platform roots, on every platform, for an issuer behind a private PKI: the issuer's metadata and key set are read trusting it, and under `mode = "introspection"` the metadata, introspection and token calls trust it beside the grant's own `ca_file`. A file that cannot be read, holds no certificate, or does not parse refuses the start. |
-| `realm` | string | `""` ⇒ `ferroehr` | The realm every `WWW-Authenticate` challenge names. |
-| `role_claims` | list of string | `["roles","groups","entitlements"]` | Token claim paths the caller's roles are read from, in order; dotted paths walk nested claims, and a role is matched without regard to case. A path that is empty, has an empty step or carries whitespace is a boot error. **`scope` is not a role source**; see [Security](../security.md#rbac-role-based-coarse). `[authz.rbac] role_claims`, where this key lived before, is refused at boot. Beside several `[[auth.issuer]]` tables each path is written `<issuer>#<path>`, the issuer exactly as its table names it, and is read from that issuer's tokens alone; a bare path refuses the start, the default included, so name each issuer whose roles count, or set `[]` (GHSA-pfgx-xq28-2629). |
-| `scopeless_subjects` | list of string | `[]` | The exact `sub` values whose token, when it carries no resource scope of either the SMART on openEHR or the SMART on FHIR grammar, meets every SMART on openEHR requirement. A token that carries resource scopes gets only its scopes, and the allowlist reaches neither the ADMIN API nor the DEMOGRAPHIC API, which need the product scope. Beside several `[[auth.issuer]]` tables each entry is written `<issuer>#<sub>` and admits that issuer's tokens alone, since a `sub` is unique only within its issuer (RFC 7519 §4.1.2); a bare entry, or one naming an issuer the section does not trust, refuses the start. |
-| `capabilities` | list of string | `[]` | SMART capabilities the discovery document adds: one SMART App Launch or the SMART on openEHR draft lists, or a full URI. |
-| `scopes_supported` | list of string | `[]` | The scopes the discovery document lists. Empty, it lists the scopes the route table honours. |
-| `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the bearer clients in `[smart] demographic_clients`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
+| `mode` | `jwt` or `introspection` | `jwt` | How the issuer's tokens are checked: as JWTs against its key set, or posted to its RFC 7662 endpoint (see [Opaque tokens](#opaque-tokens-by-introspection)). |
+| `role_claims` | list of string | `["roles","groups","entitlements"]` | Token claim paths the caller's roles are read from; dotted paths walk nested claims, and a role is matched without regard to case. **`scope` is not a role source**. A `federation` issuer reads no role. Whether a role grants `admin_role` and the other privileged roles is [`[authz.rbac] role_issuers`](#authzrbac). |
+| `sender_constraint` | `none` or `required` | `none` | `required` admits only a token bound to a DPoP key (RFC 9449) or to the client certificate of a mutual-TLS connection (RFC 8705 §3). A token carrying `cnf` is held to it under either value. |
+| `assurance` | table | unset | The assurance level the issuer's tokens carry, in the shape of [`[authz.assurance]`](#authzassurance-the-assurance-level-patient-data-requires). |
+| `person_key` | string | `sub` (preset) | The claim a person is bound by. `email`, `phone_number`, `preferred_username` and `name` are never accepted as a key (OpenID Connect Core 1.0 §5.7). |
+| `first_party_clients` | list of string | `[]` | The deployment's own clients. **A `persons` token is admitted only through a client listed here or in `delegates`.** |
+| `delegates` | list of `{ client }` or `{ sub, issuer }` | `[]` | Third-party clients or RFC 8693 actors that act for a person; their tokens are recorded as the client acting for the person the token names. |
+| `token_types`, `required_claims`, `scope_claim`, `app_only_scope_claim` | | preset | The token shape that replaces `token_profile`: the accepted `typ` values, the claims every token carries, and where its scopes are read. For an issuer that minted under `token_profile = "jwt"`, set `token_types = ["JWT"]` and the `required_claims` its tokens carry. |
+| `client_claims`, `app_only`, `guest`, `impersonation_marker`, `expect`, `user_claims`, `person_equality`, `unstable_claims`, `max_actor_chain`, `representation`, `tenant_claim`, `adapter`, `onward_*` | | preset | The other profile keys of `ferrohealth-smart`: which claim names the client, what marks an app-only token or a guest, what refuses an impersonation, the claims a token must carry exactly, how a representative names whom it acts for, the claim naming the tenant, the vendor adapter (`idp-entra`) and the onward grants. |
+
+### `[[auth.party]]`, `[[auth.federation]]`, `[auth.dpop]` and `[auth.idp.entra]`
+
+| Table | Description |
+|---|---|
+| `[[auth.party]]` | One per `persons` issuer, keyed by `issuer`: where its logins are looked up. `identifier_issuer` and `identifier_type` (`guid` and `uuid` compare in lower case) name the identifiers the issuer profile's `person_key` is matched against; `group_claim` with `group_identifier_issuer` reads the groups a token asserts; `guests` looks a guest up. **Boot refuses a `persons` issuer without one**, a table that sets `claim` (the profile's `person_key` is the key), and two tables sharing an issuer or an `identifier_issuer`. |
+| `[[auth.federation]]` | One per `federation` issuer: how its tokens' claims map to the fields of another party's professional or organisation (`mapping = "iua"`, `"ehdsi"` or per field), the countries, issuing authorities and provider prefixes that bound them, and `contact_point` for a MyHealth@EU contact point. |
+| `[auth.dpop]` | The DPoP proof check of a sender-constrained issuer: `external_url` (required, the base URL clients address; a proof's `htu` is it plus the request path), `max_age_seconds` (`60`), `clock_skew_seconds` (`10`) and `algorithms`. The proofs a replica accepted are held by that replica alone, so the Helm chart refuses a sender-constrained issuer on more than one replica. |
+| `[auth.idp.entra]` | The Microsoft Graph access of the `idp-entra` adapter, which an issuer turns on with `adapter = "idp-entra"` to read the groups of an Entra ID groups overage: `base_url` (`https://graph.microsoft.com/v1.0`), `timeout_ms` (`2000`), `max_response_bytes`, `security_enabled_only` and the client credentials of `[auth.idp.entra.credentials]`. An issuer naming the adapter without this table refuses the start. |
 
 > [!WARNING]
 > **`auth.enabled = true` with no mechanism is a boot error.** Such a server
@@ -73,7 +124,8 @@ the RFC 6750 §2.1 `b64token` alphabet is refused the same way, with `401` and
 ### Opaque tokens by introspection
 
 An authorization server that issues opaque access tokens is served with
-`mode = "introspection"`. Each bearer token is posted to the issuer's
+`mode = "introspection"` on its `[[auth.issuer]]` table, whose
+`[auth.issuer.introspection]` table holds the keys below. Each bearer token is posted to the issuer's
 introspection endpoint (RFC 7662 §2.1), and the active response stands in for
 the JWT claims: `sub`, `scope`, the roles of `role_claims`, `aud` against
 `audience` and `iss` against the issuer. An inactive token is a `401`. An
@@ -89,20 +141,25 @@ active response is reused until its `exp`, at most `cache_max_age_seconds`.
 | `bearer` | table | unset | A client credentials grant whose token authorizes the call instead (SMART App Launch 2.2.0, Token Introspection). Exactly one of `client` and `bearer`. |
 
 ```toml
-[auth]
+[[auth.issuer]]
 issuer = "https://idp.example.org/realms/ferroehr"
+kind = "persons"
 audience = ["ferroehr"]
 mode = "introspection"
 
-[auth.introspection.client]
+[auth.issuer.introspection.client]
 client_id = "ferroehr-rs"
 client_secret_file = "/run/secrets/introspection-client"
 ```
 
 ### The Basic-auth user store
 
-`[[auth.basic.users]]` is an array of tables and therefore **file-only**: the
-environment grammar cannot spell an array index.
+`[[auth.basic.users]]` is an array of tables. A Basic user is always a
+person: it maps to the `PERSON` carrying its binding key through
+[`[[authz.party_binding.basic_user]]`](#authzparty_binding), and a Basic user
+with no mapping refuses the start, naming the user. A machine authenticates
+with the client credentials grant (RFC 6749 §4.4), and a `system/` scope on a
+Basic user refuses the start.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -164,22 +221,79 @@ beside a declared table, and a `levels` value that is blank or carries
 whitespace, a quote or a backslash, because the refusal names the accepted
 values in one quoted, space-separated `acr_values` parameter (RFC 9470 §3).
 
-### `[authz.professional]`: the natural person behind a token
+The access record carries the acting mode and the professional the caller
+classification names; see [Audit trail](../audit.md#the-ehds-logging-elements-mapped).
+`[authz.professional]` is refused at boot: the issuer's `kind` and profile
+classify the caller, and a client acting for a person is one the issuer lists
+in `delegates`.
 
-Absent by default, and tokens are then not judged on it. Present, a
-patient-data request whose token names no natural person is refused with `403`,
-unless it is a client token acting for a named professional.
+### `[authz.party_binding]`
+
+How a person is attributed. There is no switch: binding is how FerroEHR
+attributes a person, and `enabled` is refused at boot.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `claim` | string | `sub` | The claim identifying the natural person; a dotted path reaches into a JSON object. A token lacking it is a client token. |
-| `client_tokens` | `sub_is_client` \| `claim_absent` | `sub_is_client` | How else a client-credentials token is recognised. `sub_is_client` also treats a token whose `sub` equals its `client_id` or `azp` as a client token (RFC 9068 §2.2); `claim_absent` relies on the missing claim alone. |
-| `acting_for_claim` | string | unset | The claim a client token carries the professional's identifier in, such as `act.sub`. Unset refuses every client token on patient data. |
+| `provider` | `{ issuer, id }`, or `[[authz.party_binding.provider]]` tables | **required** once `[auth]` admits a credential | The healthcare provider this deployment acts for, as an identifier issuer and id (in the Netherlands the URA). Every access record of a bound or provisional person and every version a person commits name it (EHDS Art. 13(4), Annex II 3.2(a)). A deployment that serves several providers declares one table per value of its issuers' `tenant_claim` (`tenant`, `issuer`, `id`) instead; the two forms cannot be combined, and a bound issuer that names no `tenant_claim` is refused beside the table form. |
+| `namespace` | string | `demographic` | The `PARTY_REF.namespace` a bound party is written under, the value of the ITS-REST overview example (`committer.external_ref.namespace="demographic"`), held to the `OBJECT_REF.namespace` pattern `[a-zA-Z][a-zA-Z0-9_.:/&?=+-]*`. |
+| `basic_user` | `[[authz.party_binding.basic_user]]` tables | `[]` | One per Basic user: `user`, `key_issuer` (the `identifier_issuer` of an `[[auth.party]]` table) and `key`, the binding key the user's `PERSON` carries. A Basic user with no table, a table naming no Basic user and a `key_issuer` no table names refuse the start. |
 
-The access record then carries the acting mode and the professional; see
-[Audit trail](../audit.md#the-ehds-logging-elements-mapped). Both tables are
-reachable from the environment too (`FERROEHR__AUTHZ__ASSURANCE__MINIMUM`,
-`FERROEHR__AUTHZ__PROFESSIONAL__ACTING_FOR_CLAIM`), except the `levels` map.
+```toml
+[authz.party_binding]
+provider = { issuer = "urn:oid:2.16.528.1.1007.3.3", id = "12345678" }
+
+[[authz.party_binding.basic_user]]
+user = "clinician"
+key_issuer = "urn:example:staff-login"
+key = "3f2b0c1e-0000-4000-8000-000000000001"
+```
+
+### `[authz.import]` and `[[authz.system_client]]`
+
+`[authz.import] trusted_systems` lists the `creating_system_id` values whose
+wrapped committers may name a local party on import; this node's own
+`[rest] system_id` is refused.
+
+Each OAuth client-credentials client that commits is declared in one
+`[[authz.system_client]]` table, keyed by `issuer` (a `machines` or `persons`
+issuer) and `client_id`. A Basic user is never a system client.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `issuer`, `client_id` | string | required | The client, as its tokens name it. A duplicate pair refuses the start. |
+| `provider` | `{ issuer, id }` | required | The healthcare provider it acts for, recorded on every system access (EHDS Annex II 3.2(a)). |
+| `facilities` | list of `{ issuer, id }` or `{ issuer, id_prefix }` | `[]` | The facility identifiers it may commit for. |
+| `writes` | list of template ids | `[]` | The templates it may commit; a template the store does not hold refuses the start. |
+| `origins` | list of `relay`, `device` | required | `relay`: it relays another system's record of a human act, such as HL7 v2. `device`: a device registers with no human acting, which needs `device_identifier_issuers`. |
+| `device_identifier_issuers` | list of string | `[]` | The issuers of the device identifiers a `device` client names. |
+
+### `[[authz.federation.agreement]]`
+
+What a `federation` issuer's verified external persons, or its organisation,
+may do here. Each table is keyed by `issuer` and `accessor` and admits only its
+own accessor kind; every agreement is listed on the boot line and in
+`GET /management/info`, and one that runs without a named person is logged at
+`warn` on every boot.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `issuer` | string | required | The `federation` issuer. |
+| `accessor` | `person` or `organisation` | required | Named persons, or the organisation without a named person. A duplicate (issuer, accessor) pair refuses the start. |
+| `name`, `version` | string | `""` | The agreement; required for an organisation. |
+| `jurisdiction` | ISO 3166-1 alpha-2 | `""` | An issuer with `profile = "nl"` implies `NL`. |
+| `exchange` | string | `""` | The kind of exchange the agreement covers. |
+| `legal_ground` | `{ gdpr_6_1, gdpr_9_2, national }` | unset | The GDPR Art. 6(1) point (`a` to `f`), the Art. 9(2) point (`a` to `j`) and the national provision; in the Netherlands Art. 9(2)(h) with UAVG Art. 30(3)(a). Required for an organisation. |
+| `consent` | `mitz` or `local` | unset | The source of the consent the exchange is conditioned on, never its legal ground. Required for every NL agreement with `reads` (Wabvpz Art. 15a(1)); an organisation may not take it from Mitz, whose closed question needs a responsible professional. |
+| `reads` | list of `patient/` scopes | `[]` | The most an external caller may read; a `user/` or `system/` scope refuses the start. |
+| `writes` | list of template ids | `[]` | The templates an external person may commit; an organisation agreement takes none (EHDS Art. 13(4)), and a template the store does not hold refuses the start. |
+| `discard`, `discard_window_hours` | bool, int | `false`, `24` | Whether an external person may discard a dispensation of the same point of care within the window (MyHealth@EU Requirements Catalogue 10.0.0, requirement 07.04). |
+| `caller_rate` | `{ requests_per_second, burst }` | **required** | The admission rate per caller, above which a request is refused before any patient lookup. |
+| `opt_out_override` | bool | `false` | Whether a professional may read an opted-out EHR under national vital-interest access (EHDS Art. 10(2)); never on an organisation agreement. |
+| `access_class` | `automated` or `chained` | unset | For an organisation, required: no natural person views the data, or the requester logs the person and every request carries its correlation id as an attested claim. |
+| `chained_log_retention_years` | int | unset | For `chained`, required: how long the requester keeps its log, at least `[audit.store]`'s retention. |
+
+An organisation agreement on a MyHealth@EU `contact_point` issuer refuses the
+start.
 
 ### `[authz.rbac]`
 
@@ -192,6 +306,8 @@ reachable from the environment too (`FERROEHR__AUTHZ__ASSURANCE__MINIMUM`,
 | `access_service_roles` | list of strings | `[]` | Roles of the EHDS Art. 10 access-service callers: the Art. 4 access service of persons and the Art. 12 health professional access service. A caller holding one reads an EHR whose person opted out as absent, unless it declares one of `[audit] emergency_purpose_codes` and does not act for the person (Art. 10(2)). Empty, the opt-out holds for nobody and recording one is refused. Environment: `FERROEHR__AUTHZ__RBAC__ACCESS_SERVICE_ROLES`, comma-separated. See [opt-out from the access services](../security.md#opt-out-from-the-access-services-ehds-art-10). |
 | `identifier_reader_role` | string | unset | Role that may read a party's protected national identifiers through `GET /ferroehr/rest/extensions/v1/admin/party/identifiers`, beside the admin role. Every read is an access record naming the reader, the party and the scheme. Unset, nobody may. See [reading a party's protected identifiers](../operations-admin-apis.md#reading-a-partys-protected-identifiers). |
 | `subject_audit_role` | string | unset | Role that may read the access log for one subject at a time: `GET /fhir/r4/AuditEvent` with the `patient` parameter required, refused without it. The grant a patient portal holds to serve a person's right to know who accessed their record (GDPR Art. 15, EHDS Art. 9), instead of an admin credential over every patient's log. Unset, the log stays admin-only. See [Audit trail](../audit.md#retrieving-audit-records-iti-81). |
+| `import_role` | string | unset | Role that may import an EHR or an EHR extract (`message_import_ehr`, `message_import_ehr_extract`). |
+| `role_issuers` | list of string | `[]` | The `persons` issuers whose role claims may grant `admin_role`, `emergency_access_role`, `import_role` and `identifier_reader_role`. A token of any other issuer never holds them, and a Basic user keeps the roles its own table grants. An issuer of another kind refuses the start. Empty, no token grants them. |
 | `ehr_access_default` | enum{open,restricted} | `open` | What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits. `restricted` is object-level default-deny: only `admin_role` reaches a setting-less EHR, so an operator can still author the settings that open it. It is enforced whether `enabled` is on or off. With `[auth] enabled = false` nothing could enforce `restricted`, so that combination is a boot error. See [Security](../security.md#per-ehr-access-control-ehr_access). |
 
 > [!NOTE]
@@ -308,8 +424,8 @@ whose grants count for what. See [SMART App Launch](../smart-app-launch.md).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | Serve `/.well-known/smart-configuration`. It is built from the first `[auth]` issuer's metadata, so it needs an issuer whose metadata names a `token_endpoint` (SMART App Launch 2.2.0, Conformance, §Metadata); an issuer read from a `jwks_file` refuses the start with `enabled = true` unless `issuer_metadata_file` supplies that metadata. |
-| `issuer_metadata_file` | path | unset | A JSON file holding the RFC 8414 §2 metadata of the first `[auth]` issuer when its key set is a `jwks_file`, read at boot. It must name that issuer, repeat no member name, and every endpoint it names must be `https` (a loopback host excepted); the discovery document takes its `token_endpoint` and the other endpoints from it. Set for an issuer whose metadata is read from the issuer, it is a boot error. |
+| `enabled` | bool | `false` | Serve `/.well-known/smart-configuration`. It is built from the metadata of one `[auth]` issuer (the first introspected `[auth]` issuer, else the issuer `[smart] issuer_metadata_file` names, else the first issuer whose metadata is read from it, else the first issuer), so it needs an issuer whose metadata names a `token_endpoint` (SMART App Launch 2.2.0, Conformance, §Metadata); an issuer read from a `jwks_file` refuses the start with `enabled = true` unless `issuer_metadata_file` supplies that metadata. |
+| `issuer_metadata_file` | path | unset | A JSON file holding the RFC 8414 §2 metadata of the `[auth]` issuer it names, whose key set is a `jwks_file`, read at boot. It must name an `[auth]` issuer, wherever it stands in the list, repeat no member name, and every endpoint it names must be `https` (a loopback host excepted); the discovery document takes its `token_endpoint` and the other endpoints from it. Set for an issuer whose metadata is read from the issuer, it is a boot error. |
 | `platform_base_url` | string | unset ⇒ the REST root | The path the discovery document hangs off, e.g. `/gateway/v1`. |
 | `public_base_url` | string | **required when enabled** | The server's externally reachable origin (e.g. `https://cdr.example.com`), from which the discovery document's absolute `services.*.baseUrl` values are built. |
 | `launch_base64_json` | bool | `false` | Advertise the `launch-base64-json` capability. Experimental, and advisory: the base64 JSON launch object is consumed by the application, not the CDR. |

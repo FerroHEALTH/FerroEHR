@@ -17,7 +17,6 @@ use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::{AuthSection, IssuerKey};
 
 use crate::common;
 use crate::common::send_body;
@@ -63,11 +62,7 @@ async fn issuer() -> MockServer {
 /// `smart_enabled`, its `patient/` grants bound when `patient_bound`.
 fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
     let mut cfg = AppConfig {
-        auth: AuthSection {
-            issuer: IssuerKey::Flat(issuer.to_owned()),
-            audience: vec![AUDIENCE.to_owned()],
-            ..AuthSection::default()
-        },
+        auth: common::trusting(vec![common::entry(issuer, AUDIENCE)]),
         ..common::api_config(false)
     };
     cfg.smart.enabled = smart_enabled;

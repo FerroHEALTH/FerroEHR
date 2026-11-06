@@ -51,10 +51,10 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
     config.storage.party.url = Some(SecretUrl::new(format!(
         "postgres://partyuser:{PARTY_PW}@127.0.0.1:1/ferroehr"
     )));
-    config.auth.issuer = ferrohealth_smart::config::IssuerKey::Flat(format!(
+    config.auth.shared.issuer = ferrohealth_smart::config::IssuerKey::Flat(format!(
         "https://idpuser:{ISSUER_PW}@idp.example/realms/ferroehr"
     ));
-    config.auth.basic = Some(ferrohealth_smart::config::BasicSection {
+    config.auth.shared.basic = Some(ferrohealth_smart::config::BasicSection {
         users: vec![ferrohealth_smart::config::BasicUser {
             user: "reporter".to_owned(),
             password_hash: Some(secrecy::SecretString::from(BASIC_HASH)),

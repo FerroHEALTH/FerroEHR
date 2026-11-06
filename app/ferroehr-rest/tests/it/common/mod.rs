@@ -17,13 +17,15 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::body::Body;
+use ferroehr::config::auth_section::AuthConfig;
 use ferroehr::config::rest::{AdminConfig, RestConfig};
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
 use ferroehr_rest::extensions::access::authz::{AuthzResolvers, ResolveError};
 use ferroehr_rest::state::AppState;
-use ferrohealth_smart::config::{AuthSection, BasicSection, BasicUser, IssuerKey};
+use ferrohealth_smart::config::{AuthSection, BasicSection, BasicUser, IssuerEntry, IssuerKey};
+use ferrohealth_smart::kind::IssuerKind;
 use http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
 use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
@@ -125,7 +127,7 @@ pub(crate) async fn router_for_profile(
         server: server(),
         ..AppConfig::default()
     };
-    config.auth.enabled = false;
+    config.auth.shared.enabled = false;
     config.spec_profile = profile;
     router_with(
         config,
@@ -165,7 +167,7 @@ pub(crate) async fn unauthenticated_router(service: Arc<FerroEhrService>) -> Rou
         server: server(),
         ..AppConfig::default()
     };
-    config.auth.enabled = false;
+    config.auth.shared.enabled = false;
     router_with(config, service).await
 }
 
@@ -192,10 +194,7 @@ pub(crate) fn api_config(admin_enabled: bool) -> AppConfig {
             cors_permissive: false,
             ..Default::default()
         },
-        auth: AuthSection {
-            enabled: false,
-            ..AuthSection::default()
-        },
+        auth: auth_off(),
         admin: AdminConfig {
             enabled: admin_enabled,
         },
@@ -231,15 +230,52 @@ pub(crate) fn jwks_file() -> PathBuf {
     .clone()
 }
 
+/// The client every test token names unless it names its own.
+pub(crate) const TEST_CLIENT: &str = "ferroehr-test-client";
+
+/// The `[[auth.issuer]]` table of a `persons` issuer at `issuer` for
+/// `audience`, whose first-party client is [`TEST_CLIENT`].
+pub(crate) fn entry(issuer: &str, audience: &str) -> IssuerEntry {
+    IssuerEntry {
+        issuer: issuer.to_owned(),
+        kind: Some(IssuerKind::Persons),
+        audience: vec![audience.to_owned()],
+        first_party_clients: Some(vec![TEST_CLIENT.to_owned()]),
+        ..IssuerEntry::default()
+    }
+}
+
+/// The `[auth]` table of `section`, with no vendor adapter table.
+pub(crate) fn auth(section: AuthSection) -> AuthConfig {
+    AuthConfig {
+        shared: Box::new(section),
+        ..AuthConfig::default()
+    }
+}
+
+/// The `[auth]` table trusting the issuers `entries`.
+pub(crate) fn trusting(entries: Vec<IssuerEntry>) -> AuthConfig {
+    auth(AuthSection {
+        issuer: IssuerKey::List(entries),
+        ..AuthSection::default()
+    })
+}
+
+/// Authentication switched off.
+pub(crate) fn auth_off() -> AuthConfig {
+    auth(AuthSection {
+        enabled: false,
+        ..AuthSection::default()
+    })
+}
+
 /// Bearer authentication trusting `issuer` for `audience`, its key set read
 /// from the committed test key's file — no authorization server is reached.
-pub(crate) fn issuer_auth(issuer: &str, audience: &str) -> AuthSection {
-    AuthSection {
-        issuer: IssuerKey::Flat(issuer.to_owned()),
-        audience: vec![audience.to_owned()],
+pub(crate) fn issuer_auth(issuer: &str, audience: &str) -> AuthConfig {
+    trusting(vec![IssuerEntry {
         jwks_file: jwks_file().display().to_string(),
-        ..AuthSection::default()
-    }
+        ..entry(issuer, audience)
+    }])
 }
 
 static METADATA_ISSUER: tokio::sync::OnceCell<String> = tokio::sync::OnceCell::const_new();
@@ -290,9 +326,36 @@ pub(crate) fn started_metadata_issuer() -> &'static str {
         .expect("metadata_issuer runs before a token names it")
 }
 
+/// Bearer authentication trusting the `persons` issuer `persons` and the
+/// `patients` issuer `patients`, both for `audience` and both reading the
+/// committed test key set: patients and professionals sign in at separate
+/// issuers.
+pub(crate) fn persons_and_patients(persons: &str, patients: &str, audience: &str) -> AuthConfig {
+    let jwks_file = jwks_file().display().to_string();
+    trusting(vec![
+        IssuerEntry {
+            jwks_file: jwks_file.clone(),
+            ..entry(persons, audience)
+        },
+        IssuerEntry {
+            kind: Some(IssuerKind::Patients),
+            jwks_file,
+            ..entry(patients, audience)
+        },
+    ])
+}
+
+/// The RBAC rules whose privileged roles the tokens of `issuer` may grant.
+pub(crate) fn rbac_trusting(issuer: &str) -> ferroehr::config::authz::RbacConfig {
+    ferroehr::config::authz::RbacConfig {
+        role_issuers: vec![issuer.to_owned()],
+        ..ferroehr::config::authz::RbacConfig::default()
+    }
+}
+
 /// Basic authentication admitting each `(user, Argon2id PHC hash, scopes)`.
-pub(crate) fn basic_auth(users: &[(&str, &str, &str)]) -> AuthSection {
-    AuthSection {
+pub(crate) fn basic_auth(users: &[(&str, &str, &str)]) -> AuthConfig {
+    auth(AuthSection {
         basic: Some(BasicSection {
             users: users
                 .iter()
@@ -307,7 +370,7 @@ pub(crate) fn basic_auth(users: &[(&str, &str, &str)]) -> AuthSection {
             cache_ttl_seconds: 60,
         }),
         ..AuthSection::default()
-    }
+    })
 }
 
 /// The Argon2id PHC hash of `password`, under a fixed salt so the fixtures
@@ -330,7 +393,7 @@ pub(crate) fn with_basic_users(config: &mut AppConfig, users: &[(&str, &[&str])]
         .map(|(user, _roles)| (*user, hash.as_str(), FULL_SCOPES))
         .collect();
     config.auth = basic_auth(&entries);
-    if let Some(basic) = config.auth.basic.as_mut() {
+    if let Some(basic) = config.auth.shared.basic.as_mut() {
         for entry in &mut basic.users {
             if let Some((_, roles)) = users.iter().find(|(user, _)| *user == entry.user) {
                 entry.roles = roles.iter().map(|role| (*role).to_owned()).collect();
@@ -419,7 +482,7 @@ pub(crate) fn bearer(claims: &Value) -> String {
             .or_insert_with(|| serde_json::json!(uuid::Uuid::now_v7().to_string()));
         object
             .entry("client_id")
-            .or_insert(serde_json::json!("ferroehr-test-client"));
+            .or_insert(serde_json::json!(TEST_CLIENT));
         object
             .entry("scope")
             .or_insert(serde_json::json!(FULL_SCOPES));

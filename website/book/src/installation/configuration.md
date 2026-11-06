@@ -66,17 +66,20 @@ including after the `FERROEHR` prefix.** A single underscore only ever appears
 | TOML | Environment variable |
 |---|---|
 | `[db] max_connections = 20` | `FERROEHR__DB__MAX_CONNECTIONS=20` |
-| `[auth] issuer = "…"` | `FERROEHR__AUTH__ISSUER=…` |
+| `[authz.rbac] admin_role = "…"` | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE=…` |
 | `[management.endpoints] env = "off"` | `FERROEHR__MANAGEMENT__ENDPOINTS__ENV=off` |
 | `[terminology.server] url = "…"` | `FERROEHR__TERMINOLOGY__SERVER__URL=…` |
 
 Scalars are typed automatically (bool / int / float, else string).
 **List-typed keys take comma-separated values**
-(`FERROEHR__AUTH__AUDIENCE=ferroehr,other`). Map-keyed tables are
-reachable too: the map key is just another segment
-(`FERROEHR__AUTHZ__ABAC__POLICY__COMPOSITION__NAME`). Arrays of tables (the
-Basic-auth user store) are **file-only**, because the environment grammar has
-no way to spell an array index.
+(`FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=https://a,https://b`). Map-keyed tables
+are reachable too: the map key is just another segment
+(`FERROEHR__AUTHZ__ABAC__POLICY__COMPOSITION__NAME`). An array of tables is
+set by element index: `FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr` sets
+`audience` of the first `[[auth.issuer]]` table key by key over the file's,
+and the next index past the end adds a table. An index with a leading zero,
+one that skips an element, or one under a key that holds no array of tables
+refuses the start.
 
 > [!NOTE]
 > Enum values are lowercase / `snake_case` tokens, exactly as the tables show.

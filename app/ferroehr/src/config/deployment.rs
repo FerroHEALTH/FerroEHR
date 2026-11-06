@@ -409,7 +409,7 @@ impl DeploymentPosture {
         {
             gaps.push(DeploymentGap::MigrateOnRuntimeCredential);
         }
-        if !config.auth.enabled {
+        if !config.auth.shared.enabled {
             gaps.push(DeploymentGap::AuthOff);
         } else if !config.authz.rbac.enabled {
             gaps.push(DeploymentGap::RbacOff);
@@ -884,7 +884,7 @@ mod tests {
     #[test]
     fn production_refuses_auth_off_unless_accepted_by_name() {
         let mut config = production(separated());
-        config.auth.enabled = false;
+        config.auth.shared.enabled = false;
         let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert_eq!(posture.gaps, [DeploymentGap::AuthOff]);
         assert!(!posture.permits_boot());
@@ -938,7 +938,7 @@ mod tests {
         config.deployment_accepts = vec![DeploymentGap::RbacOff];
         assert!(DeploymentPosture::evaluate(&config, &distinct_clusters()).permits_boot());
 
-        config.auth.enabled = false;
+        config.auth.shared.enabled = false;
         config.deployment_accepts = Vec::new();
         assert_eq!(
             DeploymentPosture::evaluate(&config, &distinct_clusters()).gaps,

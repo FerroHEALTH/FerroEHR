@@ -75,7 +75,7 @@ async fn the_local_posture_creates_and_finds_an_ehr_by_its_subject() {
         server: common::server(),
         ..AppConfig::default()
     };
-    app_config.auth.enabled = false;
+    app_config.auth.shared.enabled = false;
     let app = common::router_with(app_config, Arc::new(service)).await;
     let _keep = db;
 

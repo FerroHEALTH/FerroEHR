@@ -24,8 +24,8 @@ use ehds_logging::balp::ObjectIds;
 use ehds_logging::emergency::EmergencyPurposes;
 use ehds_logging::label::LabelPolicy;
 use ehds_logging::record::{
-    AccessRecord, Accessor, Acting, Action, AssuranceLevel, DataSubject, EhrAt, Origin, Outcome,
-    PatientIdentifier, PatientLookup, Professional, Purpose, Request,
+    AccessRecord, Action, AssuranceLevel, DataSubject, EhrAt, Origin, Outcome, PatientIdentifier,
+    PatientLookup, Purpose, Request,
 };
 use ehds_logging::retention::RetentionPolicy;
 use ihe_atna::balp::{
@@ -38,9 +38,8 @@ use ihe_atna::user::{Code, OnBehalfOf, PurposeOfUse, User};
 use secrecy::SecretString;
 
 use crate::system_log::AuditError;
-use crate::system_log::event::{
-    ActingMode, AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
-};
+use crate::system_log::event::{AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass};
+use crate::system_log::fhir_accessor::accessor;
 use crate::system_log::message::AuditContext;
 
 /// The canonical-URL prefix of the IHE BALP profiles (v1.1.4).
@@ -291,44 +290,6 @@ fn origins(event: &AuditEvent) -> Vec<Origin> {
             categories: None,
         })
         .collect()
-}
-
-/// Who accessed the data (Annex II 3.2(a), (b)), as the authentication layer
-/// judged them: a Basic user has no issuer and no client, and an acting mode
-/// the deployment did not establish is none.
-fn accessor(event: &AuditEvent, missing: &str, purposes: Vec<Purpose>) -> Accessor {
-    Accessor {
-        issuer: event.issuer.clone(),
-        subject: nonempty(&event.user_id, missing),
-        client_id: event.client_id.clone(),
-        audience: None,
-        provider: event.organisation.clone(),
-        acting: event.actor.mode.map(|mode| match mode {
-            ActingMode::Client => Acting::Client,
-            ActingMode::Person => Acting::Person,
-        }),
-        // NOTE: NEN 7513:2018 §5 (not vendored, NEN copyright) asks for the role or authority
-        // under which the record was accessed, which BALP 1.1.4 §3:5.7.5.4 writes at role.
-        roles: event
-            .roles
-            .iter()
-            .map(|role| ehds_logging::record::Coded {
-                system: None,
-                code: role.clone(),
-            })
-            .collect(),
-        token_id: event.token_id.clone(),
-        assurance: event.actor.assurance_level.map(assurance),
-        professional: Professional {
-            name: None,
-            identifier: event.actor.professional_id.clone(),
-        },
-        alt_id: None,
-        purposes,
-        // NOTE: Regulation (EU) 2025/327 Art 68 names the data permit; FHIR R4 AuditEvent.agent.policy carries it.
-        policies: event.permit.iter().cloned().collect(),
-        relayed: None,
-    }
 }
 
 /// Whether the patient behind the record's EHR is named: the subject resolver
@@ -588,7 +549,9 @@ const fn balp_outcome(outcome: EventOutcome) -> ihe_atna::balp::Outcome {
     }
 }
 
-const fn assurance(level: ferrohealth_smart::assurance::AssuranceLevel) -> AssuranceLevel {
+pub(super) const fn assurance(
+    level: ferrohealth_smart::assurance::AssuranceLevel,
+) -> AssuranceLevel {
     match level {
         ferrohealth_smart::assurance::AssuranceLevel::Low => AssuranceLevel::Low,
         ferrohealth_smart::assurance::AssuranceLevel::Substantial => AssuranceLevel::Substantial,
@@ -596,7 +559,7 @@ const fn assurance(level: ferrohealth_smart::assurance::AssuranceLevel) -> Assur
     }
 }
 
-fn nonempty(value: &str, fallback: &str) -> String {
+pub(super) fn nonempty(value: &str, fallback: &str) -> String {
     if value.is_empty() {
         fallback.to_owned()
     } else {
@@ -608,7 +571,7 @@ fn nonempty(value: &str, fallback: &str) -> String {
 mod tests {
     use super::*;
     use crate::system_log::categories::{AccessedContent, Classifier, QueryConstraints};
-    use crate::system_log::event::ActorAuthentication;
+    use crate::system_log::event::{ActingMode, ActorAuthentication};
     use base64::Engine;
     use ferrohealth_smart::assurance::AssuranceLevel as Level;
     use jiff::Timestamp;

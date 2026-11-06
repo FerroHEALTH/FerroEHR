@@ -37,7 +37,6 @@ use crate::db::domain::Domain;
 use crate::db::{DatabaseLevels, DbError};
 use crate::error::ErrorChain;
 use crate::licence::state::{LicenceState, LicenceStatus};
-use crate::system_log::config::AuditPosture;
 use crate::telemetry::build_info::BuildInfo;
 use ferrohealth_secret::REDACTED;
 use ferrohealth_secret::secret_url::RedactedUrl;
@@ -227,8 +226,7 @@ impl Report {
             format: FORMAT,
             generated_at: jiff::Timestamp::now(),
             manifest,
-            build: BuildInfo::for_profile(config.spec_profile)
-                .with_audit(AuditPosture::of(&config.audit)),
+            build: BuildInfo::for_config(config),
             target: Target {
                 arch: std::env::consts::ARCH,
                 os: std::env::consts::OS,

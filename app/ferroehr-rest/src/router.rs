@@ -156,14 +156,13 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
             patient_data: authn::assurance::PatientDataGate::new(
                 authenticator.bearer_admitted(),
                 &cfg.assurance,
-                cfg.professional.as_ref(),
                 namespaces.clone(),
-                ferroehr::config::auth::realm(&cfg.auth),
+                ferroehr::config::auth::realm(&cfg.auth.shared),
             )
             .map(Arc::new),
             smart: Arc::new(smart::routes::SmartRoutes::new(
                 &namespaces,
-                ferroehr::config::auth::product_scope(&cfg.auth),
+                ferroehr::config::auth::product_scope(&cfg.auth.shared),
                 cfg.smart.demographic_clients.clone(),
             )),
             served: Arc::new(crate::api::served::ServedMethods::new(&namespaces)),

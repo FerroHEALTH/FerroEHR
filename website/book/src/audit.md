@@ -171,7 +171,7 @@ the authority and the wording below is a paraphrase.
 | Annex II 3.2 | Access-event field | DICOM PS3.15 | FHIR `AuditEvent` | State |
 |---|---|---|---|---|
 | (a) the healthcare provider or other individuals having accessed | `organisation` | — (no such attribute) | an `agent` whose `who` is a logical reference to an `Organization` | Recorded |
-| (b) the specific natural person or persons having accessed | `principal` (+ `token_id`, `client_ip`), and with `[authz.professional]` configured `professional_id` + `acting_mode` | `ActiveParticipant/@UserID` (the professional; a client application acting for one is a second, non-requesting participant; the token subject is `@AlternativeUserID` when it differs) | the `agent:user` slice, `who` the token's issuer and subject, the professional's identifier as its `ihe-otherId`, and the client application as an agent of its own (BALP 1.1.4 §3:5.7.5.4) | Recorded |
+| (b) the specific natural person or persons having accessed | `principal` (+ `token_id`, `client_ip`), and `professional_id` + `acting_mode` for a caller its issuer classifies as a person or a delegate | `ActiveParticipant/@UserID` (the professional; a client application acting for one is a second, non-requesting participant; the token subject is `@AlternativeUserID` when it differs) | the `agent:user` slice, `who` the token's issuer and subject, the professional's identifier as its `ihe-otherId`, and the client application as an agent of its own (BALP 1.1.4 §3:5.7.5.4) | Recorded |
 | (c) the categories of data accessed | `categories` + `category_basis` + `category_evidence` + `category_map_digest`, classified by `ehds-logging` through the `[audit.categories]` map (beside `resource_class`, `domain` and `result_count`) | none (no such element) | the `entity` named `ehds-categories`, with one `ehds-category` detail per category and its basis, each id the classification read and the map digest; each category is also a `meta.security` label | Recorded |
 | (d) the time and date of access | `recorded_at` | `EventIdentification/@EventDateTime` | `recorded` | Recorded |
 | (e) the origin or origins of data | `origins` + `origin_count` (the `FEEDER_AUDIT` originating systems of the served version bodies, or the server that created them, derived at commit onto `version.origins`) | — (no such element) | one `entity` named `origin` per origin, its `system-id` detail the originating system | Recorded |
@@ -194,8 +194,8 @@ caller authenticated with Basic, the field stays empty rather than being
 guessed.
 
 Element (b) asks for a **natural person**, and a bearer token can name a client
-application instead. With [`[authz.professional]`](security.md#assurance-level-and-the-natural-person-on-patient-data)
-configured, every record says which it was and who stood behind it:
+application instead. Each issuer's [`kind` and profile](security.md#assurance-level-and-the-natural-person-on-patient-data)
+classify the caller, so every record says which it was and who stood behind it:
 
 | Field | Meaning | DICOM PS3.15 | FHIR `AuditEvent` |
 |---|---|---|---|
@@ -213,9 +213,8 @@ value, which lives in the local store's column only. The tamper-evidence digest 
 the record (see [Tamper evidence](#tamper-evidence) for records written before
 the digest was versioned).
 
-Without `[authz.professional]` the mode and the professional stay empty and
-(b) is answered by `principal`, which names a client application when the token
-names no person. Without `[authz.assurance] levels` the level stays empty;
+For a system caller the mode and the professional stay empty and (b) is
+answered by `principal`, which names the client application. Without `[authz.assurance] levels` the level stays empty;
 the raw value is still recorded when the token carries the claim. A Basic
 credential records none of the four.
 

@@ -160,6 +160,7 @@ LABEL org.opencontainers.image.title="FerroEHR" \
 COPY deploy/hosted/docker-compose.yml deploy/hosted/Caddyfile \
      deploy/hosted/ferroehr.sandbox.toml deploy/hosted/ferroehr-viewer.sandbox.toml \
      deploy/hosted/ferropix.sandbox.toml deploy/hosted/ferropix-seed.sh \
+     deploy/hosted/basic-users-jwks.json \
      /opt/sandbox-posture/
 # The licence-free shaped terminology seed (docker/terminology/seed/) travels the
 # same way: the sandbox and the terminology overlay mount this directory into

@@ -43,7 +43,7 @@ async fn local_app() -> (testkit::TestDb, Router) {
         server: common::server(),
         ..AppConfig::default()
     };
-    config.auth.enabled = false;
+    config.auth.shared.enabled = false;
     (db, common::router_with(config, Arc::new(service)).await)
 }
 

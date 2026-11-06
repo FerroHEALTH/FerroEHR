@@ -92,6 +92,7 @@ pub fn build(event: &AuditEvent, ctx: &AuditContext, subject: Option<&str>) -> A
                 .into_iter()
                 .collect(),
             outcome_description: Some(event.outcome.description().to_owned()),
+            purposes_of_use: Vec::new(),
         },
         participants,
         source: AuditSource {
@@ -252,6 +253,7 @@ fn object(
         data_life_cycle: None,
         id_type_code: coded(id_type_code),
         query: None,
+        name: None,
         details: Vec::new(),
     }
 }

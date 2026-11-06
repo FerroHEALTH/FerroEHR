@@ -80,6 +80,8 @@ pub mod event;
 mod feed;
 #[cfg(feature = "fhir")]
 pub mod fhir;
+#[cfg(feature = "fhir")]
+mod fhir_accessor;
 pub mod message;
 pub mod render;
 #[cfg(feature = "fhir")]

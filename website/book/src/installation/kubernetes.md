@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 21.0.5 -n ferroehr \
+  --version 22.0.0 -n ferroehr \
   --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.6.3 \
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.5
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 22.0.0
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 21.0.5` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 22.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.6.3` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.5 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 22.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -200,8 +200,8 @@ image, and FerroTERM.
 
 That install alone **boots but answers `401` to everything**, deliberately:
 `config.auth.enabled` is on and no mechanism is configured yet, and a server that
-authenticates nothing is not a safe default. Add a `config.auth.issuer` (with
-`config.auth.audience`) or a `config.auth.basic.users` entry before expecting a
+authenticates nothing is not a safe default. Add a `config.auth.issuer` table
+(with its `kind` and `audience`) or a `config.auth.basic.users` entry before expecting a
 request to succeed. Every route also checks the SMART on openEHR scopes of the
 caller: a Basic user's `scopes`, a token's `scope` claim.
 
@@ -334,7 +334,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.5 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 22.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -772,12 +772,32 @@ Pick one:
 ```yaml
 config:
   auth:
-    issuer: https://keycloak.example.org/realms/ferroehr
-    audience: [ferroehr]
+    issuer:
+      - issuer: https://keycloak.example.org/realms/ferroehr
+        kind: persons
+        profile: keycloak
+        audience: [ferroehr]
+        first_party_clients: [ferroehr-viewer]
+    party:
+      - issuer: https://keycloak.example.org/realms/ferroehr
+        identifier_issuer: urn:example:staff-login
+        identifier_type: uuid
+  authz:
+    rbac:
+      role_issuers: [https://keycloak.example.org/realms/ferroehr]
+    party_binding:
+      provider: { issuer: "urn:oid:2.16.528.1.1007.3.3", id: "12345678" }
 ```
 
 or Basic auth, whose password hashes go in `secrets.basicUserPasswordHashes`
 while the user, its scopes and its roles stay under `config.auth.basic.users`.
+A Basic user is a person: each maps to the binding key of its `PERSON` under
+`config.authz.party_binding.basic_user`, under the identifier issuer of a
+`config.auth.party` table (see `deploy/helm/ci/basic-auth-values.yaml`).
+
+A `persons` issuer with `sender_constraint: required` runs on one replica: the
+chart refuses it beside `replicaCount` above 1 or autoscaling, because a DPoP
+proof is recorded by the replica that accepted it.
 
 > [!WARNING]
 > `config.auth.enabled: false` makes the chart render, and serves **every**
@@ -804,7 +824,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 21.0.5 -n ferroehr --reuse-values \
+  --version 22.0.0 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -838,7 +858,8 @@ is an explicit, auditable decision:
 | ADMIN API | `config.admin.enabled` | off | Physical, irreversible delete. Gate behind admin RBAC. |
 | Terminology extension API | `config.terminology.api_enabled` | off | 404 when off. |
 | Outbox feed | `config.outbox.readers` | none | The commit-event feed for the readers named; FerroBRIDGE delivers it to a broker. See [Change events](../beyond-core/outbox-feed.md). |
-| Bearer tokens | `config.auth.issuer` | unset | With `config.auth.audience`; the issuer's metadata and key set are read at boot, asymmetric algorithms only. |
+| Bearer tokens | `config.auth.issuer` | unset | A list of issuer tables, each with its `kind`, `profile` and `audience`, and a `config.auth.party` table for a `persons` issuer; the issuer's metadata and key set are read at boot, asymmetric algorithms only. |
+| Party binding | `config.authz.party_binding.provider` | unset | Required once authentication admits a credential: the healthcare provider the deployment acts for. Each Basic user maps to its binding key under `config.authz.party_binding.basic_user`. |
 | RBAC | `config.authz.rbac.enabled` | **on** | The coarse role gate (active while `config.auth.enabled`). |
 | ABAC | `config.authz.abac.enabled` | off | Cedar (policies via a `config.files` mount) or a remote policy decision point. |
 | S3 multimedia | `config.multimedia.enabled` | off | ⚠ Offloaded blobs are PHI. Private, encrypted, HTTPS bucket; keys via `secrets.multimediaAccessKeyId` and `secrets.multimediaSecretAccessKey`. |
@@ -975,7 +996,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 21.0.5 -n ferroehr --reuse-values \
+  --version 22.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1318,7 +1339,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 21.0.5 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 22.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

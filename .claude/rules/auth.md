@@ -44,9 +44,14 @@ governs maintenance and extension, not initial build.
   — one place, never per-handler. The authenticated principal goes into
   request extensions; the `access` PEP consumes it.
 - **Config-driven** (one TOML file, `ferroehr.toml`, with environment-variable
-  overrides): the crate's `[auth]` section (issuers, audience, the Basic user
-  store, the product scope), FerroEHR's `[authz]` and `[smart]`.
-  Config changes are user-visible → same-PR website-book + changelog entries.
+  overrides): the crate's `[auth]` section (`[[auth.issuer]]` tables with
+  their `kind` and profile, `[[auth.party]]`, `[[auth.federation]]`,
+  `[auth.dpop]`, the Basic user store, the product scope), FerroEHR's
+  `[auth.idp]` beside it (`config::auth_section`), FerroEHR's `[authz]`
+  (`party_binding`, `system_client`, `federation.agreement`, `import`,
+  `rbac.role_issuers`) and `[smart]`. Every person is bound to a party with
+  no switch; a Basic user is a person, mapped by its key. Config changes are
+  user-visible → same-PR website-book + changelog entries.
 - **Layer order is load-bearing:** authn → `access` (RBAC/ABAC) → SMART
   scopes (AND-composed — SMART can only narrow, never widen). `[smart]
   enabled` switches only the discovery document.

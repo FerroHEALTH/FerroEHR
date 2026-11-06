@@ -20,7 +20,6 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use ferrohealth_secret::secret_url::RedactedUrl;
 use ferrohealth_secret::secret_url::SecretUrl;
 
 /// The server-wide disposition for an EHR that carries no
@@ -106,6 +105,14 @@ pub struct RbacConfig {
     /// identifier. Unset, nobody may call it (#3776). No openEHR spec governs
     /// this — our own design/extension.
     pub identifier_reader_role: Option<String>,
+    /// The role that may import an EHR or an EHR extract
+    /// (`message_import_ehr`, `message_import_ehr_extract`; default unset).
+    // TODO(#5005): require the role on the two import operations.
+    pub import_role: Option<String>,
+    /// The issuers whose role claims may grant `admin_role`,
+    /// `emergency_access_role`, `import_role` and `identifier_reader_role`,
+    /// each a `persons` issuer; empty, the default, lets no token grant them.
+    pub role_issuers: Vec<String>,
     /// What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default
     /// `open`).
     ///
@@ -134,6 +141,8 @@ impl Default for RbacConfig {
             emergency_access_role: None,
             access_service_roles: Vec::new(),
             identifier_reader_role: None,
+            import_role: None,
+            role_issuers: Vec::new(),
             ehr_access_default: EhrAccessDefault::Open,
         }
     }
@@ -283,7 +292,7 @@ pub struct AbacConfig {
     /// `directory`).
     ///
     /// With `engine = remote` every kind the enforcement point consults needs an
-    /// entry ([`REQUIRED_REMOTE_POLICY_KINDS`]), checked at boot: a runtime
+    /// entry ([`REQUIRED_REMOTE_POLICY_KINDS`](crate::config::abac_rules::REQUIRED_REMOTE_POLICY_KINDS)), checked at boot: a runtime
     /// "kind not configured" branch can only fail closed, and a deny on
     /// live traffic is a worse answer than a refusal to start.
     pub policy: BTreeMap<String, PolicyRule>,
@@ -342,9 +351,19 @@ pub struct AuthzConfig {
     /// The authentication assurance a patient-data request must carry
     /// (`[authz.assurance]`, off by default).
     pub assurance: ferrohealth_smart::assurance::AssuranceSection,
-    /// How a bearer token names the natural person behind it
-    /// (`[authz.professional]`, absent by default).
-    pub professional: Option<ferrohealth_smart::assurance::ProfessionalSection>,
+    /// The party binding: the provider, the namespace and the Basic users'
+    /// keys (`[authz.party_binding]`).
+    pub party_binding: crate::config::binding::PartyBindingConfig,
+    /// The systems whose imported committers are trusted (`[authz.import]`).
+    pub import: crate::config::clients::ImportConfig,
+    /// The system clients that commit (`[[authz.system_client]]`).
+    pub system_client: Vec<crate::config::clients::SystemClient>,
+    /// The federation agreements (`[authz.federation]`).
+    pub federation: crate::config::agreement::FederationConfig,
+    /// The removed `[authz.professional]` table, held only so its presence is
+    /// refused by name.
+    #[serde(default, skip_serializing)]
+    pub professional: Option<serde::de::IgnoredAny>,
 }
 
 /// A boot-time authorization-configuration error — a hard error that must
@@ -413,93 +432,10 @@ impl AuthzConfig {
     }
 }
 
-/// The canonical resource-kind keys accepted in the `abac.policy` map, and the
-/// two on which a `template` parameter is illegal.
-const POLICY_KINDS: [&str; 6] = [
-    "ehr",
-    "ehr_status",
-    "composition",
-    "contribution",
-    "query",
-    "directory",
-];
-
-/// The resource kinds a remote PDP must have a policy for.
-///
-/// `directory` is absent deliberately: DIRECTORY gating is the separate
-/// [`AbacConfig::check_directory`] opt-in, so its policy is required only when
-/// that switch is on.
-pub const REQUIRED_REMOTE_POLICY_KINDS: [&str; 5] =
-    ["ehr", "ehr_status", "composition", "contribution", "query"];
-
-impl AbacConfig {
-    /// Validate the ABAC section at boot (hard errors). Only called when
-    /// `enabled`.
-    fn validate(&self) -> Result<(), AuthzConfigError> {
-        self.validate_policy_rules()?;
-        match self.engine {
-            AbacEngineKind::Remote => self.validate_remote_engine(),
-            AbacEngineKind::Cedar => match self.cedar.policy_dir {
-                Some(_) => Ok(()),
-                None => Err(AuthzConfigError::CedarDirMissing),
-            },
-        }
-    }
-
-    /// Every configured policy rule names a known resource kind, and no rule
-    /// asks for a parameter its kind cannot carry.
-    ///
-    /// The `template` parameter is a property of committed content, so an
-    /// EHR-level or EHR_STATUS-level rule can never be given one.
-    fn validate_policy_rules(&self) -> Result<(), AuthzConfigError> {
-        for (kind, rule) in &self.policy {
-            if !POLICY_KINDS.contains(&kind.as_str()) {
-                return Err(AuthzConfigError::UnknownPolicyKind(kind.clone()));
-            }
-            if !rule.parameters.contains(&AbacParam::Template) {
-                continue;
-            }
-            match kind.as_str() {
-                "ehr" => return Err(AuthzConfigError::TemplateParamIllegal("ehr")),
-                "ehr_status" => return Err(AuthzConfigError::TemplateParamIllegal("ehr_status")),
-                _ => {}
-            }
-        }
-        Ok(())
-    }
-
-    /// The remote-PDP engine's own requirements: a base server URL with a
-    /// trailing slash, and a policy for every resource kind the PEP consults
-    /// (an unconfigured kind denies, and the missing rule is a boot error
-    /// rather than a silent refusal at request time).
-    fn validate_remote_engine(&self) -> Result<(), AuthzConfigError> {
-        let server = self
-            .remote
-            .server
-            .as_ref()
-            .map(SecretUrl::expose)
-            .filter(|s| !s.trim().is_empty())
-            .ok_or(AuthzConfigError::RemoteServerMissing)?;
-        if !server.ends_with('/') {
-            return Err(AuthzConfigError::RemoteServerTrailingSlash(
-                RedactedUrl(server).to_string(),
-            ));
-        }
-        for kind in REQUIRED_REMOTE_POLICY_KINDS {
-            if !self.policy.contains_key(kind) {
-                return Err(AuthzConfigError::RemotePolicyMissing(kind));
-            }
-        }
-        if self.check_directory && !self.policy.contains_key("directory") {
-            return Err(AuthzConfigError::RemotePolicyMissing("directory"));
-        }
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::abac_rules::REQUIRED_REMOTE_POLICY_KINDS;
 
     #[test]
     fn defaults_are_valid() {

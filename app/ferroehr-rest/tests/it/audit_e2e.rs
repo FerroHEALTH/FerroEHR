@@ -38,7 +38,6 @@ use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogCon
 use ferroehr::system_log::sender::{AuditSender, SubjectLookup, SubjectResolver, start};
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_server::client_address::ForwardedHeader;
-use ferrohealth_smart::config::AuthSection;
 use http::{Request, StatusCode};
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
@@ -118,10 +117,7 @@ fn auth_off_config() -> AppConfig {
             swagger_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
-        auth: AuthSection {
-            enabled: false,
-            ..AuthSection::default()
-        },
+        auth: common::auth_off(),
         ..Default::default()
     }
 }

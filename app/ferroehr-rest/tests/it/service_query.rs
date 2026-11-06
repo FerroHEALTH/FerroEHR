@@ -33,7 +33,7 @@ async fn app(pool: &PgPool) -> Router {
         server: common::server(),
         ..AppConfig::default()
     };
-    config.auth.enabled = false;
+    config.auth.shared.enabled = false;
     ferroehr_rest::build_with(
         config,
         std::sync::Arc::new(FerroEhrService::new(

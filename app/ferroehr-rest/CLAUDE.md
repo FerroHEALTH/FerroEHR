@@ -57,9 +57,11 @@ copy of any of it.
 - **Authz/authn** live in `extensions::access`. `authn/` is the
   `ferrohealth-smart` `Gate` (bearer tokens from the `[auth]` issuers, Basic
   users from `[[auth.basic.users]]`) behind FerroEHR's middleware, plus
-  `authn::assurance`, the patient-data gate over `[authz.assurance]` and
-  `[authz.professional]`: RFC 9470 step-up `401`, natural-person `403`,
-  judged before RBAC, and the `ActorAuthentication` the audit layer records;
+  `authn::build` (the `Authenticator`: every `[[auth.issuer]]`, `[auth.dpop]`
+  through `Gate::with_dpop`, and the `[authz.rbac] role_issuers` filter of
+  the privileged roles), `authn::assurance`, the patient-data gate over
+  `[authz.assurance]`: RFC 9470 step-up `401`, judged before RBAC, and the
+  `ActorAuthentication` the audit layer records from the caller's kind;
   `authz/` = the RBAC/ABAC engine, incl. a `cedar` policy path; `pep.rs` = the
   policy-enforcement point; `ehr_access.rs`. Token checking, Basic
   verification and the SMART scope grammar come from `ferrohealth-smart`;

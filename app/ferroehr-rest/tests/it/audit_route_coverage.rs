@@ -30,7 +30,6 @@ use ferroehr::system_log::store::AuditStore;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
-use ferrohealth_smart::config::{AuthSection, IssuerKey};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -215,6 +214,7 @@ fn config() -> AppConfig {
             ..Default::default()
         },
         auth: common::issuer_auth(ISSUER, AUDIENCE),
+        rbac: common::rbac_trusting(ISSUER),
         admin: AdminConfig { enabled: true },
         smart: SmartConfig {
             enabled: true,
@@ -241,13 +241,11 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
+    let issuer = common::metadata_issuer().await;
     let served = AppConfig {
         server: common::server(),
-        auth: AuthSection {
-            issuer: IssuerKey::Flat(common::metadata_issuer().await.to_owned()),
-            audience: vec![AUDIENCE.to_owned()],
-            ..AuthSection::default()
-        },
+        auth: common::trusting(vec![common::entry(issuer, AUDIENCE)]),
+        rbac: common::rbac_trusting(issuer),
         ..config()
     };
     let app = ferroehr_rest::build_full(served, Arc::new(svc), authz, Observability::default())

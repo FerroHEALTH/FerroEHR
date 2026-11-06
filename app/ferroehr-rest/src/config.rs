@@ -7,12 +7,12 @@
 //! (`ferroehr::config` — one TOML, one schema); this module holds only the
 //! adapter-side assembly the router consumes.
 
+use ferroehr::config::auth_section::AuthConfig;
 use ferroehr::config::authz::RbacConfig;
 use ferroehr::config::rest::{AdminConfig, RestConfig};
 use ferroehr::config::smart::SmartConfig;
 use ferrohealth_server::section::ServerSection;
-use ferrohealth_smart::assurance::{AssuranceSection, ProfessionalSection};
-use ferrohealth_smart::config::AuthSection;
+use ferrohealth_smart::assurance::AssuranceSection;
 
 /// The REST adapter's runtime configuration view, assembled by the binary
 /// from the root [`ferroehr::config::FerroEhrConfig`].
@@ -20,7 +20,7 @@ use ferrohealth_smart::config::AuthSection;
 /// Not a serde root — it is built in code, so extension-group toggles are
 /// plain `bool`s lifted from their owning sections
 /// (`[terminology].api_enabled`).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AppConfig {
     /// `[server]` — the listener and the stack around the routes: the
     /// family's section.
@@ -28,8 +28,8 @@ pub struct AppConfig {
     /// `[rest]` — the REST surface and the System-Options identity.
     pub rest: RestConfig,
     /// `[auth]` — authentication: the `ferrohealth-smart` section (issuers,
-    /// Basic users, product scope).
-    pub auth: AuthSection,
+    /// Basic users, product scope) and the vendor adapter tables.
+    pub auth: AuthConfig,
     /// `[admin]` — the ADMIN API group toggle.
     pub admin: AdminConfig,
     /// `[smart]` — SMART App Launch resource-server posture.
@@ -45,30 +45,10 @@ pub struct AppConfig {
     pub rbac: RbacConfig,
     /// `[authz.assurance]` — the assurance a patient-data request must carry.
     pub assurance: AssuranceSection,
-    /// `[authz.professional]` — how a token names the natural person behind it.
-    pub professional: Option<ProfessionalSection>,
     /// `spec_profile` — the openEHR specification generation set the server
     /// runs; the demographic ingress boundary reads it (the stable
     /// generation's released surface differs from the typed core's).
     pub spec_profile: ferroehr::config::profile::SpecProfile,
-}
-
-impl Default for AppConfig {
-    fn default() -> Self {
-        Self {
-            server: ServerSection::default(),
-            rest: RestConfig::default(),
-            auth: ferroehr::config::FerroEhrConfig::default().auth,
-            admin: AdminConfig::default(),
-            smart: SmartConfig::default(),
-            terminology_api_enabled: false,
-            audit_organization_claim: None,
-            rbac: RbacConfig::default(),
-            assurance: AssuranceSection::default(),
-            professional: None,
-            spec_profile: ferroehr::config::profile::SpecProfile::default(),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -101,13 +81,9 @@ mod tests {
     #[test]
     fn app_config_defaults_off() {
         let c = AppConfig::default();
-        assert!(c.auth.enabled);
+        assert!(c.auth.shared.enabled);
         assert!(!c.admin.enabled);
         assert!(!c.smart.enabled);
         assert!(!c.terminology_api_enabled);
-        assert_eq!(
-            c.auth.role_claims,
-            ferrohealth_smart::roles::default_claims()
-        );
     }
 }

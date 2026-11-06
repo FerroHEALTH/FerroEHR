@@ -78,12 +78,12 @@ optional:
   `statement-version.sh` step of `citation-guard` enforces the match) — it is GENERATED, never hand-edited, because Zenodo ignores
   `CITATION.cff` completely whenever a `.zenodo.json` exists
   (<https://help.zenodo.org/docs/github/describe-software/zenodo-json/>),
-  + the default image tags in `docker-compose.yml` (the `ghcr.io/…:X.Y.Z`
-  fallbacks the standalone quickstart pulls) AND in the
-  `docker-compose.terminology.yml` overlay (its `FERROEHR_IMAGE` default, the
-  image volume the FerroTERM services mount; #3605), guarded by
-  `scripts/checks/compose-image-tags.sh`, which reads every root and
-  `docker/` compose file / the `compose-version-guard` CI job (the hosted sandbox carries NO release-cut step: its compose defaults
+  (NOT the compose image tags: `docker-compose.yml` and the
+  `docker-compose.terminology.yml` overlay pin the FerroEHR images at `:main`
+  on main, and the release lane writes X.Y.Z into the copy it attaches,
+  `scripts/release/quickstart-compose.sh`, #5003; the `compose-version-guard`
+  CI job, `scripts/checks/compose-image-tags.sh`, refuses a release tag in the
+  tree and `--release` holds the attached copy to the version; the hosted sandbox carries NO release-cut step: its compose defaults
   track the `:latest` release pointer and the release pipeline's `sandbox` +
   `sandbox-reseed` legs redeploy + reseed the Hetzner box automatically after
   the tag's images apply — `deploy/hosted/README.md`, #2974); the hosted DATABASE box pin in `deploy/hosted/cloud-init-postgres.yaml` moves AFTER the release publishes, since its index digest exists only then: a follow-up PR reads tag + digest from the registry, and step 6 of `deploy/hosted/sandbox-ferropix-rollout.sh` moves the box (#4252), + the chart's `appVersion` and
@@ -124,9 +124,8 @@ optional:
   tag and digest in `_helpers.tpl` and `values.yaml`, and the release sweep
   leaves them alone; bumping one is its own chart change.
 
-  **`appVersion` is an ordinary cut step again (#2890, the compose
-  treatment):** the same release-PR sweep that bumps the docker-compose.yml
-  image tags sets the chart's `appVersion` and the `artifacthub.io/images`
+  **`appVersion` is an ordinary cut step again (#2890):** the release-PR
+  sweep sets the chart's `appVersion` and the `artifacthub.io/images`
   tags to X.Y.Z, then regenerates the chart README. The committed value
   equals the workspace version at all times —
   `scripts/checks/chart-appversion.sh` enforces the equality (run by the

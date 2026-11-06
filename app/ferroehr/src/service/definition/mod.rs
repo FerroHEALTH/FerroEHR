@@ -48,6 +48,7 @@ mod adl2_engine;
 mod adl2_resolution;
 mod adl2_terminology;
 mod binding_uri;
+pub mod declared;
 pub(super) mod lineage;
 mod opt14;
 mod query;

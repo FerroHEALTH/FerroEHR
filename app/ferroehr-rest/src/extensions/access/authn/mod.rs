@@ -38,6 +38,7 @@
 )]
 
 pub(crate) mod assurance;
+mod build;
 mod issuer;
 
 use std::sync::Arc;
@@ -49,15 +50,12 @@ use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
 use ferrohealth_smart::resource::introspection::Introspector;
-use ferrohealth_smart::resource::{
-    Access, Caller, Honoured, IssuerSet, PatientClaim, ResourceServer, Via,
-};
+use ferrohealth_smart::resource::{Access, Caller, Honoured, ResourceServer, Via};
 use http::request::Parts;
 use http::{HeaderValue, StatusCode, header};
 use openehr_its::rest::runtime::ApiError;
 
 use crate::api::served::ServedMethods;
-use crate::config::AppConfig;
 use crate::extensions::access::authz::AuthzHandle;
 use crate::extensions::access::authz::classify::OperationClass;
 use crate::extensions::access::authz::roles::RbacDecision;
@@ -202,6 +200,12 @@ pub enum AuthError {
     /// crate logs which check failed at debug level and nothing else.
     #[error("invalid bearer token")]
     InvalidToken,
+    /// A `DPoP` token that does not hold (RFC 9449 §7.1).
+    #[error("invalid DPoP token")]
+    InvalidDpopToken,
+    /// A `DPoP` proof that does not hold (RFC 9449 §4.3).
+    #[error("invalid DPoP proof")]
+    InvalidDpopProof,
     /// The issuer's signing keys could not be read, so no bearer token can be
     /// validated.
     #[error("the authorization server's signing keys could not be read")]
@@ -226,6 +230,8 @@ impl AuthError {
                 "the Authorization header carries no single well-formed credential".to_owned(),
             ),
             Refusal::InvalidToken => AuthError::InvalidToken,
+            Refusal::InvalidDpopToken => AuthError::InvalidDpopToken,
+            Refusal::InvalidDpopProof => AuthError::InvalidDpopProof,
             Refusal::Forbidden | Refusal::Unclassified => {
                 AuthError::Forbidden("the credential does not permit this request".to_owned())
             }
@@ -253,7 +259,11 @@ impl AuthError {
             // forged. The reason stays in the debug log.
             AuthError::MissingCredentials
             | AuthError::InvalidCredentials
-            | AuthError::InvalidToken => ApiError::Unauthorized("authentication failed".to_owned()),
+            | AuthError::InvalidToken
+            | AuthError::InvalidDpopToken
+            | AuthError::InvalidDpopProof => {
+                ApiError::Unauthorized("authentication failed".to_owned())
+            }
         }
     }
 
@@ -264,6 +274,8 @@ impl AuthError {
             AuthError::MissingCredentials => Some(Refusal::Missing(schemes)),
             AuthError::InvalidCredentials => Some(Refusal::InvalidBasic),
             AuthError::InvalidToken => Some(Refusal::InvalidToken),
+            AuthError::InvalidDpopToken => Some(Refusal::InvalidDpopToken),
+            AuthError::InvalidDpopProof => Some(Refusal::InvalidDpopProof),
             AuthError::MalformedRequest(_) => Some(Refusal::InvalidRequest),
             AuthError::Forbidden(_) => Some(Refusal::Forbidden),
             AuthError::KeyResolution | AuthError::VerificationUnavailable(_) => None,
@@ -280,6 +292,8 @@ impl AuthError {
             AuthError::InvalidCredentials => "invalid_credentials",
             AuthError::MalformedRequest(_) => "malformed_request",
             AuthError::InvalidToken => "invalid_token",
+            AuthError::InvalidDpopToken => "invalid_dpop_token",
+            AuthError::InvalidDpopProof => "invalid_dpop_proof",
             AuthError::KeyResolution => "key_resolution",
             AuthError::Forbidden(_) => "forbidden",
             AuthError::VerificationUnavailable(_) => "verification_unavailable",
@@ -287,8 +301,8 @@ impl AuthError {
     }
 }
 
-/// The check of the first issuer, whose metadata the SMART discovery document
-/// is built from.
+/// The check of the described issuer, whose metadata the SMART discovery
+/// document is built from.
 enum Primary {
     /// A JWT access token checked against the issuer's keys.
     Jwt(Arc<ResourceServer>),
@@ -307,6 +321,8 @@ pub struct Authenticator {
     realm: String,
     /// The issuer whose metadata the SMART discovery document is built from.
     primary: Option<Primary>,
+    /// The issuers whose tokens may grant a privileged role.
+    role_issuers: build::RoleIssuers,
 }
 
 impl std::fmt::Debug for Authenticator {
@@ -319,103 +335,6 @@ impl std::fmt::Debug for Authenticator {
 }
 
 impl Authenticator {
-    /// Builds the authenticator of `config`: each `[auth]` issuer's metadata
-    /// and key set are read here, so an authorization server that cannot be
-    /// reached refuses the start rather than the first request.
-    ///
-    /// The first issuer takes `[smart] issuer_metadata_file` as its metadata
-    /// when its key set is a `jwks_file`, so its discovery document can name a
-    /// `token_endpoint`.
-    ///
-    /// # Errors
-    /// A message naming the refused setting, the issuer that could not be
-    /// read, or the metadata file that could not be read or does not fit the
-    /// first issuer, or a `patient_claim` that names no claim.
-    ///
-    /// Every caller an issuer admits carries `patient_claim`, the live ABAC
-    /// patient claim, as the `ferrohealth-smart` `PatientClaim`.
-    pub async fn new(config: &AppConfig, patient_claim: Option<&str>) -> Result<Arc<Self>, String> {
-        let resolved = ferroehr::config::auth::resolve(&config.auth)
-            .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
-        let mut gate = Gate::open();
-        let mut primary = None;
-        let claim = patient_claim
-            .map(PatientClaim::new)
-            .transpose()
-            .map_err(|e| format!("authz.abac.patient_claim is refused: {e}"))?;
-        if resolved.enabled {
-            if let Some(settings) = resolved.introspection {
-                let issuer = settings.issuer.clone();
-                let mut introspector = Introspector::discover(settings).await.map_err(|e| {
-                    format!(
-                        "the introspection endpoint of {issuer} could not be read: {}",
-                        ferroehr::error::ErrorChain::new(&e)
-                    )
-                })?;
-                if let Some(claim) = &claim {
-                    introspector = introspector.with_extension(claim.clone());
-                }
-                let introspector = Arc::new(introspector);
-                primary = Some(Primary::Introspection(Arc::clone(&introspector)));
-                gate = gate.with_bearer(introspector);
-            } else if !resolved.issuers.is_empty() {
-                let mut supplied = match config.smart.issuer_metadata_file.as_deref() {
-                    Some(path) => Some(issuer::issuer_metadata(path).await?),
-                    None => None,
-                };
-                let mut issuers = IssuerSet::new();
-                for settings in resolved.issuers {
-                    let issuer = settings.issuer.clone();
-                    let mut server = ResourceServer::discover(settings)
-                        .await
-                        .map_err(|e| issuer::unreadable_issuer(&issuer, &e))?;
-                    if let Some(metadata) = supplied.take() {
-                        server = server.with_metadata(metadata).map_err(|e| {
-                            format!(
-                                "smart.issuer_metadata_file does not fit the first [auth] \
-                                 issuer {issuer}: {}",
-                                ferroehr::error::ErrorChain::new(&e)
-                            )
-                        })?;
-                    }
-                    if let Some(claim) = &claim {
-                        server = server.with_extension(claim.clone());
-                    }
-                    let server = Arc::new(server);
-                    primary.get_or_insert_with(|| Primary::Jwt(Arc::clone(&server)));
-                    issuers = issuers.with(server);
-                }
-                gate = gate.with_bearer(Arc::new(issuers));
-            }
-            // NOTE: RFC 9110 §11.6.1, a challenge names only a scheme the server
-            // implements, so an `[auth.basic]` table without users admits no Basic.
-            if let Some(store) = resolved
-                .basic
-                .filter(|_store| ferroehr::config::auth::has_basic(&config.auth))
-            {
-                gate = gate.with_basic(Arc::new(store));
-            }
-            let backend = config.smart.backend_clients.clone();
-            let patient = config.smart.patient_issuers.clone();
-            gate = gate
-                .with_realm(ferroehr::config::auth::realm(&config.auth))
-                .with_honoured(move |caller| Honoured {
-                    backend: caller
-                        .client_id()
-                        .is_some_and(|client| backend.iter().any(|listed| listed == client)),
-                    patient: caller
-                        .issuer()
-                        .is_some_and(|issuer| patient.iter().any(|listed| listed == issuer)),
-                });
-        }
-        Ok(Arc::new(Self {
-            enabled: config.auth.enabled,
-            gate,
-            realm: ferroehr::config::auth::realm(&config.auth).to_owned(),
-            primary,
-        }))
-    }
-
     pub(crate) fn enabled(&self) -> bool {
         self.enabled
     }
@@ -425,7 +344,7 @@ impl Authenticator {
         self.gate.schemes().bearer
     }
 
-    /// The SMART discovery document of the first issuer under `options`, or
+    /// The SMART discovery document of the described issuer under `options`, or
     /// `None` when no issuer's metadata was read.
     pub(crate) fn smart_configuration(&self, options: &SmartOptions) -> Option<serde_json::Value> {
         self.primary.as_ref().map(|primary| match primary {
@@ -448,34 +367,27 @@ impl Authenticator {
             .unwrap_or_else(|_invalid| HeaderValue::from_static(r#"Bearer realm="ferroehr""#))
     }
 
-    /// Authenticates the request carrying `headers` through the gate.
+    /// Authenticates the request of `parts` through the gate, whose `DPoP`
+    /// proof check reads the request line.
     ///
     /// The gate holds a bearer token to the RFC 6750 §2.1 `b64token` syntax and
     /// refuses a blank `sub` (RFC 9068 §2.2), and its Basic store keeps a
     /// verified credential for `[auth.basic] cache_ttl_seconds`; it logs which
     /// check refused a credential.
-    pub(crate) async fn authenticate(
-        &self,
-        headers: &http::HeaderMap,
-    ) -> Result<Authenticated, AuthError> {
+    pub(crate) async fn authenticate(&self, parts: &Parts) -> Result<Authenticated, AuthError> {
         let access = self
             .gate
-            .authenticate(headers)
+            .authenticate_request(parts)
             .await
             .map_err(|denied| AuthError::from_refusal(denied.refusal()))?;
         let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
-        let roles = Self::roles_of(caller);
+        let roles = self.role_issuers.roles(caller);
         let honoured = self.gate.honoured(&access);
         // NOTE: no specification governs this: our own design; a credential the
         // verified-credential cache admitted was authenticated on an earlier request.
         let fresh = caller.via() == Via::Basic && !caller.cached();
         let principal = Principal::new(access.clone(), roles, honoured);
         Ok(Authenticated { principal, fresh })
-    }
-
-    /// The roles of `caller`, upper-cased.
-    fn roles_of(caller: &Caller) -> Vec<String> {
-        upper_cased(caller.roles())
     }
 }
 
@@ -526,15 +438,17 @@ fn count_auth_failure(mechanism: &'static str, status: &'static str) {
 /// public endpoints are mounted outside it.
 pub(crate) async fn middleware(
     State(layer): State<AuthLayer>,
-    mut req: Request,
+    req: Request,
     next: Next,
 ) -> Response {
     let auth = &layer.authenticator;
     if !auth.enabled() {
         return REQUEST_PRINCIPAL.scope(None, next.run(req)).await;
     }
-
-    match auth.authenticate(req.headers()).await {
+    let (parts, body) = req.into_parts();
+    let outcome = auth.authenticate(&parts).await;
+    let mut req = Request::from_parts(parts, body);
+    match outcome {
         Ok(Authenticated { principal, fresh }) => {
             // NOTE: RFC 9110 §15.5.6; whether a method is served is the
             // resource's property, so no grant changes the `405`.
@@ -703,9 +617,7 @@ fn smart_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Opt
 ///
 /// An insufficient assurance level is a `401` carrying the RFC 9470 §3 step-up
 /// challenge (`insufficient_user_authentication` with the accepted
-/// `acr_values`); a credential naming no natural person is a `403`, the
-/// authenticated-but-refused branch of the ITS-REST split, without a challenge
-/// as the RBAC refusal has none.
+/// `acr_values`).
 fn patient_data_refusal(
     gate: &PatientDataGate,
     principal: &Principal,
@@ -728,20 +640,6 @@ fn patient_data_refusal(
             resp.headers_mut()
                 .insert(header::WWW_AUTHENTICATE, gate.step_up_challenge());
             resp
-        }
-        PatientDataRefusal::NoNaturalPerson => {
-            count_auth_failure(mechanism, "403");
-            tracing::warn!(
-                mechanism,
-                reason = "no_natural_person",
-                "patient-data request refused"
-            );
-            RestError::from(ApiError::Forbidden(
-                "patient data requires a credential that names a natural person, or a \
-                 client credential acting for a named professional"
-                    .to_owned(),
-            ))
-            .into_response()
         }
     };
     resp.extensions_mut().insert(principal.clone());
@@ -927,6 +825,7 @@ mod tests {
 
     use std::time::Duration;
 
+    use crate::config::AppConfig;
     use argon2::password_hash::PasswordHasher;
     use argon2::{Argon2, PasswordHash};
     use ferrohealth_smart::config::{AuthSection, BasicSection, BasicUser};
@@ -947,18 +846,21 @@ mod tests {
     /// credentials kept for `cache_ttl` seconds.
     fn basic_config(cache_ttl: u64) -> AppConfig {
         AppConfig {
-            auth: AuthSection {
-                basic: Some(BasicSection {
-                    users: vec![BasicUser {
-                        user: "alice".to_owned(),
-                        password_hash: Some(SecretString::from(hash("pw"))),
-                        password_hash_file: None,
-                        scopes: vec!["user/composition-*.cruds".to_owned()],
-                        roles: Vec::new(),
-                    }],
-                    cache_ttl_seconds: cache_ttl,
+            auth: ferroehr::config::auth_section::AuthConfig {
+                shared: Box::new(AuthSection {
+                    basic: Some(BasicSection {
+                        users: vec![BasicUser {
+                            user: "alice".to_owned(),
+                            password_hash: Some(SecretString::from(hash("pw"))),
+                            password_hash_file: None,
+                            scopes: vec!["user/composition-*.cruds".to_owned()],
+                            roles: Vec::new(),
+                        }],
+                        cache_ttl_seconds: cache_ttl,
+                    }),
+                    ..AuthSection::default()
                 }),
-                ..ferroehr::config::FerroEhrConfig::default().auth
+                ..ferroehr::config::auth_section::AuthConfig::default()
             },
             ..AppConfig::default()
         }
@@ -984,9 +886,7 @@ mod tests {
             })))
             .mount(&server)
             .await;
-        let auth = AuthSection {
-            issuer: ferrohealth_smart::config::IssuerKey::Flat(uri),
-            audience: vec![AUDIENCE.to_owned()],
+        let auth = test_support::trusting(ferrohealth_smart::config::IssuerEntry {
             mode: ferrohealth_smart::config::AuthMode::Introspection,
             introspection: Some(ferrohealth_smart::config::IntrospectionSection {
                 client: Some(ferrohealth_smart::config::OauthSection {
@@ -996,8 +896,8 @@ mod tests {
                 }),
                 ..ferrohealth_smart::config::IntrospectionSection::default()
             }),
-            ..ferroehr::config::FerroEhrConfig::default().auth
-        };
+            ..test_support::entry(&uri)
+        });
         let authenticator = Authenticator::new(
             &AppConfig {
                 auth,
@@ -1039,20 +939,19 @@ mod tests {
         } else {
             (Some(grant), None)
         };
+        let mut auth = test_support::trusting(ferrohealth_smart::config::IssuerEntry {
+            mode: ferrohealth_smart::config::AuthMode::Introspection,
+            introspection: Some(ferrohealth_smart::config::IntrospectionSection {
+                endpoint: format!("{issuer}/introspect"),
+                client,
+                bearer,
+                ..ferrohealth_smart::config::IntrospectionSection::default()
+            }),
+            ..test_support::entry(issuer)
+        });
+        auth.shared.ca_file = ca_file;
         AppConfig {
-            auth: AuthSection {
-                issuer: ferrohealth_smart::config::IssuerKey::Flat(issuer.to_owned()),
-                audience: vec![AUDIENCE.to_owned()],
-                mode: ferrohealth_smart::config::AuthMode::Introspection,
-                introspection: Some(ferrohealth_smart::config::IntrospectionSection {
-                    endpoint: format!("{issuer}/introspect"),
-                    client,
-                    bearer,
-                    ..ferrohealth_smart::config::IntrospectionSection::default()
-                }),
-                ca_file,
-                ..ferroehr::config::FerroEhrConfig::default().auth
-            },
+            auth,
             ..AppConfig::default()
         }
     }
@@ -1110,7 +1009,7 @@ mod tests {
                 "active": true,
                 "scope": "user/composition-*.r",
                 "sub": "alice",
-                "client_id": "portal",
+                "client_id": "unit-test-client",
                 "aud": AUDIENCE,
                 "iss": server.uri(),
                 "exp": jiff::Timestamp::now().as_second() + 300,
@@ -1163,13 +1062,15 @@ mod tests {
         .expect("a bearer authenticator")
     }
 
-    fn headers(auth: &str) -> http::HeaderMap {
-        let mut h = http::HeaderMap::new();
-        h.insert(header::AUTHORIZATION, HeaderValue::from_str(auth).unwrap());
-        h
+    fn headers(auth: &str) -> Parts {
+        let request = http::Request::get("/ferroehr/rest/openehr/v1/ehr")
+            .header(header::AUTHORIZATION, HeaderValue::from_str(auth).unwrap())
+            .body(())
+            .unwrap();
+        request.into_parts().0
     }
 
-    fn bearer(claims: &Value) -> http::HeaderMap {
+    fn bearer(claims: &Value) -> Parts {
         headers(&format!("Bearer {}", test_support::token(claims)))
     }
 
@@ -1254,7 +1155,7 @@ mod tests {
     async fn missing_credentials() {
         let err = basic_only()
             .await
-            .authenticate(&http::HeaderMap::new())
+            .authenticate(&http::Request::new(()).into_parts().0)
             .await
             .expect_err("reject");
         assert!(matches!(err, AuthError::MissingCredentials));
@@ -1288,7 +1189,7 @@ mod tests {
     #[tokio::test]
     async fn configured_basic_roles_are_upper_cased() {
         let mut config = basic_config(60);
-        if let Some(basic) = config.auth.basic.as_mut()
+        if let Some(basic) = config.auth.shared.basic.as_mut()
             && let Some(alice) = basic.users.first_mut()
         {
             alice.roles = vec!["admin".to_owned(), "user".to_owned()];
@@ -1496,12 +1397,16 @@ mod tests {
         );
     }
 
-    /// RFC 9068 §4: under the `jwt` profile a plainly typed or untyped token is
-    /// accepted, and a token typed as another kind of JWT is still refused.
+    /// RFC 9068 §4: an issuer whose `token_types` names `JWT` admits a plainly
+    /// typed token, and refuses an untyped one and another kind of JWT.
     #[tokio::test]
-    async fn the_jwt_profile_admits_a_plain_jwt_and_refuses_another_kind() {
-        let mut auth = test_support::bearer_auth();
-        auth.token_profile = ferrohealth_smart::resource::TokenProfile::Jwt;
+    async fn token_types_admit_a_plain_jwt_and_refuse_another_kind() {
+        let auth = test_support::trusting(ferrohealth_smart::config::IssuerEntry {
+            jwks_file: test_support::jwks_file().display().to_string(),
+            token_types: Some(vec!["JWT".to_owned()]),
+            required_claims: Some(["iss", "exp", "aud", "sub"].map(str::to_owned).to_vec()),
+            ..test_support::entry(ISSUER)
+        });
         let authenticator = Authenticator::new(
             &AppConfig {
                 auth,
@@ -1521,21 +1426,22 @@ mod tests {
             header.kid = Some("cnf-smart-test".to_owned());
             let mut claims = json!({
                 "iss": ISSUER, "aud": AUDIENCE, "sub": "alice", "exp": now() + 3600,
+                "client_id": "unit-test-client",
             });
             claims["scope"] = json!("user/composition-*.r");
             jsonwebtoken::encode(&header, &claims, &key).expect("encode")
         };
-        for typ in [Some("JWT"), None] {
-            authenticator
+        authenticator
+            .authenticate(&headers(&format!("Bearer {}", mint(Some("JWT")))))
+            .await
+            .expect("a plain JWT authenticates");
+        for typ in [None, Some("JWT+ID")] {
+            let err = authenticator
                 .authenticate(&headers(&format!("Bearer {}", mint(typ))))
                 .await
-                .expect("a plain JWT authenticates under the jwt profile");
+                .expect_err("an untyped token and an ID token are refused");
+            assert!(matches!(err, AuthError::InvalidToken), "got {err:?}");
         }
-        let err = authenticator
-            .authenticate(&headers(&format!("Bearer {}", mint(Some("JWT+ID")))))
-            .await
-            .expect_err("an ID token is refused under either profile");
-        assert!(matches!(err, AuthError::InvalidToken), "got {err:?}");
     }
 
     #[tokio::test]
@@ -1960,17 +1866,21 @@ mod tests {
         }
 
         /// An `[auth]` section trusting the issuer `server` runs.
-        fn section(issuer: &str, refresh_seconds: u64, timeout_ms: u64) -> AuthSection {
-            AuthSection {
-                issuer: ferrohealth_smart::config::IssuerKey::Flat(issuer.to_owned()),
-                audience: vec![AUDIENCE.to_owned()],
+        fn section(
+            issuer: &str,
+            refresh_seconds: u64,
+            timeout_ms: u64,
+        ) -> ferroehr::config::auth_section::AuthConfig {
+            test_support::trusting(ferrohealth_smart::config::IssuerEntry {
                 jwks_refresh_interval_seconds: refresh_seconds,
                 timeout_ms,
-                ..ferroehr::config::FerroEhrConfig::default().auth
-            }
+                ..test_support::entry(issuer)
+            })
         }
 
-        async fn authenticator(section: AuthSection) -> Result<Arc<Authenticator>, String> {
+        async fn authenticator(
+            section: ferroehr::config::auth_section::AuthConfig,
+        ) -> Result<Arc<Authenticator>, String> {
             Authenticator::new(
                 &AppConfig {
                     auth: section,
@@ -1990,7 +1900,7 @@ mod tests {
         }
 
         /// A token of `issuer` signed with the test key under `kid`.
-        fn token_under(issuer: &str, kid: &str) -> http::HeaderMap {
+        fn token_under(issuer: &str, kid: &str) -> Parts {
             let mut claims = test_support::claims("alice", "user/composition-*.r");
             claims["iss"] = json!(issuer);
             let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256);

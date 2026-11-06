@@ -71,8 +71,8 @@
 #
 # QUICKSTART DEFAULTS, do NOT use in production: demo realm, demo secret,
 # demo password, a development CA, Keycloak in start-dev mode. For a real
-# deployment configure your own https issuer via FERROEHR__AUTH__ISSUER and
-# FERROEHR__AUTH__AUDIENCE (or the [auth] config block) and remove this overlay.
+# deployment configure your own https issuer via FERROEHR__AUTH__ISSUER__0__ISSUER
+# and its siblings (or an [[auth.issuer]] table) and remove this overlay.
 #
 # The repo's dev/e2e lanes use their OWN Keycloak (docker-compose.dev.yml,
 # `keycloak` profile) with the full exported realm from docker/keycloak/import;
@@ -88,16 +88,29 @@ services:
       # on top of the base quickstart posture without replacing it. The issuer
       # is the canonical KC_HOSTNAME below: token `iss` claims match it no
       # matter which host the token was requested from.
-      FERROEHR__AUTH__ISSUER: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
+      # The realm is the second [[auth.issuer]] table (index 1): the first is
+      # the issuer the quickstart's Basic user binds under.
+      FERROEHR__AUTH__ISSUER__1__ISSUER: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
+      FERROEHR__AUTH__ISSUER__1__KIND: persons
+      # The keycloak preset: `typ: JWT` tokens with `azp` naming the client.
+      FERROEHR__AUTH__ISSUER__1__PROFILE: keycloak
       # Required: the audience this CDR answers to (RFC 7519 §4.1.3), which the
       # realm's two clients put in every access token.
-      FERROEHR__AUTH__AUDIENCE: ferroehr
-      # Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068 profile
-      # the CDR expects by default.
-      FERROEHR__AUTH__TOKEN_PROFILE: jwt
+      FERROEHR__AUTH__ISSUER__1__AUDIENCE: ferroehr
+      # A person signs in through the viewer; the service client's tokens carry
+      # its `client_id` session note, which marks them app-only.
+      FERROEHR__AUTH__ISSUER__1__FIRST_PARTY_CLIENTS: ferroehr-viewer
+      FERROEHR__AUTH__ISSUER__1__APP_ONLY__0__CLAIM: client_id
+      FERROEHR__AUTH__ISSUER__1__APP_ONLY__0__VALUE: ferroehr-service
       # Keycloak writes the realm roles under the nested `realm_access.roles`,
       # beside the RFC 9068 claims the shared default reads.
-      FERROEHR__AUTH__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
+      FERROEHR__AUTH__ISSUER__1__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
+      # The realm's logins bind under their own identifier issuer, and its
+      # role claims may grant the administrator role.
+      FERROEHR__AUTH__PARTY__1__ISSUER: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
+      FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:ferroehr:keycloak-quickstart-login
+      FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: uuid
+      FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
       # The development CA, trusted for the issuer's metadata and key set
       # beside the platform roots (`[auth] ca_file`) on every platform. It
       # needs a 5.5.0 or later image: 5.4.2 refuses the key.
@@ -277,7 +290,7 @@ configs:
   # claim). The SMART scopes are default client scopes, so every token carries
   # them in `scope`.
   # Each client's `oidc-audience-mapper` is LOAD-BEARING, not decoration: the
-  # CDR sets FERROEHR__AUTH__AUDIENCE=ferroehr above, and Keycloak puts
+  # CDR sets FERROEHR__AUTH__ISSUER__1__AUDIENCE=ferroehr above, and Keycloak puts
   # `ferroehr` into `aud` only because the mapper names it. Without it every
   # bearer call is refused 401 (RFC 7519 §4.1.3 audience validation).
   keycloak-realm:

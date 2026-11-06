@@ -34,6 +34,23 @@ swagger_ui = "public"
 [auth]
 enabled = true
 
+# The issuer the Basic users bind under. A Basic user is a person and maps to
+# the PERSON carrying its binding key, which [[auth.party]] places under the
+# identifier issuer of a persons issuer. This one signs nothing: its key set,
+# deploy/hosted/basic-users-jwks.json, which every FerroEHR image carries, is
+# the public half of a key pair whose private key was discarded, for local
+# lanes only, so no token of it exists.
+[[auth.issuer]]
+issuer = "https://basic-users.ferroehr.invalid"
+kind = "persons"
+audience = ["ferroehr-basic-users"]
+jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
+
+[[auth.party]]
+issuer = "https://basic-users.ferroehr.invalid"
+identifier_issuer = "urn:ferroehr:basic-user"
+identifier_type = "login"
+
 # The whole admin group behind the demo credential — no partial enablement,
 # no separate admin user (owner ruling, #2965).
 [admin]
@@ -48,6 +65,16 @@ enabled = true
 user = "ferroehr"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
+
+# The healthcare provider the sandbox acts for (an example id under the OID
+# arc 2.999), and the binding key of the demo user.
+[authz.party_binding]
+provider = { issuer = "urn:oid:2.999.7.9", id = "sandbox" }
+
+[[authz.party_binding.basic_user]]
+user = "ferroehr"
+key_issuer = "urn:ferroehr:basic-user"
+key = "ferroehr"
 
 # Authentication only, no role gate — the one demo user deliberately reaches
 # every enabled surface, the admin group included (#2965).

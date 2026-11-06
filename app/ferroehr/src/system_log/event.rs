@@ -249,8 +249,8 @@ impl ActingMode {
 /// `docs/law/eu/ehds/text.html Annex II 3`).
 ///
 /// Every field is `None` when the deployment configures nothing that reads it:
-/// the mode and the professional need `[authz.professional]`, the level
-/// needs `[authz.assurance] levels`. **No openEHR spec governs this — our
+/// the mode and the professional need a caller its issuer classifies as a
+/// person or a delegate, the level needs `[authz.assurance] levels`. **No openEHR spec governs this — our
 /// own design/extension.**
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ActorAuthentication {

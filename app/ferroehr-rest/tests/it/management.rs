@@ -19,7 +19,6 @@ use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
 use ferrohealth_health::registry::{Check, HealthIndicator, Outcome, Registry};
-use ferrohealth_smart::config::AuthSection;
 use ferrohealth_telemetry::request_log::RequestLog;
 
 use crate::common;
@@ -34,14 +33,14 @@ const ADMIN_BASIC: &str = "Basic YWRtaW46cHc=";
 /// The app configuration with Basic authentication on for one `admin` user
 /// holding `roles`.
 fn admin_config(roles: &[&str]) -> AppConfig {
-    let mut config = base_config(AuthSection::default());
+    let mut config = base_config(ferroehr::config::auth_section::AuthConfig::default());
     common::with_basic_users(&mut config, &[("admin", roles)]);
     config
 }
 
 /// The base app configuration every management fixture shares: Swagger off,
 /// authentication from `auth`.
-fn base_config(auth: AuthSection) -> AppConfig {
+fn base_config(auth: ferroehr::config::auth_section::AuthConfig) -> AppConfig {
     AppConfig {
         server: common::server(),
         rest: RestConfig {
@@ -510,10 +509,7 @@ async fn management_status_carries_what_the_public_status_withholds() {
 
 async fn app_with_metrics() -> (testkit::TestDb, Router) {
     // Authentication off: this test exercises the API path, not the gate.
-    let config = base_config(AuthSection {
-        enabled: false,
-        ..AuthSection::default()
-    });
+    let config = base_config(common::auth_off());
     let observability = Observability {
         management: ManagementConfig {
             enabled: true,
@@ -603,10 +599,7 @@ fn looks_like_id(value: &str) -> bool {
 #[tokio::test]
 async fn separate_port_mode_keeps_management_off_the_main_app() {
     // With `management.port` set, the main app must NOT mount /management…
-    let config = base_config(AuthSection {
-        enabled: false,
-        ..AuthSection::default()
-    });
+    let config = base_config(common::auth_off());
     let observability = Observability {
         management: ManagementConfig {
             enabled: true,

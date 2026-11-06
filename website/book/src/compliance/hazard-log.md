@@ -124,11 +124,9 @@ records the caller as unknown and never fabricates one. The organisation is
 read from the same token claim the ABAC layer reads, and stays empty when
 there is no claim or the caller used Basic. The EHR comes from the resource
 the dispatch resolved, or from the request path where none exists. An AQL
-execution records each served EHR separately. With
-`[authz.professional]` configured, a token that names no natural person is
-refused on patient data unless it is a client token acting for a named
-professional, and the record carries the acting mode (`person` or `client`)
-and that professional; with `[authz.assurance]` configured, it carries the
+execution records each served EHR separately. A token's issuer classifies
+its caller: the record carries the acting mode (`person`, or `client` for a
+delegate acting for a person) and the person the token names; with `[authz.assurance]` configured, it carries the
 assurance level the token maps to, and a token below the configured minimum is
 refused with a step-up challenge. The DICOM message and the FHIR
 `AuditEvent` give the client and this server the same data-flow role (DICOM
@@ -173,11 +171,9 @@ the held composition (`access-delay:<vo>`).
 - `app/ferroehr/src/system_log/message.rs`:
   `an_access_delay_record_names_the_patient_and_the_held_composition`.
 
-**Remains:** both blocks are off by default, and until the deployment
-configures `[authz.professional]` a client application's credential is
-recorded as that application, not as the professional behind it. A shared
-Basic account names the account; with either block configured, Basic is
-refused on patient data. The DICOM format has no element for the assurance
+**Remains:** the assurance block is off by default, and a system client's
+credential is recorded as that client. A Basic user is bound to a person by
+its key; with a minimum configured, Basic is refused on patient data. The DICOM format has no element for the assurance
 level, so the syslog feed carries none; the FHIR record carries the level as
 the BALP `ihe-assuranceLevel` extension, and the raw claim value stays in the
 local store's column.

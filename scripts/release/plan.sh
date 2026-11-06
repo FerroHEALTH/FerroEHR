@@ -330,7 +330,17 @@ check_citation() {
 # (https://help.zenodo.org/docs/github/describe-software/zenodo-json/).
 check_zenodo() { bash scripts/render/zenodo-json.sh --check; }
 
-check_compose_tags() { bash scripts/checks/compose-image-tags.sh; }
+# The tree pins :main, and the copy the release attaches pins this release
+# (scripts/release/quickstart-compose.sh, #5003).
+check_compose_tags() {
+  bash scripts/checks/compose-image-tags.sh || return 1
+  local copy rc=0
+  copy="$(mktemp)"
+  cp docker-compose.yml "$copy"
+  bash scripts/release/quickstart-compose.sh "$VERSION" "$copy" || rc=1
+  rm -f "$copy"
+  return "$rc"
+}
 
 check_docs_claims() { bash scripts/checks/docs-claims.sh --all; }
 
@@ -351,7 +361,7 @@ check_chart_unpublished The chart version is not already published
 check_statement_version The ferroehr party statement's product version matches the workspace
 check_citation CITATION.cff version matches the workspace version
 check_zenodo .zenodo.json is in sync with CITATION.cff
-check_compose_tags The compose image tags match their policy
+check_compose_tags The compose files pin :main, and the attached quickstart this release
 check_docs_claims Documented keys resolve in their source
 EOF
 }

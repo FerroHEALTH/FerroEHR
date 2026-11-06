@@ -43,7 +43,6 @@ use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::{build_full, build_with};
 use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
 use ferrohealth_authz::request::{Attr, Decision};
-use ferrohealth_smart::config::AuthSection;
 use http::{Request, StatusCode};
 use serde_json::{Value, json};
 use testkit::syslog_tls::SyslogTlsListener;
@@ -153,10 +152,7 @@ fn rest_config() -> AppConfig {
 /// An auth-off config used only to seed data over the shared service.
 fn seed_config() -> AppConfig {
     let mut c = rest_config();
-    c.auth = AuthSection {
-        enabled: false,
-        ..AuthSection::default()
-    };
+    c.auth = common::auth_off();
     c
 }
 

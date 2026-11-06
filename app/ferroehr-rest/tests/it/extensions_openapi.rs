@@ -26,7 +26,6 @@ use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::extensions::openapi::extensions_document;
-use ferrohealth_smart::config::{AuthSection, IssuerKey};
 
 use crate::common;
 use crate::common::get;
@@ -554,7 +553,6 @@ fn app_config() -> AppConfig {
         audit_organization_claim: None,
         rbac: ferroehr::config::authz::RbacConfig::default(),
         assurance: ferrohealth_smart::assurance::AssuranceSection::default(),
-        professional: None,
         spec_profile: ferroehr::config::profile::SpecProfile::default(),
     }
 }
@@ -564,11 +562,10 @@ fn app_config() -> AppConfig {
 async fn full_app() -> Router {
     let config = AppConfig {
         server: common::server(),
-        auth: AuthSection {
-            issuer: IssuerKey::Flat(common::metadata_issuer().await.to_owned()),
-            audience: vec!["ferroehr".to_owned()],
-            ..AuthSection::default()
-        },
+        auth: common::trusting(vec![common::entry(
+            common::metadata_issuer().await,
+            "ferroehr",
+        )]),
         ..app_config()
     };
     let public = EndpointLevels {
