@@ -87,6 +87,12 @@ config:
         profile: rfc9068
         audience: [ferroehr]
         first_party_clients: [ferroehr-viewer]
+      # The machines issuer FerroBRIDGE's client credentials tokens come from
+      # (RFC 6749 §4.4): the CDR trusts its tokens, and bridge.cdr.oauth
+      # names FerroBRIDGE's client at it.
+      - issuer: https://machines.example.org/realms/ferroehr
+        kind: machines
+        audience: [ferroehr-machines]
     # The issuer's logins bind to the PERSON carrying their `sub` under this
     # identifier issuer.
     party:
@@ -100,6 +106,13 @@ config:
       # The healthcare provider this deployment acts for (an example id
       # under the OID arc 2.999).
       provider: { issuer: "urn:oid:2.999.7.9", id: "all-features" }
+    # FerroBRIDGE commits what $toopenehr maps, relaying the record of
+    # another system, as the healthcare provider this deployment acts for.
+    system_client:
+      - issuer: https://machines.example.org/realms/ferroehr
+        client_id: ferrobridge
+        provider: { issuer: "urn:oid:2.999.7.9", id: "all-features" }
+        origins: [relay]
     rbac:
       role_issuers: [https://keycloak.example.com/realms/ferroehr]
       enabled: true
@@ -315,6 +328,11 @@ bridge:
   replicaCount: 2
   cdr:
     existingSecret: ferroehr-bridge-cdr
+    oauth:
+      issuer: https://machines.example.org/realms/ferroehr
+      clientId: ferrobridge
+      scope: system/composition-*.cruds system/template-*.r system/aql-*.rs
+      audience: ferroehr-machines
   podDisruptionBudget:
     enabled: true
     minAvailable: 1
