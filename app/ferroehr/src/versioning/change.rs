@@ -28,7 +28,7 @@ use uuid::Uuid;
 
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
-use crate::ids::{EhrId, VoId};
+use crate::ids::{AllocatedVoId, EhrId, VoId};
 use crate::storage::codec::reassemble;
 use crate::storage::identifier_repo;
 use crate::storage::row::NodeRow;
@@ -41,6 +41,7 @@ use crate::versioning::lifecycle::{
 use crate::versioning::object_version_id::{TreeId, VersionIdError, object_version_id};
 use crate::versioning::{Kind, SigningCtx, integrity, restriction};
 
+mod construct;
 pub(crate) mod precondition;
 mod resolve;
 
@@ -98,7 +99,7 @@ pub struct Committed {
 /// taking a second clock reading) would risk an instant that is not the one
 /// stored.
 #[derive(Debug)]
-pub(crate) struct CommittedContribution {
+pub struct CommittedContribution {
     /// The new CONTRIBUTION's `HIER_OBJECT_ID` uid (the `ETag`/`Location`
     /// value).
     pub id: Uuid,
@@ -191,6 +192,8 @@ pub(crate) fn meter_committed(committed: &Committed) {
 pub(crate) enum Change {
     /// Create a new versioned object.
     Create {
+        /// The id allocated before the commit; `None` mints one at the commit.
+        allocated: Option<AllocatedVoId>,
         kind: Kind,
         canonical: Value,
         template_id: Option<String>,
@@ -731,6 +734,7 @@ async fn apply_change(
     };
     let resolved = match change {
         Change::Create {
+            allocated,
             kind,
             canonical,
             template_id,
@@ -740,6 +744,7 @@ async fn apply_change(
             other_input_version_uids,
         } => {
             let content = Content {
+                allocated,
                 kind,
                 canonical,
                 lifecycle_state,
@@ -762,6 +767,7 @@ async fn apply_change(
             other_input_version_uids,
         } => {
             let content = Content {
+                allocated: None,
                 kind,
                 canonical,
                 lifecycle_state,
@@ -1135,62 +1141,6 @@ impl Write {
         Self {
             placement: Some(placement),
             ..self
-        }
-    }
-}
-
-impl Change {
-    /// A [`Change::Create`] of `canonical` with the caller's envelope.
-    pub(crate) fn create(
-        kind: Kind,
-        canonical: Value,
-        template_id: Option<String>,
-        envelope: WriteEnvelope,
-    ) -> Self {
-        Change::Create {
-            kind,
-            canonical,
-            template_id,
-            signature: envelope.signature,
-            lifecycle_state: envelope.lifecycle_state,
-            attestations: envelope.attestations,
-            other_input_version_uids: Vec::new(),
-        }
-    }
-
-    /// A [`Change::Modify`] of `vo_id` to `canonical` with the caller's
-    /// envelope; `expected` is the tip the caller's `If-Match` names.
-    pub(crate) fn modify(
-        vo_id: VoId,
-        kind: Kind,
-        canonical: Value,
-        expected: Option<TreeId>,
-        template_id: Option<String>,
-        envelope: WriteEnvelope,
-    ) -> Self {
-        Change::Modify {
-            vo_id,
-            kind,
-            canonical,
-            expected,
-            template_id,
-            signature: envelope.signature,
-            lifecycle_state: envelope.lifecycle_state,
-            attestations: envelope.attestations,
-            other_input_version_uids: Vec::new(),
-        }
-    }
-
-    /// A [`Change::Delete`] of `vo_id`. Deletion fixes the lifecycle state at
-    /// `523|deleted|` itself (master06 §Logical Deletion), so it takes no
-    /// envelope lifecycle.
-    pub(crate) fn delete(vo_id: VoId, kind: Kind, expected: Option<TreeId>) -> Self {
-        Change::Delete {
-            vo_id,
-            kind,
-            expected,
-            signature: None,
-            other_input_version_uids: Vec::new(),
         }
     }
 }
