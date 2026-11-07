@@ -16,19 +16,13 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use axum::body::Body;
-use axum::extract::Request;
-use axum::response::{IntoResponse as _, Response};
 use ferroehr::config::agreement::{AccessClass, Accessor, Agreement};
 use ferroehr::config::clients::SystemClient;
 use ferroehr::versioning::committer::ExternalCaller;
 use ferroehr::versioning::committer::external::ExternalProfessional;
-use ferrohealth_server::caller_rate::{self, CallerKey, CallerLimit};
 use ferrohealth_smart::federation::{Attribute, External, Field};
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::resource::{Access, Caller};
-use http::StatusCode;
-use tower::{Layer as _, ServiceExt as _};
 
 use super::AuthError;
 
@@ -38,13 +32,12 @@ use super::AuthError;
 pub(crate) struct Admitted(Arc<Held>);
 
 /// One agreement as this node holds it: the table, where its issuer reads a
-/// `chained` request's correlation id from, its caller rate, and whether its
-/// issuer is a MyHealth@EU contact point.
+/// `chained` request's correlation id from, and whether its issuer is a
+/// MyHealth@EU contact point.
 #[derive(Debug)]
 struct Held {
     agreement: Arc<Agreement>,
     correlation_source: Option<String>,
-    limit: Option<CallerLimit>,
     contact_point: bool,
 }
 
@@ -100,7 +93,6 @@ impl Declared {
                     let held = Held {
                         agreement: Arc::new(agreement),
                         correlation_source,
-                        limit: table.caller_rate.map(CallerLimit::new),
                         contact_point,
                     };
                     Some(((table.issuer.clone(), accessor), Arc::new(held)))
@@ -120,8 +112,8 @@ impl Declared {
     /// # Errors
     /// [`AuthError::KindRefused`] (`403`) for an external caller without an
     /// agreement for its accessor kind, or holding a scope the agreement does
-    /// not read; [`AuthError::Forbidden`] (`403`) for a `chained` request
-    /// without an attested correlation id.
+    /// not read, or making a `chained` request without an attested correlation
+    /// id.
     pub(super) fn admit(&self, access: Access) -> Result<Access, AuthError> {
         let Some(caller) = access.caller() else {
             return Ok(access);
@@ -158,9 +150,12 @@ impl Declared {
         if held.agreement.access_class == Some(AccessClass::Chained)
             && caller.correlation_id().is_none()
         {
-            return Err(AuthError::Forbidden(
-                "a chained organisation request carries no attested correlation id".to_owned(),
-            ));
+            return Err(AuthError::KindRefused {
+                code: "refused-correlation-missing",
+                message: "a chained organisation request carries no attested correlation id"
+                    .to_owned(),
+                principal: None,
+            });
         }
         Ok(Access::Caller(Arc::new(
             Caller::clone(caller).with_extension(Admitted(Arc::clone(held))),
@@ -183,97 +178,18 @@ fn held(access: &Access) -> Option<&Held> {
         .map(|admitted| admitted.0.as_ref())
 }
 
-/// The agreement of the caller of `access` when its issuer is a MyHealth@EU
-/// contact point.
-pub(super) fn contact_point(access: &Access) -> Option<&Arc<Agreement>> {
-    held(access)
-        .filter(|held| held.contact_point)
-        .map(|held| &held.agreement)
-}
-
 /// Where the issuer of the caller of `access` reads a `chained` request's
 /// correlation id from, as the access record names it.
 pub(super) fn correlation_source(access: &Access) -> Option<&str> {
     held(access).and_then(|held| held.correlation_source.as_deref())
 }
 
-/// Holds the caller of `principal` to its agreement's `caller_rate`, a
-/// contact point's caller to the patient of its TRC, then confines a bound
-/// representative to the EHR of its subject; the refusal of any, before any
-/// patient lookup of the request itself.
-///
-/// What it reads of `req` is read before it awaits anything, so the future
-/// holds no borrow of the request.
-pub(super) fn prepare<'a>(
-    layer: &'a super::AuthLayer,
-    principal: &'a mut super::Principal,
-    req: &Request,
-) -> impl Future<Output = Option<Response>> + Send + 'a {
-    let shape = super::trc::Shape::of(layer, req);
-    let headers = req.headers().clone();
-    async move { prepared(layer, principal, shape, &headers).await }
-}
-
-/// [`prepare`] over what it read of the request.
-async fn prepared(
-    layer: &super::AuthLayer,
-    principal: &mut super::Principal,
-    shape: super::trc::Shape,
-    headers: &http::HeaderMap,
-) -> Option<Response> {
-    let auth = &layer.authenticator;
-    if let Some(refusal) = over_rate(principal, &auth.declared.system_clients).await {
-        return Some(refusal);
-    }
-    if let Some(refusal) = super::trc::confine(layer, principal, shape, headers).await {
-        return Some(refusal);
-    }
-    match super::party::represented_ehr(&layer.service, &principal.access).await {
-        Ok(represented) => {
-            principal.represented = represented;
-            None
-        }
-        Err(e) => Some(super::refused(auth, headers, &e, Some(principal.clone()))),
-    }
-}
-
-/// The refusal of an external caller of `principal` above its agreement's
-/// `caller_rate`, keyed on its issuer's subject: `429` with `Retry-After`
-/// from the family's caller limit, before any patient lookup, carrying the
-/// caller and its binding record for the access log, which counts it into the
-/// caller's summary record. `None` within the rate or for any other caller.
-pub(super) async fn over_rate(
-    principal: &super::Principal,
-    clients: &[Arc<SystemClient>],
-) -> Option<Response> {
-    let limit = held(&principal.access)?.limit.clone()?;
-    // NOTE: ferrohealth-server 0.5 `caller_rate` offers its limit only as middleware, so
-    // it runs here around a service that answers `204` when the request is within it.
-    let take = axum::middleware::from_fn_with_state(limit, caller_rate::limit).layer(
-        tower::service_fn(|_: Request| async {
-            Ok::<_, std::convert::Infallible>(StatusCode::NO_CONTENT.into_response())
-        }),
-    );
-    let mut request = Request::new(Body::empty());
-    request
-        .extensions_mut()
-        .insert(CallerKey(Arc::from(principal.subject.as_str())));
-    let Ok(mut refusal) = take.oneshot(request).await;
-    if refusal.status() != StatusCode::TOO_MANY_REQUESTS {
-        return None;
-    }
-    let committer = super::party::committer_identity(principal, clients);
-    if let Some(mut binding) = super::record::of_request(principal, &committer) {
-        binding
-            .detail
-            .insert("refusal".to_owned(), vec!["caller-rate".to_owned()]);
-        refusal.extensions_mut().insert(binding);
-    }
-    refusal
-        .extensions_mut()
-        .insert(crate::system_log::refusals::OverRate);
-    refusal.extensions_mut().insert(principal.clone());
-    Some(refusal)
+/// The agreement of the caller of `access` when its issuer is a MyHealth@EU
+/// contact point.
+pub(super) fn contact_point(access: &Access) -> Option<&Arc<Agreement>> {
+    held(access)
+        .filter(|held| held.contact_point)
+        .map(|held| &held.agreement)
 }
 
 /// What the external caller of `access` may commit, when it is one.
@@ -322,15 +238,15 @@ fn professional(external: &External) -> ExternalProfessional {
         provider_identifier: text(Field::ProviderHealthcareProviderIdentifier),
         provider_authority: text(Field::ProviderIssuingAuthorityName),
         contact_point: false,
-        permissions: external
-            .field(Field::ProfessionalPermissions)
-            .map(|permissions| {
+        permissions: external.field(Field::ProfessionalPermissions).map_or_else(
+            Vec::new,
+            |permissions| {
                 permissions
                     .values()
                     .into_iter()
                     .map(str::to_owned)
                     .collect()
-            })
-            .unwrap_or_default(),
+            },
+        ),
     }
 }

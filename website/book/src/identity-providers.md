@@ -126,9 +126,6 @@ profile, and the server acts on the kind:
     `[[auth.federation]]` table maps to `correlation_id`, as one string; a
     request without it is refused with `403`, and a request header never
     stands in for it;
-  - a caller above its agreement's `caller_rate` is answered `429` with
-    `Retry-After` before any patient lookup, a MyHealth@EU contact point's
-    included;
   - an external person commits only a COMPOSITION of a template the
     agreement's `writes` lists; an organisation commits nothing, and neither
     attests or writes a demographic party. Neither deletes, except the

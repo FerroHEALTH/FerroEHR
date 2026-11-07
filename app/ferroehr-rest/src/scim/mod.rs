@@ -17,3 +17,5 @@
               §3.8 JSON representation by definition"
 )]
 pub mod protocol;
+
+pub mod endpoint;

@@ -12,20 +12,33 @@
 //! it discards a dispensation of its own point of care within the agreement's
 //! window (MyHealth@EU Requirements Catalogue 10.0.0, requirement 07.04).
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use axum::Router;
 use ferroehr::config::agreement::{Accessor, Agreement, EhdsiService};
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::version_update::WriteRequest;
-use ferrohealth_smart::federation::{Field, Source};
-use ferrohealth_smart::sender::ClientCertificate;
+use ferroehr::system_log::sender::{AuditHandle, start};
+use ferroehr_rest::config::AppConfig;
+use ferroehr_rest::extensions::management::Observability;
+use ferrohealth_server::section::CallerRate;
+use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+use ferrohealth_smart::federation::{FederationSection, Field, Mapping, Source};
+use ferrohealth_smart::kind::IssuerKind;
+use ferrohealth_smart::sender::proof::DpopSection;
+use ferrohealth_smart::sender::{ClientCertificate, SenderConstraint};
 use http::StatusCode;
 use openehr_rm::prelude::EhrStatus;
 use serde_json::{Value, json};
 
 use crate::common::{self, BASE};
-use crate::federation_http::{AUDIENCE, CONTACT_POINT, agreement, contact_point, ehr, serve_also};
+
+/// NCPeH-A's authorization server, a MyHealth@EU contact point.
+const CONTACT_POINT: &str = "https://ncpeh-a.example";
+/// This node's audience at the contact point.
+const AUDIENCE: &str = "ferroehr-contact-point";
 
 /// The assigning authority of the TRC patients.
 const NAMESPACE: &str = "urn:oid:2.999.1";
@@ -48,24 +61,77 @@ fn certificate() -> ClientCertificate {
 fn eprescription(hours: u32) -> Agreement {
     Agreement {
         issuer: CONTACT_POINT.to_owned(),
+        accessor: Some(Accessor::Person),
         reads: vec![SCOPE.to_owned()],
         writes: vec![DISPENSATION.to_owned()],
         discard: true,
         discard_window_hours: hours,
         ehdsi_service: Some(EhdsiService::Eprescription),
-        ..agreement(Accessor::Person)
+        caller_rate: Some(CallerRate {
+            requests_per_second: std::num::NonZeroU32::MIN.saturating_add(99),
+            burst: std::num::NonZeroU32::MIN.saturating_add(99),
+        }),
+        ..Agreement::default()
     }
 }
 
-/// The router trusting the contact point under `agreement`, its table mapping
-/// the provider's issuing authority, with the dispensation template held.
+/// The router trusting the contact point under `agreement`: a
+/// sender-constrained `federation` issuer with the eHDSI mapping, its table
+/// mapping the professional's country and authority and the provider's
+/// authority, over the local EHR index, with the dispensation template held.
 async fn serve(agreement: Agreement) -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
-    let (entry, mut table, dpop) = contact_point();
-    table.fields.insert(
-        Field::ProviderIssuingAuthorityName,
-        vec![Source::Constant(AUTHORITY.to_owned())],
+    let (db, pool) = common::migrated_pool().await;
+    let (sender, _handle): (_, AuditHandle) =
+        start(common::local_audit(), None, Some(pool.clone()))
+            .await
+            .expect("the audit sender");
+    let svc = Arc::new(
+        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+            .with_ehr_index(EhrIndexProvider::Local)
+            .with_audit(sender)
+            .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),
     );
-    let (db, svc, app) = Box::pin(serve_also(vec![agreement], Some((entry, table, dpop)))).await;
+    let constant = |value: &str| vec![Source::Constant(value.to_owned())];
+    let mut auth = common::auth(AuthSection {
+        issuer: IssuerKey::List(vec![IssuerEntry {
+            issuer: CONTACT_POINT.to_owned(),
+            kind: Some(IssuerKind::Federation),
+            audience: vec![AUDIENCE.to_owned()],
+            jwks_file: common::jwks_file().display().to_string(),
+            sender_constraint: SenderConstraint::Required,
+            ..IssuerEntry::default()
+        }]),
+        federation: vec![FederationSection {
+            issuer: CONTACT_POINT.to_owned(),
+            contact_point: Some(true),
+            mapping: Some(Mapping::Ehdsi),
+            fields: BTreeMap::from([
+                (Field::ProfessionalCountryCode, constant("BE")),
+                (
+                    Field::ProfessionalIssuingAuthorityName,
+                    constant("NCP-B Belgium"),
+                ),
+                (Field::ProviderIssuingAuthorityName, constant(AUTHORITY)),
+            ]),
+            countries: vec!["BE".to_owned()],
+            ..FederationSection::default()
+        }],
+        dpop: Some(DpopSection {
+            external_url: "https://ehr.example".to_owned(),
+            ..DpopSection::default()
+        }),
+        ..AuthSection::default()
+    });
+    auth.shared.enabled = true;
+    let mut config = AppConfig {
+        auth,
+        agreements: vec![agreement],
+        ..common::api_config(true)
+    };
+    config.smart.patient_issuers = vec![CONTACT_POINT.to_owned()];
+    let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
+        .await
+        .expect("build app");
     svc.template_adl14_upload(&common::ips_opt_xml())
         .await
         .expect("upload the IPS template");
@@ -208,7 +274,10 @@ async fn a_contact_point_reads_only_the_ehr_of_its_trc_patient() {
     let (db, svc, app) = serve(eprescription(24)).await;
     let mine = patient_ehr(&svc, "SYNTHETIC-1").await;
     let theirs = patient_ehr(&svc, "SYNTHETIC-2").await;
-    let subjectless = ehr(&svc).await.to_string();
+    let subjectless = Box::pin(svc.create_ehr_meta(WriteRequest::new(None)))
+        .await
+        .map(|(id, _)| id.to_string())
+        .expect("an EHR naming no patient");
     let unknown = "0190e6c4-0000-7000-8000-000000000000";
     let credential = token(Some("SYNTHETIC-1"), PROVIDER, &json!({}));
     let (status, body) = send(&app, "GET", &format!("/ehr/{mine}"), &credential, None).await;

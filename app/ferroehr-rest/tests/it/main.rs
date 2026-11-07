@@ -103,6 +103,7 @@ mod query_refusals_http;
 mod rbac_e2e;
 mod representation_http;
 mod sandbox_seed_http;
+mod scim_endpoint;
 mod scim_protocol;
 mod served_openapi;
 mod served_openapi_snapshot;

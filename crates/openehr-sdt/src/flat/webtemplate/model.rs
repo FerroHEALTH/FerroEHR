@@ -283,6 +283,15 @@ pub struct WebTemplateNode {
     #[serde(skip)]
     pub closed_attributes: Vec<WebTemplateClosedAttribute>,
 
+    /// The RM attributes of this node the template prohibits: a constraint
+    /// attribute with existence `0..0`, or one whose every constraint object has
+    /// occurrences `0..0` (AOM 1.4 `master04-constraint_model_package.adoc`
+    /// §existence). The in-context synthesis reads it,
+    /// so a COMPOSITION whose template prohibits `context` gets no `/context`
+    /// node. Build-time only (`#[serde(skip)]`).
+    #[serde(skip)]
+    pub prohibited_attributes: Vec<String>,
+
     /// Structural stubs for the structural attributes (`data`, `description`,
     /// `protocol`, `state`) of an ENTRY, EVENT or ACTIVITY node that the
     /// template **does** constrain with a node-identified structural child
@@ -392,6 +401,7 @@ impl WebTemplateNode {
             code_lists: Vec::new(),
             constraint_bindings: Vec::new(),
             closed_attributes: Vec::new(),
+            prohibited_attributes: Vec::new(),
             structural_stubs: Vec::new(),
             alternatives: Vec::new(),
             full_id: String::new(),

@@ -300,6 +300,11 @@ impl AuthError {
         }
     }
 
+    /// The HTTP status this outcome answers with.
+    pub(crate) fn status(&self) -> StatusCode {
+        self.to_api_error().status()
+    }
+
     fn to_api_error(&self) -> ApiError {
         match self {
             AuthError::Forbidden(m) | AuthError::KindRefused { message: m, .. } => {
@@ -579,7 +584,7 @@ pub(crate) async fn middleware(
             mut principal,
             fresh,
         }) => {
-            if let Some(refusal) = declared::prepare(&layer, &mut principal, &req).await {
+            if let Some(refusal) = trc::patient_context(&layer, &mut principal, &req).await {
                 return refusal;
             }
             // NOTE: RFC 9110 §15.5.6; whether a method is served is the

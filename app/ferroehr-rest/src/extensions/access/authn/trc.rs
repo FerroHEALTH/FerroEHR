@@ -70,6 +70,39 @@ impl Shape {
     }
 }
 
+/// Holds the caller of `principal` to the patient it may reach on `req`: a
+/// contact point's caller to the EHR of its TRC patient ([`confine`]), then a
+/// bound representative to the EHR of its subject; the refusal of either,
+/// before any patient lookup of the request itself.
+///
+/// What it reads of `req` is read before it awaits anything, so the future
+/// holds no borrow of the request.
+pub(super) fn patient_context<'a>(
+    layer: &'a AuthLayer,
+    principal: &'a mut Principal,
+    req: &Request,
+) -> impl Future<Output = Option<Response>> + Send + 'a {
+    let shape = Shape::of(layer, req);
+    let headers = req.headers().clone();
+    async move {
+        if let Some(refusal) = confine(layer, principal, shape, &headers).await {
+            return Some(refusal);
+        }
+        match super::party::represented_ehr(&layer.service, &principal.access).await {
+            Ok(represented) => {
+                principal.represented = represented;
+                None
+            }
+            Err(e) => Some(super::refused(
+                &layer.authenticator,
+                &headers,
+                &e,
+                Some(principal.clone()),
+            )),
+        }
+    }
+}
+
 /// Holds a contact point's caller of `principal` to the EHR of its TRC
 /// patient on a patient-data request of `shape`, marking it [`TrcBound`];
 /// the refusal, or `None` for a request it admits or any other caller.
@@ -77,7 +110,7 @@ impl Shape {
 /// A token without the binding is refused as
 /// `ERROR_SEC_DATA_INTEGRITY_NOT_ENSURED` (MyHealth@EU Requirements Catalogue
 /// 10.0.0 requirement 11.01.02) before the EHR index is asked.
-pub(super) async fn confine(
+async fn confine(
     layer: &AuthLayer,
     principal: &mut Principal,
     shape: Shape,
