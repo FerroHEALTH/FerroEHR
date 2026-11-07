@@ -479,3 +479,174 @@ async fn an_agreement_naming_a_template_the_store_does_not_hold_is_refused() {
         .expect("the store answers")
         .expect("no template is named");
 }
+
+/// The shared party mapping of #5013: one person template with its three
+/// selectors at one path told apart by type, a name attribute, the
+/// professional role, a group and the two relationship archetypes.
+const MAPPING: &str = r#"
+[[authz.party_binding.person.template]]
+template_id = "FerroEHR professional"
+default = true
+key = { path = "/details[id2]/items[id3]", type = "guid" }
+user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
+external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
+
+[[authz.party_binding.person.attribute]]
+scim = "name.formatted"
+oidc = "name"
+jit = true
+name = true
+path = { "FerroEHR professional" = "/identities[id4]/details[id5]/items[id6]" }
+
+[authz.party_binding.professional_role]
+template_id = "FerroEHR professional role"
+
+[authz.party_binding.group]
+template_id = "FerroEHR care team"
+external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
+display_name = "/identities[id4]/details[id5]/items[id6]"
+
+[authz.party_binding.membership]
+archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0"
+
+[authz.party_binding.representation]
+archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0"
+relationship_codes = { at0010 = "254", at0011 = "264" }
+"#;
+
+/// [`full`] with [`MAPPING`], `old` replaced by `new` in the mapping.
+fn mapped(old: &str, new: &str) -> String {
+    assert!(MAPPING.contains(old), "the mapping holds {old:?}");
+    format!("{}{}", full(), MAPPING.replacen(old, new, 1))
+}
+
+#[test]
+fn the_shared_party_mapping_loads() {
+    let config = assemble(&mapped("", "")).expect("assembles");
+    config.validate().expect("validates");
+    let sections = config.authz.party_binding.sections();
+    assert_eq!(sections.person.template.len(), 1);
+    assert!(!sections.person.attribute[0].path.is_empty());
+    let mapping = sections
+        .binding_mapping(&["urn:example:staff-login".to_owned()], "ADMIN")
+        .expect("compiles");
+    assert!(mapping.names_template("ferroehr PROFESSIONAL"));
+    assert!(mapping.names_template("FerroEHR professional role"));
+    assert!(mapping.names_template("FerroEHR care team"));
+    assert!(!mapping.names_template("FerroEHR patient"));
+}
+
+#[test]
+fn an_unknown_key_in_a_mapping_section_is_refused() {
+    for (old, new) in [
+        ("default = true", "default = true\ncolour = \"blue\""),
+        ("jit = true", "jit = true\nrequired = true"),
+        (
+            "template_id = \"FerroEHR professional role\"",
+            "template_id = \"FerroEHR professional role\"\nscope = \"x\"",
+        ),
+        (
+            "relationship_codes",
+            "archetype = \"x\"\nrelationship_codes",
+        ),
+        ("type = \"guid\" }", "type = \"guid\", issuer = \"x\" }"),
+    ] {
+        let text = refusal(&mapped(old, new));
+        assert!(text.contains("unknown field"), "{old}: {text}");
+    }
+}
+
+/// Asserts the mapping with `old` replaced by `new` is refused with a
+/// message holding `expected`.
+fn refused_with(old: &str, new: &str, expected: &str) {
+    let text = refusal(&mapped(old, new));
+    assert!(text.contains(expected), "{old} -> {new}: {text}");
+}
+
+#[test]
+fn a_mapping_without_exactly_one_default_template_is_refused() {
+    refused_with("default = true", "default = false", "exactly one");
+}
+
+#[test]
+fn a_selector_path_that_does_not_compile_is_refused_naming_it() {
+    refused_with(
+        "key = { path = \"/details[id2]/items[id3]\"",
+        "key = { path = \"details[id2\"",
+        "\"FerroEHR professional\" key",
+    );
+}
+
+#[test]
+fn two_equal_selectors_are_refused() {
+    refused_with(
+        "type = \"scim_user_name\"",
+        "type = \"guid\"",
+        "key and user_name are one selector",
+    );
+}
+
+#[test]
+fn a_key_of_a_protected_scheme_is_refused() {
+    let toml = format!(
+        "{}\n[demographic.identifier_protection]\nenabled = true\nschemes = [\"guid\"]\nkey = \"{}\"\n",
+        mapped("", ""),
+        "00".repeat(32)
+    );
+    let text = refusal(&toml);
+    assert!(text.contains("is protected"), "{text}");
+}
+
+#[test]
+fn a_bsn_identifier_on_a_professional_template_is_refused() {
+    refused_with(
+        "type = \"scim_external_id\" }\n\n[[authz",
+        "type = \"2.16.840.1.113883.2.4.6.3\" }\n\n[[authz",
+        "Dutch BSN namespace",
+    );
+}
+
+#[test]
+fn a_name_mapped_into_details_is_refused() {
+    refused_with(
+        "\"/identities[id4]/details[id5]/items[id6]\" }",
+        "\"/details[id2]/items[id7]\" }",
+        "goes in PARTY.identities",
+    );
+}
+
+#[test]
+fn an_identifier_mapped_into_identities_is_refused() {
+    refused_with(
+        "scim = \"name.formatted\"\noidc = \"name\"\njit = true\nname = true",
+        "scim = \"urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier\"",
+        "goes in PARTY.details",
+    );
+}
+
+#[test]
+fn an_intrinsic_scim_attribute_is_never_mapped() {
+    refused_with(
+        "scim = \"name.formatted\"\noidc = \"name\"\njit = true\nname = true",
+        "scim = \"userName\"",
+        "intrinsic to SCIM",
+    );
+}
+
+#[test]
+fn a_key_fed_by_an_email_address_is_refused() {
+    refused_with(
+        "scim = \"name.formatted\"\noidc = \"name\"\njit = true\nname = true\npath = { \"FerroEHR professional\" = \"/identities[id4]/details[id5]/items[id6]\" }",
+        "oidc = \"email\"\npath = { \"FerroEHR professional\" = \"/details[id2]/items[id3]\" }",
+        "never fed by an email address",
+    );
+}
+
+#[test]
+fn a_relationship_code_outside_subject_relationship_is_refused() {
+    refused_with(
+        "at0011 = \"264\"",
+        "at0011 = \"9999\"",
+        "subject_relationship group",
+    );
+}

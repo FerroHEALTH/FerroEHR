@@ -392,6 +392,40 @@ namespace = "demographic"
 #? key_issuer = "urn:example:staff-login"
 #? key = "3f2b0c1e-0000-4000-8000-000000000001"
 
+# The one PERSON mapping SCIM, just-in-time creation and the binding share.
+# Each person template names the paths and DV_IDENTIFIER types of the binding
+# key, userName and externalId (one path, told apart by type); exactly one is
+# the default new persons are created with. Names go in identities and
+# identifiers in details. After a change, stop every replica and run
+# `ferroehr party-binding refill`: a replica whose mapping differs from the
+# one the side table was filled under refuses to start.
+#? [[authz.party_binding.person.template]]
+#? template_id = "FerroEHR professional"
+#? default = true
+#? key = { path = "/details[at0001]/items[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2]/items[at0001]", type = "guid" }
+#? user_name = { path = "/details[at0001]/items[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2]/items[at0001]", type = "scim_user_name" }
+#? external_id = { path = "/details[at0001]/items[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2]/items[at0001]", type = "scim_external_id" }
+# Each mapped value: its SCIM attribute, its OpenID Connect claim, whether
+# just-in-time creation writes it, whether it is the committer's name, and its
+# path per template.
+#? [[authz.party_binding.person.attribute]]
+#? scim = "name.formatted"
+#? oidc = "name"
+#? jit = true
+#? name = true
+#? path = { "FerroEHR professional" = "/identities[openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1]/details[at0001]/items[at0002]" }
+#? [authz.party_binding.professional_role]
+#? template_id = "FerroEHR professional role"
+#? [authz.party_binding.group]
+#? template_id = "FerroEHR care team"
+#? external_id = { path = "/details[at0001]/items[at0001]", type = "scim_external_id" }
+#? display_name = "/identities[at0002]/details[at0003]/items[at0004]"
+#? [authz.party_binding.membership]
+#? archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
+#? [authz.party_binding.representation]
+#? archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1"
+#? relationship_codes = { at0010 = "254", at0011 = "264" }
+
 # The creating_system_id values whose wrapped committers may name a local
 # party on import; never this node's own [rest] system_id.
 [authz.import]

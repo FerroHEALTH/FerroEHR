@@ -60,6 +60,18 @@ no least-privilege role can do, so point `[db] migrate_url` at the credential
 that prepares the schema. See
 [Operations](../operations.md#which-credential-prepares-the-schema).
 
+### `ferroehr party-binding refill`
+
+```sh
+ferroehr party-binding refill   # rebuild the party binding side table under the configured mapping
+```
+
+Rebuilds the binding side table from the party versions under the
+configured [party mapping](config-auth.md#the-party-mapping) and stores the
+mapping's digest. Run it with every replica stopped after a mapping change:
+it refuses while a replica holds a live lease, and refuses a store in which
+two parties carry one selector value, naming both.
+
 ### `ferroehr healthcheck`
 
 Asks the running server's `GET /health/readiness` and exits 0 on `200`, 1

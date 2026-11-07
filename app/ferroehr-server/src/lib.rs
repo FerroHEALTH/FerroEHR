@@ -65,6 +65,7 @@ use ferroehr::db;
 use ferroehr::service::FerroEhrService;
 use ferroehr::telemetry::{self, indicators};
 use ferrohealth_telemetry::request_log::RequestLog;
+pub mod party_binding;
 
 /// How long to wait for the audit queue to flush on shutdown.
 const AUDIT_DRAIN_TIMEOUT: Duration = Duration::from_secs(5);
@@ -123,6 +124,12 @@ pub enum Command {
         /// Which report to print.
         #[arg(long, value_enum, default_value_t = ReportEvent::Start)]
         event: ReportEvent,
+    },
+    /// The party binding side table: `refill` it after a mapping change.
+    PartyBinding {
+        /// Which step to run.
+        #[command(subcommand)]
+        cmd: party_binding::PartyBindingCmd,
     },
     /// Write a redacted report of what this deployment runs (build, features,
     /// specification pins, migration level, posture, licence, manufacturer and
@@ -197,6 +204,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             command: ConfigCommand::Check,
         })) => run_config_check(config, set),
         Some(Command::Db { cmd }) => run_db(&cmd, config, set).await,
+        Some(Command::PartyBinding { cmd }) => party_binding::run(&cmd, config, set).await,
         Some(Command::UsageReport { print: _, event }) => {
             run_usage_report(event, config, set).await
         }
@@ -621,7 +629,7 @@ fn assemble_service(
     }
 
     service = attach_terminology(service, config)?;
-    attach_multimedia(service, config)
+    attach_multimedia(party_binding::install(service, config)?, config)
 }
 
 /// Wires authorization, active only when authentication is enabled: the RBAC
@@ -1183,6 +1191,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     }
 
     service.unheld_written_templates(&config.authz).await??;
+    let binding_lease = party_binding::prepare(&service, &config).await?;
     // The retention register keys category periods on the map in force, so it
     // is mirrored before the listener takes traffic. `validate` has already
     // refused a map that does not compile.
@@ -1253,6 +1262,9 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         .context("serving ferroehr-rest")?;
     tracing::info!(?drained, "the listeners drained");
 
+    if let Some(held) = binding_lease {
+        held.release().await;
+    }
     if let Some(handle) = audit_handle {
         handle.shutdown(AUDIT_DRAIN_TIMEOUT).await;
     }

@@ -43,8 +43,8 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// - `versioned_object_does_not_exist` (`404`) — no template with that id.
-    /// - `409` (`ServiceError::Conflict`) — a `version` row still references
-    ///   the template (`version.template_id` FK, `clinical/0006_definitions.sql`);
+    /// - `409` (`ServiceError::Conflict`) — the party mapping names the
+    ///   template, or a `version` row still references the template (`version.template_id` FK, `clinical/0006_definitions.sql`);
     ///   a physical delete must never orphan the compositions built on it.
     /// - `exception` — a database fault.
     pub async fn admin_template_delete(&self, template_id: &str) -> Result<(), ServiceError> {
@@ -61,6 +61,12 @@ impl FerroEhrService {
         // Counted over BOTH storage tiers: `version` is one relation
         // partitioned by tier, so this reaches an archived composition's
         // reference as well as a live one.
+        if self.binding.names_template(&stored) {
+            return Err(ServiceError::conflict(format!(
+                "template '{stored}' is named by [authz.party_binding]; remove it from the party \
+                 mapping before deleting it"
+            )));
+        }
         let refs = template_repo::template_use_count(&mut tx, &stored).await?;
         if refs > 0 {
             return Err(ServiceError::conflict(format!(

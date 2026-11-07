@@ -86,6 +86,8 @@ mod opt_resource_meta;
 mod outbox_feed;
 mod party_binding_config;
 mod party_binding_source;
+mod party_mapping;
+mod party_mapping_templates;
 mod persistence;
 mod privacy_leak;
 mod privacy_policy;

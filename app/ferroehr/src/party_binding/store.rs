@@ -25,6 +25,8 @@
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
+use crate::error::ServiceError;
+use crate::error::refusal::{Clash, Refusal};
 use crate::ids::VoId;
 use crate::party_binding::{BindingMapping, IdentifierSelector};
 use crate::storage::error::StorageError;
@@ -75,6 +77,22 @@ macro_rules! relationships {
     };
 }
 
+/// The canonical form of `DV_IDENTIFIER` `id`, the value of `id.type`: lower
+/// case for a GUID or UUID, as `ferrohealth-smart` puts a claim value.
+macro_rules! canonical_value {
+    ($id:literal) => {
+        concat!(
+            "CASE WHEN lower(",
+            $id,
+            " ->> 'type') IN ('guid', 'uuid') THEN lower(",
+            $id,
+            " ->> 'id') ELSE ",
+            $id,
+            " ->> 'id' END"
+        )
+    };
+}
+
 /// Rebuilds the side-table rows the party `vo_id` of `kind` contributes, on
 /// the commit transaction `tx`, after the write has advanced its head row.
 ///
@@ -108,18 +126,55 @@ pub async fn reindex(
     }
 }
 
-/// Rebuilds the reverse-relationship index and the side-table rows of the
-/// party `committed` wrote, on its commit transaction `tx`.
+/// The `409` of a violation of one of the selector unique indexes: the commit
+/// gives a binding key, a `userName`, an `externalId` or a group
+/// `displayName` a second live party. Every other failure is classified as
+/// storage.
+pub(crate) fn selector_in_use(e: StorageError) -> ServiceError {
+    let StorageError::Database(source) = e else {
+        return ServiceError::Storage(e);
+    };
+    let selector = source
+        .as_database_error()
+        .filter(|db| db.is_unique_violation())
+        .and_then(|db| db.constraint())
+        .and_then(|constraint| match constraint {
+            "uq_binding_identifier_key" => Some("binding key"),
+            "uq_binding_identifier_user_name" => Some("userName"),
+            "uq_binding_identifier_external_id" => Some("externalId"),
+            "uq_binding_identifier_display_name" => Some("displayName"),
+            _ => None,
+        });
+    match selector {
+        Some(selector) => ServiceError::Conflict(
+            Refusal::new(
+                Clash::State,
+                format!("the {selector} this party carries is already held by another party"),
+            )
+            .with_source(source),
+        ),
+        None => ServiceError::Storage(StorageError::Database(source)),
+    }
+}
+
+/// Judges the party commit `committed` against the protection rules
+/// ([`crate::party_binding::protect`]), then rebuilds its
+/// reverse-relationship index and side-table rows, on its commit transaction
+/// `tx`.
 ///
 /// # Errors
-/// [`StorageError::Database`] on a driver failure.
+/// The protection refusals, the `409` of [`selector_in_use`], and a storage
+/// failure.
 pub(crate) async fn reindex_committed(
     tx: &mut PgConnection,
     ctx: &SigningCtx<'_>,
     committed: &Committed,
-) -> Result<(), StorageError> {
+) -> Result<(), ServiceError> {
+    crate::party_binding::protect::check(tx, ctx.binding, committed.kind, committed.vo_id).await?;
     party_reverse::reindex(tx, committed.vo_id).await?;
-    reindex(tx, ctx.binding, committed.kind, committed.vo_id).await
+    reindex(tx, ctx.binding, committed.kind, committed.vo_id)
+        .await
+        .map_err(selector_in_use)
 }
 
 /// Rebuilds the reverse-relationship index and the side-table rows of the
@@ -143,9 +198,10 @@ pub(crate) async fn reindex_loaded(
     }
 }
 
-/// The statement `sql` with the six parameters the selector derivations
+/// The statement `sql` with the seven parameters the selector derivations
 /// share: the parties `$1`, the kind `$2`, the canonical template `$3`, and
-/// the selector's path `$4`, variables `$5` and type `$6`.
+/// the selector's path `$4`, variables `$5`, type `$6` and issuers `$7`
+/// (NULL for every issuer).
 fn selected<'q>(
     sql: &'static str,
     ids: Option<&'q [Uuid]>,
@@ -160,6 +216,16 @@ fn selected<'q>(
         .bind(&selector.json_path)
         .bind(&selector.variables)
         .bind(&selector.identifier_type)
+        .bind(selector.issuer_filter())
+}
+
+/// The condition that `id` is a complete identifier of the selector's type and
+/// issuers, with the parameters [`selected`] binds.
+macro_rules! identifier_of_selector {
+    () => {
+        "id ->> 'type' = $6 AND id ->> 'issuer' IS NOT NULL AND id ->> 'id' IS NOT NULL \
+         AND ($7::text[] IS NULL OR id ->> 'issuer' = ANY($7::text[]))"
+    };
 }
 
 /// Rebuilds every row of the side table from the party versions alone, on
@@ -180,6 +246,71 @@ pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(
     }
     reindex_persons(tx, mapping, None, true).await?;
     reindex_groups(tx, mapping, None).await
+}
+
+/// One selector identifier of a live `PERSON` head, as the unique indexes
+/// compare it.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct HeldSelector {
+    /// `key`, `user_name` or `external_id`.
+    pub selector: &'static str,
+    /// The `DV_IDENTIFIER.issuer`; empty for a `userName`, which is unique
+    /// across issuers.
+    pub issuer: String,
+    /// The compared value: the canonical key, the folded `userName`, or the
+    /// `externalId`.
+    pub value: String,
+    /// The `PERSON`'s container.
+    pub party_id: Uuid,
+}
+
+/// Every selector identifier of every live `PERSON` head of a mapped
+/// template, whether or not it binds, on `tx`: what [`refill`] would hold
+/// each value to one party by.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn held_selectors(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+) -> Result<Vec<HeldSelector>, StorageError> {
+    let mut out = Vec::new();
+    for (template, selectors) in &mapping.persons {
+        for (selector, chosen) in selectors.each() {
+            let rows = selected(
+                concat!(
+                    heads!(),
+                    "SELECT DISTINCT p.vo_id, \
+                            CASE WHEN $8 = 'user_name' THEN '' ELSE id ->> 'issuer' END AS issuer, \
+                            CASE WHEN $8 = 'user_name' THEN party.binding_fold(id ->> 'id') \
+                                 WHEN $8 = 'key' THEN ",
+                    canonical_value!("id"),
+                    " ELSE id ->> 'id' END AS value \
+                 FROM p CROSS JOIN LATERAL jsonb_path_query(p.body, $4::jsonpath, $5::jsonb) AS id \
+                 WHERE ",
+                    identifier_of_selector!()
+                ),
+                None,
+                Kind::Person,
+                template,
+                chosen,
+            )
+            .bind(selector)
+            .fetch_all(&mut *tx)
+            .await?;
+            for row in rows {
+                out.push(HeldSelector {
+                    selector,
+                    issuer: row.try_get("issuer")?,
+                    value: row.try_get("value")?,
+                    party_id: row.try_get("vo_id")?,
+                });
+            }
+        }
+    }
+    out.sort();
+    out.dedup();
+    Ok(out)
 }
 
 /// The `PERSON` containers every version of the `ROLE` `role` names as its
@@ -208,7 +339,8 @@ async fn reindex_persons(
     if let Some(ids) = ids {
         sqlx::query(
             "UPDATE binding_identifier SET retired_at = now() \
-             WHERE party_id = ANY($1) AND selector = 'key' AND retired_at IS NULL",
+             WHERE party_id = ANY($1) AND selector IN ('key', 'user_name', 'external_id') \
+               AND retired_at IS NULL",
         )
         .bind(ids)
         .execute(&mut *tx)
@@ -221,11 +353,19 @@ async fn reindex_persons(
         .execute(&mut *tx)
         .await?;
     }
-    for (template, key) in &mapping.persons {
+    for (template, selectors) in &mapping.persons {
         insert_representations(tx, mapping, ids, template).await?;
-        insert_keys(tx, mapping, ids, template, key).await?;
+        insert_keys(tx, mapping, ids, template, &selectors.key).await?;
+        for (selector, chosen) in [
+            ("user_name", selectors.user_name.as_ref()),
+            ("external_id", selectors.external_id.as_ref()),
+        ] {
+            if let Some(chosen) = chosen {
+                insert_selector(tx, ids, Kind::Person, template, selector, chosen).await?;
+            }
+        }
         if tombstones {
-            insert_tombstones(tx, ids, template, key).await?;
+            insert_tombstones(tx, ids, template, &selectors.key).await?;
         }
     }
     // A key a live row binds again is no longer a tombstone.
@@ -286,22 +426,6 @@ async fn insert_representations(
     Ok(())
 }
 
-/// The canonical form of `DV_IDENTIFIER` `id`, the value of `id.type`: lower
-/// case for a GUID or UUID, as `ferrohealth-smart` puts a claim value.
-macro_rules! canonical_value {
-    ($id:literal) => {
-        concat!(
-            "CASE WHEN lower(",
-            $id,
-            " ->> 'type') IN ('guid', 'uuid') THEN lower(",
-            $id,
-            " ->> 'id') ELSE ",
-            $id,
-            " ->> 'id' END"
-        )
-    };
-}
-
 /// Inserts the live key rows of the `PERSON`s `ids` of `template`: one per
 /// identifier at `key`, for a `PERSON` that performs a professional `ROLE` or
 /// is the source of a representation relationship.
@@ -328,30 +452,35 @@ async fn insert_keys(
              JOIN vo_head rh ON rh.vo_id = listed.role_id \
              JOIN version rv ON rv.tier = rh.tier AND rv.vo_id = rh.vo_id \
                             AND rv.sys_version = rh.trunk_head_sys_version \
-             WHERE $7::text IS NOT NULL AND rh.kind = 'ROLE' \
+             WHERE $8::text IS NOT NULL AND rh.kind = 'ROLE' \
                AND rh.lifecycle_state IN ('532', '553') \
                AND rv.body IS NOT NULL \
                AND lower(btrim(rv.body::jsonb -> 'archetype_details' -> 'template_id' ->> 'value')) \
-                   = $7 \
+                   = $8 \
                AND ",
         container!("rv.body::jsonb -> 'performer' -> 'id' ->> 'value'"),
         " = p.vo_id \
              GROUP BY p.vo_id \
          ) \
          INSERT INTO binding_identifier \
-             (party_id, selector, issuer, identifier_type, value, lifecycle_state, \
+             (party_id, selector, issuer, identifier_type, value, folded, lifecycle_state, \
               professional, representative) \
-         SELECT p.vo_id, 'key', id ->> 'issuer', id ->> 'type', ",
+         SELECT DISTINCT ON (p.vo_id, id ->> 'issuer', ",
         canonical_value!("id"),
-        ", p.lifecycle_state, coalesce(pr.dates, '{}'), rep.present \
+        ") p.vo_id, 'key', id ->> 'issuer', id ->> 'type', c.value, c.value, \
+                p.lifecycle_state, coalesce(pr.dates, '{}'), rep.present \
          FROM p \
          CROSS JOIN LATERAL jsonb_path_query(p.body, $4::jsonpath, $5::jsonb) AS id \
+         CROSS JOIN LATERAL (SELECT ",
+        canonical_value!("id"),
+        " AS value) AS c \
          LEFT JOIN professional pr ON pr.vo_id = p.vo_id \
          CROSS JOIN LATERAL (SELECT EXISTS ( \
              SELECT 1 FROM binding_representation b \
              WHERE b.representative_id = p.vo_id AND b.retired_at IS NULL) AS present) AS rep \
-         WHERE id ->> 'type' = $6 AND id ->> 'issuer' IS NOT NULL AND id ->> 'id' IS NOT NULL \
-           AND (NOT isempty(coalesce(pr.dates, '{}')) OR rep.present)"
+         WHERE ",
+        identifier_of_selector!(),
+        " AND (NOT isempty(coalesce(pr.dates, '{}')) OR rep.present)"
         ),
         ids,
         Kind::Person,
@@ -359,6 +488,44 @@ async fn insert_keys(
         key,
     )
     .bind(mapping.professional_role.as_deref())
+    .execute(&mut *tx)
+    .await?;
+    Ok(())
+}
+
+/// Inserts the live `selector` rows (`user_name`, `external_id` or
+/// `group_external_id`) of the parties `ids` of `kind` and `template`: one
+/// per identifier `chosen` selects, of every live head, whether or not it
+/// binds, so the unique indexes hold each value to one party. A `userName` is
+/// compared by its fold.
+async fn insert_selector(
+    tx: &mut PgConnection,
+    ids: Option<&[Uuid]>,
+    kind: Kind,
+    template: &str,
+    selector: &str,
+    chosen: &IdentifierSelector,
+) -> Result<(), StorageError> {
+    selected(
+        concat!(
+            heads!(),
+            "INSERT INTO binding_identifier \
+             (party_id, selector, issuer, identifier_type, value, folded, lifecycle_state) \
+         SELECT DISTINCT ON (p.vo_id, id ->> 'issuer', id ->> 'id') \
+                p.vo_id, $8, id ->> 'issuer', id ->> 'type', id ->> 'id', \
+                CASE WHEN $8 = 'user_name' THEN party.binding_fold(id ->> 'id') \
+                     ELSE id ->> 'id' END, \
+                p.lifecycle_state \
+         FROM p CROSS JOIN LATERAL jsonb_path_query(p.body, $4::jsonpath, $5::jsonb) AS id \
+         WHERE ",
+            identifier_of_selector!()
+        ),
+        ids,
+        kind,
+        template,
+        chosen,
+    )
+    .bind(selector)
     .execute(&mut *tx)
     .await?;
     Ok(())
@@ -376,9 +543,11 @@ async fn insert_tombstones(
     selected(
         concat!(
             "INSERT INTO binding_identifier \
-             (party_id, selector, issuer, identifier_type, value, lifecycle_state, \
+             (party_id, selector, issuer, identifier_type, value, folded, lifecycle_state, \
               retired_at, deprovisioned_at) \
          SELECT DISTINCT h.vo_id, 'key', id ->> 'issuer', id ->> 'type', ",
+            canonical_value!("id"),
+            ", ",
             canonical_value!("id"),
             ", last.lifecycle_state, now(), now() \
          FROM vo_head h \
@@ -390,8 +559,9 @@ async fn insert_tombstones(
          WHERE h.kind = $2 AND h.lifecycle_state = '523' \
            AND ($1::uuid[] IS NULL OR h.vo_id = ANY($1::uuid[])) \
            AND lower(btrim(last.body -> 'archetype_details' -> 'template_id' ->> 'value')) = $3 \
-           AND id ->> 'type' = $6 AND id ->> 'issuer' IS NOT NULL AND id ->> 'id' IS NOT NULL \
-           AND NOT EXISTS ( \
+           AND ",
+            identifier_of_selector!(),
+            " AND NOT EXISTS ( \
                SELECT 1 FROM binding_identifier t \
                WHERE t.party_id = h.vo_id AND t.deprovisioned_at IS NOT NULL)"
         ),
@@ -415,35 +585,48 @@ async fn reindex_groups(
     mapping: &BindingMapping,
     ids: Option<&[Uuid]>,
 ) -> Result<(), StorageError> {
-    let Some((template, external_id)) = &mapping.group else {
+    let Some(group) = &mapping.group else {
         return Ok(());
     };
+    let template = &group.template;
     if let Some(ids) = ids {
         sqlx::query(
             "UPDATE binding_identifier SET retired_at = now() \
-             WHERE party_id = ANY($1) AND selector = 'group_external_id' AND retired_at IS NULL",
+             WHERE party_id = ANY($1) AND selector IN ('group_external_id', 'group_display_name') \
+               AND retired_at IS NULL",
         )
         .bind(ids)
         .execute(&mut *tx)
         .await?;
     }
-    selected(
-        concat!(
-            heads!(),
-            "INSERT INTO binding_identifier \
-             (party_id, selector, issuer, identifier_type, value, lifecycle_state) \
-         SELECT p.vo_id, 'group_external_id', id ->> 'issuer', id ->> 'type', id ->> 'id', \
-                p.lifecycle_state \
-         FROM p CROSS JOIN LATERAL jsonb_path_query(p.body, $4::jsonpath, $5::jsonb) AS id \
-         WHERE id ->> 'type' = $6 AND id ->> 'issuer' IS NOT NULL AND id ->> 'id' IS NOT NULL"
-        ),
+    insert_selector(
+        tx,
         ids,
         Kind::Group,
         template,
-        external_id,
+        "group_external_id",
+        &group.external_id,
     )
-    .execute(&mut *tx)
     .await?;
+    if let Some(display_name) = &group.display_name {
+        sqlx::query(concat!(
+            heads!(),
+            "INSERT INTO binding_identifier \
+             (party_id, selector, issuer, identifier_type, value, folded, lifecycle_state) \
+         SELECT DISTINCT ON (p.vo_id, party.binding_fold(name ->> 'value')) \
+                p.vo_id, 'group_display_name', '', '', name ->> 'value', \
+                party.binding_fold(name ->> 'value'), p.lifecycle_state \
+         FROM p CROSS JOIN LATERAL jsonb_path_query(p.body, $4::jsonpath, $5::jsonb) AS name \
+         WHERE name ->> 'value' IS NOT NULL"
+        ))
+        .bind(ids)
+        .bind(Kind::Group.as_str())
+        .bind(template)
+        .bind(&display_name.json_path)
+        .bind(&display_name.variables)
+        .execute(&mut *tx)
+        .await?;
+    }
     sqlx::query(concat!(
         heads!(),
         ", wanted AS ( \
@@ -474,150 +657,6 @@ async fn reindex_groups(
     .execute(&mut *tx)
     .await?;
     Ok(())
-}
-
-/// One key row the lookup reads: a live row, or the tombstone of a deleted
-/// `PERSON`.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct KeyRow {
-    /// The `PERSON`'s container.
-    pub party_id: Uuid,
-    /// The head's `version_lifecycle_state` code.
-    pub lifecycle_state: String,
-    /// Whether a professional `ROLE` is valid on the lookup's date.
-    pub professional: bool,
-    /// Whether the `PERSON` is the source of a representation relationship.
-    pub representative: bool,
-    /// Whether the row is live; a row that is not is a tombstone.
-    pub live: bool,
-}
-
-/// The key rows of the identifier `value` of `identifier_type` under
-/// `issuer`, live and tombstoned, with the professional state on `today`
-/// (`YYYY-MM-DD`); answered from `ix_binding_identifier_lookup` alone.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub async fn key_rows(
-    conn: &mut PgConnection,
-    issuer: &str,
-    identifier_type: &str,
-    value: &str,
-    today: &str,
-) -> Result<Vec<KeyRow>, StorageError> {
-    let rows = sqlx::query(LOOKUP)
-        .bind(issuer)
-        .bind(identifier_type)
-        .bind(value)
-        .bind(today)
-        .fetch_all(&mut *conn)
-        .await?;
-    let mut out = Vec::with_capacity(rows.len());
-    for row in rows {
-        out.push(KeyRow {
-            party_id: row.try_get("party_id")?,
-            lifecycle_state: row.try_get("lifecycle_state")?,
-            professional: row.try_get("professional")?,
-            representative: row.try_get("representative")?,
-            live: row.try_get("live")?,
-        });
-    }
-    Ok(out)
-}
-
-/// The lookup statement of [`key_rows`], public so a test can `EXPLAIN` it.
-pub const LOOKUP: &str = "SELECT party_id, lifecycle_state, professional @> $4::date AS professional, \
-            representative, retired_at IS NULL AS live \
-     FROM binding_identifier \
-     WHERE selector = 'key' AND issuer = $1 AND identifier_type = $2 AND value = $3 \
-       AND (retired_at IS NULL OR deprovisioned_at IS NOT NULL) \
-     ORDER BY party_id";
-
-/// One live membership: a member, its group and the group's `externalId`.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MembershipRow {
-    /// The member `PERSON`'s container.
-    pub member: Uuid,
-    /// The `GROUP`'s container.
-    pub group: Uuid,
-    /// The `GROUP`'s `externalId` value under the queried issuer.
-    pub external_id: String,
-}
-
-/// The live memberships of `members` in a `GROUP` whose head is `complete` or
-/// `incomplete` and whose `externalId` is under `issuer`.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub async fn memberships(
-    conn: &mut PgConnection,
-    members: &[Uuid],
-    issuer: &str,
-) -> Result<Vec<MembershipRow>, StorageError> {
-    let rows = sqlx::query(
-        "SELECT m.member_id, g.party_id AS group_id, g.value AS external_id \
-         FROM binding_membership m \
-         JOIN binding_identifier g ON g.party_id = m.group_id AND g.retired_at IS NULL \
-                                  AND g.selector = 'group_external_id' \
-         WHERE m.member_id = ANY($1) AND m.retired_at IS NULL AND g.issuer = $2 \
-           AND g.lifecycle_state IN ('532', '553') \
-         ORDER BY m.member_id, g.party_id, g.value",
-    )
-    .bind(members)
-    .bind(issuer)
-    .fetch_all(&mut *conn)
-    .await?;
-    let mut out = Vec::with_capacity(rows.len());
-    for row in rows {
-        out.push(MembershipRow {
-            member: row.try_get("member_id")?,
-            group: row.try_get("group_id")?,
-            external_id: row.try_get("external_id")?,
-        });
-    }
-    Ok(out)
-}
-
-/// One live representation relationship: the representative, the subject and
-/// the mapped `subject_relationship` code.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RepresentationRow {
-    /// The representative `PERSON`'s container.
-    pub representative_id: Uuid,
-    /// The subject `PERSON`'s container.
-    pub subject_id: Uuid,
-    /// The openEHR `subject_relationship` code, when the type maps to one.
-    pub relationship: Option<String>,
-}
-
-/// The representation relationships of `representatives` valid on `today`
-/// (`YYYY-MM-DD`).
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub async fn representations(
-    conn: &mut PgConnection,
-    representatives: &[Uuid],
-    today: &str,
-) -> Result<Vec<RepresentationRow>, StorageError> {
-    let rows = sqlx::query(
-        "SELECT representative_id, subject_id, relationship FROM binding_representation \
-         WHERE representative_id = ANY($1) AND retired_at IS NULL AND validity @> $2::date \
-         ORDER BY representative_id, subject_id, relationship",
-    )
-    .bind(representatives)
-    .bind(today)
-    .fetch_all(&mut *conn)
-    .await?;
-    let mut out = Vec::with_capacity(rows.len());
-    for row in rows {
-        out.push(RepresentationRow {
-            representative_id: row.try_get("representative_id")?,
-            subject_id: row.try_get("subject_id")?,
-            relationship: row.try_get("relationship")?,
-        });
-    }
-    Ok(out)
 }
 
 /// Deletes every side-table row naming any of `vo_ids`, on the erasure

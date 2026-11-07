@@ -550,16 +550,33 @@ async fn a_deleted_person_leaves_a_tombstone() {
 }
 
 #[tokio::test]
-async fn two_persons_carrying_one_key_are_both_reported() {
+async fn a_second_person_binding_one_key_is_refused_at_its_commit() {
     let (_db, svc) = service().await;
     let value = "0f1a2b3c-4d5e-4f6a-9b8c-9d0e1f2a3b4c";
     let (first, _) = professional(&svc, value).await;
-    let (second, _) = professional(&svc, value).await;
-    let mut found = parties(&lookup(&svc, value).await);
-    found.sort();
-    let mut expected = vec![person_ref(first), person_ref(second)];
-    expected.sort();
-    assert_eq!(found, expected);
+
+    // The second PERSON binds the key the moment it lists its professional
+    // ROLE, and the unique index on live keys refuses that commit.
+    let body = person(PERSON_TEMPLATE, &[key(&value.to_ascii_uppercase())]);
+    let (second, uid) = create(&svc, PartyKind::Person, &body).await;
+    let (role_vo, _) = create(&svc, PartyKind::Role, &role(ROLE_TEMPLATE, second, None)).await;
+    let mut listed = body;
+    listed["roles"] = json!([party_ref("ROLE", role_vo)]);
+    let refused = Box::pin(svc.party_update(
+        PartyKind::Person,
+        object(second.to_string()),
+        if_match(&uid),
+        version(&listed, "532", Some(&uid)),
+    ))
+    .await
+    .expect_err("a key another PERSON binds is refused")
+    .classified();
+    assert!(
+        matches!(refused, ferroehr::error::ServiceError::Conflict(_)),
+        "{refused:?}"
+    );
+    assert!(refused.to_string().contains("binding key"), "{refused}");
+    assert_eq!(parties(&lookup(&svc, value).await), [person_ref(first)]);
 }
 
 #[tokio::test]
@@ -856,11 +873,13 @@ async fn the_lookup_is_an_index_only_scan_at_fifty_thousand_persons() {
     let (vo, _) = professional(&svc, UPPER_KEY).await;
     let pool = db.pool();
     sqlx::query(
-        "INSERT INTO party.binding_identifier \
-             (party_id, selector, issuer, identifier_type, value, lifecycle_state, professional) \
-         SELECT uuidv7(), 'key', $1, $2, gen_random_uuid()::text, '532', \
+        "WITH k AS (SELECT gen_random_uuid()::text AS value FROM generate_series(1, 50000)) \
+         INSERT INTO party.binding_identifier \
+             (party_id, selector, issuer, identifier_type, value, folded, lifecycle_state, \
+              professional) \
+         SELECT uuidv7(), 'key', $1, $2, k.value, k.value, '532', \
                 datemultirange(daterange(NULL, NULL)) \
-         FROM generate_series(1, 50000)",
+         FROM k",
     )
     .bind(LOGIN)
     .bind(GUID)
@@ -869,8 +888,9 @@ async fn the_lookup_is_an_index_only_scan_at_fifty_thousand_persons() {
     .expect("the persons seed");
     sqlx::query(
         "INSERT INTO party.binding_identifier \
-             (party_id, selector, issuer, identifier_type, value, lifecycle_state) \
-         SELECT uuidv7(), 'group_external_id', $1, 'external_id', 'group-' || n, '532' \
+             (party_id, selector, issuer, identifier_type, value, folded, lifecycle_state) \
+         SELECT uuidv7(), 'group_external_id', $1, 'external_id', 'group-' || n, 'group-' || n, \
+                '532' \
          FROM generate_series(1, 5000) AS n",
     )
     .bind(GROUPS)
@@ -889,7 +909,7 @@ async fn the_lookup_is_an_index_only_scan_at_fifty_thousand_persons() {
         .expect("search path");
     let explain = format!(
         "EXPLAIN (FORMAT JSON) {}",
-        ferroehr::party_binding::store::LOOKUP
+        ferroehr::party_binding::lookup::LOOKUP
     );
     let plan: Value = sqlx::query_scalar(sqlx::AssertSqlSafe(explain))
         .bind(LOGIN)

@@ -277,6 +277,27 @@ An access delay is the opposite direction: it withholds a composition from
 the person, never from a professional. What it changes is on [delayed access
 by the person](security.md#delayed-access-by-the-person-ehds-art-33).
 
+## Re-keying a professional's binding key
+
+A `PERSON`'s binding key, the login identifier it is bound to, is immutable
+on every ordinary write (RFC 7643 §2.2). `POST {ext}/admin/party/binding-key`
+is the one change, made by an administrator. No openEHR specification
+governs it; it is our own extension.
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"party_id": "0d6c…", "issuer": "https://login.example/tenant", "id": "5b0f…"}' \
+  "$BASE/admin/party/binding-key"
+```
+
+The `PERSON` gets a new version carrying the new key, the old key stops
+binding in the same commit, and one access record carries both keys. The
+route answers **403** when the new key is the requesting administrator's own
+login, **409** when the `PERSON` carries no key of that issuer or the new
+key is already bound to another party, and **404** for an unknown or
+deleted `PERSON`. The [party mapping](installation/config-auth.md#the-party-mapping)
+says which parties are protected.
+
 ## Reading a party's protected identifiers
 
 With [national-identifier protection](installation/config-privacy.md#protecting-national-identifiers-in-the-demographic-domain)

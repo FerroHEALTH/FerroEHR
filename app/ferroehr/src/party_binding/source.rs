@@ -24,7 +24,7 @@ use ferrohealth_smart::party::{Markers, Membership, PartyRef, PartyState, Repres
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::party_binding::store::{self, KeyRow};
+use crate::party_binding::lookup::{self, KeyRow};
 use crate::storage::error::StorageError;
 
 /// The RM class of a bound party.
@@ -72,7 +72,7 @@ impl LocalPartySource {
         today: &str,
     ) -> Result<Lookup, StorageError> {
         let mut conn = self.pool.acquire().await?;
-        let rows = store::key_rows(&mut conn, issuer, identifier_type, value, today).await?;
+        let rows = lookup::key_rows(&mut conn, issuer, identifier_type, value, today).await?;
         let (live, tombstones): (Vec<KeyRow>, Vec<KeyRow>) =
             rows.into_iter().partition(|row| row.live);
         let live: Vec<KeyRow> = live
@@ -89,7 +89,7 @@ impl LocalPartySource {
         let ids: Vec<Uuid> = live.iter().map(|row| row.party_id).collect();
         let mut groups: BTreeMap<Uuid, Vec<Membership>> = BTreeMap::new();
         if let Some(issuer) = group_issuer {
-            for row in store::memberships(&mut conn, &ids, issuer).await? {
+            for row in lookup::memberships(&mut conn, &ids, issuer).await? {
                 groups.entry(row.member).or_default().push(Membership::new(
                     self.party(GROUP, row.group),
                     row.external_id,
@@ -103,7 +103,7 @@ impl LocalPartySource {
             .collect();
         let mut subjects: BTreeMap<Uuid, Vec<Represented>> = BTreeMap::new();
         if !representatives.is_empty() {
-            for row in store::representations(&mut conn, &representatives, today).await? {
+            for row in lookup::representations(&mut conn, &representatives, today).await? {
                 let subject = Represented::new(self.party(PERSON, row.subject_id));
                 subjects
                     .entry(row.representative_id)
