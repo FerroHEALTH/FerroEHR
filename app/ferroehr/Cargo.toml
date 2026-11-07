@@ -32,6 +32,7 @@ ferroehr-ext = { path = "../ferroehr-ext", optional = true }
 http.workspace = true
 secrecy.workspace = true
 urlencoding.workspace = true
+unicode-normalization.workspace = true
 # `[auth]` is the `ferrohealth-smart` section (`config::auth`), and the
 # terminology lane's client credentials grant runs on its client.
 ferrohealth-smart.workspace = true

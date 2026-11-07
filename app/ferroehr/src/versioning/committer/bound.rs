@@ -54,12 +54,18 @@ pub const CLIENT_TYPE: &str = "client";
 /// The committer the server writes for `identity`, when it knows one.
 ///
 /// It is the record subject's `PARTY_SELF`, a representative's
-/// `PARTY_RELATED`, a bound professional's `PARTY_IDENTIFIED`, or a system
+/// `PARTY_RELATED`, a bound professional's or a verified external person's
+/// `PARTY_IDENTIFIED` ([`super::external::committer`]), or a system
 /// caller's `PARTY_IDENTIFIED` named by its client, with the client
 /// identifier under the token issuer and no `external_ref`, so the record
 /// says a system committed; `None` for any other caller.
 #[must_use]
 pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
+    if let Some(super::ExternalCaller::Person { professional, .. }) = &identity.external {
+        // NOTE: `committer::resolve` refuses the token whose fields name no committer, so a
+        // commit never records the login-only form this `None` falls back to.
+        return super::external::committer(identity, professional).ok();
+    }
     if identity.system {
         let client = identity.client.clone()?;
         return Some(PartyProxy::PartyIdentified(
@@ -171,19 +177,22 @@ pub fn judge(
     server: &PartyProxy,
     identity: &CommitterIdentity,
 ) -> Result<(), ServiceError> {
-    let accepted = match (stated, server) {
-        (PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party)), _)
-            if placeholder(party) =>
-        {
-            names_caller(party, identity)
-        }
-        (PartyProxy::PartySelf(party), PartyProxy::PartySelf(_)) => party.external_ref.is_none(),
-        (
-            PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party)),
-            PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(ours)),
-        ) => states_nothing_more(party, ours),
-        _ => false,
-    };
+    let accepted = stated == server
+        || match (stated, server) {
+            (PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party)), _)
+                if placeholder(party) =>
+            {
+                names_caller(party, identity)
+            }
+            (PartyProxy::PartySelf(party), PartyProxy::PartySelf(_)) => {
+                party.external_ref.is_none()
+            }
+            (
+                PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party)),
+                PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(ours)),
+            ) => states_nothing_more(party, ours),
+            _ => false,
+        };
     if accepted {
         return Ok(());
     }

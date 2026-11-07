@@ -67,6 +67,10 @@ fn federation_table() -> FederationSection {
                 )],
             ),
             (
+                Field::ProviderIssuingAuthorityName,
+                vec![Source::Constant("Registry".to_owned())],
+            ),
+            (
                 Field::ConsentReference,
                 vec![Source::Claim(CONSENT_CLAIM.to_owned())],
             ),
@@ -480,4 +484,70 @@ async fn an_external_caller_outside_its_agreement_is_recorded_with_its_code() {
         StatusCode::FORBIDDEN
     );
     crate::party_binding_http::refusal_rows(&db.pool(), "refused-scope-beyond-agreement", 1).await;
+}
+
+/// A verified external person's write records the professional under
+/// `"<country_code>:<issuing_authority_name>"` and the vouching login, and is
+/// refused with `422` unless its facility names the token's provider (#5097).
+#[tokio::test]
+async fn an_external_persons_write_records_its_committer_and_names_its_provider() {
+    let write = "patient/composition-*.c";
+    let writer = Agreement {
+        reads: vec![READ.to_owned(), write.to_owned()],
+        writes: vec!["International Patient Summary".to_owned()],
+        ..agreement(Accessor::Person)
+    };
+    let (_db, svc, app) = serve(vec![writer]).await;
+    svc.template_adl14_upload(&common::ips_opt_xml())
+        .await
+        .expect("upload the IPS template");
+    let target = ehr(&svc).await.to_string();
+    let credential = professional(
+        Some(&target),
+        &json!({ "scope": format!("{READ} {write}") }),
+    );
+    let post = |body: Value| {
+        common::req("POST", format!("{BASE}/ehr/{target}/composition"))
+            .auth(&credential)
+            .json(body.to_string())
+            .prefer_representation()
+            .build()
+    };
+    let (status, body) = common::send_body(&app, post(common::ips_canonical_composition())).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert!(body.contains("health_care_facility"), "{body}");
+
+    let mut composition = common::ips_canonical_composition();
+    composition["context"]["health_care_facility"] = json!({
+        "_type": "PARTY_IDENTIFIED", "name": "Remote clinic",
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "Registry",
+                          "id": "urn:oid:2.999.7" }] });
+    let (status, body) = common::send_body(&app, post(composition)).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let (status, version) = common::send_json(
+        &app,
+        common::req(
+            "GET",
+            format!(
+                "{BASE}/ehr/{target}/versioned_composition/{}/version",
+                serde_json::from_str::<Value>(&body).expect("the composition")["uid"]["value"]
+                    .as_str()
+                    .and_then(|uid| uid.split("::").next())
+                    .expect("the composition uid")
+            ),
+        )
+        .auth(&credential)
+        .accept("application/json")
+        .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{version}");
+    assert_eq!(
+        version["commit_audit"]["committer"],
+        json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Remote", "identifiers": [
+            { "_type": "DV_IDENTIFIER", "issuer": "DE:Registry", "id": "hp-1",
+              "type": "hp_identifier" },
+            { "_type": "DV_IDENTIFIER", "issuer": FEDERATION, "id": "hp-remote-1",
+              "type": "oauth2" } ] })
+    );
 }

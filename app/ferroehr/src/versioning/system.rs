@@ -155,16 +155,7 @@ fn admit_template(client: &SystemClient, template: Option<&str>) -> Result<(), S
 /// `EVENT_CONTEXT.health_care_facility`, or with no context in
 /// `feeder_audit.originating_system_audit.location`.
 fn admit_facility(client: &SystemClient, canonical: &Value) -> Result<(), ServiceError> {
-    let (facility, path) = match canonical.get("context").filter(|c| !c.is_null()) {
-        Some(context) => (
-            context.get("health_care_facility"),
-            "EVENT_CONTEXT.health_care_facility",
-        ),
-        None => (
-            canonical.pointer("/feeder_audit/originating_system_audit/location"),
-            "COMPOSITION.feeder_audit.originating_system_audit.location",
-        ),
-    };
+    let (facility, path) = facility_of(canonical);
     if let Some((issuer, id)) = identifiers(facility).find(|(issuer, id)| {
         client.facilities.iter().any(|listed| {
             listed.issuer == *issuer
@@ -185,6 +176,22 @@ fn admit_facility(client: &SystemClient, canonical: &Value) -> Result<(), Servic
         )
         .with_path(path),
     ))
+}
+
+/// The facility `canonical` names, with its path: its
+/// `EVENT_CONTEXT.health_care_facility`, or with no context its
+/// `feeder_audit.originating_system_audit.location`.
+pub(crate) fn facility_of(canonical: &Value) -> (Option<&Value>, &'static str) {
+    match canonical.get("context").filter(|c| !c.is_null()) {
+        Some(context) => (
+            context.get("health_care_facility"),
+            "EVENT_CONTEXT.health_care_facility",
+        ),
+        None => (
+            canonical.pointer("/feeder_audit/originating_system_audit/location"),
+            "COMPOSITION.feeder_audit.originating_system_audit.location",
+        ),
+    }
 }
 
 /// Whether `canonical`'s composer is a `PARTY_IDENTIFIED` whose identifier of
@@ -240,7 +247,7 @@ fn names_professional(canonical: &Value) -> bool {
 
 /// Every `(issuer, id)` of `party`'s `identifiers`, skipping one without an
 /// issuer.
-fn identifiers(party: Option<&Value>) -> impl Iterator<Item = (&str, &str)> {
+pub(crate) fn identifiers(party: Option<&Value>) -> impl Iterator<Item = (&str, &str)> {
     party
         .and_then(|party| party.get("identifiers"))
         .and_then(Value::as_array)

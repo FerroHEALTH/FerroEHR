@@ -19,6 +19,8 @@ use std::sync::Arc;
 use ferroehr::config::agreement::{Accessor, Agreement};
 use ferroehr::config::clients::SystemClient;
 use ferroehr::versioning::committer::ExternalCaller;
+use ferroehr::versioning::committer::external::ExternalProfessional;
+use ferrohealth_smart::federation::{Attribute, External, Field};
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::resource::{Access, Caller};
 
@@ -129,10 +131,42 @@ pub(crate) fn admitted(access: &Access) -> Option<&Arc<Agreement>> {
 /// What the external caller of `access` may commit, when it is one.
 pub(super) fn committing(access: &Access) -> Option<ExternalCaller> {
     let agreement = admitted(access)?;
-    Some(match agreement.accessor {
-        Some(Accessor::Person) => ExternalCaller::Person {
+    let external = access.caller().and_then(|caller| match caller.kind() {
+        CallerKind::ExternalPerson(external) => Some(external.as_ref()),
+        _ => None,
+    });
+    Some(match (agreement.accessor, external) {
+        (Some(Accessor::Person), Some(external)) => ExternalCaller::Person {
             writes: agreement.writes.clone(),
+            professional: Box::new(professional(external)),
         },
         _ => ExternalCaller::Organisation,
     })
+}
+
+/// What `external`'s token asserts about the professional and the provider.
+/// The name is the asserted full name (IHE IUA `subject_name`, eHDSI
+/// `subject-id`), or the given and the family name joined by a space.
+fn professional(external: &External) -> ExternalProfessional {
+    let text = |field| {
+        external
+            .field(field)
+            .and_then(Attribute::text)
+            .map(str::to_owned)
+    };
+    let name = text(Field::ProfessionalName).or_else(|| {
+        let parts: Vec<String> = [Field::ProfessionalGivenName, Field::ProfessionalFamilyName]
+            .into_iter()
+            .filter_map(text)
+            .collect();
+        (!parts.is_empty()).then(|| parts.join(" "))
+    });
+    ExternalProfessional {
+        name,
+        hp_identifier: text(Field::ProfessionalHpIdentifier),
+        country_code: text(Field::ProfessionalCountryCode),
+        issuing_authority: text(Field::ProfessionalIssuingAuthorityName),
+        provider_identifier: text(Field::ProviderHealthcareProviderIdentifier),
+        provider_authority: text(Field::ProviderIssuingAuthorityName),
+    }
 }
