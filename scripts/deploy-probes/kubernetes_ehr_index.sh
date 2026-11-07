@@ -226,9 +226,11 @@ k8s_index_create() { # <namespace> <id>
     --data "$(k8s_index_status "$1" "$2")" "$K8S_API/ehr")"
   K8S_INDEX_EHR="$(grep -i '^location' "$PROBE_TMP/index-create.headers" | tr -d '\r' | awk -F/ '{print $NF}')"
   [[ -n "$K8S_INDEX_EHR" ]] && return 0
+  local log
+  log="$(kc logs -l app.kubernetes.io/name=ferroehr --tail=200 2>&1)"
   probe_fail "a Location header naming the EHR created for the subject" \
     "$code $(head -c 300 "$PROBE_TMP/index-create")" \
-    "$(kc logs -l app.kubernetes.io/name=ferroehr --tail=200 2>&1 | grep -m2 -E '"level":"(ERROR|WARN)"' | cut -c1-400)"
+    "$(grep -E '"level":"(ERROR|WARN)"' <<<"$log" | sed -n 1,2p | cut -c1-400)"
   return 1
 }
 
