@@ -39,6 +39,7 @@
 
 pub(crate) mod assurance;
 mod build;
+pub(crate) mod declared;
 mod issuer;
 mod party;
 
@@ -351,8 +352,8 @@ pub struct Authenticator {
     /// The party binding every admitted caller is looked up in, when an
     /// `[[auth.party]]` table binds an issuer.
     party: Option<Arc<party::Binding>>,
-    /// The `[[authz.system_client]]` tables.
-    system_clients: Vec<Arc<ferroehr::config::clients::SystemClient>>,
+    /// The system clients and the federation agreements.
+    declared: declared::Declared,
 }
 
 impl std::fmt::Debug for Authenticator {
@@ -416,10 +417,11 @@ impl Authenticator {
                 .map_err(|refusal| self.naming_caller(refusal, &access))?,
             None => access,
         };
-        let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
-        if let Some(refusal) = party::kind_refusal(caller) {
+        if let Some(refusal) = access.caller().and_then(party::kind_refusal) {
             return Err(refusal);
         }
+        let access = self.declared.admit(access)?;
+        let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
         let roles = self.role_issuers.roles(caller);
         let honoured = self.gate.honoured(&access);
         // NOTE: no specification governs this: our own design; a credential the
@@ -541,7 +543,8 @@ pub(crate) async fn middleware(
             }
             req.extensions_mut().insert(principal.clone());
             let for_audit = principal.clone();
-            let mut committer = party::committer_identity(&for_audit, &auth.system_clients);
+            let mut committer =
+                party::committer_identity(&for_audit, &auth.declared.system_clients);
             if let Some(binding) = auth.party.as_deref() {
                 match binding.details(&for_audit).await {
                     Ok(details) => committer.bound = details,

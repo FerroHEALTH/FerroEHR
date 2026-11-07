@@ -45,6 +45,7 @@ fn professional() -> CommitterIdentity {
         bound: None,
         system: false,
         system_client: None,
+        external: None,
     }
 }
 
@@ -226,6 +227,7 @@ async fn a_basic_login_is_checked_against_this_server() {
         bound: None,
         system: false,
         system_client: None,
+        external: None,
     };
     assert_eq!(
         composition_create(

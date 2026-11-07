@@ -66,6 +66,7 @@ fn system(client: &str, declared: Option<SystemClient>) -> CommitterIdentity {
         bound: None,
         system: true,
         system_client: declared.map(Arc::new),
+        external: None,
     }
 }
 

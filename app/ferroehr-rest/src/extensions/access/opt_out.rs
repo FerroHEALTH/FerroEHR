@@ -14,7 +14,8 @@
 //! design/extension.
 //!
 //! A caller holding one of `[authz.rbac] access_service_roles` is an
-//! access-service caller. Its requests run with the opt-out enforced,
+//! access-service caller, and so is every verified external person or
+//! organisation of a `federation` issuer, by its kind. Its requests run with the opt-out enforced,
 //! published to the platform layer through
 //! `ferroehr::system_log::access_context`, where the AQL builder, the exports,
 //! the subject lookup and the write guard treat an opted-out EHR as absent.
@@ -26,6 +27,7 @@
 //! surfaces, read the record as before.
 
 use axum::response::{IntoResponse, Response};
+use ferroehr::config::agreement::Accessor;
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Missing;
 use ferroehr::ids::EhrId;
@@ -57,15 +59,21 @@ pub(crate) fn applies(state: &AppState, op: &str) -> OptOut {
     let Some(principal) = current_principal() else {
         return OptOut::Untouched;
     };
-    if !is_access_service(state, &principal) {
-        return OptOut::Untouched;
-    }
+    // NOTE: an external person may override only where its agreement sets
+    // opt_out_override, and an organisation never; our own design under EHDS Art. 10(2).
+    let overridable = match super::authn::declared::admitted(&principal.access) {
+        Some(agreement) => {
+            agreement.opt_out_override && agreement.accessor == Some(Accessor::Person)
+        }
+        None if is_access_service(state, &principal) => true,
+        None => return OptOut::Untouched,
+    };
     let emergency = state
         .backend()
         .is_emergency_purpose(ferroehr::system_log::access_context::current_purpose().as_deref());
     // NOTE: EHDS Art. 10(2) admits "a healthcare provider or health professional", so a
     // caller acting for the person is never admitted by the override.
-    if emergency && !super::delay::acts_for_the_person(&principal) {
+    if overridable && emergency && !super::delay::acts_for_the_person(&principal) {
         OptOut::Overridden
     } else {
         OptOut::Enforced
