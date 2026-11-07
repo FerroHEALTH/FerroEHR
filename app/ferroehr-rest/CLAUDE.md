@@ -61,7 +61,10 @@ copy of any of it.
   through `Gate::with_dpop`, and the `[authz.rbac] role_issuers` filter of
   the privileged roles), `authn::assurance`, the patient-data gate over
   `[authz.assurance]`: RFC 9470 step-up `401`, judged before RBAC, and the
-  `ActorAuthentication` the audit layer records from the caller's kind;
+  `ActorAuthentication` the audit layer records from the caller's kind,
+  `authn::gates`, the RBAC gate and the SMART route check run after it, and
+  `authn::party`, the login binding, which also confines a bound
+  representative to its subject's EHR (#5086);
   `authz/` = the RBAC/ABAC engine, incl. a `cedar` policy path; `pep.rs` = the
   policy-enforcement point; `ehr_access.rs`. Token checking, Basic
   verification and the SMART scope grammar come from `ferrohealth-smart`;
