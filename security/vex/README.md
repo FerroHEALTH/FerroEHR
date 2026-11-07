@@ -70,6 +70,33 @@ Debian security update, rerun the release scan over a candidate image and
 re-read every statement whose package changed; a statement whose finding no
 longer fires is deleted.
 
+## A judgement trivy does not apply
+
+The gates hand these documents to `trivy --vex`, so a statement takes effect
+only when trivy applies it. Trivy 0.73.0 to 0.76.0 keeps a finding whose
+package has a dependency cycle among its dependents (#5158): its walk from the
+package to the image treats a component whose dependents are all on the
+current path like one with no dependent at all, and fails safe to "affected".
+The `ferroehr-postgres` image carries a full dpkg database, whose `Depends`
+form two such cycles (`libc6` with `libgcc-s1`, `libssl3t64` with
+`openssl-provider-legacy`). So no `not_affected` statement for `libc6`,
+`libgcc-s1`, `gcc-14-base` or `zlib1g` in `postgres-os.openvex.json` changes
+what the gate reports, while the statements for every other package apply.
+The distroless images have no dependency graph, so every statement in
+`ferroehr-os.openvex.json` applies. This is why the scheduled scan raised the
+`zlib1g` findings in #5137.
+
+`scripts/security/vex-applied.sh --image <name>=<ref>` scans an image for both
+platforms with and without the documents, under the same flags, and names
+every `not_affected` or `fixed` judgement the second scan still reports. Run
+it after adding a judgement for the postgres image. A judgement it names
+still counts for the release record (`vex-coverage.sh` reads the documents
+itself), but the gate keeps the finding: a fixable one is fixed by the
+rebuild, as for any other. On 2026-11-08, over the published images, it
+applied 237 of 266 judged findings of `ferroehr-postgres` per platform (the
+29 left are the `libc6`, `libgcc-s1` and `gcc-14-base` ones) and 44 of 44 of
+`ferroehr`.
+
 ## The generated document
 
 `rust-advisories.openvex.json` is produced by
