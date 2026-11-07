@@ -6175,6 +6175,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "scaleseed"
+version = "5.6.3"
+dependencies = [
+ "anyhow",
+ "clap",
+ "ferroehr",
+ "futures",
+ "jiff",
+ "openehr-its",
+ "openehr-query",
+ "openehr-rm",
+ "serde_json",
+ "sqlx",
+ "testkit",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "schannel"
 version = "0.1.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
