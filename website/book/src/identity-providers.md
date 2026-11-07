@@ -113,9 +113,14 @@ profile, and the server acts on the kind:
     under an agreement with `opt_out_override` reaches one, under an emergency
     purpose, recorded as an override; an organisation never does;
   - a read under an agreement with a `consent` condition needs the consent
-    decision reference for the patient, which no token carries yet, so every
-    such read is refused, and so is every request on openEHR data under an
-    NL agreement until the Wabvpz Art. 15f roles can be read;
+    decision reference for the patient (Wabvpz Art. 1(j) and Art. 15a(1)):
+    the token carries it in the claim or `authorization_details` member its
+    `[[auth.federation]]` table maps to `consent.reference`, as one string
+    (a coded value refuses the token with `401`), and its `patient/` grant
+    holds it to the launch-context patient. A read without it is refused with
+    `403`, and the access record carries the reference with the other
+    external fields. Every request on openEHR data under an NL agreement is
+    refused until the Wabvpz Art. 15f roles can be read;
   - an external person commits only a COMPOSITION of a template the
     agreement's `writes` lists; an organisation commits nothing, and neither
     deletes, attests or writes a demographic party.

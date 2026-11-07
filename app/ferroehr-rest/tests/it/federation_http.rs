@@ -44,9 +44,12 @@ const READ: &str = "patient/composition-*.r";
 const PURPOSE: &str = "x-purpose-of-use";
 /// The organisation statement's `authorization_details` type.
 const ORGANISATION_ACCESS: &str = "organisation-access";
+/// The claim the issuer carries its consent decision reference in.
+const CONSENT_CLAIM: &str = "consent_ref";
 
 /// The `[[auth.federation]]` table of [`FEDERATION`]: IHE IUA claims, the
-/// country and issuing authority beside them, and the organisation statement.
+/// country and issuing authority beside them, the consent decision
+/// reference and the organisation statement.
 fn federation_table() -> FederationSection {
     FederationSection {
         issuer: FEDERATION.to_owned(),
@@ -62,6 +65,10 @@ fn federation_table() -> FederationSection {
                 vec![Source::Claim(
                     "extensions.ihe_iua.issuing_authority".to_owned(),
                 )],
+            ),
+            (
+                Field::ConsentReference,
+                vec![Source::Claim(CONSENT_CLAIM.to_owned())],
             ),
         ]),
         countries: vec!["DE".to_owned()],
@@ -308,6 +315,50 @@ async fn a_consent_conditioned_read_without_a_decision_reference_is_refused() {
         .await,
         StatusCode::FORBIDDEN
     );
+}
+
+#[tokio::test]
+async fn a_consent_conditioned_read_carrying_its_decision_reference_is_served_and_recorded() {
+    let conditioned = Agreement {
+        consent: Some(ConsentSource::Local),
+        ..agreement(Accessor::Person)
+    };
+    let (db, svc, app) = serve(vec![conditioned]).await;
+    let target = ehr(&svc).await.to_string();
+    let reference = "https://consent.example/fhir/Consent/c-1";
+    let carrying = professional(Some(&target), &json!({ CONSENT_CLAIM: reference }));
+    assert_eq!(read(&app, &target, &carrying, None).await, StatusCode::OK);
+    // The reference confines nothing by itself: the token's patient grant
+    // still holds it to the launch-context EHR.
+    let other = ehr(&svc).await.to_string();
+    assert_eq!(
+        read(&app, &other, &carrying, None).await,
+        StatusCode::FORBIDDEN,
+        "another EHR than the token's"
+    );
+    let coded = professional(Some(&target), &json!({ CONSENT_CLAIM: [reference] }));
+    assert_eq!(
+        read(&app, &target, &coded, None).await,
+        StatusCode::UNAUTHORIZED,
+        "a reference is one string: a coded one refuses the token"
+    );
+    let pool = db.pool();
+    for _ in 0..50 {
+        let recorded: Option<String> = sqlx::query_scalar(
+            "SELECT external_fields -> 'consent.reference' ->> 0 FROM audit.audit_event \
+             WHERE operation = 'ehr_get_by_id' AND binding = 'external'",
+        )
+        .fetch_optional(&pool)
+        .await
+        .expect("query")
+        .flatten();
+        if let Some(recorded) = recorded {
+            assert_eq!(recorded, reference);
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    panic!("no external record was stored");
 }
 
 #[tokio::test]
