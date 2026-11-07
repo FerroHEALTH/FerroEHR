@@ -404,3 +404,29 @@ async fn every_external_record_carries_its_binding_agreement_and_provider() {
         ("external", "Regional exchange")
     );
 }
+
+/// An external caller refused for want of an agreement, or for a scope its
+/// agreement does not read, is recorded under the code naming which (#5140).
+#[tokio::test]
+async fn an_external_caller_outside_its_agreement_is_recorded_with_its_code() {
+    let (db, svc, none) = serve(Vec::new()).await;
+    let target = ehr(&svc).await.to_string();
+    let credential = professional(Some(&target), &json!({}));
+    assert_eq!(
+        read(&none, &target, &credential, None).await,
+        StatusCode::FORBIDDEN
+    );
+    crate::party_binding_http::refusal_rows(&db.pool(), "refused-no-agreement", 1).await;
+
+    let (db, svc, persons) = serve(vec![agreement(Accessor::Person)]).await;
+    let target = ehr(&svc).await.to_string();
+    let beyond = professional(
+        Some(&target),
+        &json!({ "scope": format!("{READ} patient/composition-*.c") }),
+    );
+    assert_eq!(
+        read(&persons, &target, &beyond, None).await,
+        StatusCode::FORBIDDEN
+    );
+    crate::party_binding_http::refusal_rows(&db.pool(), "refused-scope-beyond-agreement", 1).await;
+}
