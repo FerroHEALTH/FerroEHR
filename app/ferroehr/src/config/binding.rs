@@ -29,6 +29,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::config::auth_section::AuthConfig;
 
+pub mod person;
+
 /// The `[authz.party_binding]` table.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -43,10 +45,34 @@ pub struct PartyBindingConfig {
     pub namespace: String,
     /// The key each Basic user is bound by (`[[authz.party_binding.basic_user]]`).
     pub basic_user: Vec<BasicUserKey>,
+    /// The person templates and attributes of the shared party mapping.
+    pub person: person::PersonSection,
+    /// The professional `ROLE` template.
+    pub professional_role: Option<person::RoleSection>,
+    /// The provisioned `GROUP` template.
+    pub group: Option<person::GroupSection>,
+    /// The membership `PARTY_RELATIONSHIP` archetype.
+    pub membership: Option<person::MembershipSection>,
+    /// The representation `PARTY_RELATIONSHIP` archetype.
+    pub representation: Option<person::RepresentationSection>,
     /// The removed `enabled` key, held only so its presence is refused by
     /// name: binding has no switch.
     #[serde(default, skip_serializing)]
     pub enabled: Option<serde::de::IgnoredAny>,
+}
+
+impl PartyBindingConfig {
+    /// The mapping sections of the table.
+    #[must_use]
+    pub fn sections(&self) -> person::Sections<'_> {
+        person::Sections {
+            person: &self.person,
+            professional_role: self.professional_role.as_ref(),
+            group: self.group.as_ref(),
+            membership: self.membership.as_ref(),
+            representation: self.representation.as_ref(),
+        }
+    }
 }
 
 impl Default for PartyBindingConfig {
@@ -57,6 +83,11 @@ impl Default for PartyBindingConfig {
             // `committer.external_ref.namespace="demographic"` in its example.
             namespace: "demographic".to_owned(),
             basic_user: Vec::new(),
+            person: person::PersonSection::default(),
+            professional_role: None,
+            group: None,
+            membership: None,
+            representation: None,
             enabled: None,
         }
     }
@@ -376,6 +407,18 @@ impl crate::config::FerroEhrConfig {
             return errors;
         }
         errors.extend(self::errors(&self.auth, &self.authz, &resolved));
+        let protection = &self.demographic.identifier_protection;
+        let protected: &[String] = if protection.enabled {
+            &protection.schemes
+        } else {
+            &[]
+        };
+        errors.extend(
+            self.authz
+                .party_binding
+                .sections()
+                .errors(&key_issuers(&resolved), protected),
+        );
         errors.extend(crate::config::clients::system_client_errors(
             &self.authz.system_client,
             &resolved,
@@ -388,6 +431,20 @@ impl crate::config::FerroEhrConfig {
         ));
         errors
     }
+}
+
+/// The `identifier_issuer` of every `[[auth.party]]` table: the issuers a
+/// binding key is held under.
+#[must_use]
+pub fn key_issuers(resolved: &Resolved) -> Vec<String> {
+    let mut issuers: Vec<String> = resolved
+        .party
+        .iter()
+        .map(|table| table.identifier_issuer.clone())
+        .collect();
+    issuers.sort();
+    issuers.dedup();
+    issuers
 }
 
 /// Returns the one provider `urn:ura|1`, the provider the configuration

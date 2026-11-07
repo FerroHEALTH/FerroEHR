@@ -14,16 +14,44 @@
 //! never the person's, and answers `503`. No openEHR spec governs resolving a
 //! login to a party: our own design.
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Duration;
 
+use ferroehr::config::binding::Providers;
+use ferroehr::party_binding::source::BindingSource;
+use ferroehr::versioning::committer::bound::BoundDetails;
+
 use ferrohealth_smart::party::adapter::AdapterError;
 use ferrohealth_smart::party::binding::PartyBinding;
-use ferrohealth_smart::party::source::PartySource;
 use ferrohealth_smart::party::{GroupsCause, Outcome};
 use ferrohealth_smart::resource::{Access, Caller};
 
 use super::AuthError;
+
+/// The party binding of the deployment, with what the committer of a bound
+/// caller carries beside it: the provider, the namespace and the source of
+/// the `PERSON`'s name.
+pub(crate) struct Binding {
+    /// The shared crate's binding.
+    pub(super) shared: PartyBinding,
+    /// The source logins are looked up in, which also names a `PERSON`.
+    source: Arc<dyn BindingSource>,
+    /// `[authz.party_binding] provider`.
+    provider: Option<Providers>,
+    /// `[authz.party_binding] namespace`.
+    namespace: String,
+    /// Each issuer's `tenant_claim`, which picks a per-tenant provider.
+    tenant_claims: BTreeMap<String, String>,
+}
+
+impl std::fmt::Debug for Binding {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Binding")
+            .field("namespace", &self.namespace)
+            .finish_non_exhaustive()
+    }
+}
 
 /// Returns the party binding of `config`'s `[[auth.party]]` tables and
 /// `[authz.party_binding]`, looking logins up in `source`; `None` without a
@@ -34,19 +62,91 @@ use super::AuthError;
 pub(super) fn binding(
     config: &crate::config::AppConfig,
     resolved: &ferrohealth_smart::config::Resolved,
-    source: Option<Arc<dyn PartySource>>,
-) -> Result<Option<Arc<PartyBinding>>, String> {
+    source: Option<Arc<dyn BindingSource>>,
+) -> Result<Option<Arc<Binding>>, String> {
     let Some(source) = source.filter(|_| resolved.enabled && !resolved.party.is_empty()) else {
         return Ok(None);
     };
-    ferroehr::config::binding::party_binding(&config.auth, &config.party_binding, resolved, source)
-        .map(|binding| Some(Arc::new(binding)))
-        .map_err(|e| {
-            format!(
-                "authz.party_binding: {}",
-                ferroehr::error::ErrorChain::new(&e)
-            )
+    let lookup: Arc<dyn ferrohealth_smart::party::source::PartySource> =
+        Arc::<dyn BindingSource>::clone(&source);
+    let binding = ferroehr::config::binding::party_binding(
+        &config.auth,
+        &config.party_binding,
+        resolved,
+        lookup,
+    )
+    .map_err(|e| {
+        format!(
+            "authz.party_binding: {}",
+            ferroehr::error::ErrorChain::new(&e)
+        )
+    })?;
+    let tenant_claims = resolved
+        .issuers
+        .iter()
+        .filter_map(|settings| {
+            let claim = settings.profile.tenant_claim.clone()?;
+            Some((settings.issuer.clone(), claim))
         })
+        .collect();
+    Ok(Some(Arc::new(Binding {
+        shared: binding,
+        source,
+        provider: config.party_binding.provider.clone(),
+        namespace: config.party_binding.namespace.clone(),
+        tenant_claims,
+    })))
+}
+
+impl Binding {
+    /// What the committer of the bound caller of `principal` carries beside
+    /// the binding; `None` for a caller the binding did not bind.
+    ///
+    /// # Errors
+    /// [`AuthError::PartyUnavailable`] when the source cannot name the
+    /// `PERSON`.
+    pub(super) async fn details(
+        &self,
+        principal: &super::Principal,
+    ) -> Result<Option<BoundDetails>, AuthError> {
+        let Some(caller) = principal.access.caller() else {
+            return Ok(None);
+        };
+        let Some(bound) = caller.party().and_then(Outcome::bound) else {
+            return Ok(None);
+        };
+        let name = self
+            .source
+            .person_name(bound.party.id())
+            .await
+            .map_err(|error| {
+                tracing::warn!(
+                    error = %ferroehr::error::ErrorChain::new(&error),
+                    "the party source could not name the bound PERSON"
+                );
+                AuthError::PartyUnavailable { retry_after: None }
+            })?;
+        let provider = match &self.provider {
+            None => None,
+            Some(Providers::One(one)) => Some((one.issuer.clone(), one.id.clone())),
+            Some(Providers::ByTenant(tables)) => {
+                let tenant = caller
+                    .issuer()
+                    .and_then(|issuer| self.tenant_claims.get(issuer))
+                    .and_then(|claim| principal.claims.get(claim))
+                    .and_then(serde_json::Value::as_str);
+                tables
+                    .iter()
+                    .find(|table| Some(table.tenant.as_str()) == tenant)
+                    .map(|table| (table.issuer.clone(), table.id.clone()))
+            }
+        };
+        Ok(Some(BoundDetails {
+            name,
+            provider,
+            namespace: self.namespace.clone(),
+        }))
+    }
 }
 
 /// Looks the caller of `access` up in `binding`, returning the access whose
@@ -143,6 +243,51 @@ pub(super) fn detail(code: &str) -> &'static str {
         }
         "refused-groups-unavailable" => "the groups this token asserts cannot be read",
         _ => "this login is bound to no demographic party",
+    }
+}
+
+/// Returns the platform committer identity published for the service layer.
+///
+/// A write whose request carried no committal headers is attributed to the
+/// authenticated principal rather than the system identity
+/// (`AUDIT_DETAILS.committer` 1..1 — RM common master04 §Audit Details). A
+/// Bearer subject was minted by the identity provider, so the audit records the
+/// validated token issuer; Basic credentials are local and carry none.
+pub(super) fn committer_identity(
+    principal: &super::Principal,
+) -> ferroehr::versioning::committer::CommitterIdentity {
+    ferroehr::versioning::committer::CommitterIdentity {
+        subject: principal.subject.clone(),
+        id_type: match principal.method {
+            super::AuthMethod::Basic => "basic",
+            super::AuthMethod::Bearer => "oauth2",
+        },
+        issuer: match principal.method {
+            super::AuthMethod::Basic => None,
+            super::AuthMethod::Bearer => principal
+                .access
+                .caller()
+                .and_then(Caller::issuer)
+                .map(str::to_owned),
+        },
+        client: super::client_of(principal),
+        person: crate::smart::acts_as_person(principal),
+        party: principal
+            .access
+            .caller()
+            .and_then(Caller::party)
+            .and_then(Outcome::bound)
+            .cloned(),
+        representative: principal.access.caller().is_some_and(|caller| {
+            matches!(
+                caller.kind(),
+                ferrohealth_smart::kind::CallerKind::Representative { .. }
+            )
+        }),
+        bound: None,
+        system: principal.access.caller().is_some_and(|caller| {
+            matches!(caller.kind(), ferrohealth_smart::kind::CallerKind::System)
+        }),
     }
 }
 

@@ -62,7 +62,10 @@
 //!   (`PARTY_REF.Type_validity`) + `…object_ref.adoc` (`OBJECT_REF.namespace`).
 
 pub mod identifier;
+pub mod mapped_write;
+pub mod mapping;
 pub mod precondition;
+pub mod rekey;
 pub mod reverse;
 pub mod template;
 pub mod types;

@@ -214,8 +214,8 @@ impl AuditInput {
     ///   default;
     /// - `description` — the caller's when supplied, else the server default;
     /// - `committer` — the caller's `PARTY_PROXY` (defaulted by the adapter to
-    ///   the principal / system identity), or the person's own `PARTY_SELF`
-    ///   ([`crate::versioning::committer::attributed`]);
+    ///   the principal / system identity), or the server's committer for a
+    ///   caller it knows ([`crate::versioning::committer::resolve`]);
     /// - `system_id` — the caller's when supplied, else this server's.
     ///
     /// The audit is a plain `UPDATE_AUDIT` ([`plain_audit`]), as on the
@@ -249,8 +249,7 @@ impl AuditInput {
             .clone()
             .unwrap_or_else(|| fallback_system_id.to_owned());
         validate_system_id(&system_id)?;
-        let committer = crate::versioning::committer::attributed(base.committer.clone());
-        check_committer(&committer)?;
+        let committer = check_committer(&base.committer)?;
         Ok(Self {
             system_id,
             change_type,
@@ -297,7 +296,7 @@ impl AuditInput {
                 .unwrap_or_else(|| default_system_id.to_owned()),
             change_type,
             description: update.description.clone(),
-            committer: crate::versioning::committer::attributed(update.committer.clone()),
+            committer: update.committer.clone(),
             attestation: None,
         }
     }
@@ -559,22 +558,23 @@ pub(crate) fn validate_system_id(system_id: &str) -> Result<(), ServiceError> {
 ///   `org.openehr.rm.common.party_identified.adoc` and `…party_related.adoc`).
 ///   A PARTY appearing as content is validated by the RM-invariant pass, but the
 ///   audit committer is stored verbatim, so it is checked here.
-pub(crate) fn validate_commit_audit(audit: &AuditInput) -> Result<(), ServiceError> {
+pub(crate) fn validate_commit_audit(audit: &mut AuditInput) -> Result<(), ServiceError> {
     validate_system_id(&audit.system_id)?;
-    check_committer(&audit.committer)
+    audit.committer = check_committer(&audit.committer)?;
+    Ok(())
 }
 
 /// The one committer check every write path runs: the committer's own RM
-/// invariants ([`validate_committer`]), then whether it is the authenticated
-/// caller ([`crate::versioning::committer::refuse_impersonation`]).
+/// invariants ([`validate_committer`]), then the committer the commit records
+/// for it ([`crate::versioning::committer::resolve`]), which it returns.
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] for a committer that breaks its invariants;
 /// [`ServiceError::Restricted`] (`403`) for one the server can show is not
 /// the caller.
-pub(crate) fn check_committer(committer: &PartyProxy) -> Result<(), ServiceError> {
+pub(crate) fn check_committer(committer: &PartyProxy) -> Result<PartyProxy, ServiceError> {
     validate_committer(committer)?;
-    crate::versioning::committer::refuse_impersonation(committer)
+    crate::versioning::committer::resolve(committer)
 }
 
 /// Run the committer `PARTY_PROXY`'s OWN RM class invariants + terminology

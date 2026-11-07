@@ -60,6 +60,7 @@ const RELATIONSHIP: &str = "PARTY_RELATIONSHIP";
 #[derive(Debug, Clone, Default)]
 pub struct MappedPartyTemplates {
     persons: Vec<String>,
+    role: Option<String>,
     group: Option<String>,
     membership: Option<String>,
 }
@@ -69,6 +70,13 @@ impl MappedPartyTemplates {
     #[must_use]
     pub fn with_person_template(mut self, template_id: impl Into<String>) -> Self {
         self.persons.push(template_id.into());
+        self
+    }
+
+    /// Sets the template a professional `ROLE` is written under.
+    #[must_use]
+    pub fn with_role_template(mut self, template_id: impl Into<String>) -> Self {
+        self.role = Some(template_id.into());
         self
     }
 
@@ -91,6 +99,7 @@ impl MappedPartyTemplates {
         let key = canonical_key(template_id);
         self.persons
             .iter()
+            .chain(&self.role)
             .chain(&self.group)
             .any(|mapped| canonical_key(mapped) == key)
     }
@@ -139,6 +148,7 @@ impl FerroEhrService {
             self.demographic_pool.clone(),
             namespace,
         )
+        .with_mapping(Arc::clone(&self.binding))
     }
 
     /// Rebuild the binding side table from the party versions alone, in one

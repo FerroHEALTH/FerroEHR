@@ -18,7 +18,8 @@
 //! delay of the person's own access, [`access_restriction`] the EHDS Art. 8
 //! restriction of access by health professionals, [`opt_out`] the EHDS Art. 10
 //! opt-out from access through the access services, [`identifiers`] serves the audited
-//! read of a party's protected national identifiers, and [`outbox`] the feed of
+//! read of a party's protected national identifiers, [`binding_key`] the re-key of a
+//! `PERSON`'s binding key, and [`outbox`] the feed of
 //! commit events to the readers `[outbox] readers` names. Each carries its own
 //! spec-silence flag and register citation.
 
@@ -26,6 +27,7 @@ pub mod access_delay;
 pub mod access_repair;
 pub mod access_restriction;
 pub mod archive;
+pub mod binding_key;
 mod body;
 pub mod dump_load;
 pub mod identifiers;

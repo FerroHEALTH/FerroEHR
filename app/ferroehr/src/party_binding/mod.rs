@@ -18,6 +18,9 @@
 //! with no cache. No openEHR spec governs resolving a login to a party: our
 //! own design.
 
+pub mod fill;
+pub mod lookup;
+pub mod protect;
 pub mod source;
 pub mod store;
 
@@ -63,6 +66,9 @@ pub struct IdentifierSelector {
     json_path: String,
     /// The compiled path's variables, as a JSON object text.
     variables: String,
+    /// The `DV_IDENTIFIER.issuer`s the selector holds, sorted; empty holds
+    /// every issuer.
+    issuers: Vec<String>,
 }
 
 impl IdentifierSelector {
@@ -85,7 +91,7 @@ impl IdentifierSelector {
         if identifier_type.trim().is_empty() {
             return Err(SelectorError::Type { path });
         }
-        let Some((json_path, variables)) = compile(&path) else {
+        let Some((json_path, variables)) = compile(&path, IDENTIFIER) else {
             return Err(SelectorError::Path { path });
         };
         Ok(Self {
@@ -93,6 +99,7 @@ impl IdentifierSelector {
             identifier_type,
             json_path,
             variables,
+            issuers: Vec::new(),
         })
     }
 
@@ -107,13 +114,157 @@ impl IdentifierSelector {
     pub fn identifier_type(&self) -> &str {
         &self.identifier_type
     }
+
+    /// Returns this selector holding only the identifiers whose
+    /// `DV_IDENTIFIER.issuer` is one of `issuers`, so two selectors at one
+    /// path and of one type are told apart by issuer.
+    #[must_use]
+    pub fn with_issuers<I, S>(mut self, issuers: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        let mut issuers: Vec<String> = issuers.into_iter().map(Into::into).collect();
+        issuers.sort();
+        issuers.dedup();
+        self.issuers = issuers;
+        self
+    }
+
+    /// Returns the issuers the selector holds; empty holds every issuer.
+    #[must_use]
+    pub fn issuers(&self) -> &[String] {
+        &self.issuers
+    }
+
+    /// The steps of the path: each attribute with its node id predicate.
+    #[must_use]
+    pub fn steps(&self) -> Vec<(String, Option<String>)> {
+        steps(&self.path)
+    }
+
+    /// The issuers as the `text[]` a statement binds: `None` holds every
+    /// issuer.
+    fn issuer_filter(&self) -> Option<&[String]> {
+        (!self.issuers.is_empty()).then_some(self.issuers.as_slice())
+    }
 }
 
-/// Compiles `path` to a lax SQL/JSON path that yields every `DV_IDENTIFIER`
-/// it addresses, with the node ids as `$pN` variables (PostgreSQL 18, "The
+/// A selector of the `DV_TEXT` at a path: the `displayName` of a group.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NameSelector {
+    /// The path as written.
+    path: String,
+    /// The compiled SQL/JSON path.
+    json_path: String,
+    /// The compiled path's variables, as a JSON object text.
+    variables: String,
+}
+
+impl NameSelector {
+    /// Returns the selector of the `DV_TEXT` (or `DV_CODED_TEXT`) values at
+    /// `path`, the `ELEMENT` holding the name or its `value`.
+    ///
+    /// # Errors
+    /// [`SelectorError::Path`] naming the path when a step is not an
+    /// attribute name with an optional node id predicate.
+    pub fn new(path: impl Into<String>) -> Result<Self, SelectorError> {
+        let path = path.into();
+        let Some((json_path, variables)) = compile(&path, TEXT) else {
+            return Err(SelectorError::Path { path });
+        };
+        Ok(Self {
+            path,
+            json_path,
+            variables,
+        })
+    }
+
+    /// Returns the path as written.
+    #[must_use]
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+}
+
+/// The filter of a compiled path that keeps a `DV_IDENTIFIER`.
+const IDENTIFIER: &str = " ? (@._type == \"DV_IDENTIFIER\")";
+/// The filter of a compiled path that keeps a `DV_TEXT` or `DV_CODED_TEXT`.
+const TEXT: &str = " ? (@._type == \"DV_TEXT\" || @._type == \"DV_CODED_TEXT\")";
+
+/// The selectors of one person template: the binding key, and the SCIM
+/// `userName` and `externalId` when the mapping names them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PersonSelectors {
+    /// The binding key.
+    key: IdentifierSelector,
+    /// The SCIM `userName`.
+    user_name: Option<IdentifierSelector>,
+    /// The SCIM `externalId`.
+    external_id: Option<IdentifierSelector>,
+    /// The name the committer reads.
+    name: Option<NameSelector>,
+}
+
+impl PersonSelectors {
+    /// Returns the selectors of a template binding by `key` alone.
+    #[must_use]
+    pub fn new(key: IdentifierSelector) -> Self {
+        Self {
+            key,
+            user_name: None,
+            external_id: None,
+            name: None,
+        }
+    }
+
+    /// Returns these selectors with the SCIM `userName` at `selector`.
+    #[must_use]
+    pub fn with_user_name(mut self, selector: IdentifierSelector) -> Self {
+        self.user_name = Some(selector);
+        self
+    }
+
+    /// Returns these selectors with the committer's name at `selector`.
+    #[must_use]
+    pub fn with_name(mut self, selector: NameSelector) -> Self {
+        self.name = Some(selector);
+        self
+    }
+
+    /// Returns these selectors with the SCIM `externalId` at `selector`.
+    #[must_use]
+    pub fn with_external_id(mut self, selector: IdentifierSelector) -> Self {
+        self.external_id = Some(selector);
+        self
+    }
+
+    /// The selectors as `(side-table selector, selector)` pairs, the key
+    /// first.
+    fn each(&self) -> impl Iterator<Item = (&'static str, &IdentifierSelector)> {
+        std::iter::once(("key", &self.key))
+            .chain(self.user_name.iter().map(|s| ("user_name", s)))
+            .chain(self.external_id.iter().map(|s| ("external_id", s)))
+    }
+}
+
+/// The selectors of the provisioned group template: its `externalId`, and its
+/// `displayName` when the mapping names it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct GroupSelectors {
+    /// The canonical template id.
+    template: String,
+    /// The `externalId`.
+    external_id: IdentifierSelector,
+    /// The `displayName`.
+    display_name: Option<NameSelector>,
+}
+
+/// Compiles `path` to a lax SQL/JSON path that yields every value it
+/// addresses that passes `filter`, with the node ids as `$pN` variables (PostgreSQL 18, "The
 /// SQL/JSON Path Language": in lax mode `[*]` treats a non-array as a
 /// one-element array, so a single and a multiple attribute read alike).
-fn compile(path: &str) -> Option<(String, String)> {
+fn compile(path: &str, filter: &str) -> Option<(String, String)> {
     let rest = path.strip_prefix('/')?;
     let mut json_path = String::from("$");
     let mut variables = BTreeMap::new();
@@ -144,9 +295,24 @@ fn compile(path: &str) -> Option<(String, String)> {
     if !last_is_value {
         json_path.push_str(".value[*]");
     }
-    json_path.push_str(" ? (@._type == \"DV_IDENTIFIER\")");
+    json_path.push_str(filter);
     let variables = serde_json::to_string(&variables).ok()?;
     Some((json_path, variables))
+}
+
+/// The steps of `path`, an absolute path [`compile`] accepts: each attribute
+/// with its node id predicate.
+fn steps(path: &str) -> Vec<(String, Option<String>)> {
+    path.trim_start_matches('/')
+        .split('/')
+        .map(|step| match step.split_once('[') {
+            Some((attribute, predicate)) => (
+                attribute.to_owned(),
+                Some(predicate.trim_end_matches(']').to_owned()),
+            ),
+            None => (step.to_owned(), None),
+        })
+        .collect()
 }
 
 /// Whether `name` is an RM attribute name: lower-case snake case.
@@ -181,14 +347,12 @@ fn node_id_text(node_id: &str) -> bool {
 /// definition store keys them.
 #[derive(Debug, Clone, Default)]
 pub struct BindingMapping {
-    /// The person templates, by canonical template id, with their key
-    /// selector.
-    persons: BTreeMap<String, IdentifierSelector>,
+    /// The person templates, by canonical template id, with their selectors.
+    persons: BTreeMap<String, PersonSelectors>,
     /// The canonical template id of the professional `ROLE`.
     professional_role: Option<String>,
-    /// The canonical template id of a provisioned `GROUP`, with its
-    /// `externalId` selector.
-    group: Option<(String, IdentifierSelector)>,
+    /// The provisioned `GROUP` template with its selectors.
+    group: Option<GroupSelectors>,
     /// The canonical archetype id of a membership `PARTY_RELATIONSHIP`.
     membership: Option<String>,
     /// The canonical archetype id of a representation `PARTY_RELATIONSHIP`.
@@ -196,14 +360,24 @@ pub struct BindingMapping {
     /// Each representation type code, mapped to its openEHR
     /// `subject_relationship` code.
     relationship_codes: BTreeMap<String, String>,
+    /// The role whose holder may write a protected party
+    /// ([`protect`]), compared case-insensitively.
+    admin_role: Option<String>,
 }
 
 impl BindingMapping {
     /// Returns this mapping binding the `PERSON`s of `template_id` by the
     /// identifiers `key` selects.
     #[must_use]
-    pub fn with_person(mut self, template_id: &str, key: IdentifierSelector) -> Self {
-        self.persons.insert(canonical_key(template_id), key);
+    pub fn with_person(self, template_id: &str, key: IdentifierSelector) -> Self {
+        self.with_person_selectors(template_id, PersonSelectors::new(key))
+    }
+
+    /// Returns this mapping reading the `PERSON`s of `template_id` through
+    /// `selectors`.
+    #[must_use]
+    pub fn with_person_selectors(mut self, template_id: &str, selectors: PersonSelectors) -> Self {
+        self.persons.insert(canonical_key(template_id), selectors);
         self
     }
 
@@ -218,7 +392,21 @@ impl BindingMapping {
     /// by the identifier `external_id` selects.
     #[must_use]
     pub fn with_group(mut self, template_id: &str, external_id: IdentifierSelector) -> Self {
-        self.group = Some((canonical_key(template_id), external_id));
+        self.group = Some(GroupSelectors {
+            template: canonical_key(template_id),
+            external_id,
+            display_name: None,
+        });
+        self
+    }
+
+    /// Returns this mapping reading a group's `displayName` at `selector`;
+    /// without a group template it changes nothing.
+    #[must_use]
+    pub fn with_group_display_name(mut self, selector: NameSelector) -> Self {
+        if let Some(group) = &mut self.group {
+            group.display_name = Some(selector);
+        }
         self
     }
 
@@ -244,10 +432,97 @@ impl BindingMapping {
         self
     }
 
+    /// Returns this mapping letting the holders of `role` write a protected
+    /// party through the demographic API.
+    #[must_use]
+    pub fn with_admin_role(mut self, role: impl Into<String>) -> Self {
+        self.admin_role = Some(role.into());
+        self
+    }
+
+    /// The binding-key selector of the person template `template_id`, in any
+    /// case.
+    #[must_use]
+    pub fn key_selector(&self, template_id: &str) -> Option<&IdentifierSelector> {
+        self.persons
+            .get(&canonical_key(template_id))
+            .map(|selectors| &selectors.key)
+    }
+
     /// Whether the mapping derives any row.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.persons.is_empty() && self.group.is_none()
+    }
+
+    /// Whether the mapping names `template_id` (in any case) as a person,
+    /// role or group template.
+    #[must_use]
+    pub fn names_template(&self, template_id: &str) -> bool {
+        let key = canonical_key(template_id);
+        self.persons.contains_key(&key)
+            || self.professional_role.as_ref() == Some(&key)
+            || self.group.as_ref().is_some_and(|g| g.template == key)
+    }
+
+    /// Returns the digest of everything the side-table rows are derived
+    /// under: two mappings with one digest derive the same rows.
+    ///
+    /// It is the SHA-256 of a canonical text of the templates, selectors,
+    /// archetypes and relationship codes, in lower-case hex.
+    #[must_use]
+    pub fn digest(&self) -> String {
+        use sha2::Digest as _;
+        let mut text = String::new();
+        let mut line = |parts: &[&str]| {
+            text.push_str(&parts.join("\u{1f}"));
+            text.push('\n');
+        };
+        for (template, selectors) in &self.persons {
+            for (selector, chosen) in selectors.each() {
+                line(&[
+                    "person",
+                    template,
+                    selector,
+                    chosen.path(),
+                    chosen.identifier_type(),
+                    &chosen.issuers().join(","),
+                ]);
+            }
+        }
+        if let Some(role) = &self.professional_role {
+            line(&["role", role]);
+        }
+        if let Some(group) = &self.group {
+            let external = &group.external_id;
+            line(&[
+                "group",
+                &group.template,
+                external.path(),
+                external.identifier_type(),
+                &external.issuers().join(","),
+                group.display_name.as_ref().map_or("", NameSelector::path),
+            ]);
+        }
+        if let Some(membership) = &self.membership {
+            line(&["membership", membership]);
+        }
+        if let Some(representation) = &self.representation {
+            line(&["representation", representation]);
+        }
+        for (code, mapped) in &self.relationship_codes {
+            line(&["relationship", code, mapped]);
+        }
+        sha2::Sha256::digest(text.as_bytes()).iter().fold(
+            String::with_capacity(64),
+            |mut hex, byte| {
+                use std::fmt::Write as _;
+                // NOTE: `impl fmt::Write for String` never fails
+                // (<https://doc.rust-lang.org/std/fmt/trait.Write.html#impl-Write-for-String>).
+                let _written = write!(hex, "{byte:02x}");
+                hex
+            },
+        )
     }
 }
 

@@ -296,7 +296,7 @@ fn commit_audit_without_a_canonical_committer_is_refused() {
     let decoded = decode(&body(complete(), identityless, update_audit()))
         .expect("a canonical PARTY_PROXY decodes");
     let (member, _) = audits(&decoded);
-    match validate_commit_audit(&AuditInput::from_commit_audit(
+    match validate_commit_audit(&mut AuditInput::from_commit_audit(
         member,
         "249".to_owned(),
         "s",

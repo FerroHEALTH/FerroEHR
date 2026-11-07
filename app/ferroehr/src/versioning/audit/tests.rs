@@ -179,19 +179,19 @@ fn committer_causes<T: std::fmt::Debug>(
 
 #[test]
 fn commit_audit_rejects_empty_system_id() {
-    let audit = audit_input(
+    let mut audit = audit_input(
         "",
         &json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Jones" }),
     );
-    assert_system_id_refused(validate_commit_audit(&audit));
+    assert_system_id_refused(validate_commit_audit(&mut audit));
 }
 
 #[test]
 fn commit_audit_rejects_committer_without_identity() {
-    let audit = audit_input("ferroehr.local", &json!({ "_type": "PARTY_IDENTIFIED" }));
+    let mut audit = audit_input("ferroehr.local", &json!({ "_type": "PARTY_IDENTIFIED" }));
     // The nested dispatcher violations survive as DATA: the causes list is
     // asserted, not a substring of the rendered message.
-    let causes = committer_causes(validate_commit_audit(&audit));
+    let causes = committer_causes(validate_commit_audit(&mut audit));
     assert!(
         causes.iter().any(|c| c.message.contains("Basic_validity")),
         "causes must carry the PARTY_IDENTIFIED invariant, got {causes:?}"
@@ -200,11 +200,11 @@ fn commit_audit_rejects_committer_without_identity() {
 
 #[test]
 fn commit_audit_rejects_empty_committer_name() {
-    let audit = audit_input(
+    let mut audit = audit_input(
         "ferroehr.local",
         &json!({ "_type": "PARTY_IDENTIFIED", "name": "" }),
     );
-    match validate_commit_audit(&audit) {
+    match validate_commit_audit(&mut audit) {
         Err(ServiceError::Unprocessable { violation: v, .. }) => assert!(
             v.causes().iter().any(|c| c.message.contains("Name_valid")),
             "causes must carry Name_valid, got {:?}",
@@ -248,14 +248,14 @@ fn commit_audit_party_related_relationship_is_enforced() {
             .insert("relationship".into(), relationship);
         audit_input("sys", &c)
     };
-    let bad = related(json!({
+    let mut bad = related(json!({
         "_type": "DV_CODED_TEXT", "value": "colleague",
         "defining_code": { "_type": "CODE_PHRASE", "code_string": "99999",
                            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" } }
     }));
     // The refusal is produced by the generated `PARTY_RELATED` core, whose
     // violation message names the invariant, not the rejected code.
-    match validate_commit_audit(&bad) {
+    match validate_commit_audit(&mut bad) {
         Err(ServiceError::Unprocessable { violation: v, .. }) => {
             assert!(
                 v.causes()
@@ -267,7 +267,7 @@ fn commit_audit_party_related_relationship_is_enforced() {
         }
         other => panic!("non-member relationship code must be 422, got {other:?}"),
     }
-    validate_commit_audit(&related(json!({
+    validate_commit_audit(&mut related(json!({
         "_type": "DV_CODED_TEXT", "value": "mother",
         "defining_code": { "_type": "CODE_PHRASE", "code_string": "10",
                            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" } }
@@ -277,19 +277,19 @@ fn commit_audit_party_related_relationship_is_enforced() {
 
 #[test]
 fn commit_audit_accepts_valid_committers() {
-    validate_commit_audit(&audit_input(
+    validate_commit_audit(&mut audit_input(
         "sys",
         &json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Jones" }),
     ))
     .expect("named committer");
-    validate_commit_audit(&audit_input(
+    validate_commit_audit(&mut audit_input(
         "sys",
         &json!({ "_type": "PARTY_IDENTIFIED", "identifiers": [
             { "_type": "DV_IDENTIFIER", "id": "42", "issuer": "x", "type": "id" }
         ] }),
     ))
     .expect("identifier-only committer");
-    validate_commit_audit(&audit_input("sys", &json!({ "_type": "PARTY_SELF" })))
+    validate_commit_audit(&mut audit_input("sys", &json!({ "_type": "PARTY_SELF" })))
         .expect("PARTY_SELF committer");
 }
 

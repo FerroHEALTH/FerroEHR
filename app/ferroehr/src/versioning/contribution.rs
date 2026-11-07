@@ -463,8 +463,8 @@ pub(crate) fn parse_contribution_audit(
             .with_invariant("AUDIT_DETAILS.Change_type_valid"),
         )
     })?;
-    let audit = AuditInput::from_commit_audit(audit, code, system_id);
-    validate_commit_audit(&audit)?;
+    let mut audit = AuditInput::from_commit_audit(audit, code, system_id);
+    validate_commit_audit(&mut audit)?;
     Ok(audit)
 }
 

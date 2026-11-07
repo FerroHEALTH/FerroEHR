@@ -248,6 +248,109 @@ key_issuer = "urn:example:staff-login"
 key = "3f2b0c1e-0000-4000-8000-000000000001"
 ```
 
+#### The party mapping
+
+SCIM provisioning, just-in-time creation and the login binding read and
+write the same demographic parties under one mapping. It names the
+templates each party is valid against, the identifier selectors of the
+binding key, `userName` and `externalId`, and where each SCIM attribute and
+OpenID Connect claim goes. Names go in `PARTY.identities` and identifiers
+in `PARTY.details` (RM demographic §Names and Addresses, §Party
+Identification), and boot refuses a name mapped into `details` or an
+identifier mapped into `identities`. No openEHR specification governs this
+mapping: it is FerroEHR's own design, and its targets are RM demographic
+paths.
+
+| Section | Keys | Description |
+|---|---|---|
+| `[[authz.party_binding.person.template]]` | `template_id`, `key`, `user_name`, `external_id`, `default` | One per template a professional's `PERSON` may use, so a migrated template can stay beside a new one. `key`, `user_name` and `external_id` are selectors, each `{ path, type }`: the path of the `ELEMENT` holding the `DV_IDENTIFIER` and its `type`. Every identifier can sit at one path (the repeated element of an identifier cluster), so two selectors at one path are told apart by `type`, and the key by its issuer, the `identifier_issuer` of an `[[auth.party]]` table. Exactly one table sets `default = true`: SCIM and just-in-time creation create new persons with it. |
+| `[[authz.party_binding.person.attribute]]` | `scim`, `oidc`, `jit`, `name`, `path` | One per mapped value: a SCIM attribute path (the RFC 7644 `valuePath` form, `emails[type eq "work"].value`, and the FerroEHR extension `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier` that feeds the binding key), an OpenID Connect claim, whether just-in-time creation writes it (`jit`, default `false`), whether it is the name the committer reads (`name`, at most one), and `path`, one path per template id. `id`, `schemas`, `meta`, `active`, `userName` and `externalId` are SCIM's own and are never mapped. |
+| `[authz.party_binding.professional_role]` | `template_id` | The template of the professional `ROLE`, rooted at `ROLE`. A `PERSON` is a professional while it lists a `ROLE` of this template that names it as `performer`, is `complete` or `incomplete`, and whose `time_validity` holds today. |
+| `[authz.party_binding.group]` | `template_id`, `external_id`, `display_name` | The template of a SCIM Group's `GROUP`, its `externalId` selector and the path of its `displayName`. |
+| `[authz.party_binding.membership]` | `archetype_id` | The `PARTY_RELATIONSHIP` archetype of a group membership. |
+| `[authz.party_binding.representation]` | `archetype_id`, `relationship_codes` | The `PARTY_RELATIONSHIP` archetype a representative acts through, from the representative's `PERSON` to the subject's, and the code of the openEHR `subject_relationship` group each of its relationship types maps to. |
+
+A worked example over the `openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2`
+cluster, with the Microsoft Entra object id as the binding key:
+
+```toml
+[[authz.party_binding.person.template]]
+template_id = "FerroEHR professional"
+default = true
+key = { path = "/details[at0001]/items[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2]/items[at0001]", type = "guid" }
+user_name = { path = "/details[at0001]/items[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2]/items[at0001]", type = "scim_user_name" }
+external_id = { path = "/details[at0001]/items[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2]/items[at0001]", type = "scim_external_id" }
+
+[[authz.party_binding.person.attribute]]
+scim = "name.formatted"
+oidc = "name"
+jit = true
+name = true
+path = { "FerroEHR professional" = "/identities[openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1]/details[at0001]/items[at0002]" }
+
+[authz.party_binding.professional_role]
+template_id = "FerroEHR professional role"
+
+[authz.party_binding.group]
+template_id = "FerroEHR care team"
+external_id = { path = "/details[at0001]/items[at0001]", type = "scim_external_id" }
+display_name = "/identities[at0002]/details[at0003]/items[at0004]"
+
+[authz.party_binding.membership]
+archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
+
+[authz.party_binding.representation]
+archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1"
+relationship_codes = { at0010 = "254", at0011 = "264" }
+```
+
+With Microsoft Entra ID, map the object id to `externalId` (Entra's
+matching) and to the binding-key attribute (the binding): two attributes,
+two selectors. The key's `[[auth.party]] identifier_type` is `guid`, so a
+key differing only in case binds one login.
+
+Boot refuses, naming the key: no or two `default` tables; a selector path
+that does not compile; two equal selectors; a key whose scheme
+`[demographic.identifier_protection]` protects; any selector under the Dutch
+BSN namespace (OID `2.16.840.1.113883.2.4.6.3`); a key fed by an email
+address, a phone number, `preferred_username`, `name`, `upn` or
+`unique_name`; a template that is absent, rooted at another class or lacks
+a mapped path; a path whose type cannot carry its source; and a
+representation type with no `subject_relationship` code. Deleting a template
+the mapping names is refused with `409`.
+
+The parties the binding relies on are protected: a `PERSON` of a mapped
+template carrying a selector identifier, its professional `ROLE`, a
+representation relationship, and a `GROUP` of the group template. Only an
+administrator (`authz.rbac.admin_role`) writes one through the demographic
+API, including the creation of a party that carries a selector identifier.
+An administrator's version that leaves a protected identifier out is refused
+with `422`. A present binding key is immutable (RFC 7643 §2.2): a version
+that changes it is refused with `403`, and
+[`POST /admin/party/binding-key`](../operations-admin-apis.md) is the one
+change. Each selector value binds one live party: a commit that gives a
+binding key, a `userName` (compared after RFC 8265 width mapping, lower case
+and NFC), an `externalId` or a group `displayName` a second party is refused
+with `409`. A deleted `PERSON` leaves its key as a tombstone that refuses
+the login until an administrator binds the key again.
+
+#### Changing the mapping
+
+The side table is filled from the configured mapping and the party
+versions. The first boot fills it and stores the mapping's digest; a replica
+whose mapping digest differs from the stored one refuses to start, naming
+both digests. Each running replica holds a lease it renews every 20 seconds.
+A mapping change is a stop-the-world step:
+
+1. Stop every replica. With Helm, scale the deployment to zero first: a
+   rolling upgrade would start new replicas beside old ones.
+2. Run `ferroehr party-binding refill` with the new configuration. It
+   refuses while a replica's lease was renewed within the last minute, and
+   refuses a store in which two parties carry one selector value, naming
+   both.
+3. Start the replicas with the new mapping. A replica still holding the old
+   mapping refuses to start.
+
 #### How a login is looked up
 
 Every request of a person is looked up in the binding side table of the

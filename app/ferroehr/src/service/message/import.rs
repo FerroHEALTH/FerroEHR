@@ -118,7 +118,7 @@ impl FerroEhrService {
         an_ehr_id: Option<EhrId>,
         an_extract: Extract,
     ) -> Result<EhrId, ServiceError> {
-        let (containers, parties) = parse_import_containers(&an_extract)?;
+        let (containers, parties) = self.admitted(&an_extract).await?;
         // A whole-EHR clone must carry an EHR_STATUS (EHR.ehr_status 1..1, RM
         // ehr §"EHR Creation") — the target could not otherwise be a valid EHR.
         if !containers.iter().any(|c| c.kind == Kind::EhrStatus) {
@@ -219,7 +219,7 @@ impl FerroEhrService {
                 format!("no EHR with id {an_ehr_id}"),
             ));
         }
-        let (containers, parties) = parse_import_containers(&an_extract)?;
+        let (containers, parties) = self.admitted(&an_extract).await?;
         reject_duplicate_singleton_containers(&containers)?;
 
         let mut conn = acquire(&self.pool).await?;
@@ -428,7 +428,7 @@ fn reject_duplicate_singleton_containers(
 /// item's `X_VERSIONED_*` wrapper contributes its `ORIGINAL_VERSION`s to one
 /// [`ImportContainer`]; branch / multi-system version trees are first-class
 /// (master06 §Distributed Versioning).
-fn parse_import_containers(
+pub(super) fn parse_import_containers(
     extract: &Extract,
 ) -> Result<(Vec<ImportContainer>, Vec<ImportContainer>), ServiceError> {
     let value = openehr_its::json::to_canonical_value(extract);

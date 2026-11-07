@@ -34,6 +34,7 @@
 mod export;
 mod extract_type;
 mod import;
+pub mod import_policy;
 
 use crate::error::ServiceError;
 use crate::ids::EhrId;

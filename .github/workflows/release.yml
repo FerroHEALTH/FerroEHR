@@ -1142,6 +1142,16 @@ jobs:
         env:
           LOADTEST_BIN: target/release/loadtest
         run: bash scripts/perf/audit.sh ferroehr:perf ferroehr-postgres:perf perf-audit
+      # The pull-request performance gate on the release image (#5081): idle
+      # limits and the committed baseline, on the same runner image it was
+      # measured on. The release build is at least as fast as the e2e build the
+      # baseline was measured with, so a breach here is a regression.
+      - name: Install the pinned ferrohealth-perf
+        run: bash scripts/perf/gate.sh install
+      - name: The performance gate
+        env:
+          PERF_OUT: perf-gate
+        run: bash scripts/perf/gate.sh run ferroehr:perf ferroehr-postgres:perf
       - name: Name the evaluation for the release
         env:
           TAG: ${{ needs.plan.outputs.tag }}
@@ -1159,6 +1169,7 @@ jobs:
           path: |
             perf-out/
             perf-audit/
+            perf-gate/
           if-no-files-found: ignore
       - name: Attach the logging performance evaluation to the draft release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3

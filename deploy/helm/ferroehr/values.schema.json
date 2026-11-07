@@ -1508,7 +1508,7 @@
       "additionalProperties": true
     },
     "bridge": {
-      "description": "FerroBRIDGE, the FHIR and openEHR bridge, deployed as its own workload against this release's CDR. Off by default. Cluster-internal, because a caller FerroBRIDGE's [auth] admits acts on the CDR with its credential: there is no Ingress key and no Service type key, and enabling it without a networkPolicy.ingressFrom peer or a cdr.existingSecret is refused at render.",
+      "description": "FerroBRIDGE, the FHIR and openEHR bridge, deployed as its own workload against this release's CDR. Off by default. Cluster-internal, because a caller FerroBRIDGE's [auth] admits acts on the CDR with its credential: there is no Ingress key and no Service type key, and enabling it without a networkPolicy.ingressFrom peer or a cdr.existingSecret and a cdr.oauth client of a machines issuer is refused at render.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -1570,8 +1570,35 @@
           "additionalProperties": false,
           "properties": {
             "existingSecret": {
-              "description": "An EXISTING Secret with the keys user and password, a user of config.auth.basic.users. Required when enabled.",
+              "description": "An EXISTING Secret with the key client_secret, the secret of oauth.clientId at oauth.issuer. Required when enabled.",
               "type": "string"
+            },
+            "oauth": {
+              "description": "FerroBRIDGE's OAuth client for the CDR: a client credentials client (RFC 6749 §4.4) of a machines issuer in config.auth.issuer.",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "issuer": {
+                  "description": "The issuer identifier, an https URL (RFC 8414 §2); a config.auth.issuer entry with kind machines. Required when enabled.",
+                  "type": "string"
+                },
+                "clientId": {
+                  "description": "FerroBRIDGE's client identifier at the issuer (RFC 6749 §2.2). Required when enabled.",
+                  "type": "string"
+                },
+                "scope": {
+                  "description": "The scope parameter (RFC 6749 §3.3); empty sends none.",
+                  "type": "string"
+                },
+                "audience": {
+                  "description": "An audience parameter; empty sends none.",
+                  "type": "string"
+                },
+                "resource": {
+                  "description": "A resource parameter (RFC 8707 §2); empty sends none.",
+                  "type": "string"
+                }
+              }
             }
           }
         },
