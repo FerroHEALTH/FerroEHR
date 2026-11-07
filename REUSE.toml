@@ -568,6 +568,14 @@ precedence = "override"
 SPDX-FileCopyrightText = "HL7 International"
 SPDX-License-Identifier = "CC0-1.0"
 
+# Logius's Logboek Dataverwerkingen NEN7513 Extensie: the W3C notice in its
+# LICENSE file, and CC BY 4.0 as its publication states.
+[[annotations]]
+path = "docs/specs/nen-7513-sources/logius/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Logius"
+SPDX-License-Identifier = "CC-BY-4.0 OR W3C-20150513"
+
 # The provenance records of those trees, the cache-only records of the Mitz
 # document, DICOM PS3.15 and the Independent Submission RFCs, and the record
 # of the ISO standards, are first-party prose about the material. Placed LAST:
@@ -590,6 +598,7 @@ path = [
   "docs/specs/dicom-ps3-15/PROVENANCE.md",
   "docs/specs/rfc-independent/PROVENANCE.md",
   "docs/specs/iso-health-informatics/PROVENANCE.md",
+  "docs/specs/nen-7513-sources/PROVENANCE.md",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "Cadasto B.V."

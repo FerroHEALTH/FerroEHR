@@ -20,7 +20,7 @@ Five groups are added to the openEHR Terminology, with constants on `OPENEHR_TER
 |person, delegated person, subject of care, representative, external person, organisation, system
 
 |access authorisation
-|role, agreement, consent, permit, emergency, subject of care, representation, legal obligation
+|role, treatment relationship, agreement, consent, permit, emergency, subject of care, representation, legal obligation
 
 |access refusal reason
 |not authenticated, credential not bound, not authorised, consent absent, opted out, restricted by the subject, rate limited, system failure

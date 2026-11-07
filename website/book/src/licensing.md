@@ -142,6 +142,7 @@ used as test corpora. Each family keeps its upstream license:
 | Nuts RFC021, VP Token Grant Type, under `docs/specs/nuts-rfc/` | `nuts-foundation/nuts-specification` | [CC-BY-SA 4.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-4.0.txt) |
 | The IHE Basic Audit Log Patterns implementation guide, Release 1.1.4, under `docs/specs/ihe-balp/` | `IHE/ITI.BasicAudit` | [CC-BY 4.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-4.0.txt) |
 | The FHIR R4 and R5 `AuditEvent` pages, under `docs/specs/fhir-auditevent/` | HL7 International | [CC0 1.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC0-1.0.txt) |
+| Logius's Logboek Dataverwerkingen NEN7513 Extensie, under `docs/specs/nen-7513-sources/logius/` | `Logius-standaarden/logboek-extensie-nen7513` | [CC-BY 4.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-4.0.txt) or [W3C-20150513](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/W3C-20150513.txt): the publication states the first, the repository's `LICENSE` the second |
 
 The NEN 7510, 7512 and 7513 standards the compliance pages cite are sold under
 copyright and are not in the tree; `docs/law/nl/nen-75xx/` holds a record of the

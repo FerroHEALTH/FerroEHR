@@ -34,6 +34,7 @@ An entry projects onto the records other standards define. The projection writes
 * *FHIR `AuditEvent` under IHE Basic Audit Log Patterns 1.1.4:* the action, times, outcome, purposes, accessor, provider, credential, client, items, query, request id and system map to `action`, `recorded`, `period`, `outcome`, `purposeOfEvent`, `agent`, `entity` and `source`. The order of the delegation chain, the legal grounds, the origins, the retention and the hash chain have no element. `_ehr_id_` is carried as an identifier, since BALP expects a `Patient` reference.
 * *DICOM PS3.15 A.5 audit message:* the action, outcome, accessor and items map to `EventIdentification`, `ActiveParticipant`, `AuditSourceIdentification` and `ParticipantObjectIdentification`, with 110101 "Audit Log Used" for a read of the log (A.5.3.2). Purposes, authorisations and the emergency mark have no element in the A.5.1 schema.
 * *EHDS Annex II 3.2:* (a) `_accessor.provider_`, (b) `_accessor.party_`, (c) `_items.categories_`, (d) `_time_recorded_`, (e) `_items.origins_`.
+* *NEN 7513:2024 (Netherlands):* the DICOM-derived fields map as above; `participantSegments` maps to `_items.paths_`, `behandelrelatieProtocol` and `toestemmingsProfiel` to `_authorisations_`, and the list of checks the access decision ran (`controles`) goes to `_other_details_` under a national archetype.
 
 == Example (informative)
 

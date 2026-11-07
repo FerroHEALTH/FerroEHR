@@ -12,7 +12,7 @@ h|*Attributes*
 
 h|*1..1*
 |*kind*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
-a|The kind of ground, coded in the openEHR Terminology `access authorisation` group: a role, an agreement, a consent decision, a permit, an emergency override, the subject's own access, a representation, or a legal obligation.
+a|The kind of ground, coded in the openEHR Terminology `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, an emergency override, the subject's own access, a representation, or a legal obligation.
 
 h|*0..1*
 |*policy*: `xref:data_types:uri_package.adoc#_dv_uri_class[DV_URI]`

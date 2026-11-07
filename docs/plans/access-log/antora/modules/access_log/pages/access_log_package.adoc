@@ -14,11 +14,11 @@ An `ACCESS_LOG_ENTRY` records one access event to the data of at most one EHR. A
 
 === What
 
-`_ehr_id_` and `_items_` name the data: per item the versioned object and the version, the RM type, archetype and template, the categories and the origins, and whether the item was delivered. An access by query adds `ACCESS_QUERY`, which names a stored query or carries a digest of the query text.
+`_ehr_id_` and `_items_` name the data: per item the versioned object and the version, the RM type, archetype and template, the paths within the item where the access reached only part of it, the categories and the origins, and whether the item was delivered. An access by query adds `ACCESS_QUERY`, which names a stored query or carries a digest of the query text.
 
 === Why and Under Which Authorisation
 
-`_purposes_` holds the purposes of use. `_authorisations_` holds each ground of the access decision: a role, an agreement with its version and legal grounds, a consent decision with its reference, a permit, an emergency override, the subject's own access, a representation, or a legal obligation. `_is_emergency_` marks an access under an emergency override.
+`_purposes_` holds the purposes of use. `_authorisations_` holds each ground of the access decision: a role, a treatment relationship, an agreement with its version and legal grounds, a consent decision with its reference, a permit, an emergency override, the subject's own access, a representation, or a legal obligation. `_is_emergency_` marks an access under an emergency override.
 
 === Outcome, System and Transport
 

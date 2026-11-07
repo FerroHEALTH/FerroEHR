@@ -65,6 +65,22 @@ BASE §Integrity: "every write access of any kind to any part of an openEHR
 record is logged with the user identification, time, reason". A read leaves
 no openEHR trace.
 
+## openEHR principles the design keeps
+
+The design adds to openEHR in the way openEHR is built. Four principles
+govern it, each quoted from the vendored specifications, with how the
+design keeps it.
+
+| Principle | What openEHR says | How the design keeps it |
+|---|---|---|
+| Two-level modelling | BASE `master04-design_principles.adoc`: "Only the first level (the Reference Model) is implemented in software"; archetypes and templates are the levels above it. `master10-archetypes.adoc` §Overview: the reference model is "a stable object model from which software and data can be built". | The log is fixed RM structure, implemented in software like `AUDIT_DETAILS`, so every CDR reads every entry the same way. Its classes are not `LOCATABLE` and are not archetyped. The one archetypable point is `ACCESS_LOG_ENTRY.other_details`, an `ITEM_STRUCTURE`, as on `FEEDER_AUDIT_DETAILS`, where a jurisdiction adds fields under an archetype (the Dutch `controles` of NEN 7513, the eHDSI assertion ids) without a change to the RM. |
+| Indelibility | BASE `master07-security.adoc` §Security Policy: "health record information cannot be deleted; logical deletion is achieved by marking the data in such a way as to make it appear deleted (implemented in version control)". | The log is outside the EHR, so expiring entries never touches EHR content, and nothing in the EHR is marked, versioned or deleted by an access. Inside the log, entries are never changed; retention replaces content by a tombstone that keeps the chain link, so the log's own history stays complete. |
+| EHR and demographic separation | BASE `master06-design_of_the_ehr.adoc`: "One of the basic principles of openEHR is the complete separation of EHR and demographic information, such that an EHR taken in isolation contains little or no clue as to the identity of the patient it belongs to". `master07-security.adoc`, "Anonymity". | An entry names the subject by `ehr_id` only, and the accessor by a `PARTY_PROXY` whose `external_ref` points into the demographic service, as `AUDIT_DETAILS.committer` does. No patient name or national identifier is copied into the log; the subject view resolves names when it is read. The log is a third store beside the EHR and the demographic service, so a stolen log alone gives neither clinical content nor identities beyond the accessors'. |
+| The version and contribution model | RM `master06-change_control_package.adoc` §Contributions: "The list of all Contribution objects for a version repository (such as an EHR) provides a complete history of the change-sets made to the repository", and every `VERSION` records its Contribution and `commit_audit`. | The log does not repeat the change audit: a write's entry points at the version it left (`ACCESSED_ITEM.version_id`), and the `CONTRIBUTION` keeps who changed what. A read creates no `VERSION` and no `CONTRIBUTION`. An imported log keeps its origin's `system_id` and links, the way an `IMPORTED_VERSION` keeps the `ORIGINAL_VERSION` it wraps. |
+
+The package changes no existing class (our own design, so another vendor
+adopts it without touching data it already holds).
+
 ## Sources compared
 
 Every file path below is vendored in this repository. Three sources are
@@ -85,7 +101,11 @@ cited by section from the cache or from the publisher's public summary.
 | EHDS | Regulation (EU) 2025/327, `docs/law/eu/ehds/text.html` | Annex II 3.2: on "every access event or group of events" record (a) the provider or other individuals, (b) "the specific natural person or persons", (c) the categories of data, (d) the time and date, (e) the origins. Annex II 3.3: review tools. Annex II 3.4: "different retention periods and access rights that take into account the origins and categories". Art 9(1) and (2): the person's right to this information, "free of charge and without delay", "available for at least three years from each date of access", with at least (a) the provider or individuals, (b) the date and time, (c) which data. Art 9(3): Member States may restrict it. Art 11(5): an emergency access to restricted data "shall be logged in a clear and understandable format and shall be easily accessible for the data subject". Art 36(1): the common specifications for Annex II, by 26 March 2027. |
 | MyHealth@EU | Implementing Regulation (EU) 2026/2083, `docs/law/eu/myhealth-eu-2026-2083/text.html` | Art 15(1)(f)(ii): exchanges through MyHealth@EU "are logged systematically", "including the identity of actors involved, the categories of personal data and the purposes". Binds the national contact points. |
 | eHDSI Audit Trail Profile | 10.1.0, `docs/specs/ehdsi-specifications/ehdsi-audit-trail-profile-10.1.0.docx` | §2.2: "The payload of each auditable event MUST be safeguarded by a payload signature"; the Patient Privacy audit schema is written in the patient's country. Binds the NCPs (2026/2083 Art 4(1)). |
-| GDPR | `docs/law/eu/gdpr/text.html` | Art 5(1)(c) data minimisation and Art 5(1)(e) storage limitation, which bound what an entry holds and how long; Art 15 the access right Art 9 EHDS builds on. |
+| GDPR | `docs/law/eu/gdpr/text.html` | Art 5(1)(c) data minimisation and Art 5(1)(e) storage limitation, which bound what an entry holds and how long; Art 15 the access right Art 9 EHDS builds on. The log is itself a processing of personal data: Art 30(1) asks the controller to record it among its processing activities, with "the envisaged time limits for erasure" (f) and "a general description of the technical and organisational security measures" (g); Art 32(1)(b) asks for "the ongoing confidentiality, integrity, availability and resilience of processing systems", and Art 32(2) weighs "unauthorised disclosure of, or access to personal data". |
+| Besluit elektronische gegevensverwerking door zorgaanbieders (Begz) | `docs/law/nl/begz/text.html` | Art 5(1): the care provider responsible for a zorginformatiesysteem, and the party responsible for an elektronisch uitwisselingssysteem, "dragen er zorg voor dat de logging van het systeem voldoet aan het bepaalde in NEN 7513". Art 5(2): the retention period for logging is set under NEN 7513 and published in the Staatscourant. Art 1 defines NEN 7513 as the standard for "het vastleggen van acties op elektronische patiëntdossiers". |
+| Besluit vaststelling bewaartermijn logging | `docs/law/nl/besluit-bewaartermijn-logging/text.html` | Made under Begz Art 5(2): logging "wordt ten minste 5 jaar bewaard vanaf het moment dat de logregel wordt geschreven". |
+| Wabvpz | `docs/law/nl/wabvpz/text.html` | Art 15e: a copy of the record given under Art 15d(1) includes, at the client's request, "(a) wie bepaalde informatie via het elektronisch uitwisselingssysteem beschikbaar heeft gesteld en op welke datum" and "(b) wie bepaalde informatie heeft ingezien of opgevraagd en op welke datum"; Art 15d(1): electronically, "met redelijke tussenpozen". |
+| NEN 7513:2024 | record only, `docs/law/nl/nen-7513/PROVENANCE.md` (which still names the 2018 edition); the field list from Logius's Logboek Dataverwerkingen NEN7513 Extensie, `docs/specs/nen-7513-sources/logius/specificatie.md`; the scope from Kamerstuk 27529 nr. 228, cache only, `docs/specs/nen-7513-sources/PROVENANCE.md` | By the Minister's letter: the standard specifies "de gebeurtenissen die worden gelogd en de loggegevens die bij een gebeurtenis in een logregel worden vastgelegd"; the events are "toegang tot patiëntgegevens, toegang tot de logging en gebeurtenissen die invloed kunnen hebben op de betekenis of de betrouwbaarheid van de logging"; added data stay "in het patiëntdossier, niet in de logging". By the Logius extension, the fields of a 2024 log line "zoals verplicht gesteld": the DICOM-derived event, user, source and participant fields, plus `participantObjectPermissionPolicySet`, `participantSegments`, `autorisatieProtocol`, `behandelrelatieProtocol`, `toestemmingsProfiel` and `controles` (§To NEN 7513:2024). No NEN text is copied. |
 
 The Art 36 common specifications for the logging component are not adopted
 in the vendored corpus. The design meets Annex II 3.2 as written and is
@@ -176,8 +196,9 @@ The reasons, each from a source:
   "health record information cannot be deleted". EHDS Art 9(2) sets a floor
   of three years from each date of access, GDPR Art 5(1)(e) bounds the upper
   end, Annex II 3.4 asks for periods per category and origin, and a national
-  law can fix the period (the Dutch decree under
-  `docs/law/nl/besluit-bewaartermijn-logging/` sets five years). Versioned
+  law can fix the period (in the Netherlands, Begz Art 5(2) has the period
+  set under NEN 7513, and the Besluit vaststelling bewaartermijn logging
+  sets at least five years from the moment the log line is written). Versioned
   EHR content can only be logically deleted, which keeps it.
 - **A read would become a write.** Versioned content changes through a
   `CONTRIBUTION` with `AUDIT_DETAILS` (RM common, change control). Logging a
@@ -341,6 +362,7 @@ classDiagram
     +rm_type : String [0..1]
     +archetype_id : ARCHETYPE_ID [0..1]
     +template_id : TEMPLATE_ID [0..1]
+    +paths : List~DV_EHR_URI~ [0..*]
     +categories : List~DV_CODED_TEXT~ [0..*]
     +was_delivered : Boolean [1]
   }
@@ -409,12 +431,14 @@ How each question of the issue is answered:
   records.
 - **What.** `ehr_id` and `items`: per item the versioned object and the
   version (`OBJECT_REF`, `OBJECT_VERSION_ID`), its RM type, archetype and
-  template, the categories (Annex II 3.2(c)) and the origins (3.2(e)), and
-  whether it was delivered. A query adds `ACCESS_QUERY`.
+  template, the paths within it where the access reached only part of it
+  (NEN 7513 `participantSegments`), the categories (Annex II 3.2(c)) and the
+  origins (3.2(e)), and whether it was delivered. A query adds `ACCESS_QUERY`.
 - **When.** `time_recorded` and `occurred` (3.2(d)).
 - **Why.** `purposes`, coded (the eHDSI purpose of use, HL7
   `v3-ActReason`, or a national code system).
-- **Under which authorisation.** `authorisations`: the agreement with its
+- **Under which authorisation.** `authorisations`: a role, a treatment
+  relationship (NEN 7513 `behandelrelatieProtocol`), the agreement with its
   name, version and legal grounds, the consent decision reference of #5106
   in `reference`, a permit, an emergency override.
 - **Outcome.** `ACCESS_OUTCOME.result` (granted, partially granted, refused,
@@ -452,14 +476,27 @@ governs, it is cited; otherwise "our own design".
    or a durable reservation of it, before it sends a response that carries
    EHR data, and refuses the access when it cannot (our own design; FerroEHR
    does this today).
-4. **Reading the log is an access.** A read of an access log is recorded,
-   with an `ACCESSED_ITEM` whose `object` names the log (DICOM PS3.15
-   A.5.3.2, "Audit Log Used").
+4. **Reading the log is an access, and it MUST be recorded.** A read of an
+   access log writes an entry with an `ACCESSED_ITEM` whose `object` names
+   the log, by every route: ITS-REST, ITI-81, AQL, an export, a reviewer's
+   tool (DICOM PS3.15 A.5.3.2, "Audit Log Used"; NEN 7513 by the Minister's
+   letter, "toegang tot de logging"; GDPR Art 32(2)). The rule has no
+   exception for administrators or for the subject.
 5. **No clinical content.** No entry carries data values from the EHR. The
    item names the object and version; the query is named or digested (§Data
    minimisation).
 6. **An entry is never changed.** The only change is its replacement by a
    tombstone at the end of its retention (§Retention).
+7. **What changes the log is recorded.** A change to its retention
+   settings, a change of digest algorithm or signing key, a restore from
+   backup, a correction of the system clock and an erasure ordered by law
+   each write an entry naming the log (NEN 7513 by the Minister's letter,
+   "gebeurtenissen die invloed kunnen hebben op de betekenis of de
+   betrouwbaarheid van de logging").
+8. **The log has its own access control.** Reading it needs a permission
+   granted for the log alone, never one that comes with clinical access
+   rights, and the subject view is the only view a subject or representative
+   gets (GDPR Art 32(1)(b) and 32(2); our own design for the separation).
 
 ### One read, end to end
 
@@ -552,8 +589,12 @@ optional signature per entry.**
   recording system's configuration (EHDS Annex II 3.4; `ehds-logging`'s
   `retention` module computes the same from category and origin).
 - The floor inside the Union is three years from the date of access (EHDS
-  Art 9(2)); a national law can set a longer period (the Dutch decree, five
-  years) and GDPR Art 5(1)(e) bounds it from above. An entry whose
+  Art 9(2)); a national law can set a longer period and GDPR Art 5(1)(e) bounds it
+  from above. In the Netherlands, Begz Art 5(1) makes the logging of a
+  zorginformatiesysteem meet NEN 7513, Art 5(2) has its retention period
+  set and published, and the Besluit vaststelling bewaartermijn logging
+  sets "ten minste 5 jaar" from the moment the log line is written; a Dutch
+  entry carries that decree among its `retention.grounds`. An entry whose
   categories call for different periods keeps the longest.
 - At the end of the period the content is removed and an
   `ACCESS_LOG_TOMBSTONE` takes its place (§Integrity). An erasure a law
@@ -574,6 +615,13 @@ optional signature per entry.**
   9(2)(a) to (c)), the purposes, and the emergency mark, which Art 11(5)
   asks to be "easily accessible". Refused accesses are shown: they tell the
   person who tried.
+- **Dutch law asks the same of a copy.** Wabvpz Art 15e has a copy of the
+  record under Art 15d(1) include, at the client's request, who made
+  information available through an exchange system and when, and "wie
+  bepaalde informatie heeft ingezien of opgevraagd en op welke datum". The
+  subject view answers the second from `accessor`, `items` and
+  `time_recorded`; the first is the `CONTRIBUTION` audit of the versions
+  the exchange system made available.
 - **What the subject does not see.** Credentials and token ids, client
   addresses, the delegation chain, the query digest, the security labels,
   `other_details`, and the chain links. These serve review and integrity,
@@ -610,6 +658,33 @@ audit log) shape what an entry holds:
   token id, never the token (BALP 3:5.7.5.1 opaque and minimal patterns).
 - **The client address** is optional; a deployment that records it may give
   it a shorter retention than the rest of the entry (our own design).
+
+## The log as a processing of personal data
+
+The log holds personal data of two kinds of people: the subject of care
+(by `ehr_id`, which the CDR links to them) and the staff and others who
+accessed. GDPR applies to it as to any processing.
+
+- **Records of processing (Art 30).** The deploying organisation lists the
+  log among its processing activities. The model gives it what Art 30(1)
+  asks: the purpose (Annex II 3.2, the Art 9 right, Begz Art 5 in the
+  Netherlands), the categories of data subjects and data (the classes
+  above), the recipients (reviewers, the subject, an Audit Record
+  Repository the projections feed), the time limits for erasure (each
+  entry's `retention`), and the security measures (below). The FerroEHR
+  book page that describes the log is the product's input to that record.
+- **Security of processing (Art 32).** Integrity: the hash chain, signed
+  checkpoints, and append-only storage (§Integrity). Confidentiality: a
+  permission for the log alone, never granted with clinical rights, the
+  subject view for the subject, `security_labels` per entry (Annex II 3.4),
+  and no clinical content or credential in an entry. Availability and
+  resilience: the fail-closed write and the export with its checkpoint; the
+  backups are the deployment's. Testing (Art 32(1)(d)): the scheduled chain
+  verification.
+- **Access to the log is logged.** Every read of the log, by any route and
+  any role, is an entry (rule 4), and so is every change that affects the
+  log's meaning or reliability (rule 7). A reviewer's reading of the log is
+  therefore itself reviewable.
 
 ## ITS-REST resources
 
@@ -666,6 +741,38 @@ permission, never granted with clinical query rights; and each such query is
 itself an entry. FerroEHR builds it after the ITS-REST resources, as its
 own issue.
 
+## Legal requirements and where the model meets them
+
+One row per legal requirement that reaches an EHR system's access log. The
+third column names the model element or rule that meets it; a row that the
+model meets only in part says what is left and who carries it.
+
+| Requirement | Source | Met by |
+|---|---|---|
+| Record "on every access event or group of events" | EHDS Annex II 3.2 | Rules 1 to 3: every access, granted, refused or failed; one entry per EHR, grouped by `channel.request_id`; written before data leave |
+| (a) the healthcare provider or other individuals | EHDS Annex II 3.2(a) | `accessor.provider`; `accessor.kind` for an organisation accessor |
+| (b) the specific natural person | EHDS Annex II 3.2(b) | `accessor.party` (bound `PERSON` by `external_ref`, or identifiers for an external person), `accessor.credential`, `accessor.delegation` |
+| (c) the categories of data | EHDS Annex II 3.2(c) | `items.categories` |
+| (d) the time and date | EHDS Annex II 3.2(d) | `time_recorded`, `occurred` |
+| (e) the origins of the data | EHDS Annex II 3.2(e) | `items.origins` |
+| Review and analysis tools | EHDS Annex II 3.3 | `GET /admin/access_log`, the chain and checkpoint resources, AQL over `ACCESS_LOG_ENTRY` |
+| Retention and access rights by origin and category | EHDS Annex II 3.4 | `retention` per entry, tombstones in place; `security_labels`; rule 8 |
+| The person's right to the information, "including through automatic notifications" | EHDS Art 9(1) | The subject view at `GET /ehr/{ehr_id}/access_log`, filterable by `from`, which a person's access service polls. A push channel to the person is not in this design; the electronic health data access service the Member State runs carries it |
+| Free, without delay, at least three years from each access, with (a) to (c) | EHDS Art 9(2) | The subject view and its mandatory fields; the three-year floor in `retention` |
+| Member State restrictions | EHDS Art 9(3) | A deployment's restriction applied to the subject view; the entry is unchanged |
+| Emergency access to restricted data logged, clear, easily accessible | EHDS Art 11(5) | `is_emergency` with an `emergency` authorisation; shown in the subject view |
+| Exchanges logged with the identity of actors, the categories and the purposes | Implementing Regulation (EU) 2026/2083 Art 15(1)(f)(ii) (binds the national contact points) | `accessor`, `items.categories`, `purposes`; applied at the data holder behind a contact point as the deployment's national implementation |
+| A payload signature on each auditable event | eHDSI Audit Trail Profile 10.1.0 §2.2 (binds the national contact points) | `ACCESS_LOG_LINK.signature`, optional, switched on where a national implementation asks for it |
+| Data minimisation | GDPR Art 5(1)(c) | §Data minimisation: no clinical content, no patient identifier, references over copies, query digest, no credential |
+| Storage limitation | GDPR Art 5(1)(e) | `retention.retain_until`, tombstones |
+| The data subject's right of access | GDPR Art 15 | The subject view; Art 15(1)(c) recipients are the accessors it lists |
+| Records of processing activities | GDPR Art 30 | §The log as a processing of personal data; each entry's `retention` gives the erasure limits of Art 30(1)(f) |
+| Security of processing | GDPR Art 32 | The chain and checkpoints (integrity), rule 8 and `security_labels` (confidentiality), rule 4 (every read of the log logged), fail-closed writes and the export (availability), scheduled verification (testing) |
+| Logging that meets NEN 7513 | Begz Art 5(1) (Netherlands) | §To NEN 7513:2024: every listed field mapped, three gaps named; NEN 7513's events (access to patient data, access to the logging, events affecting the logging's reliability) are rules 1, 4 and 7 |
+| A retention period for logging, set and published | Begz Art 5(2); Besluit vaststelling bewaartermijn logging | At least five years from the moment the line is written, in `retention`, with the decree among its `grounds` |
+| Who viewed or requested which information, and when, in a copy of the record | Wabvpz Art 15e(b), with Art 15d(1) | The subject view: `accessor`, `items`, `time_recorded` |
+| A secure audit record for each read, create, update or archive, naming at least the user, the subject of care, the function and the date and time | ISO 27789:2021, scope (public summary) | Rule 1; `accessor`, `ehr_id`, `action` and `operation`, `time_recorded` |
+
 ## Mappings and their losses
 
 Each projection reads one `ACCESS_LOG_ENTRY` and writes one target record.
@@ -682,10 +789,12 @@ flowchart LR
   R5["FHIR R5 AuditEvent"]
   DICOM["DICOM PS3.15 A.5<br/>audit message"]
   EHDS["EHDS access record<br/>ehds-logging AccessRecord"]
+  NEN["NEN 7513:2024 log line<br/>Netherlands"]
   ENTRY -- "loses: reason code, export and import as actions, delegation order, legal grounds, origins as elements, retention, chain" --> BALP
   ENTRY -- "loses: as R4, but keeps the reason code" --> R5
   ENTRY -- "loses: purposes, authorisations, emergency mark, origins, retention, labels, chain, delegation order" --> DICOM
   ENTRY -- "loses: export and import fold into Read and Create, refused and failed share the failure scale, the chain" --> EHDS
+  ENTRY -- "loses: source site and type as per-entry values, controles outside the core, names resolved on read" --> NEN
 ```
 
 ### To FHIR R4 `AuditEvent` under IHE BALP 1.1.4
@@ -784,6 +893,53 @@ The EHDS access record is a projection that loses almost nothing; the
 entry is the wider of the two because it adds the chain, the tombstone, the
 per-EHR split and the openEHR item references.
 
+### To NEN 7513:2024
+
+Begz Art 5(1) makes NEN 7513 binding on a Dutch zorginformatiesysteem. The
+standard is sold under copyright and is not read here; the field list is the
+one Logius's NEN7513 extension gives as "zoals verplicht gesteld"
+(`docs/specs/nen-7513-sources/logius/specificatie.md`), which names NEN 7513
+of December 2024. The extension is a draft, so the list is checked against
+the standard by someone who holds it before a Dutch deployment relies on this
+table (#5136 moves the repository's NEN 7513 record to the 2024
+edition). Most fields keep their DICOM PS3.15 names, so the DICOM table
+above applies to them; this table adds the Dutch ones and states every gap.
+
+| NEN 7513 field (Logius extension) | Entry | Gap |
+|---|---|---|
+| `EventID`, `EventActionCode`, `EventTypeCode` | `action`, `operation` | none |
+| `EventDateTime` | `time_recorded` (`occurred` where the access spans time) | none |
+| `EventOutcomeIndicator` | `outcome.result` | the reason's code, as in DICOM |
+| `AuditEnterpriseSiteID` | the organisation responsible for `system_id`, which signs the checkpoints | no attribute per entry: a deployment constant, written by the projection |
+| `AuditSourceId` | `system_id` | none |
+| `AuditSourceTypeCode` | `channel.interface` in part | no attribute per entry: a deployment constant, written by the projection |
+| `users[].userID` | `accessor.credential` (`issuer`, `subject`) | none |
+| `users[].alternateUserID` | `accessor.party.external_ref` | none |
+| `users[].userName` | the name of `accessor.party`, resolved from the demographic party when read; copied for a party from elsewhere | not copied for a local party (GDPR Art 5(1)(c)); the projection resolves it |
+| `users[].userIsRequestor` | true for `accessor`, false for each `accessor.delegation` actor | none |
+| `users[].roleIDCode` | `accessor.roles` | none |
+| `users[].purposeOfUse` | `purposes` | none |
+| `users[].networkAccessPointTypeCode`, `networkAccessPointID` | `channel.client_address` | the type code is derived from the address form |
+| `participants[]` for the patient: `participantObjectTypeCode`, `TypeCodeRole`, `IDTypeCode`, `ID` | `ehr_id` | the patient is identified by `ehr_id`; where a deployment must log the BSN, the projection resolves it from `EHR_STATUS.subject` at projection time, so the log itself never holds it |
+| `participants[]` for data: `participantObjectID`, `TypeCode`, `TypeCodeRole` | `items.version_id`, `items.object`, `items.rm_type` | none |
+| `participantObjectDataLifeCycle` | derived from `action` | not stored; derived |
+| `participantObjectPermissionPolicySet` | `authorisations.policy` | none |
+| `participantObjectSensitivity` | `security_labels` | none |
+| `participantObjectName` | none | deliberately not recorded (minimisation); resolved when read |
+| `participantObjectDetail` | `items.categories`, `items.template_id` | none |
+| `participantObjectDescription` | `items.archetype_id`, `items.rm_type` | none |
+| `participantSegments[]` | `items.paths`, the parts of an item reached, as `DV_EHR_URI` runtime paths | none; `paths` was added to the model for this field |
+| `autorisatieProtocol` | `authorisations` of kind `role` or `agreement`, with `policy` | none |
+| `behandelrelatieProtocol` | `authorisations` of kind `treatment relationship` | none; the rubric was added to the `access authorisation` group for this field |
+| `toestemmingsProfiel` | `authorisations` of kind `consent`, with `reference` (the consent decision of #5106) | none |
+| `controles` | `other_details`, under a Dutch archetype | the checks an access decision ran are jurisdiction-specific and stay outside the core model |
+| `trace_id`, `span_id`, `parent_span_id` (W3C Trace Context) | `channel.request_id`, `channel.correlation_id` | the trace and span are not separate attributes |
+
+Who may read a NEN 7513 log, and how, the standard sets; its public summary
+names access to the logging as an event to log, which rule 4 does. Rule 8
+keeps the log's own permission apart from clinical rights; the roles a Dutch
+deployment grants it are the deployment's to set under NEN 7510 and NEN 7513.
+
 ### From FHIR `AuditEvent` and DICOM into the log
 
 A store that receives foreign audit records, such as FerroBRIDGE's facade
@@ -847,7 +1003,8 @@ input moves to the vendored BMM and the module to `openehr-rm`.
 7. the ITS-REST resources with the subject view (#5130);
 8. AQL over `ACCESS_LOG_ENTRY` (#5131);
 9. the submission of the proposal to openEHR and the note to the EU
-   logging work, after the owner's approval (#5132).
+. the repository's NEN 7513 record moved to the 2024 edition and the
+    clauses the pages cite rechecked (#5136).
 
 ## Moving the log with the EHR
 
@@ -920,6 +1077,9 @@ Art 36(1), due 26 March 2027), a note would contain:
 | RFC 8785 canonical JSON as the digest input | our own design |
 | Signed checkpoints; optional signature per entry | our own design; eHDSI Audit Trail Profile §2.2 for the per-entry case |
 | Retention stated on each entry | EHDS Annex II 3.4, Art 9(2) |
+| Every read of the log and every change to the log recorded | DICOM PS3.15 A.5.3.2; NEN 7513 (by Kamerstuk 27529 nr. 228); GDPR Art 32(2) |
+| A permission for the log alone | GDPR Art 32(1)(b); our own design for the separation from clinical rights |
+| `ACCESSED_ITEM.paths` and the `treatment relationship` authorisation | NEN 7513:2024 (`participantSegments`, `behandelrelatieProtocol`, by the Logius extension) |
 | Subject view as a reduction of the entry | EHDS Art 9(2), 9(3), 11(5); FHIR R4 and R5 §6.4.2 |
 | Query digest by default | GDPR Art 5(1)(c); our own design against BALP 1:52.4.1.4 |
 | ITS-REST resources and their paging | our own design on ITS-REST 1.1.0 conventions |

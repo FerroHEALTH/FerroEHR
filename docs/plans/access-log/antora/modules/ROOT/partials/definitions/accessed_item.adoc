@@ -31,6 +31,10 @@ h|*0..1*
 a|The template the item was committed under.
 
 h|*0..1*
+|*paths*: `xref:{class_list}[List]<xref:data_types:uri_package.adoc#_dv_ehr_uri_class[DV_EHR_URI]>`
+a|The parts of the item the access reached, as fully qualified runtime paths, where it reached less than the whole item; empty when the whole item was reached.
+
+h|*0..1*
 |*categories*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
 a|The categories of data the item belongs to, coded in a terminology the jurisdiction names.
 

@@ -34,6 +34,19 @@
       "documentation": "The template the item was committed under.",
       "type": "TEMPLATE_ID"
     },
+    "paths": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "paths",
+      "documentation": "The parts of the item the access reached, as fully qualified runtime paths, where it reached less than the whole item; empty when the whole item was reached.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_EHR_URI"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
     "categories": {
       "_type": "P_BMM_CONTAINER_PROPERTY",
       "name": "categories",

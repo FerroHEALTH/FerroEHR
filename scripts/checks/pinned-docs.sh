@@ -44,6 +44,7 @@ readonly TREES=(
   docs/specs/fhir-auditevent
   docs/specs/dicom-ps3-15
   docs/specs/rfc-independent
+  docs/specs/nen-7513-sources
 )
 
 fail=0
