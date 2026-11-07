@@ -245,6 +245,25 @@ pub(crate) async fn service() -> (testkit::TestDb, Arc<FerroEhrService>) {
     (db, Arc::new(svc))
 }
 
+/// The real platform service over a fresh database, recording its access
+/// records into the audit store; the handle keeps the audit drain running.
+pub(crate) async fn audited_service() -> (
+    testkit::TestDb,
+    ferroehr::system_log::sender::AuditHandle,
+    Arc<FerroEhrService>,
+) {
+    let (db, pool) = common::migrated_pool().await;
+    let (sender, handle) =
+        ferroehr::system_log::sender::start(common::local_audit(), None, Some(pool.clone()))
+            .await
+            .expect("the audit sender");
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_binding_mapping(mapping())
+        .with_audit(sender)
+        .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool));
+    (db, handle, Arc::new(svc))
+}
+
 /// Asserts `credential` is refused with `403` naming `code`.
 pub(crate) async fn refused(app: &Router, credential: &str, code: &str) {
     let (status, body) = list(app, credential).await;
@@ -479,7 +498,7 @@ async fn an_overage_the_identity_provider_throttles_is_unavailable_with_its_retr
 
 /// The stored failed-authentication records carrying `binding`, as
 /// `(event_code, party id)`, waiting for the drain to write `count` of them.
-async fn refusal_rows(
+pub(crate) async fn refusal_rows(
     pool: &sqlx::PgPool,
     binding: &str,
     count: usize,
@@ -538,18 +557,8 @@ async fn a_login_binding_refusal_is_recorded_with_its_code_and_party() {
 /// issuer's binding reads, never a claim value (#5139).
 #[tokio::test]
 async fn a_key_claim_refusal_is_recorded_with_the_claim_name() {
-    let (db, pool) = common::migrated_pool().await;
-    let (sender, _handle): (_, ferroehr::system_log::sender::AuditHandle) =
-        ferroehr::system_log::sender::start(common::local_audit(), None, Some(pool.clone()))
-            .await
-            .expect("the audit sender");
-    let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
-            .with_binding_mapping(mapping())
-            .with_audit(sender)
-            .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),
-    );
-    let app = router(Arc::clone(&svc), Some("oid")).await;
+    let (db, _audit, svc) = audited_service().await;
+    let app = router(svc, Some("oid")).await;
     refused(
         &app,
         &token("someone", &json!({"name": "A Person"})),

@@ -19,6 +19,7 @@ use tokio::task_local;
 use crate::error::ServiceError;
 
 pub mod bound;
+pub mod external;
 
 /// The `DV_IDENTIFIER.issuer` stamped on a committer whose credential this
 /// deployment holds itself (Basic auth) — there is no external authority to
@@ -103,6 +104,8 @@ pub enum ExternalCaller {
     Person {
         /// The agreement's `writes`.
         writes: Vec<String>,
+        /// What the token asserts about the professional and the provider.
+        professional: Box<external::ExternalProfessional>,
     },
     /// An external organisation, whose access is read-only (EHDS Art. 13(4)).
     Organisation,
@@ -141,6 +144,11 @@ pub fn resolve(stated: &PartyProxy) -> Result<PartyProxy, ServiceError> {
     let Some(identity) = current_committer() else {
         return Ok(stated.clone());
     };
+    if let Some(ExternalCaller::Person { professional, .. }) = &identity.external {
+        let server = external::committer(&identity, professional)?;
+        bound::judge(stated, &server, &identity)?;
+        return Ok(server);
+    }
     if let Some(server) = bound::server_committer(&identity) {
         bound::judge(stated, &server, &identity)?;
         return Ok(server);

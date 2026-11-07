@@ -131,7 +131,26 @@ profile, and the server acts on the kind:
     included;
   - an external person commits only a COMPOSITION of a template the
     agreement's `writes` lists; an organisation commits nothing, and neither
-    deletes, attests or writes a demographic party.
+    deletes, attests or writes a demographic party;
+  - an external person's commit records the server's committer, a
+    `PARTY_IDENTIFIED` with no `external_ref`: the asserted name as one
+    string, the professional's `hp_identifier` under the issuer
+    `"<country_code>:<issuing_authority_name>"` with type `hp_identifier`,
+    and the token's `iss` and `sub` with type `oauth2`. The country must be
+    an upper-case ISO 3166-1 alpha-2 code, and the issuing authority is
+    NFC-normalised with its white space trimmed and collapsed and may hold no
+    `:`, control or bidi character. A missing or failing field is refused
+    with `403` naming it. Map the authority with a `constant` source in the
+    `[[auth.federation]]` table when the token does not carry it;
+  - the COMPOSITION names the healthcare provider the token asserts in
+    `EVENT_CONTEXT.health_care_facility`, or with no context in
+    `feeder_audit.originating_system_audit.location`: a `DV_IDENTIFIER` with
+    the `provider.healthcare_provider_identifier` as `id` and the
+    `provider.issuing_authority_name` as `issuer`. The server writes no
+    facility and refuses a composition without it with `422` (EHDS
+    Art. 13(4)). This is the domestic form; the MyHealth@EU contact-point
+    form, with the identity assertion's `NameID` and the `organization-id`,
+    is planned.
 - **Attestations** come only from a person bound to a professional `PERSON`.
   A patient, a representative, a system caller and an unbound caller are
   refused with `403` (RM common master04 §Attestation).

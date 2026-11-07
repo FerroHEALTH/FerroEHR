@@ -217,7 +217,8 @@ pub(super) async fn resolve_create(
     )?;
     external::admit_content(
         content.kind,
-        system::template_of(&content.canonical, content.template_id.as_deref()),
+        &content.canonical,
+        content.template_id.as_deref(),
     )?;
     let vo_id = VoId::minted(ctx.stamp);
     let tree = TreeId::trunk(1);
@@ -274,10 +275,7 @@ pub(super) async fn resolve_modify(
     .await?;
     person::refuse_composing_for_others(kind, &content.canonical)?;
     system::admit_content(kind, &content.canonical, content.template_id.as_deref())?;
-    external::admit_content(
-        kind,
-        system::template_of(&content.canonical, content.template_id.as_deref()),
-    )?;
+    external::admit_content(kind, &content.canonical, content.template_id.as_deref())?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
     // the transition from the preceding version's state must be legal
     // (master06 §Version Lifecycle state machine).

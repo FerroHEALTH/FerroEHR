@@ -22,7 +22,9 @@ use axum::response::{IntoResponse as _, Response};
 use ferroehr::config::agreement::{AccessClass, Accessor, Agreement};
 use ferroehr::config::clients::SystemClient;
 use ferroehr::versioning::committer::ExternalCaller;
+use ferroehr::versioning::committer::external::ExternalProfessional;
 use ferrohealth_server::caller_rate::{self, CallerKey, CallerLimit};
+use ferrohealth_smart::federation::{Attribute, External, Field};
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::resource::{Access, Caller};
 use http::StatusCode;
@@ -110,9 +112,10 @@ impl Declared {
     /// no request header stands in for it.
     ///
     /// # Errors
-    /// [`AuthError::Forbidden`] (`403`) for an external caller without an
-    /// agreement for its accessor kind, holding a scope the agreement does not
-    /// read, or making a `chained` request without an attested correlation id.
+    /// [`AuthError::KindRefused`] (`403`) for an external caller without an
+    /// agreement for its accessor kind, or holding a scope the agreement does
+    /// not read; [`AuthError::Forbidden`] (`403`) for a `chained` request
+    /// without an attested correlation id.
     pub(super) fn admit(&self, access: Access) -> Result<Access, AuthError> {
         let Some(caller) = access.caller() else {
             return Ok(access);
@@ -125,11 +128,13 @@ impl Declared {
         let held = caller
             .issuer()
             .and_then(|issuer| self.agreements.get(&(issuer.to_owned(), accessor)))
-            .ok_or_else(|| {
-                AuthError::Forbidden(format!(
+            .ok_or_else(|| AuthError::KindRefused {
+                code: "refused-no-agreement",
+                message: format!(
                     "no [[authz.federation.agreement]] of this issuer admits the accessor \
                      {accessor}"
-                ))
+                ),
+                principal: None,
             })?;
         let beyond = caller.scope().iter().any(|scope| {
             !NEUTRAL.contains(&scope.as_str())
@@ -137,9 +142,12 @@ impl Declared {
                 && !held.agreement.reads.iter().any(|read| read == scope)
         });
         if beyond {
-            return Err(AuthError::Forbidden(
-                "an external caller holds only the patient/ scopes its agreement reads".to_owned(),
-            ));
+            return Err(AuthError::KindRefused {
+                code: "refused-scope-beyond-agreement",
+                message: "an external caller holds only the patient/ scopes its agreement reads"
+                    .to_owned(),
+                principal: None,
+            });
         }
         if held.agreement.access_class == Some(AccessClass::Chained)
             && caller.correlation_id().is_none()
@@ -173,6 +181,27 @@ fn held(access: &Access) -> Option<&Held> {
 /// correlation id from, as the access record names it.
 pub(super) fn correlation_source(access: &Access) -> Option<&str> {
     held(access).and_then(|held| held.correlation_source.as_deref())
+}
+
+/// Holds the caller of `principal` to its agreement's `caller_rate`, then
+/// confines a bound representative to the EHR of its subject; the refusal of
+/// either, before any patient lookup of the request itself.
+pub(super) async fn prepare(
+    layer: &super::AuthLayer,
+    principal: &mut super::Principal,
+    headers: &http::HeaderMap,
+) -> Option<Response> {
+    let auth = &layer.authenticator;
+    if let Some(refusal) = over_rate(principal, &auth.declared.system_clients).await {
+        return Some(refusal);
+    }
+    match super::party::represented_ehr(&layer.service, &principal.access).await {
+        Ok(represented) => {
+            principal.represented = represented;
+            None
+        }
+        Err(e) => Some(super::refused(auth, headers, &e, Some(principal.clone()))),
+    }
 }
 
 /// The refusal of an external caller of `principal` above its agreement's
@@ -217,10 +246,42 @@ pub(super) async fn over_rate(
 /// What the external caller of `access` may commit, when it is one.
 pub(super) fn committing(access: &Access) -> Option<ExternalCaller> {
     let agreement = admitted(access)?;
-    Some(match agreement.accessor {
-        Some(Accessor::Person) => ExternalCaller::Person {
+    let external = access.caller().and_then(|caller| match caller.kind() {
+        CallerKind::ExternalPerson(external) => Some(external.as_ref()),
+        _ => None,
+    });
+    Some(match (agreement.accessor, external) {
+        (Some(Accessor::Person), Some(external)) => ExternalCaller::Person {
             writes: agreement.writes.clone(),
+            professional: Box::new(professional(external)),
         },
         _ => ExternalCaller::Organisation,
     })
+}
+
+/// What `external`'s token asserts about the professional and the provider.
+/// The name is the asserted full name (IHE IUA `subject_name`, eHDSI
+/// `subject-id`), or the given and the family name joined by a space.
+fn professional(external: &External) -> ExternalProfessional {
+    let text = |field| {
+        external
+            .field(field)
+            .and_then(Attribute::text)
+            .map(str::to_owned)
+    };
+    let name = text(Field::ProfessionalName).or_else(|| {
+        let parts: Vec<String> = [Field::ProfessionalGivenName, Field::ProfessionalFamilyName]
+            .into_iter()
+            .filter_map(text)
+            .collect();
+        (!parts.is_empty()).then(|| parts.join(" "))
+    });
+    ExternalProfessional {
+        name,
+        hp_identifier: text(Field::ProfessionalHpIdentifier),
+        country_code: text(Field::ProfessionalCountryCode),
+        issuing_authority: text(Field::ProfessionalIssuingAuthorityName),
+        provider_identifier: text(Field::ProviderHealthcareProviderIdentifier),
+        provider_authority: text(Field::ProviderIssuingAuthorityName),
+    }
 }

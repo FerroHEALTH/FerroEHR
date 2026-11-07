@@ -31,7 +31,9 @@ use http::StatusCode;
 use serde_json::{Value, json};
 
 use crate::common::{self, BASE};
-use crate::party_binding_http::{AUDIENCE, ISSUER, LOGIN, list, professional, refused, service};
+use crate::party_binding_http::{
+    AUDIENCE, ISSUER, LOGIN, audited_service, list, professional, refusal_rows, refused, service,
+};
 
 /// The standards-only machines issuer.
 const MACHINES: &str = "https://machines.example";
@@ -280,4 +282,22 @@ async fn a_delegated_person_commits_as_their_own_person() {
     let committer = &version["commit_audit"]["committer"];
     assert_eq!(committer["external_ref"]["type"], "PERSON", "{committer}");
     assert_eq!(committer["identifiers"][0]["id"], key, "{committer}");
+}
+
+/// A system caller refused for a personal scope is recorded under
+/// `refused-system-personal-scope`, once per refused request (#5140).
+#[tokio::test]
+async fn a_system_caller_with_a_personal_scope_is_recorded_with_its_code() {
+    let (db, _audit, svc) = audited_service().await;
+    let app = router(svc, config(false, Vec::new())).await;
+    let tokens = app_only("user/template-*.r");
+    for (profile, credential) in &tokens {
+        assert_eq!(
+            list(&app, credential).await.0,
+            StatusCode::FORBIDDEN,
+            "{profile}"
+        );
+    }
+    let rows = refusal_rows(&db.pool(), "refused-system-personal-scope", tokens.len()).await;
+    assert_eq!(rows.len(), tokens.len(), "one record per refused request");
 }

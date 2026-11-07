@@ -256,6 +256,19 @@ pub enum AuthError {
         /// on a token of an issuer the binding names.
         claim: Option<String>,
     },
+    /// A caller of a kind the request does not admit, under the binding
+    /// `code`: a system caller holding a personal scope, or an external caller
+    /// outside its agreement.
+    #[error("forbidden: {message}")]
+    KindRefused {
+        /// The binding code, such as `refused-no-agreement`.
+        code: &'static str,
+        /// What the refusal tells the caller.
+        message: String,
+        /// The caller who was refused, so the failed-authentication record
+        /// names them.
+        principal: Option<Box<Principal>>,
+    },
     /// The party source or the identity provider could not answer, so the
     /// server cannot decide (RFC 9110 §15.6.4).
     #[error("the login binding could not be read")]
@@ -288,7 +301,9 @@ impl AuthError {
 
     fn to_api_error(&self) -> ApiError {
         match self {
-            AuthError::Forbidden(m) => ApiError::Forbidden(m.clone()),
+            AuthError::Forbidden(m) | AuthError::KindRefused { message: m, .. } => {
+                ApiError::Forbidden(m.clone())
+            }
             AuthError::VerificationUnavailable(m) => {
                 crate::overview::error::internal_fault("verify the supplied credentials", m)
             }
@@ -324,7 +339,7 @@ impl AuthError {
             AuthError::InvalidDpopToken => Some(Refusal::InvalidDpopToken),
             AuthError::InvalidDpopProof => Some(Refusal::InvalidDpopProof),
             AuthError::MalformedRequest(_) => Some(Refusal::InvalidRequest),
-            AuthError::Forbidden(_) => Some(Refusal::Forbidden),
+            AuthError::Forbidden(_) | AuthError::KindRefused { .. } => Some(Refusal::Forbidden),
             AuthError::KeyResolution
             | AuthError::VerificationUnavailable(_)
             | AuthError::PartyRefused { .. }
@@ -347,7 +362,7 @@ impl AuthError {
             AuthError::KeyResolution => "key_resolution",
             AuthError::Forbidden(_) => "forbidden",
             AuthError::VerificationUnavailable(_) => "verification_unavailable",
-            AuthError::PartyRefused { code, .. } => code,
+            AuthError::PartyRefused { code, .. } | AuthError::KindRefused { code, .. } => code,
             AuthError::PartyUnavailable { .. } => "party_unavailable",
         }
     }
@@ -472,24 +487,31 @@ impl Authenticator {
     }
 
     /// Returns `refusal` naming the caller of `access` when the login binding
-    /// refused it, so the failed-authentication record carries who was refused.
+    /// or the caller's kind refused it, so the failed-authentication record
+    /// carries who was refused.
     fn naming_caller(&self, refusal: AuthError, access: &Access) -> AuthError {
-        let AuthError::PartyRefused {
-            code, party, claim, ..
-        } = refusal
-        else {
-            return refusal;
+        let principal = || {
+            access.caller().map(|caller| {
+                let roles = self.role_issuers.roles(caller);
+                let honoured = self.gate.honoured(access);
+                Box::new(Principal::new(access.clone(), roles, honoured))
+            })
         };
-        let principal = access.caller().map(|caller| {
-            let roles = self.role_issuers.roles(caller);
-            let honoured = self.gate.honoured(access);
-            Box::new(Principal::new(access.clone(), roles, honoured))
-        });
-        AuthError::PartyRefused {
-            code,
-            principal,
-            party,
-            claim,
+        match refusal {
+            AuthError::PartyRefused {
+                code, party, claim, ..
+            } => AuthError::PartyRefused {
+                code,
+                principal: principal(),
+                party,
+                claim,
+            },
+            AuthError::KindRefused { code, message, .. } => AuthError::KindRefused {
+                code,
+                message,
+                principal: principal(),
+            },
+            other => other,
         }
     }
 }
@@ -556,14 +578,8 @@ pub(crate) async fn middleware(
             mut principal,
             fresh,
         }) => {
-            if let Some(refusal) =
-                declared::over_rate(&principal, &auth.declared.system_clients).await
-            {
+            if let Some(refusal) = declared::prepare(&layer, &mut principal, req.headers()).await {
                 return refusal;
-            }
-            match party::represented_ehr(&layer.service, &principal.access).await {
-                Ok(represented) => principal.represented = represented,
-                Err(e) => return refused(auth, req.headers(), &e, Some(principal)),
             }
             // NOTE: RFC 9110 §15.5.6; whether a method is served is the
             // resource's property, so no grant changes the `405`.
@@ -645,6 +661,10 @@ pub(crate) async fn middleware(
                 AuthError::PartyRefused {
                     principal: Some(principal),
                     ..
+                }
+                | AuthError::KindRefused {
+                    principal: Some(principal),
+                    ..
                 } => Some(Principal::clone(principal)),
                 _ => None,
             };
@@ -662,12 +682,16 @@ fn refused(
     principal: Option<Principal>,
 ) -> Response {
     let mut resp = refusal_response(auth, headers, e);
-    if let AuthError::PartyRefused {
-        code, party, claim, ..
-    } = e
-        && let Some(record) =
-            record::refused(code, party.as_deref(), claim.as_deref(), principal.as_ref())
-    {
+    let record = match e {
+        AuthError::PartyRefused {
+            code, party, claim, ..
+        } => record::refused(code, party.as_deref(), claim.as_deref(), principal.as_ref()),
+        AuthError::KindRefused { code, .. } => {
+            record::refused(code, None, None, principal.as_ref())
+        }
+        _ => None,
+    };
+    if let Some(record) = record {
         resp.extensions_mut().insert(record);
     }
     if let Some(principal) = principal {

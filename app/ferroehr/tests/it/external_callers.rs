@@ -14,7 +14,60 @@ use crate::fixtures::{attestation_by, ckm_example, deleting};
 use ferroehr::error::ServiceError;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::version_update::WriteRequest;
+use ferroehr::versioning::committer::external::ExternalProfessional;
 use ferroehr::versioning::committer::{CommitterIdentity, ExternalCaller, with_committer};
+
+/// The provider the professional's token asserts.
+const PROVIDER: &str = "urn:oid:2.999.7";
+/// The issuing authority of the provider and the professional.
+const AUTHORITY: &str = "Registry";
+
+/// What a domestic federation token asserts about the professional and the
+/// provider.
+fn asserted() -> ExternalProfessional {
+    ExternalProfessional {
+        name: Some("Dr Remote".to_owned()),
+        hp_identifier: Some("hp-1".to_owned()),
+        country_code: Some("DE".to_owned()),
+        issuing_authority: Some(AUTHORITY.to_owned()),
+        provider_identifier: Some(PROVIDER.to_owned()),
+        provider_authority: Some(AUTHORITY.to_owned()),
+    }
+}
+
+/// An external person writing `template`, asserting `professional`.
+fn person(template: &str, professional: ExternalProfessional) -> CommitterIdentity {
+    external(ExternalCaller::Person {
+        writes: vec![template.to_owned()],
+        professional: Box::new(professional),
+    })
+}
+
+/// `composition` naming `facility` as its `EVENT_CONTEXT.health_care_facility`.
+fn at_facility(mut composition: Value, facility: &Value) -> Value {
+    if let Some(context) = composition
+        .get_mut("context")
+        .and_then(Value::as_object_mut)
+    {
+        context.insert("health_care_facility".to_owned(), facility.clone());
+    }
+    composition
+}
+
+/// The template `composition` is of.
+fn template_of(composition: &Value) -> String {
+    composition
+        .pointer("/archetype_details/template_id/value")
+        .and_then(Value::as_str)
+        .expect("the example names its template")
+        .to_owned()
+}
+
+/// The provider as a `PARTY_IDENTIFIED` facility.
+fn provider_facility() -> Value {
+    json!({ "_type": "PARTY_IDENTIFIED", "name": "Remote clinic",
+            "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": AUTHORITY, "id": PROVIDER }] })
+}
 
 /// The identity of an external caller that may commit as `external`.
 fn external(external: ExternalCaller) -> CommitterIdentity {
@@ -49,9 +102,8 @@ async fn an_external_person_commits_only_a_listed_template_and_an_organisation_n
         .and_then(Value::as_str)
         .expect("the example names its template")
         .to_owned();
-    let person = external(ExternalCaller::Person {
-        writes: vec![template],
-    });
+    let example = at_facility(example, &provider_facility());
+    let person = person(&template, asserted());
     let commit = |identity: CommitterIdentity, body: Value| {
         let svc = &svc;
         async move {
@@ -123,4 +175,104 @@ async fn an_external_person_commits_only_a_listed_template_and_an_organisation_n
         .await,
     );
     forbidden(commit(external(ExternalCaller::Organisation), example).await);
+}
+
+fn unprocessable<T: std::fmt::Debug>(result: Result<T, ServiceError>) {
+    match result.map_err(ServiceError::flattened) {
+        Err(ServiceError::Unprocessable { .. }) => {}
+        other => panic!("expected 422, got {other:?}"),
+    }
+}
+
+/// The external person's committer names the professional under
+/// `"<country_code>:<issuing_authority_name>"` and the login the federation
+/// issuer vouched for, with no `external_ref` (#5097).
+#[tokio::test]
+async fn an_external_persons_commit_records_the_professional_and_the_vouching_login() {
+    let (_db, svc, ehr) = service().await;
+    let example = ckm_example(&svc, "vital-signs").await;
+    let template = template_of(&example);
+    let asserted = ExternalProfessional {
+        issuing_authority: Some(" Bundes\u{0061}\u{0308}rztekammer \t Registry ".to_owned()),
+        ..asserted()
+    };
+    let written = with_committer(
+        Some(person(&template, asserted)),
+        Box::pin(svc.create_composition(
+            ehr,
+            WriteRequest::new(crate::typed_body::typed(&at_facility(
+                example,
+                &provider_facility(),
+            ))),
+        )),
+    )
+    .await
+    .expect("the external write commits");
+    let ovid = format!(
+        "{}::{}::{}",
+        written.vo_id, written.creating_system_id, written.tree
+    );
+    let committer = svc
+        .composition_version_envelope(ehr, ovid.parse().expect("an OBJECT_VERSION_ID"))
+        .await
+        .expect("the stored version")
+        .body["commit_audit"]["committer"]
+        .clone();
+    assert_eq!(
+        committer,
+        json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Remote", "identifiers": [
+            { "_type": "DV_IDENTIFIER", "issuer": "DE:Bundes\u{00E4}rztekammer Registry",
+              "id": "hp-1", "type": "hp_identifier" },
+            { "_type": "DV_IDENTIFIER", "issuer": "https://federation.example",
+              "id": "hp-remote-1", "type": "oauth2" } ] })
+    );
+}
+
+/// A country code that is no upper-case ISO 3166-1 alpha-2 code, and an
+/// issuing authority with a `:`, are refused with `403`; a composition
+/// whose facility does not name the token's provider is refused with `422`.
+#[tokio::test]
+async fn an_external_write_with_a_bad_field_or_without_its_provider_is_refused() {
+    let (_db, svc, ehr) = service().await;
+    let example = ckm_example(&svc, "vital-signs").await;
+    let template = template_of(&example);
+    let commit = |professional: ExternalProfessional, body: Value| {
+        let svc = &svc;
+        let identity = person(&template, professional);
+        async move {
+            with_committer(
+                Some(identity),
+                Box::pin(
+                    svc.create_composition(ehr, WriteRequest::new(crate::typed_body::typed(&body))),
+                ),
+            )
+            .await
+        }
+    };
+    let listed = at_facility(example.clone(), &provider_facility());
+    for country in ["de", "DEU"] {
+        forbidden(
+            commit(
+                ExternalProfessional {
+                    country_code: Some(country.to_owned()),
+                    ..asserted()
+                },
+                listed.clone(),
+            )
+            .await,
+        );
+    }
+    forbidden(
+        commit(
+            ExternalProfessional {
+                issuing_authority: Some("DE:Registry".to_owned()),
+                ..asserted()
+            },
+            listed,
+        )
+        .await,
+    );
+    let elsewhere = json!({ "_type": "PARTY_IDENTIFIED", "name": "Elsewhere",
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": AUTHORITY, "id": "urn:oid:2.999.8" }] });
+    unprocessable(commit(asserted(), at_facility(example, &elsewhere)).await);
 }
