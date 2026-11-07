@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/postgres-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-11-05T00:00:00Z",
-  "version": 6,
+  "timestamp": "2026-11-07T00:00:00Z",
+  "version": 7,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -901,14 +901,14 @@
           "@id": "pkg:oci/ferroehr-postgres",
           "subcomponents": [
             {
-              "@id": "pkg:deb/debian/zlib1g"
+              "@id": "pkg:deb/debian/zlib1g@1.3.dfsg%2Breally1.3.1-1%2Bb1?epoch=1"
             }
           ]
         }
       ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "The infinite loop is in zlib's crc32_combine64 and crc32_combine_gen64. Nothing in the image calls them: postgres, libxml2, libLLVM and the PostgreSQL modules that link zlib import no crc32_combine function, and zlib's own deflate and inflate do not use it. PostgreSQL computes its checksums with its own CRC-32C."
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.6.3 and every earlier release carries zlib1g 1:1.3.dfsg+really1.3.1-1+b1, which has the infinite loop in crc32_combine64 and crc32_combine_gen64. Nothing in the image calls those functions (postgres, libxml2, libLLVM and the PostgreSQL modules that link zlib import none of them, and PostgreSQL computes its checksums with its own CRC-32C), but Debian now publishes the fix in trixie-security as 1:1.3.dfsg+really1.3.1-1+deb13u1, so the finding is fixed by a rebuild and is not argued away. The image's security-upgrade layer installs that version, so FerroEHR 5.7.0 and later releases carry no affected version.",
+      "action_statement": "Upgrade to FerroEHR 5.7.0 or later, whose ferroehr-postgres image carries zlib1g 1:1.3.dfsg+really1.3.1-1+deb13u1; 5.7.0 is the first release that fixes the finding."
     },
     {
       "vulnerability": {
@@ -919,14 +919,14 @@
           "@id": "pkg:oci/ferroehr-postgres",
           "subcomponents": [
             {
-              "@id": "pkg:deb/debian/zlib1g"
+              "@id": "pkg:deb/debian/zlib1g@1.3.dfsg%2Breally1.3.1-1%2Bb1?epoch=1"
             }
           ]
         }
       ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_present",
-      "impact_statement": "The overflow is in gz_vacate, part of the non-blocking gzwrite support introduced in zlib 1.3.1.2 (commit 81cc0be, as the Debian security tracker entry for CVE-2026-85091 records). The image's zlib1g is 1.3.1, which predates that code."
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.6.3 and every earlier release carries zlib1g 1:1.3.dfsg+really1.3.1-1+b1. The heap overflow is in gz_vacate, the non-blocking gzwrite support that the Debian security tracker entry for CVE-2026-85091 dates to zlib 1.3.1.2, after the image's 1.3.1; Debian nevertheless lists trixie as fixed only in 1:1.3.dfsg+really1.3.1-1+deb13u1 in trixie-security, so the finding is fixed by a rebuild and is not argued away. The image's security-upgrade layer installs that version, so FerroEHR 5.7.0 and later releases carry no affected version.",
+      "action_statement": "Upgrade to FerroEHR 5.7.0 or later, whose ferroehr-postgres image carries zlib1g 1:1.3.dfsg+really1.3.1-1+deb13u1; 5.7.0 is the first release that fixes the finding."
     },
     {
       "vulnerability": {
@@ -937,14 +937,14 @@
           "@id": "pkg:oci/ferroehr-postgres",
           "subcomponents": [
             {
-              "@id": "pkg:deb/debian/zlib1g"
+              "@id": "pkg:deb/debian/zlib1g@1.3.dfsg%2Breally1.3.1-1%2Bb1?epoch=1"
             }
           ]
         }
       ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "The overflow is in gz_write, zlib's gzip file writer, after an underlying write() fails. In zlib before 1.3.1.2, which includes the image's 1.3.1, the failed write must be followed by a gzclearerr() call before a later gz* write reaches the stale pointer (the CVE description, as the Debian security tracker entry for CVE-2026-76844 records it). Nothing in the image imports gzclearerr, on amd64 and arm64 alike: pg_dump, pg_dumpall, pg_restore, pg_basebackup, pg_receivewal, pg_recvlogical and pg_verifybackup, libxml2, dpkg-deb and libapt-pkg are the only objects that import zlib's gz* functions (gzopen, gzdopen, gzwrite), and none of them imports gzclearerr. The postgres server does not use the gz* functions at all."
+      "status": "affected",
+      "impact_statement": "The ferroehr-postgres image of FerroEHR 5.6.3 and every earlier release carries zlib1g 1:1.3.dfsg+really1.3.1-1+b1. The overflow is in gz_write, zlib's gzip file writer, after an underlying write() fails; in zlib 1.3.1 it also needs a gzclearerr() call, and no object in those images imports gzclearerr on amd64 or arm64 (pg_dump, pg_dumpall, pg_restore, pg_basebackup, pg_receivewal, pg_recvlogical, pg_verifybackup, libxml2, dpkg-deb and libapt-pkg are the only importers of zlib's gz* functions, and the postgres server uses none). Debian now publishes the fix in trixie-security as 1:1.3.dfsg+really1.3.1-1+deb13u1, so the finding is fixed by a rebuild and is not argued away. The image's security-upgrade layer installs that version, so FerroEHR 5.7.0 and later releases carry no affected version.",
+      "action_statement": "Upgrade to FerroEHR 5.7.0 or later, whose ferroehr-postgres image carries zlib1g 1:1.3.dfsg+really1.3.1-1+deb13u1; 5.7.0 is the first release that fixes the finding."
     },
     {
       "vulnerability": {
