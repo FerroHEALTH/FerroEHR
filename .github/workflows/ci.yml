@@ -1874,11 +1874,11 @@ jobs:
   # transactions a second while idle, and no gate saw it. This one starts the
   # server this tree builds with its own PostgreSQL, holds it to absolute idle
   # limits, drives perf/plan.toml against it and judges the load phase against
-  # perf/baseline.toml once it lands (#5095; scripts/perf/gate.sh over ferrohealth-perf, pinned in
-  # docs/VERSIONS.md). The self-test runs first: an idle busy-loop must fail
-  # it. The baseline is measured on this runner image by perf-baseline.yml, one
-  # entry per CPU model; docs/release.md says how to read the report and write
-  # the baseline again.
+  # its CPU model's entry in perf/baseline.toml (scripts/perf/gate.sh over
+  # ferrohealth-perf, pinned in docs/VERSIONS.md). The self-test runs first: an
+  # idle busy-loop must fail it. The baseline is measured on this runner image
+  # by perf-baseline.yml, one entry per CPU model; docs/release.md says how to
+  # read the report and write the baseline again.
   perf:
     name: perf
     needs: [changes, ui-e2e-binary]
@@ -1915,8 +1915,6 @@ jobs:
         run: docker buildx build --load -t ferroehr-postgres:perf docker/postgres
       - name: An idle busy-loop fails the gate
         run: bash scripts/perf/gate.sh self-test ferroehr:perf ferroehr-postgres:perf
-      # The load phase is judged once perf/baseline.toml holds a baseline per
-      # CPU model of the runner pool (#5095); until then it is reported.
       - name: The gate
         run: bash scripts/perf/gate.sh run ferroehr:perf ferroehr-postgres:perf
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -142,10 +142,10 @@ yourself (see the script's header).
 The load baseline is kept per CPU model of the runner pool the gate runs on
 (`ubuntu-26.04`), because one model's latencies say nothing about another's.
 `perf/baseline.toml` holds one `[[baseline]]` entry per model, keyed by the
-`model name` line of `/proc/cpuinfo`. Until that file is committed (#5095), a
-run judges the idle limits, which are absolute, and reports the load phase
-without judging it: a run whose only reason it could not be judged is the
-missing baseline passes, and every other reason fails it.
+`model name` line of `/proc/cpuinfo`. A run judges the idle limits, which are
+absolute, and the load phase against its CPU model's entry. A runner whose model
+has no entry cannot be judged, and the run fails with exit 2, naming the model
+and the models the file holds.
 
 A baseline is measured on the runner, never on a developer machine. Run the
 **Performance baseline** workflow (`perf-baseline.yml`) by hand on `main`:
