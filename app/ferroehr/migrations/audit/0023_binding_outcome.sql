@@ -72,7 +72,7 @@ COMMENT ON COLUMN audit_event.representation IS
 COMMENT ON COLUMN audit_event.external_fields IS
     'The fields a federation token asserts about a verified external accessor, by field name.';
 COMMENT ON COLUMN audit_event.agreement IS
-    'The federation agreement an external accessor was admitted under: {name, version, legal_ground, accessor, access_class}, and for a chained request {correlation_id, correlation_source}.';
+    'The federation agreement an external accessor was admitted under: {name, version, legal_ground, accessor, access_class}.';
 COMMENT ON COLUMN audit_event.actor_chain IS
     'The RFC 8693 actor chain of a delegated token, outermost first; recorded, never decided on.';
 COMMENT ON COLUMN audit_event.facilities IS
