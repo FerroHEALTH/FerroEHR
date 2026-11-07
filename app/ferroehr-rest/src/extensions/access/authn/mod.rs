@@ -51,7 +51,7 @@ use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
 use ferrohealth_smart::resource::introspection::Introspector;
-use ferrohealth_smart::resource::{Access, Caller, Honoured, ResourceServer, Via};
+use ferrohealth_smart::resource::{Access, Honoured, ResourceServer, Via};
 use http::request::Parts;
 use http::{HeaderValue, StatusCode, header};
 use openehr_its::rest::runtime::ApiError;
@@ -350,7 +350,7 @@ pub struct Authenticator {
     role_issuers: build::RoleIssuers,
     /// The party binding every admitted caller is looked up in, when an
     /// `[[auth.party]]` table binds an issuer.
-    party: Option<Arc<ferrohealth_smart::party::binding::PartyBinding>>,
+    party: Option<Arc<party::Binding>>,
 }
 
 impl std::fmt::Debug for Authenticator {
@@ -409,7 +409,7 @@ impl Authenticator {
             .await
             .map_err(|denied| AuthError::from_refusal(denied.refusal()))?;
         let access = match &self.party {
-            Some(binding) => party::bind(binding, access.clone())
+            Some(binding) => party::bind(&binding.shared, access.clone())
                 .await
                 .map_err(|refusal| self.naming_caller(refusal, &access))?,
             None => access,
@@ -536,7 +536,13 @@ pub(crate) async fn middleware(
             }
             req.extensions_mut().insert(principal.clone());
             let for_audit = principal.clone();
-            let committer = committer_identity(&for_audit);
+            let mut committer = party::committer_identity(&for_audit);
+            if let Some(binding) = auth.party.as_deref() {
+                match binding.details(&for_audit).await {
+                    Ok(details) => committer.bound = details,
+                    Err(e) => return refusal_response(auth, req.headers(), &e),
+                }
+            }
             // The roles ride beside the committer identity for the request
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).
@@ -703,39 +709,6 @@ fn patient_data_refusal(
     resp.extensions_mut().insert(principal.clone());
     resp.extensions_mut().insert(actor);
     resp
-}
-
-/// Returns the platform committer identity published for the service layer.
-///
-/// A write whose request carried no committal headers is attributed to the
-/// authenticated principal rather than the system identity
-/// (`AUDIT_DETAILS.committer` 1..1 — RM common master04 §Audit Details). A
-/// Bearer subject was minted by the identity provider, so the audit records the
-/// validated token issuer; Basic credentials are local and carry none.
-fn committer_identity(principal: &Principal) -> ferroehr::versioning::committer::CommitterIdentity {
-    ferroehr::versioning::committer::CommitterIdentity {
-        subject: principal.subject.clone(),
-        id_type: match principal.method {
-            AuthMethod::Basic => "basic",
-            AuthMethod::Bearer => "oauth2",
-        },
-        issuer: match principal.method {
-            AuthMethod::Basic => None,
-            AuthMethod::Bearer => principal
-                .access
-                .caller()
-                .and_then(Caller::issuer)
-                .map(str::to_owned),
-        },
-        client: client_of(principal),
-        person: crate::smart::acts_as_person(principal),
-        party: principal
-            .access
-            .caller()
-            .and_then(Caller::party)
-            .and_then(ferrohealth_smart::party::Outcome::bound)
-            .cloned(),
-    }
 }
 
 /// The client a request came through, which the `[origins]` register maps to

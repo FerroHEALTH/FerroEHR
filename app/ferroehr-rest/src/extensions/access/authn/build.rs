@@ -9,8 +9,8 @@
 
 use std::sync::Arc;
 
+use ferroehr::party_binding::source::BindingSource;
 use ferrohealth_smart::guard::Gate;
-use ferrohealth_smart::party::source::PartySource;
 use ferrohealth_smart::resource::introspection::Introspector;
 use ferrohealth_smart::resource::{Caller, Honoured, IssuerSet, PatientClaim, ResourceServer};
 use ferrohealth_smart::sender::proof::ProofCheck;
@@ -91,7 +91,7 @@ impl Authenticator {
     pub async fn new(
         config: &AppConfig,
         patient_claim: Option<&str>,
-        source: Option<Arc<dyn PartySource>>,
+        source: Option<Arc<dyn BindingSource>>,
         replay: Arc<dyn ReplayStore>,
     ) -> Result<Arc<Self>, String> {
         let resolved = ferroehr::config::auth::resolve(&config.auth.shared)

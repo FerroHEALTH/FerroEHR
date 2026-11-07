@@ -12,11 +12,13 @@
 //! the transport (a task-local) is spec-silent: no openEHR spec governs this
 //! — our own design.
 
-use openehr_base::prelude::{GenericId, ObjectId, PartyRef};
-use openehr_rm::prelude::{PartyIdentified, PartyProxy, PartySelf};
+use openehr_base::prelude::ObjectId;
+use openehr_rm::prelude::{PartyIdentified, PartyProxy};
 use tokio::task_local;
 
 use crate::error::ServiceError;
+
+pub mod bound;
 
 /// The `DV_IDENTIFIER.issuer` stamped on a committer whose credential this
 /// deployment holds itself (Basic auth) — there is no external authority to
@@ -74,6 +76,15 @@ pub struct CommitterIdentity {
     /// The demographic party the login is bound to, with its groups and the
     /// subjects it represents, when the login binding bound one (#5004).
     pub party: Option<ferrohealth_smart::party::Bound>,
+    /// Whether the caller acts as a representative of the record subject
+    /// (EHDS Art. 4(2)), whose committer is a `PARTY_RELATED`.
+    pub representative: bool,
+    /// What the server knows of the bound caller beyond the binding: the
+    /// `PERSON`'s name, the provider and the namespace.
+    pub bound: Option<bound::BoundDetails>,
+    /// Whether the caller is a system caller (an OAuth client-credentials
+    /// client acting for no person).
+    pub system: bool,
 }
 
 task_local! {
@@ -96,43 +107,25 @@ pub fn person_commits() -> bool {
     current_committer().is_some_and(|identity| identity.person)
 }
 
-/// The committer of a write a person makes in their own EHR: `PARTY_SELF`, its
-/// `external_ref` naming the login that committed it.
+/// The committer a commit records for the committer the client `stated`.
 ///
-/// RM common master04 §Audit Details: committer is a `PARTY_PROXY`, "allowing
-/// for `PARTY_SELF` to be used when the committer is the record subject", and
-/// a `PARTY_PROXY.external_ref` is a reference to "identification information
-/// for this party, in an external system" (RM common
-/// `UML/classes/org.openehr.rm.common.party_proxy.adoc`). This is how EHDS Art.
-/// 5 makes what a person inserts "clearly distinguishable".
-// NOTE: no openEHR spec governs which `PARTY_REF` names a login; ours is
-// namespace `local`, type `PERSON`, a `GENERIC_ID` of the subject in its issuer's scheme.
-#[must_use]
-pub fn person_committer(identity: CommitterIdentity) -> PartyProxy {
-    PartyProxy::PartySelf(PartySelf {
-        external_ref: Some(PartyRef {
-            namespace: "local".to_owned(),
-            r#type: "PERSON".to_owned(),
-            id: ObjectId::GenericId(GenericId {
-                value: identity.subject,
-                scheme: identity.issuer.unwrap_or_else(|| LOCAL_ISSUER.to_owned()),
-            }),
-        }),
-    })
-}
-
-/// The committer a commit records: the person's own [`person_committer`] when
-/// the request's committer is a person ([`person_commits`]), else `supplied`.
+/// For a caller the server knows ([`bound::server_committer`]) the server's
+/// committer is recorded, once `stated` passes [`bound::judge`]; for any
+/// other caller `stated` is kept once [`refuse_impersonation`] passes it.
 ///
-/// A person's committer is the server's statement, so whatever committer the
-/// client supplied is replaced (EHDS Art. 5: what the person inserts is
-/// "clearly distinguishable"); our own design, as no openEHR spec governs it.
-#[must_use]
-pub fn attributed(supplied: PartyProxy) -> PartyProxy {
-    match current_committer() {
-        Some(identity) if identity.person => person_committer(identity),
-        _ => supplied,
+/// # Errors
+/// [`ServiceError::Forbidden`] (`403`) for a stated committer that is not the
+/// caller.
+pub fn resolve(stated: &PartyProxy) -> Result<PartyProxy, ServiceError> {
+    let Some(identity) = current_committer() else {
+        return Ok(stated.clone());
+    };
+    if let Some(server) = bound::server_committer(&identity) {
+        bound::judge(stated, &server, &identity)?;
+        return Ok(server);
     }
+    refuse_impersonation(stated)?;
+    Ok(stated.clone())
 }
 
 /// Refuses a stated committer that the server can show is not the request's
@@ -218,7 +211,7 @@ where
 /// The committer a write records when the request supplied none: the
 /// authenticated caller, or the system identity when there is none.
 ///
-/// A person writing in their own EHR is their [`person_committer`]. Any other
+/// A caller the server knows is its [`bound::server_committer`]. Any other
 /// caller is a `PARTY_IDENTIFIED` named by its subject, with one
 /// `DV_IDENTIFIER` whose `issuer` is the token issuer for a Bearer caller and
 /// this deployment's `ferroehr` for a Basic one ([`CommitterIdentity::issuer`]).
@@ -231,8 +224,10 @@ where
 // NOTE: no openEHR spec governs which string names the issuing authority; our own design.
 #[must_use]
 pub fn default_committer(identity: Option<CommitterIdentity>) -> PartyProxy {
+    if let Some(server) = identity.as_ref().and_then(bound::server_committer) {
+        return server;
+    }
     let party = match identity {
-        Some(identity) if identity.person => return person_committer(identity),
         Some(identity) => openehr_rm::prelude::PartyIdentifiedData {
             external_ref: None,
             name: Some(identity.subject.clone()),
@@ -274,6 +269,9 @@ mod tests {
             client: None,
             person: false,
             party: None,
+            representative: false,
+            bound: None,
+            system: false,
         }
     }
 

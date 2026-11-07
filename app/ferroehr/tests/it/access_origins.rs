@@ -210,6 +210,9 @@ async fn a_registered_client_stamps_its_origin_on_a_direct_commit() {
         client: Some(client.to_owned()),
         person: false,
         party: None,
+        representative: false,
+        bound: None,
+        system: false,
     };
 
     let (registered, _) = ferroehr::versioning::committer::with_committer(

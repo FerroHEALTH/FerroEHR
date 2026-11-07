@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use ferroehr::ids::VoId;
+use ferroehr::party_binding::source::BindingSource;
 use ferroehr::party_binding::{BindingMapping, IdentifierSelector};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::precondition::Precondition;
@@ -92,7 +93,7 @@ async fn router(svc: Arc<FerroEhrService>, person_key: Option<&str>) -> Router {
 async fn router_over(
     svc: Arc<FerroEhrService>,
     person_key: Option<&str>,
-    source: Arc<dyn PartySource>,
+    source: Arc<dyn BindingSource>,
 ) -> Router {
     let config = config(person_key);
     let authenticator = Authenticator::new(
@@ -246,6 +247,8 @@ async fn refused(app: &Router, credential: &str, code: &str) {
     assert_eq!(status, StatusCode::FORBIDDEN, "{code}: {body}");
     assert!(body.contains(code), "{code}: {body}");
 }
+
+impl BindingSource for Twice {}
 
 /// A party source that reports two parties for every login: the unique index
 /// on live keys keeps the local source from holding one key twice, so the

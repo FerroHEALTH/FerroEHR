@@ -148,6 +148,7 @@ impl FerroEhrService {
             self.demographic_pool.clone(),
             namespace,
         )
+        .with_mapping(Arc::clone(&self.binding))
     }
 
     /// Rebuild the binding side table from the party versions alone, in one

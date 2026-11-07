@@ -261,9 +261,9 @@ async fn record() -> Record {
     }
 }
 
-/// A person's commit records `PARTY_SELF` with their login, whatever committer
-/// the request names, and reads back so; a professional's records the
-/// professional.
+/// A person's commit records `PARTY_SELF` with no `external_ref` and reads
+/// back so, a committer naming someone else is refused (#5005), and a
+/// professional's records the professional.
 #[tokio::test]
 async fn a_persons_commit_is_marked_as_theirs_and_reads_back_marked() {
     let r = record().await;
@@ -278,14 +278,26 @@ async fn a_persons_commit_is_marked_as_theirs_and_reads_back_marked() {
         "openehr-audit-details",
         "committer.name=\"Dr Fake\"".parse().unwrap(),
     );
+    let (status, _, text) = common::send(&r.app, request).await;
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "a stated other committer: {text}"
+    );
+    let request = call(
+        "POST",
+        &format!("{BASE}/ehr/{}/composition", r.ehr),
+        &r.person,
+        None,
+        Some(&composition(&party_self())),
+    );
     let (status, headers, text) = common::send(&r.app, request).await;
     assert_eq!(status, StatusCode::CREATED, "the person's insert: {text}");
     let persons_entry = common::etag_uid(&headers);
 
     let theirs = committer(&r.app, &r.ehr, &r.professional, &persons_entry).await;
     assert_eq!(theirs["_type"], "PARTY_SELF", "{theirs}");
-    assert_eq!(theirs["external_ref"]["id"]["value"], "alice", "{theirs}");
-    assert_eq!(theirs["external_ref"]["type"], "PERSON", "{theirs}");
+    assert!(theirs.get("external_ref").is_none(), "{theirs}");
     let professionals = committer(&r.app, &r.ehr, &r.professional, &r.professionals_entry).await;
     assert_eq!(
         professionals["_type"], "PARTY_IDENTIFIED",

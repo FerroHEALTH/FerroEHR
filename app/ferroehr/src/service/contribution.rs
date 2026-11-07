@@ -113,11 +113,11 @@ pub(crate) async fn commit_version_set(
     let mut changes: Vec<(AuditInput, Change)> = Vec::with_capacity(plan.len());
     // 666 attestations of existing versions (committing no new version).
     let mut attests: Vec<PendingAttest> = Vec::new();
-    for v in plan {
+    for mut v in plan {
         // AUDIT_DETAILS.System_id_valid + committer PARTY invariants — every
         // client-supplied version commit_audit must be a valid RM instance, a
         // `666|attestation|` member's included.
-        validate_commit_audit(&v.audit).map_err(|e| e.for_version_member(v.index))?;
+        validate_commit_audit(&mut v.audit).map_err(|e| e.for_version_member(v.index))?;
         if v.action == Action::Attest {
             attests.extend(plan_attestation(&target_kinds, v, party_only)?);
             continue;

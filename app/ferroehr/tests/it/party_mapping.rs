@@ -303,6 +303,9 @@ fn caller(subject: &str) -> CommitterIdentity {
         client: None,
         person: false,
         party: None,
+        representative: false,
+        bound: None,
+        system: false,
     }
 }
 
