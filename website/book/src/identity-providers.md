@@ -58,6 +58,52 @@ Three things do all the work:
 
 Everything below is those three pointed at a different issuer.
 
+## Who the caller is
+
+`ferrohealth-smart` classifies every token by its issuer's `kind` and
+profile, and the server acts on the kind:
+
+- **A person** signs in at a `persons` issuer through a first-party client,
+  or with HTTP Basic. The login is bound to the `PERSON` carrying its key,
+  and the person commits under that `PERSON`.
+- **A delegated person** reaches the server through a client or an RFC 8693
+  actor that the issuer's profile lists in `delegates`. The token's subject is
+  the person, so the request is bound and committed exactly as the person's
+  own; the client and the actor do not change who committed.
+- **A guest**, by the profile's `guest` markers (Entra ID marks one with
+  `acct = 1` or an `idp` other than the issuer), is refused with `403`
+  (`refused-guest`) unless the issuer's `[[auth.party]]` table sets
+  `guests = true`. Admit guests only for people acting under your own
+  responsibility (GDPR Art. 9(3) and Art. 29), such as contractors.
+- **A system caller** is an app-only token by the profile's `app_only`
+  markers: `sub` equal to the client claim under `rfc9068`, `idtyp = app`
+  without `scp` under `entra`, and the listed service-account subjects under
+  `keycloak`. A Basic user is never one. A system caller acts for no person, so
+  it holds `system/` scopes only, and a token with a `user/` or `patient/` scope
+  is refused with `403`. It reads under its `system/` scopes. It commits into an
+  EHR only as a client an `[[authz.system_client]]` table declares
+  ([configuration](installation/config-auth.md#authzimport-and-authzsystem_client)),
+  under the committer `PARTY_IDENTIFIED{name = <client>, identifiers =
+  [{issuer = <iss>, id = <client>, type = "client"}]}` with no `external_ref`.
+  - Each COMPOSITION it commits is of a template its `writes` lists, or the
+    commit is refused with `403`.
+  - It names a facility of its `facilities` in
+    `context.health_care_facility.identifiers`, or, for a COMPOSITION with no
+    context, in `feeder_audit.originating_system_audit.location.identifiers`.
+    Otherwise it is refused with `422` naming the element; the server fills
+    neither.
+  - A device act names the device in `composer`, with an identifier of one of
+    the client's `device_identifier_issuers` that is also
+    `feeder_audit.originating_system_audit.system_id`, and is accepted only
+    from a `device` client. Every other COMPOSITION records a person's act: it
+    is accepted only from a `relay` client (`403` otherwise) and names the
+    professional by an identifier in `composer` or in the `performer` of a
+    context participation (`422` otherwise). An organisation `composer` is
+    refused with `422`.
+- **Attestations** come only from a person bound to a professional `PERSON`.
+  A patient, a representative, a system caller and an unbound caller are
+  refused with `403` (RM common master04 §Attestation).
+
 ## Microsoft Entra ID (Azure AD)
 
 Entra ID exposes a standards-compliant OIDC issuer per tenant.

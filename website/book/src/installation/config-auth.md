@@ -369,8 +369,9 @@ when the login matches two parties (`refused-ambiguous`), when its party is
 `inactive` (`refused-inactive`) or `abandoned` (`refused-abandoned`), when
 its key belongs to a deleted party (`refused-deprovisioned`), when the token
 carries no key claim (`refused-key-claim-missing`), when the party lacks the
-marker the caller's kind needs (`refused-wrong-marker`) and when the groups a
-token asserts cannot be read (`refused-groups-unavailable`). A party store
+marker the caller's kind needs (`refused-wrong-marker`), when the groups a
+token asserts cannot be read (`refused-groups-unavailable`) and when a guest
+comes from an issuer whose table does not set `guests` (`refused-guest`). A party store
 or an identity provider that cannot answer is answered `503`, with
 `Retry-After` when the identity provider gave one.
 
@@ -382,7 +383,11 @@ wrapped committers may name a local party on import; this node's own
 
 Each OAuth client-credentials client that commits is declared in one
 `[[authz.system_client]]` table, keyed by `issuer` (a `machines` or `persons`
-issuer) and `client_id`. A Basic user is never a system client.
+issuer) and `client_id`. A Basic user is never a system client. A system
+caller with no table reads under its `system/` scopes and commits nothing into
+an EHR (`403`); a declared one commits a COMPOSITION only of a template its
+`writes` lists, at a facility its `facilities` lists, as the
+[caller kinds](../identity-providers.md#who-the-caller-is) describe.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
