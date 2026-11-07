@@ -168,6 +168,7 @@ jobs:
       # read by the `push` step below (#4546).
       actions: read
     outputs:
+      postgres_image: ${{ steps.postgres.outputs.image }}
       code: ${{ steps.filter.outputs.code }}
       viewer: ${{ steps.filter.outputs.viewer }}
       server_dockerfile: ${{ steps.filter.outputs.server_dockerfile }}
@@ -192,6 +193,13 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      # The image docker/postgres builds on, read from its FROM, the one place a
+      # Dependabot bump changes; every PostgreSQL service below runs it (#5112).
+      - id: postgres
+        run: |
+          set -euo pipefail
+          image="$(bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile)"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
       - name: The path classifier finds a match first and last in a 2000-path list
         run: bash scripts/lib/change-lanes.sh --self-test
       - id: filter
@@ -1650,7 +1658,7 @@ jobs:
       contents: read
     services:
       postgres:
-        image: postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
+        image: ${{ needs.changes.outputs.postgres_image }}
         env:
           POSTGRES_USER: openehr
           POSTGRES_PASSWORD: openehr
