@@ -83,6 +83,10 @@ pub enum ServeError {
     /// The authentication configuration was invalid.
     #[error("authentication configuration error: {0}")]
     Auth(String),
+    /// The `[scim]` endpoint cannot be served: a mapped attribute is no
+    /// attribute of its SCIM schema.
+    #[error("scim configuration error")]
+    Scim(#[source] scim::protocol::discovery::DiscoveryError),
     /// Binding a listener failed.
     #[error("binding the listener failed")]
     Io(#[from] std::io::Error),
@@ -178,6 +182,7 @@ async fn build_authenticator(
                 .to_owned(),
         ));
     }
+    scim::endpoint::check(config).map_err(ServeError::Scim)?;
     Ok(authenticator)
 }
 

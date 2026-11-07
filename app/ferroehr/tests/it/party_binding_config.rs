@@ -650,3 +650,62 @@ fn a_relationship_code_outside_subject_relationship_is_refused() {
         "subject_relationship group",
     );
 }
+
+/// [`full`] serving SCIM to one provisioning client of `issuer` binding
+/// `binding_issuer`, followed by `extra`.
+fn scim(issuer: &str, binding_issuer: &str, extra: &str) -> String {
+    format!(
+        "{}\n[scim]\nenabled = true\npublic_base_url = \"https://cdr.example.com\"\n\n\
+         [[scim.client]]\nissuer = \"{issuer}\"\nclient_id = \"entra\"\nscope = \"ferroehr/scim\"\n\
+         binding_issuer = \"{binding_issuer}\"\n{extra}",
+        full()
+    )
+}
+
+#[test]
+fn a_scim_client_of_the_machines_issuer_binding_a_party_issuer_loads() {
+    let config = assemble(&scim(
+        "https://idp.example/realms/machines",
+        "urn:example:staff-login",
+        "",
+    ))
+    .expect("assembles");
+    config.validate().expect("validates");
+    assert!(config.scim.enabled);
+    assert_eq!(config.scim.client.len(), 1);
+}
+
+#[test]
+fn every_scim_client_refusal_is_named() {
+    let staff = refusal(&scim(
+        "https://idp.example/realms/staff",
+        "urn:example:staff-login",
+        "",
+    ));
+    assert!(
+        staff.contains("names a persons issuer: a SCIM client acts for nobody"),
+        "{staff}"
+    );
+    let unbound = refusal(&scim(
+        "https://idp.example/realms/machines",
+        "urn:example:other",
+        "",
+    ));
+    assert!(
+        unbound.contains("is the identifier_issuer of no [[auth.party]] table"),
+        "{unbound}"
+    );
+    let shared = refusal(&scim(
+        "https://idp.example/realms/machines",
+        "urn:example:staff-login",
+        "\n[[scim.client]]\nissuer = \"https://idp.example/realms/machines\"\n\
+         client_id = \"okta\"\nscope = \"ferroehr/scim\"\n\
+         binding_issuer = \"urn:example:staff-login\"\n",
+    ));
+    assert!(shared.contains("shares binding_issuer"), "{shared}");
+    let unknown = refusal(&format!(
+        "{}\n[scim]\nenabled = true\nmax_deactivation = 3\n",
+        full()
+    ));
+    assert!(unknown.contains("max_deactivation"), "{unknown}");
+}

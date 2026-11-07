@@ -38,6 +38,7 @@ pub mod management;
 pub mod profile;
 pub mod redact;
 pub mod rest;
+pub mod scim;
 pub mod smart;
 pub mod versioning;
 
@@ -131,6 +132,9 @@ pub struct FerroEhrConfig {
     pub access_delay: access_delay::AccessDelayConfig,
     /// `[versioning]` — the opt-in answer to an identical re-send (#4415).
     pub versioning: versioning::VersioningConfig,
+    /// `[scim]` — the SCIM 2.0 service provider and its provisioning clients
+    /// (off by default).
+    pub scim: scim::ScimConfig,
 }
 
 impl Default for FerroEhrConfig {
@@ -174,6 +178,7 @@ impl Default for FerroEhrConfig {
             usage_report: ferrohealth_usage_report::section::UsageReportSection::default(),
             access_delay: access_delay::AccessDelayConfig::default(),
             versioning: versioning::VersioningConfig::default(),
+            scim: scim::ScimConfig::default(),
         }
     }
 }
@@ -676,6 +681,13 @@ impl FerroEhrConfig {
         if let Err(e) = self.smart.validate() {
             errors.push(ConfigError::semantic(format!("smart: {e}")));
         }
+        let resolved = auth::resolve(&self.auth.shared).ok();
+        errors.extend(
+            self.scim
+                .errors(resolved.as_ref())
+                .into_iter()
+                .map(ConfigError::semantic),
+        );
         if self.smart.enabled && !auth::has_bearer(&self.auth.shared) {
             errors.push(ConfigError::semantic(
                 "smart.enabled = true requires an [auth] issuer: the discovery document is \

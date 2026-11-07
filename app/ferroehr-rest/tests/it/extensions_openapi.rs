@@ -557,6 +557,7 @@ fn app_config() -> AppConfig {
         party_binding: ferroehr::config::binding::PartyBindingConfig::default(),
         system_clients: Vec::new(),
         agreements: Vec::new(),
+        scim: ferroehr::config::scim::ScimConfig::default(),
     }
 }
 

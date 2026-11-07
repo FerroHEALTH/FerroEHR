@@ -246,7 +246,10 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
 /// altogether; those share a single key, which is the honest behaviour: with no
 /// identity there is nothing fairer to key on. No openEHR spec governs request
 /// rates — our own design.
-async fn caller_key(mut request: axum::extract::Request, next: axum::middleware::Next) -> Response {
+pub(crate) async fn caller_key(
+    mut request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response {
     let subject = request.extensions().get::<Principal>().map_or_else(
         || Arc::from("-"),
         |principal| Arc::from(principal.subject.as_str()),
@@ -375,6 +378,9 @@ fn mount_public_surface(
         .merge(api)
         .merge(status::router(rest_root))
         .merge(discovery);
+    if let Some(scim) = crate::scim::endpoint::router(cfg, authenticator) {
+        inner = inner.merge(scim);
+    }
 
     match cfg.rest.swagger_ui {
         AccessLevel::Off => {}
