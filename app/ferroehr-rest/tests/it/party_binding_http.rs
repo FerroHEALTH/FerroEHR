@@ -476,3 +476,60 @@ async fn an_overage_the_identity_provider_throttles_is_unavailable_with_its_retr
         "{body}"
     );
 }
+
+/// The stored failed-authentication records carrying `binding`, as
+/// `(event_code, party id)`, waiting for the drain to write `count` of them.
+async fn refusal_rows(
+    pool: &sqlx::PgPool,
+    binding: &str,
+    count: usize,
+) -> Vec<(String, Option<String>)> {
+    for _ in 0..50 {
+        let rows: Vec<(String, Option<String>)> = sqlx::query_as(
+            "SELECT event_code, party ->> 'id' FROM audit.audit_event \
+             WHERE binding = $1 AND summary IS NULL ORDER BY recorded_at",
+        )
+        .bind(binding)
+        .fetch_all(pool)
+        .await
+        .expect("query");
+        if rows.len() >= count {
+            return rows;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    panic!("fewer than {count} {binding} records were stored");
+}
+
+/// Every refusal of the login binding becomes an access record through the
+/// gated path, carrying its binding code and the party it names (#5119).
+#[tokio::test]
+async fn a_login_binding_refusal_is_recorded_with_its_code_and_party() {
+    let (db, pool) = common::migrated_pool().await;
+    let (sender, _handle): (_, ferroehr::system_log::sender::AuditHandle) =
+        ferroehr::system_log::sender::start(common::local_audit(), None, Some(pool.clone()))
+            .await
+            .expect("the audit sender");
+    let svc = Arc::new(
+        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+            .with_binding_mapping(mapping())
+            .with_audit(sender)
+            .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),
+    );
+    let inactive = "7c8d9e0f-1a2b-4c3d-8e4f-5a6b7c8d9e0f";
+    let (person_uid, _) = professional(&svc, inactive, "800").await;
+    let app = router(Arc::clone(&svc), None).await;
+    refused(&app, &token(inactive, &json!({})), "refused-inactive").await;
+    refused(&app, &token(inactive, &json!({})), "refused-inactive").await;
+
+    let rows = refusal_rows(&db.pool(), "refused-inactive", 2).await;
+    let party = vo(&person_uid).0.to_string();
+    assert_eq!(
+        rows,
+        vec![
+            ("110114".to_owned(), Some(party.clone())),
+            ("110114".to_owned(), Some(party))
+        ],
+        "one failed-authentication record per refusal, naming the inactive party"
+    );
+}

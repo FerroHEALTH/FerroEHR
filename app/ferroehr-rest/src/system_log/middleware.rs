@@ -57,6 +57,7 @@ use crate::extensions::access::authn::{FreshAuthentication, Principal};
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use crate::system_log::classify::audit_for;
+use crate::system_log::refusals::{Charged, Reason, Refusal};
 
 /// The matched ITS-REST operation id, inserted by the dispatch layer onto the
 /// response. Present only when a request reached the generic dispatcher.
@@ -253,7 +254,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         event.ehr_id = object
             .as_ref()
             .and_then(|o| o.ehr_id.clone())
-            .or(route_ehr_id);
+            .or_else(|| route_ehr_id.clone());
         event.object_id = object
             .as_ref()
             .and_then(|o| o.uid.clone())
@@ -294,16 +295,15 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     // `EventTypeCode` 110122), and the success record fires only on a genuine
     // authentication event, gated by `suppress_login_events`.
     if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
-        let mut event = AuditEvent::new(
-            EventActionCode::Execute,
-            ObjectClass::Authentication,
-            outcome_from_status(status),
+        op_rejected |= refused(
+            &state,
+            &resp,
+            caller,
+            client_ip,
+            timestamp,
+            &access,
+            route_ehr_id,
         );
-        event.event_type = Some(EventType::Login);
-        // A refused credential has no principal, so the caller is `UNKNOWN`; a
-        // 403 and a patient-data step-up 401 carry one.
-        fill_common(&mut event, caller, client_ip, timestamp);
-        let _ = state.backend().emit(event);
     } else if fresh_auth && !state.backend().suppress_login_events() {
         let mut event = AuditEvent::new(
             EventActionCode::Execute,
@@ -329,6 +329,60 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         return resp;
     }
     resp
+}
+
+/// Records the refusal `resp` answered as a failed user authentication
+/// (DICOM PS3.15 §A.5.1 `EventID` 110114, `EventTypeCode` 110122), charged
+/// to the verified caller when there is one and to the client's network
+/// otherwise; whether its record was rejected under `fail_mode = "closed"`.
+fn refused(
+    state: &AppState,
+    resp: &Response,
+    caller: Caller<'_>,
+    client_ip: Option<String>,
+    timestamp: jiff::Timestamp,
+    access: &AccessContext,
+    ehr_id: Option<String>,
+) -> bool {
+    let mut event = AuditEvent::new(
+        EventActionCode::Execute,
+        ObjectClass::Authentication,
+        outcome_from_status(resp.status()),
+    );
+    event.event_type = Some(EventType::Login);
+    // NOTE: no specification governs this: our own design; the address was
+    // rendered from an `IpAddr`, so only its absence leaves it unparsed.
+    let address = client_ip.as_deref().and_then(|ip| ip.parse().ok());
+    // A refused credential has no principal, so the caller is `UNKNOWN`; a
+    // 403 and a patient-data step-up 401 carry one.
+    fill_common(&mut event, caller, client_ip, timestamp);
+    fill_access(&mut event, access, state);
+    event.ehr_id = ehr_id;
+    let charged = caller.principal.map_or_else(
+        || Charged::network(address),
+        |principal| Charged::Caller {
+            issuer: event.issuer.clone().unwrap_or_default(),
+            subject: principal.subject.clone(),
+        },
+    );
+    let outcome = caller.binding.map_or_else(
+        || {
+            resp.extensions().get::<Reason>().map_or_else(
+                || resp.status().as_str().to_owned(),
+                |Reason(r)| (*r).to_owned(),
+            )
+        },
+        |binding| binding.code.as_str().to_owned(),
+    );
+    crate::system_log::refusals::record(
+        state,
+        &Refusal {
+            charged,
+            outcome: &outcome,
+            ehr_id: event.ehr_id.as_deref(),
+            event: &event,
+        },
+    )
 }
 
 /// What an operation touched, for the record's EHDS priority category

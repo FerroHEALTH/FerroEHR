@@ -249,6 +249,9 @@ pub enum AuthError {
         /// The caller whose login was refused, so the failed-authentication
         /// record names who was refused.
         principal: Option<Box<Principal>>,
+        /// The party the refusal names: the one refused for its state or its
+        /// marker.
+        party: Option<Box<ferroehr::system_log::binding::PartyTriple>>,
     },
     /// The party source or the identity provider could not answer, so the
     /// server cannot decide (RFC 9110 §15.6.4).
@@ -431,10 +434,15 @@ impl Authenticator {
             .authenticate_request(parts)
             .await
             .map_err(|denied| AuthError::from_refusal(denied.refusal()))?;
+        self.admitted(access.clone())
+            .await
+            .map_err(|refusal| self.naming_caller(refusal, &access))
+    }
+
+    /// Binds and admits the caller of the verified `access`.
+    async fn admitted(&self, access: Access) -> Result<Authenticated, AuthError> {
         let access = match &self.party {
-            Some(binding) => party::bind(&binding.shared, access.clone())
-                .await
-                .map_err(|refusal| self.naming_caller(refusal, &access))?,
+            Some(binding) => party::bind(&binding.shared, access).await?,
             None => access,
         };
         // NOTE: no openEHR spec governs resolving a login to a party, our own design: with
@@ -463,7 +471,7 @@ impl Authenticator {
     /// Returns `refusal` naming the caller of `access` when the login binding
     /// refused it, so the failed-authentication record carries who was refused.
     fn naming_caller(&self, refusal: AuthError, access: &Access) -> AuthError {
-        let AuthError::PartyRefused { code, .. } = refusal else {
+        let AuthError::PartyRefused { code, party, .. } = refusal else {
             return refusal;
         };
         let principal = access.caller().map(|caller| {
@@ -471,7 +479,11 @@ impl Authenticator {
             let honoured = self.gate.honoured(access);
             Box::new(Principal::new(access.clone(), roles, honoured))
         });
-        AuthError::PartyRefused { code, principal }
+        AuthError::PartyRefused {
+            code,
+            principal,
+            party,
+        }
     }
 }
 
@@ -539,7 +551,7 @@ pub(crate) async fn middleware(
         }) => {
             match party::represented_ehr(&layer.service, &principal.access).await {
                 Ok(represented) => principal.represented = represented,
-                Err(e) => return refusal_response(auth, req.headers(), &e),
+                Err(e) => return refused(auth, req.headers(), &e, Some(principal)),
             }
             // NOTE: RFC 9110 §15.5.6; whether a method is served is the
             // resource's property, so no grant changes the `405`.
@@ -617,17 +629,36 @@ pub(crate) async fn middleware(
             resp
         }
         Err(e) => {
-            let mut resp = refusal_response(auth, req.headers(), &e);
-            if let AuthError::PartyRefused {
-                principal: Some(principal),
-                ..
-            } = e
-            {
-                resp.extensions_mut().insert(*principal);
-            }
-            resp
+            let principal = match &e {
+                AuthError::PartyRefused {
+                    principal: Some(principal),
+                    ..
+                } => Some(Principal::clone(principal)),
+                _ => None,
+            };
+            refused(auth, req.headers(), &e, principal)
         }
     }
+}
+
+/// The response refusing `principal` with `e`, carrying the refused caller
+/// and the binding record of a login-binding refusal for the access log.
+fn refused(
+    auth: &Authenticator,
+    headers: &header::HeaderMap,
+    e: &AuthError,
+    principal: Option<Principal>,
+) -> Response {
+    let mut resp = refusal_response(auth, headers, e);
+    if let AuthError::PartyRefused { code, party, .. } = e
+        && let Some(record) = record::refused(code, party.as_deref(), principal.as_ref())
+    {
+        resp.extensions_mut().insert(record);
+    }
+    if let Some(principal) = principal {
+        resp.extensions_mut().insert(principal);
+    }
+    resp
 }
 
 /// The client a request came through, which the `[origins]` register maps to
@@ -675,6 +706,8 @@ fn refusal_response(auth: &Authenticator, headers: &header::HeaderMap, e: &AuthE
         );
     }
     let mut resp = RestError::from(api).into_response();
+    resp.extensions_mut()
+        .insert(crate::system_log::refusals::Reason(reason));
     if let AuthError::PartyUnavailable {
         retry_after: Some(after),
     } = e

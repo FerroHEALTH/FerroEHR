@@ -169,6 +169,7 @@ pub(super) async fn bind(binding: &PartyBinding, access: Access) -> Result<Acces
             return Err(AuthError::PartyRefused {
                 code: "refused-guest",
                 principal: None,
+                party: None,
             });
         }
         Ok(None) if matches!(caller.kind(), CallerKind::Representative { .. }) => {
@@ -212,6 +213,7 @@ pub(super) const fn unrecorded() -> AuthError {
     AuthError::PartyRefused {
         code: "refused-representation-unrecorded",
         principal: None,
+        party: None,
     }
 }
 
@@ -292,6 +294,9 @@ fn refusal(outcome: &Outcome) -> Option<AuthError> {
     Some(AuthError::PartyRefused {
         code,
         principal: None,
+        party: outcome
+            .party()
+            .map(|party| Box::new(super::record::triple(party))),
     })
 }
 
@@ -437,6 +442,30 @@ mod tests {
             assert_ne!(detail(code), detail("refused-unbound"), "{code}");
         }
         assert!(refusal(&Outcome::Unbound).is_none());
+    }
+
+    #[test]
+    fn a_refusal_for_the_partys_state_or_marker_names_the_party() {
+        let party = PartyRef::new("demographic", "PERSON", "p");
+        let refused = refusal(&Outcome::Inactive { party });
+        let Some(AuthError::PartyRefused {
+            party: Some(named), ..
+        }) = refused
+        else {
+            panic!("an inactive party is refused naming it: {refused:?}");
+        };
+        assert_eq!(
+            (
+                named.namespace.as_str(),
+                named.class.as_str(),
+                named.id.as_str()
+            ),
+            ("demographic", "PERSON", "p")
+        );
+        assert!(matches!(
+            refusal(&Outcome::Deprovisioned),
+            Some(AuthError::PartyRefused { party: None, .. })
+        ));
     }
 
     #[test]

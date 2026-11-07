@@ -21,7 +21,10 @@
 //!   classified (a completeness test guards this); an unrecognised operation id
 //!   (extension route or future op) fails **closed** to a documented default and
 //!   is still audited — never silently unaudited.
+//! - [`refusals`] records every refused request within its budget, with the
+//!   summary records beyond it.
 
 pub mod classify;
 pub mod middleware;
+pub mod refusals;
 pub mod served;

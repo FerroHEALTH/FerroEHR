@@ -36,6 +36,31 @@ where
     resp
 }
 
+/// The binding record of the refusal `code`, naming `party` and, for a
+/// representative, the subject `principal` asserted; `None` for a code no
+/// binding value spells.
+pub(super) fn refused(
+    code: &str,
+    party: Option<&PartyTriple>,
+    principal: Option<&super::Principal>,
+) -> Option<BindingRecord> {
+    let code = ferroehr::system_log::binding::BindingCode::parse(code)?;
+    let mut detail = BTreeMap::new();
+    let kind = principal
+        .and_then(|principal| principal.access.caller())
+        .map(Caller::kind);
+    let inner = match kind {
+        Some(CallerKind::Guest(inner)) => Some(inner.as_ref()),
+        other => other,
+    };
+    if let Some(CallerKind::Representative { represented, .. }) = inner {
+        detail.insert("represented".to_owned(), vec![represented.clone()]);
+    }
+    let mut record = BindingRecord::refused(code, detail);
+    record.party = party.cloned();
+    Some(record)
+}
+
 /// The binding record of the request `principal` commits as `committer`;
 /// `None` for a caller the binding names nothing about.
 pub(super) fn of_request(
@@ -119,7 +144,7 @@ fn of(
 }
 
 /// The `PARTY_REF` triple of `party`.
-fn triple(party: &PartyRef) -> PartyTriple {
+pub(super) fn triple(party: &PartyRef) -> PartyTriple {
     PartyTriple {
         namespace: party.namespace().to_owned(),
         class: party.type_name().to_owned(),
