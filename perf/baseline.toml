@@ -1,0 +1,459 @@
+# The performance baseline of ferrohealth-perf, one [[baseline]] per host shape.
+# `ferrohealth-perf run --update` writes or lowers the entry of the runner's
+# model; a raise is a hand edit in a change that says why.
+schema = 3
+
+[[baseline]]
+tool = "0.4.1"
+written = "2026-11-07T13:12:34.664973435Z"
+
+[baseline.plan]
+rate = 20.0
+warmup_secs = 10
+duration_secs = 60
+requests = 9
+groups = ["aql_order_by", "aql_unordered", "composition_commit", "composition_read", "ehr_create", "ehr_read", "party_read", "party_version_read", "template_upload"]
+
+[baseline.host]
+arch = "x86_64"
+os = "linux"
+available_parallelism = 4
+cpu_model = "AMD EPYC 7763 64-Core Processor"
+total_memory_bytes = 16759439360
+
+[baseline.tolerance]
+latency = 0.25
+throughput = 0.2
+memory = 0.2
+cpu = 0.25
+transactions = 0.1
+
+[baseline.metrics]
+throughput_rps = 20.0
+peak_memory_bytes = 80531456.0
+cpu_per_request_ms = 2.5304079166666664
+transactions_per_request = 5.3792857142857144
+"aql_order_by.p50_ms" = 6.407
+"aql_order_by.p95_ms" = 7.463
+"aql_order_by.p99_ms" = 7.919
+"aql_unordered.p50_ms" = 6.193
+"aql_unordered.p95_ms" = 7.121
+"aql_unordered.p99_ms" = 7.429
+"composition_commit.p50_ms" = 5.4670000000000005
+"composition_commit.p95_ms" = 6.349
+"composition_commit.p99_ms" = 8.349
+"composition_read.p50_ms" = 3.186
+"composition_read.p95_ms" = 3.982
+"composition_read.p99_ms" = 5.019
+"ehr_create.p50_ms" = 5.475
+"ehr_create.p95_ms" = 6.493
+"ehr_create.p99_ms" = 7.851
+"ehr_read.p50_ms" = 2.775
+"ehr_read.p95_ms" = 3.706
+"ehr_read.p99_ms" = 5.321
+"party_read.p50_ms" = 3.29
+"party_read.p95_ms" = 3.831
+"party_read.p99_ms" = 4.064
+"party_version_read.p50_ms" = 2.88
+"party_version_read.p95_ms" = 3.518
+"party_version_read.p99_ms" = 3.931
+"template_upload.p50_ms" = 4.567
+"template_upload.p95_ms" = 5.209
+"template_upload.p99_ms" = 5.655
+
+[baseline.noise]
+throughput_rps = 1.0
+peak_memory_bytes = 1.2618715473466882
+cpu_per_request_ms = 1.1071474904646237
+transactions_per_request = 1.0038512616201858
+"aql_order_by.p50_ms" = 1.1266910711443576
+"aql_order_by.p95_ms" = 1.1155234657039712
+"aql_order_by.p99_ms" = 1.2242944175059058
+"aql_unordered.p50_ms" = 1.096996948771479
+"aql_unordered.p95_ms" = 1.1003026372676177
+"aql_unordered.p99_ms" = 1.280472890338361
+"composition_commit.p50_ms" = 1.1063244729605866
+"composition_commit.p95_ms" = 1.1593062469889193
+"composition_commit.p99_ms" = 2.8842037395228886
+"composition_read.p50_ms" = 1.2013170272812794
+"composition_read.p95_ms" = 1.3010106528270964
+"composition_read.p99_ms" = 1.310293806806172
+"ehr_create.p50_ms" = 1.1047390743131107
+"ehr_create.p95_ms" = 1.1566746602717826
+"ehr_create.p99_ms" = 1.2332463011314188
+"ehr_read.p50_ms" = 1.2939150401836967
+"ehr_read.p95_ms" = 1.670858220685319
+"ehr_read.p99_ms" = 1.5420603825766304
+"party_read.p50_ms" = 1.208766950488805
+"party_read.p95_ms" = 1.1712456655108028
+"party_read.p99_ms" = 1.2486253884771694
+"party_version_read.p50_ms" = 1.2563010294639687
+"party_version_read.p95_ms" = 1.193050193050193
+"party_version_read.p99_ms" = 1.5118050266565117
+"template_upload.p50_ms" = 1.141608783329599
+"template_upload.p95_ms" = 1.1826759765993584
+"template_upload.p99_ms" = 1.1907116369415505
+
+[[baseline]]
+tool = "0.4.1"
+written = "2026-11-07T13:12:34.664973435Z"
+
+[baseline.plan]
+rate = 20.0
+warmup_secs = 10
+duration_secs = 60
+requests = 9
+groups = ["aql_order_by", "aql_unordered", "composition_commit", "composition_read", "ehr_create", "ehr_read", "party_read", "party_version_read", "template_upload"]
+
+[baseline.host]
+arch = "x86_64"
+os = "linux"
+available_parallelism = 4
+cpu_model = "AMD EPYC 9V45 96-Core Processor"
+total_memory_bytes = 16759439360
+
+[baseline.tolerance]
+latency = 0.25
+throughput = 0.2
+memory = 0.2
+cpu = 0.25
+transactions = 0.1
+
+[baseline.metrics]
+throughput_rps = 20.0
+peak_memory_bytes = 74944512.0
+cpu_per_request_ms = 1.3655233333333332
+transactions_per_request = 5.3792857142857144
+"aql_order_by.p50_ms" = 4.415
+"aql_order_by.p95_ms" = 5.199
+"aql_order_by.p99_ms" = 5.715
+"aql_unordered.p50_ms" = 4.033
+"aql_unordered.p95_ms" = 4.603
+"aql_unordered.p99_ms" = 6.011
+"composition_commit.p50_ms" = 3.827
+"composition_commit.p95_ms" = 4.575
+"composition_commit.p99_ms" = 6.323
+"composition_read.p50_ms" = 2.257
+"composition_read.p95_ms" = 2.835
+"composition_read.p99_ms" = 3.555
+"ehr_create.p50_ms" = 3.755
+"ehr_create.p95_ms" = 4.451
+"ehr_create.p99_ms" = 5.427
+"ehr_read.p50_ms" = 1.998
+"ehr_read.p95_ms" = 2.587
+"ehr_read.p99_ms" = 4.215
+"party_read.p50_ms" = 2.395
+"party_read.p95_ms" = 2.885
+"party_read.p99_ms" = 3.273
+"party_version_read.p50_ms" = 2.113
+"party_version_read.p95_ms" = 2.597
+"party_version_read.p99_ms" = 3.009
+"template_upload.p50_ms" = 3.299
+"template_upload.p95_ms" = 3.857
+"template_upload.p99_ms" = 4.779
+
+[baseline.noise]
+throughput_rps = 1.0
+peak_memory_bytes = 1.2357217030114227
+cpu_per_request_ms = 1.0137187940154813
+transactions_per_request = 1.0013278449077148
+"aql_order_by.p50_ms" = 1.083352208380521
+"aql_order_by.p95_ms" = 1.0638584343142912
+"aql_order_by.p99_ms" = 1.268066491688539
+"aql_unordered.p50_ms" = 1.0689313166377385
+"aql_unordered.p95_ms" = 1.0816858570497503
+"aql_unordered.p99_ms" = 1.1683580103144235
+"composition_commit.p50_ms" = 1.0930232558139534
+"composition_commit.p95_ms" = 1.0699453551912568
+"composition_commit.p99_ms" = 1.3915862723390793
+"composition_read.p50_ms" = 1.1444395214887018
+"composition_read.p95_ms" = 1.2440917107583775
+"composition_read.p99_ms" = 1.2700421940928268
+"ehr_create.p50_ms" = 1.0655126498002665
+"ehr_create.p95_ms" = 1.0116827679173221
+"ehr_create.p99_ms" = 1.9618573797678278
+"ehr_read.p50_ms" = 1.1656656656656657
+"ehr_read.p95_ms" = 1.137611132586007
+"ehr_read.p99_ms" = 1.3482799525504152
+"party_read.p50_ms" = 1.1386221294363257
+"party_read.p95_ms" = 1.1053726169844023
+"party_read.p99_ms" = 1.0659945004582951
+"party_version_read.p50_ms" = 1.1817321344060576
+"party_version_read.p95_ms" = 1.1270696958028494
+"party_version_read.p99_ms" = 1.6174808906613494
+"template_upload.p50_ms" = 1.0812367384055774
+"template_upload.p95_ms" = 1.0782991962665283
+"template_upload.p99_ms" = 1.043523749738439
+
+[[baseline]]
+tool = "0.4.1"
+written = "2026-11-07T13:12:34.664973435Z"
+
+[baseline.plan]
+rate = 20.0
+warmup_secs = 10
+duration_secs = 60
+requests = 9
+groups = ["aql_order_by", "aql_unordered", "composition_commit", "composition_read", "ehr_create", "ehr_read", "party_read", "party_version_read", "template_upload"]
+
+[baseline.host]
+arch = "x86_64"
+os = "linux"
+available_parallelism = 4
+cpu_model = "AMD EPYC 9V74 80-Core Processor"
+total_memory_bytes = 16759439360
+
+[baseline.tolerance]
+latency = 0.25
+throughput = 0.2
+memory = 0.2
+cpu = 0.25
+transactions = 0.1
+
+[baseline.metrics]
+throughput_rps = 20.0
+peak_memory_bytes = 79593472.0
+cpu_per_request_ms = 2.17194625
+transactions_per_request = 5.371071428571429
+"aql_order_by.p50_ms" = 5.525
+"aql_order_by.p95_ms" = 6.487
+"aql_order_by.p99_ms" = 7.1690000000000005
+"aql_unordered.p50_ms" = 5.247
+"aql_unordered.p95_ms" = 5.9990000000000006
+"aql_unordered.p99_ms" = 6.535
+"composition_commit.p50_ms" = 4.9830000000000005
+"composition_commit.p95_ms" = 36.375
+"composition_commit.p99_ms" = 127.039
+"composition_read.p50_ms" = 2.915
+"composition_read.p95_ms" = 3.446
+"composition_read.p99_ms" = 4.445
+"ehr_create.p50_ms" = 4.889
+"ehr_create.p95_ms" = 31.767000000000003
+"ehr_create.p99_ms" = 82.815
+"ehr_read.p50_ms" = 2.549
+"ehr_read.p95_ms" = 3.248
+"ehr_read.p99_ms" = 4.702999999999999
+"party_read.p50_ms" = 3.0469999999999997
+"party_read.p95_ms" = 3.5620000000000003
+"party_read.p99_ms" = 3.8440000000000003
+"party_version_read.p50_ms" = 2.67
+"party_version_read.p95_ms" = 3.208
+"party_version_read.p99_ms" = 3.373
+"template_upload.p50_ms" = 4.063
+"template_upload.p95_ms" = 4.695
+"template_upload.p99_ms" = 4.867
+
+[baseline.noise]
+throughput_rps = 1.0
+peak_memory_bytes = 1.2643150648380383
+cpu_per_request_ms = 1.062502122232537
+transactions_per_request = 1.0041267305644301
+"aql_order_by.p50_ms" = 1.0778006358705816
+"aql_order_by.p95_ms" = 1.1099855282199709
+"aql_order_by.p99_ms" = 1.1798955963057154
+"aql_unordered.p50_ms" = 1.0484848484848486
+"aql_unordered.p95_ms" = 1.0467632175885535
+"aql_unordered.p99_ms" = 1.135786621024105
+"composition_commit.p50_ms" = 1.0859945731580045
+"composition_commit.p95_ms" = 2.2606507625523418
+"composition_commit.p99_ms" = 1.3118412456017443
+"composition_read.p50_ms" = 1.1199858004969825
+"composition_read.p95_ms" = 1.2145074795371154
+"composition_read.p99_ms" = 1.1785470280118424
+"ehr_create.p50_ms" = 1.0849076629165781
+"ehr_create.p95_ms" = 5.6651232466294426
+"ehr_create.p99_ms" = 3.0699783354742234
+"ehr_read.p50_ms" = 1.1461445296729915
+"ehr_read.p95_ms" = 1.1850277868584504
+"ehr_read.p99_ms" = 1.125576289791438
+"party_read.p50_ms" = 1.1456544142906218
+"party_read.p95_ms" = 1.0738197424892704
+"party_read.p99_ms" = 1.4405286343612336
+"party_version_read.p50_ms" = 1.1737769080234834
+"party_version_read.p95_ms" = 1.1416911524649036
+"party_version_read.p99_ms" = 1.267275494672755
+"template_upload.p50_ms" = 1.0967659791189204
+"template_upload.p95_ms" = 1.0873553177549684
+"template_upload.p99_ms" = 1.1088666808420156
+
+[[baseline]]
+tool = "0.4.1"
+written = "2026-11-07T13:12:34.664973435Z"
+
+[baseline.plan]
+rate = 20.0
+warmup_secs = 10
+duration_secs = 60
+requests = 9
+groups = ["aql_order_by", "aql_unordered", "composition_commit", "composition_read", "ehr_create", "ehr_read", "party_read", "party_version_read", "template_upload"]
+
+[baseline.host]
+arch = "x86_64"
+os = "linux"
+available_parallelism = 4
+cpu_model = "INTEL(R) XEON(R) PLATINUM 8573C"
+total_memory_bytes = 16758403072
+
+[baseline.tolerance]
+latency = 0.25
+throughput = 0.2
+memory = 0.2
+cpu = 0.25
+transactions = 0.1
+
+[baseline.metrics]
+throughput_rps = 20.0
+peak_memory_bytes = 80228352.0
+cpu_per_request_ms = 2.7178066666666667
+transactions_per_request = 5.378571428571429
+"aql_order_by.p50_ms" = 7.011
+"aql_order_by.p95_ms" = 8.123
+"aql_order_by.p99_ms" = 8.655
+"aql_unordered.p50_ms" = 6.763
+"aql_unordered.p95_ms" = 7.771
+"aql_unordered.p99_ms" = 8.807
+"composition_commit.p50_ms" = 6.571
+"composition_commit.p95_ms" = 7.243
+"composition_commit.p99_ms" = 8.575
+"composition_read.p50_ms" = 3.737
+"composition_read.p95_ms" = 4.471
+"composition_read.p99_ms" = 5.427
+"ehr_create.p50_ms" = 6.319
+"ehr_create.p95_ms" = 7.415
+"ehr_create.p99_ms" = 8.279
+"ehr_read.p50_ms" = 3.357
+"ehr_read.p95_ms" = 3.883
+"ehr_read.p99_ms" = 6.671
+"party_read.p50_ms" = 3.911
+"party_read.p95_ms" = 4.431
+"party_read.p99_ms" = 4.551
+"party_version_read.p50_ms" = 3.489
+"party_version_read.p95_ms" = 4.011
+"party_version_read.p99_ms" = 4.115
+"template_upload.p50_ms" = 5.271
+"template_upload.p95_ms" = 5.787
+"template_upload.p99_ms" = 6.099
+
+[baseline.noise]
+throughput_rps = 1.0
+peak_memory_bytes = 1.2323990401797111
+cpu_per_request_ms = 1.020790968697798
+transactions_per_request = 1.0027888446215139
+"aql_order_by.p50_ms" = 1.0376551133932392
+"aql_order_by.p95_ms" = 1.0418564569740243
+"aql_order_by.p99_ms" = 1.0563835932986714
+"aql_unordered.p50_ms" = 1.0431761052787225
+"aql_unordered.p95_ms" = 1.0159567623214516
+"aql_unordered.p99_ms" = 1.1062790961734983
+"composition_commit.p50_ms" = 1.0085222949322783
+"composition_commit.p95_ms" = 1.0513599337291177
+"composition_commit.p99_ms" = 3.3360932944606416
+"composition_read.p50_ms" = 1.0267594327000267
+"composition_read.p95_ms" = 1.0322075598300158
+"composition_read.p99_ms" = 1.1813156440022112
+"ehr_create.p50_ms" = 1.0107611963918341
+"ehr_create.p95_ms" = 1.0102494942683748
+"ehr_create.p99_ms" = 1.0917985263920764
+"ehr_read.p50_ms" = 1.0369377420315757
+"ehr_read.p95_ms" = 1.031419005923255
+"ehr_read.p99_ms" = 1.0701543996402338
+"party_read.p50_ms" = 1.0086934287905907
+"party_read.p95_ms" = 1.0252764612954186
+"party_read.p99_ms" = 1.040430674577016
+"party_version_read.p50_ms" = 1.0384064201777015
+"party_version_read.p95_ms" = 1.0079780603340813
+"party_version_read.p99_ms" = 1.0233292831105711
+"template_upload.p50_ms" = 1.0113830392714855
+"template_upload.p95_ms" = 1.0393986521513738
+"template_upload.p99_ms" = 1.0557468437448763
+
+[[baseline]]
+tool = "0.4.1"
+written = "2026-11-07T13:12:34.664973435Z"
+
+[baseline.plan]
+rate = 20.0
+warmup_secs = 10
+duration_secs = 60
+requests = 9
+groups = ["aql_order_by", "aql_unordered", "composition_commit", "composition_read", "ehr_create", "ehr_read", "party_read", "party_version_read", "template_upload"]
+
+[baseline.host]
+arch = "x86_64"
+os = "linux"
+available_parallelism = 4
+cpu_model = "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz"
+total_memory_bytes = 16758403072
+
+[baseline.tolerance]
+latency = 0.25
+throughput = 0.2
+memory = 0.2
+cpu = 0.25
+transactions = 0.1
+
+[baseline.metrics]
+throughput_rps = 20.0
+peak_memory_bytes = 72249344.0
+cpu_per_request_ms = 2.8467616666666666
+transactions_per_request = 5.378571428571429
+"aql_order_by.p50_ms" = 7.567
+"aql_order_by.p95_ms" = 8.271
+"aql_order_by.p99_ms" = 8.767
+"aql_unordered.p50_ms" = 7.255
+"aql_unordered.p95_ms" = 7.927
+"aql_unordered.p99_ms" = 8.295
+"composition_commit.p50_ms" = 6.387
+"composition_commit.p95_ms" = 6.991
+"composition_commit.p99_ms" = 7.959
+"composition_read.p50_ms" = 3.707
+"composition_read.p95_ms" = 4.303
+"composition_read.p99_ms" = 5.283
+"ehr_create.p50_ms" = 6.451
+"ehr_create.p95_ms" = 7.139
+"ehr_create.p99_ms" = 7.899
+"ehr_read.p50_ms" = 3.269
+"ehr_read.p95_ms" = 3.799
+"ehr_read.p99_ms" = 5.319
+"party_read.p50_ms" = 3.889
+"party_read.p95_ms" = 4.439
+"party_read.p99_ms" = 4.691
+"party_version_read.p50_ms" = 3.463
+"party_version_read.p95_ms" = 3.945
+"party_version_read.p99_ms" = 4.047
+"template_upload.p50_ms" = 5.487
+"template_upload.p95_ms" = 5.943
+"template_upload.p99_ms" = 6.003
+
+[baseline.noise]
+throughput_rps = 1.0
+peak_memory_bytes = 1.254096037190317
+cpu_per_request_ms = 1.0061912453741297
+transactions_per_request = 1.0014608233731739
+"aql_order_by.p50_ms" = 1.0163869433064623
+"aql_order_by.p95_ms" = 1.0483617458590253
+"aql_order_by.p99_ms" = 1.0574883084293374
+"aql_unordered.p50_ms" = 1.0192970365265335
+"aql_unordered.p95_ms" = 1.0136243219376815
+"aql_unordered.p99_ms" = 1.0462929475587703
+"composition_commit.p50_ms" = 1.0231720682636607
+"composition_commit.p95_ms" = 1.0554999284794735
+"composition_commit.p99_ms" = 2.253423796959417
+"composition_read.p50_ms" = 1.0458591853250607
+"composition_read.p95_ms" = 1.026957936323495
+"composition_read.p99_ms" = 1.0916146129093318
+"ehr_create.p50_ms" = 1.0334831809021858
+"ehr_create.p95_ms" = 1.0649950973525704
+"ehr_create.p99_ms" = 1.10381060893784
+"ehr_read.p50_ms" = 1.0312022025084122
+"ehr_read.p95_ms" = 1.0631745196104236
+"ehr_read.p99_ms" = 1.2677194961458922
+"party_read.p50_ms" = 1.04577012085369
+"party_read.p95_ms" = 1.024329804009912
+"party_read.p99_ms" = 1.011937753144319
+"party_version_read.p50_ms" = 1.0404273751082878
+"party_version_read.p95_ms" = 1.0329531051964513
+"party_version_read.p99_ms" = 1.07709414381023
+"template_upload.p50_ms" = 1.0109349371241114
+"template_upload.p95_ms" = 1.0336530371866062
+"template_upload.p99_ms" = 1.0712976844910878
