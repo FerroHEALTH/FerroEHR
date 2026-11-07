@@ -1095,7 +1095,12 @@ and an issuer the CDR's config.auth.issuer does not list as `machines`.
 {{- if not (hasKey $config "cdr") -}}{{- $_ := set $config "cdr" (dict) -}}{{- end -}}
 {{- $cdr = get $config "cdr" -}}
 {{- $_ := set $cdr "base_url" (include "ferroehr.cdrRestUrl" $) -}}
-{{- $oauth := dict "issuer" $.Values.bridge.cdr.oauth.issuer "client_id" $.Values.bridge.cdr.oauth.clientId "client_secret_file" (printf "%s/client_secret" (include "ferroehr.bridgeSecretDir" $)) -}}
+{{- $oauth := dict "client_id" $.Values.bridge.cdr.oauth.clientId "client_secret_file" (printf "%s/client_secret" (include "ferroehr.bridgeSecretDir" $)) -}}
+{{- if $.Values.bridge.cdr.oauth.tokenEndpoint -}}
+{{- $_ := set $oauth "token_endpoint" $.Values.bridge.cdr.oauth.tokenEndpoint -}}
+{{- else -}}
+{{- $_ := set $oauth "issuer" $.Values.bridge.cdr.oauth.issuer -}}
+{{- end -}}
 {{- range $key, $value := dict "scope" $.Values.bridge.cdr.oauth.scope "audience" $.Values.bridge.cdr.oauth.audience "resource" $.Values.bridge.cdr.oauth.resource -}}
 {{- if $value -}}{{- $_ := set $oauth $key $value -}}{{- end -}}
 {{- end -}}
