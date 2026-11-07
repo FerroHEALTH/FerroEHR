@@ -51,7 +51,7 @@ use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
 use ferrohealth_smart::resource::introspection::Introspector;
-use ferrohealth_smart::resource::{Access, Caller, Honoured, ResourceServer, Via};
+use ferrohealth_smart::resource::{Access, Honoured, ResourceServer, Via};
 use http::request::Parts;
 use http::{HeaderValue, StatusCode, header};
 use openehr_its::rest::runtime::ApiError;
@@ -536,7 +536,7 @@ pub(crate) async fn middleware(
             }
             req.extensions_mut().insert(principal.clone());
             let for_audit = principal.clone();
-            let mut committer = committer_identity(&for_audit);
+            let mut committer = party::committer_identity(&for_audit);
             if let Some(binding) = auth.party.as_deref() {
                 match binding.details(&for_audit).await {
                     Ok(details) => committer.bound = details,
@@ -709,49 +709,6 @@ fn patient_data_refusal(
     resp.extensions_mut().insert(principal.clone());
     resp.extensions_mut().insert(actor);
     resp
-}
-
-/// Returns the platform committer identity published for the service layer.
-///
-/// A write whose request carried no committal headers is attributed to the
-/// authenticated principal rather than the system identity
-/// (`AUDIT_DETAILS.committer` 1..1 — RM common master04 §Audit Details). A
-/// Bearer subject was minted by the identity provider, so the audit records the
-/// validated token issuer; Basic credentials are local and carry none.
-fn committer_identity(principal: &Principal) -> ferroehr::versioning::committer::CommitterIdentity {
-    ferroehr::versioning::committer::CommitterIdentity {
-        subject: principal.subject.clone(),
-        id_type: match principal.method {
-            AuthMethod::Basic => "basic",
-            AuthMethod::Bearer => "oauth2",
-        },
-        issuer: match principal.method {
-            AuthMethod::Basic => None,
-            AuthMethod::Bearer => principal
-                .access
-                .caller()
-                .and_then(Caller::issuer)
-                .map(str::to_owned),
-        },
-        client: client_of(principal),
-        person: crate::smart::acts_as_person(principal),
-        party: principal
-            .access
-            .caller()
-            .and_then(Caller::party)
-            .and_then(ferrohealth_smart::party::Outcome::bound)
-            .cloned(),
-        representative: principal.access.caller().is_some_and(|caller| {
-            matches!(
-                caller.kind(),
-                ferrohealth_smart::kind::CallerKind::Representative { .. }
-            )
-        }),
-        bound: None,
-        system: principal.access.caller().is_some_and(|caller| {
-            matches!(caller.kind(), ferrohealth_smart::kind::CallerKind::System)
-        }),
-    }
 }
 
 /// The client a request came through, which the `[origins]` register maps to

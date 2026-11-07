@@ -246,6 +246,51 @@ pub(super) fn detail(code: &str) -> &'static str {
     }
 }
 
+/// Returns the platform committer identity published for the service layer.
+///
+/// A write whose request carried no committal headers is attributed to the
+/// authenticated principal rather than the system identity
+/// (`AUDIT_DETAILS.committer` 1..1 — RM common master04 §Audit Details). A
+/// Bearer subject was minted by the identity provider, so the audit records the
+/// validated token issuer; Basic credentials are local and carry none.
+pub(super) fn committer_identity(
+    principal: &super::Principal,
+) -> ferroehr::versioning::committer::CommitterIdentity {
+    ferroehr::versioning::committer::CommitterIdentity {
+        subject: principal.subject.clone(),
+        id_type: match principal.method {
+            super::AuthMethod::Basic => "basic",
+            super::AuthMethod::Bearer => "oauth2",
+        },
+        issuer: match principal.method {
+            super::AuthMethod::Basic => None,
+            super::AuthMethod::Bearer => principal
+                .access
+                .caller()
+                .and_then(Caller::issuer)
+                .map(str::to_owned),
+        },
+        client: super::client_of(principal),
+        person: crate::smart::acts_as_person(principal),
+        party: principal
+            .access
+            .caller()
+            .and_then(Caller::party)
+            .and_then(Outcome::bound)
+            .cloned(),
+        representative: principal.access.caller().is_some_and(|caller| {
+            matches!(
+                caller.kind(),
+                ferrohealth_smart::kind::CallerKind::Representative { .. }
+            )
+        }),
+        bound: None,
+        system: principal.access.caller().is_some_and(|caller| {
+            matches!(caller.kind(), ferrohealth_smart::kind::CallerKind::System)
+        }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use ferrohealth_smart::party::PartyRef;
