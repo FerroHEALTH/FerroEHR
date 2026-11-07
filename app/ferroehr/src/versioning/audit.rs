@@ -214,8 +214,8 @@ impl AuditInput {
     ///   default;
     /// - `description` — the caller's when supplied, else the server default;
     /// - `committer` — the caller's `PARTY_PROXY` (defaulted by the adapter to
-    ///   the principal / system identity), or the person's own `PARTY_SELF`
-    ///   ([`crate::versioning::committer::attributed`]);
+    ///   the principal / system identity), or the server's committer for a
+    ///   caller it knows ([`crate::versioning::committer::resolve`]);
     /// - `system_id` — the caller's when supplied, else this server's.
     ///
     /// The audit is a plain `UPDATE_AUDIT` ([`plain_audit`]), as on the

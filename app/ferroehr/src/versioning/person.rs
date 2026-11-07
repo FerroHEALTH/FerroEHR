@@ -9,7 +9,7 @@
 //! her representative", and they "shall not be able to directly alter the
 //! electronic health data and related information inserted by health
 //! professionals" (`docs/law/eu/ehds/text.html` Art. 5). The marker is the
-//! committer `PARTY_SELF` ([`crate::versioning::committer::attributed`]); these are
+//! committer `PARTY_SELF` ([`crate::versioning::committer::resolve`]); these are
 //! the refusals. No openEHR spec governs who may change what: our own design.
 
 use serde_json::Value;
