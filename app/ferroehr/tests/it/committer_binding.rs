@@ -179,6 +179,7 @@ pub(crate) async fn bound(svc: &FerroEhrService, sub: &str, key: &str) -> Commit
         }),
         system: false,
         system_client: None,
+        external: None,
     }
 }
 
@@ -380,6 +381,7 @@ async fn a_patient_commits_no_demographic_version() {
         bound: None,
         system: false,
         system_client: None,
+        external: None,
     };
     let body = json!({ "_type": "PERSON", "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
         "archetype_details": archetyped("openEHR-DEMOGRAPHIC-PERSON.person.v1", "Any person"),
@@ -432,6 +434,7 @@ async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_sy
         bound: None,
         system: false,
         system_client: None,
+        external: None,
     };
     let refused = ferroehr::system_log::access_context::with_roles(
         vec!["USER".to_owned()],

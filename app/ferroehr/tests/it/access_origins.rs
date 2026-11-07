@@ -214,6 +214,7 @@ async fn a_registered_client_stamps_its_origin_on_a_direct_commit() {
         bound: None,
         system: false,
         system_client: None,
+        external: None,
     };
 
     let (registered, _) = ferroehr::versioning::committer::with_committer(

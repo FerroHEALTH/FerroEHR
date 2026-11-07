@@ -348,10 +348,18 @@ pub(crate) fn target_ehr(
 /// it represents ([`Principal::represented`], #5086) on the EHR's data and its
 /// queries, whatever its grants cover; a template is no patient's data.
 ///
+/// A read under a federation agreement whose `consent` condition applies
+/// needs the consent decision reference for that patient (Wabvpz Art. 1(j) and
+/// Art. 15a(1), `docs/law/nl/wabvpz/text.html`), which no token carries yet,
+/// so every such read is refused. A request on openEHR data under an NL
+/// agreement is refused until the Wabvpz Art. 15f roles and organisation
+/// types can be read.
+///
 /// # Errors
-/// The reason the debug log records: the grants do not meet the requirement, or
-/// a `patient/` grant addresses another EHR or none, or a representative
-/// addresses an EHR other than the represented subject's.
+/// The reason the debug log records: the grants do not meet the requirement,
+/// a `patient/` grant addresses another EHR or none, a representative
+/// addresses an EHR other than the represented subject's, or a
+/// consent-conditioned read carries no consent decision reference.
 pub(crate) fn check(
     requirement: &Requirement,
     principal: &Principal,
@@ -372,6 +380,21 @@ pub(crate) fn check(
             .is_some_and(|(target, ehr)| target.eq_ignore_ascii_case(ehr))
     {
         return Err("a representative reaches only the EHR of the subject it represents");
+    }
+    if let (Requirement::OpenEhr { permission, .. }, Some(agreement)) = (
+        requirement,
+        crate::extensions::access::authn::declared::admitted(&principal.access),
+    ) {
+        // TODO(#5107): refuse the Wabvpz Art. 15f roles and organisation types alone.
+        if agreement.jurisdiction == "NL" {
+            return Err("an NL federation request waits on the Wabvpz Art. 15f check");
+        }
+        // TODO(#5106): read the consent decision reference an onward token carries.
+        if agreement.consent.is_some()
+            && matches!(permission, Permission::Read | Permission::Search)
+        {
+            return Err("a consent-conditioned read carries no consent decision reference");
+        }
     }
     if let Requirement::OpenEhr {
         family,

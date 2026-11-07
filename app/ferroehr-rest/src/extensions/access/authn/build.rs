@@ -184,12 +184,7 @@ impl Authenticator {
             primary,
             role_issuers: RoleIssuers::of(config),
             party,
-            system_clients: config
-                .system_clients
-                .iter()
-                .cloned()
-                .map(Arc::new)
-                .collect(),
+            declared: super::declared::Declared::of(config),
         }))
     }
 }

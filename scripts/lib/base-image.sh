@@ -20,6 +20,9 @@
 #       print the two label lines, `org.opencontainers.image.base.name=<name>`
 #       and `org.opencontainers.image.base.digest=<digest>`; exit 1 when the
 #       file has no digest-pinned FROM
+#   scripts/lib/base-image.sh ref <dockerfile>      (repository-relative)
+#       print the `<name>@<digest>` reference itself, the image a workflow
+#       service container runs (#5112); exit 1 as for `labels`
 #   scripts/lib/base-image.sh --self-test
 #
 # No specification governs this: our own design. The keys are the OCI image
@@ -45,7 +48,9 @@ base_ref() {
   ' "$dockerfile"
 }
 
-labels() {
+# The literal `<name>@<digest>` base of $1; refuses a tag-only FROM and one
+# naming a build argument.
+literal_ref() {
   local dockerfile="$1" ref
   ref="$(base_ref "$dockerfile")" || return 1
   if [[ -z "$ref" ]]; then
@@ -53,9 +58,15 @@ labels() {
     return 1
   fi
   if [[ "${ref%@*}" == *'$'* ]]; then
-    echo "base-image: the base of $dockerfile names a build argument (${ref%@*}); the label needs the literal name" >&2
+    echo "base-image: the base of $dockerfile names a build argument (${ref%@*}); a reference needs the literal name" >&2
     return 1
   fi
+  printf '%s\n' "$ref"
+}
+
+labels() {
+  local ref
+  ref="$(literal_ref "$1")" || return 1
   printf 'org.opencontainers.image.base.name=%s\n' "${ref%@*}"
   printf 'org.opencontainers.image.base.digest=%s\n' "${ref#*@}"
 }
@@ -88,6 +99,7 @@ org.opencontainers.image.base.digest=$b" "$out"
   expect "a FROM with a flag" \
     "org.opencontainers.image.base.name=postgres:18.6
 org.opencontainers.image.base.digest=$a" "$out"
+  expect "the reference of a FROM with a flag" "postgres:18.6@$a" "$(literal_ref "$dir/flagged")"
 
   printf 'FROM postgres:18.6\n' >"$dir/tagged"
   if labels "$dir/tagged" >/dev/null 2>&1; then
@@ -123,21 +135,21 @@ org.opencontainers.image.base.digest=$a" "$out"
     echo "base-image: self-test FAILED ($failures)" >&2
     return 1
   fi
-  echo "base-image: self-test OK (the runtime stage past build stages, a flagged FROM, the refused tag-only and argument FROMs, a missing file, and the three Dockerfiles)."
+  echo "base-image: self-test OK (the runtime stage past build stages, a flagged FROM and its reference, the refused tag-only and argument FROMs, a missing file, and the three Dockerfiles)."
 }
 
 cd "$(dirname "$0")/../.."
 case "${1:-}" in
-  labels)
+  labels | ref)
     [[ "$#" -eq 2 ]] || {
-      echo "usage: $0 labels <dockerfile> | --self-test" >&2
+      echo "usage: $0 labels|ref <dockerfile> | --self-test" >&2
       exit 2
     }
-    labels "$2"
+    if [[ "$1" == ref ]]; then literal_ref "$2"; else labels "$2"; fi
     ;;
   --self-test) self_test ;;
   *)
-    echo "usage: $0 labels <dockerfile> | --self-test" >&2
+    echo "usage: $0 labels|ref <dockerfile> | --self-test" >&2
     exit 2
     ;;
 esac

@@ -69,12 +69,7 @@ pub(crate) fn admit_content(
     let Some(client) = composing_client(kind)? else {
         return Ok(());
     };
-    let template = template_id.or_else(|| {
-        canonical
-            .pointer("/archetype_details/template_id/value")
-            .and_then(Value::as_str)
-    });
-    admit_template(&client, template)?;
+    admit_template(&client, template_of(canonical, template_id))?;
     if organisation_composer(canonical) {
         return Err(ServiceError::content_invalid(
             Violation::new(
@@ -111,6 +106,19 @@ pub(crate) fn admit_content(
         }
     }
     admit_facility(&client, canonical)
+}
+
+/// The template a COMPOSITION is of: `template_id` as the change carries it,
+/// or its body's `archetype_details.template_id`.
+pub(crate) fn template_of<'a>(
+    canonical: &'a Value,
+    template_id: Option<&'a str>,
+) -> Option<&'a str> {
+    template_id.or_else(|| {
+        canonical
+            .pointer("/archetype_details/template_id/value")
+            .and_then(Value::as_str)
+    })
 }
 
 /// Admits a logical deletion of `vo_id`, of `kind`, by the request's system

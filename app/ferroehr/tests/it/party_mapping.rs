@@ -307,6 +307,7 @@ fn caller(subject: &str) -> CommitterIdentity {
         bound: None,
         system: false,
         system_client: None,
+        external: None,
     }
 }
 
