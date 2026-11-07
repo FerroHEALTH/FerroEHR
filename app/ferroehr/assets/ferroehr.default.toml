@@ -1040,3 +1040,23 @@ hours = 0
 # audit and no contribution record the send.
 [versioning]
 skip_identical_resend = false
+
+# [scim] — the SCIM 2.0 service provider at /scim/v2/ (RFC 7644), through which
+# an identity provider provisions each professional as a demographic PERSON.
+# OFF by default. Each [[scim.client]] is an OAuth client-credentials client of
+# the deployment's own authorization server (an [[auth.issuer]] of kind
+# machines), acting for nobody, whose tokens must hold `scope`. It owns the
+# Users whose binding key its `binding_issuer` (the identifier_issuer of an
+# [[auth.party]] table) issues; no two clients share a binding_issuer.
+# `public_base_url` is the externally reachable origin every meta.location and
+# discovery document names, required when enabled. /scim/v2/ServiceProviderConfig
+# is readable without a token; every other path needs a client's token.
+[scim]
+enabled = false
+max_results = 100
+#? public_base_url = "https://cdr.example.com"
+# [[scim.client]]
+# issuer = "https://as.example.com"
+# client_id = "entra-provisioning"
+# scope = "ferroehr/scim"
+# binding_issuer = "urn:example:login"

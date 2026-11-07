@@ -57,6 +57,8 @@ pub struct AppConfig {
     /// `[[authz.federation.agreement]]` — what each `federation` issuer's
     /// external callers may do.
     pub agreements: Vec<ferroehr::config::agreement::Agreement>,
+    /// `[scim]` — the SCIM 2.0 service provider and its provisioning clients.
+    pub scim: ferroehr::config::scim::ScimConfig,
 }
 
 impl From<&ferroehr::config::FerroEhrConfig> for AppConfig {
@@ -76,6 +78,7 @@ impl From<&ferroehr::config::FerroEhrConfig> for AppConfig {
             party_binding: config.authz.party_binding.clone(),
             system_clients: config.authz.system_client.clone(),
             agreements: config.authz.federation.agreement.clone(),
+            scim: config.scim.clone(),
         }
     }
 }

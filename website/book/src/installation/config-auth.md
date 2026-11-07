@@ -533,6 +533,67 @@ Physical deletion is irreversible, so the group stays off by default. With it
 on, `/admin` also joins the group list the `OPTIONS` System-Options manifest
 advertises, so the manifest never names a group that answers `404`.
 
+## `[scim]`
+
+FerroEHR is a SCIM 2.0 service provider (RFC 7644) at `/scim/v2/`, the
+endpoint an identity provider provisions each professional through. It is off
+by default.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool | `false` | Serve `/scim/v2/`. Off, every path under it answers `404`. |
+| `public_base_url` | string | none | The externally reachable origin, such as `https://cdr.example.com`, that every `meta.location` and discovery document names as `<public_base_url>/scim/v2` (RFC 7643 §3.1). Required when `enabled`; it carries no userinfo, query or fragment. |
+| `max_results` | integer | `100` | The most resources one list response returns, which `ServiceProviderConfig` declares as `filter.maxResults`. At least 1. |
+
+Each `[[scim.client]]` table declares one provisioning client:
+
+| Key | Description |
+|---|---|
+| `issuer` | The issuer of the client's access tokens: your own authorization server, an `[[auth.issuer]]` of kind `machines`. FerroEHR issues no tokens. |
+| `client_id` | The client the token names (`client_id`, failing that `azp`). |
+| `scope` | The one scope a token of the client must hold. SMART on openEHR defines none for SCIM, so the value is yours to choose. |
+| `binding_issuer` | The identifier issuer of the binding keys the client provisions: the `identifier_issuer` of an `[[auth.party]]` table. Each User belongs to the one client whose `binding_issuer` issues its key, so no two clients share one. |
+
+The start is refused when `enabled` is set without `public_base_url` or
+without a client, and for a client that misses a key, is declared twice,
+shares a `binding_issuer`, names an issuer that is not of kind `machines`, or
+names a `binding_issuer` no `[[auth.party]]` table carries.
+
+```toml
+[scim]
+enabled = true
+public_base_url = "https://cdr.example.com"
+
+[[scim.client]]
+issuer = "https://as.example.com"
+client_id = "entra-provisioning"
+scope = "ferroehr/scim"
+binding_issuer = "urn:example:staff-login"
+```
+
+`/scim/v2/ServiceProviderConfig` answers without a token, so a client can read
+the authentication scheme before it holds one. Every other path needs a
+bearer token of a declared client that acts for nobody and holds its `scope`:
+
+- no token, or one that does not verify, is **401** with
+  `WWW-Authenticate: Bearer`;
+- a person's token, a client no table declares, and a token without the
+  scope are **403**, the last with `WWW-Authenticate: Bearer
+  error="insufficient_scope"` (RFC 6750 §3.1).
+
+Every refusal is an RFC 7644 §3.12 `Error` message in `application/scim+json`.
+The client's requests count against
+[`[server.caller_rate]`](config-server.md) like any caller's, so each
+replica gives the client an allowance of its own, and past it a request is
+**429** with `Retry-After`. `/scim/v2/Schemas` serves the core User schema
+reduced to `userName`, `active` and the SCIM attributes
+`[[authz.party_binding.person.attribute]]` maps, and FerroEHR's extension
+`urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User` with
+`loginIdentifier`, the attribute that feeds the binding key. `/ResourceTypes`
+lists the `User` type at `/Users`; that endpoint is not served yet, and
+`ServiceProviderConfig` declares PATCH and entity tags unsupported until it
+is.
+
 ## `[access_delay]`
 
 The EHDS Art. 3(3) delay of the person's own access to newly registered data,

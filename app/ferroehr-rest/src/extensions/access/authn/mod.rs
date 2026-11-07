@@ -299,6 +299,11 @@ impl AuthError {
         }
     }
 
+    /// The HTTP status this outcome answers with.
+    pub(crate) fn status(&self) -> StatusCode {
+        self.to_api_error().status()
+    }
+
     fn to_api_error(&self) -> ApiError {
         match self {
             AuthError::Forbidden(m) | AuthError::KindRefused { message: m, .. } => {
