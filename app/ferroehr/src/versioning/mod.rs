@@ -68,6 +68,7 @@ pub mod audit;
 pub mod change;
 pub mod committer;
 pub(crate) mod contribution;
+pub(crate) mod external;
 pub(crate) mod import;
 pub(crate) mod integrity;
 pub(crate) mod lifecycle;
@@ -78,6 +79,7 @@ pub(crate) mod profile;
 pub(crate) mod read;
 pub(crate) mod restriction;
 pub mod signature;
+pub(crate) mod system;
 pub(crate) mod wire;
 
 // Re-exports: the versioning API the service layer and its adapters consume.

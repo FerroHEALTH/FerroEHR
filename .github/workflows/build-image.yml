@@ -73,7 +73,9 @@ on:
         type: string
         default: ""
       labels:
-        description: The per-image OCI labels (multiline, metadata-action syntax).
+        description: >-
+          The per-image OCI labels (multiline, metadata-action syntax), without
+          base.name and base.digest, which are read from the Dockerfile.
         required: true
         type: string
     outputs:
@@ -143,6 +145,24 @@ jobs:
       # spelled inline here: this lane's tag policy is read by every image, and
       # moving it onto the composite's output is part of forming the release
       # pipeline (#2775), not of deduplicating steps.
+      # base.name and base.digest are read from the Dockerfile's FROM pin,
+      # the one place a base digest is written, so a Dependabot bump of that
+      # pin needs no other edit (#4953). Values pass through env, never inline.
+      - name: Base image labels
+        id: base
+        env:
+          DOCKERFILE: ${{ inputs.dockerfile }}
+          LABELS: ${{ inputs.labels }}
+        run: |
+          set -euo pipefail
+          base="$(bash scripts/lib/base-image.sh labels "$DOCKERFILE")"
+          {
+            echo 'labels<<EOF'
+            printf '%s\n' "$LABELS"
+            printf '%s\n' "$base"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Metadata
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
@@ -156,7 +176,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') }}
-          labels: ${{ inputs.labels }}
+          labels: ${{ steps.base.outputs.labels }}
 
       # REVISION is the OCI-standard git-SHA arg
       # (org.opencontainers.image.revision); VERSION mirrors the tag policy.

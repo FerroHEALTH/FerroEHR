@@ -85,6 +85,27 @@ pub struct CommitterIdentity {
     /// Whether the caller is a system caller (an OAuth client-credentials
     /// client acting for no person).
     pub system: bool,
+    /// The `[[authz.system_client]]` table that declares a system caller's
+    /// client, when one does; a system caller without one commits nothing
+    /// into an EHR.
+    pub system_client: Option<std::sync::Arc<crate::config::clients::SystemClient>>,
+    /// What a verified external caller of a `federation` issuer may commit
+    /// under the agreement it was admitted under; `None` for any other caller.
+    pub external: Option<ExternalCaller>,
+}
+
+/// What a verified external caller may commit under its
+/// `[[authz.federation.agreement]]`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExternalCaller {
+    /// A verified external person, who commits a COMPOSITION only of a
+    /// template the agreement's `writes` lists.
+    Person {
+        /// The agreement's `writes`.
+        writes: Vec<String>,
+    },
+    /// An external organisation, whose access is read-only (EHDS Art. 13(4)).
+    Organisation,
 }
 
 task_local! {
@@ -126,6 +147,37 @@ pub fn resolve(stated: &PartyProxy) -> Result<PartyProxy, ServiceError> {
     }
     refuse_impersonation(stated)?;
     Ok(stated.clone())
+}
+
+/// Refuses an attestation by a caller who is no bound health professional.
+///
+/// An `ATTESTATION` is "an explicit signing by one healthcare agent of
+/// particular content" (RM `UML/classes/org.openehr.rm.common.attestation.adoc`;
+/// RM common master04 §Attestation), so only a caller bound to a `PERSON`
+/// with the professional marker attests; a patient, a representative, a
+/// system caller and an unbound or external caller do not. The RM does not
+/// say "only": limiting the healthcare agent to a bound professional is our
+/// reading. With no authenticated caller there is no one to judge.
+///
+/// # Errors
+/// [`ServiceError::Forbidden`] (`403`) for an attestation by any other caller.
+pub fn refuse_attesting() -> Result<(), ServiceError> {
+    let Some(identity) = current_committer() else {
+        return Ok(());
+    };
+    let professional = !identity.person
+        && !identity.representative
+        && !identity.system
+        && identity
+            .party
+            .as_ref()
+            .is_some_and(|bound| bound.markers.professional);
+    if professional {
+        return Ok(());
+    }
+    Err(ServiceError::not_permitted(
+        "an attestation is an explicit signing by a healthcare agent, so only a caller bound          to a professional PERSON attests (RM common master04 §Attestation)",
+    ))
 }
 
 /// Refuses a stated committer that the server can show is not the request's
@@ -272,6 +324,8 @@ mod tests {
             representative: false,
             bound: None,
             system: false,
+            system_client: None,
+            external: None,
         }
     }
 

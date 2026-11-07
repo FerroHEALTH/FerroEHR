@@ -125,6 +125,15 @@ services:
       # The realm's service client, whose system/aql-* grant counts only when
       # it is named here (SMART on openEHR §Resource Scopes).
       FERROEHR__SMART__BACKEND_CLIENTS: ferroehr-service
+      # The service client is declared as a system client, the only way a
+      # caller acting for no person commits into an EHR. It writes no
+      # COMPOSITION here (no `writes`), so it creates EHRs and reads; the
+      # provider is the example id the base quickstart acts for.
+      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__ISSUER: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
+      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__CLIENT_ID: ferroehr-service
+      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__PROVIDER__ISSUER: urn:oid:2.999.7.9
+      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__PROVIDER__ID: quickstart
+      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__ORIGINS: relay
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 

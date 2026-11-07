@@ -173,18 +173,9 @@ impl Authenticator {
             {
                 gate = gate.with_basic(Arc::new(store));
             }
-            let backend = config.smart.backend_clients.clone();
-            let patient = config.smart.patient_issuers.clone();
             gate = gate
                 .with_realm(ferroehr::config::auth::realm(&config.auth.shared))
-                .with_honoured(move |caller| Honoured {
-                    backend: caller
-                        .client_id()
-                        .is_some_and(|client| backend.iter().any(|listed| listed == client)),
-                    patient: caller
-                        .issuer()
-                        .is_some_and(|issuer| patient.iter().any(|listed| listed == issuer)),
-                });
+                .with_honoured(honoured(config));
         }
         Ok(Arc::new(Self {
             enabled: config.auth.shared.enabled,
@@ -193,7 +184,23 @@ impl Authenticator {
             primary,
             role_issuers: RoleIssuers::of(config),
             party,
+            declared: super::declared::Declared::of(config),
         }))
+    }
+}
+
+/// Returns what `[smart]` honours for a caller: a `backend_clients` client
+/// and a `patient_issuers` issuer.
+fn honoured(config: &AppConfig) -> impl Fn(&Caller) -> Honoured + Send + Sync + 'static {
+    let backend = config.smart.backend_clients.clone();
+    let patient = config.smart.patient_issuers.clone();
+    move |caller| Honoured {
+        backend: caller
+            .client_id()
+            .is_some_and(|client| backend.iter().any(|listed| listed == client)),
+        patient: caller
+            .issuer()
+            .is_some_and(|issuer| patient.iter().any(|listed| listed == issuer)),
     }
 }
 

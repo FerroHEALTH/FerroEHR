@@ -89,20 +89,22 @@ patch milestone — the remedy is only real once a tag republishes the image.
 
 ## The base-bump pin-site checklist (postgres)
 
-Machine-enforced agreement (`scripts/checks/image-labels.sh`, per-PR in CI):
-the Dockerfile `FROM` digest ↔ its `base.name`/`base.digest` LABELs ↔ the
-`containers.yml` labels ↔ every workflow's postgres service pins (the guard
-scans `.github/workflows/*.yml`, so a new lane's pin is covered the day it
-lands; it read `ci.yml` alone until #2775 and missed `sonar.yml`). Everything else
+Machine-enforced (`scripts/checks/image-labels.sh`, per-PR in CI): the
+Dockerfile `FROM` is the one place the digest is written. `base.name` and
+`base.digest` are read from it by `build-image.yml` (#4953), and every
+workflow's PostgreSQL service runs `${{ needs.<job>.outputs.postgres_image }}`,
+which a job reads from it with `scripts/lib/base-image.sh ref` and holds to
+`name@sha256:<digest>` (#5112); each such line carries its zizmor
+`unpinned-images` suppression (owner decision on #5112). The guard scans
+`.github/workflows/*.yml` and refuses a hand-written service pin anywhere. Everything else
 is a sweep — run `grep -rn '18\.<old-patch>'` over the tree and expect to
 touch:
 
-- `docker/postgres/Dockerfile` — `FROM` tag+digest, header comment, both
-  `base.*` LABELs (the digest is the MANIFEST-LIST digest:
+- `docker/postgres/Dockerfile` — `FROM` tag+digest and the header comment
+  (the digest is the MANIFEST-LIST digest:
   `docker buildx imagetools inspect postgres:<tag>` → `Digest:`)
-- `.github/workflows/containers.yml` — postgres lane comment + both label lines
-- `.github/workflows/ci.yml` — its service-container pin + the job heading
-- `.github/workflows/sonar.yml` — its own service-container pin
+- `.github/workflows/containers.yml` — the postgres lane comment
+- `.github/workflows/ci.yml` — the test job heading
 - `docs/VERSIONS.md` §Database, `docs/postgres-features.md` §Versioning note
   (latest-patch version + date, from postgresql.org — never copied forward),
   root `CLAUDE.md` §Tech stack, `docs/architecture.md` §PostgreSQL 18,

@@ -100,6 +100,12 @@ openEHR EHR id of the launch context in the token's `ehrId` claim
 `user/` and `system/` grants carry no such binding, and when a `user/` grant
 covers the same operation the wider grant wins.
 
+A `system/` grant belongs to a backend client acting for no person. A token
+its issuer's profile marks app-only holds `system/` grants alone: one that
+carries a `user/` or `patient/` scope is refused with `403`, because no person
+stands behind it. Such a client commits only as a declared
+`[[authz.system_client]]` ([Who the caller is](identity-providers.md#who-the-caller-is)).
+
 ## The discovery document
 
 With `[smart] enabled = true`, the server serves the SMART configuration

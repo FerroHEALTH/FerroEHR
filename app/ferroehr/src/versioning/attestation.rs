@@ -413,6 +413,7 @@ impl AttestationInput {
                     .with_invariant("AUDIT_DETAILS.System_id_valid"),
             ));
         }
+        crate::versioning::committer::refuse_attesting()?;
         let committer = check_committer(&update.committer)?;
         Ok(Self {
             parts: AttestationParts {

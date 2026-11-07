@@ -401,7 +401,10 @@ A service with no user behind it takes the client-credentials grant with
 `ferroehr-service`. Its service account holds `USER`, so the token reaches the
 clinical API and the admin routes refuse it with `403`. Its `system/aql-*`
 grant counts because the overlay names the client in `[smart] backend_clients`
-(`FERROEHR__SMART__BACKEND_CLIENTS`):
+(`FERROEHR__SMART__BACKEND_CLIENTS`). It creates EHRs because the overlay
+declares it as an `[[authz.system_client]]` (`FERROEHR__AUTHZ__SYSTEM_CLIENT__0__*`),
+the only way a caller acting for no person commits; it lists no `writes`, so it
+commits no COMPOSITION:
 
 ```shell
 TOKEN=$(curl -s -d client_id=ferroehr-service -d client_secret=ferroehr-service-quickstart-secret \

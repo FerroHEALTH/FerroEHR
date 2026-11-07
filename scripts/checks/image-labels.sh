@@ -33,7 +33,12 @@
 #
 # Ownership, which is what the checks below encode:
 #   build-INDEPENDENT (title, description, url, documentation, source, vendor,
-#     authors, licenses, base.name, base.digest) — both places, identical values
+#     authors, licenses) — both places, identical values
+#   base.name, base.digest — NEITHER place: the reusable build-image.yml lane
+#     reads them from the runtime stage's digest-pinned FROM through
+#     scripts/lib/base-image.sh, so the FROM Dependabot moves is the one place
+#     the base digest is written (#4953). A hand-written copy is refused, since
+#     it is the copy a bump leaves behind.
 #   build-DEPENDENT (created, version, revision, ref.name) — the workflow only,
 #     since a Dockerfile cannot know them
 #   ref.name — deliberately unset; see the waiver below
@@ -58,7 +63,8 @@ ferroehr-postgres:docker/postgres/Dockerfile"
 BUILD_WORKFLOW=.github/workflows/build-image.yml
 
 # The keys both places must declare, identically.
-SHARED="title description url documentation source vendor authors licenses base.name base.digest"
+SHARED="title description url documentation source vendor authors licenses"
+DERIVED="base.name base.digest"
 
 failures=0
 report() { printf '%s\n' "$*" >&2; failures=$((failures + 1)); }
@@ -124,51 +130,58 @@ for entry in $IMAGES; do
     done
   done
 
-  # base.name/base.digest must match the runtime stage's actual FROM pin, or the
-  # image claims a parent it was not built on — worse than claiming none.
-  from=$(grep -E '^FROM [^ ]+@sha256:' "$dockerfile" | tail -1 || true)
-  if [[ -z "$from" ]]; then
-    report "image-labels: $dockerfile has no digest-pinned FROM to check base.* against"
-  else
-    ref=$(printf '%s' "$from" | awk '{print $2}')
-    want_name=${ref%@*}
-    want_digest=${ref#*@}
-    got_name=$(dockerfile_label "$dockerfile" base.name || true)
-    got_digest=$(dockerfile_label "$dockerfile" base.digest || true)
-    [[ "$got_name" = "$want_name" ]] \
-      || report "image-labels: $dockerfile base.name is '$got_name', but its FROM is '$want_name'"
-    [[ "$got_digest" = "$want_digest" ]] \
-      || report "image-labels: $dockerfile base.digest is '$got_digest', but its FROM pins '$want_digest'"
-  fi
-done
-
-# Every service container must run the exact base the postgres image is built
-# on — a drifted service pin tests against different bytes than the image ships
-# (found as a checklist item in #2408/#2410, enforced here since).
-#
-# EVERY workflow is scanned, not a named list: the check was written against
-# ci.yml alone and sonar.yml's identical service pin — a second full instrumented
-# suite against the same database — was never covered (#2775). A list would have
-# to be extended by whoever adds the next service container, which is exactly the
-# person who does not know this guard exists.
-pg_from=$(grep -E '^FROM postgres:' docker/postgres/Dockerfile | awk '{print $2}' || true)
-if [[ -z "$pg_from" ]]; then
-  report "image-labels: docker/postgres/Dockerfile has no 'FROM postgres:' pin"
-else
-  found_any=0
-  for wf in .github/workflows/*.yml; do
-    pins=$(grep -Eo 'image: postgres:[^[:space:]]+' "$wf" | sed 's/^image: //' | sort -u || true)
-    [[ -n "$pins" ]] || continue
-    found_any=1
-    for pin in $pins; do
-      [[ "$pin" = "$pg_from" ]] \
-        || report "image-labels: $wf pins service '$pin', but docker/postgres/Dockerfile FROM is '$pg_from'"
+  # base.name/base.digest are derived from the runtime stage's FROM pin at
+  # build time, so that pin must be readable and no copy may be written down.
+  bash scripts/lib/base-image.sh labels "$dockerfile" >/dev/null \
+    || report "image-labels: $dockerfile has no digest-pinned FROM to derive base.* from"
+  for key in $DERIVED; do
+    d=$(dockerfile_label "$dockerfile" "$key" || true)
+    [[ -z "$d" ]] \
+      || report "image-labels: $dockerfile declares org.opencontainers.image.$key; it is read from the FROM pin at build time, so declare it nowhere"
+    for WORKFLOW in $WORKFLOWS; do
+      w=$(workflow_label "$image" "$key" || true)
+      [[ -z "$w" ]] \
+        || report "image-labels: $WORKFLOW declares org.opencontainers.image.$key for $image; build-image.yml reads it from the FROM pin, so declare it nowhere"
     done
   done
-  # A guard that finds nothing to check is not passing, it is vacuous.
-  [[ "$found_any" -eq 1 ]] \
-    || report "image-labels: no workflow declares a postgres service pin — this check verified nothing"
+done
+
+# Every PostgreSQL service container runs the base the postgres image is built
+# on, read from docker/postgres/Dockerfile's FROM by the job it needs (#5112),
+# so a Dependabot bump of that FROM moves every service with it. A drifted
+# service pin would test against different bytes than the image ships
+# (#2408/#2410). EVERY workflow is scanned, not a named list (#2775): a literal
+# pin is refused wherever it appears, a derived image must name its producer,
+# and the producer must read the FROM and hold the value to name@sha256, since
+# zizmor cannot see through the expression and each one carries its
+# unpinned-images suppression.
+if ! bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile >/dev/null; then
+  report "image-labels: docker/postgres/Dockerfile has no digest-pinned FROM for the services to run"
 fi
+found_any=0
+for wf in .github/workflows/*.yml; do
+  literal=$(grep -Eo 'image: postgres:[^[:space:]]+' "$wf" | sort -u || true)
+  [[ -z "$literal" ]] \
+    || report "image-labels: $wf pins a PostgreSQL service by hand ($literal); take \${{ needs.<job>.outputs.postgres_image }} from the job that reads docker/postgres's FROM"
+  derived=$(grep -Ec 'image: \$\{\{ needs\.[a-z_-]+\.outputs\.postgres_image \}\}' "$wf" || true)
+  [[ "$derived" -gt 0 ]] || continue
+  found_any=1
+  suppressed=$(grep -Ec 'image: \$\{\{ needs\.[a-z_-]+\.outputs\.postgres_image \}\} # zizmor: ignore\[unpinned-images\] .+' "$wf" || true)
+  [[ "$suppressed" -eq "$derived" ]] \
+    || report "image-labels: $wf has $derived derived PostgreSQL service image(s) and $suppressed with its unpinned-images suppression and reason"
+  # shellcheck disable=SC2016 # the literal workflow text searched for
+  grep -qF 'postgres_image: ${{ steps.postgres.outputs.image }}' "$wf" \
+    || report "image-labels: $wf runs a derived PostgreSQL service but no job publishes postgres_image from a step with id postgres"
+  # shellcheck disable=SC2016 # the literal workflow text searched for
+  grep -qF 'image="$(bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile)"' "$wf" \
+    || report "image-labels: $wf derives the PostgreSQL service image from something other than docker/postgres's FROM"
+  # shellcheck disable=SC2016 # the literal workflow text searched for
+  grep -qF '[[ "$image" =~ ^[^@[:space:]]+@sha256:[0-9a-f]{64}$ ]]' "$wf" \
+    || report "image-labels: $wf does not hold the derived PostgreSQL service image to name@sha256:<digest>"
+done
+# A guard that finds nothing to check is not passing, it is vacuous.
+[[ "$found_any" -eq 1 ]] \
+  || report "image-labels: no workflow runs a derived PostgreSQL service image; this check verified nothing"
 
 # Annotations must reach the INDEX, which is the only place GHCR reads a package
 # description from. The publishing mechanics live ONCE in the reusable
@@ -180,6 +193,14 @@ levels=$(grep -c 'DOCKER_METADATA_ANNOTATIONS_LEVELS: index,manifest' "$BUILD_WO
 annots=$(grep -c 'annotations: ${{ steps.meta.outputs.annotations }}' "$BUILD_WORKFLOW" || true)
 [[ "$annots" -eq 1 ]] \
   || report "image-labels: expected the one reusable build step passing the annotations output in $BUILD_WORKFLOW, found $annots"
+# shellcheck disable=SC2016 # the literal workflow text being searched for
+derive=$(grep -c 'bash scripts/lib/base-image.sh labels "$DOCKERFILE"' "$BUILD_WORKFLOW" || true)
+[[ "$derive" -eq 1 ]] \
+  || report "image-labels: expected the one step deriving base.* from the Dockerfile in $BUILD_WORKFLOW, found $derive"
+# shellcheck disable=SC2016 # ${{ … }} is the literal Actions expression being searched for
+fed=$(grep -c 'labels: ${{ steps.base.outputs.labels }}' "$BUILD_WORKFLOW" || true)
+[[ "$fed" -eq 1 ]] \
+  || report "image-labels: expected the metadata step to take the derived labels in $BUILD_WORKFLOW, found $fed"
 for WORKFLOW in $WORKFLOWS; do
   lanes=$(grep -c 'uses: ./.github/workflows/build-image.yml' "$WORKFLOW" || true)
   [[ "$lanes" -eq 3 ]] \

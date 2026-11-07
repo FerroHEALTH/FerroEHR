@@ -43,15 +43,40 @@ env:
   FERROEHR__USAGE_REPORT__ENABLED: "false"
 
 jobs:
+  # The image docker/postgres builds on, read from its FROM, the one place a
+  # Dependabot bump changes; the service below runs it (#5112).
+  postgres-image:
+    name: postgres image
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      postgres_image: ${{ steps.postgres.outputs.image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: postgres
+        run: |
+          set -euo pipefail
+          image="$(bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile)"
+          [[ "$image" =~ ^[^@[:space:]]+@sha256:[0-9a-f]{64}$ ]] || {
+            echo "::error::docker/postgres/Dockerfile resolves to '$image', not name@sha256:<digest>"
+            exit 1
+          }
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
   stress:
     name: stress ${{ inputs.package }}
+    needs: postgres-image
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
       contents: read
     services:
       postgres:
-        image: postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
+        image: ${{ needs.postgres-image.outputs.postgres_image }} # zizmor: ignore[unpinned-images] the digest-pinned FROM of docker/postgres, checked name@sha256 where it is read
         env:
           POSTGRES_USER: openehr
           POSTGRES_PASSWORD: openehr
