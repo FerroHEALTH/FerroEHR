@@ -71,6 +71,10 @@ jobs:
         run: |
           set -euo pipefail
           image="$(bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile)"
+          [[ "$image" =~ ^[^@[:space:]]+@sha256:[0-9a-f]{64}$ ]] || {
+            echo "::error::docker/postgres/Dockerfile resolves to '$image', not name@sha256:<digest>"
+            exit 1
+          }
           echo "image=$image" >> "$GITHUB_OUTPUT"
       # The shard list and its divisor, both from COVERAGE_SHARDS, so the matrix
       # and the `--partition n/N` can never disagree.
@@ -149,7 +153,7 @@ jobs:
         shard: ${{ fromJSON(needs.changes.outputs.shards) }}
     services:
       postgres:
-        image: ${{ needs.changes.outputs.postgres_image }}
+        image: ${{ needs.changes.outputs.postgres_image }} # zizmor: ignore[unpinned-images] the digest-pinned FROM of docker/postgres, checked name@sha256 where it is read
         env:
           POSTGRES_USER: openehr
           POSTGRES_PASSWORD: openehr

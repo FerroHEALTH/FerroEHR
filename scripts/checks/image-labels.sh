@@ -146,33 +146,42 @@ for entry in $IMAGES; do
   done
 done
 
-# Every service container must run the exact base the postgres image is built
-# on — a drifted service pin tests against different bytes than the image ships
-# (found as a checklist item in #2408/#2410, enforced here since).
-#
-# EVERY workflow is scanned, not a named list: the check was written against
-# ci.yml alone and sonar.yml's identical service pin — a second full instrumented
-# suite against the same database — was never covered (#2775). A list would have
-# to be extended by whoever adds the next service container, which is exactly the
-# person who does not know this guard exists.
-pg_from=$(grep -E '^FROM postgres:' docker/postgres/Dockerfile | awk '{print $2}' || true)
-if [[ -z "$pg_from" ]]; then
-  report "image-labels: docker/postgres/Dockerfile has no 'FROM postgres:' pin"
-else
-  found_any=0
-  for wf in .github/workflows/*.yml; do
-    pins=$(grep -Eo 'image: postgres:[^[:space:]]+' "$wf" | sed 's/^image: //' | sort -u || true)
-    [[ -n "$pins" ]] || continue
-    found_any=1
-    for pin in $pins; do
-      [[ "$pin" = "$pg_from" ]] \
-        || report "image-labels: $wf pins service '$pin', but docker/postgres/Dockerfile FROM is '$pg_from'"
-    done
-  done
-  # A guard that finds nothing to check is not passing, it is vacuous.
-  [[ "$found_any" -eq 1 ]] \
-    || report "image-labels: no workflow declares a postgres service pin — this check verified nothing"
+# Every PostgreSQL service container runs the base the postgres image is built
+# on, read from docker/postgres/Dockerfile's FROM by the job it needs (#5112),
+# so a Dependabot bump of that FROM moves every service with it. A drifted
+# service pin would test against different bytes than the image ships
+# (#2408/#2410). EVERY workflow is scanned, not a named list (#2775): a literal
+# pin is refused wherever it appears, a derived image must name its producer,
+# and the producer must read the FROM and hold the value to name@sha256, since
+# zizmor cannot see through the expression and each one carries its
+# unpinned-images suppression.
+if ! bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile >/dev/null; then
+  report "image-labels: docker/postgres/Dockerfile has no digest-pinned FROM for the services to run"
 fi
+found_any=0
+for wf in .github/workflows/*.yml; do
+  literal=$(grep -Eo 'image: postgres:[^[:space:]]+' "$wf" | sort -u || true)
+  [[ -z "$literal" ]] \
+    || report "image-labels: $wf pins a PostgreSQL service by hand ($literal); take \${{ needs.<job>.outputs.postgres_image }} from the job that reads docker/postgres's FROM"
+  derived=$(grep -Ec 'image: \$\{\{ needs\.[a-z_-]+\.outputs\.postgres_image \}\}' "$wf" || true)
+  [[ "$derived" -gt 0 ]] || continue
+  found_any=1
+  suppressed=$(grep -Ec 'image: \$\{\{ needs\.[a-z_-]+\.outputs\.postgres_image \}\} # zizmor: ignore\[unpinned-images\] .+' "$wf" || true)
+  [[ "$suppressed" -eq "$derived" ]] \
+    || report "image-labels: $wf has $derived derived PostgreSQL service image(s) and $suppressed with its unpinned-images suppression and reason"
+  # shellcheck disable=SC2016 # the literal workflow text searched for
+  grep -qF 'postgres_image: ${{ steps.postgres.outputs.image }}' "$wf" \
+    || report "image-labels: $wf runs a derived PostgreSQL service but no job publishes postgres_image from a step with id postgres"
+  # shellcheck disable=SC2016 # the literal workflow text searched for
+  grep -qF 'image="$(bash scripts/lib/base-image.sh ref docker/postgres/Dockerfile)"' "$wf" \
+    || report "image-labels: $wf derives the PostgreSQL service image from something other than docker/postgres's FROM"
+  # shellcheck disable=SC2016 # the literal workflow text searched for
+  grep -qF '[[ "$image" =~ ^[^@[:space:]]+@sha256:[0-9a-f]{64}$ ]]' "$wf" \
+    || report "image-labels: $wf does not hold the derived PostgreSQL service image to name@sha256:<digest>"
+done
+# A guard that finds nothing to check is not passing, it is vacuous.
+[[ "$found_any" -eq 1 ]] \
+  || report "image-labels: no workflow runs a derived PostgreSQL service image; this check verified nothing"
 
 # Annotations must reach the INDEX, which is the only place GHCR reads a package
 # description from. The publishing mechanics live ONCE in the reusable
