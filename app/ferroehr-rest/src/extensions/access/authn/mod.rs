@@ -48,6 +48,7 @@ use axum::extract::{FromRequestParts, MatchedPath, OriginalUri, Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use ferrohealth_smart::guard::Gate;
+use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
 use ferrohealth_smart::resource::introspection::Introspector;
@@ -80,6 +81,8 @@ pub(crate) struct AuthLayer {
     /// The methods each route serves, so an unserved one is answered `405`
     /// before any check judges the caller.
     pub(crate) served: Arc<ServedMethods>,
+    /// The service a representative's subject is resolved to its EHR through.
+    pub(crate) service: Arc<ferroehr::service::FerroEhrService>,
 }
 
 /// The authenticated caller.
@@ -108,6 +111,9 @@ pub struct Principal {
     /// is a listed backend client and whether its issuer's `patient/` grants
     /// count (`[smart] backend_clients`, `[smart] patient_issuers`).
     pub honoured: Honoured,
+    /// The EHR a bound representative is confined to, `None` for every other
+    /// caller (#5086).
+    pub represented: Option<RepresentedEhr>,
 }
 
 impl Principal {
@@ -143,8 +149,21 @@ impl Principal {
             method,
             access,
             honoured,
+            represented: None,
         }
     }
+}
+
+/// The EHR a bound representative is confined to: the one whose
+/// `EHR_STATUS.subject.external_ref` names the subject the token asserts and the
+/// party source records a live representation of.
+///
+/// No openEHR spec governs resolving a login to a party: our own design.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RepresentedEhr {
+    /// That EHR's id, or `None` when no EHR names the subject, so the
+    /// representative reaches no EHR.
+    pub ehr_id: Option<String>,
 }
 
 /// The mechanism that authenticated a [`Principal`].
@@ -417,6 +436,11 @@ impl Authenticator {
             None => access,
         };
         let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
+        // NOTE: no openEHR spec governs resolving a login to a party, our own design: with
+        // no binding no representation is recorded, so a representative is refused.
+        if self.party.is_none() && matches!(caller.kind(), CallerKind::Representative { .. }) {
+            return Err(party::unrecorded());
+        }
         if let Some(refusal) = party::kind_refusal(caller) {
             return Err(refusal);
         }
@@ -502,7 +526,14 @@ pub(crate) async fn middleware(
     let outcome = auth.authenticate(&parts).await;
     let mut req = Request::from_parts(parts, body);
     match outcome {
-        Ok(Authenticated { principal, fresh }) => {
+        Ok(Authenticated {
+            mut principal,
+            fresh,
+        }) => {
+            match party::represented_ehr(&layer.service, &principal.access).await {
+                Ok(represented) => principal.represented = represented,
+                Err(e) => return refusal_response(auth, req.headers(), &e),
+            }
             // NOTE: RFC 9110 §15.5.6; whether a method is served is the
             // resource's property, so no grant changes the `405`.
             if let Some(mut refusal) = layer.served.refusal(
@@ -1728,6 +1759,12 @@ mod tests {
                 Vec::new(),
             )),
             served: Arc::new(ServedMethods::default()),
+            service: Arc::new(ferroehr::service::FerroEhrService::new(
+                &ferroehr::db::domain::DomainPools::from_shared(
+                    &sqlx::postgres::PgPoolOptions::new()
+                        .connect_lazy_with(sqlx::postgres::PgConnectOptions::new()),
+                ),
+            )),
         };
         let app = axum::Router::new()
             .route("/x", axum::routing::get(|| async { "ok" }))

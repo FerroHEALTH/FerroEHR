@@ -99,6 +99,7 @@ mod protocol_tail;
 mod query_ehr_id_header;
 mod query_refusals_http;
 mod rbac_e2e;
+mod representation_http;
 mod sandbox_seed_http;
 mod scim_protocol;
 mod served_openapi;
