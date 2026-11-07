@@ -65,12 +65,18 @@ pub enum BindingCode {
     RefusedTrcPatientMismatch,
     /// Refused: a contact-point patient-data request carries no TRC.
     RefusedTrcMissing,
+    /// Refused: a system caller holds a `user/` or `patient/` scope.
+    RefusedSystemPersonalScope,
+    /// Refused: no federation agreement of the issuer admits the accessor.
+    RefusedNoAgreement,
+    /// Refused: an external caller holds a scope its agreement does not read.
+    RefusedScopeBeyondAgreement,
 }
 
 impl BindingCode {
     /// Every code, in the order the `ck_audit_event_binding` constraint lists
     /// them.
-    pub const ALL: [Self; 19] = [
+    pub const ALL: [Self; 22] = [
         Self::Bound,
         Self::Provisional,
         Self::External,
@@ -90,6 +96,9 @@ impl BindingCode {
         Self::RefusedExternalIncomplete,
         Self::RefusedTrcPatientMismatch,
         Self::RefusedTrcMissing,
+        Self::RefusedSystemPersonalScope,
+        Self::RefusedNoAgreement,
+        Self::RefusedScopeBeyondAgreement,
     ];
 
     /// Whether a refusal under this code is a security event, recorded once
@@ -126,6 +135,9 @@ impl BindingCode {
             Self::RefusedExternalIncomplete => "refused-external-incomplete",
             Self::RefusedTrcPatientMismatch => "refused-trc-patient-mismatch",
             Self::RefusedTrcMissing => "refused-trc-missing",
+            Self::RefusedSystemPersonalScope => "refused-system-personal-scope",
+            Self::RefusedNoAgreement => "refused-no-agreement",
+            Self::RefusedScopeBeyondAgreement => "refused-scope-beyond-agreement",
         }
     }
 

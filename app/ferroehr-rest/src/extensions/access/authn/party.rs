@@ -367,10 +367,10 @@ pub(super) fn kind_refusal(caller: &Caller) -> Option<AuthError> {
         .scope()
         .iter()
         .any(|scope| scope.starts_with("user/") || scope.starts_with("patient/"));
-    (matches!(caller.kind(), CallerKind::System) && personal).then(|| {
-        AuthError::Forbidden(
-            "a system caller acts for no person, so it holds system/ scopes only".to_owned(),
-        )
+    (matches!(caller.kind(), CallerKind::System) && personal).then(|| AuthError::KindRefused {
+        code: "refused-system-personal-scope",
+        message: "a system caller acts for no person, so it holds system/ scopes only".to_owned(),
+        principal: None,
     })
 }
 

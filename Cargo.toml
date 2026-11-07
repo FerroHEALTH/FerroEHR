@@ -223,9 +223,10 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # The 0.9 line classifies every caller by its issuer's `kind` and profile and
 # binds a person's login to a party (`party`, `[[auth.party]]`), with the
 # Entra ID groups overage adapter (`idp-entra`); 0.9.1 refuses a `system/`
-# scope on a Basic user (GHSA-jhg2-jwjp-hq74). Verified on crates.io
-# 2026-11-06.
-ferrohealth-smart = { version = "=0.9.1", default-features = false, features = ["fetch", "idp-entra"] }
+# scope on a Basic user (GHSA-jhg2-jwjp-hq74), and 0.9.3 reads a federation
+# token's consent decision reference and correlation id. Verified on
+# crates.io 2026-11-07.
+ferrohealth-smart = { version = "=0.9.3", default-features = false, features = ["fetch", "idp-entra"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroAUTH, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
