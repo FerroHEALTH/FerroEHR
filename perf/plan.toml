@@ -1,0 +1,93 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# The plan of the performance gate, read by ferrohealth-perf through
+# scripts/perf/gate.sh (docs/release.md, "The performance gate"). The gate
+# seeds the server and fills each upper-case placeholder between at signs with
+# what the seed created, so the committed plan names no id. The request set
+# reads one seeded EHR whose content never changes and writes into another, so
+# the reads are as fast at the end of the window as at its start.
+
+[idle]
+duration_secs = 60
+max_cpu_percent = 2.0
+max_transactions_per_second = 5.0
+settle_secs = 11
+
+[load]
+rate = 20.0
+warmup_secs = 10
+duration_secs = 60
+max_in_flight = 256
+saturation_ms = 5000
+timeout_ms = 10000
+max_lag_ms = 10
+sample_ms = 100
+settle_secs = 11
+
+[[requests]]
+group = "ehr_create"
+method = "POST"
+path = "/ferroehr/rest/openehr/v1/ehr"
+status = 201
+headers = { authorization = "@AUTH@", prefer = "return=minimal" }
+
+[[requests]]
+group = "ehr_read"
+method = "GET"
+path = "/ferroehr/rest/openehr/v1/ehr/@READ_EHR@"
+status = 200
+headers = { authorization = "@AUTH@", accept = "application/json" }
+
+[[requests]]
+group = "composition_commit"
+method = "POST"
+path = "/ferroehr/rest/openehr/v1/ehr/@WRITE_EHR@/composition"
+status = 201
+body = '''@COMPOSITION@'''
+headers = { authorization = "@AUTH@", content-type = "application/json", prefer = "return=minimal" }
+
+[[requests]]
+group = "composition_read"
+method = "GET"
+path = "/ferroehr/rest/openehr/v1/ehr/@READ_EHR@/composition/@READ_COMPOSITION@"
+status = 200
+headers = { authorization = "@AUTH@", accept = "application/json" }
+
+[[requests]]
+group = "aql_order_by"
+method = "POST"
+path = "/ferroehr/rest/openehr/v1/query/aql"
+status = 200
+body = '''@AQL_ORDER_BY@'''
+headers = { authorization = "@AUTH@", content-type = "application/json", accept = "application/json" }
+
+[[requests]]
+group = "aql_unordered"
+method = "POST"
+path = "/ferroehr/rest/openehr/v1/query/aql"
+status = 200
+body = '''@AQL_UNORDERED@'''
+headers = { authorization = "@AUTH@", content-type = "application/json", accept = "application/json" }
+
+[[requests]]
+group = "template_upload"
+method = "POST"
+path = "/ferroehr/rest/openehr/v1/definition/template/adl1.4"
+status = 409
+body = '''@TEMPLATE@'''
+headers = { authorization = "@AUTH@", content-type = "application/xml" }
+
+[[requests]]
+group = "party_read"
+method = "GET"
+path = "/ferroehr/rest/openehr/v1/demographic/person/@READ_PARTY@"
+status = 200
+headers = { authorization = "@AUTH@", accept = "application/json" }
+
+[[requests]]
+group = "party_version_read"
+method = "GET"
+path = "/ferroehr/rest/openehr/v1/demographic/versioned_party/@READ_PARTY_VO@"
+status = 200
+headers = { authorization = "@AUTH@", accept = "application/json" }

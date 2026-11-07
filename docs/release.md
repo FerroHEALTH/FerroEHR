@@ -98,3 +98,58 @@ Without `-f publish=true` the dispatch is a dry run that reports whether the
 published chart holds the same files. After a recovery, close the milestone the
 release run left open:
 `GITHUB_REPOSITORY=FerroHEALTH/FerroEHR bash scripts/release/milestone.sh close vX.Y.Z`.
+
+## The performance gate
+
+Every pull request that touches the server's build, its images or the gate
+runs the `perf` job in `ci.yml` (#5081), and the release's `performance` job
+runs the same gate on the release image. `scripts/perf/gate.sh` starts the
+server and the FerroEHR PostgreSQL image in containers, seeds them, and runs
+`ferrohealth-perf` (FerroSYS #249, pinned in `docs/VERSIONS.md`) in two
+phases:
+
+- **Idle:** 60 seconds with no requests. The server's CPU stays under 2 % of one
+  core, and its database commits and rolls back fewer than 5 transactions a
+  second, whatever the background workers do. FerroPIX #490 ran about 8,000.
+- **Load:** the request set in `perf/plan.toml`, sent at a fixed rate. It
+  covers EHR create and read, composition commit and read, the lab-results
+  AQL query with and without `ORDER BY`, a template upload, and two
+  demographic reads. Each group's p50, p95 and p99 latency, the throughput,
+  the peak memory, the CPU time per request and the transactions per request
+  are compared with `perf/baseline.toml`.
+
+The job first runs `gate.sh self-test`. It polls a table with no wait during
+the idle phase, and the self-test passes only when the gate fails that run on
+`idle.transactions_per_second`.
+
+### Reading the report
+
+The job summary and the `perf-report` artifact (`target/perf/summary.md`,
+`latest.json`) open with the verdict. A failed run lists its breaches first:
+each one names the metric, the measured value, the baseline or limit, and the
+threshold it crossed. A load metric fails when it is worse than the baseline
+by more than the larger of its tolerance and its A/A noise floor. A run that
+cannot be judged exits 2 and says why: no baseline, a baseline of another
+plan, a generator that lagged, or a window whose second half was not as fast
+as its first. A request answered with a status other than the plan's
+expected one fails the run too. Locally, `PERF_SERVER`, `PERF_DATABASE` and
+`PERF_TARGET` point the script at a server you started yourself (see the
+script's header).
+
+### Writing the baseline
+
+The load baseline is kept per CPU model of the runner pool the gate runs on
+(`ubuntu-26.04`), because one model's latencies say nothing about another's.
+`ferrohealth-perf` 0.2.0 adds that layout, and until it is on crates.io no load
+baseline is committed (#5095). A run then judges the idle limits, which are
+absolute, and reports the load phase without judging it: a run whose only
+reason it could not be judged is the missing baseline passes, and every other
+reason fails it.
+
+A baseline is measured on the runner, never on a developer machine:
+`scripts/perf/gate.sh update ferroehr:perf ferroehr-postgres:perf` in the
+`perf` job writes `perf/baseline.toml`, uploaded in the `perf-report`
+artifact, and you commit it in a change of its own. `--update` only lowers a
+metric on the same plan. Raising one is a hand edit in a change that says
+why. Changing the rate, the windows or the request set writes the baseline
+afresh.
