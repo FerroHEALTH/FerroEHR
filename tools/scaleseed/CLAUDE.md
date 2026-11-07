@@ -21,6 +21,14 @@ commit path writes, checks it, and measures it (#5090). It is never shipped.
   itself in `scaleseed.chunk`, so a stopped `seed` resumes. A larger target is
   a second `seed` with the larger numbers. The bookkeeping lives in its own
   `scaleseed` schema, beside the product's.
+- **`lookup` times the login lookup (#5087).** It seeds the binding side
+  table with bound persons, groups and memberships in the rows the commit path
+  derives (keys derived from each ordinal, so a seeded store is asked for keys
+  that exist), runs `VACUUM (ANALYZE)`, and times `LocalPartySource::read`,
+  the lookup the server makes, against the 2 ms p99 budget. `--seed-only` seeds
+  and times nothing; `scripts/perf/party-lookup.sh` uses it on a quickstart
+  store. A store already holding the seed is reused, one of another size is
+  refused.
 - **Keep each step's database removable.** Seed into a database of its own,
   and drop it when its numbers are recorded.
 - **Gates:** `cargo clippy -p scaleseed --all-targets -- -D warnings`,

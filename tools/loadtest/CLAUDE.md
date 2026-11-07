@@ -1,7 +1,7 @@
 # `loadtest`: the performance guard's load test (tooling, not part of the app)
 
 One binary that drives a running FerroEHR over ITS-REST with a fixed workload
-and writes one JSON report: throughput, p50 and p95 over the measured phase,
+and writes one JSON report: throughput, p50, p95 and p99 over the measured phase,
 and the same figures per operation. `scripts/perf/ab.sh` runs it against the
 release candidate and the previous release, and `scripts/perf/compare.sh`
 turns the medians into the verdict (#4081).
