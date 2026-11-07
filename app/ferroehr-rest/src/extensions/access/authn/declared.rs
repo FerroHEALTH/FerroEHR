@@ -75,7 +75,7 @@ impl Declared {
     /// `reads`, returned carrying [`Admitted`]; any other caller unchanged.
     ///
     /// # Errors
-    /// [`AuthError::Forbidden`] (`403`) for an external caller without an
+    /// [`AuthError::KindRefused`] (`403`) for an external caller without an
     /// agreement for its accessor kind, or holding a scope the agreement does
     /// not read.
     pub(super) fn admit(&self, access: Access) -> Result<Access, AuthError> {
@@ -90,11 +90,13 @@ impl Declared {
         let agreement = caller
             .issuer()
             .and_then(|issuer| self.agreements.get(&(issuer.to_owned(), accessor)))
-            .ok_or_else(|| {
-                AuthError::Forbidden(format!(
+            .ok_or_else(|| AuthError::KindRefused {
+                code: "refused-no-agreement",
+                message: format!(
                     "no [[authz.federation.agreement]] of this issuer admits the accessor \
                      {accessor}"
-                ))
+                ),
+                principal: None,
             })?;
         let beyond = caller.scope().iter().any(|scope| {
             !NEUTRAL.contains(&scope.as_str())
@@ -102,9 +104,12 @@ impl Declared {
                 && !agreement.reads.iter().any(|read| read == scope)
         });
         if beyond {
-            return Err(AuthError::Forbidden(
-                "an external caller holds only the patient/ scopes its agreement reads".to_owned(),
-            ));
+            return Err(AuthError::KindRefused {
+                code: "refused-scope-beyond-agreement",
+                message: "an external caller holds only the patient/ scopes its agreement reads"
+                    .to_owned(),
+                principal: None,
+            });
         }
         Ok(Access::Caller(Arc::new(
             Caller::clone(caller).with_extension(Admitted(Arc::clone(agreement))),
