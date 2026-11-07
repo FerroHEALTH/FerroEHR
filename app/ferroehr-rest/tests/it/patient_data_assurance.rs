@@ -168,7 +168,7 @@ async fn a_person_token_through_an_unlisted_client_is_refused() {
 }
 
 /// A third-party client the issuer lists as a delegate acts for the person
-/// its token names, and the access record carries the client mode, the
+/// its token names, and the access record carries the delegated mode, the
 /// professional and the level.
 #[tokio::test]
 async fn a_delegate_acting_for_a_professional_passes_and_is_recorded() {
@@ -198,7 +198,7 @@ async fn a_delegate_acting_for_a_professional_passes_and_is_recorded() {
     );
     assert_eq!(
         row.get::<Option<String>, _>("acting_mode").as_deref(),
-        Some("client")
+        Some("delegated")
     );
     assert_eq!(
         row.get::<Option<String>, _>("assurance_level").as_deref(),

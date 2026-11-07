@@ -124,7 +124,9 @@ impl PatientDataGate {
             mode,
             assurance_level: assessment.level,
             assurance_value: assessment.value,
-            professional_id: mode.and(caller.person_key().map(str::to_owned)),
+            professional_id: matches!(mode, Some(ActingMode::Person | ActingMode::Delegated))
+                .then(|| caller.person_key().map(str::to_owned))
+                .flatten(),
         }
     }
 
@@ -173,7 +175,11 @@ impl PatientDataGate {
 const fn acting(kind: &CallerKind) -> Option<ActingMode> {
     match kind {
         CallerKind::Person | CallerKind::Representative { .. } => Some(ActingMode::Person),
-        CallerKind::Delegated { .. } => Some(ActingMode::Client),
+        CallerKind::Delegated { .. } => Some(ActingMode::Delegated),
+        CallerKind::System => Some(ActingMode::System),
+        CallerKind::ExternalPerson(_) | CallerKind::ExternalOrganisation(_) => {
+            Some(ActingMode::External)
+        }
         _ => None,
     }
 }
@@ -269,8 +275,8 @@ mod tests {
         }
     }
 
-    /// Off by default: no minimum refuses nothing, and a system caller names
-    /// no person.
+    /// Off by default: no minimum refuses nothing, and a system caller is
+    /// recorded as one and names no person.
     #[test]
     fn an_unconfigured_gate_refuses_nothing() {
         let gate = gate(None);
@@ -280,7 +286,13 @@ mod tests {
                 Some(EHR),
             )
             .expect("passes");
-        assert_eq!(actor, ActorAuthentication::default());
+        assert_eq!(
+            actor,
+            ActorAuthentication {
+                mode: Some(ActingMode::System),
+                ..ActorAuthentication::default()
+            }
+        );
     }
 
     /// RFC 9470 §3: a level below the minimum, an unmapped value and a missing
@@ -324,8 +336,8 @@ mod tests {
         );
     }
 
-    /// A delegated token is recorded as the client acting for its person, and
-    /// a person's own token as that person, each by the issuer profile's
+    /// A delegated token is recorded as delegated, naming its person, and a
+    /// person's own token as that person, each by the issuer profile's
     /// person key.
     #[test]
     fn the_caller_kind_names_the_person() {
@@ -337,7 +349,7 @@ mod tests {
         assert_eq!(
             substantial.judge(&delegated, Some(EHR)).expect("passes"),
             ActorAuthentication {
-                mode: Some(ActingMode::Client),
+                mode: Some(ActingMode::Delegated),
                 assurance_level: Some(AssuranceLevel::High),
                 assurance_value: Some("loa-high".to_owned()),
                 professional_id: Some("prof-007".to_owned()),

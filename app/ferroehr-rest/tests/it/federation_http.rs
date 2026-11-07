@@ -353,3 +353,54 @@ async fn an_opted_out_ehr_reads_as_absent_to_every_external_caller() {
         StatusCode::NOT_FOUND
     );
 }
+
+/// The `(binding, acting_mode, agreement name, provider id)` of the stored
+/// `ehr_get_by_id` record whose binding is `binding`, waiting for the drain.
+async fn stored(pool: &sqlx::PgPool, binding: &str) -> (String, String, String, Option<String>) {
+    for _ in 0..50 {
+        let row: Option<(String, String, String, Option<String>)> = sqlx::query_as(
+            "SELECT binding, acting_mode, agreement ->> 'name', provider ->> 'id' \
+             FROM audit.audit_event WHERE operation = 'ehr_get_by_id' AND binding = $1",
+        )
+        .bind(binding)
+        .fetch_optional(pool)
+        .await
+        .expect("query");
+        if let Some(row) = row {
+            return row;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    panic!("no {binding} record was stored");
+}
+
+#[tokio::test]
+async fn every_external_record_carries_its_binding_agreement_and_provider() {
+    let (db, svc, app) = serve(vec![
+        agreement(Accessor::Person),
+        agreement(Accessor::Organisation),
+    ])
+    .await;
+    let target = ehr(&svc).await.to_string();
+    let person = professional(Some(&target), &json!({}));
+    assert_eq!(read(&app, &target, &person, None).await, StatusCode::OK);
+    assert_eq!(
+        read(&app, &target, &organisation(&target), None).await,
+        StatusCode::OK
+    );
+    let pool = db.pool();
+    assert_eq!(
+        stored(&pool, "external").await,
+        (
+            "external".to_owned(),
+            "external".to_owned(),
+            "Regional exchange".to_owned(),
+            Some("urn:oid:2.999.7".to_owned())
+        )
+    );
+    let (_, mode, name, _) = stored(&pool, "organisation").await;
+    assert_eq!(
+        (mode.as_str(), name.as_str()),
+        ("external", "Regional exchange")
+    );
+}

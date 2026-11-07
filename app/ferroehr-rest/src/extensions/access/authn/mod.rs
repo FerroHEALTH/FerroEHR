@@ -42,10 +42,12 @@ mod build;
 pub(crate) mod declared;
 mod issuer;
 mod party;
+pub(crate) mod record;
+mod refusal;
 
 use std::sync::Arc;
 
-use axum::extract::{FromRequestParts, MatchedPath, OriginalUri, Request, State};
+use axum::extract::{FromRequestParts, MatchedPath, Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use ferrohealth_smart::guard::Gate;
@@ -62,9 +64,10 @@ use crate::extensions::access::authz::AuthzHandle;
 use crate::extensions::access::authz::classify::OperationClass;
 use crate::extensions::access::authz::roles::RbacDecision;
 use crate::overview::error::RestError;
-use crate::smart::routes::{Need, SmartRoutes};
-use assurance::{PatientDataGate, PatientDataRefusal};
+use crate::smart::routes::SmartRoutes;
+use assurance::PatientDataGate;
 use ferroehr::system_log::event::ActorAuthentication;
+use refusal::{patient_data_refusal, smart_refusal};
 
 /// The state the [`middleware`] runs on: the authenticator, the optional
 /// authorization handle (`None` is authentication-only), the optional
@@ -555,18 +558,27 @@ pub(crate) async fn middleware(
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).
             let roles = for_audit.roles.clone();
+            let binding = record::of_request(&for_audit, &committer);
+            let facilities = record::Facilities::default();
             let mut resp = REQUEST_PRINCIPAL
                 .scope(
                     Some(principal),
                     ferroehr::system_log::access_context::with_roles(
                         roles,
-                        ferroehr::versioning::committer::with_committer(
-                            Some(committer),
-                            next.run(req),
+                        ferroehr::system_log::access_context::with_facilities(
+                            facilities.sink(),
+                            ferroehr::versioning::committer::with_committer(
+                                Some(committer),
+                                next.run(req),
+                            ),
                         ),
                     ),
                 )
                 .await;
+            if let Some(mut binding) = binding {
+                binding.facilities = facilities.taken();
+                resp.extensions_mut().insert(binding);
+            }
             // The outer ATNA audit layer cannot observe request-extension
             // mutations, so the principal is republished onto the response.
             resp.extensions_mut().insert(for_audit);
@@ -633,90 +645,6 @@ fn rbac_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Opti
     let mut resp = RestError::from(ApiError::Forbidden(reason)).into_response();
     resp.extensions_mut().insert(principal.clone());
     Some(resp)
-}
-
-/// Checks the SMART on openEHR requirement of the matched route, after RBAC.
-///
-/// A requirement the caller's grants do not meet, or a `patient/` grant whose
-/// target is not the EHR of the token's launch context, is a `403` with the
-/// `insufficient_scope` challenge (RFC 6750 §3.1) that names no scope,
-/// attributed to the caller. A composition operation is checked by the PEP once
-/// its template is known.
-///
-/// The API router is nested under the base path, so the request URI this layer
-/// sees has the base stripped while the matched template carries it; the path
-/// parameters are read from the original URI, which lines up with the template.
-fn smart_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Option<Response> {
-    let matched = req
-        .extensions()
-        .get::<MatchedPath>()
-        .map(MatchedPath::as_str);
-    let uri = req
-        .extensions()
-        .get::<OriginalUri>()
-        .map_or_else(|| req.uri(), |original| &original.0);
-    let need = layer.smart.need(req.method(), matched, uri.path());
-    let Need::Now(requirement) = need else {
-        return None;
-    };
-    let reason = match crate::smart::routes::check(
-        &requirement,
-        principal,
-        crate::smart::routes::target_ehr(&requirement, matched, uri, req.headers()).as_deref(),
-    ) {
-        Ok(()) => return None,
-        Err(reason) => reason,
-    };
-    count_auth_failure(mechanism_label(principal.method), "403");
-    tracing::debug!(reason, "a SMART on openEHR requirement was not met");
-    let mut resp = RestError::from(ApiError::Forbidden(
-        "the credential does not permit this request".to_owned(),
-    ))
-    .into_response();
-    resp.headers_mut().insert(
-        header::WWW_AUTHENTICATE,
-        layer
-            .authenticator
-            .challenge(Some(&AuthError::Forbidden(String::new()))),
-    );
-    resp.extensions_mut().insert(principal.clone());
-    Some(resp)
-}
-
-/// Builds the response for a patient-data request the gate refused, attributed
-/// to the caller so the audit layer records who was refused and how they
-/// authenticated.
-///
-/// An insufficient assurance level is a `401` carrying the RFC 9470 §3 step-up
-/// challenge (`insufficient_user_authentication` with the accepted
-/// `acr_values`).
-fn patient_data_refusal(
-    gate: &PatientDataGate,
-    principal: &Principal,
-    refusal: PatientDataRefusal,
-    actor: ActorAuthentication,
-) -> Response {
-    let mechanism = mechanism_label(principal.method);
-    let mut resp = match refusal {
-        PatientDataRefusal::InsufficientAssurance => {
-            count_auth_failure(mechanism, "401");
-            tracing::warn!(
-                mechanism,
-                reason = "insufficient_user_authentication",
-                "patient-data request refused"
-            );
-            let mut resp = RestError::from(ApiError::Unauthorized(
-                "patient data requires a higher authentication assurance level".to_owned(),
-            ))
-            .into_response();
-            resp.headers_mut()
-                .insert(header::WWW_AUTHENTICATE, gate.step_up_challenge());
-            resp
-        }
-    };
-    resp.extensions_mut().insert(principal.clone());
-    resp.extensions_mut().insert(actor);
-    resp
 }
 
 /// The client a request came through, which the `[origins]` register maps to

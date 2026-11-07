@@ -216,11 +216,15 @@ pub struct AuditEvent {
     /// The server's request id, which the request log names and the
     /// response's `x-request-id` carries unless the client sent its own.
     pub request_id: Option<String>,
+    /// The outcome of the party binding and its fields (EHDS Annex II 3.2(a)
+    /// and (b)); `None` when no caller was authenticated.
+    pub binding: Option<crate::system_log::binding::BindingRecord>,
     /// The event time.
     pub timestamp: Timestamp,
 }
 
-/// Whether a natural person or a client application presented the credential.
+/// How the credential acts: a natural person, a client application for one, a
+/// verified external accessor, or a client acting for nobody.
 ///
 /// **No openEHR spec governs this — our own design/extension.**
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -230,6 +234,13 @@ pub enum ActingMode {
     /// The token names a client application, acting for the professional in
     /// [`ActorAuthentication::professional_id`] when it names one.
     Client,
+    /// A person reaches the server through a declared client or an RFC 8693
+    /// actor, named in [`ActorAuthentication::professional_id`].
+    Delegated,
+    /// A verified external person or organisation of a `federation` issuer.
+    External,
+    /// A client acting for nobody.
+    System,
 }
 
 impl ActingMode {
@@ -240,6 +251,9 @@ impl ActingMode {
         match self {
             ActingMode::Person => "person",
             ActingMode::Client => "client",
+            ActingMode::Delegated => "delegated",
+            ActingMode::External => "external",
+            ActingMode::System => "system",
         }
     }
 }
@@ -382,6 +396,7 @@ impl AuditEvent {
             category_map_digest: None,
             actor: ActorAuthentication::default(),
             request_id: None,
+            binding: None,
             timestamp: Timestamp::now(),
         }
     }
