@@ -98,8 +98,8 @@ ENTRYPOINT ["/usr/local/bin/ferroehr-viewer"]
 ARG VERSION="0.1.0"
 ARG REVISION=""
 # See docker/Dockerfile for the split: build-independent keys here, the four
-# build-dependent ones from the publishing workflow. base.* names this runtime
-# stage's `FROM`, kept in step by scripts/checks/image-labels.sh.
+# build-dependent ones from the publishing workflow. base.* is read from this
+# runtime stage's `FROM` by build-image.yml (scripts/lib/base-image.sh).
 LABEL org.opencontainers.image.title="FerroEHR Viewer" \
       org.opencontainers.image.description="Viewer for openEHR ITS-REST CDRs — pure-Rust server-rendered web app (template manager, visual AQL query builder, EHR browser)" \
       org.opencontainers.image.url="https://ferroehr.eu/" \
@@ -108,8 +108,6 @@ LABEL org.opencontainers.image.title="FerroEHR Viewer" \
       org.opencontainers.image.vendor="Cadasto B.V." \
       org.opencontainers.image.authors="Cadasto B.V. <https://www.cadasto.com/contact/>" \
       org.opencontainers.image.licenses="BUSL-1.1" \
-      org.opencontainers.image.base.name="gcr.io/distroless/cc-debian13:nonroot" \
-      org.opencontainers.image.base.digest="sha256:08476c244888bfb425bae1ae4dd7c17f093e972aab8426883d97f3c6f280f7c1" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}" \
       eu.ferroehr.image.manufacturer="Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com" \

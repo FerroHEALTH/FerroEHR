@@ -57,8 +57,8 @@ COPY --chmod=0755 gosu /usr/local/bin/gosu
 COPY initdb/ /docker-entrypoint-initdb.d/
 
 # See docker/Dockerfile for the split: build-independent keys here, the four
-# build-dependent ones from the publishing workflow. base.* names the `FROM`
-# above, kept in step by scripts/checks/image-labels.sh.
+# build-dependent ones from the publishing workflow. base.* is read from the
+# `FROM` above by build-image.yml (scripts/lib/base-image.sh).
 #
 # `licenses` is an SPDX EXPRESSION and this image genuinely is one: our init
 # scripts are BUSL-1.1, and every layer under them is upstream `postgres`, which
@@ -72,7 +72,5 @@ LABEL org.opencontainers.image.title="FerroEHR PostgreSQL" \
       org.opencontainers.image.vendor="Cadasto B.V." \
       org.opencontainers.image.authors="Cadasto B.V. <https://www.cadasto.com/contact/>" \
       org.opencontainers.image.licenses="BUSL-1.1 AND PostgreSQL" \
-      org.opencontainers.image.base.name="postgres:18.6" \
-      org.opencontainers.image.base.digest="sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81" \
       eu.ferroehr.image.manufacturer="Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com" \
       eu.ferroehr.image.accompanying-documents="Information sheet and instructions for use: the assets ferroehr-v<version>-information-sheet.md and ferroehr-v<version>-instructions-for-use.md of https://github.com/FerroHEALTH/FerroEHR/releases/tag/v<version>, where <version> is this image's org.opencontainers.image.version"
