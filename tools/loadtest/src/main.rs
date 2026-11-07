@@ -44,6 +44,10 @@ use reqwest::{Client, RequestBuilder, Response, StatusCode};
 use serde::Serialize;
 use tokio::task::JoinSet;
 
+mod report;
+
+use report::{AuditReport, OperationReport, Report, millis, percentile};
+
 /// The ADL 1.4 operational template every composition conforms to.
 const TEMPLATE: &str = include_str!("../../../corpus/templates/ckm/vital-signs.opt");
 /// The canonical JSON composition every write commits, its start time varied.
@@ -387,97 +391,6 @@ async fn drive(
     Ok(all)
 }
 
-/// The nearest-rank `pct`th percentile of `sorted`, ascending.
-fn percentile(sorted: &[Duration], pct: usize) -> Option<Duration> {
-    let rank = sorted.len().saturating_mul(pct).div_ceil(100).max(1);
-    sorted.get(rank.saturating_sub(1)).copied()
-}
-
-/// Milliseconds as a float, for the report.
-fn millis(duration: Option<Duration>) -> f64 {
-    duration.map_or(0.0, |d| d.as_secs_f64() * 1000.0)
-}
-
-/// One operation kind's figures.
-#[derive(Debug, Serialize)]
-struct OperationReport {
-    count: usize,
-    p50_ms: f64,
-    p95_ms: f64,
-}
-
-/// What one run measured.
-#[derive(Debug, Serialize)]
-struct Report {
-    workers: usize,
-    operations: usize,
-    elapsed_seconds: f64,
-    throughput_ops_per_second: f64,
-    p50_ms: f64,
-    p95_ms: f64,
-    by_operation: BTreeMap<&'static str, OperationReport>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    audit: Option<AuditReport>,
-}
-
-/// What the `--audit` run measured of the access log.
-#[derive(Debug, Serialize)]
-struct AuditReport {
-    /// The ITS-REST operation id of each kind in the mix to the access records
-    /// the measured window holds for it (ITI-81 `subtype`).
-    records_by_operation: BTreeMap<&'static str, u64>,
-    /// The operation id to the operations of the measured phase that ran it.
-    operations_by_operation: BTreeMap<&'static str, u64>,
-    /// Whether every operation has its record: a composition create or read
-    /// exactly one, an AQL execution at least one (one per EHR it served).
-    complete: bool,
-    /// Seconds from the end of the measured phase until the counts settled.
-    settled_after_seconds: f64,
-    /// The paged ITI-81 retrievals over the measured window.
-    retrieval: OperationReport,
-    /// Records per retrieved page.
-    page_size: usize,
-}
-
-impl Report {
-    /// Summarises `timings`, measured over `elapsed` with `workers` workers.
-    fn new(workers: usize, timings: &[(Op, Duration)], elapsed: Duration) -> anyhow::Result<Self> {
-        let mut all: Vec<Duration> = timings.iter().map(|(_, d)| *d).collect();
-        all.sort_unstable();
-        let mut by_kind: BTreeMap<&'static str, Vec<Duration>> = BTreeMap::new();
-        for (op, d) in timings {
-            by_kind.entry(op.name()).or_default().push(*d);
-        }
-        let by_operation = by_kind
-            .into_iter()
-            .map(|(name, mut ds)| {
-                ds.sort_unstable();
-                let figures = OperationReport {
-                    count: ds.len(),
-                    p50_ms: millis(percentile(&ds, 50)),
-                    p95_ms: millis(percentile(&ds, 95)),
-                };
-                (name, figures)
-            })
-            .collect();
-        let seconds = elapsed.as_secs_f64();
-        if seconds <= 0.0 {
-            bail!("the measured phase took no time");
-        }
-        let count = f64::from(u32::try_from(all.len()).context("operation count exceeds u32")?);
-        Ok(Self {
-            workers,
-            operations: all.len(),
-            elapsed_seconds: seconds,
-            throughput_ops_per_second: count / seconds,
-            p50_ms: millis(percentile(&all, 50)),
-            p95_ms: millis(percentile(&all, 95)),
-            by_operation,
-            audit: None,
-        })
-    }
-}
-
 /// The code system of the ITS-REST operation id a record carries as its
 /// `subtype` (the ITI-81 `subtype` token).
 const OPERATION_SYSTEM: &str = "urn:openehr:its-rest:operation";
@@ -658,6 +571,7 @@ async fn measure_audit(
             count: retrieval.len(),
             p50_ms: millis(percentile(&retrieval, 50)),
             p95_ms: millis(percentile(&retrieval, 95)),
+            p99_ms: millis(percentile(&retrieval, 99)),
         },
         page_size,
     })

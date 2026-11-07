@@ -106,7 +106,7 @@ measure() {
     exit 2
   fi
   down "$file"
-  jq -r '"    \(.throughput_ops_per_second * 10 | round / 10) op/s, p95 \(.p95_ms * 10 | round / 10) ms"' \
+  jq -r '"    \(.throughput_ops_per_second * 10 | round / 10) op/s, p95 \(.p95_ms * 10 | round / 10) ms, p99 \(.p99_ms * 10 | round / 10) ms"' \
     "$out/$side/run-$n.json"
 }
 

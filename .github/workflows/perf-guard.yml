@@ -12,6 +12,10 @@
 # before any image is tagged. The same job then runs the logging component's
 # performance evaluation on main (scripts/perf/audit.sh, EHDS Annex II 1.1),
 # so a change that breaks a stated claim shows before the release cut does.
+# Last it measures the login lookup at 50 000 persons and 5 000 groups
+# (scripts/perf/party-lookup.sh, #5087): main over the quickstart's own binding
+# rows against a seeded side table, and the lookup timed against its 2 ms p99
+# budget, reported and never judged.
 #
 # A relative A/B on one runner is what makes a hosted runner usable here: both
 # sides share its noise, where an absolute figure would not be comparable
@@ -58,8 +62,8 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache: false
-      - name: Build the load test
-        run: cargo build --locked --release -p loadtest
+      - name: Build the load test and the seeder
+        run: cargo build --locked --release -p loadtest -p scaleseed
       - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
@@ -94,11 +98,22 @@ jobs:
           CANDIDATE: ${{ steps.candidate.outputs.digest }}
           LOADTEST_BIN: target/release/loadtest
         run: bash scripts/perf/audit.sh "$CANDIDATE" ferroehr-postgres:perf perf-audit
+      # The login lookup at 50 000 persons and 5 000 groups (#5087): main over the
+      # quickstart's own binding rows against a seeded side table, and the lookup
+      # itself timed against its 2 ms p99 budget. Reported, never judged.
+      - name: The login lookup at scale
+        if: always()
+        env:
+          CANDIDATE: ${{ steps.candidate.outputs.digest }}
+          LOADTEST_BIN: target/release/loadtest
+          SCALESEED_BIN: target/release/scaleseed
+        run: bash scripts/perf/party-lookup.sh "$CANDIDATE" ferroehr-postgres:perf perf-lookup
       - name: Summary
         if: always()
         run: |
           if [ -f perf-out/summary.md ]; then cat perf-out/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
           if [ -f perf-audit/summary.md ]; then cat perf-audit/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f perf-lookup/summary.md ]; then cat perf-lookup/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
       - name: Keep the reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -107,4 +122,5 @@ jobs:
           path: |
             perf-out/
             perf-audit/
+            perf-lookup/
           if-no-files-found: ignore

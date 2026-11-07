@@ -7,8 +7,8 @@
 # Each directory holds the run-*.json reports of one side, the same odd number
 # of runs on both. The verdict compares the median of each side: the candidate
 # fails when its throughput is below 90 % of the previous release's, or its
-# p95 latency is above 110 %. The per-operation medians are printed beside the
-# verdict for diagnosis and decide nothing. No openEHR spec governs this: our
+# p95 latency is above 110 %. The p99 medians, overall and per operation, are
+# printed beside the verdict for diagnosis and decide nothing (#5087). No openEHR spec governs this: our
 # own design.
 #
 # Usage: scripts/perf/compare.sh <previous-dir> <candidate-dir>
@@ -49,8 +49,11 @@ side() {
         runs: length,
         throughput: (map(.throughput_ops_per_second) | median),
         p95: (map(.p95_ms) | median),
+        p99: (map(.p99_ms // 0) | median),
         ops: ([$all[] | .by_operation // {} | keys[]] | unique
-              | map(. as $k | {key: $k, value: ([$all[] | .by_operation[$k].p95_ms // 0] | median)})
+              | map(. as $k | {key: $k, value: {
+                  p95: ([$all[] | .by_operation[$k].p95_ms // 0] | median),
+                  p99: ([$all[] | .by_operation[$k].p99_ms // 0] | median)}})
               | from_entries)
       }
   ' "${files[@]}" 2>/dev/null || {
@@ -84,10 +87,12 @@ compare() {
       "|---|---|---|---|---|---|",
       "| throughput (op/s) | \($p.throughput | num) | \($c.throughput | num) | \($tr | pct) | at least \($tmin | pct) | \(if $tbad then "**refused**" else "ok" end) |",
       "| p95 latency (ms) | \($p.p95 | num) | \($c.p95 | num) | \($pr | pct) | at most \($pmax | pct) | \(if $pbad then "**refused**" else "ok" end) |",
+      "| p99 latency (ms) | \($p.p99 | num) | \($c.p99 | num) | \(if $p.p99 > 0 then $c.p99 / $p.p99 | pct else "-" end) | reported | - |",
       "",
-      "| operation | previous p95 (ms) | candidate p95 (ms) |",
-      "|---|---|---|",
-      (($p.ops + $c.ops) | keys[] as $k | "| \($k) | \($p.ops[$k] // 0 | num) | \($c.ops[$k] // 0 | num) |"),
+      "| operation | previous p95 (ms) | candidate p95 (ms) | previous p99 (ms) | candidate p99 (ms) |",
+      "|---|---|---|---|---|",
+      (($p.ops + $c.ops) | keys[] as $k
+        | "| \($k) | \($p.ops[$k].p95 // 0 | num) | \($c.ops[$k].p95 // 0 | num) | \($p.ops[$k].p99 // 0 | num) | \($c.ops[$k].p99 // 0 | num) |"),
       "",
       (if $tbad or $pbad then "VERDICT: regression" else "VERDICT: within budget" end)
   ')"
@@ -103,8 +108,8 @@ self_test() {
   report() {
     local dir="$1" n="$2" throughput="$3" p95="$4"
     mkdir -p "$dir"
-    printf '{"workers":8,"operations":2000,"elapsed_seconds":1,"throughput_ops_per_second":%s,"p50_ms":1,"p95_ms":%s,"by_operation":{"aql_contains":{"count":1,"p50_ms":1,"p95_ms":%s}}}\n' \
-      "$throughput" "$p95" "$p95" >"$dir/run-$n.json"
+    printf '{"workers":8,"operations":2000,"elapsed_seconds":1,"throughput_ops_per_second":%s,"p50_ms":1,"p95_ms":%s,"p99_ms":%s,"by_operation":{"aql_contains":{"count":1,"p50_ms":1,"p95_ms":%s,"p99_ms":%s}}}\n' \
+      "$throughput" "$p95" "$((${p95%.*} * 2))" "$p95" "$((${p95%.*} * 2))" >"$dir/run-$n.json"
   }
   # side_of DIR T1 T2 T3 P1 P2 P3
   side_of() {
@@ -128,6 +133,8 @@ self_test() {
   # Medians 1000 op/s and 22 ms; an outlier run on either side moves nothing.
   side_of "$tmp/pass" 950 960 3000 24 10 200
   expect "a candidate within budget passes" 0 "VERDICT: within budget" "$tmp/prev" "$tmp/pass"
+  expect "the p99 medians are reported and decide nothing" 0 "| p99 latency (ms) | 44 | 48 | 109.1 % | reported | - |" "$tmp/prev" "$tmp/pass"
+  expect "each operation's p99 median is reported" 0 "| aql_contains | 22 | 24 | 44 | 48 |" "$tmp/prev" "$tmp/pass"
   side_of "$tmp/slow" 899 880 2000 20 20 20
   expect "throughput below 90 % is refused" 1 "| throughput (op/s) | 1000 | 899 | 89.9 % | at least 90 % | **refused** |" "$tmp/prev" "$tmp/slow"
   side_of "$tmp/late" 1000 1000 1000 24.3 24.3 1
@@ -144,7 +151,7 @@ self_test() {
   mkdir -p "$tmp/bad"
   echo '{"throughput_ops_per_second":"fast"}' >"$tmp/bad/run-1.json"
   expect "a report without numbers is refused" 2 "do not parse as load test reports" "$tmp/bad" "$tmp/prev"
-  echo "compare.sh self-test: 7 cases passed"
+  echo "compare.sh self-test: 9 cases passed"
 }
 
 case "${1:-}" in

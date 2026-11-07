@@ -10,6 +10,8 @@
 //! run resumes from. `check` compares a sample of clones with their
 //! prototypes, in the stored rows and as the service serves them. `measure`
 //! runs the scale test's queries against one seeded EHR and writes the report.
+//! `lookup` seeds the login binding's side table with bound persons and groups and
+//! times the lookup every request of a person makes against its budget (#5087).
 //! No openEHR specification governs load generation: our own design.
 //!
 //! ```text
@@ -17,6 +19,7 @@
 //! scaleseed --database-url postgres://… seed --ehrs 100000 --compositions 1000000
 //! scaleseed --database-url postgres://… check --sample 200
 //! scaleseed --database-url postgres://… measure --out target/scale/1m --host "…"
+//! scaleseed --database-url postgres://… lookup --out target/perf/lookup
 //! ```
 
 #![expect(
@@ -26,6 +29,7 @@
 
 mod check;
 mod clone;
+mod lookup;
 mod measure;
 mod proto;
 mod seed;
@@ -87,6 +91,27 @@ enum Command {
         #[arg(long)]
         host: String,
     },
+    /// Seeds the login binding's side table and times the lookup.
+    Lookup {
+        /// The bound persons to seed.
+        #[arg(long, default_value_t = 50_000)]
+        persons: i64,
+        /// The groups to seed.
+        #[arg(long, default_value_t = 5_000)]
+        groups: i64,
+        /// The lookups to time.
+        #[arg(long, default_value_t = 5_000)]
+        samples: usize,
+        /// The p99 budget in milliseconds (#5004).
+        #[arg(long, default_value_t = 2.0)]
+        budget_ms: f64,
+        /// Seed only, and time nothing.
+        #[arg(long)]
+        seed_only: bool,
+        /// The directory the report is written to.
+        #[arg(long, default_value = "target/perf/lookup")]
+        out: PathBuf,
+    },
 }
 
 #[tokio::main]
@@ -127,6 +152,38 @@ async fn main() -> anyhow::Result<()> {
         Command::Check { sample } => {
             let checked = check::run(&svc, &pool, sample).await?;
             eprintln!("scaleseed: {checked} sampled clones match their prototypes");
+        }
+        Command::Lookup {
+            persons,
+            groups,
+            samples,
+            budget_ms,
+            seed_only,
+            out,
+        } => {
+            let target = lookup::Target {
+                persons,
+                groups,
+                samples,
+                budget_ms,
+            };
+            lookup::seed(&pool, target).await?;
+            if !seed_only {
+                let source = svc.party_source("scaleseed");
+                let figures = lookup::measure(&pool, &source, target, &out).await?;
+                eprintln!(
+                    "scaleseed: the lookup p99 is {:.3} ms against a budget of {} ms ({}); \
+                     report written to {}",
+                    figures.p99_ms,
+                    figures.budget_ms,
+                    if figures.within_budget() {
+                        "within"
+                    } else {
+                        "over"
+                    },
+                    out.join("report.md").display()
+                );
+            }
         }
         Command::Measure { out, host } => {
             measure::run(&svc, &pool, &cli.database_url, &host, &out).await?;
