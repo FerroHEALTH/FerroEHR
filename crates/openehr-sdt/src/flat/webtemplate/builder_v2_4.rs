@@ -121,7 +121,7 @@ pub fn build_web_template_v2_4(
     tree.max = 1;
 
     let mut tree = shape::compact(tree, 1).unwrap_or_else(shape::tree_placeholder);
-    shape::synthesize_in_context(&mut tree);
+    super::in_context::synthesize_in_context(&mut tree);
     super::id::build_ids(&mut tree);
     // Parse the archetype-conformance walk plan once, as the OPT-1.4 front end
     // does, so a commit against this template is walked without re-parsing.

@@ -64,9 +64,8 @@ mod party;
 
 /// Fixed example instants used for the RM temporal leaves (deterministic).
 ///
-/// [`EXAMPLE_DATE_TIME`] doubles as the `now` supplied to
-/// [`composition_from_flat`] for the
-/// `ctx/time` default, so a generated example is reproducible across calls. No
+/// [`EXAMPLE_DATE_TIME`] doubles as the `now` supplied to [`composition_from_flat`]
+/// for the `ctx/time` default, so a generated example is reproducible across calls. No
 /// openEHR spec governs an example's timestamps — our own design (examples must
 /// be deterministic).
 const EXAMPLE_DATE_TIME: &str = "2022-02-03T04:05:06Z";
@@ -166,14 +165,15 @@ pub fn example_composition(wt: &WebTemplate, level: DetailLevel) -> Result<Value
     }
     let mut flat: Map<String, Value> = Map::new();
 
-    // Composition-level housekeeping the tree does not carry as data leaves.
-    // `from_flat`/`apply_ctx` turn these into the RM-mandatory language /
-    // territory / composer / context (the tree's `default_language` drives the
-    // language; territory has no template constraint, so a fixed valid default).
+    // Composition-level housekeeping the tree does not carry as data leaves:
+    // `from_flat` turns these into language, territory, composer and, when the
+    // template has a `/context` node (RM `COMPOSITION.context` 0..1), the context.
     flat.insert("ctx/language".to_owned(), json!(wt.default_language));
     flat.insert("ctx/territory".to_owned(), json!("US"));
     flat.insert("ctx/composer_name".to_owned(), json!("Example composer"));
-    flat.insert("ctx/time".to_owned(), json!(EXAMPLE_DATE_TIME));
+    if wt.tree.children.iter().any(|c| c.aql_path == "/context") {
+        flat.insert("ctx/time".to_owned(), json!(EXAMPLE_DATE_TIME));
+    }
 
     // Walk the tree from the root (COMPOSITION); the root is never forced empty —
     // an empty-content composition is valid RM, and a real content cardinality is

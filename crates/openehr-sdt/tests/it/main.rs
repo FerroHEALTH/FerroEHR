@@ -35,6 +35,7 @@ mod format_parity;
 mod master05_tables;
 mod model_walkgen;
 mod party_build;
+mod prohibited_context;
 mod raw_attributes;
 mod shape_tolerance;
 mod spec_vectors;

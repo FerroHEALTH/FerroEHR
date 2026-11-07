@@ -16,8 +16,10 @@
 mod binding_v2_4;
 pub mod builder;
 pub mod builder_v2_4;
+mod existence;
 mod id;
 mod implicit;
+mod in_context;
 mod inputs;
 mod interval_v2_4;
 pub mod model;
