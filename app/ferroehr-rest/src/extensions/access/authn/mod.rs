@@ -252,6 +252,9 @@ pub enum AuthError {
         /// The party the refusal names: the one refused for its state or its
         /// marker.
         party: Option<Box<ferroehr::system_log::binding::PartyTriple>>,
+        /// The key claim the token lacked, for `refused-key-claim-missing`
+        /// on a token of an issuer the binding names.
+        claim: Option<String>,
     },
     /// The party source or the identity provider could not answer, so the
     /// server cannot decide (RFC 9110 §15.6.4).
@@ -442,7 +445,7 @@ impl Authenticator {
     /// Binds and admits the caller of the verified `access`.
     async fn admitted(&self, access: Access) -> Result<Authenticated, AuthError> {
         let access = match &self.party {
-            Some(binding) => party::bind(&binding.shared, access).await?,
+            Some(binding) => party::bind(binding, access).await?,
             None => access,
         };
         // NOTE: no openEHR spec governs resolving a login to a party, our own design: with
@@ -471,7 +474,10 @@ impl Authenticator {
     /// Returns `refusal` naming the caller of `access` when the login binding
     /// refused it, so the failed-authentication record carries who was refused.
     fn naming_caller(&self, refusal: AuthError, access: &Access) -> AuthError {
-        let AuthError::PartyRefused { code, party, .. } = refusal else {
+        let AuthError::PartyRefused {
+            code, party, claim, ..
+        } = refusal
+        else {
             return refusal;
         };
         let principal = access.caller().map(|caller| {
@@ -483,6 +489,7 @@ impl Authenticator {
             code,
             principal,
             party,
+            claim,
         }
     }
 }
@@ -650,8 +657,11 @@ fn refused(
     principal: Option<Principal>,
 ) -> Response {
     let mut resp = refusal_response(auth, headers, e);
-    if let AuthError::PartyRefused { code, party, .. } = e
-        && let Some(record) = record::refused(code, party.as_deref(), principal.as_ref())
+    if let AuthError::PartyRefused {
+        code, party, claim, ..
+    } = e
+        && let Some(record) =
+            record::refused(code, party.as_deref(), claim.as_deref(), principal.as_ref())
     {
         resp.extensions_mut().insert(record);
     }

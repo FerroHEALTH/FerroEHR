@@ -330,7 +330,7 @@ beside it hold what each outcome needs:
 | `organisation` | an organisation under an agreement with `accessor = "organisation"` | `external_fields`, `agreement`, `provider` |
 | `system` | a client acting for nobody | `provider` of its `[[authz.system_client]]`, `facilities` of the compositions it committed |
 | `self` | a patient token of a `patients` issuer | the principal |
-| `refused-*` | a refusal of the binding: `unbound`, `ambiguous`, `inactive`, `abandoned`, `deprovisioned`, `wrong-marker`, `representation-unrecorded`, `key-claim-missing`, `groups-unavailable`, `guest`, `external-incomplete`, `trc-patient-mismatch`, `trc-missing` | `party` for a party refused for its state or marker, `binding_detail` for what else the refusal names (`represented`, the subject a representative asserted) |
+| `refused-*` | a refusal of the binding: `unbound`, `ambiguous`, `inactive`, `abandoned`, `deprovisioned`, `wrong-marker`, `representation-unrecorded`, `key-claim-missing`, `groups-unavailable`, `guest`, `external-incomplete`, `trc-patient-mismatch`, `trc-missing` | `party` for a party refused for its state or marker, `binding_detail` for what else the refusal names (`represented`, the subject a representative asserted; `claim`, the name of the key claim a token lacked, never its value) |
 
 `acting_mode` is `person`, `delegated` for a person through a declared client
 or actor, `external` for a verified external accessor and `system` for a client

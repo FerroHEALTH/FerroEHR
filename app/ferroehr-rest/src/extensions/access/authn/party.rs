@@ -36,7 +36,7 @@ use super::{AuthError, RepresentedEhr};
 /// the `PERSON`'s name.
 pub(crate) struct Binding {
     /// The shared crate's binding.
-    pub(super) shared: PartyBinding,
+    shared: PartyBinding,
     /// The source logins are looked up in, which also names a `PERSON`.
     source: Arc<dyn BindingSource>,
     /// `[authz.party_binding] provider`.
@@ -45,6 +45,9 @@ pub(crate) struct Binding {
     namespace: String,
     /// Each issuer's `tenant_claim`, which picks a per-tenant provider.
     tenant_claims: BTreeMap<String, String>,
+    /// Each issuer's `person_key`, the claim a `refused-key-claim-missing`
+    /// record names.
+    key_claims: BTreeMap<String, String>,
 }
 
 impl std::fmt::Debug for Binding {
@@ -91,12 +94,18 @@ pub(super) fn binding(
             Some((settings.issuer.clone(), claim))
         })
         .collect();
+    let key_claims = resolved
+        .issuers
+        .iter()
+        .map(|settings| (settings.issuer.clone(), settings.profile.person_key.clone()))
+        .collect();
     Ok(Some(Arc::new(Binding {
         shared: binding,
         source,
         provider: config.party_binding.provider.clone(),
         namespace: config.party_binding.namespace.clone(),
         tenant_claims,
+        key_claims,
     })))
 }
 
@@ -158,11 +167,11 @@ impl Binding {
 /// [`AuthError::PartyRefused`] for an outcome the request is refused for,
 /// and [`AuthError::PartyUnavailable`] when the source or the identity
 /// provider could not answer.
-pub(super) async fn bind(binding: &PartyBinding, access: Access) -> Result<Access, AuthError> {
+pub(super) async fn bind(binding: &Binding, access: Access) -> Result<Access, AuthError> {
     let Some(caller) = access.caller() else {
         return Ok(access);
     };
-    let outcome = match binding.resolve(caller).await {
+    let outcome = match binding.shared.resolve(caller).await {
         // NOTE: GDPR Art. 9(3) and Art. 29, a guest acts only under this controller's
         // responsibility, which `[[auth.party]] guests` declares; our own design.
         Ok(None) if matches!(caller.kind(), CallerKind::Guest(_)) => {
@@ -170,6 +179,7 @@ pub(super) async fn bind(binding: &PartyBinding, access: Access) -> Result<Acces
                 code: "refused-guest",
                 principal: None,
                 party: None,
+                claim: None,
             });
         }
         Ok(None) if matches!(caller.kind(), CallerKind::Representative { .. }) => {
@@ -185,12 +195,20 @@ pub(super) async fn bind(binding: &PartyBinding, access: Access) -> Result<Acces
             return Err(AuthError::PartyUnavailable { retry_after: None });
         }
     };
-    if let Some(refusal) = refusal(&outcome) {
+    if let Some(mut refusal) = refusal(&outcome) {
         tracing::warn!(
             issuer = caller.issuer().unwrap_or("-"),
             outcome = outcome.as_str(),
             "the login binding refused the request"
         );
+        if let (AuthError::PartyRefused { claim, .. }, Outcome::KeyClaimMissing) =
+            (&mut refusal, &outcome)
+        {
+            *claim = caller
+                .issuer()
+                .and_then(|issuer| binding.key_claims.get(issuer))
+                .cloned();
+        }
         return Err(refusal);
     }
     if let CallerKind::Representative { represented, .. } = caller.kind()
@@ -214,6 +232,7 @@ pub(super) const fn unrecorded() -> AuthError {
         code: "refused-representation-unrecorded",
         principal: None,
         party: None,
+        claim: None,
     }
 }
 
@@ -297,6 +316,7 @@ fn refusal(outcome: &Outcome) -> Option<AuthError> {
         party: outcome
             .party()
             .map(|party| Box::new(super::record::triple(party))),
+        claim: None,
     })
 }
 

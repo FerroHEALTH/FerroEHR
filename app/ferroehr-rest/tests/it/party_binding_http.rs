@@ -533,3 +533,41 @@ async fn a_login_binding_refusal_is_recorded_with_its_code_and_party() {
         "one failed-authentication record per refusal, naming the inactive party"
     );
 }
+
+/// A token without the key claim is recorded with the name of the claim the
+/// issuer's binding reads, never a claim value (#5139).
+#[tokio::test]
+async fn a_key_claim_refusal_is_recorded_with_the_claim_name() {
+    let (db, pool) = common::migrated_pool().await;
+    let (sender, _handle): (_, ferroehr::system_log::sender::AuditHandle) =
+        ferroehr::system_log::sender::start(common::local_audit(), None, Some(pool.clone()))
+            .await
+            .expect("the audit sender");
+    let svc = Arc::new(
+        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+            .with_binding_mapping(mapping())
+            .with_audit(sender)
+            .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),
+    );
+    let app = router(Arc::clone(&svc), Some("oid")).await;
+    refused(
+        &app,
+        &token("someone", &json!({"name": "A Person"})),
+        "refused-key-claim-missing",
+    )
+    .await;
+
+    refusal_rows(&db.pool(), "refused-key-claim-missing", 1).await;
+    let (detail,): (Option<Value>,) = sqlx::query_as(
+        "SELECT binding_detail FROM audit.audit_event \
+         WHERE binding = 'refused-key-claim-missing' AND summary IS NULL",
+    )
+    .fetch_one(&db.pool())
+    .await
+    .expect("query");
+    assert_eq!(
+        detail,
+        Some(json!({"claim": ["oid"]})),
+        "the record names the key claim and carries no claim value"
+    );
+}
