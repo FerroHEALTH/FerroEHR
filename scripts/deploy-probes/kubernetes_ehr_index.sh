@@ -205,6 +205,13 @@ k8s_pix_token() { # <client-id> <scope>
     | jq -r '.access_token // empty'
 }
 
+# A fresh synthetic identifier of letters alone. A digit run can pass a
+# national number's checksum (a 9 or 10 digit run passes the NHS number's about
+# one time in eleven), which the identifier scanner refuses with 422 (#5109).
+k8s_index_word() { # <prefix>
+  printf '%s-%s' "$1" "$(openssl rand -hex 8 | tr 0-9 g-p)"
+}
+
 # The EHR_STATUS that names <id> in <namespace>.
 k8s_index_status() { # <namespace> <id>
   jq -cn --arg ns "$1" --arg id "$2" '{_type: "EHR_STATUS",
@@ -236,7 +243,8 @@ k8s_index_create() { # <namespace> <id>
 
 # The local index: GET /ehr by the subject the EHR_STATUS names.
 k8s_index_local_roundtrip() {
-  local subject="local-$RANDOM$RANDOM" code found
+  local subject code found
+  subject="$(k8s_index_word local)"
   k8s_index_create probe "$subject" || return 0
   code="$(curl -s -u "$K8S_BASIC" -G -H 'Accept: application/json' -o "$PROBE_TMP/index-lookup" \
     -w "$K8S_HTTP_CODE" --data-urlencode "subject_id=$subject" --data-urlencode "subject_namespace=probe" \
@@ -271,7 +279,8 @@ k8s_index_cohort_roundtrip() { # <pseudonym> <source-id>
 # CDR's client for the clinical pseudonym (ITI-83), and runs the round trip:
 # the EHR names the pseudonym, the lookup names the source identifier.
 k8s_index_ihe_roundtrip() {
-  local red="probe-$RANDOM$RANDOM" src consumer code pseudonym pix="http://127.0.0.1:${K8S_PIX_PORT}/fhir"
+  local red src consumer code pseudonym pix="http://127.0.0.1:${K8S_PIX_PORT}/fhir"
+  red="$(k8s_index_word probe)"
   if ! k8s_pix_pf_start; then
     probe_fail "a forward to a ready FerroPIX pod" "no FerroPIX pod answered /health/liveness"
     return 0
