@@ -1033,6 +1033,27 @@ operator's that the injection would overwrite is refused rather than silently
 replaced, and so is a secret-shaped key: this file is a ConfigMap. No openEHR
 spec governs this; FerroBRIDGE's own configuration reference defines the keys.
 */}}
+{{- /*
+FerroBRIDGE reaches the CDR as a machine: a client credentials token
+(RFC 6749 §4.4) of a `machines` issuer this release's CDR trusts. From
+ferrohealth-smart 0.9 a Basic credential is a person's and holds no `system/`
+scope, so the chart offers no Basic machine user. Refused here: no client,
+and an issuer the CDR's config.auth.issuer does not list as `machines`.
+*/}}
+{{- define "ferroehr.bridgeCdrClient" -}}
+{{- $oauth := .Values.bridge.cdr.oauth -}}
+{{- if not (and $oauth.issuer $oauth.clientId) -}}
+{{- fail "bridge.enabled=true without bridge.cdr.oauth.issuer and bridge.cdr.oauth.clientId: FerroBRIDGE reaches the CDR under a client credentials token (RFC 6749 §4.4) of a `machines` issuer the CDR trusts. Name that issuer and FerroBRIDGE's client at it; a Basic user is a person and holds no system/ scope." -}}
+{{- end -}}
+{{- $trusted := false -}}
+{{- range $issuer := (.Values.config.auth.issuer | default list) -}}
+{{- if and (kindIs "map" $issuer) (eq (toString $issuer.issuer) (toString $oauth.issuer)) (eq (toString $issuer.kind) "machines") -}}{{- $trusted = true -}}{{- end -}}
+{{- end -}}
+{{- if not $trusted -}}
+{{- fail (printf "bridge.cdr.oauth.issuer %s is not a `machines` issuer of config.auth.issuer, so the CDR would refuse every token FerroBRIDGE presents. Add it there with kind: machines and the audience its tokens carry." (toString $oauth.issuer)) -}}
+{{- end -}}
+{{- end }}
+
 {{- define "ferroehr.bridgeConfigToml" -}}
 {{- $config := deepCopy (.Values.bridge.config | default dict) -}}
 {{- $findings := include "ferroehr.bridgeSecretScan" (dict "node" $config "path" "") | trim -}}
@@ -1046,12 +1067,12 @@ spec governs this; FerroBRIDGE's own configuration reference defines the keys.
 {{- $leaks = append $leaks "bridge.config.cdm.url" -}}
 {{- end -}}
 {{- if $leaks -}}
-{{- fail (printf "refusing to render a secret into FerroBRIDGE's ConfigMap: %s. A ConfigMap is not a sensitive object (it is readable with namespace read and not covered by Secret encryption at rest), so set the key's `_file` sibling instead and mount the file from a Secret with bridge.extraVolumes and bridge.extraVolumeMounts. The CDR credential itself comes from bridge.cdr.existingSecret." (join ", " $leaks)) -}}
+{{- fail (printf "refusing to render a secret into FerroBRIDGE's ConfigMap: %s. A ConfigMap is not a sensitive object (it is readable with namespace read and not covered by Secret encryption at rest), so set the key's `_file` sibling instead and mount the file from a Secret with bridge.extraVolumes and bridge.extraVolumeMounts. The CDR client secret itself comes from bridge.cdr.existingSecret." (join ", " $leaks)) -}}
 {{- end -}}
 {{- $owned := list -}}
 {{- $cdr := dig "cdr" (dict) $config -}}
 {{- range $key := list "base_url" "credentials" -}}
-{{- if hasKey $cdr $key -}}{{- $owned = append $owned (printf "bridge.config.cdr.%s (the chart points [cdr] at this release's CDR Service, with the credential from bridge.cdr.existingSecret)" $key) -}}{{- end -}}
+{{- if hasKey $cdr $key -}}{{- $owned = append $owned (printf "bridge.config.cdr.%s (the chart points [cdr] at this release's CDR Service, under the OAuth client of bridge.cdr.oauth)" $key) -}}{{- end -}}
 {{- end -}}
 {{- if and $.Values.terminology.enabled (hasKey $config "terminology") -}}
 {{- $owned = append $owned "bridge.config.terminology (terminology.enabled=true points [terminology] at this release's FerroTERM; set terminology.enabled=false to name another server)" -}}
@@ -1074,7 +1095,11 @@ spec governs this; FerroBRIDGE's own configuration reference defines the keys.
 {{- if not (hasKey $config "cdr") -}}{{- $_ := set $config "cdr" (dict) -}}{{- end -}}
 {{- $cdr = get $config "cdr" -}}
 {{- $_ := set $cdr "base_url" (include "ferroehr.cdrRestUrl" $) -}}
-{{- $_ := set $cdr "credentials" (dict "password_file" (printf "%s/password" (include "ferroehr.bridgeSecretDir" $))) -}}
+{{- $oauth := dict "issuer" $.Values.bridge.cdr.oauth.issuer "client_id" $.Values.bridge.cdr.oauth.clientId "client_secret_file" (printf "%s/client_secret" (include "ferroehr.bridgeSecretDir" $)) -}}
+{{- range $key, $value := dict "scope" $.Values.bridge.cdr.oauth.scope "audience" $.Values.bridge.cdr.oauth.audience "resource" $.Values.bridge.cdr.oauth.resource -}}
+{{- if $value -}}{{- $_ := set $oauth $key $value -}}{{- end -}}
+{{- end -}}
+{{- $_ := set $cdr "credentials" (dict "oauth" $oauth) -}}
 {{- if $.Values.terminology.enabled -}}
 {{- $_ := set $config "terminology" (dict "base_url" (printf "http://%s:%v/r4" (include "ferroehr.terminologyFullname" $) $.Values.terminology.service.port) "wire_version" "r4") -}}
 {{- end -}}

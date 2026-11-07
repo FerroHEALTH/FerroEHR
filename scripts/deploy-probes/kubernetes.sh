@@ -95,6 +95,12 @@ K8S_BRIDGE="ferroehr-bridge"
 K8S_BRIDGE_LABEL="app.kubernetes.io/name=$K8S_BRIDGE"
 K8S_BRIDGE_CLIENT_LABEL="ferroehr.probe/client=bridge"
 K8S_BRIDGE_SECRET="ferroehr-bridge-cdr"
+# The machines issuer FerroBRIDGE's client credentials tokens come from, which
+# the CDR's values must trust as `kind: machines`, and FerroBRIDGE's client
+# there. Unset leaves the live bridge rows declared not exercised (#5093).
+K8S_MACHINES_ISSUER="${K8S_MACHINES_ISSUER:-}"
+K8S_BRIDGE_CLIENT_ID="${K8S_BRIDGE_CLIENT_ID:-ferrobridge}"
+K8S_BRIDGE_CLIENT_SECRET="${K8S_BRIDGE_CLIENT_SECRET:-}"
 K8S_BRIDGE_MAPPINGS="ferroehr-bridge-mappings"
 # The template the probe's mapping names; FerroBRIDGE fetches it from the CDR.
 K8S_BRIDGE_TEMPLATE="corpus/templates/blood_pressure.opt"
@@ -1162,6 +1168,9 @@ bridge:
   enabled: true
   cdr:
     existingSecret: $K8S_BRIDGE_SECRET
+    oauth:
+      issuer: $K8S_MACHINES_ISSUER
+      clientId: $K8S_BRIDGE_CLIENT_ID
   mappings:
     existingConfigMap: $K8S_BRIDGE_MAPPINGS
     files:
@@ -1182,15 +1191,14 @@ YAML
 }
 
 # The credential and the mapping set an operator supplies, created the way the
-# book tells them to: a Secret with `user` and `password` for a Basic user of
-# the CDR, and a ConfigMap of FHIRconnect files. The mapping is the smallest one
+# book tells them to: a Secret with the `client_secret` of FerroBRIDGE's
+# machines client, and a ConfigMap of FHIRconnect files. The mapping is the smallest one
 # that compiles against the CDR's cnf.blood_pressure template: one context, one
 # model, one mapped element.
 k8s_bridge_inputs() {
   kc delete secret "$K8S_BRIDGE_SECRET" --ignore-not-found >/dev/null 2>&1
   kc create secret generic "$K8S_BRIDGE_SECRET" \
-    --from-literal=user="${K8S_BASIC%%:*}" \
-    --from-literal=password="${K8S_BASIC#*:}" >/dev/null 2>&1 || return 1
+    --from-literal=client_secret="$K8S_BRIDGE_CLIENT_SECRET" >/dev/null 2>&1 || return 1
   mkdir -p "$PROBE_TMP/bridge-mappings"
   cat > "$PROBE_TMP/bridge-mappings/probe.context.yml" <<'YAML'
 grammar: FHIRConnect/v1.0.0
@@ -1286,7 +1294,7 @@ probes_k8s_bridge() {
   # The BROKEN states, at render: no peer named, and no credential named. Both
   # must be refusals that say which key fixes them.
   probe "P-K8S-BRIDGE-GUARD" "$PROBE_BROKEN" "chart" "#3713" \
-    "bridge.enabled with no ingressFrom peer, or with no CDR credential Secret, is refused at render"
+    "bridge.enabled with no ingressFrom peer, no client secret Secret, or no machines client of a trusted issuer, is refused at render"
   local guard
   guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
              -f "$K8S_AUTH_VALUES" --set database.existingSecret=ferroehr-db \
@@ -1299,7 +1307,22 @@ probes_k8s_bridge() {
              --set-json 'bridge.networkPolicy.ingressFrom=[{"podSelector":{"matchLabels":{"probe":"x"}}}]' 2>&1)"
   assert_contains "$guard" "bridge.cdr.existingSecret" \
     "a bridge with no credential cannot reach a CDR that requires one, and the refusal must say where it goes"
+  guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
+             -f "$K8S_AUTH_VALUES" --set database.existingSecret=ferroehr-db \
+             --set bridge.enabled=true --set bridge.cdr.existingSecret=probe \
+             --set bridge.cdr.oauth.issuer=https://untrusted.example.org --set bridge.cdr.oauth.clientId=probe \
+             --set-json 'bridge.networkPolicy.ingressFrom=[{"podSelector":{"matchLabels":{"probe":"x"}}}]' 2>&1)"
+  assert_contains "$guard" "kind: machines" \
+    "a client of an issuer the CDR does not trust as machines would be refused on every call, so it must not render"
   probe_done
+
+  # The live rows need an authorization server that issues FerroBRIDGE's
+  # client credentials tokens and that the CDR trusts as machines.
+  if [[ -z "$K8S_MACHINES_ISSUER" ]]; then
+    uncovered "the bridge install, its credential, its Service and its NetworkPolicy (P-K8S-BRIDGE-BOOT and after)" \
+      "FerroBRIDGE reaches the CDR under a client credentials token of a machines issuer, and K8S_MACHINES_ISSUER names none (#5093)"
+    return 0
+  fi
 
   probe "P-K8S-BRIDGE-BOOT" "$PROBE_WORKING" "chart" "#3713" \
     "bridge.enabled installs FerroBRIDGE beside the CDR and FerroTERM, and it rolls out"
@@ -1354,8 +1377,6 @@ probes_k8s_bridge() {
 
   uncovered "FerroBRIDGE's FHIR facade (GET /fhir/metadata and the resource routes)" \
     "the facade keeps an identity map in a file it must write, and the chart mounts no writable volume for it; this run serves the operations lane alone"
-  uncovered "a bearer credential (bridge.cdr.auth=bearer)" \
-    "the harness's CDR authenticates Basic users; a token the CDR accepts needs an identity provider this harness does not run"
 }
 
 probes_k8s_bridge_runtime() {
@@ -1402,7 +1423,7 @@ probes_k8s_bridge_psa() {
 # each file three times and refused the start.
 probes_k8s_bridge_cred() {
   probe "P-K8S-BRIDGE-CRED" "$PROBE_WORKING" "server" "#3713" \
-    "the bridge authenticates to the CDR with the Secret's credential and compiles the mounted mapping set"
+    "the bridge reaches the CDR under its client's token and compiles the mounted mapping set"
   local logs
   logs="$(kc logs -l "$K8S_BRIDGE_LABEL" --tail=200 --all-containers 2>/dev/null)"
   assert_contains "$logs" '"lane":"operations","enabled":true' \
@@ -1410,7 +1431,7 @@ probes_k8s_bridge_cred() {
   assert_contains "$logs" '"contexts":1,' \
     "one context loaded; the ..data copies of a whole-ConfigMap volume would have been refused as duplicates"
   assert_contains "$logs" '"programs":1,' \
-    "one program compiled, against the template fetched from the CDR under the Secret's credential"
+    "one program compiled, against the template fetched from the CDR under the client's token"
   probe_done
 }
 
