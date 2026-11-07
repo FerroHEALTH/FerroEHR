@@ -219,6 +219,9 @@ pub struct AuditEvent {
     /// The outcome of the party binding and its fields (EHDS Annex II 3.2(a)
     /// and (b)); `None` when no caller was authenticated.
     pub binding: Option<crate::system_log::binding::BindingRecord>,
+    /// For a summary record, the count of the refusals it stands for and the
+    /// EHR ids they named; `None` on every other record.
+    pub summary: Option<crate::system_log::binding::Summary>,
     /// The event time.
     pub timestamp: Timestamp,
 }
@@ -397,6 +400,7 @@ impl AuditEvent {
             actor: ActorAuthentication::default(),
             request_id: None,
             binding: None,
+            summary: None,
             timestamp: Timestamp::now(),
         }
     }

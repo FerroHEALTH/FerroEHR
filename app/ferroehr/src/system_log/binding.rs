@@ -92,6 +92,17 @@ impl BindingCode {
         Self::RefusedTrcMissing,
     ];
 
+    /// Whether a refusal under this code is a security event, recorded once
+    /// per answered request and never summarised: XCA 8.0.1 §4.2.2 asks for
+    /// an audit entry each time the TRC patient does not match.
+    #[must_use]
+    pub const fn is_security_event(self) -> bool {
+        matches!(
+            self,
+            Self::RefusedTrcPatientMismatch | Self::RefusedTrcMissing
+        )
+    }
+
     /// The stored spelling, matching the `ck_audit_event_binding` constraint.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -206,8 +217,6 @@ pub struct BindingRecord {
     pub facilities: Vec<Identified>,
     /// What a refusal names beside its code, by name.
     pub detail: BTreeMap<String, Vec<String>>,
-    /// For a summary record, the count and the EHR ids.
-    pub summary: Option<Summary>,
 }
 
 impl BindingRecord {
@@ -226,7 +235,6 @@ impl BindingRecord {
             actor_chain: Vec::new(),
             facilities: Vec::new(),
             detail: BTreeMap::new(),
-            summary: None,
         }
     }
 
@@ -294,10 +302,10 @@ impl BindingRecord {
 
     /// The JSON value of each jsonb binding column, in the order the inserts
     /// list them after `binding` and `guest`: party, groups, provider,
-    /// representation, external fields, agreement, actor chain, facilities,
-    /// detail and summary; `NULL` for an empty field.
+    /// representation, external fields, agreement, actor chain, facilities
+    /// and detail; `NULL` for an empty field.
     #[must_use]
-    pub fn json_columns(&self) -> [Option<Value>; 10] {
+    pub fn json_columns(&self) -> [Option<Value>; 9] {
         fn json<T: Serialize>(value: &T) -> Option<Value> {
             serde_json::to_value(value).ok()
         }
@@ -317,7 +325,6 @@ impl BindingRecord {
             listed(&self.actor_chain),
             listed(&self.facilities),
             mapped(&self.detail),
-            self.summary.as_ref().and_then(json),
         ]
     }
 }
@@ -442,14 +449,28 @@ mod tests {
 
     #[test]
     fn a_summary_record_carries_its_count_and_ehr_ids() {
-        let mut summary = BindingRecord::of(BindingCode::RefusedUnbound);
-        summary.summary = Some(Summary {
+        let summary = Summary {
             count: 12,
             ehr_ids: vec!["e1".to_owned()],
-        });
+        };
         assert_eq!(
-            summary.json_columns()[9],
+            serde_json::to_value(&summary).ok(),
             Some(serde_json::json!({ "count": 12, "ehr_ids": ["e1"] }))
+        );
+    }
+
+    #[test]
+    fn only_the_trc_refusals_are_security_events() {
+        let security: Vec<BindingCode> = BindingCode::ALL
+            .into_iter()
+            .filter(|code| code.is_security_event())
+            .collect();
+        assert_eq!(
+            security,
+            [
+                BindingCode::RefusedTrcPatientMismatch,
+                BindingCode::RefusedTrcMissing
+            ]
         );
     }
 }

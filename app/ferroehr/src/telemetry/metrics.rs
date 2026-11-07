@@ -75,6 +75,8 @@ pub const ATNA_AUDIT_SEND_FAILED: &str = "atna_audit_send_failed";
 pub const ATNA_AUDIT_REAPED: &str = "atna_audit_reaped";
 /// Findings of the scheduled audit hash-chain verification (`kind`).
 pub const ATNA_AUDIT_CHAIN_FINDINGS: &str = "atna_audit_chain_findings";
+/// Refusal records the system log could not take (`kind`).
+pub const ATNA_AUDIT_REFUSALS_UNWRITTEN: &str = "atna_audit_refusals_unwritten";
 /// Process start time, unix seconds.
 pub const PROCESS_START_TIME: &str = "process_start_time";
 /// Build identity, always `1`, carrying `version`/`git_sha`/`rm_version`.
@@ -161,6 +163,8 @@ pub struct Metrics {
     pub atna_audit_reaped: Counter<u64>,
     /// Findings of the scheduled audit hash-chain verification.
     pub atna_audit_chain_findings: Counter<u64>,
+    /// Refusal records the system log could not take.
+    pub atna_audit_refusals_unwritten: Counter<u64>,
 }
 
 impl Metrics {
@@ -259,6 +263,10 @@ impl Metrics {
                      (kind = damage | unverifiable)",
                 )
                 .build(),
+            atna_audit_refusals_unwritten: meter
+                .u64_counter(ATNA_AUDIT_REFUSALS_UNWRITTEN)
+                .with_description("Refusal records the system log could not take, by kind")
+                .build(),
         }
     }
 }
@@ -349,6 +357,7 @@ mod tests {
             WEBTEMPLATE_CACHE_EVENTS,
             ATNA_AUDIT_EMITTED,
             ATNA_AUDIT_SENT,
+            ATNA_AUDIT_REFUSALS_UNWRITTEN,
             PROCESS_START_TIME,
             TOKIO_WORKERS,
             TOKIO_GLOBAL_QUEUE_DEPTH,

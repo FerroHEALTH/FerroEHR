@@ -1253,11 +1253,12 @@ fn origin_count(event: &AuditEvent) -> Option<i64> {
 }
 
 /// The `binding` and `guest` column values of `event` and its jsonb binding
-/// columns ([`crate::system_log::binding::BindingRecord::json_columns`]).
+/// columns ([`crate::system_log::binding::BindingRecord::json_columns`]),
+/// with the `summary` column last.
 fn binding_columns(
     event: &AuditEvent,
 ) -> (Option<&'static str>, bool, [Option<serde_json::Value>; 10]) {
-    event.binding.as_ref().map_or_else(
+    let (code, guest, binding) = event.binding.as_ref().map_or_else(
         || (None, false, Default::default()),
         |binding| {
             (
@@ -1266,7 +1267,16 @@ fn binding_columns(
                 binding.json_columns(),
             )
         },
-    )
+    );
+    let summary = event
+        .summary
+        .as_ref()
+        .and_then(|summary| serde_json::to_value(summary).ok());
+    let mut columns: [Option<serde_json::Value>; 10] = Default::default();
+    for (column, value) in columns.iter_mut().zip(binding.into_iter().chain([summary])) {
+        *column = value;
+    }
+    (code, guest, columns)
 }
 
 /// The `ehr_id` column value: the EHR a classified access reached, which its

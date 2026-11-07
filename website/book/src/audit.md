@@ -330,7 +330,7 @@ beside it hold what each outcome needs:
 | `organisation` | an organisation under an agreement with `accessor = "organisation"` | `external_fields`, `agreement`, `provider` |
 | `system` | a client acting for nobody | `provider` of its `[[authz.system_client]]`, `facilities` of the compositions it committed |
 | `self` | a patient token of a `patients` issuer | the principal |
-| `refused-*` | a refusal of the binding: `unbound`, `ambiguous`, `inactive`, `abandoned`, `deprovisioned`, `wrong-marker`, `representation-unrecorded`, `key-claim-missing`, `groups-unavailable`, `guest`, `external-incomplete`, `trc-patient-mismatch`, `trc-missing` | `binding_detail`, what the refusal names |
+| `refused-*` | a refusal of the binding: `unbound`, `ambiguous`, `inactive`, `abandoned`, `deprovisioned`, `wrong-marker`, `representation-unrecorded`, `key-claim-missing`, `groups-unavailable`, `guest`, `external-incomplete`, `trc-patient-mismatch`, `trc-missing` | `party` for a party refused for its state or marker, `binding_detail` for what else the refusal names (`represented`, the subject a representative asserted) |
 
 `acting_mode` is `person`, `delegated` for a person through a declared client
 or actor, `external` for a verified external accessor and `system` for a client
@@ -339,6 +339,37 @@ DICOM renderings do not carry `external` and `system` yet. A record of a
 request with no authenticated caller carries no binding. The columns are in the
 chain digest: a record written from this release is digest version 2, which
 hashes them, and a record written before keeps verifying under version 1.
+
+### Refusal records and their budgets
+
+Every refused request is recorded as a failed user authentication, through the
+same path as an operation record: under `[audit] fail_mode = "closed"` a
+refusal whose record the system log cannot take is answered `503`. A refusal of
+the login binding or of a caller kind carries its `refused-*` code. Refusals
+are charged to one of two budgets, which never draw on each other, so a flood
+of invalid tokens cannot hide a verified caller's probing:
+
+| Budget | Charged to | Per caller in a window | Per window |
+|---|---|---|---|
+| Failed verification | the source network: the `/24` of an IPv4 address, the `/64` of an IPv6 one | 10 | 1000 |
+| Verified caller | the token's `iss` and `sub` | 10 | 1000 |
+
+A window lasts 60 seconds. Past a caller's 10 records the rest of its
+refusals in that window become one summary record, written when the window
+closes: it names the caller and carries `summary`, the count and the EHR ids
+the refused requests named (at most 64, while the count stays exact). Past a
+budget's 1000 records, the refusals of every caller not yet recorded in that
+window become one summary record per issuer and outcome, naming no caller. A
+security event (`refused-trc-patient-mismatch`, `refused-trc-missing`) is
+recorded once for every answered request and never summarised. A refusal
+record the system log cannot take is counted in
+`atna_audit_refusals_unwritten` and logged at `error`.
+
+> [!NOTE]
+> The limits, the windows and the budgets are kept **per replica**. Behind a
+> load balancer with three replicas, one caller can have up to 30 refusals
+> recorded one by one in a window before the summaries begin, and each replica
+> writes its own summary records.
 
 ### Access through FerroBRIDGE's FHIR facade
 

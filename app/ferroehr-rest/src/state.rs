@@ -53,6 +53,8 @@ struct Inner {
     authz: Option<Arc<AuthzHandle>>,
     /// The observability bundle (management config + telemetry handles).
     observability: Observability,
+    /// The refusal budgets of this replica.
+    refusals: crate::system_log::refusals::RefusalLedger,
 }
 
 impl AppState {
@@ -78,6 +80,9 @@ impl AppState {
                 backend,
                 authz,
                 observability,
+                refusals: crate::system_log::refusals::RefusalLedger::new(
+                    crate::system_log::refusals::RefusalLimits::default(),
+                ),
             }),
         }
     }
@@ -111,5 +116,10 @@ impl AppState {
     /// The observability bundle (management + telemetry handles).
     pub(crate) fn observability(&self) -> &Observability {
         &self.inner.observability
+    }
+
+    /// The refusal budgets of this replica.
+    pub(crate) fn refusals(&self) -> &crate::system_log::refusals::RefusalLedger {
+        &self.inner.refusals
     }
 }
