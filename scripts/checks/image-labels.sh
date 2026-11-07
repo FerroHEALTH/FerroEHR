@@ -33,7 +33,12 @@
 #
 # Ownership, which is what the checks below encode:
 #   build-INDEPENDENT (title, description, url, documentation, source, vendor,
-#     authors, licenses, base.name, base.digest) — both places, identical values
+#     authors, licenses) — both places, identical values
+#   base.name, base.digest — NEITHER place: the reusable build-image.yml lane
+#     reads them from the runtime stage's digest-pinned FROM through
+#     scripts/lib/base-image.sh, so the FROM Dependabot moves is the one place
+#     the base digest is written (#4953). A hand-written copy is refused, since
+#     it is the copy a bump leaves behind.
 #   build-DEPENDENT (created, version, revision, ref.name) — the workflow only,
 #     since a Dockerfile cannot know them
 #   ref.name — deliberately unset; see the waiver below
@@ -58,7 +63,8 @@ ferroehr-postgres:docker/postgres/Dockerfile"
 BUILD_WORKFLOW=.github/workflows/build-image.yml
 
 # The keys both places must declare, identically.
-SHARED="title description url documentation source vendor authors licenses base.name base.digest"
+SHARED="title description url documentation source vendor authors licenses"
+DERIVED="base.name base.digest"
 
 failures=0
 report() { printf '%s\n' "$*" >&2; failures=$((failures + 1)); }
@@ -124,22 +130,20 @@ for entry in $IMAGES; do
     done
   done
 
-  # base.name/base.digest must match the runtime stage's actual FROM pin, or the
-  # image claims a parent it was not built on — worse than claiming none.
-  from=$(grep -E '^FROM [^ ]+@sha256:' "$dockerfile" | tail -1 || true)
-  if [[ -z "$from" ]]; then
-    report "image-labels: $dockerfile has no digest-pinned FROM to check base.* against"
-  else
-    ref=$(printf '%s' "$from" | awk '{print $2}')
-    want_name=${ref%@*}
-    want_digest=${ref#*@}
-    got_name=$(dockerfile_label "$dockerfile" base.name || true)
-    got_digest=$(dockerfile_label "$dockerfile" base.digest || true)
-    [[ "$got_name" = "$want_name" ]] \
-      || report "image-labels: $dockerfile base.name is '$got_name', but its FROM is '$want_name'"
-    [[ "$got_digest" = "$want_digest" ]] \
-      || report "image-labels: $dockerfile base.digest is '$got_digest', but its FROM pins '$want_digest'"
-  fi
+  # base.name/base.digest are derived from the runtime stage's FROM pin at
+  # build time, so that pin must be readable and no copy may be written down.
+  bash scripts/lib/base-image.sh labels "$dockerfile" >/dev/null \
+    || report "image-labels: $dockerfile has no digest-pinned FROM to derive base.* from"
+  for key in $DERIVED; do
+    d=$(dockerfile_label "$dockerfile" "$key" || true)
+    [[ -z "$d" ]] \
+      || report "image-labels: $dockerfile declares org.opencontainers.image.$key; it is read from the FROM pin at build time, so declare it nowhere"
+    for WORKFLOW in $WORKFLOWS; do
+      w=$(workflow_label "$image" "$key" || true)
+      [[ -z "$w" ]] \
+        || report "image-labels: $WORKFLOW declares org.opencontainers.image.$key for $image; build-image.yml reads it from the FROM pin, so declare it nowhere"
+    done
+  done
 done
 
 # Every service container must run the exact base the postgres image is built
@@ -180,6 +184,14 @@ levels=$(grep -c 'DOCKER_METADATA_ANNOTATIONS_LEVELS: index,manifest' "$BUILD_WO
 annots=$(grep -c 'annotations: ${{ steps.meta.outputs.annotations }}' "$BUILD_WORKFLOW" || true)
 [[ "$annots" -eq 1 ]] \
   || report "image-labels: expected the one reusable build step passing the annotations output in $BUILD_WORKFLOW, found $annots"
+# shellcheck disable=SC2016 # the literal workflow text being searched for
+derive=$(grep -c 'bash scripts/lib/base-image.sh labels "$DOCKERFILE"' "$BUILD_WORKFLOW" || true)
+[[ "$derive" -eq 1 ]] \
+  || report "image-labels: expected the one step deriving base.* from the Dockerfile in $BUILD_WORKFLOW, found $derive"
+# shellcheck disable=SC2016 # ${{ … }} is the literal Actions expression being searched for
+fed=$(grep -c 'labels: ${{ steps.base.outputs.labels }}' "$BUILD_WORKFLOW" || true)
+[[ "$fed" -eq 1 ]] \
+  || report "image-labels: expected the metadata step to take the derived labels in $BUILD_WORKFLOW, found $fed"
 for WORKFLOW in $WORKFLOWS; do
   lanes=$(grep -c 'uses: ./.github/workflows/build-image.yml' "$WORKFLOW" || true)
   [[ "$lanes" -eq 3 ]] \

@@ -90,17 +90,18 @@ patch milestone — the remedy is only real once a tag republishes the image.
 ## The base-bump pin-site checklist (postgres)
 
 Machine-enforced agreement (`scripts/checks/image-labels.sh`, per-PR in CI):
-the Dockerfile `FROM` digest ↔ its `base.name`/`base.digest` LABELs ↔ the
-`containers.yml` labels ↔ every workflow's postgres service pins (the guard
+the Dockerfile `FROM` digest ↔ every workflow's postgres service pins
+(`base.name`/`base.digest` are written nowhere: `build-image.yml` reads them
+from the `FROM` through `scripts/lib/base-image.sh`, #4953) (the guard
 scans `.github/workflows/*.yml`, so a new lane's pin is covered the day it
 lands; it read `ci.yml` alone until #2775 and missed `sonar.yml`). Everything else
 is a sweep — run `grep -rn '18\.<old-patch>'` over the tree and expect to
 touch:
 
-- `docker/postgres/Dockerfile` — `FROM` tag+digest, header comment, both
-  `base.*` LABELs (the digest is the MANIFEST-LIST digest:
+- `docker/postgres/Dockerfile` — `FROM` tag+digest and the header comment
+  (the digest is the MANIFEST-LIST digest:
   `docker buildx imagetools inspect postgres:<tag>` → `Digest:`)
-- `.github/workflows/containers.yml` — postgres lane comment + both label lines
+- `.github/workflows/containers.yml` — the postgres lane comment
 - `.github/workflows/ci.yml` — its service-container pin + the job heading
 - `.github/workflows/sonar.yml` — its own service-container pin
 - `docs/VERSIONS.md` §Database, `docs/postgres-features.md` §Versioning note

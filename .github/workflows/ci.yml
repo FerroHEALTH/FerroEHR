@@ -550,6 +550,8 @@ jobs:
         run: bash scripts/lib/changed-paths.sh --self-test
       - name: The conformance image check compares an image's inputs with the tree's, and its lists match containers.yml
         run: bash scripts/lib/image-inputs.sh --self-test
+      - name: The base image of each Dockerfile is read from its runtime stage's digest-pinned FROM
+        run: bash scripts/lib/base-image.sh --self-test
       - name: The early-reader check refuses head and grep -q, -m or -l on a pipe, and allows the here-string forms
         run: bash scripts/checks/pipe-early-exit.sh --self-test
       - name: No workflow or shell program feeds a reader that stops early from a pipe
@@ -1113,8 +1115,9 @@ jobs:
       # Dockerfile, so a direct build is labelled correctly, and the publishing
       # workflow, whose repo-derived defaults are wrong for a repo shipping three
       # images. Two declarations of one fact drift; this fails instead. It also
-      # holds base.name/base.digest to the runtime stage's actual FROM pin, and
-      # checks that annotations reach the INDEX (the only place GHCR reads a
+      # refuses a written base.name/base.digest, which build-image.yml reads
+      # from the runtime stage's FROM pin (#4953), and checks that annotations
+      # reach the INDEX (the only place GHCR reads a
       # package description from).
       - name: Image metadata is declared once and agrees
         run: bash scripts/checks/image-labels.sh

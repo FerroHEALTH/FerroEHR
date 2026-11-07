@@ -128,9 +128,10 @@ ARG REVISION=""
 # build-DEPENDENT ones (created, version, revision, ref.name) come from the
 # publishing workflow, which is the only place they exist.
 #
-# base.name/base.digest name the IMMEDIATE parent — the `FROM` of this runtime
-# stage, not an intermediate build stage. They are kept in step with that pin by
-# scripts/checks/image-labels.sh. eu.ferroehr.image.manufacturer names the
+# base.name/base.digest name the IMMEDIATE parent, the `FROM` of this runtime
+# stage. They are not declared here: build-image.yml reads them from that pin
+# (scripts/lib/base-image.sh, #4953), so a direct build carries neither.
+# eu.ferroehr.image.manufacturer names the
 # manufacturer (Regulation (EU) 2025/327 Art. 30(1)(g)) as the one line
 # app/ferroehr/src/manufacturer.rs renders, which a test holds it to.
 LABEL org.opencontainers.image.title="FerroEHR" \
@@ -141,8 +142,6 @@ LABEL org.opencontainers.image.title="FerroEHR" \
       org.opencontainers.image.vendor="Cadasto B.V." \
       org.opencontainers.image.authors="Cadasto B.V. <https://www.cadasto.com/contact/>" \
       org.opencontainers.image.licenses="BUSL-1.1" \
-      org.opencontainers.image.base.name="gcr.io/distroless/cc-debian13:nonroot" \
-      org.opencontainers.image.base.digest="sha256:08476c244888bfb425bae1ae4dd7c17f093e972aab8426883d97f3c6f280f7c1" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}" \
       eu.ferroehr.image.carries-sandbox-posture="true" \

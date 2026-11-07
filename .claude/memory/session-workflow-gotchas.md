@@ -212,10 +212,9 @@ commit-message wording. Late labels: since #2777 applying a label raises a fresh
     tree — check `started_at` vs the fix's merge time before believing a
     red). A foreign commit also ends dependabot's ownership (`rebase` then
     refuses; only `recreate` remains), so push one only when the PR is
-    being merged soon. Corollary: a base-image digest bump must sweep EVERY
-    base.digest declaration (both Dockerfiles + the label blocks in
-    containers.yml and release.yml) — image-labels.sh holds them equal and
-    dependabot bumps only the FROM lines.
+    being merged soon. Since #4953 a base-image digest bump needs no
+    sweep of the base.* labels: build-image.yml reads them from the FROM
+    line dependabot bumps, and image-labels.sh refuses a hand-written copy.
 
 - **A main push cancels an in-flight containers dispatch** (`concurrency:
   containers-${{ github.ref }}` + cancel-in-progress): hold every merge while
