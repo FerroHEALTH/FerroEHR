@@ -1,0 +1,13 @@
+=== ACCESS_LOG_CHECKPOINT Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_log_checkpoint.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_log_checkpoint.adoc[]
+
+====

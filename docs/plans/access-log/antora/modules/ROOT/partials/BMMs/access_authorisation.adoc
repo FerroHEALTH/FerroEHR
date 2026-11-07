@@ -1,0 +1,56 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_AUTHORISATION",
+  "documentation": "One ground the access decision rested on.",
+  "properties": {
+    "kind": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "kind",
+      "documentation": "The kind of ground, coded in the openEHR Terminology `access authorisation` group: a role, an agreement, a consent decision, a permit, an emergency override, the subject's own access, a representation, or a legal obligation.",
+      "is_mandatory": true,
+      "type": "DV_CODED_TEXT"
+    },
+    "policy": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "policy",
+      "documentation": "The policy or agreement the ground is defined in.",
+      "type": "DV_URI"
+    },
+    "name": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "name",
+      "documentation": "The name of the agreement or policy.",
+      "type": "String"
+    },
+    "version": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "version",
+      "documentation": "The version of the agreement or policy.",
+      "type": "String"
+    },
+    "reference": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "reference",
+      "documentation": "The identifier of the decision the ground rests on, such as a consent decision reference or a data permit number.",
+      "type": "DV_IDENTIFIER"
+    },
+    "legal_grounds": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "legal_grounds",
+      "documentation": "The legal provisions the ground rests on.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    }
+  },
+  "invariants": {
+    "Kind_valid": "terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_access_authorisation, kind.defining_code)"
+  }
+}
+--------

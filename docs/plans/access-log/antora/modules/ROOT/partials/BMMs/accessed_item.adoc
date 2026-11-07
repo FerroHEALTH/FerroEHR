@@ -1,0 +1,75 @@
+[source,json]
+--------
+{
+  "name": "ACCESSED_ITEM",
+  "documentation": "One item of EHR data an access asked for or delivered: a versioned object or one of its versions, or, for a query whose result is not itemised, the categories and origins of what it delivered.",
+  "properties": {
+    "object": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "object",
+      "documentation": "Reference to the versioned object, `EHR_STATUS`, `EHR_ACCESS` or directory the item belongs to.",
+      "type": "OBJECT_REF"
+    },
+    "version_id": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "version_id",
+      "documentation": "The version accessed, when one version was.",
+      "type": "OBJECT_VERSION_ID"
+    },
+    "rm_type": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "rm_type",
+      "documentation": "The reference model type of the item, such as `COMPOSITION`.",
+      "type": "String"
+    },
+    "archetype_id": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "archetype_id",
+      "documentation": "The archetype of the item's root, when it is archetyped.",
+      "type": "ARCHETYPE_ID"
+    },
+    "template_id": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "template_id",
+      "documentation": "The template the item was committed under.",
+      "type": "TEMPLATE_ID"
+    },
+    "categories": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "categories",
+      "documentation": "The categories of data the item belongs to, coded in a terminology the jurisdiction names.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "origins": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "origins",
+      "documentation": "The systems the item's data came from.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_ORIGIN"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "was_delivered": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "was_delivered",
+      "documentation": "True when the item was delivered to the accessor or written; false when it was asked for and withheld.",
+      "is_mandatory": true,
+      "type": "Boolean"
+    }
+  },
+  "invariants": {
+    "Item_named": "object /= Void or version_id /= Void or not categories.is_empty"
+  }
+}
+--------

@@ -1,0 +1,13 @@
+=== ACCESS_RETENTION Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_retention.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_retention.adoc[]
+
+====

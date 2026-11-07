@@ -1,0 +1,48 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESSOR*
+
+h|*Description*
+2+a|Who accessed: the party, the healthcare provider they acted for, their roles and groups, the credential they presented, and the chain of clients and parties that acted between them and the system.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*kind*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|The kind of accessor, coded in the openEHR Terminology `accessor kind` group: a person, a person through a delegated client, the subject of care, a representative, a person of another organisation, an organisation, or a system acting for nobody.
+
+h|*1..1*
+|*party*: `xref:common:generic_package.adoc#_party_proxy_class[PARTY_PROXY]`
+a|The party that accessed: `PARTY_IDENTIFIED` with an `_external_ref_` to the demographic party the system bound the caller to, `PARTY_SELF` for the subject of care, `PARTY_RELATED` for a representative, or `PARTY_IDENTIFIED` with identifiers alone where no party is known here.
+
+h|*0..1*
+|*provider*: `xref:common:generic_package.adoc#_party_identified_class[PARTY_IDENTIFIED]`
+a|The healthcare provider or other organisation the accessor acted for.
+
+h|*0..1*
+|*roles*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|The functional or security roles the accessor held for the access.
+
+h|*0..1*
+|*groups*: `xref:{class_list}[List]<xref:{class_party_ref}[PARTY_REF]>`
+a|The demographic `GROUP` parties, such as care teams, whose membership the access relied on.
+
+h|*0..1*
+|*binding*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|How the system bound the credential to `_party_`, or why it could not, coded in a terminology the system names.
+
+h|*0..1*
+|*credential*: `xref:access_log:access_log_package.adoc#_access_credential_class[ACCESS_CREDENTIAL]`
+a|The credential the accessor authenticated with.
+
+h|*0..1*
+|*delegation*: `xref:{class_list}[List]<xref:access_log:access_log_package.adoc#_access_credential_class[ACCESS_CREDENTIAL]>`
+a|The clients and parties that acted between the accessor and the system, outermost first, as the credential named them.
+
+h|*Invariants*
+2+a|__Kind_valid__: `terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_accessor_kind, kind.defining_code)`
+
+|===

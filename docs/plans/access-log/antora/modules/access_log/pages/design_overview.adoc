@@ -1,0 +1,28 @@
+include::partial$module_vars.adoc[]
+
+= Design Overview
+
+== Placement
+
+The access log is a separate, append-only store of the EHR system, one per `system_id`, keyed by `ehr_id`. It is not EHR content:
+
+* EHR content is indelible (xref:BASE:architecture_overview:security.adoc[Security Policy], "Indelibility"); log entries expire at the end of their retention.
+* Recording a read as versioned content would make every read a commit, and the read of that version would need its own entry.
+* An entry names staff, their roles and their organisations, which would otherwise travel with every EHR Extract.
+
+== Package Structure
+
+The `{pkg}` package sits in the RM beside `ehr`, `demographic` and `ehr_extract`. It depends on `common.generic` (`PARTY_PROXY`, `PARTY_IDENTIFIED`, `PARTY_RELATED`), `data_types`, `data_structures` and the BASE identification classes, and changes no existing class.
+
+----
+ACCESS_LOG_RECORD (abstract)
+  ├── ACCESS_LOG_ENTRY
+  └── ACCESS_LOG_TOMBSTONE
+ACCESS_LOG_LINK, ACCESS_LOG_CHECKPOINT
+ACCESSOR, ACCESS_CREDENTIAL, ACCESS_OUTCOME, ACCESSED_ITEM, ACCESS_ORIGIN,
+ACCESS_QUERY, ACCESS_AUTHORISATION, ACCESS_CHANNEL, ACCESS_RETENTION
+----
+
+None of the classes is `LOCATABLE`. `ACCESS_LOG_ENTRY._other_details_` is the one archetypable point, an `ITEM_STRUCTURE`, as on `FEEDER_AUDIT_DETAILS`.
+
+The computable form of the package is `computable/BMM/openehr_access_log_0.1.0.bmm.json`, a BMM 2.4 schema that includes `openehr_rm_1.2.0`. Its UML diagram and the Effective and UML tabs of each class are generated from it by bmm-publisher.

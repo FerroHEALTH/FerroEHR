@@ -1,0 +1,41 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_LOG_RECORD",
+  "documentation": "Abstract parent of the records of an access log. Each record holds one link of the log's hash chain, so the order and the completeness of the log can be verified by anyone who reads it. A record is never modified; when its retention period ends, the system replaces an `ACCESS_LOG_ENTRY` by an `ACCESS_LOG_TOMBSTONE` that keeps the uid, the time and the link.",
+  "is_abstract": true,
+  "properties": {
+    "uid": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "uid",
+      "documentation": "Unique identifier of this record, assigned by the recording system.",
+      "is_mandatory": true,
+      "type": "HIER_OBJECT_ID"
+    },
+    "system_id": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "system_id",
+      "documentation": "Identifier of the logical EHR system that recorded the access, with the meaning of `AUDIT_DETAILS._system_id_`.",
+      "is_mandatory": true,
+      "type": "String"
+    },
+    "time_recorded": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "time_recorded",
+      "documentation": "Time at which the record was written to the log.",
+      "is_mandatory": true,
+      "type": "DV_DATE_TIME"
+    },
+    "link": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "link",
+      "documentation": "This record's link in the log's hash chain.",
+      "is_mandatory": true,
+      "type": "ACCESS_LOG_LINK"
+    }
+  },
+  "invariants": {
+    "System_id_valid": "not system_id.is_empty"
+  }
+}
+--------

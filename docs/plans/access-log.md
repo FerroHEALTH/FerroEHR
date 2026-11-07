@@ -10,16 +10,25 @@
   Profile 10.1.0; ISO 27789:2021 and ISO 22600:2014 by their public scope;
   the party binding (#5002, #5007, #5008) and the consent reference (#5106)
 
-This plan is the design. Beside it, in `docs/plans/access-log/`:
+This plan is the design and its rationale. Beside it,
+`docs/plans/access-log/antora/` holds the draft openEHR specification change,
+written as specification text another vendor could implement and laid out
+as an Antora module of the openEHR RM component, so it drops into the
+openEHR specification repositories (`antora/PROVENANCE.md` names the
+`openEHR/antora-openehr` and `openEHR/specifications-RM` commits it
+follows):
 
-- `openehr-access-log-proposal.adoc`: the draft openEHR specification change,
-  written as specification text another vendor could implement;
-- `openehr_access_log_0.1.0.bmm.json`: the draft model as a BMM 2.4 schema
-  that includes `openehr_rm_1.2.0`, in the P_BMM JSON form of the vendored
-  schemas under `tools/openehr-codegen/vendor/bmm/`.
+- `antora/modules/access_log/`: the specification pages (requirements,
+  design overview, the `access_log` package with its class descriptions,
+  recording, integrity and retention, terminology, ITS-REST resources, AQL,
+  and the appendix with the conformance points and the amendment record);
+- `antora/modules/ROOT/partials/`: the class partials, rendered from the BMM;
+- `antora/computable/BMM/openehr_access_log_0.1.0.bmm.json`: the draft model
+  as a BMM 2.4 schema that includes `openehr_rm_1.2.0`, in the P_BMM JSON
+  form of the vendored schemas under `tools/openehr-codegen/vendor/bmm/`.
 
-Both files go with this plan when the last implementation issue lands
-(`docs/plans/README.md`). The proposal text is the part that outlives
+The tree goes with this plan when the last implementation issue lands
+(`docs/plans/README.md`). The specification text is the part that outlives
 FerroEHR's implementation; the issue that submits it carries it forward.
 
 ## Objectives
@@ -125,6 +134,42 @@ offered to that work (§Proposal path).
 **Decision: a separate, append-only log outside the EHR, one per system,
 keyed by `ehr_id`. It is not versioned content beside `EHR_ACCESS`.**
 
+The EHR keeps its versioned content and its change audit; the log sits
+beside it and points into it by `ehr_id`, version ids and party references,
+and nothing in the EHR points back:
+
+```mermaid
+flowchart LR
+  subgraph EHRBOX["EHR: versioned, indelible (RM ehr, common.change_control)"]
+    EHR["EHR<br/>ehr_id"]
+    STATUS["VERSIONED_EHR_STATUS<br/>subject: PARTY_SELF"]
+    ACCESS["VERSIONED_EHR_ACCESS<br/>access settings"]
+    COMP["VERSIONED_COMPOSITION<br/>ORIGINAL_VERSION 1..n"]
+    CONTRIB["CONTRIBUTION<br/>AUDIT_DETAILS: who changed what"]
+    EHR --> STATUS
+    EHR --> ACCESS
+    EHR --> COMP
+    EHR --> CONTRIB
+    CONTRIB -. versions .-> COMP
+  end
+  subgraph DEMO["Demographic service"]
+    PERSON["PERSON / GROUP parties"]
+  end
+  subgraph LOG["Access log: append-only, one chain per system_id, outside the EHR"]
+    E1["ACCESS_LOG_ENTRY seq n-1"]
+    E2["ACCESS_LOG_TOMBSTONE seq n<br/>content removed, link kept"]
+    E3["ACCESS_LOG_ENTRY seq n+1"]
+    CP["ACCESS_LOG_CHECKPOINT<br/>signed head"]
+    E1 -- "link.digest" --> E2
+    E2 -- "link.digest" --> E3
+    E3 -. "sealed by" .-> CP
+  end
+  E1 -- "ehr_id" --> EHR
+  E3 -- "items.version_id" --> COMP
+  E3 -- "accessor.party.external_ref" --> PERSON
+  CONTRIB -- "committer.external_ref" --> PERSON
+```
+
 The reasons, each from a source:
 
 - **The EHR is indelible; the log must expire.** BASE §Security Policy:
@@ -165,38 +210,182 @@ serves the reads. Nothing in the model assumes one process.
 
 ## The model
 
-The BMM is `docs/plans/access-log/openehr_access_log_0.1.0.bmm.json`; the
-proposal text defines every attribute. In outline:
+The BMM is
+`docs/plans/access-log/antora/computable/BMM/openehr_access_log_0.1.0.bmm.json`,
+and the specification pages define every attribute. The two class diagrams
+below carry every attribute of the BMM with its type and multiplicity; an
+attribute whose type is a class is drawn as an association, with the
+attribute's multiplicity at the far end. No access-log class inherits from
+`LOCATABLE`: the only archetypable content is `other_details`, an
+`ITEM_STRUCTURE`. The first diagram is the log and the entry:
 
+```mermaid
+classDiagram
+  direction TB
+  class ACCESS_LOG_RECORD {
+    <<abstract>>
+    +system_id : String [1]
+    +time_recorded : DV_DATE_TIME [1]
+  }
+  class ACCESS_LOG_ENTRY {
+    +occurred : DV_INTERVAL~DV_DATE_TIME~ [0..1]
+    +action : DV_CODED_TEXT [1]
+    +operation : DV_CODED_TEXT [0..1]
+    +purposes : List~DV_CODED_TEXT~ [0..*]
+    +is_emergency : Boolean [1]
+    +security_labels : List~DV_CODED_TEXT~ [0..*]
+  }
+  class ACCESS_LOG_TOMBSTONE {
+    +time_removed : DV_DATE_TIME [1]
+    +grounds : List~DV_CODED_TEXT~ [1..*]
+  }
+  class ACCESS_LOG_LINK {
+    +sequence : Integer64 [1]
+    +algorithm : String [1]
+    +previous_digest : String [1]
+    +content_digest : String [1]
+    +digest : String [1]
+    +signature : String [0..1]
+  }
+  class ACCESS_LOG_CHECKPOINT {
+    +system_id : String [1]
+    +sequence : Integer64 [1]
+    +digest : String [1]
+    +algorithm : String [1]
+    +time_sealed : DV_DATE_TIME [1]
+    +proof : String [1]
+  }
+  class ACCESS_OUTCOME {
+    +result : DV_CODED_TEXT [1]
+    +reason : DV_CODED_TEXT [0..1]
+    +description : DV_TEXT [0..1]
+    +delivered : Integer [0..1]
+  }
+  class ACCESS_QUERY {
+    +stored_query : String [0..1]
+    +language : String [0..1]
+    +text_digest : String [0..1]
+    +text : String [0..1]
+    +rows : Integer [0..1]
+  }
+  class ACCESS_AUTHORISATION {
+    +kind : DV_CODED_TEXT [1]
+    +policy : DV_URI [0..1]
+    +name : String [0..1]
+    +version : String [0..1]
+    +reference : DV_IDENTIFIER [0..1]
+    +legal_grounds : List~DV_CODED_TEXT~ [0..*]
+  }
+  class ACCESS_CHANNEL {
+    +interface : DV_CODED_TEXT [0..1]
+    +request_id : String [0..1]
+    +correlation_id : String [0..1]
+    +client_address : String [0..1]
+  }
+  class ACCESS_RETENTION {
+    +retain_until : DV_DATE [0..1]
+    +grounds : List~DV_CODED_TEXT~ [1..*]
+  }
+  class ACCESSOR
+  class ACCESSED_ITEM
+  class HIER_OBJECT_ID {
+    <<BASE>>
+  }
+  class ITEM_STRUCTURE {
+    <<RM>>
+  }
+  class LOCATABLE {
+    <<RM>>
+  }
+  class PARTY_PROXY {
+    <<RM abstract>>
+  }
+  ACCESS_LOG_RECORD <|-- ACCESS_LOG_ENTRY
+  ACCESS_LOG_RECORD <|-- ACCESS_LOG_TOMBSTONE
+  LOCATABLE <|-- ITEM_STRUCTURE : via DATA_STRUCTURE
+  ACCESS_LOG_RECORD "0..*" --> "1" HIER_OBJECT_ID : uid
+  ACCESS_LOG_RECORD "1" *-- "1" ACCESS_LOG_LINK : link
+  ACCESS_LOG_ENTRY "0..*" --> "0..1" HIER_OBJECT_ID : ehr_id
+  ACCESS_LOG_ENTRY "1" *-- "1" ACCESS_OUTCOME : outcome
+  ACCESS_LOG_ENTRY "1" *-- "1" ACCESSOR : accessor
+  ACCESS_LOG_ENTRY "1" *-- "0..*" ACCESSED_ITEM : items
+  ACCESS_LOG_ENTRY "1" *-- "0..1" ACCESS_QUERY : query
+  ACCESS_LOG_ENTRY "1" *-- "0..*" ACCESS_AUTHORISATION : authorisations
+  ACCESS_LOG_ENTRY "1" *-- "0..1" ACCESS_CHANNEL : channel
+  ACCESS_LOG_ENTRY "1" *-- "1" ACCESS_RETENTION : retention
+  ACCESS_LOG_ENTRY "1" *-- "0..1" ITEM_STRUCTURE : other_details
+  ACCESS_LOG_CHECKPOINT "0..*" --> "1" PARTY_PROXY : signer
+  ACCESS_LOG_CHECKPOINT ..> ACCESS_LOG_LINK : seals digest at sequence
 ```
-ACCESS_LOG_RECORD (abstract)       uid, system_id, time_recorded, link
-├── ACCESS_LOG_ENTRY               one access to the data of at most one EHR
-│     occurred      DV_INTERVAL<DV_DATE_TIME> [0..1]
-│     action        DV_CODED_TEXT          openEHR group "access action"
-│     operation     DV_CODED_TEXT [0..1]   e.g. the ITS-REST operation id
-│     outcome       ACCESS_OUTCOME         result, reason, description, delivered
-│     accessor      ACCESSOR               who, on whose behalf
-│     ehr_id        HIER_OBJECT_ID [0..1]  whose data
-│     items         List<ACCESSED_ITEM>    what, with categories and origins
-│     query         ACCESS_QUERY [0..1]    stored query or text digest, rows
-│     purposes      List<DV_CODED_TEXT>    why
-│     authorisations List<ACCESS_AUTHORISATION>  under which grounds
-│     is_emergency  Boolean                EHDS Art 11(5)
-│     channel       ACCESS_CHANNEL [0..1]  interface, request id, correlation, address
-│     security_labels List<DV_CODED_TEXT>  who may read this entry
-│     retention     ACCESS_RETENTION       retain_until, grounds
-│     other_details ITEM_STRUCTURE [0..1]  jurisdiction details, archetypable
-└── ACCESS_LOG_TOMBSTONE           what remains after retention: time_removed, grounds
-ACCESS_LOG_LINK                    sequence, algorithm, previous_digest, content_digest, digest, signature [0..1]
-ACCESS_LOG_CHECKPOINT              system_id, sequence, digest, algorithm, time_sealed, signer, proof
-ACCESSOR                           kind, party: PARTY_PROXY, provider: PARTY_IDENTIFIED [0..1],
-                                   roles, groups: List<PARTY_REF>, binding [0..1],
-                                   credential: ACCESS_CREDENTIAL [0..1], delegation: List<ACCESS_CREDENTIAL>
-ACCESS_CREDENTIAL                  issuer, subject, client_id, token_id, assurance, authentication_method
-ACCESSED_ITEM                      object: OBJECT_REF, version_id: OBJECT_VERSION_ID, rm_type,
-                                   archetype_id, template_id, categories, origins, was_delivered
-ACCESS_ORIGIN                      system_id, endpoint: DV_URI, location: PARTY_IDENTIFIED
-ACCESS_AUTHORISATION               kind, policy: DV_URI, name, version, reference: DV_IDENTIFIER, legal_grounds
+
+The second is who accessed and what they reached, with the RM and BASE
+classes the model reuses:
+
+```mermaid
+classDiagram
+  direction LR
+  class ACCESSOR {
+    +kind : DV_CODED_TEXT [1]
+    +roles : List~DV_CODED_TEXT~ [0..*]
+    +binding : DV_CODED_TEXT [0..1]
+  }
+  class ACCESS_CREDENTIAL {
+    +issuer : String [1]
+    +subject : String [1]
+    +client_id : String [0..1]
+    +token_id : String [0..1]
+    +assurance : DV_CODED_TEXT [0..1]
+    +authentication_method : DV_CODED_TEXT [0..1]
+  }
+  class ACCESSED_ITEM {
+    +rm_type : String [0..1]
+    +archetype_id : ARCHETYPE_ID [0..1]
+    +template_id : TEMPLATE_ID [0..1]
+    +categories : List~DV_CODED_TEXT~ [0..*]
+    +was_delivered : Boolean [1]
+  }
+  class ACCESS_ORIGIN {
+    +system_id : String [1]
+    +endpoint : DV_URI [0..1]
+  }
+  class PARTY_PROXY {
+    <<RM abstract>>
+  }
+  class PARTY_IDENTIFIED {
+    <<RM>>
+  }
+  class PARTY_SELF {
+    <<RM>>
+  }
+  class PARTY_RELATED {
+    <<RM>>
+  }
+  class PARTY_REF {
+    <<BASE>>
+  }
+  class OBJECT_REF {
+    <<BASE>>
+  }
+  class OBJECT_VERSION_ID {
+    <<BASE>>
+  }
+  class UID_BASED_ID {
+    <<BASE abstract>>
+  }
+  PARTY_PROXY <|-- PARTY_IDENTIFIED
+  PARTY_PROXY <|-- PARTY_SELF
+  PARTY_IDENTIFIED <|-- PARTY_RELATED
+  OBJECT_REF <|-- PARTY_REF
+  UID_BASED_ID <|-- OBJECT_VERSION_ID
+  ACCESSOR "0..*" --> "1" PARTY_PROXY : party
+  ACCESSOR "0..*" --> "0..1" PARTY_IDENTIFIED : provider
+  ACCESSOR "0..*" --> "0..*" PARTY_REF : groups
+  ACCESSOR "1" *-- "0..1" ACCESS_CREDENTIAL : credential
+  ACCESSOR "1" *-- "0..*" ACCESS_CREDENTIAL : delegation
+  ACCESSED_ITEM "0..*" --> "0..1" OBJECT_REF : object
+  ACCESSED_ITEM "0..*" --> "0..1" OBJECT_VERSION_ID : version_id
+  ACCESSED_ITEM "1" *-- "0..*" ACCESS_ORIGIN : origins
+  ACCESS_ORIGIN "0..*" --> "0..1" PARTY_IDENTIFIED : location
 ```
 
 How each question of the issue is answered:
@@ -271,6 +460,52 @@ governs, it is cited; otherwise "our own design".
    minimisation).
 6. **An entry is never changed.** The only change is its replacement by a
    tombstone at the end of its retention (§Retention).
+
+### One read, end to end
+
+A granted read and a refused one, through the gate, the party binding
+(#5002), the access decision, the log write and the projections:
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Pro as Professional's client
+  participant Gate as ferroehr-rest gate
+  participant Bind as Party binding
+  participant Authz as Access decision
+  participant Svc as FerroEhrService
+  participant Log as Access log store
+  participant Proj as Projections
+  participant ARR as Audit Record Repository
+  Pro->>Gate: GET /ehr/{ehr_id}/composition/{uid} with bearer token
+  Gate->>Gate: verify the token: issuer, subject, client, jti
+  Gate->>Bind: look up the login
+  Bind-->>Gate: bound PERSON, groups, provider
+  Gate->>Authz: roles, purposes, agreement, consent reference
+  alt access granted
+    Authz-->>Gate: granted, with its grounds
+    Gate->>Svc: read the version
+    Svc-->>Gate: the composition, its template, categories, origins
+    Gate->>Log: write ACCESS_LOG_ENTRY (granted, one per EHR)
+    Log->>Log: content_digest, then link.digest over the previous link
+    alt entry written
+      Log-->>Gate: stored at sequence n
+      Gate-->>Pro: 200 with the composition
+    else entry cannot be written
+      Log-->>Gate: failure
+      Gate-->>Pro: refused, no data leaves (fail-closed)
+    end
+  else access refused
+    Authz-->>Gate: refused, with the reason
+    Gate->>Log: write ACCESS_LOG_ENTRY (refused, items not delivered)
+    Gate-->>Pro: 403 or 404
+  end
+  Proj->>Log: read the stored entry
+  Proj->>Proj: entry to ehds-logging AccessRecord (EHDS Annex II 3.2)
+  Proj->>Proj: AccessRecord to IHE BALP FHIR R4 AuditEvent and DICOM message
+  Proj->>ARR: ITI-20 FHIR feed or syslog
+  Note over Log,ARR: ITI-81 and the ITS-REST access_log resources read the same stored entry
+```
 
 ## Integrity
 
@@ -437,6 +672,21 @@ Each projection reads one `ACCESS_LOG_ENTRY` and writes one target record.
 FerroEHR writes the projections from the stored entry; nothing stores a
 projection as a second source. "Loss" means the target cannot carry the
 value; the entry keeps it.
+
+In one picture, with what each target loses:
+
+```mermaid
+flowchart LR
+  ENTRY["ACCESS_LOG_ENTRY<br/>the record kept"]
+  BALP["FHIR R4 AuditEvent<br/>IHE BALP 1.1.4"]
+  R5["FHIR R5 AuditEvent"]
+  DICOM["DICOM PS3.15 A.5<br/>audit message"]
+  EHDS["EHDS access record<br/>ehds-logging AccessRecord"]
+  ENTRY -- "loses: reason code, export and import as actions, delegation order, legal grounds, origins as elements, retention, chain" --> BALP
+  ENTRY -- "loses: as R4, but keeps the reason code" --> R5
+  ENTRY -- "loses: purposes, authorisations, emergency mark, origins, retention, labels, chain, delegation order" --> DICOM
+  ENTRY -- "loses: export and import fold into Read and Create, refused and failed share the failure scale, the chain" --> EHDS
+```
 
 ### To FHIR R4 `AuditEvent` under IHE BALP 1.1.4
 
@@ -623,7 +873,7 @@ the design.
 touches (the openEHR Jira projects by component):
 
 - **SPECRM:** the new `org.openehr.rm.access_log` package and its classes,
-  with the BMM in this folder as its computable form.
+  with the BMM in `antora/computable/BMM/` as its computable form.
 - **SPECTERM:** the groups `access action`, `access outcome`, `accessor
   kind`, `access authorisation` and `access refusal reason`, and the group
   id constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`.
@@ -636,8 +886,10 @@ touches (the openEHR Jira projects by component):
 - **SPECPR:** a problem report that records the gap this proposal fills,
   quoting BASE §Security Policy, so the CRs have a report to resolve.
 
-The proposal text in `docs/plans/access-log/openehr-access-log-proposal.adoc`
-is the body of the SPECRM request; the others cite it.
+The Antora module in `docs/plans/access-log/antora/` is the body of the
+SPECRM request, in the layout the openEHR specifications now use; its
+terminology, ITS-REST and AQL pages move to the TERM, ITS-REST and QUERY
+components for the other requests.
 
 **To the EU work on the logging component's common specifications** (EHDS
 Art 36(1), due 26 March 2027), a note would contain:
@@ -689,5 +941,5 @@ Art 36(1), due 26 March 2027), a note would contain:
 
 - [ ] The owner has reviewed the design and the proposal.
 - [ ] Every implementation sub-issue of #5121 is closed; the last one deletes
-  this file and `docs/plans/access-log/`, and the proposal text moves to
+  this file and `docs/plans/access-log/`, and the specification text moves to
   the issue that submits it.

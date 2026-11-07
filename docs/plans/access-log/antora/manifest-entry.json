@@ -1,0 +1,27 @@
+{
+  "id": "access_log",
+  "title": "Access Log Information Model",
+  "title_short": "Access Log",
+  "description": "openEHR Access Log Information Model specification (draft)",
+  "micro_summary": "Record of every access to EHR data",
+  "summary": "Model of the record an EHR system keeps of every access to EHR data: who accessed, on whose behalf, what, when, why, under which authorisation, with which outcome and through which channel. The log is kept beside the EHR, keyed by ehr_id, append-only and hash-chained, with tombstones that keep the chain intact after retention, signed checkpoints, a subject view for the patient, ITS-REST resources and an AQL root class.",
+  "classes": [
+    "ACCESS_LOG_RECORD",
+    "ACCESS_LOG_ENTRY",
+    "ACCESS_LOG_TOMBSTONE",
+    "ACCESS_LOG_LINK",
+    "ACCESS_LOG_CHECKPOINT",
+    "ACCESSOR",
+    "ACCESS_CREDENTIAL",
+    "ACCESS_OUTCOME",
+    "ACCESSED_ITEM",
+    "ACCESS_ORIGIN",
+    "ACCESS_QUERY",
+    "ACCESS_AUTHORISATION",
+    "ACCESS_CHANNEL",
+    "ACCESS_RETENTION"
+  ],
+  "copyright_year": "2026",
+  "spec_status": "DEVELOPMENT",
+  "keywords": "access log, audit, EHR, openehr"
+}

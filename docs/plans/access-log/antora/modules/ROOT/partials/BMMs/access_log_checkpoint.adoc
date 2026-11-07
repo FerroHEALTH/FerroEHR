@@ -1,0 +1,62 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_LOG_CHECKPOINT",
+  "documentation": "A signed statement by the recording system of the head of its log at a point in time. A checkpoint commits to every record up to `_sequence_`, so a verifier that holds it can detect a later rewrite of the log, and an export carries the checkpoint its records verify against.",
+  "properties": {
+    "system_id": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "system_id",
+      "documentation": "The system whose log the checkpoint seals.",
+      "is_mandatory": true,
+      "type": "String"
+    },
+    "sequence": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "sequence",
+      "documentation": "The `_link.sequence_` of the last record the checkpoint covers.",
+      "is_mandatory": true,
+      "type": "Integer64"
+    },
+    "digest": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "digest",
+      "documentation": "The `_link.digest_` of that record.",
+      "is_mandatory": true,
+      "type": "String"
+    },
+    "algorithm": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "algorithm",
+      "documentation": "Name of the digest algorithm of the chain.",
+      "is_mandatory": true,
+      "type": "String"
+    },
+    "time_sealed": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "time_sealed",
+      "documentation": "Time at which the checkpoint was signed.",
+      "is_mandatory": true,
+      "type": "DV_DATE_TIME"
+    },
+    "signer": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "signer",
+      "documentation": "The party, usually the organisation responsible for the system, whose key signed the checkpoint.",
+      "is_mandatory": true,
+      "type": "PARTY_PROXY"
+    },
+    "proof": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "proof",
+      "documentation": "The signature over the checkpoint's other attributes, in the form `ATTESTATION._proof_` uses, such as a JWS or a PGP signature.",
+      "is_mandatory": true,
+      "type": "String"
+    }
+  },
+  "invariants": {
+    "Sequence_valid": "sequence >= 1",
+    "Proof_valid": "not proof.is_empty"
+  }
+}
+--------

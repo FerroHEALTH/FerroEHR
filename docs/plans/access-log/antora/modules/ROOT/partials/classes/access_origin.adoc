@@ -1,0 +1,13 @@
+=== ACCESS_ORIGIN Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_origin.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_origin.adoc[]
+
+====

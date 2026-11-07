@@ -1,0 +1,13 @@
+=== ACCESS_QUERY Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_query.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_query.adoc[]
+
+====

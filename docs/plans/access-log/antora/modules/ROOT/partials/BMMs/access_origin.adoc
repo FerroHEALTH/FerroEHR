@@ -1,0 +1,31 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_ORIGIN",
+  "documentation": "One origin of accessed data: the system it came from, as `FEEDER_AUDIT` or the version's own `AUDIT_DETAILS._system_id_` names it, or the endpoint a federated access asked.",
+  "properties": {
+    "system_id": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "system_id",
+      "documentation": "The originating system.",
+      "is_mandatory": true,
+      "type": "String"
+    },
+    "endpoint": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "endpoint",
+      "documentation": "The endpoint the access asked, for a federated access.",
+      "type": "DV_URI"
+    },
+    "location": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "location",
+      "documentation": "The facility at the origin, as `FEEDER_AUDIT_DETAILS._location_` names it.",
+      "type": "PARTY_IDENTIFIED"
+    }
+  },
+  "invariants": {
+    "System_id_valid": "not system_id.is_empty"
+  }
+}
+--------

@@ -1,0 +1,29 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_CHANNEL*
+
+h|*Description*
+2+a|The interface and request that carried an access.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*0..1*
+|*interface*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|The interface, such as openEHR ITS-REST 1.1.0, HL7 FHIR R4 or a user interface of the system, coded in a terminology the system names.
+
+h|*0..1*
+|*request_id*: `xref:{class_string}[String]`
+a|The identifier of the request in the recording system's own logs; every entry one request produced carries the same value.
+
+h|*0..1*
+|*correlation_id*: `xref:{class_string}[String]`
+a|The identifier the client or an intermediary correlates the request by in its own log.
+
+h|*0..1*
+|*client_address*: `xref:{class_string}[String]`
+a|The network address the request came from.
+
+|===

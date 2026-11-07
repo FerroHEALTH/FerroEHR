@@ -1,0 +1,82 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_LOG_ENTRY*
+
+h|*Description*
+2+a|The record of one access event to the data of at most one EHR: who accessed, on whose behalf, what, when, why, under which authorisation, with which outcome, and through which channel. An access that reaches the data of several EHRs is recorded as one entry per EHR, and the entries of one request share `_channel.request_id_`.
+
+h|*Inherit*
+2+|`xref:access_log:access_log_package.adoc#_access_log_record_class[ACCESS_LOG_RECORD]`
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*0..1*
+|*occurred*: `xref:data_types:quantity_package.adoc#_dv_interval_class[DV_INTERVAL]<xref:data_types:date_time_package.adoc#_dv_date_time_class[DV_DATE_TIME]>`
+a|Time interval over which the access took place, when it is known and differs from `_time_recorded_`.
+
+h|*1..1*
+|*action*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|What the access did to the data, coded in the openEHR Terminology `access action` group.
+
+h|*0..1*
+|*operation*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|The interface operation that carried the access, such as an ITS-REST operation id, coded in a terminology that names the interface.
+
+h|*1..1*
+|*outcome*: `xref:access_log:access_log_package.adoc#_access_outcome_class[ACCESS_OUTCOME]`
+a|Whether the access was granted, and how it ended.
+
+h|*1..1*
+|*accessor*: `xref:access_log:access_log_package.adoc#_accessor_class[ACCESSOR]`
+a|Who accessed the data, on whose behalf, and with which credential.
+
+h|*0..1*
+|*ehr_id*: `xref:{class_hier_object_id}[HIER_OBJECT_ID]`
+a|The `ehr_id` of the EHR whose data the access reached or asked for. Void only for an access that named no EHR, such as a refused request whose target could not be resolved.
+
+h|*0..1*
+|*items*: `xref:{class_list}[List]<xref:access_log:access_log_package.adoc#_accessed_item_class[ACCESSED_ITEM]>`
+a|The data of the EHR the access asked for or delivered.
+
+h|*0..1*
+|*query*: `xref:access_log:access_log_package.adoc#_access_query_class[ACCESS_QUERY]`
+a|The query that carried the access, for an access by query.
+
+h|*0..1*
+|*purposes*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|The purposes of use the accessor declared or the system established.
+
+h|*0..1*
+|*authorisations*: `xref:{class_list}[List]<xref:access_log:access_log_package.adoc#_access_authorisation_class[ACCESS_AUTHORISATION]>`
+a|The grounds on which the access was authorised or refused: roles, agreements, consent decisions, permits, emergency overrides.
+
+h|*1..1*
+|*is_emergency*: `xref:{class_boolean}[Boolean]`
+a|True when the access was made under an emergency override of the access policy, such as an access to protect the vital interests of the subject of care.
+
+h|*0..1*
+|*channel*: `xref:access_log:access_log_package.adoc#_access_channel_class[ACCESS_CHANNEL]`
+a|The interface and the request that carried the access.
+
+h|*0..1*
+|*security_labels*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|Labels that limit who may read this entry, derived from the categories and origins of the data accessed.
+
+h|*1..1*
+|*retention*: `xref:access_log:access_log_package.adoc#_access_retention_class[ACCESS_RETENTION]`
+a|How long this entry is kept, and on which grounds.
+
+h|*0..1*
+|*other_details*: `xref:data_structures:item_structure_package.adoc#_item_structure_class[ITEM_STRUCTURE]`
+a|Further details a jurisdiction or a deployment records, never clinical content. May be archetyped.
+
+h|*Invariants*
+2+a|__Action_valid__: `terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_access_action, action.defining_code)`
+
+h|
+2+a|__Items_need_ehr__: `not items.is_empty implies ehr_id /= Void`
+
+|===

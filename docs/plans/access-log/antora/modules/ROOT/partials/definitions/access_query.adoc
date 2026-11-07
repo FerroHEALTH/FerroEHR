@@ -1,0 +1,39 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_QUERY*
+
+h|*Description*
+2+a|The query of an access by query. The query text is recorded as a digest by default; the text itself only where a policy asks for it.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*0..1*
+|*stored_query*: `xref:{class_string}[String]`
+a|The qualified name of the stored query executed, with its version.
+
+h|*0..1*
+|*language*: `xref:{class_string}[String]`
+a|The query language and its version, such as `AQL 1.1`.
+
+h|*0..1*
+|*text_digest*: `xref:{class_string}[String]`
+a|Digest of the query text as received, in lower-case hexadecimal, with the algorithm of the log's chain.
+
+h|*0..1*
+|*text*: `xref:{class_string}[String]`
+a|The query text as received, recorded only where a policy asks for it.
+
+h|*0..1*
+|*rows*: `xref:{class_integer}[Integer]`
+a|The number of result rows the query delivered that hold data of this entry's EHR.
+
+h|*Invariants*
+2+a|__Query_named__: `stored_query /= Void or text_digest /= Void`
+
+h|
+2+a|__Rows_valid__: `rows /= Void implies rows >= 0`
+
+|===

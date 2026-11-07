@@ -1,0 +1,38 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_OUTCOME",
+  "documentation": "How an access ended.",
+  "properties": {
+    "result": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "result",
+      "documentation": "The result, coded in the openEHR Terminology `access outcome` group: granted, partially granted, refused or failed.",
+      "is_mandatory": true,
+      "type": "DV_CODED_TEXT"
+    },
+    "reason": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "reason",
+      "documentation": "Why the access was refused, partly granted or failed, coded in the openEHR Terminology `access refusal reason` group or a terminology the system names.",
+      "type": "DV_CODED_TEXT"
+    },
+    "description": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "description",
+      "documentation": "Free text on the outcome, never clinical content.",
+      "type": "DV_TEXT"
+    },
+    "delivered": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "delivered",
+      "documentation": "The number of objects or result rows delivered to the accessor, when counted.",
+      "type": "Integer"
+    }
+  },
+  "invariants": {
+    "Result_valid": "terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_access_outcome, result.defining_code)",
+    "Delivered_valid": "delivered /= Void implies delivered >= 0"
+  }
+}
+--------

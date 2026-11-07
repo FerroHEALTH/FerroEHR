@@ -1,0 +1,28 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_ORIGIN*
+
+h|*Description*
+2+a|One origin of accessed data: the system it came from, as `FEEDER_AUDIT` or the version's own `AUDIT_DETAILS._system_id_` names it, or the endpoint a federated access asked.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*system_id*: `xref:{class_string}[String]`
+a|The originating system.
+
+h|*0..1*
+|*endpoint*: `xref:data_types:uri_package.adoc#_dv_uri_class[DV_URI]`
+a|The endpoint the access asked, for a federated access.
+
+h|*0..1*
+|*location*: `xref:common:generic_package.adoc#_party_identified_class[PARTY_IDENTIFIED]`
+a|The facility at the origin, as `FEEDER_AUDIT_DETAILS._location_` names it.
+
+h|*Invariants*
+2+a|__System_id_valid__: `not system_id.is_empty`
+
+|===

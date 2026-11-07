@@ -1,0 +1,13 @@
+== Amendment Record
+
+[cols="1,6,2,2", options="header"]
+|===
+|Issue|Details|Raiser|Completed
+
+4+^h|*Draft, not part of an RM release*
+
+|[[latest_issue]]0.1.0
+|Initial draft: the `access_log` package, terminology groups, recording rules, hash chain, retention, subject view, ITS-REST resources and AQL root class.
+|FerroEHR
+|[[latest_issue_date]]07 Nov 2026
+|===

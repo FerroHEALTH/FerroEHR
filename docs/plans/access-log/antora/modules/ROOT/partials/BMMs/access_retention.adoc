@@ -1,0 +1,29 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_RETENTION",
+  "documentation": "How long an entry is kept, set when it is written from the categories and origins of the data and the laws that apply.",
+  "properties": {
+    "retain_until": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "retain_until",
+      "documentation": "The last day the entry is kept; Void when it is kept without end.",
+      "type": "DV_DATE"
+    },
+    "grounds": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "grounds",
+      "documentation": "The provisions that set the period, such as a minimum period from the date of access and a national maximum.",
+      "is_mandatory": true,
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 1,
+        "upper_unbounded": true
+      }
+    }
+  }
+}
+--------
