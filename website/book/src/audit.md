@@ -327,7 +327,7 @@ beside it hold what each outcome needs:
 | `bound` | a person bound to a `complete` `PERSON` | `party`, `party_groups`, `provider`, `guest` for an admitted guest, `representation` for a representative, `actor_chain` for a delegated token |
 | `provisional` | a person bound to an `incomplete` `PERSON` | `party`, `party_groups`, `provider` |
 | `external` | a verified external person of a `federation` issuer | `external_fields`, `agreement`, `provider` |
-| `organisation` | an organisation under an agreement with `accessor = "organisation"` | `external_fields`, `agreement`, `provider` |
+| `organisation` | an organisation under an agreement with `accessor = "organisation"` | `external_fields`, `agreement` (with its legal ground and access class, and for a `chained` request `correlation_id` and `correlation_source`), `provider` |
 | `system` | a client acting for nobody | `provider` of its `[[authz.system_client]]`, `facilities` of the compositions it committed |
 | `self` | a patient token of a `patients` issuer | the principal |
 | `refused-*` | a refusal of the binding or of a caller kind: `unbound`, `ambiguous`, `inactive`, `abandoned`, `deprovisioned`, `wrong-marker`, `representation-unrecorded`, `key-claim-missing`, `groups-unavailable`, `guest`, `external-incomplete`, `trc-patient-mismatch`, `trc-missing`; and of a caller kind, `system-personal-scope` (a system caller holding a `user/` or `patient/` scope), `no-agreement` (no federation agreement admits the accessor) and `scope-beyond-agreement` (an external caller holding a scope its agreement does not read) | `party` for a party refused for its state or marker, `binding_detail` for what else the refusal names (`represented`, the subject a representative asserted; `claim`, the name of the key claim a token lacked, never its value) |
@@ -361,7 +361,11 @@ the refused requests named (at most 64, while the count stays exact). Past a
 budget's 1000 records, the refusals of every caller not yet recorded in that
 window become one summary record per issuer and outcome, naming no caller. A
 security event (`refused-trc-patient-mismatch`, `refused-trc-missing`) is
-recorded once for every answered request and never summarised. A refusal
+recorded once for every answered request and never summarised. A federation
+caller above its agreement's `caller_rate`, a contact point's included, is
+answered `429` before any patient lookup, and every such refusal goes into
+that caller's summary record from the first, with `binding_detail` naming
+`caller-rate`, so the count of security events stays bounded. A refusal
 record the system log cannot take is counted in
 `atna_audit_refusals_unwritten` and logged at `error`.
 

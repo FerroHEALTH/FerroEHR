@@ -310,9 +310,14 @@ scopeless_subjects = []      # e.g. [{ issuer = "https://idp.example/realms/staf
 
 # What a federation issuer asserts about another party: one [[auth.federation]]
 # table per federation issuer (the ferrohealth-smart federation section).
+# `fields` maps a field to where the token carries it: `consent.reference`, the
+# consent decision reference a consent-conditioned read needs, and
+# `correlation_id`, the requester's id a "chained" organisation request needs,
+# read from a claim or an attested authorization_details member, never a header.
 #? [[auth.federation]]
 #? issuer = "https://federation.example"
 #? mapping = "iua"
+#? fields = { "consent.reference" = [{ claim = "consent_ref" }], "correlation_id" = [{ authorization_details = "correlation_id" }] }
 
 # The DPoP proof check (RFC 9449) of a sender-constrained issuer. Each accepted
 # proof is recorded in the database every replica shares, so a proof is
@@ -452,8 +457,11 @@ trusted_systems = []
 # person: it needs name, version, legal_ground and access_class, takes no
 # writes, no opt_out_override and no consent from mitz, and is logged at warn
 # on every boot. A "chained" access class needs chained_log_retention_years at
-# least [audit.store]'s. An NL agreement (a profile = "nl" issuer implies NL)
-# with reads needs a consent source. Every reads entry is a patient/ scope.
+# least [audit.store]'s and its issuer's [[auth.federation]] table mapping
+# correlation_id from the token; a chained request without the id is refused.
+# A caller above caller_rate is answered 429 before any patient lookup. An NL
+# agreement (a profile = "nl" issuer implies NL) with reads needs a consent
+# source. Every reads entry is a patient/ scope.
 #? [[authz.federation.agreement]]
 #? issuer = "https://federation.example"
 #? accessor = "organisation"        # person | organisation

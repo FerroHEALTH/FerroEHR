@@ -25,10 +25,13 @@ use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
+use ferrohealth_server::section::CallerRate;
 use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection};
 use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
 use ferrohealth_smart::federation::{FederationSection, Field, Mapping, Source};
 use ferrohealth_smart::kind::IssuerKind;
+use ferrohealth_smart::sender::proof::DpopSection;
+use ferrohealth_smart::sender::{ClientCertificate, SenderConstraint};
 use http::StatusCode;
 use serde_json::{Value, json};
 
@@ -46,10 +49,13 @@ const PURPOSE: &str = "x-purpose-of-use";
 const ORGANISATION_ACCESS: &str = "organisation-access";
 /// The claim the issuer carries its consent decision reference in.
 const CONSENT_CLAIM: &str = "consent_ref";
+/// The organisation statement's member carrying a chained request's
+/// correlation id.
+const CORRELATION_MEMBER: &str = "correlation_id";
 
 /// The `[[auth.federation]]` table of [`FEDERATION`]: IHE IUA claims, the
 /// country and issuing authority beside them, the consent decision
-/// reference and the organisation statement.
+/// reference, and the organisation statement with its correlation id.
 fn federation_table() -> FederationSection {
     FederationSection {
         issuer: FEDERATION.to_owned(),
@@ -73,6 +79,10 @@ fn federation_table() -> FederationSection {
             (
                 Field::ConsentReference,
                 vec![Source::Claim(CONSENT_CLAIM.to_owned())],
+            ),
+            (
+                Field::CorrelationId,
+                vec![Source::AuthorizationDetails(CORRELATION_MEMBER.to_owned())],
             ),
         ]),
         countries: vec!["DE".to_owned()],
@@ -106,6 +116,15 @@ fn agreement(accessor: Accessor) -> Agreement {
 /// The router trusting [`FEDERATION`] under `agreements`, with `ETREAT`
 /// agreed as an emergency purpose; returns it with its service.
 async fn serve(agreements: Vec<Agreement>) -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
+    Box::pin(serve_also(agreements, None)).await
+}
+
+/// [`serve`], also trusting `issuer` with its `[[auth.federation]]` table and
+/// the `[auth.dpop]` table a sender-constrained issuer needs.
+async fn serve_also(
+    agreements: Vec<Agreement>,
+    issuer: Option<(IssuerEntry, FederationSection, DpopSection)>,
+) -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     let (db, pool) = common::migrated_pool().await;
     let audit = AuditConfig {
         purpose_codes: vec!["TREAT".to_owned(), "ETREAT".to_owned()],
@@ -120,21 +139,30 @@ async fn serve(agreements: Vec<Agreement>) -> (testkit::TestDb, Arc<FerroEhrServ
             .with_audit(sender)
             .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),
     );
+    let mut entries = vec![IssuerEntry {
+        issuer: FEDERATION.to_owned(),
+        kind: Some(IssuerKind::Federation),
+        audience: vec![AUDIENCE.to_owned()],
+        jwks_file: common::jwks_file().display().to_string(),
+        // NOTE: the 2026/2099 Annex levels a domestic federation requires of
+        // a professional's authentication.
+        assurance: Some(AssuranceSection {
+            levels: BTreeMap::from([("high".to_owned(), AssuranceLevel::High)]),
+            ..AssuranceSection::default()
+        }),
+        ..IssuerEntry::default()
+    }];
+    let mut tables = vec![federation_table()];
+    let mut dpop = None;
+    if let Some((entry, table, proof)) = issuer {
+        entries.push(entry);
+        tables.push(table);
+        dpop = Some(proof);
+    }
     let mut auth = common::auth(AuthSection {
-        issuer: IssuerKey::List(vec![IssuerEntry {
-            issuer: FEDERATION.to_owned(),
-            kind: Some(IssuerKind::Federation),
-            audience: vec![AUDIENCE.to_owned()],
-            jwks_file: common::jwks_file().display().to_string(),
-            // NOTE: the 2026/2099 Annex levels a domestic federation requires of
-            // a professional's authentication.
-            assurance: Some(AssuranceSection {
-                levels: BTreeMap::from([("high".to_owned(), AssuranceLevel::High)]),
-                ..AssuranceSection::default()
-            }),
-            ..IssuerEntry::default()
-        }]),
-        federation: vec![federation_table()],
+        issuer: IssuerKey::List(entries),
+        federation: tables,
+        dpop,
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -457,6 +485,260 @@ async fn every_external_record_carries_its_binding_agreement_and_provider() {
     assert_eq!(
         (mode.as_str(), name.as_str()),
         ("external", "Regional exchange")
+    );
+}
+
+/// The correlation id the requester set.
+const CORRELATION: &str = "5f0c6a1e-correlation-1";
+
+/// A `chained` organisation agreement whose requester keeps its log 30 years.
+fn chained() -> Agreement {
+    Agreement {
+        access_class: Some(AccessClass::Chained),
+        chained_log_retention_years: Some(30),
+        ..agreement(Accessor::Organisation)
+    }
+}
+
+/// The organisation's token in the launch context of `ehr`, its statement
+/// attesting `correlation`.
+fn chained_organisation(ehr: &str, correlation: Option<&str>) -> String {
+    let mut statement = json!({ "type": ORGANISATION_ACCESS, "locations": [AUDIENCE] });
+    if let Some(id) = correlation {
+        statement[CORRELATION_MEMBER] = json!(id);
+    }
+    token(&json!({
+        "sub": "remote-system",
+        "client_id": "remote-system",
+        "ehrId": ehr,
+        "authorization_details": [statement],
+    }))
+}
+
+#[tokio::test]
+async fn a_chained_organisation_request_is_served_only_with_an_attested_correlation_id() {
+    let (db, svc, app) = serve(vec![chained()]).await;
+    let target = ehr(&svc).await.to_string();
+    let bare = chained_organisation(&target, None);
+    assert_eq!(
+        read(&app, &target, &bare, None).await,
+        StatusCode::FORBIDDEN,
+        "no correlation id"
+    );
+    // A request header never stands in for the attested member.
+    for header in [
+        "x-correlation-id",
+        "correlation-id",
+        "x-request-id",
+        "traceparent",
+    ] {
+        let request = common::req("GET", format!("{BASE}/ehr/{target}"))
+            .auth(&bare)
+            .accept("application/json")
+            .header(
+                header,
+                "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+            )
+            .build();
+        assert_eq!(
+            common::send_body(&app, request).await.0,
+            StatusCode::FORBIDDEN,
+            "{header}"
+        );
+    }
+    let attested = chained_organisation(&target, Some(CORRELATION));
+    assert_eq!(read(&app, &target, &attested, None).await, StatusCode::OK);
+    let pool = db.pool();
+    stored(&pool, "organisation").await;
+    let recorded: String = sqlx::query_scalar(
+        "SELECT agreement::text FROM audit.audit_event \
+         WHERE operation = 'ehr_get_by_id' AND binding = 'organisation'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("query");
+    let recorded: Value = serde_json::from_str(&recorded).expect("JSON");
+    assert_eq!(
+        recorded,
+        json!({
+            "name": "Regional exchange",
+            "version": "1",
+            "legal_ground": "GDPR Art. 6(1)(e), Art. 9(2)(h)",
+            "accessor": "organisation",
+            "access_class": "chained",
+            "correlation_id": CORRELATION,
+            "correlation_source": "authorization_details:correlation_id",
+        })
+    );
+}
+
+/// `agreement(accessor)` admitting each caller two requests at once and one
+/// a second after.
+fn limited(accessor: Accessor) -> Agreement {
+    Agreement {
+        caller_rate: Some(CallerRate {
+            requests_per_second: std::num::NonZeroU32::MIN,
+            burst: std::num::NonZeroU32::MIN.saturating_add(1),
+        }),
+        ..agreement(accessor)
+    }
+}
+
+/// Reads the EHR `ehr` as `credential` over a connection that presented
+/// `certificate`; returns the status and whether a `Retry-After` came back.
+async fn read_over(
+    app: &Router,
+    ehr: &str,
+    credential: &str,
+    certificate: Option<&ClientCertificate>,
+) -> (StatusCode, bool) {
+    let mut request = common::req("GET", format!("{BASE}/ehr/{ehr}"))
+        .auth(credential)
+        .accept("application/json")
+        .build();
+    if let Some(certificate) = certificate {
+        request.extensions_mut().insert(certificate.clone());
+    }
+    let (status, headers, _) = common::send(app, request).await;
+    (status, headers.contains_key(http::header::RETRY_AFTER))
+}
+
+#[tokio::test]
+async fn an_external_caller_above_its_caller_rate_is_refused_before_any_patient_lookup() {
+    let (db, svc, app) = serve(vec![
+        limited(Accessor::Person),
+        agreement(Accessor::Organisation),
+    ])
+    .await;
+    let target = ehr(&svc).await.to_string();
+    let person = professional(Some(&target), &json!({}));
+    for _ in 0..2 {
+        assert_eq!(
+            read_over(&app, &target, &person, None).await,
+            (StatusCode::OK, false)
+        );
+    }
+    // An EHR this node does not hold answers `429`, never the `404` a lookup gives.
+    let unknown = uuid::Uuid::now_v7().to_string();
+    let elsewhere = professional(Some(&unknown), &json!({}));
+    assert_eq!(
+        read_over(&app, &unknown, &elsewhere, None).await,
+        (StatusCode::TOO_MANY_REQUESTS, true)
+    );
+    // Another accessor under its own agreement is not held to the person's rate.
+    assert_eq!(
+        read(&app, &target, &organisation(&target), None).await,
+        StatusCode::OK
+    );
+    // The refusal goes into the caller's summary record, never a record of its own.
+    let pool = db.pool();
+    stored(&pool, "organisation").await;
+    let own: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM audit.audit_event WHERE binding_detail -> 'refusal' IS NOT NULL",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("query");
+    assert_eq!(own, 0);
+}
+
+/// NCPeH-A's authorization server, a MyHealth@EU contact point.
+const CONTACT_POINT: &str = "https://ncpeh-a.example";
+
+/// The contact point's issuer table, its `[[auth.federation]]` table with the
+/// eHDSI mapping, and the `[auth.dpop]` table its sender constraint needs.
+fn contact_point() -> (IssuerEntry, FederationSection, DpopSection) {
+    let entry = IssuerEntry {
+        issuer: CONTACT_POINT.to_owned(),
+        kind: Some(IssuerKind::Federation),
+        audience: vec![AUDIENCE.to_owned()],
+        jwks_file: common::jwks_file().display().to_string(),
+        sender_constraint: SenderConstraint::Required,
+        ..IssuerEntry::default()
+    };
+    let table = FederationSection {
+        issuer: CONTACT_POINT.to_owned(),
+        contact_point: Some(true),
+        mapping: Some(Mapping::Ehdsi),
+        fields: BTreeMap::from([
+            (
+                Field::ProfessionalCountryCode,
+                vec![Source::Constant("BE".to_owned())],
+            ),
+            (
+                Field::ProfessionalIssuingAuthorityName,
+                vec![Source::Constant("NCP-B Belgium".to_owned())],
+            ),
+        ]),
+        countries: vec!["BE".to_owned()],
+        ..FederationSection::default()
+    };
+    let dpop = DpopSection {
+        external_url: "https://ehr.example".to_owned(),
+        ..DpopSection::default()
+    };
+    (entry, table, dpop)
+}
+
+/// A contact-point token bound to `certificate`: eHDSI SAML Profile 10.0.0
+/// §2.3's mandatory attributes with the assertion and TRC windows.
+fn contact_point_token(certificate: &ClientCertificate) -> String {
+    let now = jiff::Timestamp::now().as_second();
+    common::bearer(&json!({
+        "iss": CONTACT_POINT, "sub": "hp-nameid", "client_id": "ncpeh-b", "aud": AUDIENCE,
+        "exp": now + 600, "scope": "patient/*.rs",
+        "cnf": { "x5t#S256": certificate.thumbprint() },
+        "ehdsi": {
+            "professional": {
+                "hp_identifier": "CN=Synthetic Doctor,O=Hospital,C=BE",
+                "name": "Synthetic Doctor",
+                "hp_professional_role": [{ "system": "2.16.840.1.113883.2.9.6.2.7", "code": "221" }],
+                "authentication_method": ferrohealth_smart::federation::contact::AUTHENTICATION_CLASSES[4]
+            },
+            "provider": {
+                "healthcare_provider_identifier": "urn:oid:1.2.3.4",
+                "facility_type": "Hospital",
+                "home_community_id": "urn:oid:1.2.3"
+            },
+            "point_of_care": "Synthetic Hospital",
+            "purpose_of_use": "TREATMENT",
+            "assertion": {
+                "issuer": "https://ncp-b.example",
+                "id": "urn:uuid:ida-1",
+                "not_before": now - 60,
+                "not_on_or_after": now + 3600
+            },
+            "trc": { "id": "urn:uuid:trc-1", "not_before": now - 60, "not_on_or_after": now + 3600 },
+            "patient": { "id": "synthetic-patient^^^&1.2.3&ISO" }
+        }
+    }))
+}
+
+#[tokio::test]
+async fn a_contact_point_caller_above_its_caller_rate_is_refused_too() {
+    let professional_agreement = Agreement {
+        issuer: CONTACT_POINT.to_owned(),
+        reads: vec!["patient/*.rs".to_owned()],
+        ..limited(Accessor::Person)
+    };
+    let (_db, svc, app) = Box::pin(serve_also(
+        vec![professional_agreement],
+        Some(contact_point()),
+    ))
+    .await;
+    let target = ehr(&svc).await.to_string();
+    let certificate = ClientCertificate::from_der(b"synthetic client certificate DER");
+    let token = contact_point_token(&certificate);
+    for _ in 0..2 {
+        let (status, _) = read_over(&app, &target, &token, Some(&certificate)).await;
+        assert!(
+            status != StatusCode::UNAUTHORIZED && status != StatusCode::TOO_MANY_REQUESTS,
+            "the contact point is admitted within its rate: {status}"
+        );
+    }
+    assert_eq!(
+        read_over(&app, &target, &token, Some(&certificate)).await,
+        (StatusCode::TOO_MANY_REQUESTS, true)
     );
 }
 

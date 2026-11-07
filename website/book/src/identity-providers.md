@@ -121,6 +121,14 @@ profile, and the server acts on the kind:
     `403`, and the access record carries the reference with the other
     external fields. Every request on openEHR data under an NL agreement is
     refused until the Wabvpz Art. 15f roles can be read;
+  - a `chained` organisation request carries the requester's correlation id
+    in the claim or attested `authorization_details` member its
+    `[[auth.federation]]` table maps to `correlation_id`, as one string; a
+    request without it is refused with `403`, and a request header never
+    stands in for it;
+  - a caller above its agreement's `caller_rate` is answered `429` with
+    `Retry-After` before any patient lookup, a MyHealth@EU contact point's
+    included;
   - an external person commits only a COMPOSITION of a template the
     agreement's `writes` lists; an organisation commits nothing, and neither
     deletes, attests or writes a demographic party;

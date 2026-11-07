@@ -193,6 +193,13 @@ pub struct AgreementRecord {
     pub accessor: String,
     /// `automated` or `chained`, for an organisation.
     pub access_class: Option<String>,
+    /// The correlation id of a `chained` request, as its token attests it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub correlation_id: Option<String>,
+    /// Where the issuer's `[[auth.federation]]` table reads the correlation id
+    /// from, such as `claim:correlation_id`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub correlation_source: Option<String>,
 }
 
 /// A summary record's count, and the EHR ids the refusals named.
@@ -423,6 +430,8 @@ mod tests {
             legal_ground: Some("GDPR Art. 6(1)(e), Art. 9(2)(h)".to_owned()),
             accessor: "person".to_owned(),
             access_class: None,
+            correlation_id: None,
+            correlation_source: None,
         };
         let fields = BTreeMap::from([(
             "professional.hp_identifier".to_owned(),
@@ -437,6 +446,32 @@ mod tests {
         let organisation = BindingRecord::external(true, fields, agreement, Some(provider()));
         assert_eq!(organisation.code, BindingCode::Organisation);
         assert!(organisation.json_columns()[5].is_some());
+    }
+
+    #[test]
+    fn a_chained_agreement_carries_its_correlation_id_and_source() {
+        let agreement = AgreementRecord {
+            name: "Regional exchange".to_owned(),
+            version: "1".to_owned(),
+            legal_ground: Some("GDPR Art. 6(1)(e), Art. 9(2)(h)".to_owned()),
+            accessor: "organisation".to_owned(),
+            access_class: Some("chained".to_owned()),
+            correlation_id: Some("corr-1".to_owned()),
+            correlation_source: Some("authorization_details:correlation_id".to_owned()),
+        };
+        let record = BindingRecord::external(true, BTreeMap::new(), agreement, None);
+        assert_eq!(
+            record.json_columns()[5],
+            Some(serde_json::json!({
+                "name": "Regional exchange",
+                "version": "1",
+                "legal_ground": "GDPR Art. 6(1)(e), Art. 9(2)(h)",
+                "accessor": "organisation",
+                "access_class": "chained",
+                "correlation_id": "corr-1",
+                "correlation_source": "authorization_details:correlation_id",
+            }))
+        );
     }
 
     #[test]
