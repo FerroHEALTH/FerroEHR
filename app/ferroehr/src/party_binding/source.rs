@@ -71,7 +71,10 @@ impl LocalPartySource {
     /// Returns this source naming a bound `PERSON` at the name paths of
     /// `mapping`.
     #[must_use]
-    pub fn with_mapping(mut self, mapping: std::sync::Arc<crate::party_binding::BindingMapping>) -> Self {
+    pub fn with_mapping(
+        mut self,
+        mapping: std::sync::Arc<crate::party_binding::BindingMapping>,
+    ) -> Self {
         self.mapping = mapping;
         self
     }

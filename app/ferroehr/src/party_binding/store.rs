@@ -170,6 +170,14 @@ pub(crate) async fn reindex_committed(
     ctx: &SigningCtx<'_>,
     committed: &Committed,
 ) -> Result<(), ServiceError> {
+    if crate::versioning::committer::person_commits() {
+        // NOTE: RM common master04 §Audit Details, PARTY_SELF names the record
+        // subject, and a demographic version has none (#5005).
+        return Err(ServiceError::not_permitted(
+            "a patient-context credential commits no demographic version: a demographic \
+             version has no record subject for PARTY_SELF to name",
+        ));
+    }
     crate::party_binding::protect::check(tx, ctx.binding, committed.kind, committed.vo_id).await?;
     party_reverse::reindex(tx, committed.vo_id).await?;
     reindex(tx, ctx.binding, committed.kind, committed.vo_id)

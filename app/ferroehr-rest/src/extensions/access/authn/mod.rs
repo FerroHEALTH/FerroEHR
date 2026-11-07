@@ -742,9 +742,15 @@ fn committer_identity(principal: &Principal) -> ferroehr::versioning::committer:
             .and_then(ferrohealth_smart::party::Outcome::bound)
             .cloned(),
         representative: principal.access.caller().is_some_and(|caller| {
-            matches!(caller.kind(), ferrohealth_smart::kind::CallerKind::Representative { .. })
+            matches!(
+                caller.kind(),
+                ferrohealth_smart::kind::CallerKind::Representative { .. }
+            )
         }),
         bound: None,
+        system: principal.access.caller().is_some_and(|caller| {
+            matches!(caller.kind(), ferrohealth_smart::kind::CallerKind::System)
+        }),
     }
 }
 

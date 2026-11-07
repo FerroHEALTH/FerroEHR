@@ -62,6 +62,7 @@ mod cohort_bench;
 mod cohort_query;
 mod cohort_subjects;
 mod commit_lock_order;
+mod committer_binding;
 mod committer_check;
 mod db_lease;
 mod db_outage;

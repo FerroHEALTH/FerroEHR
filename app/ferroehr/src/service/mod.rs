@@ -238,6 +238,10 @@ pub struct FerroEhrService {
     /// under; empty in [`Self::new`], which derives no row, so every login is
     /// unbound until the mapping is installed.
     pub(in crate::service) binding: Arc<crate::party_binding::BindingMapping>,
+    /// Who may import and which wrapped committers an import may carry;
+    /// [`Self::new`] lets every caller import with no wrapped-committer rule
+    /// beyond its own issuer.
+    pub(in crate::service) import_policy: Arc<message::import_policy::ImportPolicy>,
 }
 
 impl FerroEhrService {
@@ -295,6 +299,7 @@ impl FerroEhrService {
             access_delay: None,
             party_templates: Arc::default(),
             binding: Arc::default(),
+            import_policy: Arc::default(),
         }
     }
 

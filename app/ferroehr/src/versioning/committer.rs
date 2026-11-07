@@ -82,6 +82,9 @@ pub struct CommitterIdentity {
     /// What the server knows of the bound caller beyond the binding: the
     /// `PERSON`'s name, the provider and the namespace.
     pub bound: Option<bound::BoundDetails>,
+    /// Whether the caller is a system caller (an OAuth client-credentials
+    /// client acting for no person).
+    pub system: bool,
 }
 
 task_local! {
@@ -268,6 +271,7 @@ mod tests {
             party: None,
             representative: false,
             bound: None,
+            system: false,
         }
     }
 

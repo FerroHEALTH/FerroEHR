@@ -20,6 +20,7 @@ use clap::Subcommand;
 use ferroehr::config::FerroEhrConfig;
 use ferroehr::party_binding::fill::{LEASE_RENEWAL, LEASE_TTL, Lease};
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::message::import_policy::ImportPolicy;
 
 /// `ferroehr party-binding …` subcommands.
 #[derive(Debug, Subcommand)]
@@ -30,9 +31,9 @@ pub enum PartyBindingCmd {
     Refill,
 }
 
-/// Returns `service` with the configured party mapping installed: the
-/// templates a mapped party is validated against and the mapping the side
-/// table is derived under.
+/// Returns `service` with the import rules and the configured party mapping
+/// installed: the templates a mapped party is validated against and the
+/// mapping the side table is derived under.
 ///
 /// # Errors
 /// A selector path that does not compile, which the configuration check
@@ -41,14 +42,23 @@ pub fn install(
     service: FerroEhrService,
     config: &FerroEhrConfig,
 ) -> anyhow::Result<FerroEhrService> {
+    let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
+        .context("resolving [auth] for the party mapping")?;
+    let key_issuers = ferroehr::config::binding::key_issuers(&resolved);
+    let logins = resolved
+        .issuers
+        .iter()
+        .map(|settings| settings.issuer.clone())
+        .chain(key_issuers.iter().cloned());
+    let service = service.with_import_policy(ImportPolicy::new(
+        config.authz.rbac.import_role.clone(),
+        config.authz.import.trusted_systems.clone(),
+        logins,
+    ));
     let sections = config.authz.party_binding.sections();
     if sections.is_empty() {
         return Ok(service);
     }
-    let key_issuers = match ferroehr::config::auth::resolve(&config.auth.shared) {
-        Ok(resolved) => ferroehr::config::binding::key_issuers(&resolved),
-        Err(e) => return Err(e).context("resolving [auth] for the party mapping"),
-    };
     let mapping = sections
         .binding_mapping(&key_issuers, &config.authz.rbac.admin_role)
         .context("compiling [authz.party_binding]")?;

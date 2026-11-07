@@ -361,10 +361,35 @@ These things about the payload are worth calling out:
   person committed, so it is a **403** unless the request comes from the
   person, whose writes the server records as `PARTY_SELF` itself. A committer
   the server cannot compare with a login, such as a name only or an
-  identifier from a professional register, is stored as you send it. The
-  access record of the write names the login that made it. With
-  authentication off, nothing is compared. The committer's own rules (the
-  **422** above) apply on the direct writes as well.
+  identifier from a professional register, is stored as you send it when your
+  login is bound to no party. The access record of the write names the login
+  that made it. With authentication off, nothing is compared. The committer's
+  own rules (the **422** above) apply on the direct writes as well.
+- **For a caller it knows, the server writes the committer.** When your login
+  is bound to a demographic `PERSON` (see
+  [`[authz.party_binding]`](../installation/config-auth.md#authzparty_binding)),
+  every commit, attestation and CONTRIBUTION records a `PARTY_IDENTIFIED` with
+  the `PERSON`'s name, your login identifier (`DV_IDENTIFIER{issuer = token
+  iss, id = <the issuer profile's person_key value>, type = "oauth2"}`, or
+  `{issuer = "ferroehr", id = <user>, type = "basic"}` for a Basic user), the
+  provider (`type = "healthcare-provider"`) and an `external_ref` to the
+  `PERSON`. A patient writing in their own EHR is recorded as `PARTY_SELF`
+  with no `external_ref`, and a representative as a `PARTY_RELATED` naming
+  their own `PERSON` and the coded relationship. Send no committer, or the
+  placeholder `{"_type": "PARTY_IDENTIFIED", "identifiers": [{"_type":
+  "DV_IDENTIFIER", "issuer": "<token iss or ferroehr>", "id": "<sub or user
+  name>"}]}` where ITS-REST requires one; the server replaces it. A
+  placeholder naming anyone else, and a stated committer with another name,
+  another identifier or another `external_ref`, is a **403**, as is a stated
+  `PARTY_RELATED`. This deviates from the ITS-REST rule that a stated
+  committer is merged: the record has to identify who acted (EHDS Art.
+  13(4)). A patient-context token commits no demographic version (**403**).
+- **Importing needs the import role.** `POST /message/import…` needs the role
+  `[authz.rbac] import_role` names, or a `system/` caller. A wrapped
+  `commit_audit` or attestation of an imported version is kept as received,
+  but one whose committer names a party of this server, or carries a login
+  identifier of its issuers, is a **403** unless the version was created by a
+  system `[authz.import] trusted_systems` lists.
 - **A `description` is a `DV_TEXT` or `DV_CODED_TEXT` object that names its
   `_type`.** A plain string, or an object without `_type`, is a **400**. A
   coded description keeps its `defining_code`. The same holds for an

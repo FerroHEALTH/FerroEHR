@@ -43,6 +43,7 @@ fn professional() -> CommitterIdentity {
         party: None,
         representative: false,
         bound: None,
+        system: false,
     }
 }
 
@@ -222,6 +223,7 @@ async fn a_basic_login_is_checked_against_this_server() {
         party: None,
         representative: false,
         bound: None,
+        system: false,
     };
     assert_eq!(
         composition_create(
@@ -263,8 +265,9 @@ async fn party_self_is_the_persons_committer_only() {
         "a professional may not state that the record subject committed"
     );
 
-    // The person's committer is the server's PARTY_SELF, whatever the
-    // request names.
+    // The person's committer is the server's PARTY_SELF with no external_ref
+    // (RM common master04, the first scheme of §PARTY_SELF), and a stated
+    // committer naming another login is refused (#5005).
     let person = CommitterIdentity {
         subject: "jane".to_owned(),
         person: true,
@@ -274,12 +277,18 @@ async fn party_self_is_the_persons_committer_only() {
     let mut body = composition("mine");
     body["composer"] = json!({ "_type": "PARTY_SELF" });
     let write = svc.create_composition(ehr, version(&body, "249", None, &mismatching()));
+    assert_eq!(
+        outcome(with_committer(Some(person.clone()), Box::pin(write)).await),
+        Some(Refused::Forbidden),
+        "a person states no other login"
+    );
+    let write = svc.create_composition(ehr, version(&body, "249", None, &party_self));
     let committed = with_committer(Some(person), Box::pin(write))
         .await
         .expect("the person's own write commits");
     let stored = stored_committer(&svc, ehr, &committed).await;
     assert_eq!(stored["_type"], "PARTY_SELF");
-    assert_eq!(stored["external_ref"]["id"]["value"], "jane");
+    assert!(stored.get("external_ref").is_none(), "{stored}");
 }
 
 #[tokio::test]

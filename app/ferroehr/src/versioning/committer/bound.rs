@@ -63,13 +63,11 @@ pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
     let details = identity.bound.clone().unwrap_or_default();
     // NOTE: the local source names each party by its container's UUID, so an
     // id that is no HIER_OBJECT_ID names no container of this store and no reference.
-    let external_ref = HierObjectId::new(bound.party.id())
-        .ok()
-        .map(|id| PartyRef {
-            namespace: details.namespace.clone(),
-            r#type: "PERSON".to_owned(),
-            id: ObjectId::HierObjectId(id),
-        });
+    let external_ref = HierObjectId::new(bound.party.id()).ok().map(|id| PartyRef {
+        namespace: details.namespace.clone(),
+        r#type: "PERSON".to_owned(),
+        id: ObjectId::HierObjectId(id),
+    });
     let login = login(identity);
     if identity.representative {
         let code = bound
@@ -99,13 +97,13 @@ pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
             r#type: Some(PROVIDER_TYPE.to_owned()),
         });
     }
-    Some(PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(
-        PartyIdentifiedData {
+    Some(PartyProxy::PartyIdentified(
+        PartyIdentified::PartyIdentified(PartyIdentifiedData {
             external_ref,
             name: details.name,
             identifiers: Some(identifiers),
-        },
-    )))
+        }),
+    ))
 }
 
 /// The login identifier of `identity`: the issuer profile's `person_key`
