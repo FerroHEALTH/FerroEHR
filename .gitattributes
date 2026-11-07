@@ -29,6 +29,8 @@ docs/specs/okta/** -text
 docs/specs/oasis-saml/** -text
 docs/specs/ihe-iua/** -text
 docs/specs/nuts-rfc/** -text
+docs/specs/ihe-balp/** -text
+docs/specs/fhir-auditevent/** -text
 
 # Binary assets
 *.png  binary

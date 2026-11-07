@@ -552,8 +552,26 @@ precedence = "override"
 SPDX-FileCopyrightText = "Nuts foundation"
 SPDX-License-Identifier = "CC-BY-SA-4.0"
 
-# The provenance records of those trees, and the cache-only record of the Mitz
-# document, are first-party prose about the material. Placed LAST: a later matching annotation wins.
+# The IHE BALP implementation guide: the repository's CC BY 4.0 licence,
+# vendored beside it.
+[[annotations]]
+path = "docs/specs/ihe-balp/**"
+precedence = "override"
+SPDX-FileCopyrightText = "IHE International, Inc."
+SPDX-License-Identifier = "CC-BY-4.0"
+
+# The FHIR R4 and R5 AuditEvent pages: CC0 1.0, as each release's licence page
+# states.
+[[annotations]]
+path = "docs/specs/fhir-auditevent/**"
+precedence = "override"
+SPDX-FileCopyrightText = "HL7 International"
+SPDX-License-Identifier = "CC0-1.0"
+
+# The provenance records of those trees, the cache-only records of the Mitz
+# document, DICOM PS3.15 and the Independent Submission RFCs, and the record
+# of the ISO standards, are first-party prose about the material. Placed LAST:
+# a later matching annotation wins.
 [[annotations]]
 path = [
   "docs/specs/rfc/PROVENANCE.md",
@@ -567,6 +585,11 @@ path = [
   "docs/specs/ihe-iua/PROVENANCE.md",
   "docs/specs/nuts-rfc/PROVENANCE.md",
   "docs/specs/mitz/PROVENANCE.md",
+  "docs/specs/ihe-balp/PROVENANCE.md",
+  "docs/specs/fhir-auditevent/PROVENANCE.md",
+  "docs/specs/dicom-ps3-15/PROVENANCE.md",
+  "docs/specs/rfc-independent/PROVENANCE.md",
+  "docs/specs/iso-health-informatics/PROVENANCE.md",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "Cadasto B.V."

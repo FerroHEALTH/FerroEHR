@@ -1,0 +1,109 @@
+# ╭──────────────────────────────────────ImplementationGuide───────────────────────────────────────╮
+# │  The properties below are used to create the ImplementationGuide resource. For a list of       │
+# │  supported properties, see: https://fshschool.org/docs/sushi/configuration/                         │
+# ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+id: ihe.iti.balp
+canonical: https://profiles.ihe.net/ITI/BALP
+name: IHE_ITI_BALP
+title: "Basic Audit Log Patterns (BALP)"
+#date: 2024-02-16
+version: 1.1.4
+#releaselabel: ci-build
+#releaselabel: ballot
+releaselabel: Trial-Implementation
+status: active
+publisher:
+  name: IHE IT Infrastructure Technical Committee
+  url: https://www.ihe.net/ihe_domains/it_infrastructure/
+  email: iti@ihe.net
+contact:
+  - name: IHE IT Infrastructure Technical Committee
+    telecom:
+      - system: email
+        value: iti@ihe.net
+jurisdiction: 'http://unstats.un.org/unsd/methods/m49/m49.htm#001'
+#copyright: Integrating the Healthcare Enterprise (IHE) http://www.ihe.net/Governance/#Intellectual_Property
+description: >-
+  The Basic Audit Log Patterns (BALP) Implementation Guide is a Content Profile that defines some basic and reusable AuditEvent patterns. This includes basic audit log profiles for FHIR RESTful operations to be used when there is not a more specific audit event defined. A focus is enabling Privacy centric AuditEvent logs that hold well formed indication of the Patient when they are the subject of the activity being recorded in the log. Where a more specific audit event can be defined it should be derived off of these basic patterns.
+license: CC-BY-4.0
+fhirVersion: 4.0.1
+#fhirVersion: 4.3.0
+copyrightyear: '2022+'
+#extension: 
+#  - url: http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status
+#    valueCode: trial-use
+#  - url: http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm
+#    valueInteger: 2
+
+
+parameters:  # see https://confluence.hl7.org/display/FHIR/Implementation+Guide+Parameters
+  path-resource:
+    - fsh-generated/resources
+#    - input/examples
+#  path-pages:
+#    - input/pagecontent
+#    - fsh-generated/includes
+  show-inherited-invariants: 'false'
+#  usage-stats-opt-out: 'false'
+  logging: progress
+  shownav: 'true'
+  active-tables: 'false'
+  apply-contact: 'true'
+  apply-jurisdiction: 'true'
+  apply-publisher: 'true'
+  apply-version: 'true'
+  autoload-resources: 'true'
+  path-binary: input/saml
+ # fmm-definition: other.html#maturity-levels
+
+
+
+pages:
+  index.md:
+    title: Basic Audit Log Patterns (BALP)
+    generation: markdown
+  volume-1.md:
+    title: 1:52 Basic Audit Log Patterns
+    generation: markdown
+  content.md:
+    title: 3:5.7 Basic Audit Log Patterns
+    generation: markdown
+  testplan.md:
+    title: BasicAudit Test Plan
+    generation: markdown
+  other.md:
+    title: Changes to Other IHE Specifications
+    generation: markdown
+  download.md:
+    title: Download and Analysis
+    generation: markdown
+  appendix.md:
+    title: AuditEvent Use in IHE Profiles
+    generation: markdown
+  issues.md:
+    title: BasicAudit Open and Closed issues
+    generation: markdown
+
+menu:
+  BasicAudit Home: index.html
+  Volume 1:
+    Introduction: volume-1.html
+    Actors and Content: volume-1.html#1521-basicaudit-actors-and-content
+    Actor Options: volume-1.html#1522-basicaudit-actor-options
+    Required Groupings: volume-1.html#1523-basicaudit-required-actor-grouping
+    Overview: volume-1.html#1524-basicaudit-overview
+    Security Considerations: volume-1.html#1525-basicaudit-security-considerations
+    Cross-Profile Considerations: volume-1.html#1526-basicaudit-cross-profile-considerations    
+  Volume 3:
+    Basic Audit Log Patterns: content.html
+    -RESTful activities: content.html#3573-restful-activities
+    -SAML Security Token: content.html#3574-saml-security-token
+    -OAuth Security Token: content.html#3575-oauth-security-token
+    -Consent Authorized Decision Audit Message: content.html#3576-consent-authorized-decision-audit-message
+    -Privacy Disclosure Audit Message: content.html#3577-privacy-disclosure-audit-message
+  Artifacts: artifacts.html
+  Other: 
+    AuditEvent Use in IHE Profiles: appendix.html
+    Changes to Other IHE Specifications: other.html
+    Download and Analysis: download.html    
+    Test Plan: testplan.html
