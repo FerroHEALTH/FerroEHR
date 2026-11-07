@@ -52,6 +52,27 @@ pub struct EhrId(pub Uuid);
 #[sqlx(transparent)]
 pub struct VoId(pub Uuid);
 
+/// The id of a versioned object a CONTRIBUTION creates, allocated before that
+/// CONTRIBUTION commits, so another body of the same set can reference it.
+///
+/// It is minted fresh and is neither `Clone` nor `Copy`, so it names no
+/// stored object and is handed to exactly one create.
+#[derive(Debug, PartialEq, Eq)]
+pub struct AllocatedVoId(VoId);
+
+impl AllocatedVoId {
+    /// A fresh id, stamped with the server's licence key.
+    pub(crate) fn minted(stamp: &StampKey) -> Self {
+        Self(VoId::minted(stamp))
+    }
+
+    /// The id the create will give the object.
+    #[must_use]
+    pub fn id(&self) -> VoId {
+        self.0
+    }
+}
+
 impl EhrId {
     /// A fresh time-ordered id for a new EHR, stamped with the server's
     /// licence key ([`crate::licence::stamp`]).

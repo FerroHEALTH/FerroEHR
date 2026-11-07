@@ -415,6 +415,7 @@ async fn create_change(
         reject_duplicate_singleton(cx, ehr_id, kind, &data).await?;
     }
     Ok(Change::Create {
+        allocated: None,
         kind,
         canonical: data,
         template_id,

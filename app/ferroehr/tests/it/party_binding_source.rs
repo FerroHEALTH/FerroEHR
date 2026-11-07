@@ -32,6 +32,7 @@ use ferroehr::ids::VoId;
 use ferroehr::party_binding::source::LocalPartySource;
 use ferroehr::party_binding::{BindingMapping, IdentifierSelector};
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::demographic::party_set::NewParty;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::version_update::WriteRequest;
 
@@ -577,6 +578,62 @@ async fn a_second_person_binding_one_key_is_refused_at_its_commit() {
     );
     assert!(refused.to_string().contains("binding key"), "{refused}");
     assert_eq!(parties(&lookup(&svc, value).await), [person_ref(first)]);
+}
+
+/// A `PERSON` and the professional `ROLE` naming it are created by one
+/// demographic CONTRIBUTION, each body carrying the other's allocated id.
+#[tokio::test]
+async fn one_contribution_creates_a_person_and_the_role_naming_it() {
+    let (_db, svc) = service().await;
+    let value = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+    let (person_id, role_id) = (svc.allocate_party_id(), svc.allocate_party_id());
+    let (person_vo, role_vo) = (person_id.id(), role_id.id());
+    assert_ne!(person_vo, role_vo);
+    let mut body = person(PERSON_TEMPLATE, &[key(value)]);
+    body["roles"] = json!([party_ref("ROLE", role_vo)]);
+    let parties_of_set = vec![
+        NewParty {
+            id: person_id,
+            kind: PartyKind::Person,
+            body,
+            lifecycle_state: None,
+        },
+        NewParty {
+            id: role_id,
+            kind: PartyKind::Role,
+            body: role(ROLE_TEMPLATE, person_vo, None),
+            lifecycle_state: None,
+        },
+    ];
+    let committed = Box::pin(svc.create_parties(parties_of_set, "provision a professional"))
+        .await
+        .expect("the set commits");
+    let written: Vec<VoId> = committed.versions.iter().map(|c| c.vo_id).collect();
+    assert_eq!(written, [person_vo, role_vo]);
+
+    // RM common master06 §Contributions: one CONTRIBUTION lists both versions.
+    let contribution = svc
+        .demographic_contribution_get(committed.id)
+        .await
+        .expect("the contribution reads")
+        .body;
+    let listed: Vec<&str> = contribution["versions"]
+        .as_array()
+        .expect("the versions")
+        .iter()
+        .filter_map(|v| v.pointer("/id/value").and_then(Value::as_str))
+        .collect();
+    assert_eq!(
+        listed,
+        [
+            committed.versions[0].version_uid(),
+            committed.versions[1].version_uid()
+        ],
+        "{contribution}"
+    );
+
+    // The PERSON binds its key: it lists the ROLE, which names it.
+    assert_eq!(parties(&lookup(&svc, value).await), [person_ref(person_vo)]);
 }
 
 #[tokio::test]
