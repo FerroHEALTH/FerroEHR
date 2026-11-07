@@ -346,4 +346,4 @@ runs in CI and on a developer machine too, so its pin lives here and
 
 | Tool | Pin | Read by |
 |---|---|---|
-| `ferrohealth-perf` | `0.4.0` (crates.io, 2026-11-07) | `scripts/perf/gate.sh` |
+| `ferrohealth-perf` | `0.4.1` (crates.io, 2026-11-07) | `scripts/perf/gate.sh` |
