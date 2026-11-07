@@ -95,12 +95,19 @@ K8S_BRIDGE="ferroehr-bridge"
 K8S_BRIDGE_LABEL="app.kubernetes.io/name=$K8S_BRIDGE"
 K8S_BRIDGE_CLIENT_LABEL="ferroehr.probe/client=bridge"
 K8S_BRIDGE_SECRET="ferroehr-bridge-cdr"
-# The machines issuer FerroBRIDGE's client credentials tokens come from, which
-# the CDR's values must trust as `kind: machines`, and FerroBRIDGE's client
-# there. Unset leaves the live bridge rows declared not exercised (#5093).
-K8S_MACHINES_ISSUER="${K8S_MACHINES_ISSUER:-}"
-K8S_BRIDGE_CLIENT_ID="${K8S_BRIDGE_CLIENT_ID:-ferrobridge}"
-K8S_BRIDGE_CLIENT_SECRET="${K8S_BRIDGE_CLIENT_SECRET:-}"
+# The machines issuer FerroBRIDGE's client credentials tokens come from
+# (#5093): the mock authorization server the compose quickstart runs, in the
+# probe namespace, signing every token with `iss` set to the issuer below. The
+# CDR trusts that issuer as `kind: machines` through the key set the probe reads
+# from the running server, so no key material is kept anywhere.
+K8S_MACHINES="probe-machines"
+K8S_MACHINES_IMAGE="ghcr.io/navikt/mock-oauth2-server:6.1.3@sha256:2a813381bf282da46ff36ff386059e7903e25865056af8149f4fb3f1441916b8"
+K8S_MACHINES_ISSUER="https://machines.ferroehr.invalid"
+K8S_MACHINES_AUDIENCE="ferroehr-machines"
+K8S_BRIDGE_CLIENT_ID="ferrobridge"
+# The mock checks no client secret; the Secret carries one because the chart
+# mounts it, as an operator's would.
+K8S_BRIDGE_CLIENT_SECRET="probe-not-a-secret"
 K8S_BRIDGE_MAPPINGS="ferroehr-bridge-mappings"
 # The template the probe's mapping names; FerroBRIDGE fetches it from the CDR.
 K8S_BRIDGE_TEMPLATE="corpus/templates/blood_pressure.opt"
@@ -370,9 +377,13 @@ probes_k8s_boot() {
   probe "P-K8S-AUTH-GUARD" "$PROBE_BROKEN" "chart" "-" \
     "a stock install is refused at render, naming every configured way forward"
   local guard
+  # The FerroPIX dependency, on by default, refuses a render without its own
+  # database and sealing-key Secrets before the CDR's templates are reached, so
+  # it is off here: the EHR index is not what this row measures (#5103).
   guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
              --set config.deployment_profile=sandbox \
-             --set database.existingSecret=ferroehr-db 2>&1)"
+             --set database.existingSecret=ferroehr-db \
+             --set ferropix.enabled=false 2>&1)"
   assert_contains "$guard" "no authentication mechanism is configured" \
     "without this the stock install boots into a crash loop and explains itself in a log"
   assert_contains "$guard" "config.auth.basic.users" \
@@ -1170,7 +1181,10 @@ bridge:
     existingSecret: $K8S_BRIDGE_SECRET
     oauth:
       issuer: $K8S_MACHINES_ISSUER
+      tokenEndpoint: http://$K8S_MACHINES:8080/machines/token
       clientId: $K8S_BRIDGE_CLIENT_ID
+      scope: system/template-*.r system/composition-*.cruds system/aql-*.rs
+      audience: $K8S_MACHINES_AUDIENCE
   mappings:
     existingConfigMap: $K8S_BRIDGE_MAPPINGS
     files:
@@ -1187,7 +1201,96 @@ bridge:
       - podSelector:
           matchLabels:
             ${K8S_BRIDGE_CLIENT_LABEL%=*}: ${K8S_BRIDGE_CLIENT_LABEL#*=}
+    extraEgress:
+      - to:
+          - podSelector:
+              matchLabels:
+                app.kubernetes.io/name: $K8S_MACHINES
+        ports:
+          - port: 8080
+            protocol: TCP
+# The CDR trusts the machines issuer beside the Basic users' issuer of
+# $K8S_AUTH_VALUES (a values list replaces, so both are named), checking its
+# tokens against the key set read from it.
+config:
+  files:
+    machines-jwks.json: '$(cat "$PROBE_TMP/machines-jwks.json")'
+  auth:
+    issuer:
+      - issuer: https://basic-users.ferroehr.invalid
+        kind: persons
+        audience: [ferroehr-basic-users]
+        jwks_file: /opt/sandbox-posture/basic-users-jwks.json
+      - issuer: $K8S_MACHINES_ISSUER
+        kind: machines
+        audience: [$K8S_MACHINES_AUDIENCE]
+        jwks_file: /etc/ferroehr/machines-jwks.json
+        token_types: [JWT]
 YAML
+}
+
+# The machines issuer: the mock authorization server, its Service, and its key
+# set read into $PROBE_TMP/machines-jwks.json. Every client credentials token
+# carries the issuer, the client as `sub` and `client_id`, the CDR's audience
+# and the requested scope. Restricted-compliant, so the bridge's Pod Security
+# family admits it too.
+k8s_machines_up() {
+  local config
+  config="$(jq -cn --arg iss "$K8S_MACHINES_ISSUER" --arg aud "$K8S_MACHINES_AUDIENCE" \
+    '{tokenCallbacks: [{issuerId: "machines", requestMappings: [{requestParam: "grant_type",
+      match: "client_credentials", claims: {iss: $iss, sub: "${clientId}",
+      client_id: "${clientId}", aud: [$aud], scope: "${scope}"}}]}]}')"
+  kc apply -f - >/dev/null 2>&1 <<YAML || return 1
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: $K8S_MACHINES
+  labels: { app.kubernetes.io/name: $K8S_MACHINES }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/name: $K8S_MACHINES } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: $K8S_MACHINES }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: issuer
+          image: $K8S_MACHINES_IMAGE
+          env:
+            - name: JSON_CONFIG
+              value: '$config'
+          ports: [{ containerPort: 8080 }]
+          readinessProbe:
+            httpGet: { path: /machines/.well-known/openid-configuration, port: 8080 }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: $K8S_MACHINES
+spec:
+  selector: { app.kubernetes.io/name: $K8S_MACHINES }
+  ports: [{ port: 8080, targetPort: 8080 }]
+YAML
+  kc rollout status "deploy/$K8S_MACHINES" --timeout=180s >/dev/null 2>&1 || return 1
+  local name="probe-jwks-$$-$RANDOM" out _i phase
+  kubectl -n "$K8S_NS" run "$name" --image=busybox:1.37 --restart=Never \
+    --command -- wget -q -O - "http://$K8S_MACHINES:8080/machines/jwks" >/dev/null 2>&1
+  for _i in $(seq 1 30); do
+    phase="$(kc get pod "$name" -o jsonpath="$K8S_PHASE_PATH" 2>/dev/null)"
+    case "$phase" in Succeeded | Failed) break ;; *) ;; esac
+    sleep 2
+  done
+  out="$(kc logs "$name" 2>/dev/null)"
+  kc delete pod "$name" --ignore-not-found --wait=false >/dev/null 2>&1
+  jq -ce 'select(.keys | length > 0)' <<<"$out" > "$PROBE_TMP/machines-jwks.json" 2>/dev/null
 }
 
 # The credential and the mapping set an operator supplies, created the way the
@@ -1316,11 +1419,11 @@ probes_k8s_bridge() {
     "a client of an issuer the CDR does not trust as machines would be refused on every call, so it must not render"
   probe_done
 
-  # The live rows need an authorization server that issues FerroBRIDGE's
-  # client credentials tokens and that the CDR trusts as machines.
-  if [[ -z "$K8S_MACHINES_ISSUER" ]]; then
+  # The live rows need the authorization server FerroBRIDGE's client
+  # credentials tokens come from, and the key set the CDR checks them with.
+  if ! k8s_machines_up; then
     uncovered "the bridge install, its credential, its Service and its NetworkPolicy (P-K8S-BRIDGE-BOOT and after)" \
-      "FerroBRIDGE reaches the CDR under a client credentials token of a machines issuer, and K8S_MACHINES_ISSUER names none (#5093)"
+      "the machines issuer did not roll out or served no key set, so FerroBRIDGE could not obtain a token (#5093)"
     return 0
   fi
 
@@ -1445,9 +1548,9 @@ probes_k8s_bridge_serve() {
   body="$(k8s_bridge_get /health/readiness)"
   assert_contains "$body" '"state":"up"' \
     "readiness answers 200 only when every upstream answered"
-  assert_contains "$body" '"cdr":{"state":"up"}' \
+  assert_contains "$body" '{"name":"cdr","state":"up"}' \
     "the CDR indicator must be up: the bridge's egress rule to the CDR's pods carried the call"
-  assert_contains "$body" '"terminology":{"state":"up"}' \
+  assert_contains "$body" '{"name":"terminology","state":"up"}' \
     "the terminology indicator must be up: the bridge's egress rule and FerroTERM's ingress rule both admit it"
   probe_done
 }

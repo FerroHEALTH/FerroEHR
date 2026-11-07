@@ -1651,6 +1651,11 @@ bridge:
       # entry with `kind: machines`, or the render is refused: the CDR trusts
       # no token of an issuer it does not list.
       issuer: ""
+      # -- The token endpoint (RFC 6749 §3.2), for an authorization server
+      # whose metadata FerroBRIDGE cannot read at `issuer`. Set, FerroBRIDGE
+      # requests its token here and reads no metadata; `issuer` still names
+      # the issuer the CDR trusts.
+      tokenEndpoint: ""
       # -- FerroBRIDGE's client identifier at that issuer (RFC 6749 §2.2).
       # Required.
       clientId: ""
