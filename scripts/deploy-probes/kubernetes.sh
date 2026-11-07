@@ -377,13 +377,15 @@ probes_k8s_boot() {
   probe "P-K8S-AUTH-GUARD" "$PROBE_BROKEN" "chart" "-" \
     "a stock install is refused at render, naming every configured way forward"
   local guard
-  # The FerroPIX dependency, on by default, refuses a render without its own
-  # database and sealing-key Secrets before the CDR's templates are reached, so
-  # it is off here: the EHR index is not what this row measures (#5103).
+  # FerroPIX stays on, as it is by default. Its dependency chart refuses a
+  # render that names no database or sealing-key Secret before the CDR's
+  # templates are reached, so both are named, as an operator must, and the
+  # refusal read here is the CDR's own on the default install (#5103).
   guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
              --set config.deployment_profile=sandbox \
              --set database.existingSecret=ferroehr-db \
-             --set ferropix.enabled=false 2>&1)"
+             --set ferropix.database.existingSecret=ferropix-db \
+             --set ferropix.dataKey.existingSecret=ferropix-data-key 2>&1)"
   assert_contains "$guard" "no authentication mechanism is configured" \
     "without this the stock install boots into a crash loop and explains itself in a log"
   assert_contains "$guard" "config.auth.basic.users" \
