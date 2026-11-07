@@ -149,6 +149,7 @@ lives in the record:
 | Under which role or authority | `roles` — the roles the caller held at access time (the RFC 9068 §2.2.3.1 claim carriers for a bearer, the user definition for Basic), rendered as FHIR `agent.role` on the requestor and as a `RoleIDCode` per role on the DICOM requesting participant |
 | On whose authority, and why | `purpose` and `legal_basis`, and `permit`, the identifier of the data permit a secondary-use caller declares it acts under ([Secondary use](compliance/secondary-use.md#the-access-record)) |
 | Which system, and from where | `AuditSourceID` and the source participant's network address (`client_ip`): the connection's peer, or the client a peer in `[server] trusted_proxies` names in its `forwarded_header` ([Server](installation/config-server.md)) |
+| Who the person is in the demographic store, and for whom they act | `binding` and the fields beside it ([the binding outcome](#the-binding-outcome)): `party` (the bound `PERSON`), `party_groups`, `provider`, `representation` for a representative, and `acting_mode` (`person`, `delegated`, `external` or `system`); for a verified external accessor `external_fields` and `agreement` stand in for the party, and an `organisation` record names the organisation |
 
 Two of these are the deployment's to supply. `purpose` is only as meaningful as
 the vocabulary you agree with your callers: set `[audit] purpose_codes` to that
@@ -313,6 +314,31 @@ The common specifications the regulation's Article 36 provides for have not
 been adopted. When they are, this mapping is re-verified against them rather
 than assumed to still hold; see the
 [EHDS readiness page](https://ferrohealth.eu/docs/ehds/readiness.html).
+
+### The binding outcome
+
+Every record of an authenticated request carries `binding`: how the caller
+was bound to a demographic party, or why the binding refused it. It answers
+Annex II 3.2(a) and (b) where the token's subject alone does not. The columns
+beside it hold what each outcome needs:
+
+| `binding` | The caller | Recorded beside it |
+|---|---|---|
+| `bound` | a person bound to a `complete` `PERSON` | `party`, `party_groups`, `provider`, `guest` for an admitted guest, `representation` for a representative, `actor_chain` for a delegated token |
+| `provisional` | a person bound to an `incomplete` `PERSON` | `party`, `party_groups`, `provider` |
+| `external` | a verified external person of a `federation` issuer | `external_fields`, `agreement`, `provider` |
+| `organisation` | an organisation under an agreement with `accessor = "organisation"` | `external_fields`, `agreement`, `provider` |
+| `system` | a client acting for nobody | `provider` of its `[[authz.system_client]]`, `facilities` of the compositions it committed |
+| `self` | a patient token of a `patients` issuer | the principal |
+| `refused-*` | a refusal of the binding: `unbound`, `ambiguous`, `inactive`, `abandoned`, `deprovisioned`, `wrong-marker`, `representation-unrecorded`, `key-claim-missing`, `groups-unavailable`, `guest`, `external-incomplete`, `trc-patient-mismatch`, `trc-missing` | `binding_detail`, what the refusal names |
+
+`acting_mode` is `person`, `delegated` for a person through a declared client
+or actor, `external` for a verified external accessor and `system` for a client
+acting for nobody (`client` remains on records written before). The FHIR and
+DICOM renderings do not carry `external` and `system` yet. A record of a
+request with no authenticated caller carries no binding. The columns are in the
+chain digest: a record written from this release is digest version 2, which
+hashes them, and a record written before keeps verifying under version 1.
 
 ### Access through FerroBRIDGE's FHIR facade
 

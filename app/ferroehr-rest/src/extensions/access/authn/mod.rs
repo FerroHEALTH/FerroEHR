@@ -43,6 +43,7 @@ pub(crate) mod declared;
 mod gates;
 mod issuer;
 mod party;
+pub(crate) mod record;
 
 use std::sync::Arc;
 
@@ -589,14 +590,18 @@ pub(crate) async fn middleware(
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).
             let roles = for_audit.roles.clone();
+            let binding = record::of_request(&for_audit, &committer);
             let mut resp = REQUEST_PRINCIPAL
                 .scope(
                     Some(principal),
                     ferroehr::system_log::access_context::with_roles(
                         roles,
-                        ferroehr::versioning::committer::with_committer(
-                            Some(committer),
-                            next.run(req),
+                        record::recorded(
+                            binding,
+                            ferroehr::versioning::committer::with_committer(
+                                Some(committer),
+                                next.run(req),
+                            ),
                         ),
                     ),
                 )

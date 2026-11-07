@@ -120,6 +120,7 @@ pub(super) struct AccessContext {
 pub(super) struct Caller<'a> {
     principal: Option<&'a Principal>,
     actor: Option<&'a ActorAuthentication>,
+    binding: Option<&'a ferroehr::system_log::binding::BindingRecord>,
 }
 
 impl<'a> Caller<'a> {
@@ -128,6 +129,9 @@ impl<'a> Caller<'a> {
         Self {
             principal: resp.extensions().get::<Principal>(),
             actor: resp.extensions().get::<ActorAuthentication>(),
+            binding: resp
+                .extensions()
+                .get::<ferroehr::system_log::binding::BindingRecord>(),
         }
     }
 }
@@ -407,6 +411,7 @@ pub(super) fn fill_common(
     // How the person authenticated and who that person is (EHDS Annex II 3.1
     // and 3.2(b)), as the authentication layer judged it.
     event.actor = caller.actor.cloned().unwrap_or_default();
+    event.binding = caller.binding.cloned();
     event.client_ip = client_ip;
     event.timestamp = timestamp;
 }

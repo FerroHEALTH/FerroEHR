@@ -71,6 +71,7 @@
 )]
 
 pub mod access_context;
+pub mod binding;
 pub mod categories;
 pub mod chain_check;
 pub mod codes;

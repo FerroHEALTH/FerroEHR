@@ -37,6 +37,8 @@ use sqlx::{Connection, PgPool, Row};
 use tokio::sync::OnceCell;
 use uuid::Uuid;
 
+mod batch;
+
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 #[cfg(feature = "fhir")]
@@ -47,6 +49,7 @@ use crate::system_log::event::{ActingMode, AuditEvent, EventOutcome, EventType, 
 use crate::system_log::render::RenderPolicy;
 #[cfg(feature = "fhir")]
 use crate::system_log::render::{CompiledPolicy, StoredRecord};
+use batch::BatchColumns;
 
 use ferrohealth_smart::assurance::AssuranceLevel;
 
@@ -57,10 +60,11 @@ const INSERT_ONE: &str = "INSERT INTO audit.audit_event (recorded_at, action, ou
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
      acting_mode, assurance_level, assurance_value, professional_id, emergency_access, permit, \
      issuer, client_id, ehr_id, subject_namespace, subject_lookup_failed, category_content, \
-     render_policy, search_tokens) \
+     render_policy, search_tokens, binding, guest, party, party_groups, provider, representation, \
+     external_fields, agreement, actor_chain, facilities, binding_detail, summary) \
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, \
      $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, \
-     $37, $38) \
+     $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50) \
      RETURNING id";
 
 /// The batched insert: one row per element of the parallel column arrays, every
@@ -73,21 +77,26 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, 
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
      acting_mode, assurance_level, assurance_value, professional_id, emergency_access, \
      retention_ends, retention_stated, permit, issuer, client_id, ehr_id, subject_namespace, \
-     subject_lookup_failed, category_content, render_policy, search_tokens) \
+     subject_lookup_failed, category_content, render_policy, search_tokens, binding, guest, \
+     party, party_groups, provider, representation, external_fields, agreement, actor_chain, \
+     facilities, binding_detail, summary) \
      SELECT u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, u.c13, \
      u.c14, u.c15, u.c16, u.c17, u.c18, u.c19, u.c20, u.c21, u.c22, u.c23, u.c24, u.c25, u.c26, \
      u.c27, u.c28, u.c29, u.c30, u.c31, u.c32, u.c33, u.c34, u.c35, u.c36, u.c37, u.c38, \
-     $39::bytea, u.tokens::integer[] \
+     $39::bytea, u.tokens::integer[], u.c41, u.c42, u.c43, u.c44, u.c45, u.c46, u.c47, u.c48, \
+     u.c49, u.c50, u.c51, u.c52 \
      FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
      $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], \
      $12::text[], $13::text[], $14::text[], $15::text[], $16::bigint[], $17::text[], \
      $18::jsonb[], $19::jsonb[], $20::bigint[], $21::jsonb[], $22::text[], \
      $23::jsonb[], $24::text[], $25::text[], $26::text[], $27::text[], $28::text[], \
      $29::boolean[], $30::text[]::date[], $31::boolean[], $32::text[], $33::text[], \
-     $34::text[], $35::text[], $36::text[], $37::boolean[], $38::jsonb[], $40::text[]) \
+     $34::text[], $35::text[], $36::text[], $37::boolean[], $38::jsonb[], $40::text[], \
+     $41::text[], $42::boolean[], $43::jsonb[], $44::jsonb[], $45::jsonb[], $46::jsonb[], \
+     $47::jsonb[], $48::jsonb[], $49::jsonb[], $50::jsonb[], $51::jsonb[], $52::jsonb[]) \
      AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, \
      c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32, c33, c34, c35, c36, c37, \
-     c38, tokens)";
+     c38, tokens, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52)";
 
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
@@ -412,7 +421,7 @@ impl AuditStore {
         #[cfg(not(feature = "fhir"))]
         let (tokens, learned): (Vec<i32>, LearnedSets) = (Vec::new(), ());
         let outcome = outcome_smallint(event);
-        let id = sqlx::query(self.owed(INSERT_ONE, &INSERT_ONE_OWED))
+        let query = sqlx::query(self.owed(INSERT_ONE, &INSERT_ONE_OWED))
             .bind(Timestamp::from(event.timestamp))
             .bind(action_str(event))
             .bind(outcome)
@@ -450,7 +459,13 @@ impl AuditStore {
             .bind(event.subject_lookup_failed)
             .bind(category_content_json(event)?)
             .bind(policy)
-            .bind(tokens)
+            .bind(tokens);
+        let (binding, guest, json) = binding_columns(event);
+        let mut query = query.bind(binding).bind(guest);
+        for column in json {
+            query = query.bind(column);
+        }
+        let id = query
             .fetch_one(&mut *tx)
             .await?
             .try_get::<Uuid, _>("id")
@@ -558,6 +573,18 @@ impl AuditStore {
             .bind(c.contents)
             .bind(policy)
             .bind(tokens)
+            .bind(c.bindings)
+            .bind(c.guests)
+            .bind(c.parties)
+            .bind(c.groups)
+            .bind(c.providers)
+            .bind(c.representations)
+            .bind(c.externals)
+            .bind(c.agreements)
+            .bind(c.actor_chains)
+            .bind(c.facilities)
+            .bind(c.details)
+            .bind(c.summaries)
             .execute(&mut *conn)
             .await?;
         Ok(())
@@ -1225,121 +1252,21 @@ fn origin_count(event: &AuditEvent) -> Option<i64> {
         .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
 }
 
-/// Declares [`BatchColumns`] with one `Vec` per column and its
-/// `with_capacity`, so a column is named once.
-macro_rules! batch_columns {
-    ($($column:ident: $ty:ty),+ $(,)?) => {
-        /// The parallel column arrays of a batched insert, one entry per
-        /// record, which the `unnest` of the statement reads.
-        struct BatchColumns<'a> {
-            $($column: Vec<$ty>,)+
-        }
-
-        impl BatchColumns<'_> {
-            fn with_capacity(n: usize) -> Self {
-                Self {
-                    $($column: Vec::with_capacity(n),)+
-                }
-            }
-        }
-    };
-}
-
-batch_columns! {
-    recorded_at: Timestamp,
-    actions: String,
-    outcomes: i16,
-    event_codes: &'a str,
-    operations: Option<&'a str>,
-    principals: Option<&'a str>,
-    organisations: Option<&'a str>,
-    patient_ids: Option<&'a str>,
-    resource_classes: &'a str,
-    resource_ids: Option<&'a str>,
-    client_ips: Option<&'a str>,
-    token_ids: Option<&'a str>,
-    domains: &'a str,
-    purposes: Option<&'a str>,
-    legal_bases: Option<&'a str>,
-    result_counts: Option<i64>,
-    request_ids: Option<&'a str>,
-    roles: Option<serde_json::Value>,
-    origins: Option<serde_json::Value>,
-    origin_counts: Option<i64>,
-    categories: Option<serde_json::Value>,
-    bases: Option<&'static str>,
-    evidence: Option<serde_json::Value>,
-    digests: Option<String>,
-    modes: Option<&'static str>,
-    levels: Option<&'static str>,
-    values: Option<&'a str>,
-    professionals: Option<&'a str>,
-    emergency: bool,
-    ends: Option<String>,
-    stated: bool,
-    permits: Option<&'a str>,
-    issuers: Option<&'a str>,
-    clients: Option<&'a str>,
-    ehr_ids: Option<&'a str>,
-    namespaces: Option<&'a str>,
-    lookups_failed: bool,
-    contents: Option<serde_json::Value>,
-}
-
-impl<'a> BatchColumns<'a> {
-    /// Append one record, with the retention end it states (`None` when it
-    /// states none), to every column.
-    ///
-    /// # Errors
-    /// [`AuditError::Render`] when the classified content cannot be written as
-    /// JSON.
-    fn push(&mut self, record: &'a AuditRecord, end: Option<&RecordEnd>) -> Result<(), AuditError> {
-        let AuditRecord { event, subject } = record;
-        self.recorded_at.push(Timestamp::from(event.timestamp));
-        self.actions.push(action_str(event));
-        self.outcomes.push(outcome_smallint(event));
-        self.event_codes.push(event_code(event));
-        self.operations.push(operation(event));
-        self.principals.push(nonempty_opt(&event.user_id));
-        self.organisations.push(event.organisation.as_deref());
-        self.patient_ids.push(subject.as_deref());
-        self.resource_classes.push(resource_class(event.object));
-        self.resource_ids.push(event.object_id.as_deref());
-        self.client_ips.push(event.client_ip.as_deref());
-        self.token_ids.push(event.token_id.as_deref());
-        self.domains.push(event.domain.as_str());
-        self.purposes.push(event.purpose.as_deref());
-        self.legal_bases.push(event.legal_basis.as_deref());
-        self.result_counts.push(result_count(event));
-        self.request_ids.push(event.request_id.as_deref());
-        self.roles.push(roles_json(event));
-        self.origins.push(origins_json(event));
-        self.origin_counts.push(origin_count(event));
-        self.categories.push(categories_json(event));
-        self.bases.push(category_basis(event));
-        self.evidence.push(category_evidence_json(event));
-        self.digests.push(category_map_digest(event));
-        self.modes.push(event.actor.mode.map(ActingMode::as_str));
-        self.levels
-            .push(event.actor.assurance_level.map(AssuranceLevel::as_str));
-        self.values.push(event.actor.assurance_value.as_deref());
-        self.professionals
-            .push(event.actor.professional_id.as_deref());
-        self.emergency.push(event.emergency_access);
-        self.ends.push(match end {
-            Some(RecordEnd::On(date)) => Some(date.to_string()),
-            Some(RecordEnd::Never) | None => None,
-        });
-        self.stated.push(end.is_some());
-        self.permits.push(event.permit.as_deref());
-        self.issuers.push(event.issuer.as_deref());
-        self.clients.push(event.client_id.as_deref());
-        self.ehr_ids.push(access_ehr_id(event));
-        self.namespaces.push(event.subject_namespace.as_deref());
-        self.lookups_failed.push(event.subject_lookup_failed);
-        self.contents.push(category_content_json(event)?);
-        Ok(())
-    }
+/// The `binding` and `guest` column values of `event` and its jsonb binding
+/// columns ([`crate::system_log::binding::BindingRecord::json_columns`]).
+fn binding_columns(
+    event: &AuditEvent,
+) -> (Option<&'static str>, bool, [Option<serde_json::Value>; 10]) {
+    event.binding.as_ref().map_or_else(
+        || (None, false, Default::default()),
+        |binding| {
+            (
+                Some(binding.code.as_str()),
+                binding.guest,
+                binding.json_columns(),
+            )
+        },
+    )
 }
 
 /// The `ehr_id` column value: the EHR a classified access reached, which its
@@ -1475,6 +1402,9 @@ pub(super) fn stored_record(row: &PgRow) -> Result<(Vec<u8>, StoredRecord), Audi
         None => None,
         Some("person") => Some(ActingMode::Person),
         Some("client") => Some(ActingMode::Client),
+        Some("delegated") => Some(ActingMode::Delegated),
+        Some("external") => Some(ActingMode::External),
+        Some("system") => Some(ActingMode::System),
         Some(_) => return Err(unreadable("its acting mode is none this build writes")),
     };
     event.actor.assurance_level = match row.try_get::<Option<&str>, _>("assurance_level")? {

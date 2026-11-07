@@ -19,9 +19,11 @@ pub(super) fn accessor(event: &AuditEvent, missing: &str, purposes: Vec<Purpose>
         client_id: event.client_id.clone(),
         audience: None,
         provider: event.organisation.clone(),
-        acting: event.actor.mode.map(|mode| match mode {
-            ActingMode::Client => Acting::Client,
-            ActingMode::Person => Acting::Person,
+        // TODO(#5043): render the external and system modes the renderer cannot map yet.
+        acting: event.actor.mode.and_then(|mode| match mode {
+            ActingMode::Client | ActingMode::Delegated => Some(Acting::Client),
+            ActingMode::Person => Some(Acting::Person),
+            ActingMode::External | ActingMode::System => None,
         }),
         // NOTE: NEN 7513:2018 §5 (not vendored, NEN copyright) asks for the role or authority
         // under which the record was accessed, which BALP 1.1.4 §3:5.7.5.4 writes at role.
