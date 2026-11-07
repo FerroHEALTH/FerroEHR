@@ -57,7 +57,7 @@ use crate::extensions::access::authn::{FreshAuthentication, Principal};
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use crate::system_log::classify::audit_for;
-use crate::system_log::refusals::{Charged, OverRate, Reason, Refusal};
+use crate::system_log::refusals::{Charged, Reason, Refusal};
 
 /// The matched ITS-REST operation id, inserted by the dispatch layer onto the
 /// response. Present only when a request reached the generic dispatcher.
@@ -294,7 +294,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     // user-authentication event (DICOM PS3.15 §A.5.1 `EventID` 110114 with
     // `EventTypeCode` 110122), and the success record fires only on a genuine
     // authentication event, gated by `suppress_login_events`.
-    if is_refusal(&resp) {
+    if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
         op_rejected |= refused(
             &state,
             &resp,
@@ -331,20 +331,10 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     resp
 }
 
-/// Whether `resp` refused the request: a `401`, a `403`, or a caller above its
-/// agreement's `caller_rate` ([`OverRate`]).
-fn is_refusal(resp: &Response) -> bool {
-    let status = resp.status();
-    status == StatusCode::UNAUTHORIZED
-        || status == StatusCode::FORBIDDEN
-        || resp.extensions().get::<OverRate>().is_some()
-}
-
 /// Records the refusal `resp` answered as a failed user authentication
 /// (DICOM PS3.15 §A.5.1 `EventID` 110114, `EventTypeCode` 110122), charged
 /// to the verified caller when there is one and to the client's network
-/// otherwise, and counted into the caller's summary when it is [`OverRate`];
-/// whether its record was rejected under `fail_mode = "closed"`.
+/// otherwise; whether its record was rejected under `fail_mode = "closed"`.
 fn refused(
     state: &AppState,
     resp: &Response,
@@ -375,20 +365,15 @@ fn refused(
             subject: principal.subject.clone(),
         },
     );
-    let summarised = resp.extensions().get::<OverRate>().is_some();
-    let outcome = if summarised {
-        "caller-rate".to_owned()
-    } else {
-        caller.binding.map_or_else(
-            || {
-                resp.extensions().get::<Reason>().map_or_else(
-                    || resp.status().as_str().to_owned(),
-                    |Reason(r)| (*r).to_owned(),
-                )
-            },
-            |binding| binding.code.as_str().to_owned(),
-        )
-    };
+    let outcome = caller.binding.map_or_else(
+        || {
+            resp.extensions().get::<Reason>().map_or_else(
+                || resp.status().as_str().to_owned(),
+                |Reason(r)| (*r).to_owned(),
+            )
+        },
+        |binding| binding.code.as_str().to_owned(),
+    );
     crate::system_log::refusals::record(
         state,
         &Refusal {
@@ -396,7 +381,6 @@ fn refused(
             outcome: &outcome,
             ehr_id: event.ehr_id.as_deref(),
             event: &event,
-            summarised,
         },
     )
 }

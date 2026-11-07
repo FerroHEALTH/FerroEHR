@@ -71,12 +71,15 @@ pub enum BindingCode {
     RefusedNoAgreement,
     /// Refused: an external caller holds a scope its agreement does not read.
     RefusedScopeBeyondAgreement,
+    /// Refused: a `chained` organisation request carries no attested
+    /// correlation id.
+    RefusedCorrelationMissing,
 }
 
 impl BindingCode {
     /// Every code, in the order the `ck_audit_event_binding` constraint lists
     /// them.
-    pub const ALL: [Self; 22] = [
+    pub const ALL: [Self; 23] = [
         Self::Bound,
         Self::Provisional,
         Self::External,
@@ -99,6 +102,7 @@ impl BindingCode {
         Self::RefusedSystemPersonalScope,
         Self::RefusedNoAgreement,
         Self::RefusedScopeBeyondAgreement,
+        Self::RefusedCorrelationMissing,
     ];
 
     /// Whether a refusal under this code is a security event, recorded once
@@ -138,6 +142,7 @@ impl BindingCode {
             Self::RefusedSystemPersonalScope => "refused-system-personal-scope",
             Self::RefusedNoAgreement => "refused-no-agreement",
             Self::RefusedScopeBeyondAgreement => "refused-scope-beyond-agreement",
+            Self::RefusedCorrelationMissing => "refused-correlation-missing",
         }
     }
 
