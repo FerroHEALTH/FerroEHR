@@ -1,0 +1,1 @@
+- A delegated token's access record now has `acting_mode = "delegated"` where it had `client`, and a system caller's `system`. The FHIR rendering still names a delegated access as a client one. Upgrade: a review query that selects delegated access by `acting_mode = 'client'` also selects `'delegated'`.

@@ -29,6 +29,35 @@ task_local! {
     static ACCESS_RESTRICTION_ENFORCED: bool;
     static ACCESS_DELAY_ENFORCED: bool;
     static ACCESS_OPT_OUT_ENFORCED: bool;
+    static COMMITTED_FACILITIES: FacilitySink;
+}
+
+/// Where the facilities the compositions of one request name are gathered,
+/// for the binding of a system caller's access record.
+pub type FacilitySink =
+    std::sync::Arc<std::sync::Mutex<Vec<crate::system_log::binding::Identified>>>;
+
+/// Run `fut` gathering into `sink` the facilities its commits name.
+pub async fn with_facilities<F>(sink: FacilitySink, fut: F) -> F::Output
+where
+    F: Future,
+{
+    COMMITTED_FACILITIES.scope(sink, fut).await
+}
+
+/// Record that the current request committed a composition at the facility
+/// `issuer` and `id`; outside a gathering scope nothing is recorded.
+pub fn record_facility(issuer: &str, id: &str) {
+    // NOTE: no specification governs this: our own design; outside a request no record is
+    // being gathered, so the facility has nowhere to go.
+    let _outside = COMMITTED_FACILITIES.try_with(|sink| {
+        sink.lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push(crate::system_log::binding::Identified {
+                issuer: issuer.to_owned(),
+                id: id.to_owned(),
+            });
+    });
 }
 
 /// The roles the authenticated caller holds for the current request (#3239).

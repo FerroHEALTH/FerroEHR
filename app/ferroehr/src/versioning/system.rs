@@ -165,16 +165,17 @@ fn admit_facility(client: &SystemClient, canonical: &Value) -> Result<(), Servic
             "COMPOSITION.feeder_audit.originating_system_audit.location",
         ),
     };
-    if identifiers(facility).any(|(issuer, id)| {
+    if let Some((issuer, id)) = identifiers(facility).find(|(issuer, id)| {
         client.facilities.iter().any(|listed| {
-            listed.issuer == issuer
-                && (listed.id.as_deref() == Some(id)
+            listed.issuer == *issuer
+                && (listed.id.as_deref() == Some(*id)
                     || listed
                         .id_prefix
                         .as_deref()
                         .is_some_and(|prefix| id.starts_with(prefix)))
         })
     }) {
+        crate::system_log::access_context::record_facility(issuer, id);
         return Ok(());
     }
     Err(ServiceError::content_invalid(

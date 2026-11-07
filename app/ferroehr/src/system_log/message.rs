@@ -152,7 +152,9 @@ fn requesting_participants(
         .professional_id
         .as_deref()
         .filter(|id| !id.is_empty());
-    if let (Some(ActingMode::Client), Some(person)) = (event.actor.mode, professional) {
+    if let (Some(ActingMode::Client | ActingMode::Delegated), Some(person)) =
+        (event.actor.mode, professional)
+    {
         return vec![
             ActiveParticipant {
                 user_id: person.to_owned(),

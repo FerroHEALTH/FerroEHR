@@ -646,19 +646,44 @@ fn changed_value(column: &str, data_type: &str) -> Option<String> {
     Some(value)
 }
 
-/// The digest lists every column of the record but the unhashed three, so a
-/// migration that adds a column fails here until it lists the column.
+/// The columns version 2 adds to the 0017 list (`0023_binding_outcome.sql`).
+const VERSION_2_COLUMNS: [&str; 13] = [
+    "binding",
+    "party",
+    "party_groups",
+    "provider",
+    "guest",
+    "representation",
+    "external_fields",
+    "agreement",
+    "actor_chain",
+    "facilities",
+    "binding_detail",
+    "summary",
+    "digest_version",
+];
+
+/// The digest of version 2 lists every column of the record but the unhashed
+/// three, so a migration that adds a column fails here until a version lists
+/// it; version 1 keeps the 0017 list the rows written before it are hashed
+/// over.
 #[tokio::test]
 async fn the_digest_covers_every_column() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
-
-    let mut covered: Vec<String> =
-        sqlx::query_scalar("SELECT unnest(audit.audit_event_digest_columns())")
-            .fetch_all(&pool)
-            .await
-            .expect("the current digest's columns");
-    covered.sort();
+    let listed = |version: i16| {
+        let pool = pool.clone();
+        async move {
+            let mut covered: Vec<String> =
+                sqlx::query_scalar("SELECT unnest(audit.audit_event_digest_columns($1))")
+                    .bind(version)
+                    .fetch_all(&pool)
+                    .await
+                    .expect("the digest's columns");
+            covered.sort();
+            covered
+        }
+    };
 
     let mut expected: Vec<String> = audit_event_columns(&pool)
         .await
@@ -667,11 +692,126 @@ async fn the_digest_covers_every_column() {
         .filter(|name| !UNHASHED_COLUMNS.contains(&name.as_str()))
         .collect();
     expected.sort();
-
     assert_eq!(
-        covered, expected,
+        listed(2).await,
+        expected,
         "every column of audit.audit_event outside {UNHASHED_COLUMNS:?} must be in the \
-         chain digest: list a new column in audit.audit_event_digest_columns"
+         chain digest: list a new column in a new version of audit.audit_event_digest_columns"
+    );
+    let version_1: Vec<String> = expected
+        .into_iter()
+        .filter(|name| !VERSION_2_COLUMNS.contains(&name.as_str()))
+        .collect();
+    assert_eq!(listed(1).await, version_1, "version 1 is the 0017 list");
+}
+
+/// A store holding version-1 records verifies after the migration, new
+/// records are version 2, and a version-1 insert after a version-2 record is
+/// refused.
+#[tokio::test]
+async fn a_store_holding_both_digest_versions_verifies_and_refuses_a_downgrade() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AuditStore::new(pool.clone());
+    seed(&store, 2).await;
+    // Rows written before the migration are version 1: rewrite the first
+    // as one, with its digest over the version-1 list, and relink the second.
+    let mut tx = pool.begin().await.expect("tx");
+    sqlx::query("ALTER TABLE audit.audit_event DISABLE TRIGGER USER")
+        .execute(&mut *tx)
+        .await
+        .expect("disable the append-only triggers");
+    sqlx::query(
+        "UPDATE audit.audit_event SET digest_version = 1 \
+         WHERE chain_seq = (SELECT min(chain_seq) FROM audit.audit_event)",
+    )
+    .execute(&mut *tx)
+    .await
+    .expect("a version-1 row");
+    sqlx::query(
+        "UPDATE audit.audit_event e SET row_hash = audit.audit_event_row_digest(e) \
+         WHERE chain_seq = (SELECT min(chain_seq) FROM audit.audit_event)",
+    )
+    .execute(&mut *tx)
+    .await
+    .expect("its version-1 digest");
+    sqlx::query(
+        "UPDATE audit.audit_event e SET prev_hash = p.row_hash \
+         FROM audit.audit_event p WHERE p.chain_seq = e.chain_seq - 1",
+    )
+    .execute(&mut *tx)
+    .await
+    .expect("relink");
+    sqlx::query(
+        "UPDATE audit.audit_event e SET row_hash = audit.audit_event_row_digest(e) \
+         WHERE chain_seq = (SELECT max(chain_seq) FROM audit.audit_event)",
+    )
+    .execute(&mut *tx)
+    .await
+    .expect("the second digest");
+    sqlx::query(
+        "UPDATE audit.audit_chain_state SET head_hash = \
+         (SELECT row_hash FROM audit.audit_event ORDER BY chain_seq DESC LIMIT 1) WHERE singleton",
+    )
+    .execute(&mut *tx)
+    .await
+    .expect("the chain head");
+    sqlx::query("ALTER TABLE audit.audit_event ENABLE TRIGGER USER")
+        .execute(&mut *tx)
+        .await
+        .expect("enable the triggers");
+    tx.commit().await.expect("commit");
+    let versions: Vec<i16> =
+        sqlx::query_scalar("SELECT digest_version FROM audit.audit_event ORDER BY chain_seq")
+            .fetch_all(&pool)
+            .await
+            .expect("versions");
+    assert_eq!(versions, vec![1, 2]);
+    // The checkpoint the seed left is stale after the rewrite; verify from genesis.
+    sqlx::query("DELETE FROM audit.audit_chain_checkpoint")
+        .execute(&pool)
+        .await
+        .expect("no checkpoint");
+    assert!(
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty(),
+        "a store holding both versions verifies"
+    );
+    seed(&store, 1).await;
+    let newest: i16 = sqlx::query_scalar(
+        "SELECT digest_version FROM audit.audit_event ORDER BY chain_seq DESC LIMIT 1",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the newest version");
+    assert_eq!(newest, 2, "a new record is version 2");
+    // A copy of the newest record stated as version 1 is refused by the chain writer.
+    let mut tx = pool.begin().await.expect("tx");
+    let downgrade = sqlx::query(
+        "DO $$ DECLARE cols text; head record; BEGIN \
+         SELECT string_agg(quote_ident(column_name), ', ') INTO cols \
+           FROM information_schema.columns \
+          WHERE table_schema = 'audit' AND table_name = 'audit_event' \
+            AND column_name NOT IN ('id', 'stored_at', 'chain_seq', 'prev_hash', 'row_hash', \
+                'delivered_syslog_at', 'delivered_fhir_feed_at', 'digest_version'); \
+         SELECT chain_seq, row_hash INTO head FROM audit.audit_event \
+          ORDER BY chain_seq DESC LIMIT 1; \
+         PERFORM set_config('ferroehr.audit_chain_head', \
+             head.chain_seq || ':' || encode(head.row_hash, 'hex'), true); \
+         EXECUTE format('INSERT INTO audit.audit_event (%s, digest_version) \
+             SELECT %s, 1 FROM audit.audit_event WHERE chain_seq = %s', \
+             cols, cols, head.chain_seq); \
+         END $$",
+    )
+    .execute(&mut *tx)
+    .await;
+    tx.rollback().await.expect("rollback");
+    let refusal = downgrade.expect_err("a version-1 insert after version 2 is refused");
+    assert!(
+        refusal.to_string().contains("refusing a downgrade"),
+        "{refusal}"
     );
 }
 
