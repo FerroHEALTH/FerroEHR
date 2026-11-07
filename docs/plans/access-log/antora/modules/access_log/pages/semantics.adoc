@@ -1,0 +1,54 @@
+include::partial$module_vars.adoc[]
+
+= Recording, Integrity and Retention
+
+== Recording
+
+. A system MUST write an `ACCESS_LOG_ENTRY` for every access to EHR data through any of its interfaces: reads, queries, creates, updates, deletes, exports and imports, whether granted, refused or failed.
+. An access that reaches the data of several EHRs MUST be recorded as one entry per EHR whose data it asked for or delivered. The entries of one request MUST carry the same `_channel.request_id_`.
+. A system MUST write the entry, or a durable reservation of it, before it returns EHR data to the accessor, and MUST refuse the access when it cannot.
+. A read of an access log MUST itself be recorded, with an `ACCESSED_ITEM` whose `_object_` names the log.
+. An entry MUST NOT carry data values of the EHR. An item names objects and versions; a query is named by `_stored_query_` or `_text_digest_`. `ACCESS_QUERY._text_` MAY be recorded where a policy requires it.
+. An entry MUST NOT carry a credential; `ACCESS_CREDENTIAL` names it.
+. `ACCESSOR._party_` SHOULD reference the demographic party the system bound the caller to. Where no party is known, it MUST carry the identifiers the credential gave.
+. An event that can change the meaning or the reliability of the log MUST be recorded as an entry whose item names the log: a change to its retention settings, a change of digest algorithm or signing key, a restore from backup, a correction of the system clock, and an erasure ordered by law.
+. A record MUST NOT be modified after it is written, except by its replacement by a tombstone (<<_retention>>).
+
+== Integrity
+
+. The canonical form of a record is its ITS-JSON serialisation with the `_link_` attribute removed, canonicalised by the JSON Canonicalization Scheme of RFC 8785.
+. `_content_digest_` is the digest of the UTF-8 octets of the canonical form.
+. `_digest_` is the digest of the UTF-8 octets of `_previous_digest_`, a line feed, the decimal `_sequence_`, a line feed, and `_content_digest_`.
+. The first record of a log has `_sequence_` 1 and a `_previous_digest_` the system publishes with its first checkpoint.
+. Every record of one `_system_id_` MUST carry the next `_sequence_`, without gaps.
+. A system SHOULD write an `ACCESS_LOG_CHECKPOINT` at intervals its policy sets and on request, and SHOULD deposit checkpoints where the recording system cannot alter them.
+. A verifier recomputes `_digest_` for each record from `_previous_digest_`, `_sequence_` and `_content_digest_`, recomputes `_content_digest_` for each `ACCESS_LOG_ENTRY`, and checks the last digest against a checkpoint. A tombstone's `_content_digest_` cannot be recomputed and is taken as recorded.
+. A system MAY sign each link (`ACCESS_LOG_LINK._signature_`).
+. A change of algorithm takes effect at a stated sequence; each link names its algorithm.
+
+== Retention
+
+. An entry MUST state its retention when written: `_retain_until_` and the grounds that set it, from the categories and origins of the data and the law that applies.
+. At the end of the period, the system MUST replace the entry by an `ACCESS_LOG_TOMBSTONE` with the same `_uid_`, `_system_id_`, `_time_recorded_` and `_link_`. An erasure ordered by law before then takes the same path.
+. A store that receives entries from another system MUST keep their `_retain_until_` and MAY extend it.
+
+== Access to the Log
+
+The log is personal data about the subject of care and about the people who accessed the data, and its processing needs the same security as the EHR.
+
+. Reading the log MUST require a permission granted for the log alone, never one granted with clinical access rights.
+. Every read of the log MUST be recorded (<<_recording>>).
+. A system SHOULD keep the log in a store whose writers cannot alter or remove its records, and MUST detect such an alteration by the chain (<<_integrity>>).
+
+== Views
+
+A system serves two views of an entry:
+
+* *The full view*, to a party authorised to review the log.
+* *The subject view*, to the subject of care of the EHR and to their representative. It MUST include `_time_recorded_`, `_occurred_`, `_action_`, `_outcome.result_`, `_accessor.kind_`, `_accessor.party_`, `_accessor.provider_`, `_items_` (without `_origins.endpoint_`), `_purposes_` and `_is_emergency_`. It MUST omit `_accessor.credential_`, `_accessor.delegation_`, `_accessor.binding_`, `_channel_`, `_query.text_`, `_query.text_digest_`, `_security_labels_`, `_other_details_` and `_link_`. A system MAY withhold further attributes where the law of the jurisdiction restricts the subject's right to them.
+
+The caller's authorisation selects the view. A request parameter MUST NOT widen it.
+
+== Exchange
+
+A system that transfers an EHR to another system exports the EHR's records with the checkpoint they verify against. The receiving system keeps their `_system_id_`, `_link_` and `_retain_until_`, verifies them against the checkpoint, and records the import as an entry of its own log.

@@ -1,0 +1,29 @@
+include::partial$module_vars.adoc[]
+
+= Terminology
+
+NOTE: This page proposes a change to the xref:TERM::index.adoc[openEHR Terminology] (SPECTERM).
+
+Five groups are added to the openEHR Terminology, with constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS` (`Group_id_access_action`, `Group_id_access_outcome`, `Group_id_accessor_kind`, `Group_id_access_authorisation`, `Group_id_access_refusal_reason`). The codes are for the terminology editors to assign; the rubrics are:
+
+[cols="2,5", options="header"]
+|===
+|Group |Rubrics
+
+|access action
+|read, query, create, update, delete, export, import
+
+|access outcome
+|granted, partially granted, refused, failed
+
+|accessor kind
+|person, delegated person, subject of care, representative, external person, organisation, system
+
+|access authorisation
+|role, treatment relationship, agreement, consent, permit, emergency, subject of care, representation, legal obligation
+
+|access refusal reason
+|not authenticated, credential not bound, not authorised, consent absent, opted out, restricted by the subject, rate limited, system failure
+|===
+
+`access refusal reason` is recommended; a system MAY code `ACCESS_OUTCOME._reason_` in its own terminology.

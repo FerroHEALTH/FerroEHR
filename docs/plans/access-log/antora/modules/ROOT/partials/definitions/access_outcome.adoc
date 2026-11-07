@@ -1,0 +1,35 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_OUTCOME*
+
+h|*Description*
+2+a|How an access ended.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*result*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|The result, coded in the openEHR Terminology `access outcome` group: granted, partially granted, refused or failed.
+
+h|*0..1*
+|*reason*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|Why the access was refused, partly granted or failed, coded in the openEHR Terminology `access refusal reason` group or a terminology the system names.
+
+h|*0..1*
+|*description*: `xref:data_types:text_package.adoc#_dv_text_class[DV_TEXT]`
+a|Free text on the outcome, never clinical content.
+
+h|*0..1*
+|*delivered*: `xref:{class_integer}[Integer]`
+a|The number of objects or result rows delivered to the accessor, when counted.
+
+h|*Invariants*
+2+a|__Result_valid__: `terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_access_outcome, result.defining_code)`
+
+h|
+2+a|__Delivered_valid__: `delivered /= Void implies delivered >= 0`
+
+|===

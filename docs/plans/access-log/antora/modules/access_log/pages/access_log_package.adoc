@@ -1,0 +1,55 @@
+include::partial$module_vars.adoc[]
+
+= The access_log Package
+
+== Overview
+
+An `ACCESS_LOG_ENTRY` records one access event to the data of at most one EHR. An access that reaches several EHRs is recorded as one entry per EHR, and the entries of one request share `_channel.request_id_`. Every record, entry or tombstone, holds one `ACCESS_LOG_LINK` of the log's hash chain. A signed `ACCESS_LOG_CHECKPOINT` seals the head of the chain.
+
+== Design
+
+=== Who and on Whose Behalf
+
+`ACCESSOR._party_` is a `PARTY_PROXY`, the type `AUDIT_DETAILS._committer_` uses. A caller the system bound to a demographic party is a `PARTY_IDENTIFIED` whose `_external_ref_` names that party; the subject of care is `PARTY_SELF`; a representative is `PARTY_RELATED`, whose `_relationship_` is relative to the subject of the EHR. A caller no party here names is a `PARTY_IDENTIFIED` with the identifiers its credential gave. `_provider_` names the organisation the accessor acted for, `_kind_` the kind of accessor, and `_delegation_` the clients and parties between the accessor and the system, outermost first.
+
+=== What
+
+`_ehr_id_` and `_items_` name the data: per item the versioned object and the version, the RM type, archetype and template, the paths within the item where the access reached only part of it, the categories and the origins, and whether the item was delivered. An access by query adds `ACCESS_QUERY`, which names a stored query or carries a digest of the query text.
+
+=== Why and Under Which Authorisation
+
+`_purposes_` holds the purposes of use. `_authorisations_` holds each ground of the access decision: a role, a treatment relationship, an agreement with its version and legal grounds, a consent decision with its reference, a permit, an emergency override, the subject's own access, a representation, or a legal obligation. `_is_emergency_` marks an access under an emergency override.
+
+=== Outcome, System and Transport
+
+`ACCESS_OUTCOME` states whether the access was granted, partly granted, refused or failed, with the reason. `_system_id_` names the recording system and `ACCESS_CHANNEL` the interface, the request and the client address.
+
+== Class Descriptions
+
+include::ROOT:partial$classes/access_log_record.adoc[]
+
+include::ROOT:partial$classes/access_log_entry.adoc[]
+
+include::ROOT:partial$classes/access_log_tombstone.adoc[]
+
+include::ROOT:partial$classes/access_log_link.adoc[]
+
+include::ROOT:partial$classes/access_log_checkpoint.adoc[]
+
+include::ROOT:partial$classes/accessor.adoc[]
+
+include::ROOT:partial$classes/access_credential.adoc[]
+
+include::ROOT:partial$classes/access_outcome.adoc[]
+
+include::ROOT:partial$classes/accessed_item.adoc[]
+
+include::ROOT:partial$classes/access_origin.adoc[]
+
+include::ROOT:partial$classes/access_query.adoc[]
+
+include::ROOT:partial$classes/access_authorisation.adoc[]
+
+include::ROOT:partial$classes/access_channel.adoc[]
+
+include::ROOT:partial$classes/access_retention.adoc[]

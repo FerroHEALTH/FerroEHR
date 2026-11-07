@@ -1,0 +1,13 @@
+=== ACCESSOR Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/accessor.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/accessor.adoc[]
+
+====

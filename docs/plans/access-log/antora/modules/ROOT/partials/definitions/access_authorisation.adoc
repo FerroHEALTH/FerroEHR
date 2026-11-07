@@ -1,0 +1,40 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_AUTHORISATION*
+
+h|*Description*
+2+a|One ground the access decision rested on.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*kind*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|The kind of ground, coded in the openEHR Terminology `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, an emergency override, the subject's own access, a representation, or a legal obligation.
+
+h|*0..1*
+|*policy*: `xref:data_types:uri_package.adoc#_dv_uri_class[DV_URI]`
+a|The policy or agreement the ground is defined in.
+
+h|*0..1*
+|*name*: `xref:{class_string}[String]`
+a|The name of the agreement or policy.
+
+h|*0..1*
+|*version*: `xref:{class_string}[String]`
+a|The version of the agreement or policy.
+
+h|*0..1*
+|*reference*: `xref:data_types:basic_package.adoc#_dv_identifier_class[DV_IDENTIFIER]`
+a|The identifier of the decision the ground rests on, such as a consent decision reference or a data permit number.
+
+h|*0..1*
+|*legal_grounds*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|The legal provisions the ground rests on.
+
+h|*Invariants*
+2+a|__Kind_valid__: `terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_access_authorisation, kind.defining_code)`
+
+|===

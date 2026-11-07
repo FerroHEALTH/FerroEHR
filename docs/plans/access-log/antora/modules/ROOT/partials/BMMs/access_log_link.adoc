@@ -1,0 +1,55 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_LOG_LINK",
+  "documentation": "One link of the hash chain of an access log. `_content_digest_` is the digest of the record's canonical serialisation without its link; `_digest_` is the digest over `_previous_digest_`, `_sequence_` and `_content_digest_`, so a removed or reordered record breaks every later link while a tombstone, which keeps the content digest, does not.",
+  "properties": {
+    "sequence": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "sequence",
+      "documentation": "Position of the record in the log of its `_system_id_`, starting at 1, with no gaps.",
+      "is_mandatory": true,
+      "type": "Integer64"
+    },
+    "algorithm": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "algorithm",
+      "documentation": "Name of the digest algorithm, such as `SHA-256`.",
+      "is_mandatory": true,
+      "type": "String"
+    },
+    "previous_digest": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "previous_digest",
+      "documentation": "The `_digest_` of the preceding record, in lower-case hexadecimal; for the first record, the digest the log was started with.",
+      "is_mandatory": true,
+      "type": "String"
+    },
+    "content_digest": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "content_digest",
+      "documentation": "Digest of the record's canonical serialisation with `_link_` removed, in lower-case hexadecimal.",
+      "is_mandatory": true,
+      "type": "String"
+    },
+    "digest": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "digest",
+      "documentation": "Digest over `_previous_digest_`, `_sequence_` and `_content_digest_`, in lower-case hexadecimal.",
+      "is_mandatory": true,
+      "type": "String"
+    },
+    "signature": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "signature",
+      "documentation": "Optional signature of the recording system over `_digest_`, for a jurisdiction that asks for each record to be signed.",
+      "type": "String"
+    }
+  },
+  "invariants": {
+    "Sequence_valid": "sequence >= 1",
+    "Algorithm_valid": "not algorithm.is_empty",
+    "Digests_valid": "not previous_digest.is_empty and not content_digest.is_empty and not digest.is_empty"
+  }
+}
+--------

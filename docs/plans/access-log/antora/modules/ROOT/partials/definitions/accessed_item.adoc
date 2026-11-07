@@ -1,0 +1,52 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESSED_ITEM*
+
+h|*Description*
+2+a|One item of EHR data an access asked for or delivered: a versioned object or one of its versions, or, for a query whose result is not itemised, the categories and origins of what it delivered.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*0..1*
+|*object*: `xref:{class_object_ref}[OBJECT_REF]`
+a|Reference to the versioned object, `EHR_STATUS`, `EHR_ACCESS` or directory the item belongs to.
+
+h|*0..1*
+|*version_id*: `xref:{class_object_version_id}[OBJECT_VERSION_ID]`
+a|The version accessed, when one version was.
+
+h|*0..1*
+|*rm_type*: `xref:{class_string}[String]`
+a|The reference model type of the item, such as `COMPOSITION`.
+
+h|*0..1*
+|*archetype_id*: `xref:{class_archetype_id}[ARCHETYPE_ID]`
+a|The archetype of the item's root, when it is archetyped.
+
+h|*0..1*
+|*template_id*: `xref:{class_template_id}[TEMPLATE_ID]`
+a|The template the item was committed under.
+
+h|*0..1*
+|*paths*: `xref:{class_list}[List]<xref:data_types:uri_package.adoc#_dv_ehr_uri_class[DV_EHR_URI]>`
+a|The parts of the item the access reached, as fully qualified runtime paths, where it reached less than the whole item; empty when the whole item was reached.
+
+h|*0..1*
+|*categories*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|The categories of data the item belongs to, coded in a terminology the jurisdiction names.
+
+h|*0..1*
+|*origins*: `xref:{class_list}[List]<xref:access_log:access_log_package.adoc#_access_origin_class[ACCESS_ORIGIN]>`
+a|The systems the item's data came from.
+
+h|*1..1*
+|*was_delivered*: `xref:{class_boolean}[Boolean]`
+a|True when the item was delivered to the accessor or written; false when it was asked for and withheld.
+
+h|*Invariants*
+2+a|__Item_named__: `object /= Void or version_id /= Void or not categories.is_empty`
+
+|===

@@ -1,0 +1,13 @@
+=== ACCESS_LOG_TOMBSTONE Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_log_tombstone.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_log_tombstone.adoc[]
+
+====

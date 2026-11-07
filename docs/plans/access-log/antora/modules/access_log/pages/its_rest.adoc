@@ -1,0 +1,30 @@
+include::partial$module_vars.adoc[]
+
+= ITS-REST Resources
+
+NOTE: This page proposes an addition to the xref:ITS-REST::index.adoc[openEHR REST API] (SPECITS). The resources follow the conventions of ITS-REST 1.1.0: `offset` and `fetch` paging as in the Query API, ISO 8601 date-times, and `ehr_id` paths as in the EHR API.
+
+[cols="2,3", options="header"]
+|===
+|Resource |Behaviour
+
+|`GET {baseUrl}/ehr/{ehr_id}/access_log`
+|The entries of one EHR, newest first. Query parameters: `from`, `to` (ISO 8601 date-times), `action`, `outcome`, `accessor_kind`, `emergency`, `include_self`, `offset`, `fetch`. `include_self` defaults to false and leaves out the subject's own reads of their log.
+
+|`GET {baseUrl}/ehr/{ehr_id}/access_log/{uid}`
+|One entry or tombstone.
+
+|`GET {baseUrl}/admin/access_log`
+|Entries across EHRs, for review. Query parameters: `ehr_id`, `party_namespace`, `party_type`, `party_id`, `issuer`, `subject`, `request_id`, `from`, `to`, `outcome`, `emergency`, `offset`, `fetch`.
+
+|`GET {baseUrl}/admin/access_log/chain`
+|The `uid` and `link` of each record between `from_sequence` and `to_sequence`.
+
+|`GET {baseUrl}/admin/access_log/checkpoint`
+|The latest checkpoint, or the one at `sequence`.
+
+|`GET {baseUrl}/admin/access_log/export?ehr_id=`
+|The records of one EHR with the checkpoint they verify against, for a transfer of the EHR to another system.
+|===
+
+A list response is a JSON object with `offset`, `fetch` and `entries`, each entry in its ITS-JSON form with `_type`. The caller's authorisation selects the full or the subject view (xref:semantics.adoc#_views[Views]). A request for an EHR the caller may not see MUST be answered as for an EHR that does not exist (`404`). Every read of these resources is itself recorded.

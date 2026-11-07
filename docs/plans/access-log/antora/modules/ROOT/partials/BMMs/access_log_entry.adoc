@@ -1,0 +1,144 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_LOG_ENTRY",
+  "documentation": "The record of one access event to the data of at most one EHR: who accessed, on whose behalf, what, when, why, under which authorisation, with which outcome, and through which channel. An access that reaches the data of several EHRs is recorded as one entry per EHR, and the entries of one request share `_channel.request_id_`.",
+  "ancestors": [
+    "ACCESS_LOG_RECORD"
+  ],
+  "properties": {
+    "occurred": {
+      "_type": "P_BMM_GENERIC_PROPERTY",
+      "name": "occurred",
+      "documentation": "Time interval over which the access took place, when it is known and differs from `_time_recorded_`.",
+      "type_def": {
+        "root_type": "DV_INTERVAL",
+        "generic_parameters": [
+          "DV_DATE_TIME"
+        ]
+      }
+    },
+    "action": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "action",
+      "documentation": "What the access did to the data, coded in the openEHR Terminology `access action` group.",
+      "is_mandatory": true,
+      "type": "DV_CODED_TEXT"
+    },
+    "operation": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "operation",
+      "documentation": "The interface operation that carried the access, such as an ITS-REST operation id, coded in a terminology that names the interface.",
+      "type": "DV_CODED_TEXT"
+    },
+    "outcome": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "outcome",
+      "documentation": "Whether the access was granted, and how it ended.",
+      "is_mandatory": true,
+      "type": "ACCESS_OUTCOME"
+    },
+    "accessor": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "accessor",
+      "documentation": "Who accessed the data, on whose behalf, and with which credential.",
+      "is_mandatory": true,
+      "type": "ACCESSOR"
+    },
+    "ehr_id": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "ehr_id",
+      "documentation": "The `ehr_id` of the EHR whose data the access reached or asked for. Void only for an access that named no EHR, such as a refused request whose target could not be resolved.",
+      "type": "HIER_OBJECT_ID"
+    },
+    "items": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "items",
+      "documentation": "The data of the EHR the access asked for or delivered.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESSED_ITEM"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "query": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "query",
+      "documentation": "The query that carried the access, for an access by query.",
+      "type": "ACCESS_QUERY"
+    },
+    "purposes": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "purposes",
+      "documentation": "The purposes of use the accessor declared or the system established.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "authorisations": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "authorisations",
+      "documentation": "The grounds on which the access was authorised or refused: roles, agreements, consent decisions, permits, emergency overrides.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_AUTHORISATION"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "is_emergency": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "is_emergency",
+      "documentation": "True when the access was made under an emergency override of the access policy, such as an access to protect the vital interests of the subject of care.",
+      "is_mandatory": true,
+      "type": "Boolean"
+    },
+    "channel": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "channel",
+      "documentation": "The interface and the request that carried the access.",
+      "type": "ACCESS_CHANNEL"
+    },
+    "security_labels": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "security_labels",
+      "documentation": "Labels that limit who may read this entry, derived from the categories and origins of the data accessed.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "retention": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "retention",
+      "documentation": "How long this entry is kept, and on which grounds.",
+      "is_mandatory": true,
+      "type": "ACCESS_RETENTION"
+    },
+    "other_details": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "other_details",
+      "documentation": "Further details a jurisdiction or a deployment records, never clinical content. May be archetyped.",
+      "type": "ITEM_STRUCTURE"
+    }
+  },
+  "invariants": {
+    "Action_valid": "terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_access_action, action.defining_code)",
+    "Items_need_ehr": "not items.is_empty implies ehr_id /= Void"
+  }
+}
+--------

@@ -40,6 +40,11 @@ readonly TREES=(
   docs/specs/ihe-iua
   docs/specs/nuts-rfc
   docs/specs/mitz
+  docs/specs/ihe-balp
+  docs/specs/fhir-auditevent
+  docs/specs/dicom-ps3-15
+  docs/specs/rfc-independent
+  docs/specs/nen-7513-sources
 )
 
 fail=0

@@ -1,0 +1,33 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_CHANNEL",
+  "documentation": "The interface and request that carried an access.",
+  "properties": {
+    "interface": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "interface",
+      "documentation": "The interface, such as openEHR ITS-REST 1.1.0, HL7 FHIR R4 or a user interface of the system, coded in a terminology the system names.",
+      "type": "DV_CODED_TEXT"
+    },
+    "request_id": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "request_id",
+      "documentation": "The identifier of the request in the recording system's own logs; every entry one request produced carries the same value.",
+      "type": "String"
+    },
+    "correlation_id": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "correlation_id",
+      "documentation": "The identifier the client or an intermediary correlates the request by in its own log.",
+      "type": "String"
+    },
+    "client_address": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "client_address",
+      "documentation": "The network address the request came from.",
+      "type": "String"
+    }
+  }
+}
+--------

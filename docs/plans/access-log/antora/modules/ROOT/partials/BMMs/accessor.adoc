@@ -1,0 +1,83 @@
+[source,json]
+--------
+{
+  "name": "ACCESSOR",
+  "documentation": "Who accessed: the party, the healthcare provider they acted for, their roles and groups, the credential they presented, and the chain of clients and parties that acted between them and the system.",
+  "properties": {
+    "kind": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "kind",
+      "documentation": "The kind of accessor, coded in the openEHR Terminology `accessor kind` group: a person, a person through a delegated client, the subject of care, a representative, a person of another organisation, an organisation, or a system acting for nobody.",
+      "is_mandatory": true,
+      "type": "DV_CODED_TEXT"
+    },
+    "party": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "party",
+      "documentation": "The party that accessed: `PARTY_IDENTIFIED` with an `_external_ref_` to the demographic party the system bound the caller to, `PARTY_SELF` for the subject of care, `PARTY_RELATED` for a representative, or `PARTY_IDENTIFIED` with identifiers alone where no party is known here.",
+      "is_mandatory": true,
+      "type": "PARTY_PROXY"
+    },
+    "provider": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "provider",
+      "documentation": "The healthcare provider or other organisation the accessor acted for.",
+      "type": "PARTY_IDENTIFIED"
+    },
+    "roles": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "roles",
+      "documentation": "The functional or security roles the accessor held for the access.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "groups": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "groups",
+      "documentation": "The demographic `GROUP` parties, such as care teams, whose membership the access relied on.",
+      "type_def": {
+        "container_type": "List",
+        "type": "PARTY_REF"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "binding": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "binding",
+      "documentation": "How the system bound the credential to `_party_`, or why it could not, coded in a terminology the system names.",
+      "type": "DV_CODED_TEXT"
+    },
+    "credential": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "credential",
+      "documentation": "The credential the accessor authenticated with.",
+      "type": "ACCESS_CREDENTIAL"
+    },
+    "delegation": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "delegation",
+      "documentation": "The clients and parties that acted between the accessor and the system, outermost first, as the credential named them.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_CREDENTIAL"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    }
+  },
+  "invariants": {
+    "Kind_valid": "terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_accessor_kind, kind.defining_code)"
+  }
+}
+--------

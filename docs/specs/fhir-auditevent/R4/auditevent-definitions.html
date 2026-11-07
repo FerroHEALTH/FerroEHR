@@ -1,0 +1,545 @@
+﻿<!DOCTYPE HTML>
+  <!-- template-definitions.html --><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>AuditEvent - FHIR v4.0.1</title>
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="http://hl7.org/fhir"/>
+
+  <link rel="stylesheet" href="fhir.css"/>
+  <link rel="Prev" href="http://hl7.org/fhir/auditevent-definitions.html"/>
+
+    <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="./dist/css/bootstrap.css"/>
+  <link rel="stylesheet" href="./assets/css/bootstrap-fhir.css"/>
+
+    <!-- Project extras -->
+  <link rel="stylesheet" href="./assets/css/project.css"/>
+  <link rel="stylesheet" href="fhir-pub.css"/>
+  <link rel="stylesheet" href="./assets/css/pygments-manni.css"/>
+	<link rel="stylesheet" href="jquery-ui.css"/>
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- [if lt IE 9]>
+  <script src="./assets/js/html5shiv.js"></script>
+  <script src="./assets/js/respond.min.js"></script>
+  <![endif] -->
+
+    <!-- Favicons -->
+  <link sizes="144x144" rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-144-precomposed.png"/>
+  <link sizes="114x114" rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-114-precomposed.png"/>
+  <link sizes="72x72" rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-72-precomposed.png"/>
+  <link rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-57-precomposed.png"/>
+  <link rel="shortcut icon" href="./assets/ico/favicon.png"/>
+
+</head>
+<body>
+	<div id="segment-header" class="segment">  <!-- segment-header -->	
+		<div class="container">  <!-- container -->
+			<a no-external="true" id="logo" href="http://hl7.org/fhir"><img src="./assets/images/fhir-logo-www.png" alt="logo fhir" width="249" height="60"/> </a>
+			<div id="hl7-status">
+				<b>Release 4</b>
+			</div>       	
+			
+			<div id="hl7-nav">
+				 <a no-external="true" id="hl7-logo" href="http://www.hl7.org">
+					<img src="./assets/images/hl7-logo.png" width="42" alt="visit the hl7 website" height="50"/>
+				</a> 
+			</div>       	
+			<div id="hl7-nav"><a no-external="true" id="hl7-logo" href="http://hl7.org/fhir/R4/searchform.html"><img src="./assets/images/search.png" alt="Search FHIR"/></a></div> 
+		</div>
+		<div class="container">  <!-- container -->
+	</div></div>  <!-- /segment-header -->	
+
+
+	<div id="segment-navbar" class="segment">  <!-- segment-navbar -->
+		<div id="stripe"> </div>
+		<div class="container">  <!-- container -->
+   <!-- HEADER CONTENT -->
+ 	      		 	      		      		
+			<nav class="navbar navbar-inverse">
+				<div class="container">
+					<button data-target=".navbar-inverse-collapse" data-toggle="collapse" type="button" class="navbar-toggle">
+						<span class="icon-bar"> </span>
+						<span class="icon-bar"> </span>
+						<span class="icon-bar"> </span>
+					</button>
+					<a href="index.html" class="navbar-brand hidden">FHIR</a>
+					<div class="nav-collapse collapse navbar-inverse-collapse">
+						<ul class="nav navbar-nav">
+              <li><a href="./index.html">Home</a></li>
+              <li><a href="./modules.html">Getting Started</a></li>
+              <li><a href="./documentation.html">Documentation</a></li>
+              <li><a href="./resourcelist.html">Resources</a></li>
+              <li><a href="./profilelist.html">Profiles</a></li>
+              <li><a href="./extensibility-registry.html">Extensions</a></li>
+              <li><a href="./operationslist.html">Operations</a></li>
+              <li><a href="./terminologies-systems.html">Terminologies</a></li>
+						</ul>
+					</div>  <!-- /.nav-collapse -->
+				</div>  <!-- /.container -->
+			</nav>  <!-- /.navbar -->
+      		
+  <!-- /HEADER CONTENT -->				
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-navbar -->
+	
+
+	<div id="segment-breadcrumb" class="segment">  <!-- segment-breadcrumb -->
+		<div class="container">  <!-- container -->	
+			<ul class="breadcrumb">
+        <li><a href="secpriv-module.html"><img src="secpriv.jpg"/> Security and Privacy</a></li>        <li><a href="auditevent.html">AuditEvent</a></li>        <li><b>Detailed Descriptions</b></li>          <!-- auditevent.html / res-Detailed Descriptions / AuditEvent -->
+
+			</ul>	
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-breadcrumb -->
+	
+
+	<div id="segment-content" class="segment">  <!-- segment-content -->
+	<div class="container">  <!-- container -->
+            <div class="row">
+            	<div class="inner-wrapper">
+  <!-- CONTENT CONTENT -->
+
+
+<div class="col-12">  <!-- ReleaseHeader --><p id="publish-box-past">This page is part of the FHIR Specification (v4.0.1: R4 - Mixed <a href="https://confluence.hl7.org/display/HL7/HL7+Balloting" title="Normative Standard">Normative</a> and <a href="https://confluence.hl7.org/display/HL7/HL7+Balloting" title="Standard for Trial-Use">STU</a>) in it's permanent home (it will always be available at this URL). The current version which supercedes this version is <a href="http://hl7.org/fhir/index.html">5.0.0</a>. For a full list of available versions, see the <a href="http://hl7.org/fhir/directory.html">Directory of published versions <img src="external.png" style="text-align: baseline"></a>. <!--pxl-->Page versions: <a href="http://hl7.org/fhir/R5/auditevent-definitions.html">R5</a> <a href="http://hl7.org/fhir/R4B/auditevent-definitions.html">R4B</a> <b>R4</b> <a href="http://hl7.org/fhir/STU3/auditevent-definitions.html">R3</a> <a href="http://hl7.org/fhir/DSTU2/auditevent-definitions.html">R2</a></p>  <!-- EndReleaseHeader -->
+
+<ul class="nav nav-tabs"><li><a href="auditevent.html">Content</a></li><li><a href="auditevent-examples.html">Examples</a></li><li class="active"><a href="#">Detailed Descriptions</a></li><li><a href="auditevent-mappings.html">Mappings</a></li><li><a href="auditevent-profiles.html">Profiles &amp; Extensions</a></li><li><a href="auditevent-version-maps.html">R3 Conversions</a></li></ul>
+
+<h2 class="self-link-parent"><span class="sectioncount">6.4.6<a name="6.4.6"> </a></span> Resource AuditEvent - Detailed Descriptions <a href="auditevent-definitions.html#6.4.6" title="link to here" class="self-link"><svg viewBox="0 0 1792 1792" width="20" class="self-link" height="20"><path d="M1520 1216q0-40-28-68l-208-208q-28-28-68-28-42 0-72 32 3 3 19 18.5t21.5 21.5 15 19 13 25.5 3.5 27.5q0 40-28 68t-68 28q-15 0-27.5-3.5t-25.5-13-19-15-21.5-21.5-18.5-19q-33 31-33 73 0 40 28 68l206 207q27 27 68 27 40 0 68-26l147-146q28-28 28-67zm-703-705q0-40-28-68l-206-207q-28-28-68-28-39 0-68 27l-147 146q-28 28-28 67 0 40 28 68l208 208q27 27 68 27 42 0 72-31-3-3-19-18.5t-21.5-21.5-15-19-13-25.5-3.5-27.5q0-40 28-68t68-28q15 0 27.5 3.5t25.5 13 19 15 21.5 21.5 18.5 19q33-31 33-73zm895 705q0 120-85 203l-147 146q-83 83-203 83-121 0-204-85l-206-207q-83-83-83-203 0-123 88-209l-88-88q-86 88-208 88-120 0-204-84l-208-208q-84-84-84-204t85-203l147-146q83-83 203-83 121 0 204 85l206 207q83 83 83 203 0 123-88 209l88 88q86-88 208-88 120 0 204 84l208 208q84 84 84 204z" fill="navy"></path></svg></a></h2>
+<table class="colstu"><tr><td><a href="http://www.hl7.org/Special/committees/secure/index.cfm">Security <img src="external.png" style="text-align: baseline"/></a> Work Group</td><td><a href="versions.html#maturity">Maturity Level</a>: 3</td><td>&nbsp;<a href="versions.html#std-process" title="Standard Status">Trial Use</a></td><td><a href="security.html#SecPrivConsiderations">Security Category</a>: Not Classified</td>  <!-- !ns! --><td><a href="compartmentdefinition.html">Compartments</a>: <a href="compartmentdefinition-device.html">Device</a>, <a href="compartmentdefinition-patient.html">Patient</a>, <a href="compartmentdefinition-practitioner.html">Practitioner</a></td></tr></table>
+
+
+<p>Detailed Descriptions for the elements in the AuditEvent resource.</p>
+
+<table class="dict">
+  <tr><td colspan="2" class="structure"><a name="AuditEvent"> </a><b>AuditEvent</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent</td></tr>
+  <tr><td>Definition</td><td><p>A record of an event made for purposes of maintaining a security log. Typical uses include detection of intrusion attempts and monitoring for inappropriate usage.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="domainresource.html">DomainResource</a></td></tr>
+  <tr><td>Comments</td><td><p>Based on IHE-ATNA.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.type"> </a><b>AuditEvent.type</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.type</td></tr>
+  <tr><td>Definition</td><td><p>Identifier for a family of the event.  For example, a menu item, program, rule, policy, function code, application name or URL. It identifies the performed function.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>1..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-audit-event-type.html">Audit Event ID</a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Coding">Coding</a></td></tr>
+  <tr><td>Requirements</td><td><p>This identifies the performed function. For "Execute" Event Action Code audit records, this identifies the application function performed.</p>
+</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.subtype"> </a><b>AuditEvent.subtype</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.subtype</td></tr>
+  <tr><td>Definition</td><td><p>Identifier for the category of event.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-audit-event-sub-type.html">Audit Event Sub-Type</a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Coding">Coding</a></td></tr>
+  <tr><td>Requirements</td><td><p>This field enables queries of messages by implementation-defined event categories.</p>
+</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.action"> </a><b>AuditEvent.action</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.action</td></tr>
+  <tr><td>Definition</td><td><p>Indicator for type of action performed during the event that generated the audit.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-audit-event-action.html">AuditEventAction</a> (<a href="terminologies.html#required">Required</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#code">code</a></td></tr>
+  <tr><td>Requirements</td><td><p>This broadly indicates what kind of action was done on the AuditEvent.entity by the AuditEvent.agent.</p>
+</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.period"> </a><b>AuditEvent.period</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.period</td></tr>
+  <tr><td>Definition</td><td><p>The period during which the activity occurred.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Period">Period</a></td></tr>
+  <tr><td>Comments</td><td><p>The period can be a little arbitrary; where possible, the time should correspond to human assessment of the activity time.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.recorded"> </a><b>AuditEvent.recorded</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.recorded</td></tr>
+  <tr><td>Definition</td><td><p>The time when the event was recorded.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>1..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#instant">instant</a></td></tr>
+  <tr><td>Requirements</td><td><p>This ties an event to a specific date and time. Security audits typically require a consistent time base (e.g. UTC), to eliminate time-zone issues arising from geographical distribution.</p>
+</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>In a distributed system, some sort of common time base (e.g. an NTP [RFC1305] server) is a good implementation tactic.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.outcome"> </a><b>AuditEvent.outcome</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.outcome</td></tr>
+  <tr><td>Definition</td><td><p>Indicates whether the event succeeded or failed.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-audit-event-outcome.html">AuditEventOutcome</a> (<a href="terminologies.html#required">Required</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#code">code</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>In some cases a "success" may be partial, for example, an incomplete or interrupted transfer of a radiological study. For the purpose of establishing accountability, these distinctions are not relevant.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.outcomeDesc"> </a><b>AuditEvent.outcomeDesc</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.outcomeDesc</td></tr>
+  <tr><td>Definition</td><td><p>A free text description of the outcome of the event.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#string">string</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.purposeOfEvent"> </a><b>AuditEvent.purposeOfEvent</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.purposeOfEvent</td></tr>
+  <tr><td>Definition</td><td><p>The purposeOfUse (reason) that was used during the event being recorded.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="v3/PurposeOfUse/vs.html">V3 Value SetPurposeOfUse</a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#CodeableConcept">CodeableConcept</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>Use AuditEvent.agent.purposeOfUse when you know that it is specific to the agent, otherwise use AuditEvent.purposeOfEvent. For example, during a machine-to-machine transfer it might not be obvious to the audit system who caused the event, but it does know why.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent"> </a><b>AuditEvent.agent</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent</td></tr>
+  <tr><td>Definition</td><td><p>An actor taking an active role in the event or activity that is logged.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>1..*</td></tr>
+  <tr><td>Requirements</td><td><p>An agent can be a person, an organization, software, device, or other actors that may be ascribed responsibility.</p>
+</td></tr>
+  <tr><td title="Other names by which this resource/element may be known">Alternate Names</td><td>ActiveParticipant</td></tr>
+  <tr><td>Comments</td><td><p>Several agents may be associated (i.e. have some responsibility for an activity) with an event or activity.</p>
+<p>For example, an activity may be initiated by one user for other users or involve more than one user. However, only one user may be the initiator/requestor for the activity.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent.type"> </a><b>AuditEvent.agent.type</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent.type</td></tr>
+  <tr><td>Definition</td><td><p>Specification of the participation type the user plays when performing the event.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-participation-role-type.html">ParticipationRoleType</a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#CodeableConcept">CodeableConcept</a></td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent.role"> </a><b>AuditEvent.agent.role</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent.role</td></tr>
+  <tr><td>Definition</td><td><p>The security role that the user was acting under, that come from local codes defined by the access control security system (e.g. RBAC, ABAC) used in the local context.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-security-role-type.html">SecurityRoleType</a> (<a href="terminologies.html#example">Example</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#CodeableConcept">CodeableConcept</a></td></tr>
+  <tr><td>Requirements</td><td><p>This value ties an audited event to a user's role(s). It is an optional value that might be used to group events for analysis by user functional role categories.</p>
+</td></tr>
+  <tr><td>Comments</td><td><p>Should be roles relevant to the event. Should  not be an exhaustive list of roles.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent.who"> </a><b>AuditEvent.agent.who</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent.who</td></tr>
+  <tr><td>Definition</td><td><p>Reference to who this agent is that was involved in the event.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="practitionerrole.html">PractitionerRole</a> | <a href="practitioner.html">Practitioner</a> | <a href="organization.html">Organization</a> | <a href="device.html">Device</a> | <a href="patient.html">Patient</a> | <a href="relatedperson.html">RelatedPerson</a>)</td></tr>
+  <tr><td>Requirements</td><td><p>This field ties an audit event to a specific resource or identifier.</p>
+</td></tr>
+  <tr><td title="Other names by which this resource/element may be known">Alternate Names</td><td>userId</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>Where a User ID is available it will go into who.identifier.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent.altId"> </a><b>AuditEvent.agent.altId</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent.altId</td></tr>
+  <tr><td>Definition</td><td><p>Alternative agent Identifier. For a human, this should be a user identifier text string from authentication system. This identifier would be one known to a common authentication system (e.g. single sign-on), if available.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#string">string</a></td></tr>
+  <tr><td>Requirements</td><td><p>In some situations, a human user may authenticate with one identity but, to access a specific application system, may use a synonymous identify. For example, some "single sign on" implementations will do this. The alternative identifier would then be the original identify  used for authentication, and the User ID is the one known to and used by the application.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent.name"> </a><b>AuditEvent.agent.name</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent.name</td></tr>
+  <tr><td>Definition</td><td><p>Human-meaningful name for the agent.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#string">string</a></td></tr>
+  <tr><td>Requirements</td><td><p>The User ID and Authorization User ID may be internal or otherwise obscure values. This field assists the auditor in identifying the actual user.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent.requestor"> </a><b>AuditEvent.agent.requestor</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent.requestor</td></tr>
+  <tr><td>Definition</td><td><p>Indicator that the user is or is not the requestor, or initiator, for the event being audited.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>1..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#boolean">boolean</a></td></tr>
+  <tr><td>Requirements</td><td><p>This value is used to distinguish between requestor-users and recipient-users. For example, one person may initiate a report-output to be sent to another user.</p>
+</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>There can only be one initiator. If the initiator is not clear, then do not choose any one agent as the initiator.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent.location"> </a><b>AuditEvent.agent.location</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent.location</td></tr>
+  <tr><td>Definition</td><td><p>Where the event occurred.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="location.html">Location</a>)</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent.policy"> </a><b>AuditEvent.agent.policy</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent.policy</td></tr>
+  <tr><td>Definition</td><td><p>The policy or plan that authorized the activity being recorded. Typically, a single activity may have multiple applicable policies, such as patient consent, guarantor funding, etc. The policy would also indicate the security token used.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#uri">uri</a></td></tr>
+  <tr><td>Requirements</td><td><p>This value is used retrospectively to determine the authorization policies.</p>
+</td></tr>
+  <tr><td>Comments</td><td><p>For example: Where an OAuth token authorizes, the unique identifier from the OAuth token is placed into the policy element Where a policy engine (e.g. XACML) holds policy logic, the unique policy identifier is placed into the policy element.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent.media"> </a><b>AuditEvent.agent.media</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent.media</td></tr>
+  <tr><td>Definition</td><td><p>Type of media involved. Used when the event is about exporting/importing onto media.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-dicm-405-mediatype.html">Media Type Code</a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Coding">Coding</a></td></tr>
+  <tr><td>Requirements</td><td><p>Usually, this is used instead of specifying a network address. This field is not used for Media Id (i.e. the serial number of a CD).</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent.network"> </a><b>AuditEvent.agent.network</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent.network</td></tr>
+  <tr><td>Definition</td><td><p>Logical network location for application activity, if the activity has a network location.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent.network.address"> </a><b>AuditEvent.agent.network.address</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent.network.address</td></tr>
+  <tr><td>Definition</td><td><p>An identifier for the network access point of the user device for the audit event.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#string">string</a></td></tr>
+  <tr><td>Requirements</td><td><p>This datum identifies the user's network access point, which may be distinct from the server that performed the action. It is an optional value that may be used to group events recorded on separate servers for analysis of a specific network access point's data access across all servers.</p>
+</td></tr>
+  <tr><td>Comments</td><td><p>This could be a device id, IP address or some other identifier associated with a device.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent.network.type"> </a><b>AuditEvent.agent.network.type</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent.network.type</td></tr>
+  <tr><td>Definition</td><td><p>An identifier for the type of network access point that originated the audit event.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-network-type.html">AuditEventAgentNetworkType</a> (<a href="terminologies.html#required">Required</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#code">code</a></td></tr>
+  <tr><td>Requirements</td><td><p>This datum identifies the type of network access point identifier of the user device for the audit event. It is an optional value that may be used to group events recorded on separate servers for analysis of access according to a network access point's type.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.agent.purposeOfUse"> </a><b>AuditEvent.agent.purposeOfUse</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.agent.purposeOfUse</td></tr>
+  <tr><td>Definition</td><td><p>The reason (purpose of use), specific to this agent, that was used during the event being recorded.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="v3/PurposeOfUse/vs.html">V3 Value SetPurposeOfUse</a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#CodeableConcept">CodeableConcept</a></td></tr>
+  <tr><td>Comments</td><td><p>Use AuditEvent.agent.purposeOfUse when you know that is specific to the agent, otherwise use AuditEvent.purposeOfEvent. For example, during a machine-to-machine transfer it might not be obvious to the audit system who caused the event, but it does know why.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.source"> </a><b>AuditEvent.source</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.source</td></tr>
+  <tr><td>Definition</td><td><p>The system that is reporting the event.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>1..1</td></tr>
+  <tr><td>Requirements</td><td><p>The event is reported by one source.</p>
+</td></tr>
+  <tr><td>Comments</td><td><p>Since multi-tier, distributed, or composite applications make source identification ambiguous, this collection of fields may repeat for each application or process actively involved in the event. For example, multiple value-sets can identify participating web servers, application processes, and database server threads in an n-tier distributed application. Passive event participants (e.g. low-level network transports) need not be identified.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.source.site"> </a><b>AuditEvent.source.site</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.source.site</td></tr>
+  <tr><td>Definition</td><td><p>Logical source location within the healthcare enterprise network.  For example, a hospital or other provider location within a multi-entity provider group.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#string">string</a></td></tr>
+  <tr><td>Requirements</td><td><p>This value differentiates among the sites in a multi-site enterprise health information system.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.source.observer"> </a><b>AuditEvent.source.observer</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.source.observer</td></tr>
+  <tr><td>Definition</td><td><p>Identifier of the source where the event was detected.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>1..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="practitionerrole.html">PractitionerRole</a> | <a href="practitioner.html">Practitioner</a> | <a href="organization.html">Organization</a> | <a href="device.html">Device</a> | <a href="patient.html">Patient</a> | <a href="relatedperson.html">RelatedPerson</a>)</td></tr>
+  <tr><td>Requirements</td><td><p>This field ties the event to a specific source system. It may be used to group events for analysis according to where the event was detected.</p>
+</td></tr>
+  <tr><td title="Other names by which this resource/element may be known">Alternate Names</td><td>SourceId</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.source.type"> </a><b>AuditEvent.source.type</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.source.type</td></tr>
+  <tr><td>Definition</td><td><p>Code specifying the type of source where event originated.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-audit-source-type.html">Audit Event Source Type</a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Coding">Coding</a></td></tr>
+  <tr><td>Requirements</td><td><p>This field indicates which type of source is identified by the Audit Source ID. It is an optional value that may be used to group events for analysis according to the type of source where the event occurred.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.entity"> </a><b>AuditEvent.entity</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.entity</td></tr>
+  <tr><td>Definition</td><td><p>Specific instances of data or objects that have been accessed.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td>Requirements</td><td><p>The event may have other entities involved.</p>
+</td></tr>
+  <tr><td title="Other names by which this resource/element may be known">Alternate Names</td><td>ParticipantObject</td></tr>
+  <tr><td>Comments</td><td><p>Required unless the values for event identification, agent identification, and audit source identification are sufficient to document the entire auditable event. Because events may have more than one entity, this group can be a repeating set of values.</p>
+</td></tr>
+  <tr><td>Invariants</td><td><table class="dict">
+<tr><td colspan="4"><b>Defined on this element</b></td></tr>
+<tr><td width="60px"><b title="Formal Invariant Identifier">sev-1</b></td><td><a style="color: Maroon" href="conformance-rules.html#rule">Rule</a> </td><td>Either a name or a query (NOT both)</td><td><span style="font-family: Courier New, monospace">name.empty() or query.empty()</span></td></tr></table>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.entity.what"> </a><b>AuditEvent.entity.what</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.entity.what</td></tr>
+  <tr><td>Definition</td><td><p>Identifies a specific instance of the entity. The reference should be version specific.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="resourcelist.html#Any">Any</a>)</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.entity.type"> </a><b>AuditEvent.entity.type</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.entity.type</td></tr>
+  <tr><td>Definition</td><td><p>The type of the object that was involved in this audit event.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-audit-entity-type.html">Audit event entity type</a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Coding">Coding</a></td></tr>
+  <tr><td>Requirements</td><td><p>To describe the object being acted upon. In addition to queries on the subject of the action in an auditable event, it is also important to be able to query on the object type for the action.</p>
+</td></tr>
+  <tr><td>Comments</td><td><p>This value is distinct from the user's role or any user relationship to the entity.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.entity.role"> </a><b>AuditEvent.entity.role</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.entity.role</td></tr>
+  <tr><td>Definition</td><td><p>Code representing the role the entity played in the event being audited.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-object-role.html">AuditEventEntityRole</a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Coding">Coding</a></td></tr>
+  <tr><td>Requirements</td><td><p>For some detailed audit analysis it may be necessary to indicate a more granular type of entity, based on the application role it serves.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.entity.lifecycle"> </a><b>AuditEvent.entity.lifecycle</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.entity.lifecycle</td></tr>
+  <tr><td>Definition</td><td><p>Identifier for the data life-cycle stage for the entity.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-object-lifecycle-events.html">ObjectLifecycleEvents</a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Coding">Coding</a></td></tr>
+  <tr><td>Requirements</td><td><p>Institutional policies for privacy and security may optionally fall under different accountability rules based on data life cycle. This provides a differentiating value for those cases.</p>
+</td></tr>
+  <tr><td>Comments</td><td><p>This can be used to provide an audit trail for data, over time, as it passes through the system.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.entity.securityLabel"> </a><b>AuditEvent.entity.securityLabel</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.entity.securityLabel</td></tr>
+  <tr><td>Definition</td><td><p>Security labels for the identified entity.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-security-labels.html">SecurityLabels</a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Coding">Coding</a></td></tr>
+  <tr><td>Requirements</td><td><p>This field identifies the security labels for a specific instance of an object, such as a patient, to detect/track privacy and security issues.</p>
+</td></tr>
+  <tr><td>Comments</td><td><p>Copied from entity meta security tags.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.entity.name"> </a><b>AuditEvent.entity.name</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.entity.name</td></tr>
+  <tr><td>Definition</td><td><p>A name of the entity in the audit event.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#string">string</a></td></tr>
+  <tr><td>Requirements</td><td><p>Use only where entity can't be identified with an identifier.</p>
+</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>This field may be used in a query/report to identify audit events for a specific person.  For example, where multiple synonymous entity identifiers (patient number, medical record number, encounter number, etc.) have been used.</p>
+</td></tr>
+  <tr><td>Invariants</td><td><table class="dict">
+<tr><td colspan="4"><b>Affect this element</b></td></tr>
+<tr><td width="60px"><b title="Formal Invariant Identifier">sev-1</b></td><td><a style="color: Maroon" href="conformance-rules.html#rule">Rule</a> </td><td>Either a name or a query (NOT both)</td><td><span style="font-family: Courier New, monospace">name.empty() or query.empty()</span></td></tr></table>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.entity.description"> </a><b>AuditEvent.entity.description</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.entity.description</td></tr>
+  <tr><td>Definition</td><td><p>Text that describes the entity in more detail.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#string">string</a></td></tr>
+  <tr><td>Requirements</td><td><p>Use only where entity can't be identified with an identifier.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.entity.query"> </a><b>AuditEvent.entity.query</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.entity.query</td></tr>
+  <tr><td>Definition</td><td><p>The query parameters for a query-type entities.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#base64Binary">base64Binary</a></td></tr>
+  <tr><td>Requirements</td><td><p>For query events, it may be necessary to capture the actual query input to the query process in order to identify the specific event. Because of differences among query implementations and data encoding for them, this is a base 64 encoded data blob. It may be subsequently decoded or interpreted by downstream audit analysis processing.</p>
+</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>The meaning and secondary-encoding of the content of base64 encoded blob is specific to the AuditEvent.type, AuditEvent.subtype, AuditEvent.entity.type, and AuditEvent.entity.role.  The base64 is a general-use and safe container for event specific data blobs regardless of the encoding used by the transaction being recorded.  An AuditEvent consuming application must understand the event it is consuming and the formats used by the event. For example, if auditing an Oracle network database access, the Oracle formats must be understood as they will be simply encoded in the base64binary blob.</p>
+</td></tr>
+  <tr><td>Invariants</td><td><table class="dict">
+<tr><td colspan="4"><b>Affect this element</b></td></tr>
+<tr><td width="60px"><b title="Formal Invariant Identifier">sev-1</b></td><td><a style="color: Maroon" href="conformance-rules.html#rule">Rule</a> </td><td>Either a name or a query (NOT both)</td><td><span style="font-family: Courier New, monospace">name.empty() or query.empty()</span></td></tr></table>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.entity.detail"> </a><b>AuditEvent.entity.detail</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.entity.detail</td></tr>
+  <tr><td>Definition</td><td><p>Tagged value pairs for conveying additional information about the entity.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td>Requirements</td><td><p>Implementation-defined data about specific details of the object accessed or used.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.entity.detail.type"> </a><b>AuditEvent.entity.detail.type</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.entity.detail.type</td></tr>
+  <tr><td>Definition</td><td><p>The type of extra detail provided in the value.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>1..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#string">string</a></td></tr>
+  <tr><td colspan="2" class="structure"><a name="AuditEvent.entity.detail.value_x_"> </a><b>AuditEvent.entity.detail.value[x]</b></td></tr>
+  <tr><td>Element Id</td><td>AuditEvent.entity.detail.value[x]</td></tr>
+  <tr><td>Definition</td><td><p>The  value of the extra detail.</p>
+</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>1..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#string">string</a>|<a href="datatypes.html#base64Binary">base64Binary</a></td></tr>
+  <tr><td>[x] Note</td><td>See <a href="formats.html#choice">Choice of Data Types</a> for further information about how to use [x]</td></tr>
+  <tr><td>Requirements</td><td><p>Should not duplicate the entity value unless absolutely necessary.</p>
+</td></tr>
+  <tr><td>Comments</td><td><p>The value can be string when known to be a string, else base64 encoding should be used to protect binary or undefined content.  The meaning and secondary-encoding of the content of base64 encoded blob is specific to the AuditEvent.type, AuditEvent.subtype, AuditEvent.entity.type, and AuditEvent.entity.role.  The base64 is a general-use and safe container for event specific data blobs regardless of the encoding used by the transaction being recorded.  An AuditEvent consuming application must understand the event it is consuming and the formats used by the event. For example if auditing an Oracle network database access, the Oracle formats must be understood as they will be simply encoded in the base64binary blob.</p>
+</td></tr>
+</table>
+
+
+
+</div>
+
+
+				</div>  <!-- /inner-wrapper -->
+            </div>  <!-- /row -->
+        </div>  <!-- /container -->
+        
+    </div>  <!-- /segment-content -->
+
+
+	<div id="segment-footer" class="segment">  <!-- segment-footer -->
+		<div class="container">  <!-- container -->
+			<div class="inner-wrapper">
+				<p>
+        &reg;&copy; HL7.org 2011+. FHIR Release 4 (Technical Correction #1) (v4.0.1) generated on Fri, Nov 1, 2019 09:34+1100. <a style="color: #ffffff" href="qa.html">QA Page</a>
+        <br/>
+        <span style="color: #FFFF77">
+        Links: <a style="color: #b8dcf9" href="http://hl7.org/fhir/search.cfm">Search <img src="external.png" style="text-align: baseline"/></a> | 
+               <a style="color: #b8dcf9" href="history.html">Version History</a> | 
+               <a style="color: #b8dcf9" href="toc.html">Table of Contents</a> | 
+               <a style="color: #b8dcf9" href="credits.html">Credits</a> | 
+               <a style="color: #b8dcf9" href="https://www.fhir.org/perl/htmldiff.pl?oldfile=http%3A%2F%2Fhl7.org%2Ffhir%2FSTU3%2Fauditevent-definitions.html&amp;newfile=http%3A%2F%2Fhl7.org%2Ffhir%2FR4%2Fauditevent-definitions.html">Compare to R3 <img src="external.png" style="text-align: baseline"/></a> |                
+               <a rel="license" style="color: #b8dcf9" href="license.html"><img src="cc0.png" alt="CC0" style="border-style: none;"/></a> | 
+               <a style="color: #b8dcf9" href="http://hl7.org/fhir-issues" target="_blank">Propose a change <img src="external.png" style="text-align: baseline"/></a>   
+        </span>
+        </p>
+			</div>  <!-- /inner-wrapper -->
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-footer -->
+  <!-- disqus thread -->
+  <!-- disqus -->
+  <!-- end disqus -->        
+	
+	<div id="segment-post-footer" class="segment hidden">  <!-- segment-post-footer -->
+		<div class="container">  <!-- container -->
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-post-footer -->
+    
+      <!-- JS and analytics only. -->
+      <!-- Bootstrap core JavaScript
+================================================== -->
+  <!-- Placed at the end of the document so the pages load faster -->
+<script src="./assets/js/jquery.js"> </script>     <!-- note keep space here, otherwise it will be transformed to empty tag -> fails -->
+<script src="./dist/js/bootstrap.min.js"> </script>
+<script src="./assets/js/respond.min.js"> </script>
+
+<script src="./assets/js/fhir.js"> </script>
+
+  <!-- Analytics Below
+================================================== -->
+
+    
+</body>
+</html>

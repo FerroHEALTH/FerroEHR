@@ -1,0 +1,13 @@
+=== ACCESSED_ITEM Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/accessed_item.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/accessed_item.adoc[]
+
+====

@@ -1,0 +1,18 @@
+include::partial$module_vars.adoc[]
+
+= AQL
+
+NOTE: This page proposes an addition to the xref:QUERY:AQL:index.adoc[Archetype Query Language] (SPECQUERY).
+
+`ACCESS_LOG_ENTRY` MAY be used as a top-level class expression in the `FROM` clause:
+
+[source, sql]
+----
+SELECT l/time_recorded, l/accessor/party/external_ref/id/value, l/items/version_id/value
+FROM ACCESS_LOG_ENTRY l[ehr_id/value=$ehr_id]
+WHERE l/outcome/result/defining_code/code_string = $granted
+----
+
+It MUST NOT appear inside a containment of `EHR` or of any class that holds EHR content, so a query cannot return log entries and clinical data in one result. Querying the log requires its own permission, and each such query is recorded.
+
+Two uses justify it: record demerging, which reads "who has accessed that data" (xref:BASE:architecture_overview:security.adoc[Security Policy]), and the review and analysis of the log.

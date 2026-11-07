@@ -1,0 +1,783 @@
+{
+  "bmm_version": "2.4",
+  "rm_publisher": "openehr",
+  "schema_name": "access_log",
+  "rm_release": "0.1.0",
+  "schema_revision": "0.1.0.1",
+  "schema_lifecycle_state": "draft",
+  "schema_description": "openEHR Access Log: a draft change proposal for a record of every access to EHR data, kept outside the EHR as an append-only, hash-chained log keyed by ehr_id. Not an openEHR release.",
+  "schema_author": "FerroEHR (FerroHEALTH/FerroEHR#5121), draft for review",
+  "includes": {
+    "openehr_rm_1.2.0": {
+      "id": "openehr_rm_1.2.0"
+    }
+  },
+  "packages": {
+    "org.openehr.rm.access_log": {
+      "name": "org.openehr.rm.access_log",
+      "classes": [
+        "ACCESS_LOG_RECORD",
+        "ACCESS_LOG_ENTRY",
+        "ACCESS_LOG_TOMBSTONE",
+        "ACCESS_LOG_LINK",
+        "ACCESS_LOG_CHECKPOINT",
+        "ACCESSOR",
+        "ACCESS_CREDENTIAL",
+        "ACCESS_OUTCOME",
+        "ACCESSED_ITEM",
+        "ACCESS_ORIGIN",
+        "ACCESS_QUERY",
+        "ACCESS_AUTHORISATION",
+        "ACCESS_CHANNEL",
+        "ACCESS_RETENTION"
+      ]
+    }
+  },
+  "class_definitions": {
+    "ACCESS_LOG_RECORD": {
+      "name": "ACCESS_LOG_RECORD",
+      "documentation": "Abstract parent of the records of an access log. Each record holds one link of the log's hash chain, so the order and the completeness of the log can be verified by anyone who reads it. A record is never modified; when its retention period ends, the system replaces an `ACCESS_LOG_ENTRY` by an `ACCESS_LOG_TOMBSTONE` that keeps the uid, the time and the link.",
+      "is_abstract": true,
+      "properties": {
+        "uid": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "uid",
+          "documentation": "Unique identifier of this record, assigned by the recording system.",
+          "is_mandatory": true,
+          "type": "HIER_OBJECT_ID"
+        },
+        "system_id": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "system_id",
+          "documentation": "Identifier of the logical EHR system that recorded the access, with the meaning of `AUDIT_DETAILS._system_id_`.",
+          "is_mandatory": true,
+          "type": "String"
+        },
+        "time_recorded": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "time_recorded",
+          "documentation": "Time at which the record was written to the log.",
+          "is_mandatory": true,
+          "type": "DV_DATE_TIME"
+        },
+        "link": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "link",
+          "documentation": "This record's link in the log's hash chain.",
+          "is_mandatory": true,
+          "type": "ACCESS_LOG_LINK"
+        }
+      },
+      "invariants": {
+        "System_id_valid": "not system_id.is_empty"
+      }
+    },
+    "ACCESS_LOG_ENTRY": {
+      "name": "ACCESS_LOG_ENTRY",
+      "documentation": "The record of one access event to the data of at most one EHR: who accessed, on whose behalf, what, when, why, under which authorisation, with which outcome, and through which channel. An access that reaches the data of several EHRs is recorded as one entry per EHR, and the entries of one request share `_channel.request_id_`.",
+      "ancestors": [
+        "ACCESS_LOG_RECORD"
+      ],
+      "properties": {
+        "occurred": {
+          "_type": "P_BMM_GENERIC_PROPERTY",
+          "name": "occurred",
+          "documentation": "Time interval over which the access took place, when it is known and differs from `_time_recorded_`.",
+          "type_def": {
+            "root_type": "DV_INTERVAL",
+            "generic_parameters": [
+              "DV_DATE_TIME"
+            ]
+          }
+        },
+        "action": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "action",
+          "documentation": "What the access did to the data, coded in the openEHR Terminology `access action` group.",
+          "is_mandatory": true,
+          "type": "DV_CODED_TEXT"
+        },
+        "operation": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "operation",
+          "documentation": "The interface operation that carried the access, such as an ITS-REST operation id, coded in a terminology that names the interface.",
+          "type": "DV_CODED_TEXT"
+        },
+        "outcome": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "outcome",
+          "documentation": "Whether the access was granted, and how it ended.",
+          "is_mandatory": true,
+          "type": "ACCESS_OUTCOME"
+        },
+        "accessor": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "accessor",
+          "documentation": "Who accessed the data, on whose behalf, and with which credential.",
+          "is_mandatory": true,
+          "type": "ACCESSOR"
+        },
+        "ehr_id": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "ehr_id",
+          "documentation": "The `ehr_id` of the EHR whose data the access reached or asked for. Void only for an access that named no EHR, such as a refused request whose target could not be resolved.",
+          "type": "HIER_OBJECT_ID"
+        },
+        "items": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "items",
+          "documentation": "The data of the EHR the access asked for or delivered.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESSED_ITEM"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "query": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "query",
+          "documentation": "The query that carried the access, for an access by query.",
+          "type": "ACCESS_QUERY"
+        },
+        "purposes": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "purposes",
+          "documentation": "The purposes of use the accessor declared or the system established.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "authorisations": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "authorisations",
+          "documentation": "The grounds on which the access was authorised or refused: roles, agreements, consent decisions, permits, emergency overrides.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_AUTHORISATION"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "is_emergency": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "is_emergency",
+          "documentation": "True when the access was made under an emergency override of the access policy, such as an access to protect the vital interests of the subject of care.",
+          "is_mandatory": true,
+          "type": "Boolean"
+        },
+        "channel": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "channel",
+          "documentation": "The interface and the request that carried the access.",
+          "type": "ACCESS_CHANNEL"
+        },
+        "security_labels": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "security_labels",
+          "documentation": "Labels that limit who may read this entry, derived from the categories and origins of the data accessed.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "retention": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "retention",
+          "documentation": "How long this entry is kept, and on which grounds.",
+          "is_mandatory": true,
+          "type": "ACCESS_RETENTION"
+        },
+        "other_details": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "other_details",
+          "documentation": "Further details a jurisdiction or a deployment records, never clinical content. May be archetyped.",
+          "type": "ITEM_STRUCTURE"
+        }
+      },
+      "invariants": {
+        "Action_valid": "terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_access_action, action.defining_code)",
+        "Items_need_ehr": "not items.is_empty implies ehr_id /= Void"
+      }
+    },
+    "ACCESS_LOG_TOMBSTONE": {
+      "name": "ACCESS_LOG_TOMBSTONE",
+      "documentation": "What remains of an `ACCESS_LOG_ENTRY` after its retention period: the uid, the recording time and the chain link, so the chain still verifies, and nothing that identifies a person or the data.",
+      "ancestors": [
+        "ACCESS_LOG_RECORD"
+      ],
+      "properties": {
+        "time_removed": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "time_removed",
+          "documentation": "Time at which the entry's content was removed.",
+          "is_mandatory": true,
+          "type": "DV_DATE_TIME"
+        },
+        "grounds": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "grounds",
+          "documentation": "The grounds of the removal: the end of the retention period, or an erasure a law orders.",
+          "is_mandatory": true,
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 1,
+            "upper_unbounded": true
+          }
+        }
+      }
+    },
+    "ACCESS_LOG_LINK": {
+      "name": "ACCESS_LOG_LINK",
+      "documentation": "One link of the hash chain of an access log. `_content_digest_` is the digest of the record's canonical serialisation without its link; `_digest_` is the digest over `_previous_digest_`, `_sequence_` and `_content_digest_`, so a removed or reordered record breaks every later link while a tombstone, which keeps the content digest, does not.",
+      "properties": {
+        "sequence": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "sequence",
+          "documentation": "Position of the record in the log of its `_system_id_`, starting at 1, with no gaps.",
+          "is_mandatory": true,
+          "type": "Integer64"
+        },
+        "algorithm": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "algorithm",
+          "documentation": "Name of the digest algorithm, such as `SHA-256`.",
+          "is_mandatory": true,
+          "type": "String"
+        },
+        "previous_digest": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "previous_digest",
+          "documentation": "The `_digest_` of the preceding record, in lower-case hexadecimal; for the first record, the digest the log was started with.",
+          "is_mandatory": true,
+          "type": "String"
+        },
+        "content_digest": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "content_digest",
+          "documentation": "Digest of the record's canonical serialisation with `_link_` removed, in lower-case hexadecimal.",
+          "is_mandatory": true,
+          "type": "String"
+        },
+        "digest": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "digest",
+          "documentation": "Digest over `_previous_digest_`, `_sequence_` and `_content_digest_`, in lower-case hexadecimal.",
+          "is_mandatory": true,
+          "type": "String"
+        },
+        "signature": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "signature",
+          "documentation": "Optional signature of the recording system over `_digest_`, for a jurisdiction that asks for each record to be signed.",
+          "type": "String"
+        }
+      },
+      "invariants": {
+        "Sequence_valid": "sequence >= 1",
+        "Algorithm_valid": "not algorithm.is_empty",
+        "Digests_valid": "not previous_digest.is_empty and not content_digest.is_empty and not digest.is_empty"
+      }
+    },
+    "ACCESS_LOG_CHECKPOINT": {
+      "name": "ACCESS_LOG_CHECKPOINT",
+      "documentation": "A signed statement by the recording system of the head of its log at a point in time. A checkpoint commits to every record up to `_sequence_`, so a verifier that holds it can detect a later rewrite of the log, and an export carries the checkpoint its records verify against.",
+      "properties": {
+        "system_id": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "system_id",
+          "documentation": "The system whose log the checkpoint seals.",
+          "is_mandatory": true,
+          "type": "String"
+        },
+        "sequence": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "sequence",
+          "documentation": "The `_link.sequence_` of the last record the checkpoint covers.",
+          "is_mandatory": true,
+          "type": "Integer64"
+        },
+        "digest": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "digest",
+          "documentation": "The `_link.digest_` of that record.",
+          "is_mandatory": true,
+          "type": "String"
+        },
+        "algorithm": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "algorithm",
+          "documentation": "Name of the digest algorithm of the chain.",
+          "is_mandatory": true,
+          "type": "String"
+        },
+        "time_sealed": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "time_sealed",
+          "documentation": "Time at which the checkpoint was signed.",
+          "is_mandatory": true,
+          "type": "DV_DATE_TIME"
+        },
+        "signer": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "signer",
+          "documentation": "The party, usually the organisation responsible for the system, whose key signed the checkpoint.",
+          "is_mandatory": true,
+          "type": "PARTY_PROXY"
+        },
+        "proof": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "proof",
+          "documentation": "The signature over the checkpoint's other attributes, in the form `ATTESTATION._proof_` uses, such as a JWS or a PGP signature.",
+          "is_mandatory": true,
+          "type": "String"
+        }
+      },
+      "invariants": {
+        "Sequence_valid": "sequence >= 1",
+        "Proof_valid": "not proof.is_empty"
+      }
+    },
+    "ACCESSOR": {
+      "name": "ACCESSOR",
+      "documentation": "Who accessed: the party, the healthcare provider they acted for, their roles and groups, the credential they presented, and the chain of clients and parties that acted between them and the system.",
+      "properties": {
+        "kind": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "kind",
+          "documentation": "The kind of accessor, coded in the openEHR Terminology `accessor kind` group: a person, a person through a delegated client, the subject of care, a representative, a person of another organisation, an organisation, or a system acting for nobody.",
+          "is_mandatory": true,
+          "type": "DV_CODED_TEXT"
+        },
+        "party": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "party",
+          "documentation": "The party that accessed: `PARTY_IDENTIFIED` with an `_external_ref_` to the demographic party the system bound the caller to, `PARTY_SELF` for the subject of care, `PARTY_RELATED` for a representative, or `PARTY_IDENTIFIED` with identifiers alone where no party is known here.",
+          "is_mandatory": true,
+          "type": "PARTY_PROXY"
+        },
+        "provider": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "provider",
+          "documentation": "The healthcare provider or other organisation the accessor acted for.",
+          "type": "PARTY_IDENTIFIED"
+        },
+        "roles": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "roles",
+          "documentation": "The functional or security roles the accessor held for the access.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "groups": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "groups",
+          "documentation": "The demographic `GROUP` parties, such as care teams, whose membership the access relied on.",
+          "type_def": {
+            "container_type": "List",
+            "type": "PARTY_REF"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "binding": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "binding",
+          "documentation": "How the system bound the credential to `_party_`, or why it could not, coded in a terminology the system names.",
+          "type": "DV_CODED_TEXT"
+        },
+        "credential": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "credential",
+          "documentation": "The credential the accessor authenticated with.",
+          "type": "ACCESS_CREDENTIAL"
+        },
+        "delegation": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "delegation",
+          "documentation": "The clients and parties that acted between the accessor and the system, outermost first, as the credential named them.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_CREDENTIAL"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        }
+      },
+      "invariants": {
+        "Kind_valid": "terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_accessor_kind, kind.defining_code)"
+      }
+    },
+    "ACCESS_CREDENTIAL": {
+      "name": "ACCESS_CREDENTIAL",
+      "documentation": "A reference to a credential, by its issuer and the identifiers it carried, never the credential itself.",
+      "properties": {
+        "issuer": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "issuer",
+          "documentation": "The issuer of the credential, such as an OAuth 2.0 authorization server's issuer identifier or a SAML IdP's entity id.",
+          "is_mandatory": true,
+          "type": "String"
+        },
+        "subject": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "subject",
+          "documentation": "The subject the issuer named.",
+          "is_mandatory": true,
+          "type": "String"
+        },
+        "client_id": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "client_id",
+          "documentation": "The client the credential was issued to.",
+          "type": "String"
+        },
+        "token_id": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "token_id",
+          "documentation": "The identifier of the token or assertion, such as a JWT `jti`.",
+          "type": "String"
+        },
+        "assurance": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "assurance",
+          "documentation": "The assurance level of the authentication.",
+          "type": "DV_CODED_TEXT"
+        },
+        "authentication_method": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "authentication_method",
+          "documentation": "The authentication method or context class the issuer stated.",
+          "type": "DV_CODED_TEXT"
+        }
+      },
+      "invariants": {
+        "Issuer_valid": "not issuer.is_empty",
+        "Subject_valid": "not subject.is_empty"
+      }
+    },
+    "ACCESS_OUTCOME": {
+      "name": "ACCESS_OUTCOME",
+      "documentation": "How an access ended.",
+      "properties": {
+        "result": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "result",
+          "documentation": "The result, coded in the openEHR Terminology `access outcome` group: granted, partially granted, refused or failed.",
+          "is_mandatory": true,
+          "type": "DV_CODED_TEXT"
+        },
+        "reason": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "reason",
+          "documentation": "Why the access was refused, partly granted or failed, coded in the openEHR Terminology `access refusal reason` group or a terminology the system names.",
+          "type": "DV_CODED_TEXT"
+        },
+        "description": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "description",
+          "documentation": "Free text on the outcome, never clinical content.",
+          "type": "DV_TEXT"
+        },
+        "delivered": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "delivered",
+          "documentation": "The number of objects or result rows delivered to the accessor, when counted.",
+          "type": "Integer"
+        }
+      },
+      "invariants": {
+        "Result_valid": "terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_access_outcome, result.defining_code)",
+        "Delivered_valid": "delivered /= Void implies delivered >= 0"
+      }
+    },
+    "ACCESSED_ITEM": {
+      "name": "ACCESSED_ITEM",
+      "documentation": "One item of EHR data an access asked for or delivered: a versioned object or one of its versions, or, for a query whose result is not itemised, the categories and origins of what it delivered.",
+      "properties": {
+        "object": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "object",
+          "documentation": "Reference to the versioned object, `EHR_STATUS`, `EHR_ACCESS` or directory the item belongs to.",
+          "type": "OBJECT_REF"
+        },
+        "version_id": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "version_id",
+          "documentation": "The version accessed, when one version was.",
+          "type": "OBJECT_VERSION_ID"
+        },
+        "rm_type": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "rm_type",
+          "documentation": "The reference model type of the item, such as `COMPOSITION`.",
+          "type": "String"
+        },
+        "archetype_id": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "archetype_id",
+          "documentation": "The archetype of the item's root, when it is archetyped.",
+          "type": "ARCHETYPE_ID"
+        },
+        "template_id": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "template_id",
+          "documentation": "The template the item was committed under.",
+          "type": "TEMPLATE_ID"
+        },
+        "paths": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "paths",
+          "documentation": "The parts of the item the access reached, as fully qualified runtime paths, where it reached less than the whole item; empty when the whole item was reached.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_EHR_URI"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "categories": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "categories",
+          "documentation": "The categories of data the item belongs to, coded in a terminology the jurisdiction names.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "origins": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "origins",
+          "documentation": "The systems the item's data came from.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_ORIGIN"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "was_delivered": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "was_delivered",
+          "documentation": "True when the item was delivered to the accessor or written; false when it was asked for and withheld.",
+          "is_mandatory": true,
+          "type": "Boolean"
+        }
+      },
+      "invariants": {
+        "Item_named": "object /= Void or version_id /= Void or not categories.is_empty"
+      }
+    },
+    "ACCESS_ORIGIN": {
+      "name": "ACCESS_ORIGIN",
+      "documentation": "One origin of accessed data: the system it came from, as `FEEDER_AUDIT` or the version's own `AUDIT_DETAILS._system_id_` names it, or the endpoint a federated access asked.",
+      "properties": {
+        "system_id": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "system_id",
+          "documentation": "The originating system.",
+          "is_mandatory": true,
+          "type": "String"
+        },
+        "endpoint": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "endpoint",
+          "documentation": "The endpoint the access asked, for a federated access.",
+          "type": "DV_URI"
+        },
+        "location": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "location",
+          "documentation": "The facility at the origin, as `FEEDER_AUDIT_DETAILS._location_` names it.",
+          "type": "PARTY_IDENTIFIED"
+        }
+      },
+      "invariants": {
+        "System_id_valid": "not system_id.is_empty"
+      }
+    },
+    "ACCESS_QUERY": {
+      "name": "ACCESS_QUERY",
+      "documentation": "The query of an access by query. The query text is recorded as a digest by default; the text itself only where a policy asks for it.",
+      "properties": {
+        "stored_query": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "stored_query",
+          "documentation": "The qualified name of the stored query executed, with its version.",
+          "type": "String"
+        },
+        "language": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "language",
+          "documentation": "The query language and its version, such as `AQL 1.1`.",
+          "type": "String"
+        },
+        "text_digest": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "text_digest",
+          "documentation": "Digest of the query text as received, in lower-case hexadecimal, with the algorithm of the log's chain.",
+          "type": "String"
+        },
+        "text": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "text",
+          "documentation": "The query text as received, recorded only where a policy asks for it.",
+          "type": "String"
+        },
+        "rows": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "rows",
+          "documentation": "The number of result rows the query delivered that hold data of this entry's EHR.",
+          "type": "Integer"
+        }
+      },
+      "invariants": {
+        "Query_named": "stored_query /= Void or text_digest /= Void",
+        "Rows_valid": "rows /= Void implies rows >= 0"
+      }
+    },
+    "ACCESS_AUTHORISATION": {
+      "name": "ACCESS_AUTHORISATION",
+      "documentation": "One ground the access decision rested on.",
+      "properties": {
+        "kind": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "kind",
+          "documentation": "The kind of ground, coded in the openEHR Terminology `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, an emergency override, the subject's own access, a representation, or a legal obligation.",
+          "is_mandatory": true,
+          "type": "DV_CODED_TEXT"
+        },
+        "policy": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "policy",
+          "documentation": "The policy or agreement the ground is defined in.",
+          "type": "DV_URI"
+        },
+        "name": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "name",
+          "documentation": "The name of the agreement or policy.",
+          "type": "String"
+        },
+        "version": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "version",
+          "documentation": "The version of the agreement or policy.",
+          "type": "String"
+        },
+        "reference": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "reference",
+          "documentation": "The identifier of the decision the ground rests on, such as a consent decision reference or a data permit number.",
+          "type": "DV_IDENTIFIER"
+        },
+        "legal_grounds": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "legal_grounds",
+          "documentation": "The legal provisions the ground rests on.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        }
+      },
+      "invariants": {
+        "Kind_valid": "terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_access_authorisation, kind.defining_code)"
+      }
+    },
+    "ACCESS_CHANNEL": {
+      "name": "ACCESS_CHANNEL",
+      "documentation": "The interface and request that carried an access.",
+      "properties": {
+        "interface": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "interface",
+          "documentation": "The interface, such as openEHR ITS-REST 1.1.0, HL7 FHIR R4 or a user interface of the system, coded in a terminology the system names.",
+          "type": "DV_CODED_TEXT"
+        },
+        "request_id": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "request_id",
+          "documentation": "The identifier of the request in the recording system's own logs; every entry one request produced carries the same value.",
+          "type": "String"
+        },
+        "correlation_id": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "correlation_id",
+          "documentation": "The identifier the client or an intermediary correlates the request by in its own log.",
+          "type": "String"
+        },
+        "client_address": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "client_address",
+          "documentation": "The network address the request came from.",
+          "type": "String"
+        }
+      }
+    },
+    "ACCESS_RETENTION": {
+      "name": "ACCESS_RETENTION",
+      "documentation": "How long an entry is kept, set when it is written from the categories and origins of the data and the laws that apply.",
+      "properties": {
+        "retain_until": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "retain_until",
+          "documentation": "The last day the entry is kept; Void when it is kept without end.",
+          "type": "DV_DATE"
+        },
+        "grounds": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "grounds",
+          "documentation": "The provisions that set the period, such as a minimum period from the date of access and a national maximum.",
+          "is_mandatory": true,
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 1,
+            "upper_unbounded": true
+          }
+        }
+      }
+    }
+  }
+}

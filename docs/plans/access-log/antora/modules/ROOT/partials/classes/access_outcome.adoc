@@ -1,0 +1,13 @@
+=== ACCESS_OUTCOME Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_outcome.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_outcome.adoc[]
+
+====

@@ -1,0 +1,13 @@
+=== ACCESS_LOG_ENTRY Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_log_entry.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_log_entry.adoc[]
+
+====

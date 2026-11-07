@@ -1,0 +1,13 @@
+=== ACCESS_CHANNEL Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_channel.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_channel.adoc[]
+
+====

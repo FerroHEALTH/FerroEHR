@@ -1,0 +1,33 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_LOG_TOMBSTONE",
+  "documentation": "What remains of an `ACCESS_LOG_ENTRY` after its retention period: the uid, the recording time and the chain link, so the chain still verifies, and nothing that identifies a person or the data.",
+  "ancestors": [
+    "ACCESS_LOG_RECORD"
+  ],
+  "properties": {
+    "time_removed": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "time_removed",
+      "documentation": "Time at which the entry's content was removed.",
+      "is_mandatory": true,
+      "type": "DV_DATE_TIME"
+    },
+    "grounds": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "grounds",
+      "documentation": "The grounds of the removal: the end of the retention period, or an erasure a law orders.",
+      "is_mandatory": true,
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 1,
+        "upper_unbounded": true
+      }
+    }
+  }
+}
+--------

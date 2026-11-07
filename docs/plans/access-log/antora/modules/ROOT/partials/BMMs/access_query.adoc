@@ -1,0 +1,43 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_QUERY",
+  "documentation": "The query of an access by query. The query text is recorded as a digest by default; the text itself only where a policy asks for it.",
+  "properties": {
+    "stored_query": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "stored_query",
+      "documentation": "The qualified name of the stored query executed, with its version.",
+      "type": "String"
+    },
+    "language": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "language",
+      "documentation": "The query language and its version, such as `AQL 1.1`.",
+      "type": "String"
+    },
+    "text_digest": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "text_digest",
+      "documentation": "Digest of the query text as received, in lower-case hexadecimal, with the algorithm of the log's chain.",
+      "type": "String"
+    },
+    "text": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "text",
+      "documentation": "The query text as received, recorded only where a policy asks for it.",
+      "type": "String"
+    },
+    "rows": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "rows",
+      "documentation": "The number of result rows the query delivered that hold data of this entry's EHR.",
+      "type": "Integer"
+    }
+  },
+  "invariants": {
+    "Query_named": "stored_query /= Void or text_digest /= Void",
+    "Rows_valid": "rows /= Void implies rows >= 0"
+  }
+}
+--------
