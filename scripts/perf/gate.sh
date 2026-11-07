@@ -218,8 +218,8 @@ gate() { # <update: true|false> <image> <pg-image>
   "$bin" run --plan "$OUT/plan.toml" --baseline "$ROOT/perf/baseline.toml" "${TARGET[@]}" \
     --base-url "$SERVER_URL" --database-url "$DATABASE_URL" --out-dir "$OUT" \
     --summary "$OUT/summary.md" ${extra[@]+"${extra[@]}"} || status=$?
-  # TODO(#5095): commit the load baseline per CPU model with ferrohealth-perf
-  # 0.2.0; until then a run judges the idle limits and reports the load.
+  # TODO(#5095): commit the load baseline perf-baseline.yml writes per CPU
+  # model; until then a run judges the idle limits and reports the load.
   if [[ "$status" == 2 && "$update" == false && ! -f "$ROOT/perf/baseline.toml" ]] \
     && unjudged_for_no_baseline "$OUT/summary.md"; then
     echo "perf gate: the idle limits held; the load phase is reported, not judged, until perf/baseline.toml lands (#5095)"

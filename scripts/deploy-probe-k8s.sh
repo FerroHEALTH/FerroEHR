@@ -20,6 +20,8 @@
 #   scripts/deploy-probe-k8s.sh                # install, probe, tear down
 #   scripts/deploy-probe-k8s.sh --keep-up      # leave the release for poking at
 #   scripts/deploy-probe-k8s.sh --production-only  # only the P-K8S-PROD-* family
+#   scripts/deploy-probe-k8s.sh --bridge-only  # the release and the P-K8S-BRIDGE-* family
+#   scripts/deploy-probe-k8s.sh --ehr-index-only  # the release and the P-K8S-INDEX-* family
 #   scripts/deploy-probe-k8s.sh --render-check # no cluster: render the production
 #                                              # install this harness performs and
 #                                              # assert it wires the three domains
@@ -66,12 +68,16 @@ cd "$(dirname "$0")/.." || exit 1
 KEEP_UP=0
 RENDER_CHECK=0
 PRODUCTION_ONLY=0
+BRIDGE_ONLY=0
+EHR_INDEX_ONLY=0
 for arg in "$@"; do
   case "$arg" in
     --keep-up) KEEP_UP=1 ;;
     --render-check) RENDER_CHECK=1 ;;
     --production-only) PRODUCTION_ONLY=1 ;;
-    *) echo "usage: $0 [--keep-up] [--production-only] | --render-check" >&2; exit 2 ;;
+    --bridge-only) BRIDGE_ONLY=1 ;;
+    --ehr-index-only) EHR_INDEX_ONLY=1 ;;
+    *) echo "usage: $0 [--keep-up] [--production-only | --bridge-only | --ehr-index-only] | --render-check" >&2; exit 2 ;;
   esac
 done
 
@@ -85,6 +91,8 @@ COMPOSE_PROJECT="ferroehr-probe-k8s"
 . scripts/deploy-probes/lib.sh
 # shellcheck source=scripts/deploy-probes/kubernetes.sh
 . scripts/deploy-probes/kubernetes.sh
+# shellcheck source=scripts/deploy-probes/kubernetes_ehr_index.sh
+. scripts/deploy-probes/kubernetes_ehr_index.sh
 
 # ── The production overlay against three database clusters ────────────────────
 # deploy/helm/ci/boot-check.sh has the server judge values-production.yaml from
@@ -632,6 +640,24 @@ if [[ "$PRODUCTION_ONLY" -eq 1 ]]; then
 fi
 
 k8s_namespace
+if [[ "$BRIDGE_ONLY" -eq 1 ]]; then
+  if probes_k8s_boot; then
+    probes_k8s_bridge
+  else
+    uncovered "every bridge probe" "the release did not come up, so the bridge had no CDR to reach"
+  fi
+  probe_report "$PROBE_OUT" "kubernetes"
+  exit $?
+fi
+if [[ "$EHR_INDEX_ONLY" -eq 1 ]]; then
+  if probes_k8s_boot; then
+    probes_k8s_ehr_index
+  else
+    uncovered "every EHR-index probe" "the release did not come up, so no mode could be installed over it"
+  fi
+  probe_report "$PROBE_OUT" "kubernetes"
+  exit $?
+fi
 if probes_k8s_boot; then
   k8s_record_host_users "$K8S_NS" "$K8S_RELEASE"
   probes_k8s_runtime_posture
@@ -642,6 +668,7 @@ if probes_k8s_boot; then
   probes_k8s_viewer
   probes_k8s_terminology
   probes_k8s_bridge
+  probes_k8s_ehr_index
   # Last: it uninstalls the release and drops the database, which is the
   # procedure under test.
   probes_k8s_original_state

@@ -1582,6 +1582,10 @@
                   "description": "The issuer identifier, an https URL (RFC 8414 §2); a config.auth.issuer entry with kind machines. Required when enabled.",
                   "type": "string"
                 },
+                "tokenEndpoint": {
+                  "description": "The token endpoint (RFC 6749 §3.2), read instead of the issuer's metadata; issuer still names the issuer the CDR trusts.",
+                  "type": "string"
+                },
                 "clientId": {
                   "description": "FerroBRIDGE's client identifier at the issuer (RFC 6749 §2.2). Required when enabled.",
                   "type": "string"

@@ -128,28 +128,45 @@ The job summary and the `perf-report` artifact (`target/perf/summary.md`,
 `latest.json`) open with the verdict. A failed run lists its breaches first:
 each one names the metric, the measured value, the baseline or limit, and the
 threshold it crossed. A load metric fails when it is worse than the baseline
-by more than the larger of its tolerance and its A/A noise floor. A run that
-cannot be judged exits 2 and says why: no baseline, a baseline of another
-plan, a generator that lagged, or a window whose second half was not as fast
-as its first. A request answered with a status other than the plan's
-expected one fails the run too. Locally, `PERF_SERVER`, `PERF_DATABASE` and
-`PERF_TARGET` point the script at a server you started yourself (see the
-script's header).
+by more than the larger of its tolerance and the noise floor its entry was
+measured with. A run that cannot be judged exits 2 and says why: no
+baseline, no entry for the runner's CPU model, an entry to re-measure, a
+baseline of another plan, a generator that lagged, or a window whose second
+half was not as fast as its first. A request answered with a status other
+than the plan's expected one fails the run too. Locally, `PERF_SERVER`,
+`PERF_DATABASE` and `PERF_TARGET` point the script at a server you started
+yourself (see the script's header).
 
 ### Writing the baseline
 
 The load baseline is kept per CPU model of the runner pool the gate runs on
 (`ubuntu-26.04`), because one model's latencies say nothing about another's.
-`ferrohealth-perf` 0.2.0 adds that layout, and until it is on crates.io no load
-baseline is committed (#5095). A run then judges the idle limits, which are
-absolute, and reports the load phase without judging it: a run whose only
-reason it could not be judged is the missing baseline passes, and every other
-reason fails it.
+`perf/baseline.toml` holds one `[[baseline]]` entry per model, keyed by the
+`model name` line of `/proc/cpuinfo`. Until that file is committed (#5095), a
+run judges the idle limits, which are absolute, and reports the load phase
+without judging it: a run whose only reason it could not be judged is the
+missing baseline passes, and every other reason fails it.
 
-A baseline is measured on the runner, never on a developer machine:
-`scripts/perf/gate.sh update ferroehr:perf ferroehr-postgres:perf` in the
-`perf` job writes `perf/baseline.toml`, uploaded in the `perf-report`
-artifact, and you commit it in a change of its own. `--update` only lowers a
-metric on the same plan. Raising one is a hand edit in a change that says
-why. Changing the rate, the windows or the request set writes the baseline
-afresh.
+A baseline is measured on the runner, never on a developer machine. Run the
+**Performance baseline** workflow (`perf-baseline.yml`) by hand on `main`:
+
+1. It builds the server binary the `perf` job gates, then runs its `legs`
+   measuring jobs one after another. Each job lands on whatever CPU model the
+   pool gives it and runs `scripts/perf/gate.sh update` over the file the
+   previous job wrote.
+2. `update` measures five load phases, each after its own warm-up. It writes
+   each metric of the runner's model as the median of the phases, and how far
+   the worst phase strayed from that median as the metric's noise floor. It
+   leaves every other model's entry as it was.
+3. The run's `perf-baseline` artifact holds the final file, and each job's
+   summary lists the models the file holds. Commit it in a change of its own.
+
+To add a model, run the workflow again, with the committed file in place,
+until the summary lists it. A pull request whose runner has a model with no
+entry cannot be judged, and its summary names the model.
+
+On the same plan, `update` moves a metric only to the better of the entry and
+the new median. A metric fails when it is worse than its entry by more than
+the larger of its tolerance and its noise floor, so no tolerance is loosened.
+Raising a metric is a hand edit in a change that says why. Changing the rate,
+the windows or the request set writes the entry afresh.
