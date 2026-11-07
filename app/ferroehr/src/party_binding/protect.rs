@@ -10,7 +10,10 @@
 //! role template, and a `GROUP` of the group template with its memberships.
 //! Only an administrator writes one through the demographic API, so nobody
 //! can plant a key-bearing `PERSON`, grant themselves the professional
-//! `ROLE` or point a colleague's `PERSON` at their own login. A present
+//! `ROLE` or point a colleague's `PERSON` at their own login. A SCIM client
+//! writes the ones it owns: a `PERSON` whose binding keys its
+//! `binding_issuer` issues, and a professional `ROLE` that `PERSON` performs
+//! (RFC 7644 §3: a client manages its own resources). A present
 //! binding key is immutable: RFC 7643 §2.2 `mutability: "immutable"`, "SHALL
 //! NOT be updated", and only [`rekey`] changes one. An administrator's version
 //! that leaves a protected identifier out is refused, so nothing is carried
@@ -32,6 +35,8 @@ use crate::versioning::Kind;
 task_local! {
     /// The key change the running administrator re-key may make.
     static REKEY: Rekey;
+    /// The `binding_issuer` of the SCIM client the running request is of.
+    static PROVISIONER: String;
 }
 
 /// One key change an administrator re-key makes: on the `PERSON` `party`,
@@ -51,6 +56,13 @@ pub struct Rekey {
 /// change that one `PERSON`'s binding key from `change.from` to `change.to`.
 pub async fn rekey<F: Future>(change: Rekey, fut: F) -> F::Output {
     REKEY.scope(change, fut).await
+}
+
+/// Runs `fut` as a request of the SCIM client whose `binding_issuer` is
+/// `binding_issuer`: a commit inside it may write the protected parties that
+/// client owns.
+pub async fn provisioning<F: Future>(binding_issuer: String, fut: F) -> F::Output {
+    PROVISIONER.scope(binding_issuer, fut).await
 }
 
 /// One selector identifier of a body: which selector, its issuer and type,
@@ -91,8 +103,9 @@ impl Protected {
 /// write and before the side-table rows are rebuilt.
 ///
 /// # Errors
-/// [`ServiceError::Forbidden`] (`403`) when a caller who is not an
-/// administrator writes a protected party, or a write changes a present
+/// [`ServiceError::Forbidden`] (`403`) when a caller who is neither an
+/// administrator nor, inside [`provisioning`], the SCIM client that owns it
+/// writes a protected party, or a write changes a present
 /// binding key outside [`rekey`]; [`ServiceError::Unprocessable`] (`422`)
 /// naming the identifier when an administrator's version leaves a protected
 /// identifier out; a storage error when the versions cannot be read.
@@ -117,11 +130,24 @@ pub(crate) async fn check(
     if !(before.protected() || after.protected()) {
         return Ok(());
     }
-    if !administrator(mapping) {
-        // TODO(#5014): admit the SCIM client that owns the party.
+    let owner = match PROVISIONER.try_with(Clone::clone) {
+        Ok(issuer) => {
+            let held = [current, previous];
+            owned(
+                tx,
+                mapping,
+                (kind, vo_id, held),
+                &[&before, &after],
+                &issuer,
+            )
+            .await?
+        }
+        Err(_) => false,
+    };
+    if !(owner || administrator(mapping)) {
         return Err(ServiceError::not_permitted(format!(
-            "the {} {vo_id} is protected by the party binding: only an administrator writes it \
-             through the demographic API",
+            "the {} {vo_id} is protected by the party binding: only an administrator, or the \
+             SCIM client that owns it, writes it",
             kind.as_str()
         )));
     }
@@ -168,6 +194,87 @@ pub(crate) async fn check(
         ));
     }
     Ok(())
+}
+
+/// Whether the SCIM client of the binding issuer `issuer` owns the party
+/// `vo_id` of `kind`, whose versions `held` (the new head and the one before
+/// it) hold `versions`.
+///
+/// A `PERSON` is owned when it carries a binding key and each of its keys,
+/// before and after the write, is of `issuer`. A professional `ROLE` is owned
+/// when every `PERSON` it names as `performer` is.
+async fn owned(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    (kind, vo_id, held): (Kind, VoId, [Option<i32>; 2]),
+    versions: &[&Protected],
+    issuer: &str,
+) -> Result<bool, ServiceError> {
+    let keyed_by_client = |protected: &[&Protected]| {
+        let keys: Vec<(String, String)> = protected.iter().flat_map(|p| p.keys()).collect();
+        !keys.is_empty() && keys.iter().all(|(of, _)| of == issuer)
+    };
+    match kind {
+        Kind::Person => Ok(keyed_by_client(versions)),
+        Kind::Role => {
+            let performers = performers(tx, vo_id, held).await?;
+            if performers.is_empty() {
+                return Ok(false);
+            }
+            for named in performers {
+                // NOTE: a reference whose root is no UUID names no container of this store.
+                let Ok(performer) = VoId::from_uid_head(&named) else {
+                    return Ok(false);
+                };
+                let Some(sys_version) = last_body(tx, performer).await? else {
+                    return Ok(false);
+                };
+                let protected = read(tx, mapping, Kind::Person, performer, sys_version).await?;
+                if !keyed_by_client(&[&protected]) {
+                    return Ok(false);
+                }
+            }
+            Ok(true)
+        }
+        // TODO(#5015): admit the SCIM client that created the GROUP.
+        _ => Ok(false),
+    }
+}
+
+/// The `PARTY_REF.id` values the versions `held` of the `ROLE` `vo_id` name
+/// as `performer`.
+async fn performers(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+    held: [Option<i32>; 2],
+) -> Result<BTreeSet<String>, ServiceError> {
+    let held: Vec<i32> = held.into_iter().flatten().collect();
+    let rows = sqlx::query(
+        "SELECT v.body::jsonb -> 'performer' -> 'id' ->> 'value' AS performer FROM version v \
+         WHERE v.vo_id = $1 AND v.sys_version = ANY($2::int4[]) AND v.body IS NOT NULL",
+    )
+    .bind(vo_id)
+    .bind(&held)
+    .fetch_all(&mut *tx)
+    .await?;
+    let mut out = BTreeSet::new();
+    for row in rows {
+        // NOTE: RM demographic `role.adoc`: `performer` is 1..1, so a version without one names nobody.
+        if let Some(performer) = row.try_get::<Option<String>, _>("performer")? {
+            out.insert(performer);
+        }
+    }
+    Ok(out)
+}
+
+/// The `sys_version` of the last version of `vo_id` that holds a body.
+async fn last_body(tx: &mut PgConnection, vo_id: VoId) -> Result<Option<i32>, ServiceError> {
+    Ok(sqlx::query_scalar(
+        "SELECT max(v.sys_version) FROM version v WHERE v.vo_id = $1 AND v.body IS NOT NULL",
+    )
+    .bind(vo_id)
+    .fetch_one(&mut *tx)
+    .await?)
 }
 
 /// The name a selector is reported under.
