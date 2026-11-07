@@ -130,43 +130,51 @@ each one names the metric, the measured value, the baseline or limit, and the
 threshold it crossed. A load metric fails when it is worse than the baseline
 by more than the larger of its tolerance and the noise floor its entry was
 measured with. A run that cannot be judged exits 2 and says why: no
-baseline, no entry for the runner's CPU model, an entry to re-measure, a
-baseline of another plan, a generator that lagged, or a window whose second
-half was not as fast as its first. A request answered with a status other
+baseline, no entry for the runner's host shape, an entry to re-measure, a
+baseline of another plan, a generator that lagged, a window whose second
+half was not as fast as its first, or a stalled runner. A request answered with a status other
 than the plan's expected one fails the run too. Locally, `PERF_SERVER`,
 `PERF_DATABASE` and `PERF_TARGET` point the script at a server you started
 yourself (see the script's header).
 
 ### Writing the baseline
 
-The load baseline is kept per CPU model of the runner pool the gate runs on
-(`ubuntu-26.04`), because one model's latencies say nothing about another's.
-`perf/baseline.toml` holds one `[[baseline]]` entry per model, keyed by the
-`model name` line of `/proc/cpuinfo`. A run judges the idle limits, which are
-absolute, and the load phase against its CPU model's entry. A runner whose model
-has no entry cannot be judged, and the run fails with exit 2, naming the model
-and the models the file holds.
+The load baseline is kept per host shape of the runner pool the gate runs on
+(`ubuntu-26.04`): the CPU model and the total memory together, because one
+shape's latencies say nothing about another's. On this pool one CPU model ran
+about 35 % slower on a host of another memory size. `perf/baseline.toml` holds
+one `[[baseline]]` entry per shape. A run judges the idle limits, which are
+absolute, and the load phase against its shape's entry. A runner whose shape
+has no entry cannot be judged, and the run fails with exit 2, naming the shape
+and the shapes the file holds.
+
+A load metric that breaches its entry is measured again, up to twice, each
+time after its own warm-up, and fails only when it breaches in most of the
+runs. A phase in which every route's p99 is many times its p50 at once marks a
+stalled runner: it is reported, never judged, and the run exits 2.
 
 A baseline is measured on the runner, never on a developer machine. Run the
-**Performance baseline** workflow (`perf-baseline.yml`) by hand on `main`:
+**Performance baseline** workflow (`perf-baseline.yml`) by hand:
 
 1. It builds the server binary the `perf` job gates, then runs its `legs`
-   measuring jobs one after another. Each job lands on whatever CPU model the
-   pool gives it and runs `scripts/perf/gate.sh update` over the file the
-   previous job wrote.
-2. `update` measures five load phases, each after its own warm-up. It writes
-   each metric of the runner's model as the median of the phases, and how far
-   the worst phase strayed from that median as the metric's noise floor. It
-   leaves every other model's entry as it was.
-3. The run's `perf-baseline` artifact holds the final file, and each job's
-   summary lists the models the file holds. Commit it in a change of its own.
+   measuring jobs at once. Each job lands on whatever host the pool gives it
+   and runs `scripts/perf/gate.sh update` over the committed file, which
+   writes the entry of its shape from five load phases, each after its own
+   warm-up.
+2. The `merge` job folds the jobs into the committed file with
+   `ferrohealth-perf merge`. Per shape, each metric is the median over the
+   jobs and the committed entry, and its noise floor is the larger of their
+   spread and every job's own floor, so the floor holds the spread between
+   runners and not only within one.
+3. The run's `perf-baseline` artifact holds the merged file, and its summary
+   names each shape and how many jobs measured it. Commit it in a reviewed
+   change.
 
-To add a model, run the workflow again, with the committed file in place,
-until the summary lists it. A pull request whose runner has a model with no
-entry cannot be judged, and its summary names the model.
+To add a shape, run the workflow again, with the committed file in place,
+until the summary names it. A pull request whose runner has a shape with no
+entry cannot be judged, and its summary names the shape.
 
-On the same plan, `update` moves a metric only to the better of the entry and
-the new median. A metric fails when it is worse than its entry by more than
-the larger of its tolerance and its noise floor, so no tolerance is loosened.
-Raising a metric is a hand edit in a change that says why. Changing the rate,
-the windows or the request set writes the entry afresh.
+A metric fails when it is worse than its entry by more than the larger of its
+tolerance and its noise floor, so no tolerance is loosened. Raising a metric
+is a hand edit in a change that says why. Changing the rate, the windows or
+the request set writes the entry afresh.

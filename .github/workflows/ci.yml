@@ -1889,10 +1889,10 @@ jobs:
   # transactions a second while idle, and no gate saw it. This one starts the
   # server this tree builds with its own PostgreSQL, holds it to absolute idle
   # limits, drives perf/plan.toml against it and judges the load phase against
-  # its CPU model's entry in perf/baseline.toml (scripts/perf/gate.sh over
+  # its host shape's entry in perf/baseline.toml (scripts/perf/gate.sh over
   # ferrohealth-perf, pinned in docs/VERSIONS.md). The self-test runs first: an
   # idle busy-loop must fail it. The baseline is measured on this runner image
-  # by perf-baseline.yml, one entry per CPU model; docs/release.md says how to
+  # by perf-baseline.yml, one entry per host shape; docs/release.md says how to
   # read the report and write the baseline again.
   perf:
     name: perf

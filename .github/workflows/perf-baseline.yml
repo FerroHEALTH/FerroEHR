@@ -3,21 +3,23 @@
 
 # .github/workflows/perf-baseline.yml
 #
-# Writes the performance gate's load baseline, one entry per CPU model of the
-# `ubuntu-26.04` runner pool the `perf` job in ci.yml runs on (#5095). A load
-# metric is comparable only on a like CPU, and the pool mixes models, so
-# perf/baseline.toml holds one `[[baseline]]` entry per model
-# (ferrohealth-perf, pinned in docs/VERSIONS.md).
+# Writes the performance gate's load baseline, one entry per host shape (CPU
+# model and memory size) of the `ubuntu-26.04` runner pool the `perf` job in
+# ci.yml runs on (#5095). A load metric is comparable only on a like host, and
+# the pool mixes shapes, so perf/baseline.toml holds one `[[baseline]]` entry
+# per shape (ferrohealth-perf, pinned in docs/VERSIONS.md).
 #
-# Run it by hand on main. It builds the server binary the `perf` job gates,
-# with the same profile in the same container, then measures it in `legs`
-# jobs one after another. Each job lands on whatever CPU model the pool gives
-# it, takes the file the previous job wrote, and runs `scripts/perf/gate.sh
-# update`, which writes or tightens the entry of its own model from the median
-# of five load phases and leaves every other entry as it was. The last file
-# leaves as the `perf-baseline` artifact, and its summary lists the models it
-# holds. Commit it in a change of its own; run the workflow again until every
-# model the pool serves has its entry (docs/release.md, "Writing the
+# Run it by hand. It builds the server binary the `perf` job gates, with the
+# same profile in the same container, then measures it in `legs` jobs at once.
+# Each job lands on whatever host the pool gives it and runs
+# `scripts/perf/gate.sh update` over the committed file, which writes the entry
+# of its own shape from the median of five load phases. The `merge` job folds
+# the jobs into the committed file with `ferrohealth-perf merge`: per shape the
+# median over the jobs, and as the noise floor the spread between the jobs, so
+# the floor holds the spread between runners and not only within one. The
+# merged file leaves as the `perf-baseline` artifact, and its summary lists the
+# shapes it holds. Commit it in a reviewed change; run the workflow again until
+# every shape the pool serves has its entry (docs/release.md, "Writing the
 # baseline").
 #
 # No openEHR specification governs this: our own design.
@@ -27,10 +29,10 @@ on:
   workflow_dispatch:
     inputs:
       legs:
-        description: How many measuring jobs to run one after another, each on the CPU model the pool gives it.
+        description: How many measuring jobs to run at once, each on the host the pool gives it.
         type: choice
-        options: ["1", "2", "4", "6", "8"]
-        default: "6"
+        options: ["2", "4", "8", "12", "16"]
+        default: "12"
 
 permissions: {}
 
@@ -105,11 +107,10 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
-    # One leg at a time, so each takes the file the previous one wrote and the
-    # tool's own ratchet merges the entries. A leg that cannot write its entry
-    # leaves the file as it found it, and the next leg goes on.
+    # Every leg at once, each from the committed file, so the merge sees the
+    # spread between runners of one shape. A leg that cannot write its entry
+    # uploads nothing, and the merge goes on with the others.
     strategy:
-      max-parallel: 1
       fail-fast: false
       matrix:
         leg: ${{ fromJSON(needs.legs.outputs.list) }}
@@ -126,12 +127,6 @@ jobs:
         with:
           name: perf-baseline-server-binary
           path: bin/amd64
-      - name: The file the previous leg wrote
-        if: strategy.job-index > 0
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: perf-baseline
-          path: perf
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Package the app image (COPY-only, seconds)
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -143,31 +138,22 @@ jobs:
           tags: ferroehr:perf
       - name: Build the postgres image (COPY-only, seconds)
         run: docker buildx build --load -t ferroehr-postgres:perf docker/postgres
-      - name: Write or tighten this CPU model's entry
+      - name: Write this host shape's entry
         run: bash scripts/perf/gate.sh update ferroehr:perf ferroehr-postgres:perf
-      - name: The models the file holds
+      - name: The host this leg ran on
         if: always()
-        run: |
-          set -euo pipefail
-          {
-            echo "### Leg ${LEG}: $(grep -m1 '^model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ *//')"
-            echo
-            echo "perf/baseline.toml holds entries for:"
-            echo
-            if [ -f perf/baseline.toml ]; then
-              grep -E '^cpu_model = ' perf/baseline.toml | sed 's/^cpu_model = /- /'
-            else
-              echo "- (no file yet)"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
         env:
           LEG: ${{ matrix.leg }}
+        run: |
+          set -euo pipefail
+          model="$(grep -m1 '^model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ *//')"
+          memory="$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)"
+          echo "### Leg ${LEG}: ${model}, MemTotal ${memory} kB" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always() && hashFiles('perf/baseline.toml') != ''
+        if: success()
         with:
-          name: perf-baseline
+          name: perf-baseline-leg-${{ matrix.leg }}
           path: perf/baseline.toml
-          overwrite: true
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
@@ -175,3 +161,43 @@ jobs:
           name: perf-report-leg-${{ matrix.leg }}
           path: target/perf/
           if-no-files-found: warn
+
+  merge:
+    name: merge the legs
+    needs: measure
+    if: always() && needs.measure.result != 'cancelled'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - name: Install the pinned ferrohealth-perf
+        run: bash scripts/perf/gate.sh install
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: perf-baseline-leg-*
+          path: legs
+      # Per shape the median over the legs and the committed entry, and as the
+      # noise floor the larger of their spread and every leg's own floor.
+      - name: Merge the legs into the committed file
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          jobs=(legs/*/baseline.toml)
+          if [ "${#jobs[@]}" -eq 0 ]; then
+            echo "::error::no leg wrote an entry"
+            exit 1
+          fi
+          target/tools/perf/bin/ferrohealth-perf merge --baseline perf/baseline.toml "${jobs[@]}" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: perf-baseline
+          path: perf/baseline.toml
+          if-no-files-found: error
