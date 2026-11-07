@@ -40,15 +40,17 @@
 pub(crate) mod assurance;
 mod build;
 pub(crate) mod declared;
+mod gates;
 mod issuer;
 mod party;
 
 use std::sync::Arc;
 
-use axum::extract::{FromRequestParts, MatchedPath, OriginalUri, Request, State};
+use axum::extract::{FromRequestParts, MatchedPath, Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use ferrohealth_smart::guard::Gate;
+use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
 use ferrohealth_smart::resource::introspection::Introspector;
@@ -59,10 +61,8 @@ use openehr_its::rest::runtime::ApiError;
 
 use crate::api::served::ServedMethods;
 use crate::extensions::access::authz::AuthzHandle;
-use crate::extensions::access::authz::classify::OperationClass;
-use crate::extensions::access::authz::roles::RbacDecision;
 use crate::overview::error::RestError;
-use crate::smart::routes::{Need, SmartRoutes};
+use crate::smart::routes::SmartRoutes;
 use assurance::{PatientDataGate, PatientDataRefusal};
 use ferroehr::system_log::event::ActorAuthentication;
 
@@ -81,6 +81,8 @@ pub(crate) struct AuthLayer {
     /// The methods each route serves, so an unserved one is answered `405`
     /// before any check judges the caller.
     pub(crate) served: Arc<ServedMethods>,
+    /// The service a representative's subject is resolved to its EHR through.
+    pub(crate) service: Arc<ferroehr::service::FerroEhrService>,
 }
 
 /// The authenticated caller.
@@ -109,6 +111,9 @@ pub struct Principal {
     /// is a listed backend client and whether its issuer's `patient/` grants
     /// count (`[smart] backend_clients`, `[smart] patient_issuers`).
     pub honoured: Honoured,
+    /// The EHR a bound representative is confined to, `None` for every other
+    /// caller (#5086).
+    pub represented: Option<RepresentedEhr>,
 }
 
 impl Principal {
@@ -144,8 +149,21 @@ impl Principal {
             method,
             access,
             honoured,
+            represented: None,
         }
     }
+}
+
+/// The EHR a bound representative is confined to: the one whose
+/// `EHR_STATUS.subject.external_ref` names the subject the token asserts and the
+/// party source records a live representation of.
+///
+/// No openEHR spec governs resolving a login to a party: our own design.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RepresentedEhr {
+    /// That EHR's id, or `None` when no EHR names the subject, so the
+    /// representative reaches no EHR.
+    pub ehr_id: Option<String>,
 }
 
 /// The mechanism that authenticated a [`Principal`].
@@ -417,6 +435,15 @@ impl Authenticator {
                 .map_err(|refusal| self.naming_caller(refusal, &access))?,
             None => access,
         };
+        // NOTE: no openEHR spec governs resolving a login to a party, our own design: with
+        // no binding no representation is recorded, so a representative is refused.
+        if self.party.is_none()
+            && access
+                .caller()
+                .is_some_and(|caller| matches!(caller.kind(), CallerKind::Representative { .. }))
+        {
+            return Err(party::unrecorded());
+        }
         if let Some(refusal) = access.caller().and_then(party::kind_refusal) {
             return Err(refusal);
         }
@@ -504,7 +531,14 @@ pub(crate) async fn middleware(
     let outcome = auth.authenticate(&parts).await;
     let mut req = Request::from_parts(parts, body);
     match outcome {
-        Ok(Authenticated { principal, fresh }) => {
+        Ok(Authenticated {
+            mut principal,
+            fresh,
+        }) => {
+            match party::represented_ehr(&layer.service, &principal.access).await {
+                Ok(represented) => principal.represented = represented,
+                Err(e) => return refusal_response(auth, req.headers(), &e),
+            }
             // NOTE: RFC 9110 §15.5.6; whether a method is served is the
             // resource's property, so no grant changes the `405`.
             if let Some(mut refusal) = layer.served.refusal(
@@ -533,11 +567,11 @@ pub(crate) async fn middleware(
                     }
                 }
             };
-            if let Some(mut refusal) = rbac_refusal(&layer, &req, &principal) {
+            if let Some(mut refusal) = gates::rbac_refusal(&layer, &req, &principal) {
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
-            if let Some(mut refusal) = smart_refusal(&layer, &req, &principal) {
+            if let Some(mut refusal) = gates::smart_refusal(&layer, &req, &principal) {
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
@@ -588,99 +622,6 @@ pub(crate) async fn middleware(
             resp
         }
     }
-}
-
-/// Runs the RBAC gate over an authenticated caller: the matched operation's
-/// class against the caller's roles, then the read-only restriction.
-///
-/// A bearer token whose SMART on openEHR resource scopes are all `system/`
-/// scopes passes the clinical class without a role: its scopes decide access,
-/// in [`smart_refusal`]. A `user/` or `patient/` token belongs to a person and
-/// keeps the role gate, as does a Basic user.
-///
-/// A principal carrying the configured read-only role is refused on every write
-/// operation, overriding any grant. Both denials produce the same `403`,
-/// attributed to the caller so the ATNA audit layer records it. No openEHR spec
-/// governs role semantics — our own design/extension.
-fn rbac_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Option<Response> {
-    let rbac = layer.authz.as_deref().and_then(AuthzHandle::rbac)?;
-    let matched = req
-        .extensions()
-        .get::<MatchedPath>()
-        .map(|m| m.as_str().to_owned());
-    let class = rbac.class_for(req.method(), matched.as_deref());
-    let backend = principal.method == AuthMethod::Bearer
-        && principal
-            .access
-            .caller()
-            .is_some_and(|caller| crate::smart::holds_only_system_scopes(&caller.openehr_scopes()));
-    let gated = if backend && class == OperationClass::Clinical {
-        RbacDecision::Allow
-    } else {
-        rbac.decide(class, &principal.roles)
-    };
-    let decision = match gated {
-        RbacDecision::Deny(reason) => RbacDecision::Deny(reason),
-        RbacDecision::Allow => {
-            let is_write = rbac.is_write_for(req.method(), matched.as_deref());
-            rbac.decide_readonly(is_write, &principal.roles)
-        }
-    };
-    let RbacDecision::Deny(reason) = decision else {
-        return None;
-    };
-    count_auth_failure(mechanism_label(principal.method), "403");
-    let mut resp = RestError::from(ApiError::Forbidden(reason)).into_response();
-    resp.extensions_mut().insert(principal.clone());
-    Some(resp)
-}
-
-/// Checks the SMART on openEHR requirement of the matched route, after RBAC.
-///
-/// A requirement the caller's grants do not meet, or a `patient/` grant whose
-/// target is not the EHR of the token's launch context, is a `403` with the
-/// `insufficient_scope` challenge (RFC 6750 §3.1) that names no scope,
-/// attributed to the caller. A composition operation is checked by the PEP once
-/// its template is known.
-///
-/// The API router is nested under the base path, so the request URI this layer
-/// sees has the base stripped while the matched template carries it; the path
-/// parameters are read from the original URI, which lines up with the template.
-fn smart_refusal(layer: &AuthLayer, req: &Request, principal: &Principal) -> Option<Response> {
-    let matched = req
-        .extensions()
-        .get::<MatchedPath>()
-        .map(MatchedPath::as_str);
-    let uri = req
-        .extensions()
-        .get::<OriginalUri>()
-        .map_or_else(|| req.uri(), |original| &original.0);
-    let need = layer.smart.need(req.method(), matched, uri.path());
-    let Need::Now(requirement) = need else {
-        return None;
-    };
-    let reason = match crate::smart::routes::check(
-        &requirement,
-        principal,
-        crate::smart::routes::target_ehr(&requirement, matched, uri, req.headers()).as_deref(),
-    ) {
-        Ok(()) => return None,
-        Err(reason) => reason,
-    };
-    count_auth_failure(mechanism_label(principal.method), "403");
-    tracing::debug!(reason, "a SMART on openEHR requirement was not met");
-    let mut resp = RestError::from(ApiError::Forbidden(
-        "the credential does not permit this request".to_owned(),
-    ))
-    .into_response();
-    resp.headers_mut().insert(
-        header::WWW_AUTHENTICATE,
-        layer
-            .authenticator
-            .challenge(Some(&AuthError::Forbidden(String::new()))),
-    );
-    resp.extensions_mut().insert(principal.clone());
-    Some(resp)
 }
 
 /// Builds the response for a patient-data request the gate refused, attributed
@@ -1731,6 +1672,12 @@ mod tests {
                 Vec::new(),
             )),
             served: Arc::new(ServedMethods::default()),
+            service: Arc::new(ferroehr::service::FerroEhrService::new(
+                &ferroehr::db::domain::DomainPools::from_shared(
+                    &sqlx::postgres::PgPoolOptions::new()
+                        .connect_lazy_with(sqlx::postgres::PgConnectOptions::new()),
+                ),
+            )),
         };
         let app = axum::Router::new()
             .route("/x", axum::routing::get(|| async { "ok" }))

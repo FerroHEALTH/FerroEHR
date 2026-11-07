@@ -26,10 +26,10 @@ use ferroehr::versioning::committer::bound::BoundDetails;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::adapter::AdapterError;
 use ferrohealth_smart::party::binding::PartyBinding;
-use ferrohealth_smart::party::{GroupsCause, Outcome};
+use ferrohealth_smart::party::{GroupsCause, Outcome, PartyRef, Represented};
 use ferrohealth_smart::resource::{Access, Caller};
 
-use super::AuthError;
+use super::{AuthError, RepresentedEhr};
 
 /// The party binding of the deployment, with what the committer of a bound
 /// caller carries beside it: the provider, the namespace and the source of
@@ -171,6 +171,9 @@ pub(super) async fn bind(binding: &PartyBinding, access: Access) -> Result<Acces
                 principal: None,
             });
         }
+        Ok(None) if matches!(caller.kind(), CallerKind::Representative { .. }) => {
+            return Err(unrecorded());
+        }
         Ok(None) => return Ok(access),
         Ok(Some(outcome)) => outcome,
         Err(error) => {
@@ -189,9 +192,78 @@ pub(super) async fn bind(binding: &PartyBinding, access: Access) -> Result<Acces
         );
         return Err(refusal);
     }
+    if let CallerKind::Representative { represented, .. } = caller.kind()
+        && represented_subject(&outcome, represented).is_none()
+    {
+        tracing::warn!(
+            issuer = caller.issuer().unwrap_or("-"),
+            "the party source records no live representation of the asserted subject"
+        );
+        return Err(unrecorded());
+    }
     Ok(Access::Caller(Arc::new(
         Caller::clone(caller).with_party(outcome),
     )))
+}
+
+/// The refusal of a representative whose asserted subject the party source
+/// records no live representation of.
+pub(super) const fn unrecorded() -> AuthError {
+    AuthError::PartyRefused {
+        code: "refused-representation-unrecorded",
+        principal: None,
+    }
+}
+
+/// The subject among the bound party's live representations that the token's
+/// `represented` claim names, matched on the party id without regard to case.
+// NOTE: no openEHR spec governs resolving a login to a party, our own design: the
+// claim is a bare string, and the source names a subject by its container id.
+fn represented_subject<'a>(outcome: &'a Outcome, represented: &str) -> Option<&'a PartyRef> {
+    let represented = represented.trim();
+    outcome
+        .bound()?
+        .represents
+        .iter()
+        .map(Represented::subject)
+        .find(|subject| subject.id().eq_ignore_ascii_case(represented))
+}
+
+/// The EHR the representative of `access` is confined to, `None` for any
+/// other caller: the EHR whose `EHR_STATUS.subject.external_ref` names the
+/// represented subject (#5086), looked up through `service`, which records the
+/// resolution on the access log.
+///
+/// # Errors
+/// [`AuthError::PartyRefused`] when the bound party represents no such
+/// subject, and [`AuthError::PartyUnavailable`] when the store cannot answer.
+pub(super) async fn represented_ehr(
+    service: &ferroehr::service::FerroEhrService,
+    access: &Access,
+) -> Result<Option<RepresentedEhr>, AuthError> {
+    let Some(caller) = access.caller() else {
+        return Ok(None);
+    };
+    let CallerKind::Representative { represented, .. } = caller.kind() else {
+        return Ok(None);
+    };
+    let subject = caller
+        .party()
+        .and_then(|outcome| represented_subject(outcome, represented))
+        .ok_or_else(unrecorded)?;
+    let found = service
+        .ehr_id_for_subject(subject.id(), subject.namespace())
+        .await
+        .map_err(|error| {
+            tracing::warn!(
+                error = %ferroehr::error::ErrorChain::new(&error),
+                "the EHR of the represented subject could not be read"
+            );
+            AuthError::PartyUnavailable { retry_after: None }
+        })?;
+    Ok(Some(RepresentedEhr {
+        ehr_id: found.map(|ehr| ehr.to_string()),
+    }))
 }
 
 /// The refusal `outcome` answers, or `None` for an outcome the request
@@ -253,6 +325,9 @@ pub(super) fn detail(code: &str) -> &'static str {
         }
         "refused-groups-unavailable" => "the groups this token asserts cannot be read",
         "refused-guest" => "a guest of this login's issuer is not admitted",
+        "refused-representation-unrecorded" => {
+            "no live representation of the asserted subject is recorded for this login"
+        }
         _ => "this login is bound to no demographic party",
     }
 }
