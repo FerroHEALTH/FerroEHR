@@ -89,6 +89,23 @@ pub struct CommitterIdentity {
     /// client, when one does; a system caller without one commits nothing
     /// into an EHR.
     pub system_client: Option<std::sync::Arc<crate::config::clients::SystemClient>>,
+    /// What a verified external caller of a `federation` issuer may commit
+    /// under the agreement it was admitted under; `None` for any other caller.
+    pub external: Option<ExternalCaller>,
+}
+
+/// What a verified external caller may commit under its
+/// `[[authz.federation.agreement]]`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExternalCaller {
+    /// A verified external person, who commits a COMPOSITION only of a
+    /// template the agreement's `writes` lists.
+    Person {
+        /// The agreement's `writes`.
+        writes: Vec<String>,
+    },
+    /// An external organisation, whose access is read-only (EHDS Art. 13(4)).
+    Organisation,
 }
 
 task_local! {
@@ -308,6 +325,7 @@ mod tests {
             bound: None,
             system: false,
             system_client: None,
+            external: None,
         }
     }
 

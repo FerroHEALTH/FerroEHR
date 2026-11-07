@@ -100,6 +100,25 @@ profile, and the server acts on the kind:
     professional by an identifier in `composer` or in the `performer` of a
     context participation (`422` otherwise). An organisation `composer` is
     refused with `422`.
+- **A verified external person or organisation** of a `federation` issuer is
+  admitted only under the `[[authz.federation.agreement]]` of its issuer and
+  accessor, and refused with `403` without one or under the other accessor's.
+  Its rights come from the agreement, never from a role:
+  - it holds only the `patient/` scopes the agreement `reads` (beside
+    `openid`, `profile`, `fhirUser`, `online_access` and `launch`), so a token
+    with any other scope is refused, and it reaches only the EHR of its
+    launch context, which needs the issuer in `[smart] patient_issuers`;
+  - it is an access-service caller by its kind, so an opted-out EHR answers
+    `404` as an unknown one does (EHDS Art. 10(1)). Only an external person
+    under an agreement with `opt_out_override` reaches one, under an emergency
+    purpose, recorded as an override; an organisation never does;
+  - a read under an agreement with a `consent` condition needs the consent
+    decision reference for the patient, which no token carries yet, so every
+    such read is refused, and so is every request on openEHR data under an
+    NL agreement until the Wabvpz Art. 15f roles can be read;
+  - an external person commits only a COMPOSITION of a template the
+    agreement's `writes` lists; an organisation commits nothing, and neither
+    deletes, attests or writes a demographic party.
 - **Attestations** come only from a person bound to a professional `PERSON`.
   A patient, a representative, a system caller and an unbound caller are
   refused with `403` (RM common master04 §Attestation).

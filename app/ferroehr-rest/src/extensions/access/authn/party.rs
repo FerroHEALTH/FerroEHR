@@ -326,6 +326,7 @@ pub(super) fn committer_identity(
         bound: None,
         system,
         system_client,
+        external: super::declared::committing(&principal.access),
     }
 }
 
