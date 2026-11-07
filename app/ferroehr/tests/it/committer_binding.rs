@@ -37,7 +37,7 @@ const PERSON_TEMPLATE: &str = "FerroEHR professional";
 const ROLE_TEMPLATE: &str = "FerroEHR professional role";
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
 /// The token issuer.
-const ISSUER: &str = "https://login.example";
+pub(crate) const ISSUER: &str = "https://login.example";
 /// The `identifier_issuer` of its `[[auth.party]]` table.
 const LOGIN: &str = "https://login.example/tenant";
 const NAME_PATH: &str = "/identities[at0002]/details[at0003]/items[at0004]";
@@ -102,7 +102,7 @@ fn write<T: serde::de::DeserializeOwned>(data: &Value, preceding: Option<&str>) 
 
 /// Commits a professional named `name` with the key `key`; returns its
 /// container.
-async fn professional(svc: &FerroEhrService, name: &str, key: &str) -> VoId {
+pub(crate) async fn professional(svc: &FerroEhrService, name: &str, key: &str) -> VoId {
     let body = person(name, key);
     let created = Box::pin(svc.party_create(PartyKind::Person, write(&body, None)))
         .await
@@ -132,7 +132,7 @@ async fn professional(svc: &FerroEhrService, name: &str, key: &str) -> VoId {
 }
 
 /// The identity of the login `sub` whose key `key` the binding binds.
-async fn bound(svc: &FerroEhrService, sub: &str, key: &str) -> CommitterIdentity {
+pub(crate) async fn bound(svc: &FerroEhrService, sub: &str, key: &str) -> CommitterIdentity {
     let table = PartySection {
         issuer: ISSUER.to_owned(),
         identifier_issuer: LOGIN.to_owned(),
@@ -178,6 +178,7 @@ async fn bound(svc: &FerroEhrService, sub: &str, key: &str) -> CommitterIdentity
             namespace: "demographic".to_owned(),
         }),
         system: false,
+        system_client: None,
     }
 }
 
@@ -222,12 +223,12 @@ async fn commit(
 }
 
 /// The placeholder naming `issuer` and `id`.
-fn placeholder(issuer: &str, id: &str) -> Value {
+pub(crate) fn placeholder(issuer: &str, id: &str) -> Value {
     json!({ "_type": "PARTY_IDENTIFIED",
             "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id }] })
 }
 
-async fn service() -> (testkit::TestDb, FerroEhrService, EhrId) {
+pub(crate) async fn service() -> (testkit::TestDb, FerroEhrService, EhrId) {
     let (db, svc, ehr) = crate::fixtures::setup().await;
     (db, svc.with_binding_mapping(mapping()), ehr)
 }
@@ -239,7 +240,7 @@ fn forbidden(result: Result<Value, ServiceError>) {
     }
 }
 
-const KEY: &str = "1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e";
+pub(crate) const KEY: &str = "1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e";
 
 #[tokio::test]
 async fn a_bound_professional_commits_under_the_server_committer() {
@@ -378,6 +379,7 @@ async fn a_patient_commits_no_demographic_version() {
         representative: false,
         bound: None,
         system: false,
+        system_client: None,
     };
     let body = json!({ "_type": "PERSON", "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
         "archetype_details": archetyped("openEHR-DEMOGRAPHIC-PERSON.person.v1", "Any person"),
@@ -429,6 +431,7 @@ async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_sy
         representative: false,
         bound: None,
         system: false,
+        system_client: None,
     };
     let refused = ferroehr::system_log::access_context::with_roles(
         vec!["USER".to_owned()],

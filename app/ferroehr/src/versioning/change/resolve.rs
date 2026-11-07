@@ -23,7 +23,7 @@ use crate::ids::{EhrId, VoId};
 use crate::storage::codec::decompose;
 use crate::storage::row::NodeRow;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
-use crate::versioning::{Kind, SigningCtx, attestation, lifecycle, person, profile};
+use crate::versioning::{Kind, SigningCtx, attestation, lifecycle, person, profile, system};
 
 /// A logically deleted version of `vo_id` after the open tip `expected` names.
 #[expect(
@@ -52,6 +52,7 @@ pub(super) async fn resolve_delete(
     )
     .await?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
+    system::admit_delete(tx, kind, vo_id).await?;
     lifecycle::refuse_already_deleted(kind, vo_id, &next.preceding_lifecycle)?;
     retire_protected_identifiers(tx, ctx, kind, vo_id).await?;
     // A deleted version carries no data — its `ORIGINAL_VERSION.data` is
@@ -206,6 +207,11 @@ pub(super) async fn resolve_create(
     // a first version can only be `complete`/`incomplete`.
     validate_transition(None, &lifecycle)?;
     person::refuse_composing_for_others(content.kind, &content.canonical)?;
+    system::admit_content(
+        content.kind,
+        &content.canonical,
+        content.template_id.as_deref(),
+    )?;
     let vo_id = VoId::minted(ctx.stamp);
     let tree = TreeId::trunk(1);
     let body = prepare_body(tx, ctx, content.kind, vo_id, tree, content.canonical).await?;
@@ -260,6 +266,7 @@ pub(super) async fn resolve_modify(
     )
     .await?;
     person::refuse_composing_for_others(kind, &content.canonical)?;
+    system::admit_content(kind, &content.canonical, content.template_id.as_deref())?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
     // the transition from the preceding version's state must be legal
     // (master06 §Version Lifecycle state machine).

@@ -19,9 +19,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ferroehr::config::binding::Providers;
+use ferroehr::config::clients::SystemClient;
 use ferroehr::party_binding::source::BindingSource;
 use ferroehr::versioning::committer::bound::BoundDetails;
 
+use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::adapter::AdapterError;
 use ferrohealth_smart::party::binding::PartyBinding;
 use ferrohealth_smart::party::{GroupsCause, Outcome};
@@ -161,6 +163,14 @@ pub(super) async fn bind(binding: &PartyBinding, access: Access) -> Result<Acces
         return Ok(access);
     };
     let outcome = match binding.resolve(caller).await {
+        // NOTE: GDPR Art. 9(3) and Art. 29, a guest acts only under this controller's
+        // responsibility, which `[[auth.party]] guests` declares; our own design.
+        Ok(None) if matches!(caller.kind(), CallerKind::Guest(_)) => {
+            return Err(AuthError::PartyRefused {
+                code: "refused-guest",
+                principal: None,
+            });
+        }
         Ok(None) => return Ok(access),
         Ok(Some(outcome)) => outcome,
         Err(error) => {
@@ -242,8 +252,26 @@ pub(super) fn detail(code: &str) -> &'static str {
             "the demographic party this login is bound to may not act in this role"
         }
         "refused-groups-unavailable" => "the groups this token asserts cannot be read",
+        "refused-guest" => "a guest of this login's issuer is not admitted",
         _ => "this login is bound to no demographic party",
     }
+}
+
+/// Returns the refusal of a caller its kind does not admit to the request
+/// at all: a system caller holding a `user/` or `patient/` scope, which names
+/// a person the token does not carry (SMART on openEHR `master08-scopes`
+/// §Resource Scopes; RFC 9068 §2.2). No openEHR spec governs what a caller
+/// kind may do: our own design.
+pub(super) fn kind_refusal(caller: &Caller) -> Option<AuthError> {
+    let personal = caller
+        .scope()
+        .iter()
+        .any(|scope| scope.starts_with("user/") || scope.starts_with("patient/"));
+    (matches!(caller.kind(), CallerKind::System) && personal).then(|| {
+        AuthError::Forbidden(
+            "a system caller acts for no person, so it holds system/ scopes only".to_owned(),
+        )
+    })
 }
 
 /// Returns the platform committer identity published for the service layer.
@@ -252,10 +280,25 @@ pub(super) fn detail(code: &str) -> &'static str {
 /// authenticated principal rather than the system identity
 /// (`AUDIT_DETAILS.committer` 1..1 — RM common master04 §Audit Details). A
 /// Bearer subject was minted by the identity provider, so the audit records the
-/// validated token issuer; Basic credentials are local and carry none.
+/// validated token issuer; Basic credentials are local and carry none. A
+/// system caller carries the `[[authz.system_client]]` table of `clients`
+/// that declares its issuer and client, when one does.
 pub(super) fn committer_identity(
     principal: &super::Principal,
+    clients: &[Arc<SystemClient>],
 ) -> ferroehr::versioning::committer::CommitterIdentity {
+    let caller = principal.access.caller();
+    let system = caller.is_some_and(|caller| matches!(caller.kind(), CallerKind::System));
+    let client = super::client_of(principal);
+    let system_client = caller.filter(|_| system).and_then(|caller| {
+        let named = caller.client_id().or(client.as_deref())?;
+        clients
+            .iter()
+            .find(|table| {
+                Some(table.issuer.as_str()) == caller.issuer() && table.client_id == named
+            })
+            .cloned()
+    });
     ferroehr::versioning::committer::CommitterIdentity {
         subject: principal.subject.clone(),
         id_type: match principal.method {
@@ -270,7 +313,7 @@ pub(super) fn committer_identity(
                 .and_then(Caller::issuer)
                 .map(str::to_owned),
         },
-        client: super::client_of(principal),
+        client,
         person: crate::smart::acts_as_person(principal),
         party: principal
             .access
@@ -278,16 +321,11 @@ pub(super) fn committer_identity(
             .and_then(Caller::party)
             .and_then(Outcome::bound)
             .cloned(),
-        representative: principal.access.caller().is_some_and(|caller| {
-            matches!(
-                caller.kind(),
-                ferrohealth_smart::kind::CallerKind::Representative { .. }
-            )
-        }),
+        representative: caller
+            .is_some_and(|caller| matches!(caller.kind(), CallerKind::Representative { .. })),
         bound: None,
-        system: principal.access.caller().is_some_and(|caller| {
-            matches!(caller.kind(), ferrohealth_smart::kind::CallerKind::System)
-        }),
+        system,
+        system_client,
     }
 }
 

@@ -47,13 +47,39 @@ pub struct BoundDetails {
     pub namespace: String,
 }
 
+/// The `DV_IDENTIFIER.type` of the client identifier a system caller's
+/// committer carries.
+pub const CLIENT_TYPE: &str = "client";
+
 /// The committer the server writes for `identity`, when it knows one.
 ///
 /// It is the record subject's `PARTY_SELF`, a representative's
-/// `PARTY_RELATED`, or a bound professional's `PARTY_IDENTIFIED`; `None` for
-/// any other caller.
+/// `PARTY_RELATED`, a bound professional's `PARTY_IDENTIFIED`, or a system
+/// caller's `PARTY_IDENTIFIED` named by its client, with the client
+/// identifier under the token issuer and no `external_ref`, so the record
+/// says a system committed; `None` for any other caller.
 #[must_use]
 pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
+    if identity.system {
+        let client = identity.client.clone()?;
+        return Some(PartyProxy::PartyIdentified(
+            PartyIdentified::PartyIdentified(PartyIdentifiedData {
+                external_ref: None,
+                name: Some(client.clone()),
+                identifiers: Some(openehr_base::containers::NonEmptyVec::of(DvIdentifier {
+                    issuer: Some(
+                        identity
+                            .issuer
+                            .clone()
+                            .unwrap_or_else(|| LOCAL_ISSUER.to_owned()),
+                    ),
+                    assigner: None,
+                    id: client,
+                    r#type: Some(CLIENT_TYPE.to_owned()),
+                })),
+            }),
+        ));
+    }
     if identity.person && !identity.representative {
         // NOTE: RM common master04 §PARTY_SELF and Referring to the Patient, the
         // first scheme ("the most secure approach"): no external_ref.

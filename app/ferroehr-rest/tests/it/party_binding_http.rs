@@ -35,17 +35,17 @@ use serde_json::{Value, json};
 
 use crate::common::{self, BASE};
 
-const ISSUER: &str = "https://login.example";
-const AUDIENCE: &str = "ferroehr";
+pub(crate) const ISSUER: &str = "https://login.example";
+pub(crate) const AUDIENCE: &str = "ferroehr";
 /// The `identifier_issuer` of the issuer's `[[auth.party]]` table.
-const LOGIN: &str = "https://login.example/tenant";
+pub(crate) const LOGIN: &str = "https://login.example/tenant";
 /// The `group_identifier_issuer` of that table.
 const GROUPS: &str = "https://login.example/groups";
 const PERSON_TEMPLATE: &str = "FerroEHR professional";
 const ROLE_TEMPLATE: &str = "FerroEHR professional role";
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
 
-fn mapping() -> BindingMapping {
+pub(crate) fn mapping() -> BindingMapping {
     let key = IdentifierSelector::new(
         format!("/details[at0001]/items[{CLUSTER}]/items[at0001]"),
         "guid",
@@ -111,7 +111,7 @@ async fn router_over(
 }
 
 /// A bearer of `ISSUER` whose `sub` is `subject`, with `extra` claims.
-fn token(subject: &str, extra: &Value) -> String {
+pub(crate) fn token(subject: &str, extra: &Value) -> String {
     let exp = jiff::Timestamp::now().as_second() + 3600;
     let mut claims = json!({ "sub": subject, "iss": ISSUER, "aud": AUDIENCE, "exp": exp });
     if let (Some(claims), Some(extra)) = (claims.as_object_mut(), extra.as_object()) {
@@ -121,7 +121,7 @@ fn token(subject: &str, extra: &Value) -> String {
 }
 
 /// The status and body of a template listing as `credential`.
-async fn list(app: &Router, credential: &str) -> (StatusCode, String) {
+pub(crate) async fn list(app: &Router, credential: &str) -> (StatusCode, String) {
     common::send_body(
         app,
         common::req("GET", format!("{BASE}/definition/template/adl1.4"))
@@ -196,7 +196,11 @@ fn vo(uid: &str) -> VoId {
 
 /// A professional `PERSON` carrying `key`, its head in `lifecycle`; returns
 /// its last version uid and body.
-async fn professional(svc: &FerroEhrService, key: &str, lifecycle: &str) -> (String, Value) {
+pub(crate) async fn professional(
+    svc: &FerroEhrService,
+    key: &str,
+    lifecycle: &str,
+) -> (String, Value) {
     let body = person(key);
     // NOTE: RM common master06 §Version Lifecycle: only an incomplete version
     // may be abandoned.
@@ -234,7 +238,7 @@ async fn update(svc: &FerroEhrService, uid: &str, body: &Value, lifecycle: &str)
     self::uid(&updated)
 }
 
-async fn service() -> (testkit::TestDb, Arc<FerroEhrService>) {
+pub(crate) async fn service() -> (testkit::TestDb, Arc<FerroEhrService>) {
     let (db, pool) = common::migrated_pool().await;
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
         .with_binding_mapping(mapping());
@@ -242,7 +246,7 @@ async fn service() -> (testkit::TestDb, Arc<FerroEhrService>) {
 }
 
 /// Asserts `credential` is refused with `403` naming `code`.
-async fn refused(app: &Router, credential: &str, code: &str) {
+pub(crate) async fn refused(app: &Router, credential: &str, code: &str) {
     let (status, body) = list(app, credential).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{code}: {body}");
     assert!(body.contains(code), "{code}: {body}");

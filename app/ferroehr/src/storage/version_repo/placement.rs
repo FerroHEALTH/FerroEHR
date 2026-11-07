@@ -239,6 +239,25 @@ pub async fn committer_type(
     Ok(committer.flatten())
 }
 
+/// The template id the head of `vo_id` names, or `None` for an unknown
+/// object, a deleted head or an undeclared template.
+///
+/// No openEHR spec governs the SQL: our own design.
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn head_template(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+) -> Result<Option<String>, StorageError> {
+    let template: Option<Option<String>> =
+        sqlx::query_scalar("SELECT template_id FROM vo_head WHERE vo_id = $1")
+            .bind(vo_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    Ok(template.flatten())
+}
+
 /// The composition-update mega-read: [`next_placement`]'s current-trunk-tip
 /// form plus every column the update pre-checks need
 /// ([`UpdatePlacement`]).

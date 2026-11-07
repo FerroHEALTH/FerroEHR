@@ -58,6 +58,7 @@ mod authz_cedar_engine;
 mod authz_remote_pdp;
 mod authz_route_matrix;
 mod base_path_http;
+mod caller_kinds_http;
 mod cohort_http;
 mod composition_validation_http;
 mod connection_bounds;
