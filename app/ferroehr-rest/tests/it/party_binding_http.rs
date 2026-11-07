@@ -156,7 +156,7 @@ fn identities() -> Value {
                                       "name": text("name"), "value": text("professional") }] } }])
 }
 
-fn person(key: &str) -> Value {
+fn person(identifier_issuer: &str, key: &str) -> Value {
     json!({
         "_type": "PERSON", "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
         "archetype_details": archetyped("openEHR-DEMOGRAPHIC-PERSON.person.v1", PERSON_TEMPLATE),
@@ -164,7 +164,7 @@ fn person(key: &str) -> Value {
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0001", "name": text("details"),
             "items": [{ "_type": "CLUSTER", "archetype_node_id": CLUSTER, "name": text("ids"),
                 "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0001", "name": text("key"),
-                    "value": { "_type": "DV_IDENTIFIER", "issuer": LOGIN, "id": key,
+                    "value": { "_type": "DV_IDENTIFIER", "issuer": identifier_issuer, "id": key,
                                "type": "guid" } }] }] }
     })
 }
@@ -201,7 +201,18 @@ pub(crate) async fn professional(
     key: &str,
     lifecycle: &str,
 ) -> (String, Value) {
-    let body = person(key);
+    professional_of(svc, LOGIN, key, lifecycle).await
+}
+
+/// A professional `PERSON` carrying `key` issued by `identifier_issuer`, its
+/// head in `lifecycle`; returns its last version uid and body.
+pub(crate) async fn professional_of(
+    svc: &FerroEhrService,
+    identifier_issuer: &str,
+    key: &str,
+    lifecycle: &str,
+) -> (String, Value) {
+    let body = person(identifier_issuer, key);
     // NOTE: RM common master06 §Version Lifecycle: only an incomplete version
     // may be abandoned.
     let first = if lifecycle == "801" { "553" } else { "532" };
