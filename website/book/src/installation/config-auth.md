@@ -370,10 +370,23 @@ when the login matches two parties (`refused-ambiguous`), when its party is
 its key belongs to a deleted party (`refused-deprovisioned`), when the token
 carries no key claim (`refused-key-claim-missing`), when the party lacks the
 marker the caller's kind needs (`refused-wrong-marker`), when the groups a
-token asserts cannot be read (`refused-groups-unavailable`) and when a guest
-comes from an issuer whose table does not set `guests` (`refused-guest`). A party store
-or an identity provider that cannot answer is answered `503`, with
+token asserts cannot be read (`refused-groups-unavailable`), when a guest
+comes from an issuer whose table does not set `guests` (`refused-guest`), and
+when a representative's token names a subject its party has no live
+representation relationship to (`refused-representation-unrecorded`). A party
+store or an identity provider that cannot answer is answered `503`, with
 `Retry-After` when the identity provider gave one.
+
+A representative reaches only the EHR whose `EHR_STATUS.subject.external_ref`
+names the subject it represents: the issuer's `representation` claim carries
+the subject's party id, matched without regard to case, and the subject must
+be the target of one of the representative's live relationships, so a
+representative of an issuer no `[[auth.party]]` table binds is refused. Every
+composition, `EHR_STATUS`, directory, contribution and query request is held
+to that EHR, whatever the token's scopes cover; a query must name it with
+`ehr_id`. Templates stay readable. A `persons` token whose only clinical scopes
+are `patient/` is a professional confined to its launch EHR, and its commits
+record the professional, never `PARTY_SELF`.
 
 ### `[authz.import]` and `[[authz.system_client]]`
 
