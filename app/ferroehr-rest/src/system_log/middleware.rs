@@ -331,13 +331,18 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     resp
 }
 
-/// Whether `resp` refused the request: a `401`, a `403`, or a caller above its
-/// agreement's `caller_rate` ([`OverRate`]).
+/// Whether `resp` refused the request: a `401`, a `403`, a caller above its
+/// agreement's `caller_rate` ([`OverRate`]), or a security event such as a
+/// TRC patient mismatch, whatever its status.
 fn is_refusal(resp: &Response) -> bool {
     let status = resp.status();
     status == StatusCode::UNAUTHORIZED
         || status == StatusCode::FORBIDDEN
         || resp.extensions().get::<OverRate>().is_some()
+        || resp
+            .extensions()
+            .get::<ferroehr::system_log::binding::BindingRecord>()
+            .is_some_and(|binding| binding.code.is_security_event())
 }
 
 /// Records the refusal `resp` answered as a failed user authentication

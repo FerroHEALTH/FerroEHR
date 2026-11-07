@@ -150,10 +150,7 @@ impl FerroEhrService {
     /// # Errors
     /// As [`Self::clinical_subject`], and [`IndexError::Service`] on a storage
     /// fault.
-    pub(in crate::service) async fn subject_ehr(
-        &self,
-        subject: &SubjectRef,
-    ) -> Result<Option<EhrId>, IndexError> {
+    pub async fn subject_ehr(&self, subject: &SubjectRef) -> Result<Option<EhrId>, IndexError> {
         let Some(clinical) = self.clinical_subject(subject).await? else {
             return Ok(None);
         };

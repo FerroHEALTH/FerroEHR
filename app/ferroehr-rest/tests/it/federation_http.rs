@@ -40,7 +40,7 @@ use crate::common::{self, BASE};
 /// The `federation` issuer.
 const FEDERATION: &str = "https://federation.example";
 /// This node's audience at that issuer.
-const AUDIENCE: &str = "ferroehr-federation";
+pub(crate) const AUDIENCE: &str = "ferroehr-federation";
 /// The read an agreement admits.
 const READ: &str = "patient/composition-*.r";
 /// The header the default audit configuration reads the declared purpose from.
@@ -96,7 +96,7 @@ fn federation_table() -> FederationSection {
 }
 
 /// An agreement of [`FEDERATION`] for `accessor`, reading [`READ`].
-fn agreement(accessor: Accessor) -> Agreement {
+pub(crate) fn agreement(accessor: Accessor) -> Agreement {
     Agreement {
         issuer: FEDERATION.to_owned(),
         accessor: Some(accessor),
@@ -121,7 +121,7 @@ async fn serve(agreements: Vec<Agreement>) -> (testkit::TestDb, Arc<FerroEhrServ
 
 /// [`serve`], also trusting `issuer` with its `[[auth.federation]]` table and
 /// the `[auth.dpop]` table a sender-constrained issuer needs.
-async fn serve_also(
+pub(crate) async fn serve_also(
     agreements: Vec<Agreement>,
     issuer: Option<(IssuerEntry, FederationSection, DpopSection)>,
 ) -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
@@ -136,6 +136,7 @@ async fn serve_also(
         .expect("the audit sender");
     let svc = Arc::new(
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+            .with_ehr_index(ferroehr::service::ehr_index::provider::EhrIndexProvider::Local)
             .with_audit(sender)
             .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),
     );
@@ -154,7 +155,9 @@ async fn serve_also(
     }];
     let mut tables = vec![federation_table()];
     let mut dpop = None;
+    let mut patient_issuers = vec![FEDERATION.to_owned()];
     if let Some((entry, table, proof)) = issuer {
+        patient_issuers.push(entry.issuer.clone());
         entries.push(entry);
         tables.push(table);
         dpop = Some(proof);
@@ -171,7 +174,7 @@ async fn serve_also(
         agreements,
         ..common::api_config(true)
     };
-    config.smart.patient_issuers = vec![FEDERATION.to_owned()];
+    config.smart.patient_issuers = patient_issuers;
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
         .await
         .expect("build app");
@@ -224,7 +227,7 @@ fn organisation(ehr: &str) -> String {
 }
 
 /// Creates an EHR; returns its id.
-async fn ehr(svc: &FerroEhrService) -> EhrId {
+pub(crate) async fn ehr(svc: &FerroEhrService) -> EhrId {
     Box::pin(svc.create_ehr_meta(WriteRequest::new(None)))
         .await
         .map(|(id, _)| id)
@@ -574,7 +577,7 @@ async fn a_chained_organisation_request_is_served_only_with_an_attested_correlat
 
 /// `agreement(accessor)` admitting each caller two requests at once and one
 /// a second after.
-fn limited(accessor: Accessor) -> Agreement {
+pub(crate) fn limited(accessor: Accessor) -> Agreement {
     Agreement {
         caller_rate: Some(CallerRate {
             requests_per_second: std::num::NonZeroU32::MIN,
@@ -643,11 +646,11 @@ async fn an_external_caller_above_its_caller_rate_is_refused_before_any_patient_
 }
 
 /// NCPeH-A's authorization server, a MyHealth@EU contact point.
-const CONTACT_POINT: &str = "https://ncpeh-a.example";
+pub(crate) const CONTACT_POINT: &str = "https://ncpeh-a.example";
 
 /// The contact point's issuer table, its `[[auth.federation]]` table with the
 /// eHDSI mapping, and the `[auth.dpop]` table its sender constraint needs.
-fn contact_point() -> (IssuerEntry, FederationSection, DpopSection) {
+pub(crate) fn contact_point() -> (IssuerEntry, FederationSection, DpopSection) {
     let entry = IssuerEntry {
         issuer: CONTACT_POINT.to_owned(),
         kind: Some(IssuerKind::Federation),

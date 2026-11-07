@@ -99,7 +99,7 @@ impl PatientDataGate {
 
     /// Whether the matched route (the full axum `MatchedPath`) serves patient
     /// data; a route outside the API namespaces is judged patient data.
-    fn is_patient_data(&self, matched: Option<&str>) -> bool {
+    pub(super) fn serves_patient_data(&self, matched: Option<&str>) -> bool {
         let Some(matched) = matched else {
             return false;
         };
@@ -142,7 +142,7 @@ impl PatientDataGate {
         matched: Option<&str>,
     ) -> Result<ActorAuthentication, (PatientDataRefusal, ActorAuthentication)> {
         let actor = self.actor(principal);
-        if !self.is_patient_data(matched) {
+        if !self.serves_patient_data(matched) {
             return Ok(actor);
         }
         if let Some(minimum) = self.assurance.minimum

@@ -106,6 +106,9 @@ pub enum ExternalCaller {
         writes: Vec<String>,
         /// What the token asserts about the professional and the provider.
         professional: Box<external::ExternalProfessional>,
+        /// The agreement's `discard_window_hours` where it sets `discard`:
+        /// the person may then discard a dispensation of its point of care.
+        discard_window_hours: Option<u32>,
     },
     /// An external organisation, whose access is read-only (EHDS Art. 13(4)).
     Organisation,
