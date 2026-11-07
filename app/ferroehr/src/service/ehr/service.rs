@@ -241,7 +241,7 @@ impl FerroEhrService {
     /// # Errors
     /// [`ServiceError::Database`] on a storage failure, and the access-record
     /// refusal under `fail_mode = "closed"`.
-    pub(in crate::service) async fn ehr_id_for_subject(
+    pub async fn ehr_id_for_subject(
         &self,
         subject_id: &str,
         namespace: &str,

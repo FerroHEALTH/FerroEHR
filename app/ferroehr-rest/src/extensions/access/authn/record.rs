@@ -19,22 +19,21 @@ use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::{Outcome, PartyRef};
 use ferrohealth_smart::resource::Caller;
 
-/// The facilities the compositions of one request named, which a system
-/// caller's record carries; filled by the commit path, read once the
-/// response is built.
-#[derive(Debug, Clone, Default)]
-pub(crate) struct Facilities(Arc<Mutex<Vec<Identified>>>);
-
-impl Facilities {
-    /// The facilities gathered so far.
-    pub(crate) fn taken(&self) -> Vec<Identified> {
-        std::mem::take(&mut *self.0.lock().unwrap_or_else(PoisonError::into_inner))
+/// Runs the request `fut`, gathering the facilities its commits name, and
+/// puts `binding`, with those facilities, on its response.
+pub(super) async fn recorded<F>(binding: Option<BindingRecord>, fut: F) -> axum::response::Response
+where
+    F: Future<Output = axum::response::Response>,
+{
+    let sink: Arc<Mutex<Vec<Identified>>> = Arc::default();
+    let mut resp =
+        ferroehr::system_log::access_context::with_facilities(Arc::clone(&sink), fut).await;
+    if let Some(mut binding) = binding {
+        binding.facilities =
+            std::mem::take(&mut *sink.lock().unwrap_or_else(PoisonError::into_inner));
+        resp.extensions_mut().insert(binding);
     }
-
-    /// The collector the commit path pushes into.
-    pub(crate) fn sink(&self) -> Arc<Mutex<Vec<Identified>>> {
-        Arc::clone(&self.0)
-    }
+    resp
 }
 
 /// The binding record of the request `principal` commits as `committer`;

@@ -335,13 +335,18 @@ pub(crate) fn target_ehr(
     matched.and_then(|template| path_param(template, uri.path(), "ehr_id"))
 }
 
-/// Checks `requirement` for `principal`, and confines a `patient/` grant to
-/// the EHR of the launch context.
+/// Checks `requirement` for `principal`, confines a `patient/` grant to the EHR
+/// of the launch context, and confines a bound representative to the EHR of
+/// the subject it represents.
 ///
 /// A requirement on openEHR data that only `patient/` grants cover reaches the
 /// one EHR the token's `ehrId` names (`master07 §Context Selection`;
 /// `master08 §Resource Scopes`: "access is restricted to data within that
 /// patient's EHR"), so `target` must name it.
+///
+/// A representative reaches only the EHR whose `EHR_STATUS` names the subject
+/// it represents ([`Principal::represented`], #5086) on the EHR's data and its
+/// queries, whatever its grants cover; a template is no patient's data.
 ///
 /// A read under a federation agreement whose `consent` condition applies
 /// needs the consent decision reference for that patient (Wabvpz Art. 1(j) and
@@ -352,8 +357,9 @@ pub(crate) fn target_ehr(
 ///
 /// # Errors
 /// The reason the debug log records: the grants do not meet the requirement,
-/// a `patient/` grant addresses another EHR or none, or a consent-conditioned
-/// read carries no consent decision reference.
+/// a `patient/` grant addresses another EHR or none, a representative
+/// addresses an EHR other than the represented subject's, or a
+/// consent-conditioned read carries no consent decision reference.
 pub(crate) fn check(
     requirement: &Requirement,
     principal: &Principal,
@@ -361,6 +367,19 @@ pub(crate) fn check(
 ) -> Result<(), &'static str> {
     if !requirement.met_by(&principal.access, principal.honoured) {
         return Err("the grants do not meet the route's requirement");
+    }
+    if let (
+        Requirement::OpenEhr {
+            family: ResourceFamily::Composition | ResourceFamily::Aql,
+            ..
+        },
+        Some(represented),
+    ) = (requirement, &principal.represented)
+        && !target
+            .zip(represented.ehr_id.as_deref())
+            .is_some_and(|(target, ehr)| target.eq_ignore_ascii_case(ehr))
+    {
+        return Err("a representative reaches only the EHR of the subject it represents");
     }
     if let (Requirement::OpenEhr { permission, .. }, Some(agreement)) = (
         requirement,

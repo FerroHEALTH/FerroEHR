@@ -392,3 +392,87 @@ async fn a_deactivation_on_one_instance_refuses_the_next_request_on_another() {
     update(&first, &uid, &body, "800").await;
     refused(&on_second, &credential, "refused-inactive").await;
 }
+
+/// An overage token whose groups the identity provider cannot give for now is
+/// the server's failure, never the person's: with the `idp-entra` adapter
+/// registered and its Graph answering `429`, the request is answered `503`
+/// with the Graph's `Retry-After` (#5086). The adapter reaches a Graph on
+/// loopback over plain `http`, as RFC 8414 §2's loopback exception admits.
+#[tokio::test]
+async fn an_overage_the_identity_provider_throttles_is_unavailable_with_its_retry_after() {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    let graph = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "access_token": "graph-access", "token_type": "Bearer", "expires_in": 3600
+        })))
+        .mount(&graph)
+        .await;
+    let oid = "6c7d8e9f-0a1b-4c2d-8e3f-4a5b6c7d8e9f";
+    Mock::given(method("POST"))
+        .and(path(format!("/v1.0/users/{oid}/getMemberObjects")))
+        .respond_with(ResponseTemplate::new(429).insert_header("Retry-After", "7"))
+        .mount(&graph)
+        .await;
+
+    let (_db, svc) = service().await;
+    let key = "7d8e9f0a-1b2c-4d3e-9f4a-5b6c7d8e9f0a";
+    professional(&svc, key, "532").await;
+    let mut config = config(None);
+    if let IssuerKey::List(entries) = &mut config.auth.shared.issuer
+        && let Some(entry) = entries.first_mut()
+    {
+        entry.adapter = Some(ferrohealth_smart::idp::entra::NAME.to_owned());
+    }
+    config.auth.idp.entra = Some(Box::new(ferrohealth_smart::idp::entra::GraphSection {
+        base_url: format!("{}/v1.0", graph.uri()),
+        credentials: ferrohealth_smart::config::OauthSection {
+            token_endpoint: format!("{}/token", graph.uri()),
+            client_id: "ferroehr-graph".to_owned(),
+            client_secret: Some(secrecy::SecretString::from("graph-test-secret")),
+            scope: "https://graph.microsoft.com/.default".to_owned(),
+            ..ferrohealth_smart::config::OauthSection::default()
+        },
+        ..ferrohealth_smart::idp::entra::GraphSection::default()
+    }));
+    let authenticator = Authenticator::new(
+        &config,
+        None,
+        Some(Arc::new(svc.party_source("demographic"))),
+        Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+    )
+    .await
+    .expect("the binding with its adapter builds");
+    let observability = Observability::default();
+    observability.lifecycle.booted();
+    let app = ferroehr_rest::router::router(
+        AppState::with_parts(config, svc, None, observability),
+        authenticator,
+    );
+
+    let overage = token(
+        key,
+        &json!({ "oid": oid,
+                 "_claim_names": { "groups": "src1" },
+                 "_claim_sources": { "src1": { "endpoint": "https://graph.example" } } }),
+    );
+    let (status, headers, body) = common::send(
+        &app,
+        common::req("GET", format!("{BASE}/definition/template/adl1.4"))
+            .auth(&overage)
+            .accept("application/json")
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "{body}");
+    assert_eq!(
+        headers
+            .get(http::header::RETRY_AFTER)
+            .and_then(|value| value.to_str().ok()),
+        Some("7"),
+        "{body}"
+    );
+}

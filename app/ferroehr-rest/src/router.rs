@@ -166,6 +166,7 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
                 cfg.smart.demographic_clients.clone(),
             )),
             served: Arc::new(crate::api::served::ServedMethods::new(&namespaces)),
+            service: state.backend_handle(),
         },
         authn::middleware,
     ));
