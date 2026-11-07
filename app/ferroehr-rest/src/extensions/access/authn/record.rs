@@ -83,18 +83,24 @@ pub(super) fn of_request(
         principal.access.caller()?,
         committer.bound.as_ref(),
         provider,
-        super::declared::admitted(&principal.access).map(Arc::as_ref),
+        super::declared::admitted(&principal.access).map(|agreement| {
+            (
+                agreement.as_ref(),
+                super::declared::correlation_source(&principal.access),
+            )
+        }),
     )
 }
 
 /// The binding record of `caller`, with `details` for a bound person,
-/// `system_provider` for a system caller and `agreement` for an external
-/// one; `None` for a caller the binding names nothing about.
+/// `system_provider` for a system caller and `agreement`, with where its
+/// issuer reads the correlation id from, for an external one; `None` for a
+/// caller the binding names nothing about.
 fn of(
     caller: &Caller,
     details: Option<&BoundDetails>,
     system_provider: Option<Identified>,
-    agreement: Option<&Agreement>,
+    agreement: Option<(&Agreement, Option<&str>)>,
 ) -> Option<BindingRecord> {
     match caller.kind() {
         CallerKind::Patient => Some(BindingRecord::of(
@@ -156,11 +162,12 @@ pub(super) fn triple(party: &PartyRef) -> PartyTriple {
     }
 }
 
-/// The record of an external accessor admitted under `agreement`.
+/// The record of an external accessor admitted under `agreement`, whose
+/// issuer reads the correlation id from `correlation_source`.
 fn external_record(
     organisation: bool,
     external: &External,
-    agreement: &Agreement,
+    (agreement, correlation_source): (&Agreement, Option<&str>),
 ) -> BindingRecord {
     let fields: BTreeMap<String, Vec<String>> = external
         .fields()
@@ -191,6 +198,10 @@ fn external_record(
             }
             .to_owned()
         }),
+        correlation_id: external.correlation_id().map(|id| id.as_str().to_owned()),
+        correlation_source: external
+            .correlation_id()
+            .and(correlation_source.map(str::to_owned)),
     };
     BindingRecord::external(organisation, fields, record, provider)
 }

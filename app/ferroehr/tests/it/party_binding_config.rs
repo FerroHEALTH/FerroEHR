@@ -417,6 +417,43 @@ fn every_organisation_agreement_refusal_is_named() {
     assert!(text.contains("names a contact_point issuer"), "{text}");
 }
 
+/// A `chained` agreement's issuer reads the correlation id from its token,
+/// never from a constant (#5120).
+#[test]
+fn a_chained_agreement_needs_its_issuer_to_map_the_correlation_id() {
+    let chained = with(
+        "access_class = \"automated\"",
+        "access_class = \"chained\"\nchained_log_retention_years = 30\n\n[audit.store]\nretention_years = 5",
+    );
+    let text = refusal(&chained);
+    assert!(
+        text.contains(
+            "is chained and its issuer's [[auth.federation]] table maps no correlation_id"
+        ),
+        "{text}"
+    );
+    let fields = "\"professional.issuing_authority_name\" = [{ constant = \"BAEK\" }]";
+    let constant = chained.replacen(
+        fields,
+        &format!("{fields}\n\"correlation_id\" = [{{ constant = \"c-1\" }}]"),
+        1,
+    );
+    let text = refusal(&constant);
+    assert!(
+        text.contains("maps correlation_id from a constant"),
+        "{text}"
+    );
+    let claim = chained.replacen(
+        fields,
+        &format!("{fields}\n\"correlation_id\" = [{{ claim = \"correlation_id\" }}]"),
+        1,
+    );
+    assemble(&claim)
+        .expect("assembles")
+        .validate()
+        .expect("a chained agreement whose issuer maps the id from a claim loads");
+}
+
 #[test]
 fn every_agreement_needs_a_caller_rate_and_patient_reads() {
     let text = refusal(&with(

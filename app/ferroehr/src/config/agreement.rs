@@ -19,6 +19,7 @@ use std::fmt;
 
 use ferrohealth_server::section::CallerRate;
 use ferrohealth_smart::config::{AuthSection, Resolved};
+use ferrohealth_smart::federation::{Field, Source};
 use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::profile::Preset;
 use serde::{Deserialize, Serialize};
@@ -238,6 +239,9 @@ pub fn errors(
         common(agreement, auth, &name, &mut errors);
         if kind == Accessor::Organisation {
             organisation(agreement, resolved, holder, &name, &mut errors);
+            if agreement.access_class == Some(AccessClass::Chained) {
+                correlated(agreement, auth, &name, &mut errors);
+            }
         }
     }
     errors
@@ -344,6 +348,46 @@ fn chained(agreement: &Agreement, holder: Retention, name: &str, errors: &mut Ve
              audit.store {}",
             holder.describe()
         ));
+    }
+}
+
+/// A `chained` agreement's issuer reads the correlation id from its token: its
+/// `[[auth.federation]]` table maps `correlation_id`, and from no constant.
+fn correlated(agreement: &Agreement, auth: &AuthSection, name: &str, errors: &mut Vec<String>) {
+    match correlation_sources(auth, &agreement.issuer) {
+        None => errors.push(format!(
+            "{name} is chained and its issuer's [[auth.federation]] table maps no correlation_id"
+        )),
+        Some(sources) if sources.iter().any(|s| matches!(s, Source::Constant(_))) => {
+            errors.push(format!(
+                "{name} is chained and its issuer's [[auth.federation]] table maps correlation_id \
+                 from a constant: the id is read only from the token"
+            ));
+        }
+        Some(_) => {}
+    }
+}
+
+/// The sources the `[[auth.federation]]` table of `issuer` reads the
+/// correlation id of a `chained` request from, when it maps any.
+#[must_use]
+pub fn correlation_sources<'a>(auth: &'a AuthSection, issuer: &str) -> Option<&'a [Source]> {
+    auth.federation
+        .iter()
+        .find(|table| table.issuer == issuer)
+        .and_then(|table| table.fields.get(&Field::CorrelationId))
+        .map(Vec::as_slice)
+        .filter(|sources| !sources.is_empty())
+}
+
+/// How the access record names `source`: its kind and its path.
+#[must_use]
+pub fn describe_source(source: &Source) -> String {
+    match source {
+        Source::Claim(path) => format!("claim:{path}"),
+        Source::Constant(_) => "constant".to_owned(),
+        Source::AuthorizationDetails(path) => format!("authorization_details:{path}"),
+        Source::Presentation(path) => format!("presentation:{path}"),
     }
 }
 

@@ -556,6 +556,11 @@ pub(crate) async fn middleware(
             mut principal,
             fresh,
         }) => {
+            if let Some(refusal) =
+                declared::over_rate(&principal, &auth.declared.system_clients).await
+            {
+                return refusal;
+            }
             match party::represented_ehr(&layer.service, &principal.access).await {
                 Ok(represented) => principal.represented = represented,
                 Err(e) => return refused(auth, req.headers(), &e, Some(principal)),
