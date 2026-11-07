@@ -63,8 +63,9 @@ use crate::api::served::ServedMethods;
 use crate::extensions::access::authz::AuthzHandle;
 use crate::overview::error::RestError;
 use crate::smart::routes::SmartRoutes;
-use assurance::{PatientDataGate, PatientDataRefusal};
+use assurance::PatientDataGate;
 use ferroehr::system_log::event::ActorAuthentication;
+use gates::patient_data_refusal;
 
 /// The state the [`middleware`] runs on: the authenticator, the optional
 /// authorization handle (`None` is authentication-only), the optional
@@ -622,42 +623,6 @@ pub(crate) async fn middleware(
             resp
         }
     }
-}
-
-/// Builds the response for a patient-data request the gate refused, attributed
-/// to the caller so the audit layer records who was refused and how they
-/// authenticated.
-///
-/// An insufficient assurance level is a `401` carrying the RFC 9470 §3 step-up
-/// challenge (`insufficient_user_authentication` with the accepted
-/// `acr_values`).
-fn patient_data_refusal(
-    gate: &PatientDataGate,
-    principal: &Principal,
-    refusal: PatientDataRefusal,
-    actor: ActorAuthentication,
-) -> Response {
-    let mechanism = mechanism_label(principal.method);
-    let mut resp = match refusal {
-        PatientDataRefusal::InsufficientAssurance => {
-            count_auth_failure(mechanism, "401");
-            tracing::warn!(
-                mechanism,
-                reason = "insufficient_user_authentication",
-                "patient-data request refused"
-            );
-            let mut resp = RestError::from(ApiError::Unauthorized(
-                "patient data requires a higher authentication assurance level".to_owned(),
-            ))
-            .into_response();
-            resp.headers_mut()
-                .insert(header::WWW_AUTHENTICATE, gate.step_up_challenge());
-            resp
-        }
-    };
-    resp.extensions_mut().insert(principal.clone());
-    resp.extensions_mut().insert(actor);
-    resp
 }
 
 /// The client a request came through, which the `[origins]` register maps to
