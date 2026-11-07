@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The two gates the authentication middleware runs over an authenticated
+//! The gates the authentication middleware runs over an authenticated
 //! caller before the handler: RBAC, then the SMART on openEHR requirement of
-//! the matched route. Role semantics are our own design; the SMART grammar is
+//! the matched route, and the response of a patient-data request whose
+//! assurance is too low. Role semantics are our own design; the SMART grammar is
 //! the ITS-REST SMART on openEHR draft (`crate::smart::routes`).
 
 use axum::extract::{MatchedPath, OriginalUri, Request};
@@ -17,6 +18,9 @@ use crate::extensions::access::authz::roles::RbacDecision;
 use crate::overview::error::RestError;
 use crate::smart::routes::Need;
 
+use ferroehr::system_log::event::ActorAuthentication;
+
+use super::assurance::{PatientDataGate, PatientDataRefusal};
 use super::{AuthError, AuthLayer, AuthMethod, Principal, count_auth_failure, mechanism_label};
 
 /// Runs the RBAC gate over an authenticated caller: the matched operation's
@@ -118,4 +122,40 @@ pub(super) fn smart_refusal(
     );
     resp.extensions_mut().insert(principal.clone());
     Some(resp)
+}
+
+/// Builds the response for a patient-data request the gate refused, attributed
+/// to the caller so the audit layer records who was refused and how they
+/// authenticated.
+///
+/// An insufficient assurance level is a `401` carrying the RFC 9470 §3 step-up
+/// challenge (`insufficient_user_authentication` with the accepted
+/// `acr_values`).
+pub(super) fn patient_data_refusal(
+    gate: &PatientDataGate,
+    principal: &Principal,
+    refusal: PatientDataRefusal,
+    actor: ActorAuthentication,
+) -> Response {
+    let mechanism = mechanism_label(principal.method);
+    let mut resp = match refusal {
+        PatientDataRefusal::InsufficientAssurance => {
+            count_auth_failure(mechanism, "401");
+            tracing::warn!(
+                mechanism,
+                reason = "insufficient_user_authentication",
+                "patient-data request refused"
+            );
+            let mut resp = RestError::from(ApiError::Unauthorized(
+                "patient data requires a higher authentication assurance level".to_owned(),
+            ))
+            .into_response();
+            resp.headers_mut()
+                .insert(header::WWW_AUTHENTICATE, gate.step_up_challenge());
+            resp
+        }
+    };
+    resp.extensions_mut().insert(principal.clone());
+    resp.extensions_mut().insert(actor);
+    resp
 }
