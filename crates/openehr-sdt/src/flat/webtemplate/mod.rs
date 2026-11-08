@@ -17,6 +17,7 @@ mod binding_v2_4;
 pub mod builder;
 pub mod builder_v2_4;
 mod existence;
+pub mod facts;
 mod id;
 mod implicit;
 mod in_context;

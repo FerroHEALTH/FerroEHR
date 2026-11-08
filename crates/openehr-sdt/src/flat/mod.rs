@@ -25,6 +25,7 @@
     reason = "the module docs name openEHR RM classes and Simplified-Formats key names throughout as prose; backticking every occurrence would drown the text"
 )]
 
+pub mod attribute_keys;
 pub mod build;
 // The WebTemplate cache is the crate's only `moka` user, and a browser-side
 // consumer of the Simplified Formats keeps no such cache.
@@ -37,6 +38,7 @@ pub mod example;
 pub mod flatten;
 pub(crate) mod identity;
 pub(crate) mod map;
+pub mod navigate;
 pub mod path;
 pub(crate) mod rmpath;
 pub mod sim;

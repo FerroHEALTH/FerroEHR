@@ -348,7 +348,7 @@ fn coded_value(
                 .flatten()
         })
         .unwrap_or_else(|| code.to_owned());
-    let mut cv = WebTemplateCodedValue::new(code, Some(label));
+    let mut cv = WebTemplateCodedValue::new(code, Some(label)).with_terminology(terminology);
     cv.localized_labels = labels.localized(terminology, code);
     cv
 }
