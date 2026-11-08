@@ -32,6 +32,8 @@ fn asserted() -> ExternalProfessional {
         issuing_authority: Some(AUTHORITY.to_owned()),
         provider_identifier: Some(PROVIDER.to_owned()),
         provider_authority: Some(AUTHORITY.to_owned()),
+        contact_point: false,
+        permissions: Vec::new(),
     }
 }
 
@@ -40,6 +42,7 @@ fn person(template: &str, professional: ExternalProfessional) -> CommitterIdenti
     external(ExternalCaller::Person {
         writes: vec![template.to_owned()],
         professional: Box::new(professional),
+        discard_window_hours: None,
     })
 }
 
