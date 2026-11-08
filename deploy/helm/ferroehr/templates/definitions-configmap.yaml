@@ -1,0 +1,15 @@
+{{- if .Values.definitions.files }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ferroehr.fullname" . }}-definitions
+  labels:
+    {{- include "ferroehr.labels" . | nindent 4 }}
+data:
+  # The definitions the init container stores before the server starts
+  # (`ferroehr definitions load`), mounted at /etc/ferroehr-definitions.
+  {{- range .Values.definitions.files }}
+  {{ .name }}: |
+{{ .content | indent 4 }}
+  {{- end }}
+{{- end }}
