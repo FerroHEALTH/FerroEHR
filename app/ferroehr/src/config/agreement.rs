@@ -70,6 +70,10 @@ pub struct Agreement {
     /// The window of a discard, in hours (MyHealth@EU Requirements Catalogue
     /// 10.0.0, requirement 07.04, sets 24).
     pub discard_window_hours: u32,
+    /// The MyHealth@EU service a contact point's person agreement serves,
+    /// which names the `*_NOT_FOUND` code of a request outside the TRC
+    /// patient; required on a `contact_point` issuer and refused elsewhere.
+    pub ehdsi_service: Option<EhdsiService>,
     /// The admission rate per caller, above which a request is refused before
     /// any patient lookup; required.
     pub caller_rate: Option<CallerRate>,
@@ -98,6 +102,7 @@ impl Default for Agreement {
             writes: Vec::new(),
             discard: false,
             discard_window_hours: 24,
+            ehdsi_service: None,
             caller_rate: None,
             opt_out_override: false,
             access_class: None,
@@ -134,6 +139,32 @@ pub enum AccessClass {
     /// The requester logs the person behind each request, and each request
     /// carries the requester's correlation id as an attested claim.
     Chained,
+}
+
+/// The MyHealth@EU service of a contact point's agreement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EhdsiService {
+    /// The Patient Summary.
+    PatientSummary,
+    /// ePrescription and eDispensation.
+    Eprescription,
+    /// The original clinical document.
+    Orcd,
+}
+
+impl EhdsiService {
+    /// The code a request outside the TRC patient answers, which NCPeH-A
+    /// answers as "No Data" (eHDSI XCA Profile 8.0.1 §2.2.3 and §4.2.2; the
+    /// MyHealth@EU Requirements Catalogue 10.0.0 §1.25 code names).
+    #[must_use]
+    pub const fn not_found(self) -> &'static str {
+        match self {
+            Self::PatientSummary => "ERROR_PS_NOT_FOUND",
+            Self::Eprescription => "ERROR_EP_NOT_FOUND",
+            Self::Orcd => "ERROR_ORCD_NOT_FOUND",
+        }
+    }
 }
 
 /// Where the consent an exchange is conditioned on is registered.
@@ -237,6 +268,16 @@ pub fn errors(
             continue;
         };
         common(agreement, auth, &name, &mut errors);
+        let contact_point = is_contact_point(resolved, &agreement.issuer);
+        match (contact_point, agreement.ehdsi_service) {
+            (true, None) if kind == Accessor::Person => errors.push(format!(
+                "{name} is a MyHealth@EU contact point's and needs ehdsi_service"
+            )),
+            (false, Some(_)) => errors.push(format!(
+                "{name} sets ehdsi_service, which only a contact_point issuer's agreement may"
+            )),
+            _ => {}
+        }
         if kind == Accessor::Organisation {
             organisation(agreement, resolved, holder, &name, &mut errors);
             if agreement.access_class == Some(AccessClass::Chained) {
@@ -311,14 +352,7 @@ fn organisation(
              professional; use consent = \"local\""
         ));
     }
-    let contact_point = resolved.issuers.iter().any(|settings| {
-        settings.issuer == agreement.issuer
-            && settings
-                .federation
-                .as_ref()
-                .is_some_and(|f| f.contact_point == Some(true))
-    });
-    if contact_point {
+    if is_contact_point(resolved, &agreement.issuer) {
         errors.push(format!(
             "{name} names a contact_point issuer, whose requests name a professional"
         ));
@@ -326,6 +360,18 @@ fn organisation(
     if agreement.access_class == Some(AccessClass::Chained) {
         chained(agreement, holder, name, errors);
     }
+}
+
+/// Whether `issuer` is a MyHealth@EU contact point (`contact_point = true`).
+#[must_use]
+pub fn is_contact_point(resolved: &Resolved, issuer: &str) -> bool {
+    resolved.issuers.iter().any(|settings| {
+        settings.issuer == issuer
+            && settings
+                .federation
+                .as_ref()
+                .is_some_and(|f| f.contact_point == Some(true))
+    })
 }
 
 /// A `chained` agreement declares a requester log retention at least the

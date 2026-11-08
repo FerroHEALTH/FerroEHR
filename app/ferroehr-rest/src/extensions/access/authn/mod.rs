@@ -45,6 +45,7 @@ mod issuer;
 mod party;
 pub(crate) mod record;
 mod scope;
+pub(crate) mod trc;
 
 use std::sync::Arc;
 
@@ -584,7 +585,7 @@ pub(crate) async fn middleware(
             mut principal,
             fresh,
         }) => {
-            if let Some(refusal) = declared::prepare(&layer, &mut principal, req.headers()).await {
+            if let Some(refusal) = trc::patient_context(&layer, &mut principal, &req).await {
                 return refusal;
             }
             // NOTE: RFC 9110 §15.5.6; whether a method is served is the
