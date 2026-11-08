@@ -247,7 +247,7 @@ fn point_of_care(provider: &str) -> Vec<(&'static str, &str)> {
 }
 
 /// Commits a dispensation at `identifiers` into `ehr` as `credential`; the
-/// status and the versioned object id.
+/// status and the version id it answered, or its body.
 async fn dispense(
     app: &Router,
     ehr: &str,
@@ -262,11 +262,12 @@ async fn dispense(
         Some(&dispensation(identifiers)),
     )
     .await;
-    let uid = serde_json::from_str::<Value>(&body)
-        .ok()
-        .and_then(|c| c["uid"]["value"].as_str().map(str::to_owned))
-        .unwrap_or(body);
-    (status, uid)
+    let version = serde_json::from_str::<Value>(&body).ok().and_then(|c| {
+        c.pointer("/uid/value")
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+    });
+    (status, version.unwrap_or(body))
 }
 
 #[tokio::test]
@@ -344,12 +345,12 @@ async fn a_contact_point_discards_a_dispensation_of_its_point_of_care_within_the
     let (_db, svc, app) = serve(eprescription(24)).await;
     let mine = patient_ehr(&svc, "SYNTHETIC-1").await;
     let credential = token(Some("SYNTHETIC-1"), PROVIDER, &json!({}));
-    let (status, uid) = dispense(&app, &mine, &credential, &point_of_care(PROVIDER)).await;
-    assert_eq!(status, StatusCode::CREATED, "{uid}");
+    let (status, version) = dispense(&app, &mine, &credential, &point_of_care(PROVIDER)).await;
+    assert_eq!(status, StatusCode::CREATED, "the dispensation commits");
 
     // Another point of care may not discard it.
     let elsewhere = token(Some("SYNTHETIC-1"), "urn:oid:1.2.3.5", &json!({}));
-    let path = format!("/ehr/{mine}/composition/{uid}");
+    let path = format!("/ehr/{mine}/composition/{version}");
     let (status, body) = send(&app, "DELETE", &path, &elsewhere, None).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
     assert!(body.contains("another point of care"), "{body}");
@@ -388,10 +389,10 @@ async fn a_dispensation_without_ppd_046_and_a_discard_after_the_window_are_refus
     assert!(body.contains("PPD-046"), "{body}");
 
     let credential = token(Some("SYNTHETIC-1"), PROVIDER, &json!({}));
-    let (status, uid) = dispense(&app, &mine, &credential, &point_of_care(PROVIDER)).await;
-    assert_eq!(status, StatusCode::CREATED, "{uid}");
+    let (status, version) = dispense(&app, &mine, &credential, &point_of_care(PROVIDER)).await;
+    assert_eq!(status, StatusCode::CREATED, "the dispensation commits");
     tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    let path = format!("/ehr/{mine}/composition/{uid}");
+    let path = format!("/ehr/{mine}/composition/{version}");
     let (status, body) = send(&app, "DELETE", &path, &credential, None).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
     assert!(body.contains("discard window has passed"), "{body}");
