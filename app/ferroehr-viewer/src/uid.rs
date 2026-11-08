@@ -6,14 +6,21 @@
 //! The same reduction runs before a CDR path is built and when a link is
 //! drawn.
 
+use std::str::FromStr;
+
+use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
+
+use crate::error::ViewerError;
+
 /// The version CONTAINER id inside a `uid_based_id`: an `OBJECT_VERSION_ID`
 /// (`{uuid}::{system}::{tree}`) reduced to its `object_id`, a bare
 /// `HIER_OBJECT_ID` returned unchanged.
 ///
-/// Splitting on `::` is the `OBJECT_VERSION_ID` syntax itself (BASE
+/// The reduction is `openehr-base`'s `OBJECT_VERSION_ID` parse and its
+/// verbatim `object_id` (BASE
 /// `docs/specs/openehr/BASE/docs/base_types/master05-identification_package.adoc`
-/// §Syntaxes: `object_version_id = object_id "::" creating_system_id "::"
-/// version_tree_id`).
+/// §Syntaxes and §"Composite Identifiers and Case"). Any other value is read
+/// as the container id it already is and returned as written.
 ///
 /// The two forms address the same versioned object but not the same routes —
 /// an update takes the container, a delete takes the version, an `ITEM_TAG`
@@ -21,7 +28,50 @@
 /// one it means rather than passing a `uid_based_id` through untouched.
 #[must_use]
 pub fn container_uid_of(uid: &str) -> String {
-    uid.trim().split("::").next().unwrap_or_default().to_owned()
+    let uid = uid.trim();
+    ObjectVersionId::from_str(uid).map_or_else(
+        |_bare| uid.to_owned(),
+        |version| version.object_id_str().to_owned(),
+    )
+}
+
+/// The number of the version `version_uid` names: its `version_tree_id`, `3`
+/// of `uid::system::3`, or empty for a value that is no `OBJECT_VERSION_ID`,
+/// which names no version.
+#[must_use]
+pub fn version_number(version_uid: &str) -> String {
+    ObjectVersionId::from_str(version_uid).map_or_else(
+        |_not_a_version| String::new(),
+        |version| version.version_tree_id().value().to_owned(),
+    )
+}
+
+/// The `OBJECT_VERSION_ID` of version `number` of the object whose version
+/// `known` names: `known` with its `version_tree_id` replaced, or `known` as
+/// it is when it is no `OBJECT_VERSION_ID`.
+#[must_use]
+pub fn version_uid_at(known: &str, number: &str) -> String {
+    match ObjectVersionId::from_str(known) {
+        Ok(version) => format!(
+            "{}::{}::{number}",
+            version.object_id_str(),
+            version.creating_system_id_str()
+        ),
+        Err(_not_a_version) => known.to_owned(),
+    }
+}
+
+/// The trimmed `raw` when it is a full `OBJECT_VERSION_ID`, the form a delete
+/// of a version requires.
+///
+/// # Errors
+/// [`ViewerError::Invalid`] carrying `refusal` when it is not one.
+pub fn full_version_uid(raw: &str, refusal: impl FnOnce() -> String) -> Result<&str, ViewerError> {
+    let raw = raw.trim();
+    match ObjectVersionId::from_str(raw) {
+        Ok(_version) => Ok(raw),
+        Err(_not_a_version) => Err(ViewerError::Invalid(refusal())),
+    }
 }
 
 /// The `uid.value` of a served openEHR body, or an empty string when the body
@@ -68,7 +118,7 @@ pub fn uid_value_of_document(doc: &serde_json::Value) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::container_uid_of;
+    use super::{container_uid_of, version_number, version_uid_at};
 
     #[test]
     fn an_object_version_id_reduces_to_its_container() {
@@ -82,9 +132,57 @@ mod tests {
             "8849182c-82ad-4088-a07f-48ead4180515"
         );
         // Surrounding whitespace from a pasted id never reaches a URL.
-        assert_eq!(container_uid_of("  8849182c::sys::1  "), "8849182c");
+        assert_eq!(
+            container_uid_of("  8849182c-82ad-4088-a07f-48ead4180515::sys::1  "),
+            "8849182c-82ad-4088-a07f-48ead4180515"
+        );
         assert_eq!(container_uid_of(""), "");
         assert_eq!(container_uid_of("   "), "");
+    }
+
+    /// A value that is no `OBJECT_VERSION_ID` under the BASE grammar is read as
+    /// the container id it already is, never cut at its first `::`.
+    #[test]
+    fn a_value_that_is_no_version_id_is_kept_whole() {
+        // `8849182c` is no `uid`: it starts with a digit and is no ISO OID.
+        assert_eq!(container_uid_of("8849182c::sys::1"), "8849182c::sys::1");
+        // Two parts are no OBJECT_VERSION_ID.
+        assert_eq!(
+            container_uid_of("8849182c-82ad-4088-a07f-48ead4180515::sys"),
+            "8849182c-82ad-4088-a07f-48ead4180515::sys"
+        );
+        // The object_id keeps its case (BASE master05 §"Composite Identifiers and Case").
+        assert_eq!(
+            container_uid_of("8849182C-82AD-4088-A07F-48EAD4180515::sys::2"),
+            "8849182C-82AD-4088-A07F-48EAD4180515"
+        );
+    }
+
+    #[test]
+    fn a_version_number_is_the_version_tree_id() {
+        let uid = "8849182C-82AD-4088-A07F-48EAD4180515::ferroehr.local";
+        assert_eq!(version_number(&format!("{uid}::3")), "3");
+        assert_eq!(version_number(&format!("{uid}::1.2.4")), "1.2.4");
+        // A container id or a malformed value names no version.
+        assert_eq!(version_number("8849182c-82ad-4088-a07f-48ead4180515"), "");
+        assert_eq!(version_number("8849182c::sys::3"), "");
+        assert_eq!(version_number(""), "");
+    }
+
+    #[test]
+    fn a_version_uid_is_rebuilt_on_its_object_and_system() {
+        let uid = "8849182C-82AD-4088-A07F-48EAD4180515::ferroehr.local";
+        assert_eq!(
+            version_uid_at(&format!("{uid}::3"), "1"),
+            format!("{uid}::1")
+        );
+        assert_eq!(
+            version_uid_at(&format!("{uid}::1.2.4"), "2"),
+            format!("{uid}::2")
+        );
+        // A value that is no OBJECT_VERSION_ID is kept as it is.
+        assert_eq!(version_uid_at("8849182c::sys::3", "1"), "8849182c::sys::3");
+        assert_eq!(version_uid_at("", "1"), "");
     }
 
     #[test]

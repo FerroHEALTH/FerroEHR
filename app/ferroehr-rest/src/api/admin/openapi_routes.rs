@@ -642,6 +642,19 @@ guarded_handler! {
                                           nothing to tag, and §\"Deprecated \
                                           headers\" deprecates `Location` on \
                                           `DELETE`."),
+            (status = 400, description = "A path parameter outside its grammar: a \
+                                          name that is no \
+                                          `[{namespace}::]{query-name}` over \
+                                          `[a-zA-Z0-9_.-]`, or a version that is \
+                                          no exact `major.minor.patch` \
+                                          (`docs/query/Qualified_query_name.md`). \
+                                          Extension route: the status follows the \
+                                          overview table's `400` row.",
+             body = serde_json::Value,
+             example = json!({
+                 "error": "Bad Request",
+                 "message": "path parameter 'version': a stored query version is major.minor.patch, each a number without a leading zero"
+             })),
             (status = 401, description = "Unauthenticated (auth enabled, no valid \
                                           principal). Our own authorization design.",
              body = serde_json::Value,

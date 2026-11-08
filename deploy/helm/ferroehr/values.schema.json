@@ -290,6 +290,24 @@
         }
       }
     },
+    "definitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "content"],
+            "properties": {
+              "name": { "type": "string", "pattern": "^[A-Za-z0-9._-]+\\.(adls|opt)$" },
+              "content": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
     "backup": {
       "description": "Per-domain logical backups: one CronJob per pseudonymisation domain (clinical, party), plus audit when database.audit gives that domain a database of its own. Off by default, and enabling it requires a DISTINCT existing PersistentVolumeClaim per rendered domain \u2014 the render is refused otherwise.",
       "type": "object",

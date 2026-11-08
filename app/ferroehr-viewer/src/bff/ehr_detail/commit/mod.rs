@@ -58,15 +58,15 @@ pub struct CommitOutcome {
 /// (`POST /ehr/{ehr_id}/contribution`).
 ///
 /// The envelope is assembled by [`staged::contribution_body`] from the staged
-/// rows; `committer` falls back to the viewer session's own identity when the
-/// operator leaves it blank, because the wire REQUIRES one
-/// (`specifications/schemas/common/UpdateAudit.yaml`: `required: [change_type,
-/// committer]`) and the session identity is the honest answer to "who committed
-/// this". `Prefer: return=representation` is sent so the answer names the
+/// rows, with the placeholder naming the session's login as every committer:
+/// the wire requires one (`specifications/schemas/common/UpdateAudit.yaml`:
+/// `required: [change_type, committer]`), and the CDR records who committed
+/// from the authenticated caller. `Prefer: return=representation` is sent so the answer names the
 /// CONTRIBUTION and every version it minted.
 ///
 /// # Errors
-/// The errors of a CDR call ([`cdr`](crate::bff::cdr));
+/// The errors of a CDR call ([`cdr`](crate::bff::cdr)) and of
+/// [`Cdr::login`](crate::bff::Cdr::login);
 /// [`ViewerError::Invalid`] when nothing is staged or a staged change is
 /// structurally unusable; a non-2xx CDR answer (its validation diagnostics,
 /// which the UI renders verbatim, included) normalizes via
@@ -76,18 +76,11 @@ pub async fn commit_contribution(
     ehr_id: String,
     // The staged changes, in the order they were staged.
     changes: Vec<StagedChange>,
-    // The `AUDIT_DETAILS.committer` name; blank uses the session identity.
-    committer: String,
     // The optional `AUDIT_DETAILS.description`; blank omits the attribute.
     description: String,
 ) -> Result<CommitOutcome, ViewerError> {
     let cdr = crate::bff::cdr()?;
-    let committer = if committer.trim().is_empty() {
-        cdr.identity().to_owned()
-    } else {
-        committer.trim().to_owned()
-    };
-    let body = staged::contribution_body(&changes, &committer, &description)
+    let body = staged::contribution_body(&changes, cdr.login()?, &description)
         .map_err(ViewerError::Invalid)?;
     let url = cdr.rest_v1(&format!(
         "ehr/{}/contribution",

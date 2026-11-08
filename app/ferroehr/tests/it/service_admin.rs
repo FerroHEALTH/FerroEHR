@@ -23,7 +23,7 @@ use ferroehr::service::FerroEhrService;
 
 use crate::admin_fixture::{count_for_ehr, party_relationship, repository, seed_full_ehr};
 use crate::fixtures::uid;
-use crate::fixtures::uv;
+use crate::fixtures::{qn, query_version, uv, version_pattern};
 use crate::typed_body::typed;
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::{Clash, Malformed, Missing, Refusal};
@@ -308,16 +308,18 @@ async fn admin_query_delete_exact_version_and_unknown() {
     let name = "org.example::my_query";
     // Store the query at an explicit version (the PUT-with-version path).
     svc.query_store(
-        name.to_owned(),
-        Some("1.0.0".to_owned()),
-        "AQL".to_owned(),
+        &qn(name),
+        Some(version_pattern("1.0.0")),
+        "AQL",
         "SELECT c FROM EHR e CONTAINS COMPOSITION c".to_owned(),
     )
     .await
     .expect("store query 1.0.0");
 
     // Unknown (name, version) → NotFound.
-    let res = svc.admin_query_delete(name, "9.9.9").await;
+    let res = svc
+        .admin_query_delete(&qn(name), query_version("9.9.9"))
+        .await;
     assert!(
         is_not_found(&res, Missing::Artefact),
         "unknown version → artefact_does_not_exist, got {res:?}"
@@ -325,10 +327,12 @@ async fn admin_query_delete_exact_version_and_unknown() {
 
     // Exact-version delete succeeds (case-insensitive on the name); the row is
     // gone, so a second delete is NotFound.
-    svc.admin_query_delete("ORG.EXAMPLE::MY_QUERY", "1.0.0")
+    svc.admin_query_delete(&qn("ORG.EXAMPLE::MY_QUERY"), query_version("1.0.0"))
         .await
         .expect("delete version 1.0.0 (case-insensitive name)");
-    let again = svc.admin_query_delete(name, "1.0.0").await;
+    let again = svc
+        .admin_query_delete(&qn(name), query_version("1.0.0"))
+        .await;
     assert!(
         is_not_found(&again, Missing::Artefact),
         "already-deleted version → artefact_does_not_exist, got {again:?}"

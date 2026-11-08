@@ -21,11 +21,13 @@
 //! Versioning: "To support branching, a further pair of numbers is added … Both
 //! of these numbers also start at '1'").
 
+use std::borrow::Cow;
 use std::fmt;
 use std::str::FromStr;
 
 use openehr_base::prelude::{HierObjectId, ObjectVersionId, Uid};
 use openehr_base::v1_3::base_types::identification::version_tree_id::VersionTreeId;
+use openehr_its::rest::etag::EntityTag;
 use openehr_its::rest::runtime::ApiError;
 use uuid::Uuid;
 
@@ -392,20 +394,28 @@ pub fn parse_uid_based_id(raw: &str) -> Result<UidAddress, VersionIdError> {
     }
 }
 
-/// The bare token inside an `If-Match` value: surrounding whitespace and the
-/// entity-tag double quotes stripped (RFC 9110 §8.8.3 — an entity-tag is a
-/// quoted string).
+/// The value an `ETag` or `If-Match` field names, read through `openehr-its`.
 ///
-/// This is the ONE place the versioning core unwraps an `If-Match` value, so
-/// the demographic precondition comparison (`ensure_full_ovid_if_match`) and
-/// the version-tree extraction ([`expected_from_if_match`]) always judge the
-/// same token. The `W/` weakness indicator the ITS-REST overview §"`ETag` and
-/// Last-Modified" mandates on emitted `ETag`s is decoded one layer up, at the
-/// protocol adapter (`ferroehr-rest::overview::version_id::strip_etag`), where
-/// HTTP header syntax belongs; this function is the library-boundary tolerance
-/// for a direct caller that hands the quoted wire value straight through.
-pub(crate) fn if_match_token(if_match: &str) -> &str {
-    if_match.trim().trim_matches('"')
+/// That is the opaque tag of an RFC 9110 §8.8.3 entity tag, weak (`W/"…"`, the
+/// form ITS-REST 1.1.0 serves) or the deprecated strong `"…"` (overview
+/// `Requests_and_responses.md` §"`ETag` and Last-Modified"), read by
+/// `openehr_its::rest::etag::EntityTag`; or the field as written, without
+/// surrounding whitespace, when it is no entity tag (the RFC 9110 §13.1.1 `*`,
+/// a bare trunk number, an unquoted id).
+///
+/// The protocol adapter and the versioning core both read the field here, so
+/// the demographic precondition comparison and the version-tree extraction
+/// ([`expected_from_if_match`]) always judge the same value.
+#[must_use]
+pub fn entity_tag_value(field: &str) -> Cow<'_, str> {
+    let field = field.trim();
+    // NOTE: RFC 9110 §8.8.3 spells `W/` case-sensitively; our own design also reads `w/`.
+    let tag = field.strip_prefix("w/").unwrap_or(field);
+    match EntityTag::from_str(tag) {
+        Ok(tag) => Cow::Owned(tag.tag().to_owned()),
+        // NOTE: no openEHR spec governs a field that is no entity tag: our own design reads it as written.
+        Err(_not_an_entity_tag) => Cow::Borrowed(field),
+    }
 }
 
 /// The expected (current) version from an `If-Match` header value: a quoted or
@@ -430,7 +440,8 @@ pub(crate) fn if_match_token(if_match: &str) -> &str {
 /// the required-`If-Match` endpoints. `VersionIdError` converts into that `400`
 /// at each caller's error type.
 pub(crate) fn expected_from_if_match(if_match: &str) -> Result<Option<TreeId>, VersionIdError> {
-    let token = if_match_token(if_match);
+    let value = entity_tag_value(if_match);
+    let token = value.as_ref();
     // RFC 9110 §If-Match: `*` matches any current representation — no specific
     // version precondition to extract.
     if token == "*" {
@@ -658,15 +669,19 @@ mod tests {
         ));
     }
 
-    /// The one `If-Match` token normalizer strips whitespace and the
-    /// entity-tag quotes (RFC 9110 §8.8.3), leaving the bare value both the
-    /// precondition compare and the version-tree extraction judge.
+    /// The one `If-Match` reader takes the opaque tag of an entity tag
+    /// (RFC 9110 §8.8.3) without the surrounding whitespace, leaving the value
+    /// both the precondition compare and the version-tree extraction judge.
     #[test]
-    fn if_match_token_strips_quotes_and_whitespace() {
-        assert_eq!(if_match_token("\"abc::sys::3\""), "abc::sys::3");
-        assert_eq!(if_match_token("  \"abc::sys::3\"  "), "abc::sys::3");
-        assert_eq!(if_match_token("abc::sys::3"), "abc::sys::3");
-        assert_eq!(if_match_token("\"\""), "");
+    fn entity_tag_value_strips_quotes_and_whitespace() {
+        assert_eq!(entity_tag_value("\"abc::sys::3\""), "abc::sys::3");
+        assert_eq!(entity_tag_value("  \"abc::sys::3\"  "), "abc::sys::3");
+        assert_eq!(entity_tag_value("abc::sys::3"), "abc::sys::3");
+        assert_eq!(entity_tag_value("\"\""), "");
+        // The weak form ITS-REST 1.1.0 serves reads as its tag too.
+        assert_eq!(entity_tag_value("W/\"abc::sys::3\""), "abc::sys::3");
+        assert_eq!(entity_tag_value("w/\"abc::sys::3\""), "abc::sys::3");
+        assert_eq!(entity_tag_value(" * "), "*");
     }
 
     /// A malformed id prints the lexical rule once on a chain walk, and the

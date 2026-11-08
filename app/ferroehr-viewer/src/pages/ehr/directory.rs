@@ -57,12 +57,13 @@ use crate::markup::{h, opt, t};
 use crate::pages::common::is_status;
 use crate::pages::common::{
     EditorDock, Refused, at_time_row, card_panel, dock_editor, info_note, panel, plain_section,
-    quiet, section, shortened, version_number,
+    quiet, section, shortened,
 };
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, crumbs, ehr_id_param, ehr_view, tab_href};
 use crate::pages::form::Form;
 use crate::routes::Drawn;
+use crate::uid::version_number;
 use dialogs::dialogs;
 
 /// The id of Delete the directory's confirmation dialog.
@@ -297,17 +298,14 @@ fn restore_button(number: &str) -> Html {
 /// The directory's own menu: Copy the directory id when the version names
 /// it, then Delete the directory…, last.
 fn directory_menu(version_uid: &str) -> Html {
-    let copy = version_uid
-        .split("::")
-        .next()
-        .filter(|id| !id.is_empty())
-        .map(|id| {
-            Item::new(Action::new(
-                Some(Glyph::COPY),
-                tr(RecordsMsg::DirectoryCopyId),
-                Act::Copy(id.to_owned()),
-            ))
-        });
+    let id = crate::uid::container_uid_of(version_uid);
+    let copy = (!id.is_empty()).then(|| {
+        Item::new(Action::new(
+            Some(Glyph::COPY),
+            tr(RecordsMsg::DirectoryCopyId),
+            Act::Copy(id),
+        ))
+    });
     row_menu(
         &current(),
         &Menu::new(

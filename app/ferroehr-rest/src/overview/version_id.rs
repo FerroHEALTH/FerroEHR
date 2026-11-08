@@ -25,6 +25,7 @@
 use std::str::FromStr;
 
 use ferroehr::ids::{EhrId, VoId};
+use ferroehr::versioning::object_version_id::entity_tag_value;
 use http::{HeaderMap, header};
 use openehr_base::prelude::ObjectVersionId;
 use openehr_its::rest::runtime::ApiError;
@@ -112,10 +113,11 @@ pub(crate) fn object_id_uuid(ovid: &ObjectVersionId) -> Option<Uuid> {
 /// Both the weak (`W/"…"`) and the bare quoted (`"…"`) forms are accepted:
 /// the overview §"`ETag` and Last-Modified" now emits the weak form, but a client
 /// that echoes the deprecated bare form "MAY still" be supported
-/// (§"Deprecated headers") — [`strip_etag`] normalizes either into the inner
+/// (§"Deprecated headers") — [`entity_tag_value`] reads either as the inner
 /// `OBJECT_VERSION_ID`.
 pub(crate) fn require_if_match(if_match: &str) -> Result<ObjectVersionId, ApiError> {
-    let token = strip_etag(if_match);
+    let value = entity_tag_value(if_match);
+    let token = value.as_ref();
     if token.is_empty() {
         return Err(ApiError::BadRequest(
             "If-Match is required for this operation but was empty".to_owned(),
@@ -128,20 +130,7 @@ pub(crate) fn require_if_match(if_match: &str) -> Result<ObjectVersionId, ApiErr
     })
 }
 
-/// Strip an `ETag`/`If-Match` wrapper down to its opaque value: an optional
-/// leading weakness indicator `W/` (case-insensitive) then the surrounding
-/// double quotes. Accepts the weak form the server now emits and the deprecated
-/// bare quoted form alike (overview §"`ETag` and Last-Modified").
-pub(crate) fn strip_etag(raw: &str) -> &str {
-    let trimmed = raw.trim();
-    let unweak = trimmed
-        .strip_prefix("W/")
-        .or_else(|| trimmed.strip_prefix("w/"))
-        .unwrap_or(trimmed);
-    unweak.trim().trim_matches('"')
-}
-
-/// The `If-Match` request header reduced by [`strip_etag`] to the bare value it
+/// The `If-Match` request header read by [`entity_tag_value`] as the bare value it
 /// names, or `None` when the header is absent or not valid header text.
 ///
 /// A present-but-empty header yields `Some("")`, which the service refuses as a
@@ -151,7 +140,7 @@ pub(crate) fn if_match(headers: &HeaderMap) -> Option<String> {
     headers
         .get(header::IF_MATCH)
         .and_then(|v| v.to_str().ok())
-        .map(|raw| strip_etag(raw).to_owned())
+        .map(|raw| entity_tag_value(raw).into_owned())
 }
 
 #[cfg(test)]
@@ -208,11 +197,20 @@ mod tests {
     const UID: &str = "8849182c-82ad-4088-a07f-48ead4180515::openEHRSys.example.com::2";
 
     #[test]
-    fn strip_etag_handles_weak_and_bare() {
-        assert_eq!(strip_etag(&format!("W/\"{UID}\"")), UID);
-        assert_eq!(strip_etag(&format!("\"{UID}\"")), UID);
-        assert_eq!(strip_etag(&format!("  w/\"{UID}\"  ")), UID);
-        assert_eq!(strip_etag(UID), UID);
+    fn if_match_handles_weak_and_bare() {
+        let read = |value: &str| {
+            let mut headers = HeaderMap::new();
+            headers.insert(
+                header::IF_MATCH,
+                http::HeaderValue::from_str(value).expect("header text"),
+            );
+            if_match(&headers)
+        };
+        assert_eq!(read(&format!("W/\"{UID}\"")).as_deref(), Some(UID));
+        assert_eq!(read(&format!("\"{UID}\"")).as_deref(), Some(UID));
+        assert_eq!(read(UID).as_deref(), Some(UID));
+        assert_eq!(read(&format!("w/\"{UID}\"")).as_deref(), Some(UID));
+        assert!(require_if_match(&format!("  w/\"{UID}\"  ")).is_ok());
     }
 
     #[test]

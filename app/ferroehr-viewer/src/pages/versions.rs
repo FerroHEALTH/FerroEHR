@@ -16,7 +16,8 @@ use crate::bff::wire::{VersionEntry, VersionedObjectFacts};
 use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, tr, tr_with};
 use crate::markup::t;
-use crate::pages::common::{ago, at_time_row, section, short, version_number};
+use crate::pages::common::{ago, at_time_row, section, short};
+use crate::uid::version_number;
 
 /// One object's history, and where each of its versions opens.
 #[derive(Debug)]

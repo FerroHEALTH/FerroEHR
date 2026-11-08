@@ -1,0 +1,49 @@
+{
+  "description": "The catalogue rows FerroEHR fails by a deliberate deviation from the released openEHR text. Each row stays failed in Veredictum's own results; the verdict step of .github/workflows/conformance.yml (scripts/conformance-deviations.sh) passes a released run whose only red rows are these, fails on any other red row, on a listed row that passes, and on a listed case the run does not hold. The list only shrinks.",
+  "deviations": [
+    {
+      "case": "contribution_create/commit_contribution-committer_related",
+      "clause": {
+        "source": "specs/openehr/ITS-REST/specifications/schemas/common/UpdateAudit.yaml",
+        "section": "description",
+        "quote": "The server uses it to create the persisted `AUDIT_DETAILS` object."
+      },
+      "deviation": "The CONTRIBUTION states a PARTY_RELATED committer the authenticated, bound caller is not; FerroEHR refuses it with 403 instead of recording it.",
+      "decision": "https://github.com/FerroHEALTH/FerroEHR/issues/5002",
+      "upstream_report": "https://github.com/FerroHEALTH/FerroEHR/issues/5019"
+    },
+    {
+      "case": "contribution_create_refused/commit_contribution-committer_related_out_of_group",
+      "clause": {
+        "source": "specs/openehr/ITS-REST/specifications/schemas/common/UpdateAudit.yaml",
+        "section": "description",
+        "quote": "The server uses it to create the persisted `AUDIT_DETAILS` object."
+      },
+      "deviation": "Its control is contribution_create/commit_contribution-committer_related, which FerroEHR refuses with 403, so the row errors and is never judged.",
+      "decision": "https://github.com/FerroHEALTH/FerroEHR/issues/5002",
+      "upstream_report": "https://github.com/FerroHEALTH/FerroEHR/issues/5019"
+    },
+    {
+      "case": "composition_delete/delete_composition-audit_details",
+      "clause": {
+        "source": "specs/openehr/ITS-REST/specifications/docs/overview/Requests_and_responses.md",
+        "section": "openehr-version and openehr-audit-details",
+        "quote": "None of these headers are mandatory, but whatever is provided it MUST be merged with the default VERSION and VERSION.audit_details attributes on commit runtime."
+      },
+      "deviation": "The delete names committer.name=\"Dr Chart\" in openehr-audit-details, a committer the authenticated, bound caller is not; FerroEHR refuses it with 403 instead of merging it.",
+      "decision": "https://github.com/FerroHEALTH/FerroEHR/issues/5002",
+      "upstream_report": "https://github.com/FerroHEALTH/FerroEHR/issues/5019"
+    },
+    {
+      "case": "ehr_committal/create_ehr-committal_headers",
+      "clause": {
+        "source": "specs/openehr/ITS-REST/specifications/docs/overview/Requests_and_responses.md",
+        "section": "openehr-version and openehr-audit-details",
+        "quote": "None of these headers are mandatory, but whatever is provided it MUST be merged with the default VERSION and VERSION.audit_details attributes on commit runtime."
+      },
+      "deviation": "The EHR create names committer.name=\"Dr Chart\" in openehr-audit-details, a committer the authenticated, bound caller is not; FerroEHR refuses it with 403 instead of merging it.",
+      "decision": "https://github.com/FerroHEALTH/FerroEHR/issues/5002",
+      "upstream_report": "https://github.com/FerroHEALTH/FerroEHR/issues/5019"
+    }
+  ]
+}

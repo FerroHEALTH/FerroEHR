@@ -11,7 +11,7 @@ use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, Stakes, confirm_di
 use crate::locale::records::RecordsMsg;
 use crate::locale::{current, tr, tr_with};
 use crate::markup::{h, t};
-use crate::pages::common::version_number;
+use crate::uid::version_number;
 
 use super::{DELETE_DIALOG, composition_href};
 
