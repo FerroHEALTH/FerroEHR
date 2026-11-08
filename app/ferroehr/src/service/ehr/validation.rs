@@ -36,7 +36,6 @@ use serde_json::Value;
 use crate::error::{ServiceError, Violation};
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-use crate::storage::template_repo;
 use crate::validation::category::code;
 use crate::validation::versioned::composition_template_id;
 use crate::versioning::{Kind, lifecycle};
@@ -214,14 +213,7 @@ impl FerroEhrService {
             .pointer("/archetype_details/template_id/value")
             .and_then(Value::as_str)
         {
-            let wt = self.web_template(template_id).await?;
-            // NOTE: RM `ARCHETYPED.template_id` names a template, so a stored
-            // ADL2 archetype, which party templates may use, is no commit address.
-            if !template_repo::template_ref_exists(&self.pool, template_id).await? {
-                return Err(ServiceError::content_invalid(Violation::new(format!(
-                    "operational template not known: {template_id}"
-                ))));
-            }
+            let wt = self.commit_web_template(template_id).await?;
             messages.extend(run_validation_pass(hand_off, || {
                 if incomplete {
                     openehr_sdt::flat::validation::validate_archetype_conformance_incomplete(
