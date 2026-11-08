@@ -117,6 +117,20 @@ pub async fn template_exists(pool: &PgPool, template_id: &str) -> Result<bool, S
     .await?)
 }
 
+/// Whether `template_id` is registered in `template_ref`, compared
+/// case-insensitively: an address a committed version may name.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn template_ref_exists(pool: &PgPool, template_id: &str) -> Result<bool, StorageError> {
+    Ok(sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM template_ref WHERE lower(template_id) = lower($1))",
+    )
+    .bind(template_id)
+    .fetch_one(&mut *acquire(pool).await?)
+    .await?)
+}
+
 /// Every stored template's row, ordered by `template_id`.
 ///
 /// # Errors

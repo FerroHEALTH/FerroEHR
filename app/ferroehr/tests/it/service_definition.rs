@@ -1414,3 +1414,41 @@ async fn adl2_template_that_deletes_context_refuses_a_commit_carrying_one() {
         "refused for the prohibited context: {refused:?}"
     );
 }
+
+/// A commit whose `template_id` names a stored ADL2 archetype, which is no
+/// template (RM `ARCHETYPED.template_id`), is refused as an unknown template
+/// with `422` and never reaches the insert (#5177).
+#[tokio::test]
+async fn a_commit_naming_an_adl2_archetype_as_its_template_is_unprocessable() {
+    const ARCHETYPE: &str = "openEHR-EHR-COMPOSITION.not_a_template.v1.0.0";
+    const TEMPLATE: &str = "openEHR-EHR-COMPOSITION.a_template.v1.0.0";
+
+    let (_db, svc) = crate::fixtures::service().await;
+    svc.template_adl2_upload(&adl2_source("archetype", ARCHETYPE, None))
+        .await
+        .expect("upload the ADL2 archetype");
+    svc.template_adl2_upload(&adl2_source("template", TEMPLATE, Some(ARCHETYPE)))
+        .await
+        .expect("upload the ADL2 template");
+
+    let wt = svc
+        .web_template(TEMPLATE)
+        .await
+        .expect("the template resolves");
+    let mut comp = openehr_sdt::flat::example::example_composition(
+        &wt,
+        openehr_sdt::flat::example::DetailLevel::Complete,
+    )
+    .expect("the example builds");
+    comp["archetype_details"]["template_id"]["value"] = serde_json::json!(ARCHETYPE);
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    let refused = svc
+        .create_composition(ehr, crate::fixtures::uv(&comp, "249", None))
+        .await
+        .expect_err("a commit naming an archetype as its template is refused");
+    assert!(
+        matches!(&refused, ServiceError::Unprocessable { .. })
+            && format!("{refused:?}").contains("operational template not known"),
+        "a 422, not a storage error: {refused:?}"
+    );
+}
