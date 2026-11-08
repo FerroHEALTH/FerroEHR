@@ -296,6 +296,10 @@ ferrobridge-term = { version = "=0.1.143", features = ["smart"] }
 # writes its searchset Bundle. Features are chosen per member. Verified on
 # crates.io 2026-11-08 (FerroAUDIT v0.5.2).
 ihe-atna = { version = "=0.5.2", default-features = false }
+# The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
+# the viewer reads the ITI-81 searchset, each BALP `AuditEvent` and a refusal's
+# `OperationOutcome` through it. Verified on crates.io 2026-11-08.
+fhir-types = { version = "=0.1.128", default-features = false, features = ["r4", "resources"] }
 ehds-logging = { version = "=0.5.2", default-features = false }
 
 # ── Patient identity (the shared IHE ITI client library) ─────────────────────

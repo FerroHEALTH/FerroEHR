@@ -14,11 +14,11 @@
 //! The CDR answering `404` (the local audit store disabled) is a first-class
 //! rendered state, not an error.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "the viewer consumes the CDR JSON wire over ITS-REST, not the CDR internal seams \
-              (#1694)"
-)]
+use fhir_types::codec::{Json, Object, Path};
+use fhir_types::r4::audit_event::AuditEvent;
+use fhir_types::r4::bundle::Bundle;
+use fhir_types::r4::reference::Reference;
+use fhir_types::r4::resource::Resource;
 
 use crate::bff::PAGE_SIZE;
 use crate::error::ViewerError;
@@ -156,26 +156,48 @@ fn window_start() -> String {
         .unwrap_or_default()
 }
 
-/// Distil the ITI-81 `searchset` Bundle into an [`AuditPage`].
+/// An ITI-81 `searchset` entry that is no `AuditEvent` and no search outcome.
+#[derive(Debug, thiserror::Error)]
+#[error("searchset entry {index} is not an AuditEvent")]
+struct NotAnAuditEvent {
+    /// The entry's position in the Bundle.
+    index: usize,
+}
+
+/// Distil the ITI-81 `searchset` Bundle into an [`AuditPage`], read as a FHIR
+/// R4 `Bundle` of `AuditEvent` resources (`RESTful` ATNA ITI-81).
+///
+/// An entry with `search.mode` `outcome` is the server's note on the search
+/// (FHIR R4 `bundle.html` §Bundle.entry.search.mode) and makes no row; any
+/// other entry that is no `AuditEvent` refuses the page.
 fn parse_bundle(body: &str, offset: u32) -> Result<AuditPage, ViewerError> {
-    let bundle = serde_json::from_str::<serde_json::Value>(body)
+    let refused = |e| ViewerError::failed(tr(ConsoleMsg::AuditeventBundleJson), e);
+    let object = serde_json::from_str::<Object>(body)
         .map_err(|e| ViewerError::failed(tr(ConsoleMsg::AuditeventBundleJson), e))?;
+    let bundle = Bundle::from_json(&object, &mut Path::root("Bundle")).map_err(refused)?;
     let total = bundle
-        .get("total")
-        .and_then(serde_json::Value::as_u64)
-        .and_then(|t| u32::try_from(t).ok())
-        .unwrap_or(0);
-    let rows = bundle
-        .get("entry")
-        .and_then(serde_json::Value::as_array)
-        .map(|entries| {
-            entries
-                .iter()
-                .filter_map(|entry| entry.get("resource"))
-                .map(audit_row)
-                .collect()
-        })
+        .total
+        .and_then(|total| total.value)
         .unwrap_or_default();
+    let mut rows = Vec::with_capacity(bundle.entry.len());
+    for (index, entry) in bundle.entry.iter().enumerate() {
+        let outcome = entry
+            .search
+            .as_ref()
+            .and_then(|search| search.mode.as_ref())
+            .and_then(|mode| mode.value.as_deref())
+            == Some("outcome");
+        match &entry.resource {
+            Some(Resource::AuditEvent(event)) => rows.push(audit_row(event)?),
+            _ if outcome => {}
+            _ => {
+                return Err(ViewerError::failed(
+                    tr(ConsoleMsg::AuditeventBundleJson),
+                    NotAnAuditEvent { index },
+                ));
+            }
+        }
+    }
     Ok(AuditPage {
         available: true,
         total,
@@ -184,16 +206,30 @@ fn parse_bundle(body: &str, offset: u32) -> Result<AuditPage, ViewerError> {
     })
 }
 
-/// Distil one stored `AuditEvent` (IHE BALP shape) into an [`AuditRow`],
-/// reading every field defensively (a missing field renders empty, never
-/// drops the record from the security log).
-fn audit_row(resource: &serde_json::Value) -> AuditRow {
-    let text = |v: Option<&serde_json::Value>| {
-        v.and_then(serde_json::Value::as_str)
-            .unwrap_or_default()
-            .to_owned()
-    };
-    let type_code = text(resource.pointer("/type/code"));
+/// The text of a primitive, empty when it carries none.
+fn text_of(value: Option<&Option<String>>) -> String {
+    value
+        .and_then(Option::as_deref)
+        .unwrap_or_default()
+        .to_owned()
+}
+
+/// The `identifier.value` of a reference, empty when it carries none.
+fn identifier_of(reference: Option<&Reference>) -> String {
+    text_of(
+        reference
+            .and_then(|r| r.identifier.as_deref())
+            .and_then(|identifier| identifier.value.as_ref())
+            .map(|value| &value.value),
+    )
+}
+
+/// Distil one stored `AuditEvent` (IHE BALP shape) into an [`AuditRow`].
+///
+/// An optional element the event leaves out renders empty; the event itself
+/// has passed the FHIR R4 read.
+fn audit_row(event: &AuditEvent) -> Result<AuditRow, ViewerError> {
+    let type_code = text_of(event.r#type.code.as_ref().map(|code| &code.value));
     let family = match type_code.as_str() {
         "rest" => "REST".to_owned(),
         "110114" => tr(ConsoleMsg::Authentication),
@@ -203,12 +239,11 @@ fn audit_row(resource: &serde_json::Value) -> AuditRow {
     };
     // The concrete operation: the last subtype coding (the ITS-REST
     // operation id, or the DCM login kind on authentication records).
-    let operation = resource
-        .pointer("/subtype")
-        .and_then(serde_json::Value::as_array)
-        .and_then(|codings| codings.last())
+    let operation = event
+        .subtype
+        .last()
         .map(|coding| {
-            let code = text(coding.get("code"));
+            let code = text_of(coding.code.as_ref().map(|code| &code.value));
             match code.as_str() {
                 "110122" => "login".to_owned(),
                 "110123" => "logout".to_owned(),
@@ -216,7 +251,7 @@ fn audit_row(resource: &serde_json::Value) -> AuditRow {
             }
         })
         .unwrap_or_default();
-    let outcome_code = text(resource.get("outcome"));
+    let outcome_code = text_of(event.outcome.as_ref().map(|code| &code.value));
     let (outcome, success) = match outcome_code.as_str() {
         "0" => ("success".to_owned(), true),
         "4" => (tr(ConsoleMsg::MinorFailure), false),
@@ -226,42 +261,45 @@ fn audit_row(resource: &serde_json::Value) -> AuditRow {
     };
     // The requesting principal: the requestor agent's who-identifier
     // (skipping the token agent, which carries no who).
-    let principal = resource
-        .pointer("/agent")
-        .and_then(serde_json::Value::as_array)
-        .and_then(|agents| {
-            agents.iter().find(|a| {
-                a.get("requestor") == Some(&serde_json::Value::Bool(true))
-                    && a.pointer("/who/identifier/value").is_some()
-            })
+    let principal = event
+        .agent
+        .iter()
+        .find(|agent| {
+            agent.requestor.value == Some(true) && !identifier_of(agent.who.as_ref()).is_empty()
         })
-        .map(|a| text(a.pointer("/who/identifier/value")))
+        .map(|agent| identifier_of(agent.who.as_ref()))
         .unwrap_or_default();
     // Entities: the patient (audit-entity-type 1) and the data object (2).
-    let entity_value = |type_code: &str| {
-        resource
-            .pointer("/entity")
-            .and_then(serde_json::Value::as_array)
-            .and_then(|entities| {
-                entities.iter().find(|e| {
-                    e.pointer("/type/code").and_then(serde_json::Value::as_str) == Some(type_code)
-                })
+    let entity_value = |code: &str| {
+        event
+            .entity
+            .iter()
+            .find(|entity| {
+                entity
+                    .r#type
+                    .as_ref()
+                    .and_then(|coding| coding.code.as_ref())
+                    .and_then(|c| c.value.as_deref())
+                    == Some(code)
             })
-            .map(|e| text(e.pointer("/what/identifier/value")))
+            .map(|entity| identifier_of(entity.what.as_ref()))
             .unwrap_or_default()
     };
-    AuditRow {
-        recorded: text(resource.get("recorded")),
+    let refused = |e| ViewerError::failed(tr(ConsoleMsg::AuditeventBundleJson), e);
+    let raw = serde_json::to_string_pretty(&event.to_json().map_err(refused)?)
+        .map_err(|e| ViewerError::failed(tr(ConsoleMsg::AuditeventBundleJson), e))?;
+    Ok(AuditRow {
+        recorded: text_of(Some(&event.recorded.value)),
         family,
         operation,
-        action: text(resource.get("action")),
+        action: text_of(event.action.as_ref().map(|code| &code.value)),
         outcome,
         success,
         principal,
         patient: entity_value("1"),
         resource: entity_value("2"),
-        raw: serde_json::to_string_pretty(resource).unwrap_or_default(),
-    }
+        raw,
+    })
 }
 
 /// The outcome choices of the filter, as the value the query carries and
@@ -286,8 +324,25 @@ pub(crate) const ACTIONS: [(&str, ConsoleMsg); 6] = [
 ];
 
 #[cfg(test)]
+#[expect(
+    clippy::disallowed_types,
+    reason = "test fixtures are raw JSON by the testing rule (.claude/rules/testing.md)"
+)]
 mod tests {
+    use fhir_types::codec::{Json, Object, Path};
+    use fhir_types::r4::audit_event::AuditEvent;
+
     use super::{audit_row, parse_bundle};
+
+    /// The source every stored record names (`AuditEvent.source`, 1..1).
+    fn source() -> serde_json::Value {
+        serde_json::json!({ "observer": { "display": "ferroehr" } })
+    }
+
+    /// The one agent of a record that names no one (`AuditEvent.agent`, 1..*).
+    fn agent() -> serde_json::Value {
+        serde_json::json!([{ "requestor": true }])
+    }
 
     fn bundle(entries: &serde_json::Value) -> String {
         serde_json::json!({
@@ -299,13 +354,21 @@ mod tests {
         .to_string()
     }
 
+    /// `resource` read as a FHIR R4 `AuditEvent`.
+    fn event(resource: &serde_json::Value) -> AuditEvent {
+        let object: Object = serde_json::from_value(resource.clone()).expect("an object");
+        AuditEvent::from_json(&object, &mut Path::root("AuditEvent")).expect("an AuditEvent")
+    }
+
     #[test]
     fn parses_a_searchset_bundle() {
         let body = bundle(&serde_json::json!([
             { "resource": { "resourceType": "AuditEvent", "recorded": "2026-07-10T08:00:00Z",
-                "type": { "code": "rest" }, "action": "R", "outcome": "0" } },
+                "type": { "code": "rest" }, "action": "R", "outcome": "0",
+                "agent": agent(), "source": source() } },
             { "resource": { "resourceType": "AuditEvent", "recorded": "2026-07-09T08:00:00Z",
-                "type": { "code": "110114" }, "action": "E", "outcome": "4" } },
+                "type": { "code": "110114" }, "action": "E", "outcome": "4",
+                "agent": agent(), "source": source() } },
         ]));
         let page = parse_bundle(&body, 0).expect("page");
         assert!(page.available);
@@ -315,6 +378,31 @@ mod tests {
         assert!(page.rows[0].success);
         assert_eq!(page.rows[1].family, "Authentication");
         assert_eq!(page.rows[1].outcome, "minor failure");
+    }
+
+    /// A searchset that is no FHIR R4 `Bundle` of `AuditEvent`s is refused, never
+    /// read as a page with an empty row.
+    #[test]
+    fn a_body_that_is_no_audit_searchset_is_refused() {
+        // An AuditEvent without its required `source`.
+        let body = bundle(&serde_json::json!([
+            { "resource": { "resourceType": "AuditEvent", "recorded": "2026-07-10T08:00:00Z",
+                "type": { "code": "rest" }, "agent": agent() } },
+        ]));
+        assert!(parse_bundle(&body, 0).is_err());
+        // Another resource in the searchset.
+        let body = bundle(&serde_json::json!([
+            { "resource": { "resourceType": "Basic", "code": { "text": "x" } } },
+        ]));
+        assert!(parse_bundle(&body, 0).is_err());
+        assert!(parse_bundle("not json", 0).is_err());
+        // The server's note on the search makes no row.
+        let body = bundle(&serde_json::json!([
+            { "resource": { "resourceType": "OperationOutcome",
+                "issue": [{ "severity": "information", "code": "informational" }] },
+              "search": { "mode": "outcome" } },
+        ]));
+        assert_eq!(parse_bundle(&body, 0).expect("page").rows, Vec::new());
     }
 
     #[test]
@@ -334,12 +422,13 @@ mod tests {
                 { "requestor": false, "who": { "identifier": { "value": "ferroehr" } } },
                 { "requestor": true, "policy": ["jti-1"] }
             ],
+            "source": source(),
             "entity": [
                 { "type": { "code": "1" }, "what": { "identifier": { "value": "patient-42" } } },
                 { "type": { "code": "2" }, "what": { "identifier": { "value": "8fa1::ferroehr::1" } } }
             ]
         });
-        let row = audit_row(&resource);
+        let row = audit_row(&event(&resource)).expect("a row");
         assert_eq!(row.operation, "composition_get");
         assert_eq!(row.principal, "alice");
         assert_eq!(row.patient, "patient-42");
@@ -356,8 +445,10 @@ mod tests {
             "subtype": [{ "code": "110122" }],
             "action": "E",
             "outcome": "4",
+            "agent": agent(),
+            "source": source(),
         });
-        let row = audit_row(&resource);
+        let row = audit_row(&event(&resource)).expect("a row");
         assert_eq!(row.family, "Authentication");
         assert_eq!(row.operation, "login");
         assert!(!row.success);
