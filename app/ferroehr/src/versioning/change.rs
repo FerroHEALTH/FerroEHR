@@ -29,7 +29,6 @@ use uuid::Uuid;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
-use crate::storage::codec::reassemble;
 use crate::storage::identifier_repo;
 use crate::storage::row::NodeRow;
 use crate::storage::version_repo::commit::{Folded, FoldedRows, commit_folded};
@@ -39,13 +38,15 @@ use crate::versioning::lifecycle::{
     reject_deleted_with_data, resolve_lifecycle, validate_transition,
 };
 use crate::versioning::object_version_id::{TreeId, VersionIdError, object_version_id};
-use crate::versioning::{Kind, SigningCtx, integrity, restriction};
+use crate::versioning::{Kind, SigningCtx, restriction};
 
 mod construct;
 pub(crate) mod precondition;
 pub(crate) mod resolve;
+mod sign;
 
 use resolve::{Content, Placing, resolve_create, resolve_delete, resolve_modify};
+use sign::body_and_signature;
 
 /// The outcome of a versioned-object write: the object id, the new version's
 /// tree id, and the provenance carried into the event-outbox envelope.
@@ -524,6 +525,10 @@ struct ResolvedWrite {
     /// SHA-256 over the canonical body with the root `uid` removed
     /// (`version.content_digest`); `None` on a logical delete.
     content_digest: Option<[u8; 32]>,
+    /// What a party body holds that the binding hooks read, derived before
+    /// the body was decomposed (#5220); `None` for a logical delete and for
+    /// every kind but a party.
+    party_facts: Option<Box<crate::party_binding::derive::Facts>>,
     /// The version whose node rows this one reads when its content equals the
     /// preceding tip's (`version.content_sys_version`, #4415); the rows are
     /// then decomposed for the signature and not written.
@@ -581,7 +586,10 @@ struct ResolvedWrite {
 /// `OBJECT_VERSION_ID` — the stamped identity goes through the BASE
 /// construction door, so a malformed one is refused before it is written,
 /// signed and served.
-fn stamp_version_uid(canonical: &mut Value, version_uid: &str) -> Result<(), VersionIdError> {
+pub(crate) fn stamp_version_uid(
+    canonical: &mut Value,
+    version_uid: &str,
+) -> Result<(), VersionIdError> {
     if let Value::Object(map) = canonical {
         let uid =
             ObjectVersionId::new(version_uid).map_err(|source| VersionIdError::Malformed {
@@ -732,7 +740,7 @@ async fn apply_change(
         known_now,
         preplaced,
     };
-    let resolved = match change {
+    let mut resolved = match change {
         Change::Create {
             allocated,
             kind,
@@ -801,13 +809,20 @@ async fn apply_change(
     if skip_identical && let Some(existing) = skipped_resend(&resolved, audit) {
         return Ok((existing, Uuid::nil()));
     }
+    let party_facts = resolved.party_facts.take();
     // Boxed: the resolved write and the folded commit hold the whole
     // version in their state, which would otherwise put every caller's
     // future over the size the lint allows.
     let committed = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
     crate::versioning::access_delay::hold_on_creation(tx, ctx, ehr_id, &committed.0).await?;
     if committed.0.kind.is_party() {
-        crate::party_binding::store::reindex_committed(tx, ctx, &committed.0).await?;
+        Box::pin(crate::party_binding::store::reindex_committed(
+            tx,
+            ctx,
+            &committed.0,
+            party_facts.as_deref(),
+        ))
+        .await?;
     }
     Ok(committed)
 }
@@ -991,85 +1006,6 @@ fn root_archetype(rows: &[NodeRow]) -> Option<String> {
 pub(crate) fn canonical_body_text(canonical: &Value) -> Result<String, ServiceError> {
     serde_json::to_string(canonical)
         .map_err(|e| ServiceError::internal("serialize the canonical body", e))
-}
-
-/// Reassemble the version body from the node rows and derive the signature
-/// over it.
-///
-/// The signature input is the reassembled value; the stored `version.body`
-/// is the pre-decomposition text ([`canonical_body_text`]). The two are the
-/// same VALUE by decompose/reassemble fidelity, and the signature
-/// canonicalization is RFC 8785 (key-order-insensitive), so signing the
-/// reassembled form still proves the stored and served bytes. Empty rows =
-/// logical delete (Void body is signed — master06 §Logical Deletion).
-///
-/// # Errors
-/// The reassembly [`ServiceError`] or the signer's failure.
-fn body_and_signature(
-    ctx: &SigningCtx<'_>,
-    audit: &AuditInput,
-    contribution_id: Uuid,
-    r: &ResolvedWrite,
-    at_committal_attestations: &[Value],
-) -> Result<(Option<String>, bool), ServiceError> {
-    let body = if r.rows.is_empty() {
-        None
-    } else {
-        Some(reassemble(&r.rows)?)
-    };
-    version_signature(
-        ctx,
-        audit,
-        contribution_id,
-        r,
-        body.as_ref(),
-        at_committal_attestations,
-    )
-}
-
-/// The signature stored with the version, and whether it is **client-supplied**
-/// (foreign — stored verbatim, never re-verified at read; master06 §Digital
-/// Signature) vs server-generated. A client-supplied signature is kept verbatim;
-/// otherwise, with server signing enabled, the pre-reassembled `body` is signed
-/// — a logically deleted version signs Void (master06 §Logical Deletion), and a
-/// content version signs the same served bytes reads return, so the digest
-/// recomputes at read time. `at_committal_attestations` are the completed
-/// `ATTESTATION`s committed with the version, which the signed form includes
-/// (master06 §Digital Signature: "the entire Version object").
-///
-/// # Errors
-/// [`ServiceError::Signing`] when the canonical form cannot be produced or the
-/// signer fails.
-fn version_signature(
-    ctx: &SigningCtx<'_>,
-    audit: &AuditInput,
-    contribution_id: Uuid,
-    r: &ResolvedWrite,
-    body: Option<&Value>,
-    at_committal_attestations: &[Value],
-) -> Result<(Option<String>, bool), ServiceError> {
-    if let Some(client) = &r.client_signature {
-        return Ok((Some(client.clone()), true));
-    }
-    if !ctx.signer.enabled() {
-        return Ok((None, false));
-    }
-    // The signed content is the SAME reassembled value the caller stores as
-    // `version.body` — computed once, never re-reassembled here.
-    let signature = integrity::sign_version(
-        ctx,
-        audit,
-        r.time_committed,
-        r.vo_id,
-        r.tree,
-        r.preceding_uid.as_deref(),
-        &r.other_input_version_uids,
-        contribution_id,
-        &r.lifecycle,
-        body.unwrap_or(&Value::Null),
-        at_committal_attestations,
-    )?;
-    Ok((signature, false))
 }
 
 /// Write the one PHI-free event-outbox row a single-object commit announces,

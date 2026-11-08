@@ -32,7 +32,7 @@ use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::user_lifecycle::{Transition, transition};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
-use crate::versioning::change::{self, Change, WriteEnvelope};
+use crate::versioning::change::{self, Change, CommittedContribution, WriteEnvelope};
 use crate::versioning::contribution::typed_decode_gate;
 use crate::versioning::lifecycle::state;
 
@@ -264,7 +264,7 @@ impl FerroEhrService {
         &self,
         commit: ScimCommit<'_>,
         changes: Vec<Change>,
-    ) -> Result<(), UserWriteError> {
+    ) -> Result<CommittedContribution, UserWriteError> {
         let ScimCommit {
             binding_issuer,
             limit,
@@ -304,7 +304,7 @@ impl FerroEhrService {
         if let Some(group) = created_group {
             provisioned::record_group_owner(&mut tx, binding_issuer, group).await?;
         }
-        crate::party_binding::protect::provisioning(
+        let committed = crate::party_binding::protect::provisioning(
             binding_issuer.to_owned(),
             change::commit_contribution(
                 &mut tx,
@@ -321,7 +321,7 @@ impl FerroEhrService {
             self.erase_contacts_in(&mut tx, party).await?;
         }
         tx.commit().await?;
-        Ok(())
+        Ok(committed)
     }
 }
 

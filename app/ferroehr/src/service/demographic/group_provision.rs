@@ -278,11 +278,11 @@ impl FerroEhrService {
         if state.external_id.is_none() {
             clear_mapped_value(&mut body, external, Some((issued.1, issued.0)));
         }
-        let stored = body
-            .get("relationships")
-            .and_then(Value::as_array)
-            .cloned()
-            .unwrap_or_default();
+        // Taken out of place without a copy; the attribute keeps its position.
+        let stored = match body.get_mut("relationships") {
+            Some(Value::Array(stored)) => std::mem::take(stored),
+            _ => Vec::new(),
+        };
         let wanted: BTreeSet<VoId> = members.iter().copied().collect();
         let mut present = BTreeSet::new();
         let mut relationships = Vec::with_capacity(stored.len().max(members.len()));
