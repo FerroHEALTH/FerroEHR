@@ -459,7 +459,8 @@ trusted_systems = []
 # on every boot. A "chained" access class needs chained_log_retention_years at
 # least [audit.store]'s and its issuer's [[auth.federation]] table mapping
 # correlation_id from the token; a chained request without the id is refused.
-# An NL agreement (a profile = "nl" issuer implies NL) with reads needs a
+# A caller above caller_rate is answered 429 before any patient lookup. An NL
+# agreement (a profile = "nl" issuer implies NL) with reads needs a
 # consent source, and every NL agreement needs purpose = "care": one for a
 # keuring refuses the start (Wabvpz Art. 15f(2)). Under an NL agreement a
 # caller whose nl.role is 01.008 or 01.048, or whose nl.organisation_type is

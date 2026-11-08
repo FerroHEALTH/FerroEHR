@@ -28,6 +28,7 @@ use crate::fixtures::{delete_precondition, if_match, object, written_vo};
 use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::fill::{FillError, LEASE_TTL};
+use ferroehr::party_binding::protect;
 use ferroehr::party_binding::{BindingMapping, IdentifierSelector, NameSelector, PersonSelectors};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::rekey::BindingKey;
@@ -670,6 +671,92 @@ async fn only_an_administrator_writes_a_protected_party() {
     .await
     .expect("an administrator retires the ROLE");
     assert_eq!(bound(&svc, value).await, Vec::<String>::new());
+}
+
+/// Runs `fut` as a request of the SCIM client whose `binding_issuer` is
+/// `issuer`: a client acting for nobody, holding no role.
+async fn as_client<F: Future>(issuer: &str, fut: F) -> F::Output {
+    let mut identity = caller("scim-client");
+    identity.system = true;
+    as_caller(identity, &[], protect::provisioning(issuer.to_owned(), fut)).await
+}
+
+/// A SCIM client writes the protected parties it owns, those whose binding
+/// key its `binding_issuer` issues, and no other.
+#[tokio::test]
+async fn a_scim_client_writes_only_the_parties_it_owns() {
+    let (_db, svc) = service().await;
+    let value = "8d9e0f1a-2b3c-4d4e-9f5a-6b7c8d9e0f1a";
+
+    // The client whose binding_issuer issues the key creates the professional,
+    // grants the ROLE, versions both and deletes them.
+    let (vo, uid, role_vo, role_uid) =
+        as_client(LOGIN, professional(&svc, &[key(value), user_name("jane")])).await;
+    assert_eq!(bound(&svc, value).await, [vo.to_string()]);
+    let role_uid = as_client(
+        LOGIN,
+        try_update(
+            &svc,
+            PartyKind::Role,
+            role_vo,
+            &role_uid,
+            &role(vo, Some("2030-01-01")),
+        ),
+    )
+    .await
+    .expect("the owner versions the ROLE");
+
+    // Another client neither versions nor deletes them.
+    let refused = as_client(
+        SCIM,
+        try_update(
+            &svc,
+            PartyKind::Person,
+            vo,
+            &uid,
+            &person(&[key(value), user_name("jane")]),
+        ),
+    )
+    .await
+    .expect_err("another client's PERSON");
+    assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
+    let refused = as_client(SCIM, try_delete(&svc, PartyKind::Role, &role_uid))
+        .await
+        .expect_err("another client's ROLE");
+    assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
+
+    // Nor plants a PERSON keyed under the owner's issuer, nor grants the
+    // professional ROLE to a PERSON it does not own.
+    let other = "9e0f1a2b-3c4d-4e5f-8a6b-7c8d9e0f1a2b";
+    let refused = as_client(
+        SCIM,
+        try_create(&svc, PartyKind::Person, &person(&[key(other)])),
+    )
+    .await
+    .expect_err("a key another client issues");
+    assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
+    let (plain, _) = create(&svc, PartyKind::Person, &person(&[])).await;
+    let refused = as_client(LOGIN, try_create(&svc, PartyKind::Role, &role(plain, None)))
+        .await
+        .expect_err("a ROLE of a PERSON the client does not own");
+    assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
+
+    // A provisioned GROUP stays an administrator's.
+    let refused = as_client(
+        LOGIN,
+        try_create(&svc, PartyKind::Group, &group("ward-7", "Ward 7")),
+    )
+    .await
+    .expect_err("a provisioned GROUP");
+    assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
+
+    // The owner deletes the ROLE and the PERSON.
+    as_client(LOGIN, try_delete(&svc, PartyKind::Role, &role_uid))
+        .await
+        .expect("the owner deletes the ROLE");
+    as_client(LOGIN, try_delete(&svc, PartyKind::Person, &uid))
+        .await
+        .expect("the owner deletes the PERSON");
 }
 
 #[tokio::test]
