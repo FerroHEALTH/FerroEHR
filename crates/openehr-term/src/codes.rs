@@ -8,7 +8,7 @@
 //! (`AUDIT_DETAILS.change_type`) and `version_lifecycle_state`
 //! (`VERSION.lifecycle_state`), RM common `master06-change_control_package.adoc`;
 //! `null_flavours` (`ELEMENT.null_flavour`, RM data_structures
-//! `org.openehr.rm.data_structures.representation.element.adoc`); and `setting`
+//! `org.openehr.rm.data_structures.element.adoc`); and `setting`
 //! (`EVENT_CONTEXT.setting`, RM composition
 //! `org.openehr.rm.composition.event_context.adoc`). Each code and English rubric
 //! is held equal to the embedded bundle ([`crate::bundle::openehr`]) by the tests
