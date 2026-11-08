@@ -35,6 +35,8 @@ pub const SCOPE: &str = "ferroehr";
 
 /// Authentication failures (`mechanism`, `reason`).
 pub const AUTH_FAILURES: &str = "auth_failures";
+/// Login-binding refusals (`issuer`, `outcome`).
+pub const BINDING_REFUSALS: &str = "binding_refusals";
 /// Cedar authorization decisions (`result`).
 pub const AUTHZ_CEDAR_DECISIONS: &str = "authz_cedar_decisions";
 /// Remote-PDP authorization calls (`result`).
@@ -125,6 +127,8 @@ pub fn histogram_views() -> Vec<(&'static str, &'static [f64])> {
 pub struct Metrics {
     /// Authentication failures.
     pub auth_failures: Counter<u64>,
+    /// Login-binding refusals by issuer and outcome.
+    pub binding_refusals: Counter<u64>,
     /// Cedar authorization decisions.
     pub authz_cedar_decisions: Counter<u64>,
     /// Remote-PDP authorization calls.
@@ -179,6 +183,10 @@ impl Metrics {
             auth_failures: meter
                 .u64_counter(AUTH_FAILURES)
                 .with_description("Authentication failures by mechanism and reason")
+                .build(),
+            binding_refusals: meter
+                .u64_counter(BINDING_REFUSALS)
+                .with_description("Login-binding refusals by issuer and outcome")
                 .build(),
             authz_cedar_decisions: meter
                 .u64_counter(AUTHZ_CEDAR_DECISIONS)
@@ -343,6 +351,7 @@ mod tests {
     fn instrument_names_carry_no_prometheus_suffix() {
         let names = [
             AUTH_FAILURES,
+            BINDING_REFUSALS,
             AUTHZ_CEDAR_DECISIONS,
             AUTHZ_REMOTE_PDP_CALLS,
             DB_POOL_CONNECTIONS,
