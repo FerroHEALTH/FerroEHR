@@ -169,8 +169,7 @@ struct Panel {
 /// is.
 async fn target(ehr_id: &str, group: &TagGroup) -> Result<Target, ViewerError> {
     let container = crate::uid::container_uid_of(&group.target);
-    let version =
-        (container != group.target).then(|| crate::pages::common::version_number(&group.target));
+    let version = (container != group.target).then(|| crate::uid::version_number(&group.target));
     let kind = resolve_ehr_target(ehr_id.to_owned(), group.target.clone()).await?;
     let (name, versioned) = match kind {
         Some(EhrTargetKind::Composition) => (

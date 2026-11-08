@@ -43,7 +43,7 @@ use crate::bff::demographics::PartyKind;
 use crate::error::ViewerError;
 use crate::locale::records::RecordsMsg;
 use crate::locale::{tr, tr_served, tr_with};
-use crate::uid::container_uid_of;
+use crate::uid::{container_uid_of, full_version_uid};
 
 /// The `PARTY_REF` namespace the viewer writes.
 ///
@@ -280,12 +280,9 @@ pub async fn delete_relationship(
     version_uid: String,
 ) -> Result<(), ViewerError> {
     let cdr = crate::bff::cdr()?;
-    let version_uid = version_uid.trim();
-    if !version_uid.contains("::") {
-        return Err(ViewerError::Invalid(tr_served(
-            RecordsMsg::DeletingRelationshipNeedsLatestVersionS,
-        )));
-    }
+    let version_uid = full_version_uid(&version_uid, || {
+        tr_served(RecordsMsg::DeletingRelationshipNeedsLatestVersionS)
+    })?;
     let url = cdr.extensions_v1(&format!(
         "demographic/party_relationship/{}",
         urlencoding::encode(version_uid)

@@ -237,7 +237,7 @@ fn panel(ehr_id: &str, panel: Panel) -> Html {
     let body = rows
         .into_iter()
         .map(|row| {
-            let version = row.uid.rsplit("::").next().unwrap_or_default().to_owned();
+            let version = crate::uid::version_number(&row.uid);
             let href = crate::pages::composition::composition_href(
                 ehr_id,
                 &crate::uid::container_uid_of(&row.uid),

@@ -2477,6 +2477,7 @@ dependencies = [
  "indexmap 2.14.2",
  "jiff",
  "openehr-am",
+ "openehr-base",
  "openehr-its",
  "openehr-query",
  "openehr-sdt",

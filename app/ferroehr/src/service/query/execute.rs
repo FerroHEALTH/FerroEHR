@@ -44,13 +44,13 @@ use super::result_set::{build_params, result_set_json, substitute_params};
 
 impl FerroEhrService {
     /// `execute_stored_query` — execute a query stored in the definition
-    /// service by its qualified name (`version` a semver.org string, latest
-    /// when absent).
+    /// service by its qualified name, at the highest version `version`
+    /// selects or the latest when absent.
     ///
     /// # Errors
     ///
-    /// - a malformed `version` (`400`), no matching stored query, or a stored
-    ///   record with no query text → the definition-store error / exception;
+    /// - no matching stored query, or a stored record with no query text →
+    ///   the definition-store error / exception;
     /// - otherwise exactly the [`FerroEhrService::execute_aql`] failure
     ///   conditions (the stored text executes identically).
     pub async fn execute_stored_query(
@@ -62,10 +62,7 @@ impl FerroEhrService {
         // The stored AQL text resolves through the DEFINITION store by
         // exact/partial SEMVER, or the latest.
         let stored = self
-            .get_stored_query(
-                &qualified_query_name.to_string(),
-                version.map(|v| v.to_string()).as_deref(),
-            )
+            .get_stored_query(&qualified_query_name, version.as_ref())
             .await?;
         let aql = stored
             .get("q")

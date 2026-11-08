@@ -62,7 +62,7 @@ erasure requests and test-data cleanup.
 | `DELETE {base}/admin/ehr/all` | **204**: bulk delete | **400** any id in the list is not a well-formed UUID; the whole request is refused before anything is deleted |
 | `DELETE {ext}/admin/party/{party_id}` | **204**: the demographic party, every `PARTY_RELATIONSHIP` naming it as source or target, and all their versions, contributions and commit audits are physically gone | **400** malformed id, **404** no party with that id (a relationship id is refused the same way) |
 | `DELETE {ext}/admin/template/{template_id}` | **204** | **404** unknown template, **409** a committed version still references it |
-| `DELETE {ext}/admin/query/{qualified_query_name}/{version}` | **204** | **404** unknown name, or a known name with no such version |
+| `DELETE {ext}/admin/query/{qualified_query_name}/{version}` | **204** | **400** a name outside `[{namespace}::]{query-name}` or a version that is no exact `major.minor.patch`, **404** unknown name, or a known name with no such version |
 | `GET {ext}/admin/config` | **200**: the effective configuration as a redacted JSON tree | — |
 
 Every route additionally answers **401** unauthenticated, **403** for an

@@ -219,8 +219,8 @@ impl FerroEhrConfig {
     /// carries `userinfo`. A field therefore cannot leak by being renamed, and
     /// the `redacted_json_masks_every_secret_field` test enumerates the current
     /// secret set as the standing backstop. On top of the types, every string
-    /// leaf of the tree that holds a URL passes `ferrohealth-secret`'s
-    /// [`redact::mask_if_url`], so a URL in a key
+    /// leaf of the tree that holds a URL passes `ferrohealth-smart`'s
+    /// [`mask_userinfo`](ferrohealth_smart::config::mask_userinfo), so a URL in a key
     /// that is not typed `SecretUrl`, or in a configuration no validation has
     /// run over, is masked too. `[auth]` is the `ferrohealth-smart` section,
     /// whose serialization writes each Basic password hash as `***`.
@@ -1040,13 +1040,13 @@ mod tests {
 
     /// A URL loses its userinfo and query; text without `://` keeps its text.
     #[test]
-    fn mask_if_url_masks_only_a_url() {
+    fn mask_userinfo_masks_only_a_url() {
         assert_eq!(
-            redact::mask_if_url("postgres://u:Qz7@db:5432/x?password=Qz7"),
+            ferrohealth_smart::config::mask_userinfo("postgres://u:Qz7@db:5432/x?password=Qz7"),
             "postgres://***@db:5432/x?***"
         );
         assert_eq!(
-            redact::mask_if_url("s3.eu-west-1.amazonaws.com"),
+            ferrohealth_smart::config::mask_userinfo("s3.eu-west-1.amazonaws.com"),
             "s3.eu-west-1.amazonaws.com"
         );
     }

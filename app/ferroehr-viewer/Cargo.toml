@@ -42,6 +42,9 @@ openehr-sdt = { path = "../../crates/openehr-sdt", default-features = false, fea
 # The FHIR R4 `Bundle`, `AuditEvent` and `OperationOutcome` of the audit
 # screen and of a refusal body.
 fhir-types.workspace = true
+# The `OBJECT_VERSION_ID` parse and its verbatim parts, which every version id
+# the viewer reduces or rebuilds goes through.
+openehr-base = { path = "../../crates/openehr-base" }
 # The AOM2 operational-template type the ADL2 detail screen's path catalog is
 # built from (`OperationalTemplateV2` canonical JSON in, Web Template out).
 openehr-am = { path = "../../crates/openehr-am" }

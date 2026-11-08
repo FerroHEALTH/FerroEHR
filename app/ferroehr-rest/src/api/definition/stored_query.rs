@@ -46,7 +46,7 @@ pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Respo
         StatusCode::OK,
         &state
             .backend()
-            .query_list(&p.qualified_query_name.to_string())
+            .query_list(Some(&p.qualified_query_name))
             .await?,
     ))
 }
@@ -66,7 +66,7 @@ pub(super) async fn list_all(
     Ok(negotiate::body::respond(
         &parts.headers,
         StatusCode::OK,
-        &state.backend().query_list("").await?,
+        &state.backend().query_list(None).await?,
     ))
 }
 
@@ -84,10 +84,8 @@ pub(super) async fn store(state: &AppState, parts: &RequestParts) -> Result<Resp
         DefinitionQueryStoreYamlParams::from_request,
         DefinitionQueryStoreYamlParams::PARAMS,
     )?;
-    let name = p.qualified_query_name.to_string();
-    let query_type = p
-        .query_type
-        .unwrap_or_else(|| DEFAULT_QUERY_TYPE.to_owned());
+    let name = &p.qualified_query_name;
+    let query_type = p.query_type.as_deref().unwrap_or(DEFAULT_QUERY_TYPE);
     // The store's single declared body type is `text/plain`
     // (`operations/definition_query_store.yaml`); a payload DECLARING another
     // media type is refused 415 before parsing (`Resources.md` §format rules
@@ -104,7 +102,7 @@ pub(super) async fn store(state: &AppState, parts: &RequestParts) -> Result<Resp
     // neighbouring version recovered by a post-hoc lookup.
     let version = state
         .backend()
-        .query_store(name.clone(), None, query_type, body)
+        .query_store(name, None, query_type, body)
         .await?;
     let location = format!(
         "{}/definition/query/{name}/{version}",
@@ -132,7 +130,7 @@ pub(super) async fn version_get(
         StatusCode::OK,
         &state
             .backend()
-            .query_version_get(p.qualified_query_name.to_string(), p.version.to_string())
+            .query_version_get(&p.qualified_query_name, &p.version)
             .await?,
     ))
 }
@@ -151,11 +149,8 @@ pub(super) async fn version_store(
         DefinitionQueryVersionStoreYamlParams::from_request,
         DefinitionQueryVersionStoreYamlParams::PARAMS,
     )?;
-    let name = p.qualified_query_name.to_string();
-    let version = p.version.to_string();
-    let query_type = p
-        .query_type
-        .unwrap_or_else(|| DEFAULT_QUERY_TYPE.to_owned());
+    let name = &p.qualified_query_name;
+    let query_type = p.query_type.as_deref().unwrap_or(DEFAULT_QUERY_TYPE);
     // Same `text/plain`-only body type as the version-less store (the released
     // operation omits the Content-Type parameter but carries the identical
     // text/plain body) — a declared foreign media type is 415 (`Resources.md`
@@ -169,7 +164,7 @@ pub(super) async fn version_store(
     // `major.minor.patch`; a prefix or malformed value is its `400`).
     let stored = state
         .backend()
-        .query_store(name.clone(), Some(version), query_type, body)
+        .query_store(name, Some(p.version), query_type, body)
         .await?;
     let location = format!(
         "{}/definition/query/{name}/{stored}",

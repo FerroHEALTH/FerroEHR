@@ -540,8 +540,11 @@ mod tests {
     #[test]
     fn hrefs_route_on_the_container_and_percent_encode_the_id() {
         assert_eq!(
-            party_href(PartyKind::Role, "8849182c::sys::3"),
-            "/parties/role/8849182c"
+            party_href(
+                PartyKind::Role,
+                "8849182c-82ad-4088-a07f-48ead4180515::sys::3"
+            ),
+            "/parties/role/8849182c-82ad-4088-a07f-48ead4180515"
         );
         // A hostile id can never break out of its path segment.
         assert_eq!(
@@ -549,8 +552,8 @@ mod tests {
             "/parties/person/a%2Fb%3Fc%23d"
         );
         assert_eq!(
-            relationship_href("7d44aa01::sys::1"),
-            "/parties/relationships/7d44aa01"
+            relationship_href("7d44aa01-5c1e-4b8a-9f43-1c5b8a2e4d10::sys::1"),
+            "/parties/relationships/7d44aa01-5c1e-4b8a-9f43-1c5b8a2e4d10"
         );
         // A contribution uid is NOT a version id — it keeps every character.
         assert_eq!(contribution_href(" c9 "), "/parties/contributions/c9");

@@ -16,6 +16,8 @@ use ferroehr::service::definition::types::TemplateListFilter;
 use ferroehr::service::list::Page;
 
 use crate::adl2_fixture::adl2_source;
+use crate::fixtures::{qn, query_version, version_pattern};
+use openehr_its::rest::stored_query::{QualifiedQueryName, QueryNameError, VersionPattern};
 
 fn fixture(rel: &str) -> String {
     let path = format!(
@@ -598,9 +600,9 @@ async fn query_store_rejects_non_aql_formalism() {
     // A non-AQL formalism → unsupported-formalism reject.
     let err = svc
         .query_store(
-            "org.example::q1".to_owned(),
-            Some("1.0.0".to_owned()),
-            "SQL".to_owned(),
+            &qn("org.example::q1"),
+            Some(version_pattern("1.0.0")),
+            "SQL",
             aql.clone(),
         )
         .await
@@ -618,9 +620,9 @@ async fn query_store_rejects_non_aql_formalism() {
 
     // The AQL formalism (case-insensitive) stores.
     svc.query_store(
-        "org.example::q1".to_owned(),
-        Some("1.0.0".to_owned()),
-        "aql".to_owned(),
+        &qn("org.example::q1"),
+        Some(version_pattern("1.0.0")),
+        "aql",
         aql,
     )
     .await
@@ -640,11 +642,11 @@ async fn query_store_name_grammar_and_reserved_name() {
 
     // Namespace-less names — plain and dotted — store and read back.
     for name in ["ward_dashboard_probe", "cnf.ward_dashboard-probe"] {
-        svc.query_store(name.to_owned(), None, "AQL".to_owned(), aql.clone())
+        svc.query_store(&qn(name), None, "AQL", aql.clone())
             .await
             .unwrap_or_else(|e| panic!("namespace-less name `{name}` must store: {e:?}"));
         let listed = svc
-            .query_list(name)
+            .query_list(Some(&qn(name)))
             .await
             .unwrap_or_else(|e| panic!("`{name}` must be retrievable: {e:?}"));
         // The descriptor carries the ONE canonical identity — the
@@ -663,7 +665,7 @@ async fn query_store_name_grammar_and_reserved_name() {
     // without a namespace (Qualified_query_name §NOTE).
     for name in ["aql", "AQL", "org.openehr::aql", "org.openehr::AQL"] {
         let err = svc
-            .query_store(name.to_owned(), None, "AQL".to_owned(), aql.clone())
+            .query_store(&qn(name), None, "AQL", aql.clone())
             .await
             .expect_err("the reserved query-name `aql` must be rejected");
         assert!(
@@ -678,16 +680,34 @@ async fn query_store_name_grammar_and_reserved_name() {
         );
     }
 
-    // A three-part name's MIDDLE `aql` is the formalism segment, not the
-    // query-name — never reserved.
-    svc.query_store(
-        "task_planning::aql::chemotherapy_plans".to_owned(),
-        None,
-        "AQL".to_owned(),
-        aql,
-    )
-    .await
-    .expect("a three-part name with the `aql` formalism segment stores");
+    // A reserved name reads, so a lookup of one addresses a query that cannot
+    // exist: not found (`responses/404_Query.yaml`).
+    let missing = svc
+        .query_version_get(&qn("org.openehr::aql"), &version_pattern("1"))
+        .await
+        .expect_err("no query is stored under a reserved name");
+    assert!(
+        matches!(
+            missing,
+            ServiceError::NotFound(Refusal {
+                kind: Missing::Artefact,
+                ..
+            })
+        ),
+        "a reserved name looks up as not found, got {missing:?}"
+    );
+
+    // ITS-REST 1.1.0 defines `[{namespace}::]{query-name}` only, over the
+    // query-name characters `[a-zA-Z0-9_.-]`, so the three-part
+    // `{namespace}::{formalism}::{query-name}` form is no qualified query name
+    // and never reaches the store; the formalism is the `query_type`.
+    assert_eq!(
+        "task_planning::aql::chemotherapy_plans".parse::<QualifiedQueryName>(),
+        Err(QueryNameError::Malformed)
+    );
+    svc.query_store(&qn("task_planning::chemotherapy_plans"), None, "AQL", aql)
+        .await
+        .expect("the two-part name stores, its formalism given as query_type");
 }
 
 #[tokio::test]
@@ -945,61 +965,46 @@ async fn query_store_get_list_delete() {
     // The formalism: AQL in any case and at major version 1 stores; any other
     // formalism, or a text that is no AQL, is refused and stores nothing.
     for (name, formalism) in [("f::lower", "aql"), ("f::major", "AQL::1")] {
-        svc.query_store(name.to_owned(), None, formalism.to_owned(), good.to_owned())
+        svc.query_store(&qn(name), None, formalism, good.to_owned())
             .await
             .unwrap_or_else(|e| panic!("{formalism} stores: {e:?}"));
-        svc.admin_query_delete(name, "1.0.0")
+        svc.admin_query_delete(&qn(name), query_version("1.0.0"))
             .await
             .expect("delete the formalism probe");
     }
     let cql = svc
-        .query_store("f::cql".to_owned(), None, "cql".to_owned(), good.to_owned())
+        .query_store(&qn("f::cql"), None, "cql", good.to_owned())
         .await
         .expect_err("cql is no supported formalism");
     assert!(precondition(&cql), "got {cql:?}");
     let not_aql = svc
-        .query_store(
-            "f::not_aql".to_owned(),
-            None,
-            "AQL".to_owned(),
-            "this is not aql".to_owned(),
-        )
+        .query_store(&qn("f::not_aql"), None, "AQL", "this is not aql".to_owned())
         .await
         .expect_err("a text that is no AQL is refused");
     assert!(precondition(&not_aql), "got {not_aql:?}");
     assert_eq!(
-        svc.query_list("").await.unwrap(),
+        svc.query_list(None).await.unwrap(),
         Vec::<serde_json::Value>::new()
     );
 
     // store under an explicit qualified name.
     let version = svc
-        .query_store(
-            "ehr::over_50".to_owned(),
-            None,
-            "AQL".to_owned(),
-            good.to_owned(),
-        )
+        .query_store(&qn("ehr::over_50"), None, "AQL", good.to_owned())
         .await
         .expect("store named");
     let named = svc
-        .query_version_get("ehr::over_50".to_owned(), version.clone())
+        .query_version_get(&qn("ehr::over_50"), &VersionPattern::Exact(version))
         .await
         .expect("the named query is registered");
     assert_eq!(named["name"], "ehr::over_50");
     assert_eq!(named["q"], good);
     // A bare name gets the "misc" namespace applied.
-    svc.query_store(
-        "bare_name".to_owned(),
-        None,
-        "aql".to_owned(),
-        good.to_owned(),
-    )
-    .await
-    .expect("store bare");
+    svc.query_store(&qn("bare_name"), None, "aql", good.to_owned())
+        .await
+        .expect("store bare");
     for name in ["bare_name", "misc::bare_name"] {
         assert!(
-            svc.query_version_get(name.to_owned(), "1".to_owned())
+            svc.query_version_get(&qn(name), &version_pattern("1"))
                 .await
                 .is_ok(),
             "{name} addresses the bare-name store"
@@ -1013,56 +1018,56 @@ async fn query_store_get_list_delete() {
     // keyed the wire store under ('', name) and made the query
     // undeletable/unfindable under the name it was created with.
     svc.query_store(
-        "wire_bare".to_owned(),
-        Some("1.0.0".to_owned()),
-        "AQL".to_owned(),
+        &qn("wire_bare"),
+        Some(version_pattern("1.0.0")),
+        "AQL",
         good.to_owned(),
     )
     .await
     .expect("wire store of a bare name");
     assert!(
-        svc.query_version_get("wire_bare".to_owned(), "1.0.0".to_owned())
+        svc.query_version_get(&qn("wire_bare"), &version_pattern("1.0.0"))
             .await
             .is_ok(),
         "the bare name addresses the wire-stored bare name"
     );
     let fetched = svc
-        .query_version_get("misc::wire_bare".to_owned(), "1.0.0".to_owned())
+        .query_version_get(&qn("misc::wire_bare"), &version_pattern("1.0.0"))
         .await
         .expect("qualified wire GET resolves the bare-name store");
     assert_eq!(fetched["version"], "1.0.0");
-    svc.admin_query_delete("wire_bare", "1.0.0")
+    svc.admin_query_delete(&qn("wire_bare"), query_version("1.0.0"))
         .await
         .expect("admin delete addresses the same canonical row by the bare name");
     assert!(
-        svc.query_version_get("wire_bare".to_owned(), "1.0.0".to_owned())
+        svc.query_version_get(&qn("wire_bare"), &version_pattern("1.0.0"))
             .await
             .is_err(),
         "deleted everywhere"
     );
 
     // The list holds the two stored queries; a name prefix narrows it.
-    let mut all = listed_query_names(&svc.query_list("").await.unwrap());
+    let mut all = listed_query_names(&svc.query_list(None).await.unwrap());
     all.sort();
     assert_eq!(all, vec!["ehr::over_50", "misc::bare_name"]);
     assert_eq!(
-        listed_query_names(&svc.query_list("ehr::").await.unwrap()),
+        listed_query_names(&svc.query_list(Some(&qn("ehr"))).await.unwrap()),
         vec!["ehr::over_50"]
     );
 
     // delete → the query is gone.
-    svc.admin_query_delete("ehr::over_50", &version)
+    svc.admin_query_delete(&qn("ehr::over_50"), version)
         .await
         .expect("delete");
     assert!(
-        svc.query_version_get("ehr::over_50".to_owned(), version.clone())
+        svc.query_version_get(&qn("ehr::over_50"), &VersionPattern::Exact(version))
             .await
             .is_err()
     );
-    assert_eq!(svc.query_list("").await.unwrap().len(), 1);
+    assert_eq!(svc.query_list(None).await.unwrap().len(), 1);
     // Deleting an absent query → 404.
     let del_missing = svc
-        .admin_query_delete("ehr::over_50", &version)
+        .admin_query_delete(&qn("ehr::over_50"), version)
         .await
         .expect_err("delete absent");
     assert!(
