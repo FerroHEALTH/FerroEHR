@@ -2356,6 +2356,16 @@
           "204": {
             "description": "Deleted (bodyless). Extension route — no released response file governs this; the status mirrors the released hard-delete `204` (`responses/204_deleted_hard.yaml`). No response header: a deleted row has nothing to tag, and §\"Deprecated headers\" deprecates `Location` on `DELETE`."
           },
+          "400": {
+            "description": "A path parameter outside its grammar: a name that is no `[{namespace}::]{query-name}` over `[a-zA-Z0-9_.-]`, or a version that is no exact `major.minor.patch` (`docs/query/Qualified_query_name.md`). Extension route: the status follows the overview table's `400` row.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Unauthenticated (auth enabled, no valid principal). Our own authorization design.",
             "content": {

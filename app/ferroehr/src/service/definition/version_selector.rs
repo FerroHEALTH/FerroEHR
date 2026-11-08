@@ -61,17 +61,6 @@ pub(super) fn check_version_selector(version: &str) -> Result<(), ServiceError> 
     )))
 }
 
-/// Whether a `version` path parameter is a SEMVER *prefix* (`{major}` or
-/// `{major}.{minor}`) rather than an exact `{major}.{minor}.{patch}` triple
-/// (`parameters/path/version.yaml`).
-pub(super) fn is_partial_semver(version: &str) -> bool {
-    let segments: Vec<&str> = version.split('.').collect();
-    segments.len() < 3
-        && segments
-            .iter()
-            .all(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,18 +97,5 @@ mod tests {
             assert!(!is_version_selector(bad), "{bad:?} should be refused");
             assert!(check_version_selector(bad).is_err());
         }
-    }
-
-    #[test]
-    fn partial_semver_detection() {
-        // `{major}` / `{major}.{minor}` prefixes (version.yaml).
-        assert!(is_partial_semver("1"));
-        assert!(is_partial_semver("1.0"));
-        assert!(is_partial_semver("12.34"));
-        // Exact triples and malformed tokens are not prefixes.
-        assert!(!is_partial_semver("1.0.0"));
-        assert!(!is_partial_semver("1..0"));
-        assert!(!is_partial_semver("1.a"));
-        assert!(!is_partial_semver(""));
     }
 }

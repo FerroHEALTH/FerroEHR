@@ -18,7 +18,7 @@ use ferroehr::error::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::service::FerroEhrService;
 use ferroehr::versioning::change::Committed;
 
-use crate::fixtures::{composition, folder, uid, uv};
+use crate::fixtures::{composition, folder, qn, uid, uv, version_pattern};
 use crate::item_tag_fixture::ehr_tag;
 
 use crate::fixtures::{commit_audit, committer};
@@ -1118,16 +1118,16 @@ async fn stored_query_crud() {
 
     let aql = "SELECT c FROM EHR e CONTAINS COMPOSITION c".to_owned();
     svc.query_store(
-        "org.example::all_comps".to_owned(),
-        Some("1.0.0".to_owned()),
-        "AQL".to_owned(),
+        &qn("org.example::all_comps"),
+        Some(version_pattern("1.0.0")),
+        "AQL",
         aql.clone(),
     )
     .await
     .expect("store query");
 
     let got = svc
-        .query_version_get("org.example::all_comps".to_owned(), "1.0.0".to_owned())
+        .query_version_get(&qn("org.example::all_comps"), &version_pattern("1.0.0"))
         .await
         .expect("get query");
     assert_eq!(got["q"], aql);
@@ -1135,7 +1135,7 @@ async fn stored_query_crud() {
     assert_eq!(got["type"], "AQL");
 
     let list = svc
-        .query_list("org.example::all_comps")
+        .query_list(Some(&qn("org.example::all_comps")))
         .await
         .expect("list");
     assert_eq!(list.len(), 1);
@@ -1156,9 +1156,9 @@ async fn stored_query_semver_prefix_resolves_to_latest_match() {
         ("1.1.0", "SELECT c FROM EHR c"),
     ] {
         svc.query_store(
-            "org.example::obs".to_owned(),
-            Some(version.to_owned()),
-            "AQL".to_owned(),
+            &qn("org.example::obs"),
+            Some(version_pattern(version)),
+            "AQL",
             q.to_owned(),
         )
         .await
@@ -1166,14 +1166,14 @@ async fn stored_query_semver_prefix_resolves_to_latest_match() {
     }
 
     let by_major = svc
-        .query_version_get("org.example::obs".to_owned(), "1".to_owned())
+        .query_version_get(&qn("org.example::obs"), &version_pattern("1"))
         .await
         .expect("major prefix resolves");
     assert_eq!(by_major["version"], "1.1.0");
     assert_eq!(by_major["q"], "SELECT c FROM EHR c");
 
     let by_minor = svc
-        .query_version_get("org.example::obs".to_owned(), "1.0".to_owned())
+        .query_version_get(&qn("org.example::obs"), &version_pattern("1.0"))
         .await
         .expect("major.minor prefix resolves");
     assert_eq!(by_minor["version"], "1.0.1");
@@ -1181,12 +1181,12 @@ async fn stored_query_semver_prefix_resolves_to_latest_match() {
 
     // An exact triple still resolves exactly; an unmatched prefix is 404.
     let exact = svc
-        .query_version_get("org.example::obs".to_owned(), "1.0.0".to_owned())
+        .query_version_get(&qn("org.example::obs"), &version_pattern("1.0.0"))
         .await
         .expect("exact version");
     assert_eq!(exact["version"], "1.0.0");
     assert!(
-        svc.query_version_get("org.example::obs".to_owned(), "2".to_owned())
+        svc.query_version_get(&qn("org.example::obs"), &version_pattern("2"))
             .await
             .is_err(),
         "an unmatched prefix must not resolve"
@@ -1207,20 +1207,23 @@ async fn stored_query_list_matches_name_prefix() {
         ("com.acme::other", "0.1.0"),
     ] {
         svc.query_store(
-            name.to_owned(),
-            Some(version.to_owned()),
-            "AQL".to_owned(),
+            &qn(name),
+            Some(version_pattern(version)),
+            "AQL",
             "SELECT e FROM EHR e".to_owned(),
         )
         .await
         .expect("store");
     }
 
-    let by_namespace = svc.query_list("org.example").await.expect("prefix list");
+    let by_namespace = svc
+        .query_list(Some(&qn("org.example")))
+        .await
+        .expect("prefix list");
     assert_eq!(by_namespace.len(), 3, "all versions of all org.example::*");
 
     let by_full_name = svc
-        .query_list("org.example::all_comps")
+        .query_list(Some(&qn("org.example::all_comps")))
         .await
         .expect("full-name list");
     assert_eq!(by_full_name.len(), 2, "both versions of the named query");
@@ -1231,7 +1234,7 @@ async fn stored_query_list_matches_name_prefix() {
         "each row carries its own qualified name"
     );
 
-    let all = svc.query_list("").await.expect("wildcard list");
+    let all = svc.query_list(None).await.expect("wildcard list");
     assert_eq!(all.len(), 4, "empty pattern is a wildcard");
 }
 
