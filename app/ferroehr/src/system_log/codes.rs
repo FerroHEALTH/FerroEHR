@@ -105,6 +105,15 @@ pub const NETWORK_ACCESS_POINT_IP: &str = "2";
 pub const OBJECT_TYPE_PERSON: &str = "1";
 /// Participant object type: system object (`2`).
 pub const OBJECT_TYPE_SYSTEM: &str = "2";
+/// Participant object type: other (`4`).
+pub const OBJECT_TYPE_OTHER: &str = "4";
+/// The ID type of an object the access record adds, named by its name: its
+/// FHIR R4 `audit-entity-type`, `4` "Other", as `ehds-logging` writes it.
+pub const OBJ_ID_ENTITY_OTHER: Code = Code {
+    csd_code: "4",
+    code_system: "http://terminology.hl7.org/CodeSystem/audit-entity-type",
+    original_text: "Other",
+};
 /// Participant object type-code role: patient (`1`).
 pub const OBJECT_ROLE_PATIENT: &str = "1";
 /// Participant object type-code role: query (`24`).

@@ -22,9 +22,10 @@ use ihe_atna::atna::message::{
 use secrecy::{SecretSlice, SecretString};
 
 use crate::system_log::AuditError;
+use crate::system_log::access_binding::{entities, members};
 use crate::system_log::codes::{
-    self, Code, NETWORK_ACCESS_POINT_IP, OBJECT_ROLE_PATIENT, OBJECT_ROLE_QUERY,
-    OBJECT_TYPE_PERSON, OBJECT_TYPE_SYSTEM,
+    self, Code, NETWORK_ACCESS_POINT_IP, OBJ_ID_ENTITY_OTHER, OBJECT_ROLE_PATIENT,
+    OBJECT_ROLE_QUERY, OBJECT_TYPE_OTHER, OBJECT_TYPE_PERSON, OBJECT_TYPE_SYSTEM,
 };
 use crate::system_log::event::{ActingMode, AuditEvent, EventType};
 
@@ -56,8 +57,15 @@ const ROLE_VOCABULARY: &str = "urn:ferroehr:role";
 /// Builds the DICOM audit message of a resolved [`AuditEvent`], with the server
 /// [`AuditContext`] and the optionally-resolved patient subject id (`None` →
 /// `ctx.value_if_missing`).
-#[must_use]
-pub fn build(event: &AuditEvent, ctx: &AuditContext, subject: Option<&str>) -> AuditMessage {
+///
+/// # Errors
+/// [`AuditError::Render`] when the event's binding record has no form in the
+/// access record.
+pub fn build(
+    event: &AuditEvent,
+    ctx: &AuditContext,
+    subject: Option<&str>,
+) -> Result<AuditMessage, AuditError> {
     let missing = ctx.value_if_missing.as_str();
     let (event_code, event_text) = event.object.event_id(event.action);
     let client_ip = event
@@ -79,7 +87,15 @@ pub fn build(event: &AuditEvent, ctx: &AuditContext, subject: Option<&str>) -> A
         role_id_codes: vec![coded(server_role)],
         access_point: Some(ip_point(nonempty(&ctx.server_ip, missing))),
     });
-    AuditMessage {
+    let mut objects: Vec<ParticipantObject> = build_objects(event, subject, missing)
+        .into_iter()
+        .map(|object| ParticipantObject {
+            data_life_cycle: Some(event.action.data_life_cycle()),
+            ..object
+        })
+        .collect();
+    objects.extend(binding_objects(event, nonempty(&event.user_id, missing))?);
+    Ok(AuditMessage {
         event: EventIdentification {
             event_id: CodedValue::new(event_code, codes::DCM, event_text),
             action: event.action.as_code(),
@@ -104,14 +120,41 @@ pub fn build(event: &AuditEvent, ctx: &AuditContext, subject: Option<&str>) -> A
                 original_text: Some("Application Server process or thread".to_owned()),
             }],
         },
-        objects: build_objects(event, subject, missing)
-            .into_iter()
-            .map(|object| ParticipantObject {
-                data_life_cycle: Some(event.action.data_life_cycle()),
-                ..object
-            })
-            .collect(),
-    }
+        objects,
+    })
+}
+
+/// The participant objects of the binding fields (EHDS Annex II 3.2(a), (b)),
+/// which PS3.15 §A.5 has no element for: the `ehds-accessor` and
+/// `ehds-relayed` objects, each detail as `ehds-logging` writes it in both of
+/// its renderings, so this message and the FHIR `AuditEvent` agree.
+fn binding_objects(
+    event: &AuditEvent,
+    user_id: String,
+) -> Result<Vec<ParticipantObject>, AuditError> {
+    let Some(binding) = &event.binding else {
+        return Ok(Vec::new());
+    };
+    let members =
+        members(binding, event.issuer.as_deref()).map_err(|e| AuditError::Render(Box::new(e)))?;
+    Ok(entities(members, user_id)
+        .into_iter()
+        .map(|(name, entries)| ParticipantObject {
+            // NOTE: RESTful ATNA Rev. 3.6 Table 3.20.4.2.2.1-1 maps a BALP entity's name to
+            // ParticipantObjectName and each detail to a ParticipantObjectDetail.
+            name: Some(SecretString::from(name.to_owned())),
+            details: entries
+                .into_iter()
+                .map(|entry| (entry.name.to_owned(), SecretString::from(entry.value)))
+                .collect(),
+            ..object(
+                name.to_owned(),
+                OBJECT_TYPE_OTHER,
+                None,
+                OBJ_ID_ENTITY_OTHER,
+            )
+        })
+        .collect())
 }
 
 /// The message of `event` as UTF-8 XML, ready for the syslog frame.
@@ -123,7 +166,7 @@ pub fn to_xml(
     ctx: &AuditContext,
     subject: Option<&str>,
 ) -> Result<SecretSlice<u8>, AuditError> {
-    build(event, ctx, subject)
+    build(event, ctx, subject)?
         .to_xml()
         .map_err(|e| AuditError::Xml(Box::new(e)))
 }
@@ -356,6 +399,7 @@ mod tests {
         e.ehr_id = Some("7d44b88c-4199-4bad-9765-99c1b0a5f9d3".to_owned());
         e.object_id = Some("access-delay:0b2c5f1e-8d4a-4c6b-9e7f-3a1d2c4b5e6f".to_owned());
         let objects: Vec<_> = build(&e, &ctx(), Some("patient-42"))
+            .expect("a message")
             .objects
             .iter()
             .map(|o| {

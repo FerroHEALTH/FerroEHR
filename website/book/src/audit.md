@@ -149,7 +149,7 @@ lives in the record:
 | Under which role or authority | `roles` — the roles the caller held at access time (the RFC 9068 §2.2.3.1 claim carriers for a bearer, the user definition for Basic), rendered as FHIR `agent.role` on the requestor and as a `RoleIDCode` per role on the DICOM requesting participant |
 | On whose authority, and why | `purpose` and `legal_basis`, and `permit`, the identifier of the data permit a secondary-use caller declares it acts under ([Secondary use](compliance/secondary-use.md#the-access-record)) |
 | Which system, and from where | `AuditSourceID` and the source participant's network address (`client_ip`): the connection's peer, or the client a peer in `[server] trusted_proxies` names in its `forwarded_header` ([Server](installation/config-server.md)) |
-| Who the person is in the demographic store, and for whom they act | `binding` and the fields beside it ([the binding outcome](#the-binding-outcome)): `party` (the bound `PERSON`), `party_groups`, `provider`, `representation` for a representative, and `acting_mode` (`person`, `delegated`, `external` or `system`); for a verified external accessor `external_fields` and `agreement` stand in for the party, and an `organisation` record names the organisation |
+| Who the person is in the demographic store, and for whom they act | `binding` and the fields beside it ([the binding outcome](#the-binding-outcome)): `party` (the bound `PERSON`), `party_groups`, `provider`, `representation` for a representative, and `acting_mode` (`person`, `delegated`, `external` or `system`); for a verified external accessor `external_fields` and `agreement` stand in for the party, and an `organisation` record names the organisation. The FHIR `AuditEvent`, the DICOM message and the syslog feed carry each in the `ehds-accessor` and `ehds-relayed` entities ([the binding fields in the renderings](#the-binding-fields-in-the-renderings)) |
 
 Two of these are the deployment's to supply. `purpose` is only as meaningful as
 the vocabulary you agree with your callers: set `[audit] purpose_codes` to that
@@ -334,11 +334,46 @@ beside it hold what each outcome needs:
 
 `acting_mode` is `person`, `delegated` for a person through a declared client
 or actor, `external` for a verified external accessor and `system` for a client
-acting for nobody (`client` remains on records written before). The FHIR and
-DICOM renderings do not carry `external` and `system` yet. A record of a
+acting for nobody (`client` remains on records written before). The FHIR
+`AuditEvent` writes each mode as the person's `agent.role`. A record of a
 request with no authenticated caller carries no binding. The columns are in the
 chain digest: a record written from this release is digest version 2, which
 hashes them, and a record written before keeps verifying under version 1.
+
+#### The binding fields in the renderings
+
+Neither BALP 1.1.4 §3:5.7.5.4 nor DICOM PS3.15 §A.5 has an element for the
+binding fields beyond the bound person, so `ehds-logging` writes them as
+details of two entities it adds, and FerroEHR hands it every field. The FHIR
+`AuditEvent` carries each entity as an `entity` with its `name` and one
+`detail` per value. The DICOM message carries each as a
+`ParticipantObjectIdentification` of type `4` (Other) with the entity name as
+its `ParticipantObjectName` and one `ParticipantObjectDetail` per value
+(RESTful ATNA Rev. 3.6 Table 3.20.4.2.2.1-1), and the ITI-20 syslog feed
+sends that message. Both renderings take the detail list from
+`ehds-logging`, so they never disagree.
+
+| Recorded field | Rendered as |
+|---|---|
+| `binding` | `ehds-accessor`: `binding`, with `guest` for an admitted guest and `security-event` for `refused-trc-patient-mismatch` and `refused-trc-missing` |
+| `party` | `ehds-accessor`: `party` as `<namespace>\|<type>\|<id>`; in the FHIR `AuditEvent` also the person's `otherId` typed `PRN` |
+| `party_groups` | `ehds-accessor`: one `group` per group, in the party's namespace with type `GROUP` |
+| `provider` | `ehds-accessor`: `acts-for` as `<issuer>\|<id>` |
+| `facilities` | `ehds-accessor`: one `facility` per facility, as `<issuer>\|<id>` |
+| `representation` | `ehds-accessor`: `represents`, `represents-ground` and `represents-relationship`; a refusal's `represented` as `represents` alone |
+| `actor_chain` | `ehds-accessor`: one `actor` per actor, `<issuer>\|<subject>`, outermost first |
+| `binding_detail` | `ehds-accessor`: `binding-claim` for `refused-key-claim-missing` |
+| `external_fields` | `ehds-relayed`, marked `asserted` and naming the issuer by `relayed-issuer`: each 2026/2099 Annex field and eHDSI SAML attribute at its own detail (`hp-family-name`, `hp-identifier`, `provider-identifier` and the others), `consent.reference` as `agreement-consent`, and every other field as `asserted-field` `<name>=<value>` |
+| `agreement` | `ehds-relayed`: `agreement-name`, `agreement-version`, `agreement-legal-ground` and `agreement-access-class` |
+| `correlation_id`, `correlation_source` | the FHIR `AuditEvent`: `correlation-id` and `correlation-source` of the request id's entity; the DICOM message: the same two details of `ehds-relayed`, since it carries no request entity |
+| `acting_mode` | the FHIR `AuditEvent`: the person's `agent.role`; DICOM: none |
+
+Every value goes through the renderers' escape: a control character, a
+bidirectional control or a line separator is written as its code point, and
+no value is cut. A DICOM detail value is base64-encoded as given (PS3.15
+§A.5.1.1). A binding record that lacks a field its code needs fails the
+rendering, and the sender reports the failure, never a record without the
+binding.
 
 ### Refusal records and their budgets
 

@@ -86,7 +86,7 @@ impl AuditStore {
             let (digest, stored) = stored_record(row)?;
             let policy = self.policy(stored.chain_seq, &digest).await?;
             let (event, subject) = classified(stored, &policy)?;
-            if !shows(holds, &event, &policy.context, subject.as_deref(), now) {
+            if !shows(holds, &event, &policy.context, subject.as_deref(), now)? {
                 continue;
             }
             if shown >= skip && documents.len() < take {
@@ -99,14 +99,17 @@ impl AuditStore {
 }
 
 /// Whether the person sees the record of `event` at `now`.
+///
+/// # Errors
+/// [`AuditError::Render`] when the record has no form as an access record.
 fn shows(
     holds: &Holds,
     event: &AuditEvent,
     ctx: &AuditContext,
     subject: Option<&str>,
     now: Timestamp,
-) -> bool {
-    match access_record(event, ctx, subject) {
+) -> Result<bool, AuditError> {
+    Ok(match access_record(event, ctx, subject)? {
         Some(record) => holds.shows(Reader::Person, &record, now),
         // NOTE: EHDS Art. 3(3), a record outside the access record (a hold's own mark) names
         // only its object, which the register holds by the same key.
@@ -114,5 +117,5 @@ fn shows(
             .object_id
             .as_deref()
             .is_none_or(|object| !holds.withholds(object, now)),
-    }
+    })
 }
