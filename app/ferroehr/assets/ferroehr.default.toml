@@ -459,8 +459,9 @@ trusted_systems = []
 # on every boot. A "chained" access class needs chained_log_retention_years at
 # least [audit.store]'s and its issuer's [[auth.federation]] table mapping
 # correlation_id from the token; a chained request without the id is refused.
-# An NL agreement (a profile = "nl" issuer implies NL) with reads needs a
-# consent source. Every reads entry is a patient/ scope.
+# A caller above caller_rate is answered 429 before any patient lookup. An NL
+# agreement (a profile = "nl" issuer implies NL) with reads needs a consent
+# source. Every reads entry is a patient/ scope.
 #? [[authz.federation.agreement]]
 #? issuer = "https://federation.example"
 #? accessor = "organisation"        # person | organisation

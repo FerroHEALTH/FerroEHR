@@ -107,6 +107,13 @@ fn synth_composition(node: &mut WebTemplateNode) {
 /// constrains `other_context` already yields a `/context` node) and prepended so
 /// it leads the children, as in the master04 example; the leaves are then
 /// ensured under it.
+///
+/// A created wrapper takes its `min` from the template's existence on
+/// `context` where one is declared, and otherwise from the RM, where
+/// `COMPOSITION.context` is `0..1` (RM `UML/classes/org.openehr.rm.composition.composition.adoc`
+/// §Attributes): an archetype's existence only overrides the RM's
+/// (AM `ADL2/master04.3-cadl_complex_types.adoc` §Existence, AM
+/// `AOM2/master04.2-constraint_model-semantics.adoc`).
 fn ensure_context(node: &mut WebTemplateNode) {
     let idx = if let Some(i) = node.children.iter().position(|c| c.aql_path == "/context") {
         i
@@ -115,7 +122,11 @@ fn ensure_context(node: &mut WebTemplateNode) {
         // The example gives the context wrapper `nodeId: ""` and no `inContext`
         // marker; its leaf children carry `inContext: true`.
         ctx.node_id = Some(String::new());
-        ctx.min = Some(1);
+        ctx.min = Some(i32::from(
+            node.existence
+                .iter()
+                .any(|ex| ex.path == "/context" && ex.min >= 1),
+        ));
         ctx.max = 1;
         node.children.insert(0, ctx);
         0

@@ -19,7 +19,7 @@ use super::{
     validate_transition,
 };
 use crate::error::ServiceError;
-use crate::ids::{EhrId, VoId};
+use crate::ids::{AllocatedVoId, EhrId, VoId};
 use crate::storage::codec::decompose;
 use crate::storage::row::NodeRow;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
@@ -98,6 +98,7 @@ pub(super) struct Placing {
 
 /// The content half of a create or a modify, as the change carries it.
 pub(super) struct Content {
+    pub(super) allocated: Option<AllocatedVoId>,
     pub(super) kind: Kind,
     pub(super) canonical: Value,
     pub(super) lifecycle_state: Option<String>,
@@ -220,7 +221,10 @@ pub(super) async fn resolve_create(
         &content.canonical,
         content.template_id.as_deref(),
     )?;
-    let vo_id = VoId::minted(ctx.stamp);
+    let vo_id = content
+        .allocated
+        .take()
+        .map_or_else(|| VoId::minted(ctx.stamp), |allocated| allocated.id());
     let tree = TreeId::trunk(1);
     let body = prepare_body(tx, ctx, content.kind, vo_id, tree, content.canonical).await?;
     let time_committed = match at.known_now {
