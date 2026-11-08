@@ -10847,7 +10847,10 @@ pub(super) static CLASSES: &[RmClass] = &[
                 declared_type: "ORIGINAL_VERSION",
                 container: Container::None,
                 is_mandatory: true,
-                type_params: &[],
+                type_params: &[RmTypeRef {
+                    name: "Any",
+                    params: &[],
+                }],
                 cardinality: None,
                 nonempty: false,
                 ref_target: None,
@@ -16279,7 +16282,10 @@ pub(super) static CLASSES: &[RmClass] = &[
                 declared_type: "DV_INTERVAL",
                 container: Container::None,
                 is_mandatory: true,
-                type_params: &[],
+                type_params: &[RmTypeRef {
+                    name: "DV_ORDERED",
+                    params: &[],
+                }],
                 cardinality: None,
                 nonempty: false,
                 ref_target: None,

@@ -304,7 +304,8 @@ pub fn dispatch_typed(ty: &str, value: &Value, out: &mut Vec<InvariantViolation>
         "DV_SCALE" => run::<DvScale>(ty, value, out),
         "DV_PARSABLE" => run::<DvParsable>(ty, value, out),
         "DV_PERIODIC_TIME_SPECIFICATION" => run::<DvPeriodicTimeSpecification>(ty, value, out),
-        "REFERENCE_RANGE" => run::<ReferenceRange>(ty, value, out),
+        // A REFERENCE_RANGE node alone reads its limits at the bound of `T`.
+        "REFERENCE_RANGE" => run::<ReferenceRange<DvOrdered>>(ty, value, out),
         // DV_INTERVAL: prefer the DV_ORDERED-typed element so the
         // Limits_consistent ordering invariant runs; fall back to
         // Value elements (boundary flags only) for non-DV_ORDERED payloads.

@@ -111,6 +111,30 @@ fn generic_parameters_resolve_to_their_bound() {
     assert_eq!(upper.declared_type, "DV_ORDERED");
 }
 
+/// RM `UML/classes/org.openehr.rm.data_types.reference_range.adoc` heads the
+/// class `REFERENCE_RANGE<T>`, and its range is the one attribute `T` reaches
+/// (the generator restores `DV_INTERVAL<T>`, tracker issue #5196); likewise
+/// `IMPORTED_VERSION<T>.item` is an `ORIGINAL_VERSION<T>`. Both generations.
+#[test]
+fn an_elided_generic_argument_is_restored_in_both_generations() {
+    macro_rules! restored {
+        ($($model:ident)::+) => {{
+            let range = $($model)::+::attribute("REFERENCE_RANGE", "range")
+                .expect("REFERENCE_RANGE.range");
+            assert_eq!(range.declared_type, "DV_INTERVAL");
+            let args: Vec<&str> = range.type_params.iter().map(|p| p.name).collect();
+            assert_eq!(args, ["DV_ORDERED"]);
+            let item = $($model)::+::attribute("IMPORTED_VERSION", "item")
+                .expect("IMPORTED_VERSION.item");
+            assert_eq!(item.declared_type, "ORIGINAL_VERSION");
+            let args: Vec<&str> = item.type_params.iter().map(|p| p.name).collect();
+            assert_eq!(args, ["Any"]);
+        }};
+    }
+    restored!(openehr_rm::v1_1::model);
+    restored!(openehr_rm::v1_2::model);
+}
+
 #[test]
 fn is_structure_root_matches_the_node_codec() {
     // Mirrors ferroehr::storage::codec::STRUCTURE_TYPES.

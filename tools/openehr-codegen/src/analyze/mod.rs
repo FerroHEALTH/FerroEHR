@@ -352,31 +352,21 @@ impl Model {
             .iter()
             .map(|g| g.name.as_str())
             .collect();
+        // NOTE: an argument the BMM drops (`IMPORTED_VERSION.item: ORIGINAL_VERSION`)
+        // is restored at load from the cited `plan::overrides::ELIDED_ARGUMENTS`, so a
+        // parameter is used only where it appears literally.
         let mut used = BTreeSet::new();
-        let mut threads_own_param = false;
         for rp in self.flattened_props(class) {
             match &rp.prop.kind {
                 BmmPropKind::Single(t) | BmmPropKind::Container { item: t, .. } => {
                     collect_param_uses(t, &declared, &mut used);
-                    // A bare reference to an *unbounded* generic class threads
-                    // this class's own parameter into that open slot
-                    // (`IMPORTED_VERSION.item: ORIGINAL_VERSION` →
-                    // `OriginalVersion<T>`), so the parameter is used even though
-                    // it never appears literally in the (BMM-dropped) type args.
-                    if let BmmType::Simple(n) = t
-                        && self
-                            .generic_param_bounds(n)
-                            .is_some_and(|b| b.iter().any(Option::is_none))
-                    {
-                        threads_own_param = true;
-                    }
                 }
             }
         }
         class
             .generic_params
             .iter()
-            .filter(|g| used.contains(g.name.as_str()) || threads_own_param)
+            .filter(|g| used.contains(g.name.as_str()))
             .map(|g| (g.name.clone(), self.resolved_param_bound(name, &g.name)))
             .collect()
     }

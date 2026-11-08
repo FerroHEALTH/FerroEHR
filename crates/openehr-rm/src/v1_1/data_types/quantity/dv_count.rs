@@ -24,7 +24,8 @@ pub struct DvCount {
     /// Optional normal range.
     pub normal_range: Option<Box<DvInterval<DvCount>>>,
     /// Optional tagged other reference ranges for this value in its particular measurement context.
-    pub other_reference_ranges: Option<openehr_base::containers::NonEmptyVec<ReferenceRange>>,
+    pub other_reference_ranges:
+        Option<openehr_base::containers::NonEmptyVec<ReferenceRange<DvCount>>>,
 
     // inherited: DV_QUANTIFIED
     /// Optional status of magnitude with values:

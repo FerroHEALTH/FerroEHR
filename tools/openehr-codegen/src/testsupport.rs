@@ -1054,6 +1054,19 @@ pub fn decision_maps() -> Vec<DeclMap> {
                 .collect(),
         },
         DeclMap {
+            map: "elided_argument",
+            check_existence: true,
+            entries: overrides::ELIDED_ARGUMENTS
+                .iter()
+                .map(|e| DeclEntry {
+                    key: format!("{}.{}", e.class, e.property),
+                    decision: format!("{}<{}>", e.root, e.arguments.join(", ")),
+                    citation: e.citation.to_string(),
+                    reason: e.reason.to_string(),
+                })
+                .collect(),
+        },
+        DeclMap {
             map: "type_override",
             check_existence: true,
             entries: overrides::TYPE_OVERRIDES
