@@ -11,6 +11,7 @@
               projections by specification (QUERY 1.1)"
 )]
 
+use openehr_its::rest::stored_query::QualifiedQueryName;
 use std::sync::LazyLock;
 
 use jiff::Timestamp;
@@ -129,7 +130,7 @@ fn render_param(value: &ParamValue) -> String {
 pub(super) fn result_set_json(
     aql: &str,
     executed: &str,
-    name: Option<&str>,
+    name: Option<&QualifiedQueryName>,
     result: QueryResult,
 ) -> Value {
     let columns: Vec<ResultSetColumn> = result
@@ -164,7 +165,7 @@ pub(super) fn result_set_json(
             // empty and serializes to nothing.
             additional_properties: std::collections::BTreeMap::new(),
         }),
-        name: name.map(ToOwned::to_owned),
+        name: name.cloned(),
         q: Some(aql.to_owned()),
         columns: Some(columns),
         // The envelope serializes with EMPTY rows; the real rows are MOVED

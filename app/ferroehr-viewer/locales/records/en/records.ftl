@@ -25,7 +25,6 @@ relationship-type-required-party-relationship-invariant = a relationship type is
 archetype-node-id-required-locatable-archetype = an archetype node id is required (LOCATABLE.archetype_node_id)
 cdr-created-relationship-but-returned-no = the CDR created the relationship but returned no uid to open it by
 relationship-id-required = a relationship id is required
-committer-required-contribution-audit = a committer is required on a CONTRIBUTION audit
 stage-least-one-change-before-committing = stage at least one change before committing
 creation-commits-new-versioned-object-so = a creation commits a NEW versioned object, so it carries no preceding version
 no-preceding-version-known-yet-pick = no preceding version is known yet: pick the target and wait for it to load
@@ -301,9 +300,9 @@ contribution-made-versions = { $count ->
 }
 contribution-not-committed = Not committed
 contribution-commit-refused = The CDR refused the contribution, so nothing was committed.
+contribution-no-subject = The session carries no verified subject to commit as.
 contribution-choices-refused = The templates or compositions to pick from could not be read.
 contribution-composition-refused = The composition to amend could not be read.
-contribution-committer-placeholder = Leave empty to commit as { $name }
 contribution-commit = { $count ->
     [one] Commit 1 change
    *[other] Commit { $count } changes

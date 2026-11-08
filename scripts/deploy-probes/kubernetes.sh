@@ -319,7 +319,16 @@ k8s_pf_start() {
   done
   kc port-forward "svc/$K8S_RELEASE" "${K8S_PORT}:8080" >/dev/null 2>&1 &
   K8S_PF_PID=$!
-  wait_http "$K8S_CDR/health/liveness" 45
+  wait_http "$K8S_CDR/health/liveness" 45 || return 1
+  k8s_provision
+}
+
+# Binds the Basic user `clinician` of the CI values to a demographic PERSON
+# through the SCIM client those values declare (docs/conformance/party/scim/),
+# so every probe that logs in as it acts as a bound person. A User that
+# exists already is kept, so each forward of a reinstall runs it again.
+k8s_provision() {
+  bash scripts/scim-provision.sh "$K8S_CDR" basic-users clinician >/dev/null
 }
 
 # k8s_runtime_spec <node> <container-id>: the OCI runtime spec the node applied.

@@ -827,7 +827,9 @@ pub type QueryType = String;
 
 /// The `QueryVersion` ITS-REST OAS component schema (a non-object shape, so
 /// it is an alias rather than a struct).
-pub type QueryVersion = String;
+///
+/// Read by its grammar, docs/query/Qualified_query_name.md: "SEMVER style (i.e. `major.minor.patch`)".
+pub type QueryVersion = crate::rest::stored_query::QueryVersion;
 
 /// The `StoredQuery` transport DTO of this API group (an ITS-REST OAS
 /// component schema).
@@ -1973,7 +1975,9 @@ pub struct DefinitionQueryVersionGetParams {
     /// `qualified_query_name` (path)
     pub qualified_query_name: super::common::QueryName,
     /// `version` (path)
-    pub version: String,
+    ///
+    /// Read by its grammar, parameters/path/version.yaml: "an exact version (e.g. `1.7.1`), or a pattern as partial prefix, in a form of `{major}` or `{major}.{minor}`".
+    pub version: crate::rest::stored_query::VersionPattern,
     #[serde(rename = "Accept")]
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
@@ -2044,7 +2048,9 @@ pub struct DefinitionQueryVersionStoreYamlParams {
     /// `qualified_query_name` (path)
     pub qualified_query_name: super::common::QueryName,
     /// `version` (path)
-    pub version: String,
+    ///
+    /// Read by its grammar, parameters/path/version.yaml: "an exact version (e.g. `1.7.1`), or a pattern as partial prefix, in a form of `{major}` or `{major}.{minor}`".
+    pub version: crate::rest::stored_query::VersionPattern,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `query_type` (query)
     pub query_type: Option<String>,

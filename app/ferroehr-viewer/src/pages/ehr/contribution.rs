@@ -814,8 +814,6 @@ struct NewForm {
     drafts: Vec<(Draft, Option<Refused>)>,
     /// The audit's description.
     description: String,
-    /// The audit's committer.
-    committer: String,
     /// The commit the CDR refused, when the post was one.
     refused: Option<Refused>,
     /// What the picks offer.
@@ -840,24 +838,13 @@ async fn read_new(ehr_id: String) -> Form<NewForm> {
         .as_ref()
         .map(|posted| posted.text("description"))
         .unwrap_or_default();
-    let committer = posted
-        .as_ref()
-        .map(|posted| posted.text("committer"))
-        .unwrap_or_default();
     let mut refused = None;
     if posted
         .as_ref()
         .is_some_and(|posted| posted.intent() == "save")
     {
         let staged: Vec<StagedChange> = drafts.iter().map(Draft::staged).collect();
-        match commit_contribution(
-            ehr_id.clone(),
-            staged,
-            committer.clone(),
-            description.clone(),
-        )
-        .await
-        {
+        match commit_contribution(ehr_id.clone(), staged, description.clone()).await {
             Ok(outcome) => {
                 let href = if outcome.contribution_uid.is_empty() {
                     tab_href(&ehr_id, EhrTab::Contributions)
@@ -894,7 +881,6 @@ async fn read_new(ehr_id: String) -> Form<NewForm> {
     Form::Shown(Box::new(NewForm {
         drafts: drafts.into_iter().zip(troubles).collect(),
         description,
-        committer,
         refused,
         choices,
         pick_trouble,
@@ -906,14 +892,10 @@ fn new_form(ehr_id: &str, form: NewForm) -> Html {
     let NewForm {
         drafts,
         description,
-        committer,
         refused,
         choices,
         pick_trouble,
     } = form;
-    let you = crate::request::signed()
-        .map(|session| session.identity)
-        .unwrap_or_default();
     let line = if refused.is_some() {
         (Glyph::CIRCLE_X, tr(RecordsMsg::ContributionNotCommitted))
     } else {
@@ -939,16 +921,8 @@ fn new_form(ehr_id: &str, form: NewForm) -> Html {
         r#"<input id="au-d" name="description" type="text" class="fui-input" value="{}">"#,
         t(description)
     )));
-    let committer = Field::new("au-c", tr(RecordsMsg::FactCommitter)).view(h(format!(
-        r#"<input id="au-c" name="committer" type="text" class="fui-input" value="{}" placeholder="{}">"#,
-        t(committer),
-        t(tr_with(
-            RecordsMsg::ContributionCommitterPlaceholder,
-            &[("name", you.clone().into())],
-        ))
-    )));
     let audit = h(format!(
-        r#"<div class="fui-form-grid"><div class="fui-span-2">{description}</div><div class="fui-span-2">{committer}</div></div>"#
+        r#"<div class="fui-form-grid"><div class="fui-span-2">{description}</div></div>"#
     ));
     dock_editor(EditorDock {
         form: NEW_FORM.to_owned(),

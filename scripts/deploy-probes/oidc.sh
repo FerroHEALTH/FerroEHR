@@ -19,9 +19,30 @@ KC_REALM="$KC/auth/realms/ferroehr"
 OIDC_LAYER="compose"
 
 # The stack for this family: the quickstart PLUS the Keycloak overlay, which is
-# how the book tells an operator to get an issuer.
+# how the book tells an operator to get an issuer. The overlay adds an
+# [[auth.party]] table, so the binding side table the quickstart filled is
+# refilled under the overlay's mapping before the server starts on it, and
+# under the quickstart's again when the family hands the stack back.
+oidc_files=(-f docker-compose.yml -f docker-compose.keycloak.yml)
+
+# Refills the binding side table under the mapping of the compose files given,
+# with the server stopped, as the boot refusal of a changed mapping asks.
+binding_refill() {
+  dc "$@" stop ferroehr >/dev/null 2>&1
+  dc "$@" run --rm --no-deps ferroehr party-binding refill >/dev/null 2>&1
+}
+
 oidc_up() {
-  dc -f docker-compose.yml -f docker-compose.keycloak.yml up -d ferroehr keycloak >/dev/null 2>&1
+  # Keycloak first: its one-shot writes the CA the overlay's server reads at load.
+  dc "${oidc_files[@]}" up -d keycloak >/dev/null 2>&1
+  binding_refill "${oidc_files[@]}"
+  dc "${oidc_files[@]}" up -d ferroehr keycloak >/dev/null 2>&1
+}
+
+# Puts the quickstart back for the families after this one.
+oidc_down() {
+  binding_refill -f docker-compose.yml
+  compose_up ferroehr ferroehr-provision
 }
 
 # The middle segment of a JWT, decoded. `base64 -d` wants padding, and a JWT is

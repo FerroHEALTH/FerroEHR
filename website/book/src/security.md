@@ -736,7 +736,10 @@ Three surfaces, three honest answers: the set differs because what they serve
 differs.
 
 **The REST API** carries, on every response including the transport-layer ones
-(`413` from the body limit, `408` from the timeout, `500` from the panic handler):
+(`413` from the body limit, `408` from the timeout, `503` from the overload
+bound, `500` from the panic handler), the health routes and the management
+listener on its own port. The family server stack sets them outermost
+(`ferrohealth-server`), each only where a response does not set its own:
 
 | Header | Value | Why |
 |---|---|---|
@@ -750,18 +753,21 @@ differs.
 `X-XSS-Protection` and `X-Powered-By` are absent because the cheat sheet says to
 remove them, and no `Server` header is sent at all.
 
-**`Strict-Transport-Security` is deliberately not sent by the API server.** It is a
-property of the TLS edge, and [RFC 6797 §7.2](https://www.rfc-editor.org/rfc/rfc6797#section-7.2)
+**`Strict-Transport-Security: max-age=31536000` is sent only when FerroEHR
+serves TLS itself** (`[server.tls]`). [RFC 6797 §7.2](https://www.rfc-editor.org/rfc/rfc6797#section-7.2)
 requires a browser to *ignore* it over plain HTTP, which is how this server is
-commonly reached behind a terminating proxy. Set it at the proxy or ingress that
-owns TLS; sending it from here would be inert at best and misleading at worst.
+commonly reached behind a terminating proxy, and forbids a server to send it
+there. Behind such a proxy, set it at the proxy or ingress that owns TLS.
+`includeSubDomains` is left out, because FerroEHR does not decide for the hosts
+beside it.
 
 **The viewer** carries the FerroHEALTH console set instead, because it serves
 HTML: a CSP that admits scripts and styles from its own origin alone
 (`script-src 'self'; style-src 'self'`, no nonce, no inline script or
 style), `Referrer-Policy: no-referrer` and `Cross-Origin-Opener-Policy:
 same-origin` (the [viewer chapter](viewer/index.md#browser-security-headers)
-lists them). Its `Cache-Control` has one scoped exception to `no-store`:
+lists them), with `Cross-Origin-Resource-Policy: same-site` from the API set
+beside them. Its `Cache-Control` has one scoped exception to `no-store`:
 FerroUI's stylesheet, theme and scripts under `/ferrohealth-ui/<version>/`
 are served `no-cache`, so the browser keeps them and revalidates them, and
 they hold nothing clinical (the viewer reaches the CDR from its own server,

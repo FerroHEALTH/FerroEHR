@@ -29,6 +29,7 @@
               (#1694)"
 )]
 
+use crate::bff::login::Login;
 use crate::locale::records::RecordsMsg;
 use crate::locale::{tr, tr_with};
 use serde_json::{Value, json};
@@ -257,29 +258,26 @@ pub fn envelope_change_type(changes: &[StagedChange]) -> ChangeType {
 
 /// Assemble the `NewContribution` envelope the staging area posts.
 ///
-/// `committer` names the `PARTY_IDENTIFIED` on the change-set audit and on
-/// every member's `commit_audit` (both are `UPDATE_AUDIT` objects requiring
-/// `change_type` + `committer` — ITS-REST
-/// `specifications/schemas/common/UpdateAudit.yaml`). A blank `description`
-/// omits the optional attribute rather than sending an empty `DV_TEXT`.
+/// The committer on the change-set audit and on every member's `commit_audit`
+/// (both are `UPDATE_AUDIT` objects requiring `change_type` and `committer`,
+/// ITS-REST `specifications/schemas/common/UpdateAudit.yaml`) is the
+/// placeholder naming `login`.
+/// A blank `description` omits the optional attribute rather than sending an
+/// empty `DV_TEXT`.
 ///
 /// # Errors
-/// The operator-facing complaint when the change set is empty, when the
-/// committer is blank, or when a member fails [`check`] — prefixed with the
-/// row it belongs to, because the CDR's own refusal does not name a member
-/// index.
+/// The operator-facing complaint when the change set is empty, or when a
+/// member fails [`check`], prefixed with the row it belongs to, because the
+/// CDR's own refusal does not name a member index.
 pub fn contribution_body(
     changes: &[StagedChange],
-    committer: &str,
+    login: &Login,
     description: &str,
 ) -> Result<String, String> {
     if changes.is_empty() {
         return Err(tr(RecordsMsg::StageLeastOneChangeBeforeCommitting));
     }
-    let committer = committer.trim();
-    if committer.is_empty() {
-        return Err(tr(RecordsMsg::CommitterRequiredContributionAudit));
-    }
+    let committer = placeholder(login);
     let mut versions = Vec::with_capacity(changes.len());
     for (position, change) in changes.iter().enumerate() {
         check(change).map_err(|complaint| {
@@ -293,9 +291,9 @@ pub fn contribution_body(
                 ],
             )
         })?;
-        versions.push(update_version(change, committer)?);
+        versions.push(update_version(change, &committer)?);
     }
-    let mut audit = update_audit(envelope_change_type(changes), committer);
+    let mut audit = update_audit(envelope_change_type(changes), &committer);
     let description = description.trim();
     if !description.is_empty()
         && let Some(object) = audit.as_object_mut()
@@ -313,8 +311,18 @@ pub fn contribution_body(
     })
 }
 
+/// The placeholder committer naming `login`: a `PARTY_IDENTIFIED` whose only
+/// member is one `DV_IDENTIFIER{issuer, id}`, which the CDR replaces with the
+/// committer it derives from the authenticated caller (#5019).
+fn placeholder(login: &Login) -> Value {
+    json!({
+        "_type": "PARTY_IDENTIFIED",
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": login.issuer(), "id": login.id() }],
+    })
+}
+
 /// One `UPDATE_VERSION` member of the envelope.
-fn update_version(change: &StagedChange, committer: &str) -> Result<Value, String> {
+fn update_version(change: &StagedChange, committer: &Value) -> Result<Value, String> {
     let data: Value = serde_json::from_str(change.body.trim()).map_err(|e| {
         tr_with(
             RecordsMsg::DocumentNotValidJson,
@@ -339,11 +347,11 @@ fn update_version(change: &StagedChange, committer: &str) -> Result<Value, Strin
 }
 
 /// An `UPDATE_AUDIT` carrying `change_type` + `committer`.
-fn update_audit(change_type: ChangeType, committer: &str) -> Value {
+fn update_audit(change_type: ChangeType, committer: &Value) -> Value {
     json!({
         "_type": "UPDATE_AUDIT",
         "change_type": coded_text(change_type.code(), change_type.rubric()),
-        "committer": { "_type": "PARTY_IDENTIFIED", "name": committer },
+        "committer": committer,
     })
 }
 
@@ -363,7 +371,7 @@ fn coded_text(code: &str, rubric: &str) -> Value {
 #[cfg(test)]
 mod tests {
     use super::{
-        ChangeType, StagedChange, StagedKind, check, contribution_body, create_target_label,
+        ChangeType, Login, StagedChange, StagedKind, check, contribution_body, create_target_label,
         envelope_change_type,
     };
     use serde_json::Value;
@@ -389,6 +397,17 @@ mod tests {
         "is_queryable": true,
         "is_modifiable": true
     }"#;
+
+    /// The placeholder of the Basic login `ferroehr`.
+    fn committer() -> Value {
+        serde_json::json!({ "_type": "PARTY_IDENTIFIED",
+                "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "ferroehr" }] })
+    }
+
+    /// The Basic login `ferroehr`.
+    fn login() -> Login {
+        Login::basic("ferroehr")
+    }
 
     fn create() -> StagedChange {
         StagedChange {
@@ -419,7 +438,7 @@ mod tests {
         // with two OBJECT_REFs.
         let body = contribution_body(
             &[create(), status_modify()],
-            "Dr Viewer",
+            &login(),
             "Encounter recorded; status refreshed",
         )
         .expect("the envelope assembles");
@@ -453,10 +472,7 @@ mod tests {
             versions[0]["commit_audit"]["committer"]["_type"],
             "PARTY_IDENTIFIED"
         );
-        assert_eq!(
-            versions[0]["commit_audit"]["committer"]["name"],
-            "Dr Viewer"
-        );
+        assert_eq!(versions[0]["commit_audit"]["committer"], committer());
 
         // Member 2: a modification naming the version it supersedes.
         assert_eq!(
@@ -481,7 +497,7 @@ mod tests {
             doc["audit"]["change_type"]["defining_code"]["code_string"],
             "251"
         );
-        assert_eq!(doc["audit"]["committer"]["name"], "Dr Viewer");
+        assert_eq!(doc["audit"]["committer"], committer());
         assert_eq!(
             doc["audit"]["description"]["value"],
             "Encounter recorded; status refreshed"
@@ -499,7 +515,7 @@ mod tests {
             envelope_change_type(&[create(), second.clone()]),
             ChangeType::Creation
         );
-        let body = contribution_body(&[create(), second], "u", "").expect("assembles");
+        let body = contribution_body(&[create(), second], &login(), "").expect("assembles");
         let doc: Value = serde_json::from_str(&body).expect("assembled JSON");
         assert_eq!(doc["audit"]["change_type"]["value"], "creation");
         // A blank description omits the optional attribute entirely.
@@ -512,7 +528,7 @@ mod tests {
         amend.kind = StagedKind::CompositionAmend;
         amend.change_type = ChangeType::Amendment;
         amend.body = COMPOSITION.to_owned();
-        let body = contribution_body(&[amend], "u", "").expect("assembles");
+        let body = contribution_body(&[amend], &login(), "").expect("assembles");
         let doc: Value = serde_json::from_str(&body).expect("assembled JSON");
         assert_eq!(
             doc["versions"][0]["commit_audit"]["change_type"]["defining_code"]["code_string"],
@@ -525,18 +541,16 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_change_set_or_a_blank_committer_is_refused_before_any_round_trip() {
-        assert!(contribution_body(&[], "u", "").is_err());
-        let message = contribution_body(&[create()], "   ", "").expect_err("blank committer");
-        assert!(message.contains("committer"), "{message}");
+    fn an_empty_change_set_is_refused_before_any_round_trip() {
+        assert!(contribution_body(&[], &login(), "").is_err());
     }
 
     #[test]
     fn a_failing_member_names_its_row_because_the_cdr_refusal_does_not() {
         let mut broken = create();
         broken.body = "[]".to_owned();
-        let message =
-            contribution_body(&[status_modify(), broken], "u", "").expect_err("a broken member");
+        let message = contribution_body(&[status_modify(), broken], &login(), "")
+            .expect_err("a broken member");
         assert!(message.starts_with("change 2 ("), "{message}");
         assert!(message.contains("must be a JSON object"), "{message}");
     }

@@ -124,8 +124,36 @@ reads about FerroEHR is the party set under `docs/conformance/party/ferroehr/`:
   into commit audits and the version ids it mints, the `environment` a measured
   run happened on, and `exclusive_server`, which lets the workflows that delete
   every EHR run.
+- **`deviations.json`** lists the rows FerroEHR fails on purpose, each with
+  the clause it breaks, the decision behind it and the upstream report (see
+  [Known deviations](#known-deviations)).
 
-Credentials are in neither file. The run reads them from the environment.
+Credentials are in none of these files. The run reads them from the environment.
+
+### Known deviations
+
+Veredictum offers no way to declare a deviation: a row that breaks a MUST is
+a failed row, and it stays failed in the results, the badges and the committed
+record. FerroEHR carries one deviation on purpose. The server writes the
+committer of every version from the authenticated, bound caller, and refuses
+with **403** a stated committer that names someone else (RM Common
+`AUDIT_DETAILS.committer`, "Identity \[...\] of user who committed the item").
+ITS-REST asks that whatever committer a client supplies "MUST be merged"
+(`Requests_and_responses.md` §openehr-version and openehr-audit-details), so
+the catalogue rows that state another committer and expect it recorded fail.
+
+The gate of the conformance workflow reads `deviations.json`
+(`scripts/conformance-deviations.sh`). A released run passes when its only red
+rows are the listed ones, and fails on any other red row, on a listed row that
+passes, and on a listed case the run does not hold, so the list only shrinks.
+The job summary prints each listed row with its status and grounds. The four
+rows are the three that state another committer
+(`contribution_create/commit_contribution-committer_related`,
+`composition_delete/delete_composition-audit_details`,
+`ehr_committal/create_ehr-committal_headers`) and the refused-commit row whose
+control is the first of them. The decision is
+[#5002](https://github.com/FerroHEALTH/FerroEHR/issues/5002), and the upstream
+report is [#5019](https://github.com/FerroHEALTH/FerroEHR/issues/5019).
 
 ## Running the suite yourself
 

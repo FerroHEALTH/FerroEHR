@@ -40,4 +40,6 @@ pub mod runtime;
 #[cfg(feature = "rest-server")]
 pub mod server;
 #[cfg(feature = "rest")]
+pub mod stored_query;
+#[cfg(feature = "rest")]
 pub mod tagged;

@@ -319,6 +319,30 @@ migrations:
     tolerations: []
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Definitions loaded before the server starts (off while `files` is empty).
+#
+# Each file is stored in the definition store by an init container that runs
+# `ferroehr definitions load` on the server's own configuration, in the order
+# listed, before the server container starts. A deployment that maps its
+# professionals to demographic parties needs the templates its party mapping
+# names stored before boot, which refuses a mapping whose templates it lacks.
+# A definition stored with the same text is left alone, so the step runs at
+# every pod start; one stored under the same id with other text fails the
+# pod, because a stored definition never changes. The files travel in a
+# ConfigMap of their own. No openEHR spec governs loading definitions out of
+# band: our own design.
+# ─────────────────────────────────────────────────────────────────────────────
+definitions:
+  # -- The definitions to load, in order: each `name` a file name ending in
+  # `.opt` (an OPT 1.4 template) or `.adls` (an ADL 2 archetype or template,
+  # its parents and slot fillers first) and its `content`.
+  files: []
+  # - name: openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls
+  #   content: |
+  #     archetype (adl_version=2.0.6; rm_release=1.1.0)
+  #     ...
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Per-domain logical backups (off by default).
 #
 # One CronJob per pseudonymisation domain, each dumping ONLY its own
