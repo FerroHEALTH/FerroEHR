@@ -480,3 +480,136 @@ async fn a_system_caller_with_a_personal_scope_is_recorded_with_its_code() {
     let rows = refusal_rows(&db.pool(), "refused-system-personal-scope", tokens.len()).await;
     assert_eq!(rows.len(), tokens.len(), "one record per refused request");
 }
+
+/// The `(binding, acting_mode, client_id, provider id)` of a stored record.
+type Stored = (
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+);
+
+/// The `(binding, acting_mode, client_id, provider id)` of the stored records
+/// of `operation` whose principal is `principal`, waiting for `count`.
+async fn stored_rows(
+    pool: &sqlx::PgPool,
+    operation: &str,
+    principal: &str,
+    count: usize,
+) -> Vec<Stored> {
+    for _ in 0..50 {
+        let rows: Vec<Stored> = sqlx::query_as(
+            "SELECT binding, acting_mode, client_id, provider ->> 'id' \
+                 FROM audit.audit_event WHERE operation = $1 AND principal = $2 \
+                 ORDER BY recorded_at",
+        )
+        .bind(operation)
+        .bind(principal)
+        .fetch_all(pool)
+        .await
+        .expect("query");
+        if rows.len() >= count {
+            return rows;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    panic!("fewer than {count} {operation} records of {principal} were stored");
+}
+
+/// Every access record of a system caller carries `binding = system`, the
+/// acting mode `system`, the client and the healthcare provider its
+/// `[[authz.system_client]]` table names, under each profile (EHDS Annex II
+/// 3.2(a), "identification of the healthcare provider"; the fields are our
+/// own design, #5008). The test tokens all carry `client_id`, so under the
+/// `entra` and `keycloak` profiles the record names the `azp` client the
+/// profile reads, never that stray claim (#5194).
+#[tokio::test]
+async fn a_system_callers_records_carry_its_client_and_provider() {
+    let (db, _audit, svc) = audited_service().await;
+    let declared = [MACHINES, ENTRA, KEYCLOAK]
+        .into_iter()
+        .map(|issuer| SystemClient {
+            issuer: issuer.to_owned(),
+            client_id: "lab".to_owned(),
+            provider: Some(ferroehr::config::binding::ProviderId {
+                issuer: "urn:oid:2.16.528.1.1007.3.3".to_owned(),
+                id: "90000001".to_owned(),
+            }),
+            origins: vec![Origin::Relay],
+            ..SystemClient::default()
+        })
+        .collect();
+    let app = router(svc, config(false, declared)).await;
+    let tokens = app_only(SYSTEM_SCOPES);
+    for (profile, credential) in &tokens {
+        let (status, body) = create_ehr(&app, credential).await;
+        assert_eq!(status, StatusCode::CREATED, "{profile}: {body}");
+    }
+    for principal in ["lab", "8f1c", SERVICE_ACCOUNT] {
+        let rows = stored_rows(&db.pool(), "ehr_create", principal, 1).await;
+        assert_eq!(
+            rows,
+            vec![(
+                Some("system".to_owned()),
+                Some("system".to_owned()),
+                Some("lab".to_owned()),
+                Some("90000001".to_owned())
+            )],
+            "{principal}"
+        );
+    }
+}
+
+/// An RFC 7523 JWT-bearer onward token names the person in `sub` and the
+/// middle-tier client in its client claim, with no `act`: the client the
+/// issuer lists in `delegates` acts for the person, who is bound and commits
+/// as their own `PERSON`, and the record carries the delegated mode and the
+/// client (#5008).
+#[tokio::test]
+async fn a_jwt_bearer_onward_token_commits_as_the_person_and_records_its_client() {
+    let (db, _audit, svc) = audited_service().await;
+    let key = "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e";
+    professional(&svc, key, "532").await;
+    let mut config = config(false, Vec::new());
+    if let IssuerKey::List(entries) = &mut config.auth.shared.issuer
+        && let Some(persons) = entries.first_mut()
+    {
+        persons.delegates = Some(vec![Delegate::Client("bridge".to_owned())]);
+    }
+    let app = router(Arc::clone(&svc), config).await;
+    let onward = bearer(
+        ISSUER,
+        AUDIENCE,
+        &json!({ "sub": key, "client_id": "bridge" }),
+    );
+    let (status, body) = create_ehr(&app, &onward).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let ehr: Value = serde_json::from_str(&body).expect("an EHR");
+    let ehr_id = ehr
+        .pointer("/ehr_id/value")
+        .and_then(Value::as_str)
+        .expect("the EHR id")
+        .to_owned();
+    let (status, version) = common::send_json(
+        &app,
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version"),
+        )
+        .auth(&onward)
+        .accept("application/json")
+        .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{version}");
+    let committer = &version["commit_audit"]["committer"];
+    assert_eq!(committer["external_ref"]["type"], "PERSON", "{committer}");
+    assert_eq!(committer["identifiers"][0]["id"], key, "{committer}");
+    let rows = stored_rows(&db.pool(), "ehr_create", key, 1).await;
+    assert_eq!(
+        rows[0].1.as_deref(),
+        Some("delegated"),
+        "the delegated mode"
+    );
+    assert_eq!(rows[0].2.as_deref(), Some("bridge"), "the client");
+}

@@ -360,6 +360,42 @@ async fn a_consent_conditioned_read_without_a_decision_reference_is_refused() {
     );
 }
 
+/// A consent-conditioned read refused for its missing decision reference is
+/// recorded through the gated refusal path as a failed user authentication
+/// (DICOM PS3.15 §A.5.1 `EventID` 110114) charged to the verified
+/// professional (Wabvpz Art. 15a(1) for the condition; the record is our own
+/// design, #5007).
+#[tokio::test]
+async fn a_consent_conditioned_read_without_a_decision_reference_is_recorded() {
+    let conditioned = Agreement {
+        consent: Some(ConsentSource::Local),
+        ..agreement(Accessor::Person)
+    };
+    let (db, svc, app) = serve(vec![conditioned]).await;
+    let target = ehr(&svc).await.to_string();
+    let refused = professional(Some(&target), &json!({}));
+    assert_eq!(
+        read(&app, &target, &refused, None).await,
+        StatusCode::FORBIDDEN
+    );
+    let pool = db.pool();
+    for _ in 0..50 {
+        let recorded: Option<(String, String)> = sqlx::query_as(
+            "SELECT event_code, issuer FROM audit.audit_event \
+             WHERE principal = 'hp-remote-1' AND summary IS NULL",
+        )
+        .fetch_optional(&pool)
+        .await
+        .expect("query");
+        if let Some(recorded) = recorded {
+            assert_eq!(recorded, ("110114".to_owned(), FEDERATION.to_owned()));
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    panic!("the refused read was not recorded");
+}
+
 #[tokio::test]
 async fn a_consent_conditioned_read_carrying_its_decision_reference_is_served_and_recorded() {
     let conditioned = Agreement {

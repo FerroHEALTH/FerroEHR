@@ -98,7 +98,7 @@ clients whose direct commits come from it:
 ```toml
 [[origins.registered]]
 id = "lab.example"          # the FEEDER_AUDIT system_id the lab's feed writes
-clients = ["lab-gateway"]   # a Basic user, or an access token's client_id (else azp)
+clients = ["lab-gateway"]   # a Basic user, or the client its token's issuer profile names (client_claims)
 ```
 
 A body without a `FEEDER_AUDIT` committed by `lab-gateway` is then stamped

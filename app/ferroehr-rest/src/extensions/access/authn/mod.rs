@@ -708,17 +708,15 @@ fn refused(
     resp
 }
 
-/// The client a request came through, which the `[origins]` register maps to
-/// an origin: the Basic user, or the access token's `client_id`, failing that
-/// its `azp` (RFC 9068 §2.2).
+/// The client a request came through, which the `[origins]` register maps to.
+///
+/// The Basic user, or the client the token's issuer profile reads from
+/// `client_claims`, never another client claim the token carries (#5194).
 #[must_use]
 pub fn client_of(principal: &Principal) -> Option<String> {
     match principal.method {
         AuthMethod::Basic => Some(principal.subject.clone()),
-        AuthMethod::Bearer => ["client_id", "azp"]
-            .into_iter()
-            .find_map(|claim| principal.claims.get(claim).and_then(|v| v.as_str()))
-            .map(str::to_owned),
+        AuthMethod::Bearer => principal.access.caller()?.client_id().map(str::to_owned),
     }
 }
 
