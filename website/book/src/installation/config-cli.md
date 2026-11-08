@@ -60,6 +60,31 @@ no least-privilege role can do, so point `[db] migrate_url` at the credential
 that prepares the schema. See
 [Operations](../operations.md#which-credential-prepares-the-schema).
 
+### `ferroehr definitions load`
+
+```sh
+ferroehr definitions load person.adls role.adls   # store each file, then exit
+```
+
+Stores each file in the definition store, in the order given, before
+`serve` starts. An `.opt` file is an OPT 1.4 template and an `.adls` file an
+ADL 2 archetype or template, whose parents and slot fillers come before it in
+the list. Each file is validated and versioned exactly as the REST upload
+(`POST /definition/template/adl1.4` or `/adl2`) would, and the command stops
+at the first refusal, naming the file. A file whose id is already stored with
+the same text is left alone, so the step runs at every start; one stored
+under the same id with other text is refused, because a stored definition
+never changes and a changed one takes a new version in its id.
+
+A deployment that maps its professionals to demographic parties runs it
+first, so the [party mapping](config-auth.md#the-party-mapping) finds its
+templates when the server boots: as a one-shot compose service, a Helm init
+container or a setup step. The repository's
+`deploy/definitions/professional/` holds the PERSON and ROLE pair the
+development lanes and the quickstart load, adapted from openEHR CKM
+archetypes; a production deployment loads the templates its own modelling
+chose.
+
 ### `ferroehr party-binding refill`
 
 ```sh
