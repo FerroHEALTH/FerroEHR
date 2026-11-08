@@ -415,10 +415,11 @@ fn relayed_committer() -> Value {
           "type": "oauth2" } ] })
 }
 
-/// A contact point's dispensation records the IdA NameID under the IdA's
-/// issuer, typed by its format, beside the voucher's login, and its discard
-/// is a logical delete under the same committer; a dispensation without the
-/// `organization-id` is refused with `422` (#5144).
+/// A contact point's dispensation records the HP Identity Assertion's
+/// `NameID` under the assertion's issuer, typed by its format, beside the
+/// voucher's login, and its discard is a logical delete under the same
+/// committer; a dispensation without the `organization-id` is refused with
+/// `422` (#5144).
 #[tokio::test]
 async fn a_contact_points_dispensation_and_discard_record_the_ida_nameid() {
     let (_db, svc, app) = serve(eprescription(24)).await;
