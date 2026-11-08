@@ -56,6 +56,7 @@ use openehr_base::prelude::{Cardinality, MultiplicityInterval};
 use openehr_lang::v1_1::beom::core::operator_kind::OperatorKind;
 
 use super::binding_v2_4::{bound_codes, split_operational, term_bindings_of};
+use super::facts::WebTemplateNodeFacts;
 use super::implicit;
 use super::inputs::{assumed_code, default_string};
 use super::interval_v2_4::{
@@ -123,6 +124,7 @@ pub fn build_web_template_v2_4(
     tree.node_id = Some(opt.archetype_id.local_semantic_id());
     tree.archetype_ref = Some(template_id.clone());
     tree.rm_release = Some(opt.rm_release.clone());
+    tree.facts = WebTemplateNodeFacts::of_v2_4_root(&opt.terminology, &ctx.default_language);
     tree.min = Some(1);
     tree.max = 1;
 
@@ -314,6 +316,7 @@ fn build_node(
         _ => term,
     };
     let mut node = create_node(ctx, term, child_term, owner, co, parent, identity);
+    node.facts = WebTemplateNodeFacts::of_v2_4(co, child_term, &ctx.default_language);
     build_children(ctx, child_term, co, &mut node, path);
     node
 }
@@ -345,11 +348,7 @@ fn create_node(
     };
     let path = build_path(parent, attr_name, &rm_type, &arch_node_id, name.as_deref());
     let mut node = WebTemplateNode::new(rm_type, path);
-    node.node_id = if arch_node_id.is_empty() {
-        None
-    } else {
-        Some(arch_node_id)
-    };
+    node.node_id = (!arch_node_id.is_empty()).then_some(arch_node_id);
     if archetyped {
         node.archetype_ref = object_archetype_ref(co, &ctx.overlay_parents).map(str::to_owned);
     }
@@ -793,7 +792,7 @@ fn expand_codes(term: &ArchetypeTerminology, constraint: &str) -> Vec<String> {
 
 fn coded_value(ctx: &Ctx, term: &ArchetypeTerminology, code: &str) -> WebTemplateCodedValue {
     let label = rubric_text(term, code, &ctx.default_language).unwrap_or_else(|| code.to_owned());
-    let mut cv = WebTemplateCodedValue::new(code, Some(label));
+    let mut cv = WebTemplateCodedValue::new(code, Some(label)).with_terminology("local");
     cv.localized_labels = ctx.localized(term, code);
     cv.term_bindings = term_bindings_of(term, code);
     cv

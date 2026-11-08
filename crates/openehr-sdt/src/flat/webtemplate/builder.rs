@@ -403,11 +403,8 @@ fn create_node(
         name_constraint.as_deref(),
     );
     let mut node = WebTemplateNode::new(rm_type, path);
-    node.node_id = if arch_node_id.is_empty() {
-        None
-    } else {
-        Some(arch_node_id)
-    };
+    node.node_id = (!arch_node_id.is_empty()).then_some(arch_node_id);
+    node.facts = super::facts::WebTemplateNodeFacts::of_v1_4(co);
     node.min = min;
     node.max = max;
 

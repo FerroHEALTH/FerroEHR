@@ -43,11 +43,17 @@ pub(crate) fn parse(rel: &str) -> Vec<PathSegment> {
         .unwrap_or_default()
 }
 
-/// The segments from `parent_aql` to `child_aql` (the child path extends the
-/// parent). When `child_aql` is not a suffix-extension of `parent_aql` the whole
-/// child path is parsed (matching the prior FLAT behaviour).
+/// The segments from `parent_aql` to `child_aql`, compared step by step as
+/// [`crate::flat::navigate::relative`] compares them. When `child_aql` does not
+/// extend `parent_aql` the whole child path is returned (the prior FLAT
+/// behaviour).
 pub(crate) fn relative(parent_aql: &str, child_aql: &str) -> Vec<PathSegment> {
-    parse(child_aql.strip_prefix(parent_aql).unwrap_or(child_aql))
+    let parent = parse(parent_aql);
+    let child = parse(child_aql);
+    match child.strip_prefix(parent.as_slice()) {
+        Some(tail) => tail.to_vec(),
+        None => child,
+    }
 }
 
 /// Follow `segs` from each of `roots`, returning the reached nodes in document
@@ -180,7 +186,7 @@ pub(crate) fn name_fallback_from_paths<'a>(
 
 /// Whether `seg`'s name conjunct is redundant under `table` — the condition
 /// [`NameFallback`] documents.
-fn fallback_allowed(table: &NameFallback, seg: &PathSegment) -> bool {
+pub(crate) fn fallback_allowed(table: &NameFallback, seg: &PathSegment) -> bool {
     let Some(id) = &seg.predicate.archetype_node_id else {
         return false;
     };

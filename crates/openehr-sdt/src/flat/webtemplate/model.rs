@@ -353,6 +353,10 @@ pub struct WebTemplateNode {
     /// Build-time only (`#[serde(skip)]`).
     #[serde(skip)]
     pub rm_release: Option<String>,
+    /// What the operational template states about this node that the
+    /// document has no member for. Build-time only (`#[serde(skip)]`).
+    #[serde(skip)]
+    pub facts: super::facts::WebTemplateNodeFacts,
 
     /// Pre-parsed archetype-conformance walk plan: the constraint
     /// paths and sibling groups this node's validation walk needs, parsed ONCE at
@@ -410,6 +414,7 @@ impl WebTemplateNode {
             name_coded: None,
             archetype_ref: None,
             rm_release: None,
+            facts: super::facts::WebTemplateNodeFacts::default(),
             walk: None,
         }
     }
@@ -541,6 +546,9 @@ pub struct WebTemplateCodedValue {
     /// The `DV_SCALE` scale value of this option, when the constraint is a scale.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scale: Option<f64>,
+    /// The terminology the option's code is drawn from (`#[serde(skip)]`).
+    #[serde(skip)]
+    pub terminology: Option<String>,
 }
 
 impl WebTemplateCodedValue {
@@ -555,6 +563,7 @@ impl WebTemplateCodedValue {
             validation: None,
             ordinal: None,
             scale: None,
+            terminology: None,
         }
     }
 }

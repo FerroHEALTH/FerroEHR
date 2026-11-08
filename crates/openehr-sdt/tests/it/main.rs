@@ -40,6 +40,7 @@ mod raw_attributes;
 mod shape_tolerance;
 mod spec_vectors;
 mod structured;
+mod template_navigation;
 mod untagged_nodes;
 mod validation;
 mod validation_checklist;
