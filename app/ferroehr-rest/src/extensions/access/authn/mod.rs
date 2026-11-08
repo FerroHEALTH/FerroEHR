@@ -58,7 +58,7 @@ use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
 use ferrohealth_smart::resource::introspection::Introspector;
-use ferrohealth_smart::resource::{Access, Caller, Honoured, ResourceServer, Via};
+use ferrohealth_smart::resource::{Access, Honoured, ResourceServer, Via};
 use http::request::Parts;
 use http::{HeaderValue, StatusCode, header};
 use openehr_its::rest::runtime::ApiError;
@@ -710,18 +710,13 @@ fn refused(
 
 /// The client a request came through, which the `[origins]` register maps to.
 ///
-/// That is the Basic user, or the client the token's issuer profile reads
-/// from `client_claims` (RFC 9068 §2.2 `client_id` by default), never another
-/// client claim the token carries (#5194).
+/// The Basic user, or the client the token's issuer profile reads from
+/// `client_claims`, never another client claim the token carries (#5194).
 #[must_use]
 pub fn client_of(principal: &Principal) -> Option<String> {
     match principal.method {
         AuthMethod::Basic => Some(principal.subject.clone()),
-        AuthMethod::Bearer => principal
-            .access
-            .caller()
-            .and_then(Caller::client_id)
-            .map(str::to_owned),
+        AuthMethod::Bearer => principal.access.caller()?.client_id().map(str::to_owned),
     }
 }
 
