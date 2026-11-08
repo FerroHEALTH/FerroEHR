@@ -54,6 +54,7 @@ pub(crate) mod data_values;
 pub(crate) mod parties;
 pub(crate) mod structures;
 
+use openehr_rm::v1_2::typing::base_name;
 use serde_json::{Value, json};
 
 use crate::flat::error::FlatError;
@@ -88,7 +89,7 @@ pub(crate) fn build_leaf(
     wt_node: Option<&WebTemplateNode>,
     path: &str,
 ) -> Result<Value, FlatError> {
-    let base = base_type(rm_type);
+    let base = base_name(rm_type);
 
     // `|raw` bypass (master04 §"Raw canonical JSON"): the value is embedded
     // canonical RM JSON and MUST carry `_type`. RM→FLAT produces it only for
@@ -157,7 +158,7 @@ pub(crate) fn build_rm_attr(
     host_rm_type: &str,
     path: &str,
 ) -> Result<Option<(String, Value)>, FlatError> {
-    structures::build_rm_attr(seg, occurrences, base_type(host_rm_type), path)
+    structures::build_rm_attr(seg, occurrences, base_name(host_rm_type), path)
 }
 
 /// The canonical-JSON value `node` carries whole under `|raw` (master04 §Raw
@@ -207,12 +208,6 @@ pub(crate) const PARTY_PROXY_CLASSES: &[&str] =
     &["PARTY_SELF", "PARTY_IDENTIFIED", "PARTY_RELATED"];
 
 // ── shared helpers (visible to the sibling map submodules) ────────────────────
-
-/// The concrete base of a possibly-generic slot type (`DV_INTERVAL<DV_QUANTITY>`
-/// → `DV_INTERVAL`).
-pub(super) fn base_type(rm_type: &str) -> &str {
-    rm_type.split('<').next().unwrap_or(rm_type)
-}
 
 /// A `CODE_PHRASE` (RM data_types §CODE_PHRASE): `terminology_id.value` +
 /// `code_string`.

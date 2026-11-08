@@ -100,6 +100,15 @@ impl fmt::Display for RmType {
     }
 }
 
+/// The class name a type name starts with, without its generic arguments or
+/// surrounding space (`DV_INTERVAL` of `DV_INTERVAL<DV_QUANTITY>`).
+///
+/// The borrowed counterpart of [`RmType::name`] for a caller holding the text.
+#[must_use]
+pub fn base_name(text: &str) -> &str {
+    text.split('<').next().unwrap_or(text).trim()
+}
+
 /// Why a text is no RM type name. Each position is a byte offset.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum RmTypeParseError {
@@ -554,6 +563,13 @@ mod tests {
                 ],
             )
         );
+    }
+
+    #[test]
+    fn the_base_name_drops_the_arguments() {
+        assert_eq!(base_name("DV_INTERVAL<DV_QUANTITY>"), "DV_INTERVAL");
+        assert_eq!(base_name(" HISTORY <ITEM_LIST>"), "HISTORY");
+        assert_eq!(base_name("DV_TEXT"), "DV_TEXT");
     }
 
     #[test]

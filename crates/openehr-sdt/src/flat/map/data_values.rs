@@ -21,9 +21,10 @@
               (#1694)"
 )]
 
+use openehr_rm::v1_2::typing::{RmType, base_name};
 use serde_json::{Map, Value, json};
 
-use super::{base_type, code_phrase_obj, family, parties, wt_coded_value, wt_terminology};
+use super::{code_phrase_obj, family, parties, wt_coded_value, wt_terminology};
 use crate::flat::sim::SimNode;
 use crate::flat::webtemplate::model::WebTemplateNode;
 
@@ -89,7 +90,7 @@ pub(crate) fn emit_leaf(rm: &Value, rm_type: &str, list_open: Option<bool>, out:
     let ty = rm
         .get("_type")
         .and_then(Value::as_str)
-        .unwrap_or_else(|| base_type(rm_type));
+        .unwrap_or_else(|| base_name(rm_type));
     match ty {
         // master05 §DV_TEXT (and DV_PARAGRAPH shares the shape). A DV_TEXT held
         // in an *open* DV_CODED_TEXT slot is the `|other` free-text branch
@@ -97,7 +98,7 @@ pub(crate) fn emit_leaf(rm: &Value, rm_type: &str, list_open: Option<bool>, out:
         // when the node also carries metadata that keeps it from being a bare
         // leaf (`|formatting` / `_mapping`).
         "DV_TEXT" | "DV_PARAGRAPH" => {
-            let coded_slot = base_type(rm_type) == "DV_CODED_TEXT";
+            let coded_slot = base_name(rm_type) == "DV_CODED_TEXT";
             let open_slot = coded_slot && list_open != Some(false);
             let has_meta = present(rm.get("formatting")) || present(rm.get("mappings"));
             if open_slot {
@@ -211,8 +212,7 @@ pub(crate) fn emit_leaf(rm: &Value, rm_type: &str, list_open: Option<bool>, out:
         // type whose datum is not attrs-only — `emit_leaf` emits its endpoint
         // children here, since master05 §DV_INTERVAL models them as sub-paths.
         "DV_INTERVAL" => {
-            let t = base_type(generic_arg(rm_type).unwrap_or("DV_QUANTITY"));
-            emit_interval(rm, t, out);
+            emit_interval(rm, &interval_limit(rm_type), out);
         }
         // Any remaining `DV_*` leaf falls back to its scalar `value`.
         _ => put(out, "", rm.get("value")),
@@ -380,7 +380,7 @@ pub(super) fn build_leaf(
     rm_type: &str,
     wt_node: Option<&WebTemplateNode>,
 ) -> Option<Value> {
-    let base = base_type(rm_type);
+    let base = base_name(rm_type);
     let mut value = build_core(base, rm_type, node, wt_node).or_else(|| {
         infer_type(node)
             .filter(|t| *t != base)
@@ -541,22 +541,18 @@ fn build_core(
         }
         "DV_MULTIMEDIA" => build_multimedia(node),
         "DV_PARSABLE" => build_parsable(node),
-        "DV_INTERVAL" => Some(build_interval(
-            node,
-            base_type(generic_arg(rm_type).unwrap_or("DV_QUANTITY")),
-        )),
+        "DV_INTERVAL" => Some(build_interval(node, &interval_limit(rm_type))),
         _ => bare_typed(node, base),
     }
 }
 
-/// The `T` of a generic slot type (`DV_INTERVAL<DV_QUANTITY>` → `DV_QUANTITY`).
-fn generic_arg(rm_type: &str) -> Option<&str> {
-    let start = rm_type.find('<')? + 1;
-    let end = rm_type.rfind('>')?;
-    if start >= end {
-        return None;
-    }
-    Some(rm_type.get(start..end)?.trim())
+/// The class of the `T` of a generic slot type (`DV_INTERVAL<DV_QUANTITY>` →
+/// `DV_QUANTITY`), `DV_QUANTITY` for a slot type that names none.
+fn interval_limit(rm_type: &str) -> String {
+    // NOTE: a slot type that is no generic RM type name (RM class tables) has no argument.
+    let parsed = rm_type.parse::<RmType>().ok();
+    let limit = parsed.as_ref().and_then(|t| t.params().first());
+    limit.map_or_else(|| "DV_QUANTITY".to_owned(), |t| t.name().to_owned())
 }
 
 fn attr<'a>(node: &'a SimNode, key: &str) -> Option<&'a Value> {
