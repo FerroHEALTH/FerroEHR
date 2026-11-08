@@ -14,7 +14,8 @@ use std::sync::Arc;
 use axum::Router;
 use ferroehr::config::binding::PartyBindingConfig;
 use ferroehr::config::binding::person::{
-    PersonAttribute, PersonSection, PersonTemplate, RoleSection, Selector,
+    GroupSection, MembershipSection, PersonAttribute, PersonSection, PersonTemplate, RoleSection,
+    Selector,
 };
 use ferroehr::config::scim::{ScimClient, ScimConfig};
 use ferroehr::service::FerroEhrService;
@@ -29,6 +30,8 @@ use serde_json::{Value, json};
 use crate::common;
 
 mod entra;
+mod groups;
+mod groups_entra;
 mod refusals;
 
 /// The deployment's own authorization server, which issues the clients' tokens.
@@ -55,6 +58,15 @@ const NAME_PATH: &str = "/identities[id4]/details[id5]/items[id6]";
 const GIVEN_PATH: &str = "/identities[id4]/details[id5]/items[id15]";
 const FAMILY_PATH: &str = "/identities[id4]/details[id5]/items[id16]";
 const EMAIL_PATH: &str = "/contacts[id10]/addresses[id11]/details[id12]/items[id13]";
+/// The group template, the membership archetype and the identifier issuers
+/// of each client's Groups' `externalId`s.
+const GROUP: &str = "openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0";
+const MEMBERSHIP_HRID: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0";
+/// The archetype id each membership's `archetype_node_id` carries, its
+/// interface form (AM 2 Identification §Archetype Identifiers).
+const MEMBERSHIP: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1";
+const GROUPS: &str = "urn:example:groups";
+const OTHER_GROUPS: &str = "urn:example:other-groups";
 /// The custom extension FerroEHR's User attributes sit in.
 const EXTENSION: &str = "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User";
 
@@ -195,8 +207,54 @@ fn binding() -> PartyBindingConfig {
         professional_role: Some(RoleSection {
             template_id: ROLE.to_owned(),
         }),
+        group: Some(GroupSection {
+            template_id: GROUP.to_owned(),
+            external_id: selector("group_external_id"),
+            display_name: Some(NAME_PATH.to_owned()),
+        }),
+        membership: Some(MembershipSection {
+            archetype_id: MEMBERSHIP.to_owned(),
+        }),
         ..PartyBindingConfig::default()
     }
+}
+
+/// A synthetic ADL 2 membership archetype: a `PARTY_RELATIONSHIP` with
+/// optional details.
+fn membership_archetype() -> String {
+    format!(
+        "archetype (adl_version=2.0.6; rm_release=1.1.0)
+    {MEMBERSHIP_HRID}
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <[\"name\"] = <\"FerroEHR tests\">>
+    lifecycle_state = <\"published\">
+    details = <
+        [\"en\"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <\"A member of a group.\">
+        >
+    >
+
+definition
+    PARTY_RELATIONSHIP[id1] matches {{
+        details matches {{
+            ITEM_TREE[id2] occurrences matches {{0..1}}
+        }}
+    }}
+
+terminology
+    term_definitions = <
+        [\"en\"] = <
+            [\"id1\"] = <text = <\"Membership\"> description = <\"A membership.\">>
+            [\"id2\"] = <text = <\"Details\"> description = <\"The details.\">>
+        >
+    >
+"
+    )
 }
 
 fn config() -> AppConfig {
@@ -214,15 +272,20 @@ fn config() -> AppConfig {
         jwks_file: common::jwks_file().display().to_string(),
         ..common::entry(issuer, AUDIENCE)
     };
-    let party = |issuer: &str, identifier_issuer: &str| PartySection {
+    let party = |issuer: &str, identifier_issuer: &str, groups: &str| PartySection {
         issuer: issuer.to_owned(),
         identifier_issuer: identifier_issuer.to_owned(),
         identifier_type: "guid".to_owned(),
+        group_claim: "groups".to_owned(),
+        group_identifier_issuer: groups.to_owned(),
         ..PartySection::default()
     };
     let mut auth = common::auth(AuthSection {
         issuer: IssuerKey::List(vec![machines, persons(PERSONS), persons(OTHER_PERSONS)]),
-        party: vec![party(PERSONS, LOGIN), party(OTHER_PERSONS, OTHER_LOGIN)],
+        party: vec![
+            party(PERSONS, LOGIN, GROUPS),
+            party(OTHER_PERSONS, OTHER_LOGIN, OTHER_GROUPS),
+        ],
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -297,9 +360,14 @@ async fn app_of(
             .with_audit(sender)
             .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone()));
     }
-    for (hrid, root) in [(PERSON, "PERSON"), (ROLE, "ROLE")] {
+    for adl in [
+        archetype(PERSON, "PERSON"),
+        archetype(ROLE, "ROLE"),
+        archetype(GROUP, "GROUP"),
+        membership_archetype(),
+    ] {
         service
-            .template_adl2_upload(&archetype(hrid, root))
+            .template_adl2_upload(&adl)
             .await
             .expect("the archetype uploads");
     }
