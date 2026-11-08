@@ -35,16 +35,17 @@ use crate::flash::{Done, redirect_with};
 use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{flag, h, opt, t};
+use crate::pages::common::is_status;
 use crate::pages::common::{
     EditorDock, Refused, card_panel, dock_editor, document_section, panel, plain_section, section,
-    short, shortened, version_number,
+    short, shortened,
 };
-use crate::pages::common::{is_status, version_uid_at};
 use crate::pages::ehr::EhrModel;
 use crate::pages::ehr::{EhrTab, crumbs, ehr_id_param, ehr_view, tab_href};
 use crate::pages::form::Form;
 use crate::pages::versions::History;
 use crate::routes::Drawn;
+use crate::uid::{version_number, version_uid_at};
 
 #[expect(
     clippy::disallowed_types,

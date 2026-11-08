@@ -29,6 +29,9 @@
 //! `ehr_id`-carrying operation, so a non-UUID id is refused at the door rather
 //! than admitted into a store and a query surface that cannot represent it.
 
+use std::str::FromStr;
+
+use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -90,16 +93,18 @@ impl VoId {
         Self(stamp.mint())
     }
 
-    /// The versioned object `uid` names: the `object_id` before the first `::`
-    /// of an `OBJECT_VERSION_ID` (`object_id '::' creating_system_id '::'
-    /// version_tree_id`, BASE `object_version_id.adoc`), or the whole of a bare
-    /// uid.
+    /// The versioned object `uid` names: the `object_id` of an
+    /// `OBJECT_VERSION_ID` (BASE `object_version_id.adoc`), or the whole of any
+    /// other value, read as the bare uid of the container.
     ///
     /// # Errors
-    /// [`uuid::Error`] when that `object_id` is not a UUID, so it names no
-    /// versioned object this server holds.
+    /// [`uuid::Error`] when that `object_id` or bare uid is not a UUID, so it
+    /// names no versioned object this server holds.
     pub fn from_uid_head(uid: &str) -> Result<Self, uuid::Error> {
-        uid.split("::").next().unwrap_or(uid).parse()
+        match ObjectVersionId::from_str(uid) {
+            Ok(version) => version.object_id_str().parse(),
+            Err(_not_a_version) => uid.parse(),
+        }
     }
 }
 
@@ -115,7 +120,7 @@ impl std::fmt::Display for VoId {
     }
 }
 
-impl std::str::FromStr for EhrId {
+impl FromStr for EhrId {
     type Err = uuid::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -123,7 +128,7 @@ impl std::str::FromStr for EhrId {
     }
 }
 
-impl std::str::FromStr for VoId {
+impl FromStr for VoId {
     type Err = uuid::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {

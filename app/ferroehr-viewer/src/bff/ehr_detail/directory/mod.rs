@@ -32,6 +32,9 @@
 
 pub mod edit;
 
+use std::str::FromStr;
+
+use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use serde_json::{Value, json};
 
 use crate::uid::uid_value_of;
@@ -486,15 +489,25 @@ pub async fn fetch_directory_subtree(
 }
 
 /// Split an `OBJECT_VERSION_ID` into its `object_id::system` prefix and its
-/// integer version tree number (`abc::sys::3` → `("abc::sys", 3)`). Returns
-/// `None` for a branched (non-integer) version tree id.
+/// trunk version number (`abc::sys::3` → `("abc::sys", 3)`). Returns `None`
+/// for a branch version or a value that is no `OBJECT_VERSION_ID`, since
+/// neither names a trunk version to count back from.
 fn split_version_uid(uid: &str) -> Option<(String, i32)> {
-    let (prefix, version) = uid.rsplit_once("::")?;
-    let number = version.parse::<i32>().ok()?;
-    if prefix.is_empty() || number < 1 {
+    let version = ObjectVersionId::from_str(uid).ok()?;
+    if version.is_branch() {
         return None;
     }
-    Some((prefix.to_owned(), number))
+    let number = version
+        .version_tree_id()
+        .trunk_version()
+        .parse::<i32>()
+        .ok()?;
+    let prefix = format!(
+        "{}::{}",
+        version.object_id_str(),
+        version.creating_system_id_str()
+    );
+    Some((prefix, number))
 }
 
 /// Summarize a fetched directory FOLDER version body into a [`DirectoryVersion`].

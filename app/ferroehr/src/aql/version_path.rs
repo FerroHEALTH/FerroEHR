@@ -7,6 +7,9 @@
 //! the version standard predicate of a `VERSION` class expression (QUERY
 //! master03 §Standard predicate).
 
+use std::str::FromStr;
+
+use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use openehr_query::ast::{FunctionCall, IdentifiedPath, ObjectPath, StandardPredicate, Terminal};
 
 use super::analyze::{
@@ -228,13 +231,11 @@ pub(crate) fn resolve_version_predicate(
     })
 }
 
-/// Whether an `OBJECT_VERSION_ID` string names a branch version. The format is
-/// `object_id::creating_system_id::version_tree_id`; a trunk `version_tree_id` is
-/// a plain integer, while a branch id contains dots (`1.1.1`).
+/// Whether a string is an `OBJECT_VERSION_ID` that names a branch version
+/// (BASE `version_tree_id.adoc` `is_branch`). A value that is no
+/// `OBJECT_VERSION_ID` names no version, so it compares unequal to every one.
 fn is_branch_version_id(s: &str) -> bool {
-    s.split("::")
-        .nth(2)
-        .is_some_and(|tree_id| tree_id.contains('.'))
+    ObjectVersionId::from_str(s).is_ok_and(|version| version.is_branch())
 }
 
 /// The FerroEHR extension function `LAST(<path below v/attestations>)`: the

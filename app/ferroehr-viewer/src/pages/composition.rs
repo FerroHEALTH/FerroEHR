@@ -50,16 +50,16 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, card_panel, dock_editor, document_section, findings_of, info_note,
-    marks_of, panel, plain_section, section, short, shortened, state_mark, version_number, when,
+    EditorDock, Refused, card_panel, discarded, dock_editor, document_section, findings_of,
+    info_note, is_status, marks_of, panel, plain_section, section, short, shortened, state_mark,
+    when,
 };
-use crate::pages::common::{discarded, is_status, version_uid_at};
 use crate::pages::ehr::{crumbs, ehr_href, ehr_id_param};
 use crate::pages::form::Form;
-use crate::pages::item_tags::{TagAct, tag_act, tag_done};
-use crate::pages::item_tags::{TagPanel, tag_panel};
+use crate::pages::item_tags::{TagAct, TagPanel, tag_act, tag_done, tag_panel};
 use crate::pages::versions::History;
 use crate::routes::Drawn;
+use crate::uid::{version_number, version_uid_at};
 use delete::delete_dialog;
 
 /// The id of Delete composition's confirmation dialog.

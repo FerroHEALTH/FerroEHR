@@ -15,6 +15,9 @@
               fragment the seam produced once; stored-content serving"
 )]
 
+use std::str::FromStr;
+
+use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use openehr_rm::prelude::ItemTag;
 use serde_json::Value;
 use uuid::Uuid;
@@ -56,11 +59,12 @@ impl FerroEhrService {
         // `openehr-version-item-tag`. The version tail comes from the response
         // metadata's own OBJECT_VERSION_ID.
         let container = self.party_tags(vo_id, None).await?;
-        let version_tail = resp
+        // NOTE: a meta uid that is no OBJECT_VERSION_ID names no version, so no version set rides.
+        let served = resp
             .meta
             .as_ref()
-            .and_then(|m| m.uid.split_once("::").map(|(_, tail)| tail.to_owned()));
-        let version = match version_tail.as_deref() {
+            .and_then(|m| ObjectVersionId::from_str(&m.uid).ok());
+        let version = match tag_target_tail(served.as_ref()) {
             Some(tail) => Some(self.party_tags(vo_id, Some(tail)).await?),
             None => None,
         };

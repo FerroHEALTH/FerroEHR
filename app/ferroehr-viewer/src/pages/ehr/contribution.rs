@@ -45,15 +45,15 @@ use crate::flash::{Done, redirect_with};
 use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{h, opt, t};
-use crate::pages::common::discarded;
 use crate::pages::common::{
-    EditorDock, LastDays, Refused, ago, card_panel, count, dock_editor, document_section, panel,
-    section, shortened, version_number, when,
+    EditorDock, LastDays, Refused, ago, card_panel, count, discarded, dock_editor,
+    document_section, panel, section, shortened, when,
 };
 use crate::pages::ehr::{EhrModel, EhrTab, crumbs, ehr_href, ehr_id_param, ehr_view, tab_href};
 use crate::pages::form::Form;
 use crate::paging::Listing;
 use crate::routes::Drawn;
+use crate::uid::version_number;
 
 /// How many days the activity chart covers.
 const ACTIVITY_DAYS: u16 = 30;

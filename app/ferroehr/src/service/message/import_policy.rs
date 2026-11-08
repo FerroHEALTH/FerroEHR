@@ -24,9 +24,9 @@
 use std::collections::BTreeSet;
 
 use serde_json::Value;
-use uuid::Uuid;
 
 use crate::error::ServiceError;
+use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::versioning::import::ImportContainer;
 
@@ -149,8 +149,7 @@ impl FerroEhrService {
         let reference = committer
             .pointer("/external_ref/id/value")
             .and_then(Value::as_str)
-            .and_then(|id| id.split("::").next())
-            .and_then(|root| root.parse::<Uuid>().ok());
+            .and_then(|id| VoId::from_uid_head(id).ok());
         let local = match reference {
             Some(id) => {
                 let found: Option<i32> = sqlx::query_scalar(

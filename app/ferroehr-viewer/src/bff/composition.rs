@@ -28,6 +28,7 @@ use crate::error::ViewerError;
 use crate::format::ReprFormat;
 use crate::locale::Msg;
 use crate::locale::{tr_served, tr_served_with};
+use crate::uid::full_version_uid;
 
 /// The revision history of a versioned composition, newest-first.
 ///
@@ -229,12 +230,9 @@ pub async fn delete_composition(
     version_uid: String,
 ) -> Result<(), ViewerError> {
     let cdr = crate::bff::cdr()?;
-    let version_uid = version_uid.trim();
-    if version_uid.is_empty() || !version_uid.contains("::") {
-        return Err(ViewerError::Invalid(tr_served(
-            Msg::LatestVersionSFullObjectVersion,
-        )));
-    }
+    let version_uid = full_version_uid(&version_uid, || {
+        tr_served(Msg::LatestVersionSFullObjectVersion)
+    })?;
     let url = cdr.rest_v1(&format!(
         "ehr/{}/composition/{}",
         urlencoding::encode(&ehr_id),
