@@ -31,6 +31,7 @@ use std::collections::HashSet;
 use std::sync::LazyLock;
 
 use openehr_rm::v1_2::paths::PathSegment;
+use openehr_rm::v1_2::typing::base_name;
 use serde_json::{Map, Value, json};
 
 use crate::flat::ctx;
@@ -670,7 +671,7 @@ fn build_leaf(
     if is_null_flavoured(sim) {
         return Ok(None);
     }
-    let base = base_type(&node.rm_type);
+    let base = base_name(&node.rm_type);
     let mut dv = map::build_leaf(sim, base, Some(node), path)?;
     if let Value::Object(m) = &mut dv {
         for (seg, child) in &sim.children {
@@ -743,7 +744,7 @@ fn apply_container_attrs(
 ) -> Result<(), FlatError> {
     for (seg, child) in &sim.children {
         if seg.starts_with('_') {
-            apply_rm_attr(obj, seg, &child.occurrences, base_type(&node.rm_type), path)?;
+            apply_rm_attr(obj, seg, &child.occurrences, base_name(&node.rm_type), path)?;
             continue;
         }
         let known = node.children.iter().any(|c| {
@@ -840,7 +841,7 @@ fn child_is_walked(node: &WebTemplateNode, child: &WebTemplateNode) -> bool {
 /// — unevaluable against an absent bound). Derived from bound presence; an
 /// explicit datum flag wins.
 fn apply_interval_flags(m: &mut Map<String, Value>, rm_type: &str) {
-    if base_type(rm_type) != "DV_INTERVAL" {
+    if base_name(rm_type) != "DV_INTERVAL" {
         return;
     }
     let has_lower = m.contains_key("lower");
@@ -998,7 +999,7 @@ fn apply_container_datum_attrs(
     path: &str,
     obj: &mut Map<String, Value>,
 ) -> Result<(), FlatError> {
-    let host = base_type(&node.rm_type);
+    let host = base_name(&node.rm_type);
     for (chain, datum) in &sim.attrs {
         if let Some(attr) = container_datum_attr(host, chain) {
             obj.insert(attr.to_owned(), datum.clone());
@@ -1050,7 +1051,7 @@ fn place_direct_rm_path(
     path: &str,
     history_origin: &mut Option<String>,
 ) -> Result<bool, FlatError> {
-    let Some(dp) = direct_rm_path(base_type(host_rm_type), seg) else {
+    let Some(dp) = direct_rm_path(base_name(host_rm_type), seg) else {
         return Ok(false);
     };
     let occ = occurrences.iter().find(|o| !o.is_empty());
@@ -1572,14 +1573,14 @@ fn is_multiple(attr: &str) -> bool {
 /// any of them chooses the interval; otherwise the node builds as the point
 /// event [`concrete_type`] gives.
 fn is_interval_input(node: &WebTemplateNode, sim: &SimNode) -> bool {
-    base_type(&node.rm_type) == "EVENT"
+    base_name(&node.rm_type) == "EVENT"
         && (sim.children.contains_key("width")
             || sim.children.contains_key("math_function")
             || sim.attrs.contains_key("sample_count"))
 }
 
 fn concrete_type(rm_type: &str) -> &str {
-    match base_type(rm_type) {
+    match base_name(rm_type) {
         "EVENT" => "POINT_EVENT",
         other => other,
     }
@@ -1594,10 +1595,6 @@ fn concretize_structural(rm_type: &str) -> &str {
         "ITEM_STRUCTURE" => "ITEM_TREE",
         other => other,
     }
-}
-
-fn base_type(rm_type: &str) -> &str {
-    rm_type.split('<').next().unwrap_or(rm_type)
 }
 
 /// The ENTRY family (`RM/docs/UML/classes/org.openehr.rm.composition.*`): the
