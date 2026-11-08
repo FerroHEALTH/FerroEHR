@@ -143,13 +143,19 @@ impl FerroEhrService {
     }
 
     /// The EHR whose `EHR_STATUS` names `subject` once the installed provider
-    /// has resolved it into the clinical domain ([`Self::clinical_subject`]),
-    /// matched on the EHR's promoted subject columns; `None` when no EHR
-    /// names it or the identity source knows no clinical identifier for it.
+    /// has resolved it into the clinical domain, matched on the EHR's promoted
+    /// subject columns; `None` when no EHR names it or the identity source
+    /// knows no clinical identifier for it.
+    ///
+    /// Under [`EhrIndexProvider::Local`] the subject names itself; under
+    /// [`EhrIndexProvider::Ihe`] a subject outside the clinical domain is
+    /// cross-referenced by the PIX Manager.
     ///
     /// # Errors
-    /// As [`Self::clinical_subject`], and [`IndexError::Service`] on a storage
-    /// fault.
+    /// [`IndexError::Unconfigured`] with no provider installed,
+    /// [`IndexError::IdentitySource`] when the source fails,
+    /// [`IndexError::NotPseudonymous`] for an answered identifier the subject
+    /// rule refuses, and [`IndexError::Service`] on a storage fault.
     pub async fn subject_ehr(&self, subject: &SubjectRef) -> Result<Option<EhrId>, IndexError> {
         let Some(clinical) = self.clinical_subject(subject).await? else {
             return Ok(None);
