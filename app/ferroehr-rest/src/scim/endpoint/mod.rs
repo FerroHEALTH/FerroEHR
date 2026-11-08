@@ -13,6 +13,24 @@
 //! requests count against `[server.caller_rate]` like any other caller's. No
 //! openEHR spec governs SCIM: our own design over RFC 7644.
 
+#[expect(
+    clippy::disallowed_types,
+    reason = "SCIM resource content (#1694 boundary class): a Group is the RFC 7644 §3.8 JSON \
+              representation of an attribute-based schema, built from the GROUP's canonical body"
+)]
+mod group_map;
+#[expect(
+    clippy::disallowed_types,
+    reason = "SCIM resource content (#1694 boundary class): the RFC 7644 §3.8 JSON \
+              representation a request carries and a response serves"
+)]
+mod groups;
+#[expect(
+    clippy::disallowed_types,
+    reason = "SCIM resource content (#1694 boundary class): the RFC 7644 §3.8 JSON \
+              representation a request carries and a response serves"
+)]
+mod listing;
 pub(crate) mod schemas;
 #[expect(
     clippy::disallowed_types,
@@ -83,6 +101,7 @@ pub fn check(config: &AppConfig) -> Result<(), EndpointError> {
     if config.scim.enabled {
         schemas::discovery(&config.scim, &config.party_binding)?;
         user_map::UserMap::new(&config.party_binding).map_err(EndpointError::Mapping)?;
+        group_map::GroupMap::new(config).map_err(EndpointError::Mapping)?;
     }
     Ok(())
 }
@@ -113,22 +132,10 @@ pub(crate) fn router(
         config.scim.contact_erasure_minutes,
         Duration::from_secs(60),
     );
-    let users = discovery
-        .resource_schema("User")
-        .cloned()
-        .ok_or_else(|| "the discovery documents define no User".to_owned())
-        .and_then(|schema| {
-            users::Users::new(
-                service,
-                user_map::UserMap::new(&config.party_binding)?,
-                schema,
-                &config.scim,
-            )
-        });
-    let users = match users {
-        Ok(users) => users,
+    let resources = match resources(config, &discovery, service) {
+        Ok(resources) => resources,
         Err(error) => {
-            tracing::error!(%error, "the SCIM endpoint is not mounted: its User mapping does not build");
+            tracing::error!(%error, "the SCIM endpoint is not mounted: its resource mapping does not build");
             return None;
         }
     };
@@ -142,18 +149,7 @@ pub(crate) fn router(
         .route("/Schemas", get(schema_list))
         .route("/Schemas/{id}", get(schema))
         .with_state(Arc::clone(&discovery))
-        .merge(
-            Router::new()
-                .route("/Users", get(users::list).post(users::create))
-                .route(
-                    "/Users/{id}",
-                    get(users::read)
-                        .put(users::modify)
-                        .patch(users::modify)
-                        .delete(users::delete),
-                )
-                .with_state(users),
-        );
+        .merge(resources);
     let gated = match config.server.caller_rate {
         Some(rate) => gated
             .route_layer(from_fn_with_state(
@@ -175,6 +171,56 @@ pub(crate) fn router(
                 "no SCIM resource is served at this path",
             ))
         }),
+    ))
+}
+
+/// The `/Users` routes, with the `/Groups` routes when the party mapping
+/// maps a group.
+///
+/// # Errors
+/// The refusal naming what the User or the Group mapping lacks.
+fn resources(
+    config: &AppConfig,
+    discovery: &Discovery,
+    service: Arc<FerroEhrService>,
+) -> Result<Router<AppState>, String> {
+    let schema = |name: &str| {
+        discovery
+            .resource_schema(name)
+            .cloned()
+            .ok_or_else(|| format!("the discovery documents define no {name}"))
+    };
+    let users = users::Users::new(
+        Arc::clone(&service),
+        user_map::UserMap::new(&config.party_binding)?,
+        schema("User")?,
+        &config.scim,
+    )?;
+    let routes = Router::new()
+        .route("/Users", get(users::list).post(users::create))
+        .route(
+            "/Users/{id}",
+            get(users::read)
+                .put(users::modify)
+                .patch(users::modify)
+                .delete(users::delete),
+        )
+        .with_state(users);
+    let Some(map) = group_map::GroupMap::new(config)? else {
+        return Ok(routes);
+    };
+    let groups = groups::Groups::new(service, map, schema("Group")?, &config.scim)?;
+    Ok(routes.merge(
+        Router::new()
+            .route("/Groups", get(groups::list).post(groups::create))
+            .route(
+                "/Groups/{id}",
+                get(groups::read)
+                    .put(groups::modify)
+                    .patch(groups::modify)
+                    .delete(groups::delete),
+            )
+            .with_state(groups),
     ))
 }
 
