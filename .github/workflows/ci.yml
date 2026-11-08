@@ -570,6 +570,8 @@ jobs:
         run: bash scripts/checks/pipe-early-exit.sh
       - name: The GitHub API retry rides out a 5xx burst, blames the API when it gives up and refuses a 4xx at once
         run: bash scripts/lib/gh-retry.sh --self-test
+      - name: A cached download makes no request on a hit and is held to its sha256
+        run: bash .github/actions/cached-download/fetch.sh --self-test
       - name: The dangerous-command hook refuses and allows the shapes it documents
         run: bash .claude/hooks/block_dangerous_test.sh
       - name: The crate-version hook refuses a hand edit of the lockstep crate version
@@ -862,15 +864,19 @@ jobs:
       # `reuse lint` proves the declarations are COMPLETE. It cannot know that
       # this project also publishes a human-readable licensing chapter, which is
       # what a procurement reviewer actually reads and what drifts.
+      - id: yq
+        uses: ./.github/actions/cached-download # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          name: yq
+          version: v4.53.3
+          sha256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+          url: https://github.com/mikefarah/yq/releases/download/v4.53.3/yq_linux_amd64
       - name: Install yq
         env:
-          YQ_VERSION: v4.53.3
-          YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+          YQ_BIN: ${{ steps.yq.outputs.path }}
         run: |
           set -euo pipefail
-          curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o /tmp/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
-          echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
-          sudo install -m 0755 /tmp/yq /usr/local/bin/yq
+          sudo install -m 0755 "$YQ_BIN" /usr/local/bin/yq
           yq --version
       - name: The declarations, the texts and the chapter agree
         run: bash scripts/checks/licensing-declarations.sh
@@ -1347,15 +1353,19 @@ jobs:
       # `deny.toml` and the prose file are TOML, which jq cannot read. Pinned by
       # version and verified by checksum, like the chart lane's copy: this
       # binary decides whether the gate passes.
+      - id: yq
+        uses: ./.github/actions/cached-download # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          name: yq
+          version: v4.53.3
+          sha256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+          url: https://github.com/mikefarah/yq/releases/download/v4.53.3/yq_linux_amd64
       - name: Install yq
         env:
-          YQ_VERSION: v4.53.3
-          YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+          YQ_BIN: ${{ steps.yq.outputs.path }}
         run: |
           set -euo pipefail
-          curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o /tmp/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
-          echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
-          sudo install -m 0755 /tmp/yq /usr/local/bin/yq
+          sudo install -m 0755 "$YQ_BIN" /usr/local/bin/yq
           yq --version
       - name: Every accepted advisory has a published VEX justification
         run: bash scripts/checks/vex-advisories.sh
@@ -1800,33 +1810,47 @@ jobs:
       # field. Pinned by version and verified by checksum: this step runs before
       # the security gates, so a substituted binary would decide whether they
       # pass.
+      - id: yq
+        uses: ./.github/actions/cached-download # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          name: yq
+          version: v4.53.3
+          sha256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+          url: https://github.com/mikefarah/yq/releases/download/v4.53.3/yq_linux_amd64
       - name: Install yq
         env:
-          YQ_VERSION: v4.53.3
-          YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+          YQ_BIN: ${{ steps.yq.outputs.path }}
         run: |
           set -euo pipefail
-          curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o /tmp/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
-          echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
-          sudo install -m 0755 /tmp/yq /usr/local/bin/yq
+          sudo install -m 0755 "$YQ_BIN" /usr/local/bin/yq
           yq --version
       # The README drift check needs helm-docs, and validate.sh's self-skip when
       # it is absent is how the v4.0.5 README shipped a release stale through a
       # green lane (#2806) — so the tool is installed here (pinned in
       # deploy/helm/.tool-versions beside helm, checksum-verified like yq) and
       # validate.sh now FAILS in CI instead of skipping when it is missing.
-      - name: Install the pinned helm-docs
+      - name: Read the pinned helm-docs version
+        id: helm-docs-pin
         env:
           VERSION_FILE: deploy/helm/.tool-versions
-          HELM_DOCS_SHA256: a8cf72ada34fad93285ba2a452b38bdc5bd52cc9a571236244ec31022928d6cc
         run: |
           set -euo pipefail
           version="$(awk '$1 == "helm-docs" { print $2 }' "$VERSION_FILE")"
           [ -n "$version" ] || { echo "::error::no helm-docs line in $VERSION_FILE"; exit 1; }
-          curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o /tmp/helm-docs.tar.gz \
-            "https://github.com/norwoodj/helm-docs/releases/download/v${version}/helm-docs_${version}_Linux_x86_64.tar.gz"
-          echo "${HELM_DOCS_SHA256}  /tmp/helm-docs.tar.gz" | sha256sum -c -
-          tar -xzf /tmp/helm-docs.tar.gz -C /tmp helm-docs
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - id: helm-docs
+        uses: ./.github/actions/cached-download # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          name: helm-docs
+          version: ${{ steps.helm-docs-pin.outputs.version }}
+          sha256: a8cf72ada34fad93285ba2a452b38bdc5bd52cc9a571236244ec31022928d6cc
+          url: https://github.com/norwoodj/helm-docs/releases/download/v${{ steps.helm-docs-pin.outputs.version }}/helm-docs_${{ steps.helm-docs-pin.outputs.version }}_Linux_x86_64.tar.gz
+      - name: Install the pinned helm-docs
+        env:
+          HELM_DOCS_TGZ: ${{ steps.helm-docs.outputs.path }}
+        run: |
+          set -euo pipefail
+          tar -xzf "$HELM_DOCS_TGZ" -C /tmp helm-docs
           sudo install -m 0755 /tmp/helm-docs /usr/local/bin/helm-docs
           helm-docs --version
       # No --update: the goldens in the tree must already match this render.
@@ -2951,16 +2975,20 @@ jobs:
       # at .github/cff-schema/ (scripts/vendor/cff-schema.sh), and the pinned
       # Rust jsonschema-cli validates the yq-converted document against it.
       # yq is pinned + checksum-verified like the helm-golden job's copy.
+      - id: yq
+        uses: ./.github/actions/cached-download # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          name: yq
+          version: v4.53.3
+          sha256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+          url: https://github.com/mikefarah/yq/releases/download/v4.53.3/yq_linux_amd64
       - name: Install yq + the pinned jsonschema-cli
         env:
-          YQ_VERSION: v4.53.3
-          YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+          YQ_BIN: ${{ steps.yq.outputs.path }}
           JSONSCHEMA_CLI_VERSION: 0.52.0
         run: |
           set -euo pipefail
-          curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o /tmp/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
-          echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
-          sudo install -m 0755 /tmp/yq /usr/local/bin/yq
+          sudo install -m 0755 "$YQ_BIN" /usr/local/bin/yq
           cargo install jsonschema-cli --version "${JSONSCHEMA_CLI_VERSION}" --locked
       - name: Validate CITATION.cff (CFF 1.2.0 schema)
         run: |

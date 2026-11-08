@@ -293,6 +293,21 @@ chapters, the Clippy book, and the Cargo/rustdoc books.)
   CodeQL's `actions` language on every pull request. An accepted finding is an
   inline `# zizmor: ignore[rule]` carrying its reason, never a silent
   suppression.
+- **A tool a gating lane downloads from a release comes through
+  `.github/actions/cached-download`.** The action restores the file from the
+  Actions cache, keyed by the tool's name, pinned version and sha256, and
+  fetches it from its URL only on a miss, with five retries and exponential
+  backoff. `fetch.sh` checks the file against its pinned sha256 whichever
+  source it came from and runs no `curl` on a cache hit, so a warm run makes
+  no request to the release host; its self-test shows both. On 2026-11-08
+  GitHub answered 504 for every release asset for hours and turned `main` red
+  with no code change. It carries yq (`licensing`, `vex`, `helm-golden`,
+  `citation-guard`) and helm-docs (`helm-golden`). Known exposures left:
+  `build-chart.yml` publishes, so it restores no cache and retries through
+  `scripts/gh/retry-net.sh`; helm comes from `get.helm.sh` through
+  `azure/setup-helm`; and the CodeQL CLI that `github/codeql-action`
+  downloads, and the binaries `taiki-e/install-action` fetches, are fetched
+  inside those actions, which this repository does not control.
 - **A migration that has shipped is never edited** (owner rulings 2026-09-09
   and 2026-09-15; the policy is `sqlx-conventions.md` §Migrations). Shipped
   means present at the latest release tag or at a pre-release tag of a version

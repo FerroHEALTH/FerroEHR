@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+name: Cached download
+description: >-
+  Restore a pinned release download from the Actions cache, keyed by its
+  name, version and sha256, and fetch it from its URL only on a miss, with
+  retries and backoff. The file is checked against its sha256 whichever
+  source it came from, and a cache hit makes no request (fetch.sh). The
+  calling job checks out the repository first. A publishing lane does not
+  use it: a release restores nothing from a cache (.claude/rules/ci-cd.md).
+inputs:
+  name:
+    description: The tool's name, the first part of the cache key and of the file name.
+    required: true
+  version:
+    description: The pinned version, part of the cache key.
+    required: true
+  sha256:
+    description: The pinned sha256 of the downloaded file.
+    required: true
+  url:
+    description: The https URL of the pinned download.
+    required: true
+outputs:
+  path:
+    description: The verified file.
+    value: ${{ steps.fetch.outputs.path }}
+runs:
+  using: composite
+  steps:
+    - id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ci-downloads/${{ inputs.name }}-${{ inputs.version }}
+        key: ci-download-${{ inputs.name }}-${{ inputs.version }}-${{ inputs.sha256 }}
+    - id: fetch
+      shell: bash
+      env:
+        TOOL_URL: ${{ inputs.url }}
+        TOOL_SHA256: ${{ inputs.sha256 }}
+        TOOL_NAME: ${{ inputs.name }}
+        TOOL_VERSION: ${{ inputs.version }}
+        CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+      run: TOOL_FILE="$HOME/.cache/ci-downloads/$TOOL_NAME-$TOOL_VERSION" bash "$GITHUB_ACTION_PATH/fetch.sh"
