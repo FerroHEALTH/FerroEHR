@@ -117,6 +117,49 @@ mod tests {
     use crate::v1_2::data_types::quantity::dv_ordered::DvOrdered;
     use crate::v1_2::data_types::quantity::dv_quantity::DvQuantity;
 
+    /// The wire flags a decoded `DV_INTERVAL<DV_QUANTITY>` carries, as
+    /// `(lower_unbounded, lower_included, upper_unbounded, upper_included)`.
+    fn decoded_flags(json: &str) -> (bool, bool, bool, bool) {
+        let v: DvInterval<DvQuantity> = serde_json::from_str(json).unwrap();
+        (
+            v.lower_unbounded,
+            v.lower_included,
+            v.upper_unbounded,
+            v.upper_included,
+        )
+    }
+
+    // ITS-JSON INTERVAL requires all four flags, and BASE interval.adoc ties
+    // none to its bound; an omitted flag follows its bound (our own design, #5203).
+    #[test]
+    fn an_omitted_flag_follows_its_bound() {
+        let q = r#"{"_type": "DV_QUANTITY", "magnitude": 1.0, "units": "kg"}"#;
+        let lower_only = format!(r#"{{"_type": "DV_INTERVAL", "lower": {q}}}"#);
+        assert_eq!(decoded_flags(&lower_only), (false, true, true, false));
+        let upper_only = format!(r#"{{"_type": "DV_INTERVAL", "upper": {q}}}"#);
+        assert_eq!(decoded_flags(&upper_only), (true, false, false, true));
+        let both = format!(r#"{{"_type": "DV_INTERVAL", "lower": {q}, "upper": {q}}}"#);
+        assert_eq!(decoded_flags(&both), (false, true, false, true));
+        assert_eq!(
+            decoded_flags(r#"{"_type": "DV_INTERVAL"}"#),
+            (true, false, true, false)
+        );
+    }
+
+    #[test]
+    fn a_stated_flag_is_kept_and_the_canonical_form_round_trips() {
+        let json = r#"{"_type": "DV_INTERVAL", "upper": {"_type": "DV_QUANTITY", "magnitude": 1.0, "units": "kg"}, "lower_unbounded": false, "upper_unbounded": false, "lower_included": true, "upper_included": false}"#;
+        assert_eq!(decoded_flags(json), (false, true, false, false));
+        let v: DvInterval<DvQuantity> = serde_json::from_str(json).unwrap();
+        let written = serde_json::to_string(&v).unwrap();
+        let again: DvInterval<DvQuantity> = serde_json::from_str(&written).unwrap();
+        assert_eq!(again, v);
+        assert_eq!(
+            serde_json::to_value(&again).unwrap(),
+            serde_json::from_str::<serde_json::Value>(json).unwrap()
+        );
+    }
+
     fn quantity(magnitude: f64, units: &str) -> DvQuantity {
         DvQuantity {
             normal_status: None,

@@ -755,58 +755,51 @@ pub(crate) struct FieldDefault {
 /// is the primary path. Entries survive here only where the vendored input
 /// states nothing and a decision is still required.
 ///
-/// The four that remain are `Interval`'s inclusivity/boundedness flags. The
-/// BASE 1.3.0 `Interval` primitive type declares all four as mandatory with NO
-/// `default` facet, yet its own `Point_interval` descendant REDECLARES the same
-/// four properties carrying exactly the values below — so the schema states the
-/// convention once, on one descendant, and leaves the inherited sites silent.
-/// These entries propagate that same statement to the inherited sites
-/// (`Proper_interval`, `Multiplicity_interval`), which is also what archie and
-/// EHRbase emit on the wire: a bounded limit is *included* by default, an
-/// unstated limit is *bounded* by default. The value is a literal Rust
-/// expression.
+/// The four that remain are `Interval`'s inclusivity/boundedness flags, which
+/// ITS-JSON `INTERVAL` lists as `required` and which archie omits at their
+/// defaults. BASE `interval.adoc` gives the bounds `0..1` and states no
+/// invariant tying a flag to its bound, so a reader that admits the omission
+/// must decide; the decision here is our own design. An omitted flag follows
+/// its bound: an absent bound reads as unbounded and not included, a present
+/// one as bounded and included, and a flag the wire states is kept as written
+/// (a fixed `false`/`true` read a bound-less side as bounded and included,
+/// #5203). The value is a Rust expression over the presence locals
+/// [`crate::render::bound_presence`] binds.
 pub(crate) const FIELD_DEFAULTS: &[FieldDefault] = &[
     FieldDefault {
         owner: "Interval",
         field: "lower_included",
-        default: "true",
-        citation: "BASE docs/UML/classes/org.openehr.base.foundation_types.interval.adoc \
-                   (Interval) for the semantics; the identical value is the vendored `default` \
-                   facet on Point_interval.lower_included. No openEHR spec governs the wire \
-                   omission itself — archie/EHRbase interop convention (our own design)",
-        reason: "A bounded interval limit is included by default.",
+        default: "__present_lower",
+        citation: INTERVAL_FLAG_CITATION,
+        reason: "An omitted lower_included is true exactly when the lower bound is present.",
     },
     FieldDefault {
         owner: "Interval",
         field: "upper_included",
-        default: "true",
-        citation: "BASE docs/UML/classes/org.openehr.base.foundation_types.interval.adoc \
-                   (Interval) for the semantics; the identical value is the vendored `default` \
-                   facet on Point_interval.upper_included. No openEHR spec governs the wire \
-                   omission itself — archie/EHRbase interop convention (our own design)",
-        reason: "A bounded interval limit is included by default.",
+        default: "__present_upper",
+        citation: INTERVAL_FLAG_CITATION,
+        reason: "An omitted upper_included is true exactly when the upper bound is present.",
     },
     FieldDefault {
         owner: "Interval",
         field: "lower_unbounded",
-        default: "false",
-        citation: "BASE docs/UML/classes/org.openehr.base.foundation_types.interval.adoc \
-                   (Interval) for the semantics; the identical value is the vendored `default` \
-                   facet on Point_interval.lower_unbounded. No openEHR spec governs the wire \
-                   omission itself — archie/EHRbase interop convention (our own design)",
-        reason: "An unstated interval limit is bounded by default.",
+        default: "!__present_lower",
+        citation: INTERVAL_FLAG_CITATION,
+        reason: "An omitted lower_unbounded is true exactly when the lower bound is absent.",
     },
     FieldDefault {
         owner: "Interval",
         field: "upper_unbounded",
-        default: "false",
-        citation: "BASE docs/UML/classes/org.openehr.base.foundation_types.interval.adoc \
-                   (Interval) for the semantics; the identical value is the vendored `default` \
-                   facet on Point_interval.upper_unbounded. No openEHR spec governs the wire \
-                   omission itself — archie/EHRbase interop convention (our own design)",
-        reason: "An unstated interval limit is bounded by default.",
+        default: "!__present_upper",
+        citation: INTERVAL_FLAG_CITATION,
+        reason: "An omitted upper_unbounded is true exactly when the upper bound is absent.",
     },
 ];
+
+/// The ground every `Interval` flag default cites.
+const INTERVAL_FLAG_CITATION: &str = "BASE docs/UML/classes/org.openehr.base.foundation_types.\
+interval.adoc (bounds 0..1, flags 1..1, no invariant tying a flag to its bound) and ITS-JSON \
+INTERVAL (all four flags required). No openEHR spec governs the omission: our own design";
 
 /// Render a property's vendored `default` facet as a Rust expression of the
 /// field's own type, or `None` when the facet cannot be one.
