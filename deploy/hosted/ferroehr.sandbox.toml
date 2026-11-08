@@ -76,6 +76,25 @@ user = "ferroehr"
 key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr"
 
+# The party mapping over the professional PERSON and ROLE pair the
+# ferroehr-definitions one-shot loads (deploy/definitions/professional/): the
+# key is written under the identifier_type the [[auth.party]] table above
+# looks logins up under, beside `userName` and `externalId` at one element.
+[[authz.party_binding.person.template]]
+template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
+default = true
+key = { path = "/details[id2]/items[id3]", type = "login" }
+user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
+external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
+
+[[authz.party_binding.person.attribute]]
+scim = "name.formatted"
+name = true
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
+
+[authz.party_binding.professional_role]
+template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
+
 # Authentication only, no role gate — the one demo user deliberately reaches
 # every enabled surface, the admin group included (#2965).
 [authz.rbac]

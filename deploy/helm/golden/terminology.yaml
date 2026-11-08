@@ -264,6 +264,22 @@ data:
           key = "clinician"
           key_issuer = "urn:ferroehr:basic-user"
           user = "clinician"
+        [authz.party_binding.person]
+    
+          [[authz.party_binding.person.template]]
+            default = true
+            template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
+            [authz.party_binding.person.template.external_id]
+              path = "/details[id2]/items[id3]"
+              type = "scim_external_id"
+            [authz.party_binding.person.template.key]
+              path = "/details[id2]/items[id3]"
+              type = "login"
+            [authz.party_binding.person.template.user_name]
+              path = "/details[id2]/items[id3]"
+              type = "scim_user_name"
+        [authz.party_binding.professional_role]
+          template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
         [authz.party_binding.provider]
           id = "terminology"
           issuer = "urn:oid:2.999.7.9"
@@ -563,7 +579,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 0b2002c0246b3fcd64b96877f092c56a9407e049d8804394bf412185f1291e35
+        checksum/config: 27b34319714654cd969883478c078356d414b4c949c437d270d8b39aed772164
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

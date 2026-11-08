@@ -370,6 +370,22 @@ data:
           key = "clinician"
           key_issuer = "urn:ferroehr:basic-user"
           user = "clinician"
+        [authz.party_binding.person]
+    
+          [[authz.party_binding.person.template]]
+            default = true
+            template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
+            [authz.party_binding.person.template.external_id]
+              path = "/details[id2]/items[id3]"
+              type = "scim_external_id"
+            [authz.party_binding.person.template.key]
+              path = "/details[id2]/items[id3]"
+              type = "login"
+            [authz.party_binding.person.template.user_name]
+              path = "/details[id2]/items[id3]"
+              type = "scim_user_name"
+        [authz.party_binding.professional_role]
+          template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
         [authz.party_binding.provider]
           id = "server-tls"
           issuer = "urn:oid:2.999.7.9"
@@ -698,7 +714,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: bcbd5bf696d726481eae3f319372531b2e7f5f64297e906fda42387b738c1fc5
+        checksum/config: 4fde3cae35f9700a29c0844e80fefc63d23e4a11d0b173d55d06d322aa683448
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/management/prometheus"
