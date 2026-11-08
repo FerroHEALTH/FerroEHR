@@ -737,6 +737,25 @@ config:
     federation:
       agreement: []
 
+  # [scim] — the SCIM 2.0 service provider at /scim/v2 (RFC 7644), through
+  # which an identity provider such as Microsoft Entra ID provisions each
+  # professional as a demographic PERSON. Off by default. It needs a machines
+  # [[auth.issuer]] (the deployment's own authorization server), an
+  # [[auth.party]] whose identifier_issuer each client's binding_issuer names,
+  # and the person template, attributes and professional_role under
+  # authz.party_binding. public_base_url is required once enabled, and the
+  # Ingress then routes /scim/v2 on every host.
+  #   public_base_url: https://ferroehr.example.com
+  #   max_deactivations: 100           # per client per window, else 429
+  #   deactivation_window_minutes: 60
+  #   client:
+  #     - issuer: https://as.example.com
+  #       client_id: entra-provisioning
+  #       scope: ferroehr/scim
+  #       binding_issuer: urn:example:login
+  scim:
+    enabled: false
+
   # [admin] — ADMIN API group (physical, irreversible delete). Off ⇒ routes 404.
   admin:
     enabled: false

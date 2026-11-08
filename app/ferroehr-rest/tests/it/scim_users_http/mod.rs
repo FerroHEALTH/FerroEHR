@@ -28,6 +28,9 @@ use serde_json::{Value, json};
 
 use crate::common;
 
+mod entra;
+mod refusals;
+
 /// The deployment's own authorization server, which issues the clients' tokens.
 const MACHINES: &str = "https://as.example";
 /// The issuers of the two clients' professionals' logins.
@@ -49,11 +52,15 @@ const ROLE: &str = "openEHR-DEMOGRAPHIC-ROLE.professional.v1.0.0";
 /// The identifier element every selector shares, and the name element.
 const KEY_PATH: &str = "/details[id2]/items[id3]";
 const NAME_PATH: &str = "/identities[id4]/details[id5]/items[id6]";
+const GIVEN_PATH: &str = "/identities[id4]/details[id5]/items[id15]";
+const FAMILY_PATH: &str = "/identities[id4]/details[id5]/items[id16]";
+const EMAIL_PATH: &str = "/contacts[id10]/addresses[id11]/details[id12]/items[id13]";
 /// The custom extension FerroEHR's User attributes sit in.
 const EXTENSION: &str = "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User";
 
-/// A synthetic ADL 2 archetype `hrid` rooted at `root`, with a name in
-/// `identities` and repeatable identifiers in `details`.
+/// A synthetic ADL 2 archetype `hrid` rooted at `root`, with the formatted,
+/// given and family names in `identities`, a work email in `contacts` and repeatable identifiers in
+/// `details`.
 fn archetype(hrid: &str, root: &str) -> String {
     format!(
         "archetype (adl_version=2.0.6; rm_release=1.1.0)
@@ -82,6 +89,29 @@ definition
                             ELEMENT[id6] occurrences matches {{0..1}} matches {{
                                 value matches {{ DV_TEXT[id8] }}
                             }}
+                            ELEMENT[id15] occurrences matches {{0..1}} matches {{
+                                value matches {{ DV_TEXT[id17] }}
+                            }}
+                            ELEMENT[id16] occurrences matches {{0..1}} matches {{
+                                value matches {{ DV_TEXT[id18] }}
+                            }}
+                        }}
+                    }}
+                }}
+            }}
+        }}
+        contacts matches {{
+            CONTACT[id10] occurrences matches {{0..1}} matches {{
+                addresses matches {{
+                    ADDRESS[id11] matches {{
+                        details matches {{
+                            ITEM_TREE[id12] matches {{
+                                items matches {{
+                                    ELEMENT[id13] occurrences matches {{0..1}} matches {{
+                                        value matches {{ DV_TEXT[id14] }}
+                                    }}
+                                }}
+                            }}
                         }}
                     }}
                 }}
@@ -107,6 +137,12 @@ terminology
             [\"id4\"] = <text = <\"Identity\"> description = <\"The identity.\">>
             [\"id5\"] = <text = <\"Name\"> description = <\"The name structure.\">>
             [\"id6\"] = <text = <\"Name text\"> description = <\"The name.\">>
+            [\"id10\"] = <text = <\"Contact\"> description = <\"The contact.\">>
+            [\"id11\"] = <text = <\"Email\"> description = <\"The email address.\">>
+            [\"id12\"] = <text = <\"Email details\"> description = <\"The address structure.\">>
+            [\"id13\"] = <text = <\"Email text\"> description = <\"The work email.\">>
+            [\"id15\"] = <text = <\"Given name\"> description = <\"The given name.\">>
+            [\"id16\"] = <text = <\"Family name\"> description = <\"The family name.\">>
         >
     >
 "
@@ -114,7 +150,9 @@ terminology
 }
 
 /// The shared party mapping: one person template whose selectors share a
-/// path, `name.formatted` mapped to its name, and the professional role.
+/// path, `name.formatted` mapped to its name with the given and family names
+/// beside it, the work email to its contact,
+/// and the professional role.
 fn binding() -> PartyBindingConfig {
     let selector = |kind: &str| Selector {
         path: KEY_PATH.to_owned(),
@@ -130,12 +168,29 @@ fn binding() -> PartyBindingConfig {
                 external_id: Some(selector("scim_external_id")),
                 default: true,
             }],
-            attribute: vec![PersonAttribute {
-                scim: Some("name.formatted".to_owned()),
-                name: true,
-                path: [(PERSON.to_owned(), NAME_PATH.to_owned())].into(),
-                ..PersonAttribute::default()
-            }],
+            attribute: vec![
+                PersonAttribute {
+                    scim: Some("name.formatted".to_owned()),
+                    name: true,
+                    path: [(PERSON.to_owned(), NAME_PATH.to_owned())].into(),
+                    ..PersonAttribute::default()
+                },
+                PersonAttribute {
+                    scim: Some("name.givenName".to_owned()),
+                    path: [(PERSON.to_owned(), GIVEN_PATH.to_owned())].into(),
+                    ..PersonAttribute::default()
+                },
+                PersonAttribute {
+                    scim: Some("name.familyName".to_owned()),
+                    path: [(PERSON.to_owned(), FAMILY_PATH.to_owned())].into(),
+                    ..PersonAttribute::default()
+                },
+                PersonAttribute {
+                    scim: Some("emails[type eq \"work\"].value".to_owned()),
+                    path: [(PERSON.to_owned(), EMAIL_PATH.to_owned())].into(),
+                    ..PersonAttribute::default()
+                },
+            ],
         },
         professional_role: Some(RoleSection {
             template_id: ROLE.to_owned(),
@@ -198,23 +253,33 @@ async fn app() -> (testkit::TestDb, Router) {
     (db, app)
 }
 
+/// [`app`], with the service behind it.
+async fn app_with_service() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
+    let (db, _pool, service, app) = app_of(config(), false).await;
+    (db, service, app)
+}
+
 /// [`app`] whose clients deactivate or delete at most `max` Users an hour.
 async fn app_limited(max: u32) -> (testkit::TestDb, Router) {
     let mut config = config();
     config.scim.max_deactivations = max;
-    let (db, _pool, app) = app_of(config, false).await;
+    let (db, _pool, _service, app) = app_of(config, false).await;
     (db, app)
 }
 
 /// [`app`], recording every access to the local audit store when
 /// `audited`; with the store's pool.
 async fn app_auditing(audited: bool) -> (testkit::TestDb, sqlx::PgPool, Router) {
-    app_of(config(), audited).await
+    let (db, pool, _service, app) = app_of(config(), audited).await;
+    (db, pool, app)
 }
 
 /// The router of `config` over a fresh database holding the archetypes,
-/// auditing when `audited`; with the store's pool.
-async fn app_of(config: AppConfig, audited: bool) -> (testkit::TestDb, sqlx::PgPool, Router) {
+/// auditing when `audited`; with the store's pool and the service.
+async fn app_of(
+    config: AppConfig,
+    audited: bool,
+) -> (testkit::TestDb, sqlx::PgPool, Arc<FerroEhrService>, Router) {
     let (db, pool) = common::migrated_pool().await;
     let sections = config.party_binding.sections();
     let mapping = sections
@@ -239,8 +304,9 @@ async fn app_of(config: AppConfig, audited: bool) -> (testkit::TestDb, sqlx::PgP
             .expect("the archetype uploads");
     }
     ferroehr_rest::scim::endpoint::check(&config).expect("the endpoint can be served");
-    let app = common::router_with(config, Arc::new(service)).await;
-    (db, pool, app)
+    let service = Arc::new(service);
+    let app = common::router_with(config, Arc::clone(&service)).await;
+    (db, pool, service, app)
 }
 
 /// A client-credentials token of `client_id` holding the SCIM scope.

@@ -20,7 +20,7 @@ use crate::scim::protocol::discovery::{
     AuthenticationScheme, Discovery, DiscoveryConfig, DiscoveryError, ExtensionConfig,
     FilterConfig, ResourceTypeConfig, SchemaSelection,
 };
-use crate::scim::protocol::path::AttrPath;
+use crate::scim::protocol::path::{AttrName, AttrPath};
 use crate::scim::protocol::schema::catalogue;
 use crate::scim::protocol::schema::{
     AttributeDefinition, AttributeType, Mutability, Returned, Schema, Uniqueness,
@@ -52,6 +52,7 @@ pub(crate) fn discovery(
     binding: &PartyBindingConfig,
 ) -> Result<Discovery, DiscoveryError> {
     let mut core = Vec::new();
+    let mut core_user = catalogue::core_user();
     let mut enterprise = Vec::new();
     let mut extension = Vec::new();
     let ours = EXTENSION_URN;
@@ -73,7 +74,18 @@ pub(crate) fn discovery(
             Some(schema) if urn::same(schema, ours) => {
                 extension.push(parsed.name.as_str().to_owned());
             }
-            _ => core.push(parsed),
+            _ => {
+                if scim_path.contains('[') {
+                    for sub in ["type", "primary"] {
+                        core.push(AttrPath {
+                            sub_attr: AttrName::parse(sub),
+                            ..parsed.clone()
+                        });
+                    }
+                    primary_read_only(&mut core_user, parsed.name.as_str());
+                }
+                core.push(parsed);
+            }
         }
     }
     let mut extensions = vec![ExtensionConfig {
@@ -107,7 +119,7 @@ pub(crate) fn discovery(
                  professional ROLE"
                     .to_owned(),
             ),
-            schema: SchemaSelection::only(catalogue::core_user(), core),
+            schema: SchemaSelection::only(core_user, core),
             extensions,
         }],
     })
@@ -123,6 +135,26 @@ fn without_value_filter(scim_path: &str) -> String {
             format!("{head}{tail}")
         }
         _ => scim_path.to_owned(),
+    }
+}
+
+/// Declares the `primary` sub-attribute of the multi-valued attribute `name`
+/// of `schema` `readOnly`.
+///
+/// A value-filtered mapping holds the value of one `type` and no preference
+/// among values, so the `primary` a client such as Microsoft Entra sends is
+/// ignored, as RFC 7644 §3.3 has a provider ignore every `readOnly` attribute
+/// of a request. Our own design.
+fn primary_read_only(schema: &mut Schema, name: &str) {
+    let subs = schema
+        .attributes
+        .iter_mut()
+        .filter(|attribute| attribute.name.eq_ignore_ascii_case(name))
+        .filter_map(|attribute| attribute.sub_attributes.as_mut());
+    for sub in subs.flatten() {
+        if sub.name == "primary" {
+            sub.mutability = Mutability::ReadOnly;
+        }
     }
 }
 
@@ -245,6 +277,28 @@ mod tests {
         assert!(discovery.schema(urn::ENTERPRISE_USER).is_none());
         assert!(discovery.service_provider_config().patch.supported);
         assert!(discovery.service_provider_config().etag.supported);
+    }
+
+    #[test]
+    fn a_value_filtered_attribute_keeps_its_type_and_ignores_primary() {
+        let binding = mapped(&["emails[type eq \"work\"].value"]);
+        let discovery = discovery(&enabled(), &binding).expect("the documents build");
+        let user = discovery.schema(urn::CORE_USER).expect("the User schema");
+        let emails = user.attribute("emails").expect("emails");
+        let subs: Vec<(&str, Mutability)> = emails
+            .sub_attributes
+            .iter()
+            .flatten()
+            .map(|sub| (sub.name.as_str(), sub.mutability))
+            .collect();
+        assert_eq!(
+            subs,
+            [
+                ("value", Mutability::ReadWrite),
+                ("type", Mutability::ReadWrite),
+                ("primary", Mutability::ReadOnly),
+            ]
+        );
     }
 
     #[test]

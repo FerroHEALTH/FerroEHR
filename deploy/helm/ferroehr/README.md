@@ -304,6 +304,7 @@ Kubernetes: `>=1.36.0-0`
 | config.rest.body_limit_bytes | int | `16777216` |  |
 | config.rest.cors_permissive | bool | `false` |  |
 | config.rest.swagger_ui | string | `"private"` |  |
+| config.scim.enabled | bool | `false` |  |
 | config.server.caller_rate.burst | int | `2048` |  |
 | config.server.caller_rate.requests_per_second | int | `1024` |  |
 | config.server.max_concurrent_requests | int | `256` |  |

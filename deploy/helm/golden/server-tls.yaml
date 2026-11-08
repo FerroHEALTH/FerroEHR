@@ -419,6 +419,9 @@ data:
       cors_permissive = false
       swagger_ui = "private"
     
+    [scim]
+      enabled = false
+    
     [server]
       max_concurrent_requests = 256
       [server.caller_rate]
@@ -695,7 +698,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 7559616c66b3c2380d5cb2b5ffb5732fd3c7ae03fa3799306f9eef7a052bad1d
+        checksum/config: bcbd5bf696d726481eae3f319372531b2e7f5f64297e906fda42387b738c1fc5
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/management/prometheus"

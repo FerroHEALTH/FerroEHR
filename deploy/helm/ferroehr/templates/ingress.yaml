@@ -49,5 +49,19 @@ spec:
                 port:
                   number: {{ $.Values.service.port }}
           {{- end }}
+          {{- /* [scim] mounts the SCIM 2.0 service provider at /scim/v2, outside
+                 any [rest] base path (RFC 7644 §3.13 leaves the base URI to the
+                 provider), so an identity provider reaches it only through a
+                 path of its own; Prefix ignores a trailing slash
+                 (https://kubernetes.io/docs/concepts/services-networking/ingress/#examples). */}}
+          {{- if (($.Values.config).scim).enabled }}
+          - path: /scim/v2
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "ferroehr.fullname" $ }}
+                port:
+                  number: {{ $.Values.service.port }}
+          {{- end }}
     {{- end }}
 {{- end }}

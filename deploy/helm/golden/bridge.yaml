@@ -444,6 +444,9 @@ data:
       cors_permissive = false
       swagger_ui = "private"
     
+    [scim]
+      enabled = false
+    
     [server]
       max_concurrent_requests = 256
       [server.caller_rate]
@@ -862,7 +865,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: af7a8c45d1ab05b1d27fa86d0f50fa0ed4e337c214b268edc8904bacd605ddec
+        checksum/config: 44e382a8b1a4e42101cbf2b20ce061e133327228da72559b1f4c370ccc28f7f0
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

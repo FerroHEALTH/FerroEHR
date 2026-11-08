@@ -674,6 +674,35 @@ data:
         agreement = []
       [authz.party_binding]
         namespace = "demographic"
+        [authz.party_binding.person]
+    
+          [[authz.party_binding.person.attribute]]
+            jit = true
+            name = true
+            oidc = "name"
+            scim = "name.formatted"
+            [authz.party_binding.person.attribute.path]
+              "FerroEHR professional" = "/identities[at0002]/details[at0003]/items[at0004]"
+    
+          [[authz.party_binding.person.attribute]]
+            scim = "emails[type eq \"work\"].value"
+            [authz.party_binding.person.attribute.path]
+              "FerroEHR professional" = "/contacts[at0005]/addresses[at0006]/details[at0007]/items[at0008]"
+    
+          [[authz.party_binding.person.template]]
+            default = true
+            template_id = "FerroEHR professional"
+            [authz.party_binding.person.template.external_id]
+              path = "/details[at0001]/items[at0001]"
+              type = "scim_external_id"
+            [authz.party_binding.person.template.key]
+              path = "/details[at0001]/items[at0001]"
+              type = "uuid"
+            [authz.party_binding.person.template.user_name]
+              path = "/details[at0001]/items[at0001]"
+              type = "scim_user_name"
+        [authz.party_binding.professional_role]
+          template_id = "FerroEHR professional role"
         [authz.party_binding.provider]
           id = "all-features"
           issuer = "urn:oid:2.999.7.9"
@@ -742,6 +771,16 @@ data:
       body_limit_bytes = 16777216
       cors_permissive = false
       swagger_ui = "public"
+    
+    [scim]
+      enabled = true
+      public_base_url = "https://ferroehr.example.com"
+    
+      [[scim.client]]
+        binding_issuer = "urn:example:ferroehr-login"
+        client_id = "entra-provisioning"
+        issuer = "https://machines.example.org/realms/ferroehr"
+        scope = "ferroehr/scim"
     
     [server]
       listen = "0.0.0.0:8080"
@@ -1583,7 +1622,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 9d4db5b5996add6df86d96424a183349a23e967552deed1d50494b024eab8212
+        checksum/config: a3996fe69c71fec996dceeceb9e5452958dcfc9a80e33943c61553ffa51aab65
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
         prometheus.io/path: "/management/prometheus"
@@ -2317,6 +2356,13 @@ spec:
       http:
         paths:
           - path: /ferroehr
+            pathType: Prefix
+            backend:
+              service:
+                name: ferroehr
+                port:
+                  number: 8080
+          - path: /scim/v2
             pathType: Prefix
             backend:
               service:

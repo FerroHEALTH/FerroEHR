@@ -1066,8 +1066,8 @@ max_results = 100
 max_deactivations = 100
 deactivation_window_minutes = 60
 #? public_base_url = "https://cdr.example.com"
-# [[scim.client]]
-# issuer = "https://as.example.com"
-# client_id = "entra-provisioning"
-# scope = "ferroehr/scim"
-# binding_issuer = "urn:example:login"
+#? [[scim.client]]
+#? issuer = "https://as.example.com"
+#? client_id = "entra-provisioning"
+#? scope = "ferroehr/scim"
+#? binding_issuer = "urn:example:login"

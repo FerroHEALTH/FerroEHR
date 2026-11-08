@@ -499,3 +499,62 @@ fn the_shipped_privacy_default_accepts_this_servers_own_example_composition() {
         );
     }
 }
+
+/// `config check` refuses a `[scim]` the person mapping cannot serve, as
+/// `serve` does, so the chart-boot lane catches it before a pod starts.
+#[test]
+fn config_check_refuses_a_scim_endpoint_without_its_mapping() {
+    let scim = r#"
+[auth]
+enabled = true
+
+[[auth.issuer]]
+issuer = "https://as.example"
+kind = "machines"
+audience = ["ferroehr-machines"]
+
+[[auth.issuer]]
+issuer = "https://login.example"
+kind = "persons"
+audience = ["ferroehr"]
+
+[[auth.party]]
+issuer = "https://login.example"
+identifier_issuer = "urn:example:login"
+identifier_type = "guid"
+
+[authz.party_binding]
+provider = { issuer = "urn:oid:2.999.1", id = "1" }
+
+[ehr_index]
+provider = "local"
+
+[scim]
+enabled = true
+public_base_url = "https://cdr.example.com"
+
+[[scim.client]]
+issuer = "https://as.example"
+client_id = "entra-provisioning"
+scope = "ferroehr/scim"
+binding_issuer = "urn:example:login"
+"#;
+    let (ok, text) = config_check(scim);
+    assert!(!ok, "a SCIM endpoint with no person template: {text}");
+    assert!(text.contains("default = true"), "{text}");
+
+    let mapped = format!(
+        r#"{scim}
+[[authz.party_binding.person.template]]
+template_id = "FerroEHR professional"
+default = true
+key = {{ path = "/details[at0001]/items[at0001]", type = "guid" }}
+user_name = {{ path = "/details[at0001]/items[at0001]", type = "scim_user_name" }}
+
+[authz.party_binding.professional_role]
+template_id = "FerroEHR professional role"
+"#
+    );
+    let (ok, text) = config_check(&mapped);
+    assert!(ok, "the mapped SCIM endpoint checks: {text}");
+}
