@@ -18,6 +18,9 @@
 # a static test-only issuer key (docs/conformance/party/smart/README.md),
 # never production material.
 !docs/conformance/party/smart/cnf-smart-test.key.pem
+# The committed SCIM provisioning TEST key, the same kind of exception
+# (docs/conformance/party/scim/README.md).
+!docs/conformance/party/scim/scim-test.key.pem
 *.key
 
 # Editor / OS

@@ -82,6 +82,9 @@ echo "==> Starting core services"
 echo "==> Waiting for app to become healthy"
 wait_healthy
 
+echo "==> Waiting for the quickstart user to be provisioned"
+"${COMPOSE[@]}" up -d --no-build --wait ferroehr-provision
+
 echo "==> GET /rest/status must be 200"
 code=$(curl -fsS -o /dev/null -w '%{http_code}' "$BASE/status")
 [[ "$code" = "200" ]] || { echo "::error::/rest/status returned $code"; exit 1; }

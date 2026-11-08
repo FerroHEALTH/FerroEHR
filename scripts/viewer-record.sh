@@ -7,7 +7,8 @@
 # 1. Starts a throwaway PostgreSQL (the published ferroehr-postgres image) and
 #    the checkout's own `ferroehr` binary over docker/ferroehr.dev.toml, with
 #    the quickstart's posture of no role gate so the one user ferroehr /
-#    ferroehr reads every surface the viewer draws.
+#    ferroehr reads every surface the viewer draws. The professional templates
+#    are loaded before serve, and ferroehr is bound to a PERSON through SCIM.
 # 2. Seeds it over ITS-REST as scripts/ui-e2e.sh does (the template, an EHR,
 #    a composition committed then updated, a FLAT composition) plus what the
 #    in-process screens read: the subject, a tag, a directory, a person, an
@@ -24,7 +25,7 @@
 # Env:
 #   VIEWER_RECORD_CDR       record against this running CDR instead (its
 #                           database must be empty; user ferroehr / ferroehr
-#                           must read the admin API)
+#                           must read the admin API and be bound to a PERSON)
 #   VIEWER_RECORD_PG_IMAGE  the PostgreSQL image (default: the compose pin)
 #   VIEWER_RECORD_PG_PORT   its host port (default 55432)
 #   VIEWER_RECORD_PORT      the CDR's host port (default 18080)
@@ -94,17 +95,28 @@ else
     sleep 1
   done
   CDR_URL="http://127.0.0.1:$CDR_PORT"
+  # The dev configuration's key sets, at the paths the containers mount them.
+  SERVER_ENV=(FERROEHR_CONFIG=docker/ferroehr.dev.toml
+    FERROEHR__DB__URL="postgres://$PG_ROLE:$PG_SECRET@127.0.0.1:$PG_PORT/$PG_ROLE"
+    FERROEHR__SERVER__LISTEN="127.0.0.1:$CDR_PORT"
+    FERROEHR__AUTHZ__RBAC__ENABLED=false
+    FERROEHR__USAGE_REPORT__ENABLED=false
+    FERROEHR__TELEMETRY__FORMAT=json
+    FERROEHR__AUTH__ISSUER__0__JWKS_FILE="$ROOT/deploy/hosted/basic-users-jwks.json"
+    FERROEHR__AUTH__ISSUER__1__JWKS_FILE="$ROOT/docs/conformance/party/scim/jwks.json")
+  echo "── loading the professional templates"
+  env "${SERVER_ENV[@]}" "$ROOT/target/debug/ferroehr" definitions load \
+    deploy/definitions/professional/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls \
+    deploy/definitions/professional/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls
   echo "── starting ferroehr on $CDR_URL"
-  FERROEHR_CONFIG=docker/ferroehr.dev.toml \
-    FERROEHR__DB__URL="postgres://$PG_ROLE:$PG_SECRET@127.0.0.1:$PG_PORT/$PG_ROLE" \
-    FERROEHR__SERVER__LISTEN="127.0.0.1:$CDR_PORT" \
-    FERROEHR__AUTHZ__RBAC__ENABLED=false \
-    FERROEHR__USAGE_REPORT__ENABLED=false \
-    FERROEHR__TELEMETRY__FORMAT=json \
-    "$ROOT/target/debug/ferroehr" >"$WORK/ferroehr.log" 2>&1 &
+  env "${SERVER_ENV[@]}" "$ROOT/target/debug/ferroehr" >"$WORK/ferroehr.log" 2>&1 &
   SERVER_PID=$!
 fi
 wait_for "$CDR_URL/health/readiness" 120
+if [[ -z "${VIEWER_RECORD_CDR:-}" ]]; then
+  echo "── binding ferroehr to a PERSON through SCIM"
+  bash scripts/scim-provision.sh "$CDR_URL" basic-users ferroehr
+fi
 
 V1="$CDR_URL/ferroehr/rest/openehr/v1"
 EXT="$CDR_URL/ferroehr/rest/extensions/v1"

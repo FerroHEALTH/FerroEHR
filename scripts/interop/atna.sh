@@ -165,7 +165,7 @@ curl -fsS "$hapi/StructureDefinition?url=https://profiles.ihe.net/ITI/BALP/Struc
   echo "::error::HAPI FHIR started without the IHE BALP $BALP_VERSION profiles" >&2
   exit 2
 }
-if ! compose up -d --wait --wait-timeout 300 ferroehr-postgres ferroehr; then
+if ! compose up -d --wait --wait-timeout 300 ferroehr-postgres ferroehr ferroehr-provision; then
   echo "::error::the FerroEHR stack did not become healthy" >&2
   compose logs --tail 200 ferroehr >&2 || true
   exit 2

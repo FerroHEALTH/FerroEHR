@@ -66,6 +66,35 @@ services:
       # A source build in development (and the ui-e2e lane) sends no usage report.
       FERROEHR__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-false}
       FERROEHR__USAGE_REPORT__DEPLOYMENT: compose
+    configs:
+      # The public key set of the dev lanes' SCIM client (docs/conformance/party/scim/),
+      # which docker/ferroehr.dev.toml trusts as a machines issuer.
+      - source: ferroehr-scim-jwks
+        target: /etc/ferroehr/scim-jwks.json
+
+  # The same image loads the professional templates, so the build matches the
+  # server's; the dev config validates the SCIM key set, so it is mounted too.
+  ferroehr-definitions:
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:local}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: runtime-from-source
+      args:
+        REVISION: ${REVISION:-}
+        CARGO_BUILD_JOBS: ${CARGO_BUILD_JOBS:-2}
+    environment:
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    configs:
+      - source: ferroehr-scim-jwks
+        target: /etc/ferroehr/scim-jwks.json
+
+  # The quickstart's provisioning one-shot signs with the development issuer,
+  # which docker/ferroehr.dev.toml does not trust: a dev lane provisions its
+  # users with scripts/scim-provision.sh instead, so this one starts only
+  # under its own profile.
+  ferroehr-provision:
+    profiles: [quickstart-provision]
 
   ferroehr-viewer:
     image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/ferrohealth/ferroehr-viewer:local}
@@ -175,6 +204,9 @@ configs:
   # terminology providers the CNF stack's overlays switch on.
   ferroehr-config: !override
     file: ./docker/ferroehr.dev.toml
+
+  ferroehr-scim-jwks:
+    file: ./docs/conformance/party/scim/jwks.json
 
   keycloak-tls-script:
     content: |

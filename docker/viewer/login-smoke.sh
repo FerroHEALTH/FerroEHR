@@ -86,7 +86,7 @@ trap cleanup EXIT
 
 echo "── compose up (postgres + CDR + the viewer image under test)"
 echo "   viewer: $FERROEHR_VIEWER_IMAGE"
-"${COMPOSE[@]}" up -d --wait ferroehr-postgres ferroehr ferroehr-viewer
+"${COMPOSE[@]}" up -d --wait ferroehr-postgres ferroehr ferroehr-provision ferroehr-viewer
 
 echo "── chromedriver: $DRIVER_BIN"
 "$DRIVER_BIN" --port=9515 --allowed-ips=127.0.0.1 >/tmp/chromedriver.log 2>&1 &

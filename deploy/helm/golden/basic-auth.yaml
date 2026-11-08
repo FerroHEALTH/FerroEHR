@@ -23,7 +23,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), but from EVERY source — this policy narrows ports, NOT sources (networkPolicy.ingressAllowAll=true). Set networkPolicy.ingressFrom for a PHI workload.
   labels:
-    helm.sh/chart: ferroehr-23.2.0
+    helm.sh/chart: ferroehr-23.3.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -51,7 +51,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-23.2.0
+    helm.sh/chart: ferroehr-23.3.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -72,7 +72,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-23.2.0
+    helm.sh/chart: ferroehr-23.3.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -101,7 +101,7 @@ kind: Secret
 metadata:
   name: ferroehr-env
   labels:
-    helm.sh/chart: ferroehr-23.2.0
+    helm.sh/chart: ferroehr-23.3.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -110,6 +110,38 @@ metadata:
 type: Opaque
 stringData:
   auth.basic.users.clinician.password_hash: "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
+---
+# Source: ferroehr/templates/secret.yaml
+# Mounted config files (TOML/PEM) at /etc/ferroehr — file-shaped material an
+# in-TOML `*_path`/`*_file` key points at: the PGP key, Cedar/ABAC policies,
+# ATNA PEMs, a JWKS blob. Mounted alongside ferroehr.toml.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ferroehr-config
+  labels:
+    helm.sh/chart: ferroehr-23.3.0
+    app.kubernetes.io/name: ferroehr
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "5.6.3"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+type: Opaque
+stringData:
+  scim-jwks.json: |
+    {
+      "keys": [
+        {
+          "kty": "RSA",
+          "kid": "scim-test",
+          "use": "sig",
+          "alg": "RS256",
+          "n": "vgOrk9QbohTB1FlxrUrvS-CUvC6tIbIgTzvh-Y0whaMhBqyAmrMDvUMzfAAUGzNbrRuibj_ysB0XQWSOMsv4pkxQc2vOxxsbroenbeSi2AaQLjZegenAeNKIyb02-FVb6YTCjewxpxHeUNLycZOmtUFgwwr80sA5VcAlcGCoBb73Boy04v9-vi_oEIyH8EJNAI0wzdhkx-xAJnwdbLj5XMnkFQM8cozWs89Vlooxid29nqiae6mwTwtJSTwT7awkwAq3lHswB1WCcQRDD2UW_c9U2hxlMckH2MldwsyL1WIVob3SQf9VGPS-qpbNwl9r5bCdhIUkLG88ojcoCp6f-w",
+          "e": "AQAB"
+        }
+      ]
+    }
+    
 
 ---
 # Source: ferroehr/templates/configmap.yaml
@@ -118,7 +150,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-23.2.0
+    helm.sh/chart: ferroehr-23.3.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -166,6 +198,13 @@ data:
         jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
         kind = "persons"
     
+      [[auth.issuer]]
+        audience = ["ferroehr-scim"]
+        issuer = "https://scim.ferroehr.invalid"
+        jwks_file = "/etc/ferroehr/scim-jwks.json"
+        kind = "machines"
+        token_types = ["at+jwt"]
+    
       [[auth.party]]
         identifier_issuer = "urn:ferroehr:basic-user"
         identifier_type = "login"
@@ -184,6 +223,22 @@ data:
           key = "clinician"
           key_issuer = "urn:ferroehr:basic-user"
           user = "clinician"
+        [authz.party_binding.person]
+    
+          [[authz.party_binding.person.template]]
+            default = true
+            template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
+            [authz.party_binding.person.template.external_id]
+              path = "/details[id2]/items[id3]"
+              type = "scim_external_id"
+            [authz.party_binding.person.template.key]
+              path = "/details[id2]/items[id3]"
+              type = "login"
+            [authz.party_binding.person.template.user_name]
+              path = "/details[id2]/items[id3]"
+              type = "scim_user_name"
+        [authz.party_binding.professional_role]
+          template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
         [authz.party_binding.provider]
           id = "basic-auth"
           issuer = "urn:oid:2.999.7.9"
@@ -226,7 +281,14 @@ data:
       swagger_ui = "private"
     
     [scim]
-      enabled = false
+      enabled = true
+      public_base_url = "http://127.0.0.1:18081"
+    
+      [[scim.client]]
+        binding_issuer = "urn:ferroehr:basic-user"
+        client_id = "basic-users"
+        issuer = "https://scim.ferroehr.invalid"
+        scope = "ferroehr/scim"
     
     [server]
       max_concurrent_requests = 256
@@ -251,13 +313,176 @@ data:
     
 
 ---
+# Source: ferroehr/templates/definitions-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ferroehr-definitions
+  labels:
+    helm.sh/chart: ferroehr-23.3.0
+    app.kubernetes.io/name: ferroehr
+    app.kubernetes.io/instance: ferroehr
+    app.kubernetes.io/version: "5.6.3"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: ferroehr
+data:
+  # The definitions the init container stores before the server starts
+  # (`ferroehr definitions load`), mounted at /etc/ferroehr-definitions.
+  openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls: |
+    archetype (adl_version=2.0.6; rm_release=1.1.0)
+        openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0
+    
+    language
+        original_language = <[ISO_639-1::en]>
+    
+    description
+        original_author = <
+            ["name"] = <"FerroEHR">
+            ["organisation"] = <"Cadasto B.V.">
+        >
+        lifecycle_state = <"unmanaged">
+        details = <
+            ["en"] = <
+                language = <[ISO_639-1::en]>
+                purpose = <"A healthcare professional's PERSON, whose login identifiers bind the person to their sign-ins.">
+                use = <"Adapted from the openEHR CKM archetypes the derived_from entry names: the person's identifiers in details, the name in identities and a work email in contacts, every element optional so a person provisioned without one is complete.">
+                copyright = <"© openEHR Foundation">
+            >
+        >
+        other_details = <
+            ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+            ["derived_from"] = <"openEHR-DEMOGRAPHIC-PERSON.person.v0, openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v0, openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0, openEHR-DEMOGRAPHIC-ADDRESS.electronic_communication.v0 (openEHR CKM)">
+        >
+    
+    definition
+        PERSON[id1] matches {
+            details matches {
+                ITEM_TREE[id2] matches {
+                    items matches {
+                        ELEMENT[id3] occurrences matches {0..*} matches {
+                            value matches { DV_IDENTIFIER[id13] }
+                        }
+                    }
+                }
+            }
+            identities matches {
+                PARTY_IDENTITY[id4] matches {
+                    details matches {
+                        ITEM_TREE[id5] matches {
+                            items matches {
+                                ELEMENT[id6] occurrences matches {0..1} matches {
+                                    value matches { DV_TEXT[id14] }
+                                }
+                                ELEMENT[id7] occurrences matches {0..1} matches {
+                                    value matches { DV_TEXT[id15] }
+                                }
+                                ELEMENT[id8] occurrences matches {0..1} matches {
+                                    value matches { DV_TEXT[id16] }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            contacts matches {
+                CONTACT[id9] occurrences matches {0..1} matches {
+                    addresses matches {
+                        ADDRESS[id10] matches {
+                            details matches {
+                                ITEM_TREE[id11] matches {
+                                    items matches {
+                                        ELEMENT[id12] occurrences matches {0..1} matches {
+                                            value matches { DV_TEXT[id17] }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    
+    terminology
+        term_definitions = <
+            ["en"] = <
+                ["id1"] = <text = <"Healthcare professional"> description = <"A person who provides healthcare.">>
+                ["id2"] = <text = <"Person identifiers"> description = <"The identifiers of the person.">>
+                ["id3"] = <text = <"Identifier main data"> description = <"An identifier of the person, such as a login identifier.">>
+                ["id4"] = <text = <"Person name"> description = <"The name of the person.">>
+                ["id5"] = <text = <"Name"> description = <"The structure of the name.">>
+                ["id6"] = <text = <"Full name"> description = <"The name as it is written in full.">>
+                ["id7"] = <text = <"Given name"> description = <"The given name of the person.">>
+                ["id8"] = <text = <"Family name"> description = <"The family name of the person.">>
+                ["id9"] = <text = <"Contacts"> description = <"The contacts of the person.">>
+                ["id10"] = <text = <"Electronic communication"> description = <"An electronic address of the person.">>
+                ["id11"] = <text = <"Electronic communication details"> description = <"The structure of the address.">>
+                ["id12"] = <text = <"Email address"> description = <"The work email address of the person.">>
+            >
+        >
+    
+  openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls: |
+    archetype (adl_version=2.0.6; rm_release=1.1.0)
+        openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0
+    
+    language
+        original_language = <[ISO_639-1::en]>
+    
+    description
+        original_author = <
+            ["name"] = <"FerroEHR">
+            ["organisation"] = <"Cadasto B.V.">
+        >
+        lifecycle_state = <"unmanaged">
+        details = <
+            ["en"] = <
+                language = <[ISO_639-1::en]>
+                purpose = <"The professional ROLE a healthcare professional's PERSON performs, which makes the person bindable.">
+                use = <"Adapted from the openEHR CKM archetype the derived_from entry names, with its name the only content and that optional.">
+                copyright = <"© openEHR Foundation">
+            >
+        >
+        other_details = <
+            ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+            ["derived_from"] = <"openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0, openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0 (openEHR CKM)">
+        >
+    
+    definition
+        ROLE[id1] matches {
+            identities matches {
+                PARTY_IDENTITY[id2] matches {
+                    details matches {
+                        ITEM_TREE[id3] matches {
+                            items matches {
+                                ELEMENT[id4] occurrences matches {0..1} matches {
+                                    value matches { DV_TEXT[id5] }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    
+    terminology
+        term_definitions = <
+            ["en"] = <
+                ["id1"] = <text = <"Healthcare professional role"> description = <"The role of a person who provides healthcare.">>
+                ["id2"] = <text = <"Role name"> description = <"The name of the role.">>
+                ["id3"] = <text = <"Name"> description = <"The structure of the name.">>
+                ["id4"] = <text = <"Full name"> description = <"The name of the role as it is written in full.">>
+            >
+        >
+    
+
+---
 # Source: ferroehr/templates/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-23.2.0
+    helm.sh/chart: ferroehr-23.3.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -287,7 +512,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-23.2.0
+    helm.sh/chart: ferroehr-23.3.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -312,7 +537,9 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: dfba266b25aabb238035840fe4b6de17c85995fcedd5b96b3143e4c0c7747ed7
+        checksum/config: a9633a1db6cfe62faf48db6bdd181d8e381065f18489dbcb171f8153c4ca2b1b
+        # A changed definition list rolls the pods, so the init container loads it.
+        checksum/definitions: b0e2806bd267d9ed99e5fbf53ab1b3a4bd1d4e616a5cd7627296c22e87bed415
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr
@@ -336,6 +563,59 @@ spec:
         seccompProfile:
           type: RuntimeDefault
         supplementalGroupsPolicy: Strict
+      initContainers:
+        - name: definitions
+          image: "ghcr.io/ferrohealth/ferroehr:5.6.3"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          args:
+            - definitions
+            - load
+            - "/etc/ferroehr-definitions/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls"
+            - "/etc/ferroehr-definitions/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls"
+          env:
+            # The server reads the file FERROEHR_CONFIG names and searches for
+            # none, so the mounted ferroehr.toml is named here.
+            - name: FERROEHR_CONFIG
+              value: /etc/ferroehr/ferroehr.toml
+            - name: FERROEHR__DB__URL_FILE
+              value: "/etc/ferroehr-secrets/db.url"
+          resources:
+            limits:
+              cpu: "2"
+              ephemeral-storage: 1Gi
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              ephemeral-storage: 128Mi
+              memory: 256Mi
+          volumeMounts:
+            # readOnlyRootFilesystem=true → give the process a writable scratch dir.
+            - name: tmp
+              mountPath: /tmp
+            # ferroehr.toml (+ any config.files) mounted read-only at /etc/ferroehr.
+            - name: config
+              mountPath: /etc/ferroehr
+              readOnly: true
+            # File-borne secrets, read-only. NOT a subPath mount: a subPath-mounted
+            # Secret never receives updates, so a rotation would not propagate
+            # (https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath).
+            - name: secrets
+              mountPath: /etc/ferroehr-secrets
+              readOnly: true
+            - name: definitions
+              mountPath: /etc/ferroehr-definitions
+              readOnly: true
       containers:
         - name: ferroehr
           image: "ghcr.io/ferrohealth/ferroehr:5.6.3"
@@ -423,6 +703,10 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        - name: definitions
+          configMap:
+            name: ferroehr-definitions
+            defaultMode: 0440
         - name: config
           projected:
             # Same 0440 as the secrets volume, for the same reason: this volume
@@ -442,6 +726,11 @@ spec:
                   items:
                     - key: ferroehr.toml
                       path: ferroehr.toml
+              # Carries ferroehr.toml itself when the configuration holds a
+              # secret the chart cannot route elsewhere (then no ConfigMap
+              # exists), plus every config.files entry.
+              - secret:
+                  name: ferroehr-config
         # File-borne secrets. A projected volume rather than a plain secret volume
         # because the DSN may live in an EXTERNAL Secret the operator created,
         # which has to be projected beside the chart's own — both under one mount,

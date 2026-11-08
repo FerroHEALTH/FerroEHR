@@ -225,6 +225,22 @@ compose_up() {
     # sources, so the image is built unless explicitly skipped.
     (cd "$REPO_ROOT" && "${COMPOSE[@]}" up -d --build --wait ferroehr)
   fi
+  provision
+}
+
+# Binds every login the catalogue authenticates as to a demographic PERSON,
+# through the SCIM clients of docker/ferroehr.dev.toml and docker/sut-smart.yml:
+# the three Basic users, and the subject the runner mints SMART tokens for
+# (docs/conformance/party/ferroehr/ixit.json `scoped_tokens.mint`). Each is the
+# instrument's own login, so its PERSON carries the name the catalogue states
+# as its committer (`name: Veredictum`), and the server's committer names it.
+provision() {
+  local origin="http://localhost:${FERROEHR_PORT:-8080}"
+  echo "==> Provisioning the catalogue's logins through /scim/v2/Users"
+  bash "$REPO_ROOT/scripts/scim-provision.sh" "$origin" basic-users --name Veredictum \
+    ferroehr ferroehr-admin ferroehr-readonly
+  bash "$REPO_ROOT/scripts/scim-provision.sh" "$origin" cnf-smart --name Veredictum \
+    cnf-smart-app
 }
 
 # Writes the JUnit, CTRF and Markdown views beside the results in $1.

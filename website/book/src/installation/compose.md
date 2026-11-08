@@ -195,6 +195,15 @@ evaluation, not for production:
 
 - **Basic auth with one user:** `ferroehr` / `ferroehr` (stored as an Argon2id
   hash), carrying the `ADMIN` and `USER` roles.
+- **The user is a professional `PERSON`:** the `ferroehr-definitions` one-shot
+  loads the professional PERSON and ROLE templates the party mapping names
+  (`ferroehr definitions load`, copies of
+  `deploy/definitions/professional/`) before the server starts, and the
+  `ferroehr-provision` service then creates the user's `PERSON` through
+  `/scim/v2/Users`, with a client credentials token the development
+  `identity-issuer` signs for the client `quickstart-scim`. It stays up and
+  reports healthy once the login is bound, so `docker compose up --wait`
+  returns when the user can work.
 - **RBAC disabled:** so any authenticated caller may use every enabled
   surface, including the admin API. The `ADMIN` / `USER` / `READONLY`
   separation is switched on by setting `[authz.rbac] enabled = true` and giving
@@ -328,6 +337,17 @@ That starts **Keycloak** with a small demo realm (`ferroehr`) defined inline and
 points the server's bearer validation at it. Basic auth from the base file keeps
 working, so the server then advertises `Basic, Bearer`.
 
+The overlay adds the realm's `[[auth.party]]` table, which changes the party
+mapping. On a volume the base quickstart already started, the server refuses
+to boot on the changed mapping until the binding side table is refilled, so
+add or remove the overlay with the server stopped and refill first:
+
+```shell
+docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up -d keycloak
+docker compose -f docker-compose.yml -f docker-compose.keycloak.yml stop ferroehr
+docker compose -f docker-compose.yml -f docker-compose.keycloak.yml run --rm --no-deps ferroehr party-binding refill
+```
+
 The server accepts a token issuer only over HTTPS, or plain HTTP on a loopback
 host, so Keycloak serves the issuer over TLS at
 `https://keycloak.localhost:8443/auth/realms/ferroehr`. The containers resolve
@@ -341,10 +361,10 @@ the CA's private key; the server (`[auth] ca_file`) and the viewer
 `docker compose down --volumes` deletes the volume, and the next `up`
 generates a new CA. Keycloak also answers plain HTTP on port 8081 for the token
 call below, and the tokens it mints there name the HTTPS issuer. Keycloak's
-access tokens carry `typ: JWT`, so the overlay adds the realm as a second
+access tokens carry `typ: JWT`, so the overlay adds the realm as a third
 `[[auth.issuer]]` table with `profile = "keycloak"`
-(`FERROEHR__AUTH__ISSUER__1__PROFILE=keycloak`), beside the issuer the
-quickstart's Basic user binds under.
+(`FERROEHR__AUTH__ISSUER__2__PROFILE=keycloak`), beside the issuer the
+quickstart's Basic user binds under and the issuer of its SCIM client.
 
 Start the viewer too and sign in at <http://localhost:3000> as any user below:
 

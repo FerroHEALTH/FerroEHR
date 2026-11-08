@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "kid": "scim-test",
+      "use": "sig",
+      "alg": "RS256",
+      "n": "vgOrk9QbohTB1FlxrUrvS-CUvC6tIbIgTzvh-Y0whaMhBqyAmrMDvUMzfAAUGzNbrRuibj_ysB0XQWSOMsv4pkxQc2vOxxsbroenbeSi2AaQLjZegenAeNKIyb02-FVb6YTCjewxpxHeUNLycZOmtUFgwwr80sA5VcAlcGCoBb73Boy04v9-vi_oEIyH8EJNAI0wzdhkx-xAJnwdbLj5XMnkFQM8cozWs89Vlooxid29nqiae6mwTwtJSTwT7awkwAq3lHswB1WCcQRDD2UW_c9U2hxlMckH2MldwsyL1WIVob3SQf9VGPS-qpbNwl9r5bCdhIUkLG88ojcoCp6f-w",
+      "e": "AQAB"
+    }
+  ]
+}

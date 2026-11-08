@@ -56,6 +56,18 @@ issuer = "https://basic-users.ferroehr.invalid"
 identifier_issuer = "urn:ferroehr:basic-user"
 identifier_type = "login"
 
+# The issuer of the dev lanes' SCIM provisioning client: a machines issuer
+# over the COMMITTED TEST key set of docs/conformance/party/scim/ (never
+# production material), whose private half scripts/scim-provision.sh signs
+# with. Each lane mounts the key set at this path. Overlays add their own
+# issuers after it (index 2 on).
+[[auth.issuer]]
+issuer = "https://scim.ferroehr.invalid"
+kind = "machines"
+audience = ["ferroehr-scim"]
+token_types = ["at+jwt"]
+jwks_file = "/etc/ferroehr/scim-jwks.json"
+
 # Dev-only: expose the ops-introspection surface (`/management/...`) on the main
 # listener so the viewer's Operations panel has something to read and the
 # browser E2E battery can exercise it. The surface is OFF by default on the bare
@@ -157,6 +169,50 @@ key = "ferroehr-admin"
 user = "ferroehr-readonly"
 key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr-readonly"
+
+# The party mapping over the professional PERSON and ROLE pair of
+# deploy/definitions/professional/, which each lane loads with
+# `ferroehr definitions load` before `serve`: the binding key, `userName` and
+# `externalId` share the identifier element and are told apart by type.
+[[authz.party_binding.person.template]]
+template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
+default = true
+key = { path = "/details[id2]/items[id3]", type = "login" }
+user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
+external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
+
+[[authz.party_binding.person.attribute]]
+scim = "name.formatted"
+name = true
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
+
+[[authz.party_binding.person.attribute]]
+scim = "name.givenName"
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id7]" }
+
+[[authz.party_binding.person.attribute]]
+scim = "name.familyName"
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id8]" }
+
+[[authz.party_binding.person.attribute]]
+scim = 'emails[type eq "work"].value'
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/contacts[id9]/addresses[id10]/details[id11]/items[id12]" }
+
+[authz.party_binding.professional_role]
+template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
+
+# The SCIM endpoint the lanes provision their persons through. The client
+# below provisions the three Basic users; an overlay that adds a persons
+# issuer adds its own client (index 1), since no two share a binding_issuer.
+[scim]
+enabled = true
+public_base_url = "http://localhost:8080"
+
+[[scim.client]]
+issuer = "https://scim.ferroehr.invalid"
+client_id = "basic-users"
+scope = "ferroehr/scim"
+binding_issuer = "urn:ferroehr:basic-user"
 
 # The in-instance subject-to-EHR map, the explicit opt-in of a FerroEHR run
 # on its own: development, the UI journeys and the conformance lanes ask no
