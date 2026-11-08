@@ -34,6 +34,7 @@
 
 use crate::analyze::{External, Model, emittable_specs};
 use crate::load::bmm::BmmSchema;
+use crate::plan::elided_arguments::restore_elided_arguments;
 use std::collections::BTreeMap;
 use std::path::Path;
 
@@ -421,13 +422,19 @@ pub(crate) fn lookup(key: &str) -> Result<&'static CrateComposition, Box<dyn std
         .ok_or_else(|| format!("unknown composition key {key:?}").into())
 }
 
-/// Load and parse one vendored BMM file (relative to [`VENDOR`]).
+/// Load and parse one vendored BMM file (relative to [`VENDOR`]), with the
+/// generic arguments
+/// [`ELIDED_ARGUMENTS`](crate::plan::elided_arguments::ELIDED_ARGUMENTS) restores.
 ///
 /// # Errors
-/// Returns an error if the file cannot be read or parsed.
+/// Returns an error if the file cannot be read or parsed, or declares an
+/// elided-argument attribute with a type other than the bare class the entry
+/// restores.
 pub(crate) fn load_bmm(file: &str) -> Result<BmmSchema, Box<dyn std::error::Error>> {
     let src = std::fs::read_to_string(Path::new(VENDOR).join(file))?;
-    Ok(BmmSchema::parse_json(&src)?)
+    let mut schema = BmmSchema::parse_json(&src)?;
+    restore_elided_arguments(&mut schema).map_err(|e| format!("{file}: {e}"))?;
+    Ok(schema)
 }
 
 /// One resolved specification unit of a composed generation: its loaded
@@ -436,7 +443,8 @@ pub(crate) fn load_bmm(file: &str) -> Result<BmmSchema, Box<dyn std::error::Erro
 pub(crate) struct ComposedUnit {
     /// The table row this unit was resolved from.
     pub spec: &'static GenerationUnit,
-    /// This unit's own schema — one vendored file, verbatim.
+    /// This unit's own schema: one vendored file, with the elided generic
+    /// arguments `plan::elided_arguments::ELIDED_ARGUMENTS` restores.
     pub schema: BmmSchema,
     /// The merged resolution model (the generation's dependency schemas,
     /// then this unit alone) — a class of one unit never resolves an

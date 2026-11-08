@@ -104,11 +104,48 @@ fn container_multiplicity_is_recorded() {
 
 #[test]
 fn generic_parameters_resolve_to_their_bound() {
-    // DV_INTERVAL<T: DV_ORDERED>: `lower`/`upper` are the bare param T → DV_ORDERED.
+    // DV_INTERVAL<T: DV_ORDERED>: `lower`/`upper` are the bare param T → DV_ORDERED,
+    // and the model keeps the parameter they are written as.
     let lower = attribute("DV_INTERVAL", "lower").expect("DV_INTERVAL.lower");
     assert_eq!(lower.declared_type, "DV_ORDERED");
+    assert_eq!(lower.formal, Some("T"));
+    // A class binding (X_VERSIONED_COMPOSITION : X_VERSIONED_OBJECT<COMPOSITION>)
+    // is recorded as the bound class, with no formal parameter left.
+    let versions =
+        attribute("X_VERSIONED_COMPOSITION", "versions").expect("X_VERSIONED_COMPOSITION.versions");
+    assert!(versions.type_params.iter().all(|p| p.formal.is_none()));
+    assert_eq!(
+        attribute("DV_QUANTITY", "magnitude").map(|a| a.formal),
+        Some(None)
+    );
     let upper = attribute("DV_INTERVAL", "upper").expect("DV_INTERVAL.upper");
     assert_eq!(upper.declared_type, "DV_ORDERED");
+}
+
+/// RM `UML/classes/org.openehr.rm.data_types.reference_range.adoc` heads the
+/// class `REFERENCE_RANGE<T>`, and its range is the one attribute `T` reaches
+/// (the generator restores `DV_INTERVAL<T>`, tracker issue #5196); likewise
+/// `IMPORTED_VERSION<T>.item` is an `ORIGINAL_VERSION<T>`. Both generations.
+#[test]
+fn an_elided_generic_argument_is_restored_in_both_generations() {
+    macro_rules! restored {
+        ($($model:ident)::+) => {{
+            let range = $($model)::+::attribute("REFERENCE_RANGE", "range")
+                .expect("REFERENCE_RANGE.range");
+            assert_eq!(range.declared_type, "DV_INTERVAL");
+            let args: Vec<(&str, Option<&str>)> =
+                range.type_params.iter().map(|p| (p.name, p.formal)).collect();
+            assert_eq!(args, [("DV_ORDERED", Some("T"))]);
+            let item = $($model)::+::attribute("IMPORTED_VERSION", "item")
+                .expect("IMPORTED_VERSION.item");
+            assert_eq!(item.declared_type, "ORIGINAL_VERSION");
+            let args: Vec<(&str, Option<&str>)> =
+                item.type_params.iter().map(|p| (p.name, p.formal)).collect();
+            assert_eq!(args, [("Any", Some("T"))]);
+        }};
+    }
+    restored!(openehr_rm::v1_1::model);
+    restored!(openehr_rm::v1_2::model);
 }
 
 #[test]

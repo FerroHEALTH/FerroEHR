@@ -7,7 +7,6 @@
 //! meta-model.
 
 use crate::v1_1::data_types::quantity::dv_interval::DvInterval;
-use crate::v1_1::data_types::quantity::dv_ordered::DvOrdered;
 use crate::v1_1::data_types::text::dv_text::DvText;
 
 /// Defines a named range to be associated with any `DV_ORDERED` datum.
@@ -15,9 +14,9 @@ use crate::v1_1::data_types::text::dv_text::DvText;
 /// Each such range is particular to the patient and context, e.g. sex, age, and any other factor which affects ranges. May be used to represent normal, therapeutic, dangerous, critical etc ranges.
 #[doc(alias = "REFERENCE_RANGE")]
 #[derive(Debug, Clone, PartialEq)]
-pub struct ReferenceRange {
+pub struct ReferenceRange<T> {
     /// Term whose value indicates the meaning of this range, e.g.  normal,  critical,  therapeutic  etc.
     pub meaning: DvText,
     /// The data range for this meaning, e.g. critical  etc.
-    pub range: DvInterval<DvOrdered>,
+    pub range: DvInterval<T>,
 }
