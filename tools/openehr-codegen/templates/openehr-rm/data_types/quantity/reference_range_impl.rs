@@ -184,9 +184,11 @@ mod tests {
     #[test]
     fn a_nested_quantity_limit_breaks_range_is_simple() {
         let mut top = quantity(10.0);
-        top.other_reference_ranges = openehr_base::containers::present_nonempty(vec![
-            quantity_range(quantity(0.0), quantity(1.0)),
-        ]);
+        top.other_reference_ranges =
+            openehr_base::containers::present_nonempty(vec![quantity_range(
+                quantity(0.0),
+                quantity(1.0),
+            )]);
         let v = quantity_range(quantity(0.0), top).invariants();
         assert!(
             v.iter()
