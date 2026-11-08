@@ -13,7 +13,7 @@ use crate::ids::VoId;
 use crate::storage::version_repo::placement::TipRow;
 use crate::versioning::change::precondition::tip_uid;
 use crate::versioning::object_version_id::{
-    TreeId, VersionIdError, expected_from_if_match, if_match_token,
+    TreeId, VersionIdError, entity_tag_value, expected_from_if_match,
 };
 
 /// A demographic write's version precondition, judged once against the tip
@@ -47,10 +47,9 @@ impl Precondition {
                 tree: path,
             });
         };
-        let token = if_match_token(raw);
-        // NOTE: a token that is not a full OBJECT_VERSION_ID is legitimately the
+        // NOTE: a value that is not a full OBJECT_VERSION_ID is legitimately the
         // `*` or trunk form; `expected_from_if_match` below refuses every other shape.
-        let full = ObjectVersionId::from_str(token).ok();
+        let full = ObjectVersionId::from_str(&entity_tag_value(raw)).ok();
         let tree = expected_from_if_match(raw).map_err(VersionIdError::into_argument)?;
         Ok(Self {
             full,
