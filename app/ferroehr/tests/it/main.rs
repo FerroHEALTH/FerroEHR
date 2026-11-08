@@ -67,6 +67,7 @@ mod committer_check;
 mod db_lease;
 mod db_outage;
 mod decommission;
+mod definition_load;
 mod directory_item_refs;
 mod ehr_index_ihe;
 mod ext_functions;

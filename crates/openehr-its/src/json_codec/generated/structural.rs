@@ -137,7 +137,7 @@
 //   PARTY_SELF: openehr_rm::v1_2::common::generic::party_self::PartySelf wins over openehr_rm::v1_1::common::generic::party_self::PartySelf
 //   PERSON: openehr_rm::v1_2::demographic::person::Person wins over openehr_rm::v1_1::demographic::person::Person
 //   POINT_EVENT: openehr_rm::v1_2::data_structures::history::point_event::PointEvent<::serde_json::Value> wins over openehr_rm::v1_1::data_structures::history::point_event::PointEvent<::serde_json::Value>
-//   REFERENCE_RANGE: openehr_rm::v1_2::data_types::quantity::reference_range::ReferenceRange wins over openehr_rm::v1_1::data_types::quantity::reference_range::ReferenceRange
+//   REFERENCE_RANGE: openehr_rm::v1_2::data_types::quantity::reference_range::ReferenceRange<::serde_json::Value> wins over openehr_rm::v1_1::data_types::quantity::reference_range::ReferenceRange<::serde_json::Value>
 //   RESOURCE_DESCRIPTION: openehr_rm::v1_2::common::resource::resource_description::ResourceDescription wins over openehr_rm::v1_1::common::resource::resource_description::ResourceDescription
 //   RESOURCE_DESCRIPTION_ITEM: openehr_rm::v1_2::common::resource::resource_description_item::ResourceDescriptionItem wins over openehr_rm::v1_1::common::resource::resource_description_item::ResourceDescriptionItem
 //   REVISION_HISTORY: openehr_rm::v1_2::common::generic::revision_history::RevisionHistory wins over openehr_rm::v1_1::common::generic::revision_history::RevisionHistory
@@ -1096,7 +1096,7 @@ pub fn structural_check(
 "Point_interval" => ::core::option::Option::Some(crate::json::from_canonical_value::<openehr_base::v1_3::foundation_types::interval::point_interval::PointInterval<::serde_json::Value>>(node).map(|_| ())),
 "Proper_interval" => ::core::option::Option::Some(crate::json::from_canonical_value::<openehr_base::v1_3::foundation_types::interval::proper_interval::ProperIntervalData<::serde_json::Value>>(node).map(|_| ())),
 "REFERENCE_MODEL_ACCESS" => ::core::option::Option::Some(crate::json::from_canonical_value::<openehr_lang::v1_1::bmm::rm_access::reference_model_access::ReferenceModelAccess>(node).map(|_| ())),
-"REFERENCE_RANGE" => ::core::option::Option::Some(crate::json::from_canonical_value::<openehr_rm::v1_2::data_types::quantity::reference_range::ReferenceRange>(node).map(|_| ())),
+"REFERENCE_RANGE" => ::core::option::Option::Some(crate::json::from_canonical_value::<openehr_rm::v1_2::data_types::quantity::reference_range::ReferenceRange<::serde_json::Value>>(node).map(|_| ())),
 "RESOURCE_ANNOTATIONS" => ::core::option::Option::Some(crate::json::from_canonical_value::<openehr_base::v1_3::resource::resource_annotations::ResourceAnnotations>(node).map(|_| ())),
 "RESOURCE_DESCRIPTION" => ::core::option::Option::Some(crate::json::from_canonical_value::<openehr_rm::v1_2::common::resource::resource_description::ResourceDescription>(node).map(|_| ())),
 "RESOURCE_DESCRIPTION_ITEM" => ::core::option::Option::Some(crate::json::from_canonical_value::<openehr_rm::v1_2::common::resource::resource_description_item::ResourceDescriptionItem>(node).map(|_| ())),

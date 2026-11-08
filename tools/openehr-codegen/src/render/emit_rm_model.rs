@@ -104,6 +104,9 @@ struct AttrModel {
     /// `List<EVENT<ITEM_STRUCTURE>>`. Bare parameters are resolved to their bound,
     /// consistent with `declared_type`.
     type_params: Vec<TypeRefModel>,
+    /// The formal generic parameter the attribute's value type is written as
+    /// (`T` for `DV_INTERVAL.lower`), `None` when it names a class.
+    formal: Option<String>,
     /// The BMM-declared container cardinality (container attributes only).
     cardinality: Option<CardinalityModel>,
     /// Optional container carrying a present-implies-non-empty invariant
@@ -117,6 +120,9 @@ struct AttrModel {
 /// A resolved type reference: a root spec name plus its own generic arguments.
 struct TypeRefModel {
     name: String,
+    /// The formal generic parameter this reference is written as, resolved to
+    /// `name` (its bound).
+    formal: Option<String>,
     params: Vec<TypeRefModel>,
 }
 
@@ -315,6 +321,7 @@ fn attributes_of(model: &Model, class: &BmmClass) -> Result<Vec<AttrModel>, Stri
         .map(|rp| {
             let (declared_type, container, type_params, cardinality) =
                 value_shape(model, &class.name, &rp.prop.kind);
+            let formal = formal_param(model, &class.name, value_type(&rp.prop.kind));
             let ref_target =
                 if declared_type == "OBJECT_REF" || model.inherits(&declared_type, "OBJECT_REF") {
                     ref_target(&rp.owner, &rp.prop.name)
@@ -335,6 +342,7 @@ fn attributes_of(model: &Model, class: &BmmClass) -> Result<Vec<AttrModel>, Stri
                 container,
                 is_mandatory: rp.prop.is_mandatory,
                 type_params,
+                formal,
                 cardinality,
                 nonempty: !rp.prop.is_mandatory
                     && (crate::analyze::nonempty_optional_lists_cached(model)
@@ -416,14 +424,16 @@ fn computed_attributes_of(model: &Model, class: &BmmClass, stored: &[AttrModel])
         .filter_map(|n| map.remove(&n))
         .filter(|f| f.parameter_count == 0 && !stored.iter().any(|a| a.name == f.name))
         .filter_map(|f| {
+            let result = f.result.as_ref()?;
             let (declared_type, container, type_params, _) =
-                value_shape(model, &class.name, f.result.as_ref()?);
+                value_shape(model, &class.name, result);
             Some(AttrModel {
                 name: f.name.clone(),
                 declared_type,
                 container,
                 is_mandatory: !f.is_nullable,
                 type_params,
+                formal: formal_param(model, &class.name, value_type(result)),
                 cardinality: None,
                 nonempty: false,
                 ref_target: None,
@@ -449,6 +459,7 @@ fn type_ref_params(model: &Model, concrete: &str, t: &BmmType) -> Vec<TypeRefMod
 fn type_ref(model: &Model, concrete: &str, t: &BmmType) -> TypeRefModel {
     TypeRefModel {
         name: declared_type(model, concrete, t),
+        formal: formal_param(model, concrete, t),
         params: type_ref_params(model, concrete, t),
     }
 }
@@ -479,6 +490,23 @@ fn declared_type(model: &Model, concrete: &str, t: &BmmType) -> String {
     } else {
         root.to_string()
     }
+}
+
+/// The value type of a property-shaped `kind`: the type itself, or a
+/// container's item type.
+fn value_type(kind: &BmmPropKind) -> &BmmType {
+    match kind {
+        BmmPropKind::Single(t) | BmmPropKind::Container { item: t, .. } => t,
+    }
+}
+
+/// The formal generic parameter `t` is written as in `concrete`'s scope, `None`
+/// when `t` names a class or a parameter a monomorphizing class binds
+/// ([`class_binding`]), whose binding [`declared_type`] already records.
+fn formal_param(model: &Model, concrete: &str, t: &BmmType) -> Option<String> {
+    let root = t.root_name();
+    (model.is_generic_param(concrete, root) && !class_binding(concrete).contains_key(root))
+        .then(|| root.to_string())
 }
 
 /// Map a BMM container kind to a `Container` variant name.
@@ -571,17 +599,16 @@ fn emit_data(classes: &[ClassModel], enums: &[EnumModel]) -> String {
 /// Render one `RmAttribute { … },` row of an attribute table.
 fn attribute_lit(a: &AttrModel) -> String {
     format!(
-        "            RmAttribute {{ name: {:?}, declared_type: {:?}, container: Container::{}, is_mandatory: {}, type_params: &{}, cardinality: {}, nonempty: {}, ref_target: {} }},\n",
+        "            RmAttribute {{ name: {:?}, declared_type: {:?}, formal: {}, container: Container::{}, is_mandatory: {}, type_params: &{}, cardinality: {}, nonempty: {}, ref_target: {} }},\n",
         a.name,
         a.declared_type,
+        optional_str(a.formal.as_deref()),
         a.container,
         a.is_mandatory,
         type_refs(&a.type_params),
         cardinality(a.cardinality.as_ref()),
         a.nonempty,
-        a.ref_target
-            .as_ref()
-            .map_or_else(|| "None".to_string(), |t| format!("Some({t:?})")),
+        optional_str(a.ref_target.as_deref()),
     )
 }
 
@@ -594,13 +621,19 @@ fn type_refs(items: &[TypeRefModel]) -> String {
             b.push_str(", ");
         }
         b.push_str(&format!(
-            "RmTypeRef {{ name: {:?}, params: &{} }}",
+            "RmTypeRef {{ name: {:?}, formal: {}, params: &{} }}",
             t.name,
+            optional_str(t.formal.as_deref()),
             type_refs(&t.params)
         ));
     }
     b.push(']');
     b
+}
+
+/// Render an `Option<&'static str>` literal.
+fn optional_str(value: Option<&str>) -> String {
+    value.map_or_else(|| "None".to_string(), |v| format!("Some({v:?})"))
 }
 
 /// Render an `Option<Cardinality>` literal.

@@ -44,7 +44,8 @@ pub struct DvScale {
     /// Optional normal range.
     pub normal_range: Option<Box<DvInterval<DvOrdered>>>,
     /// Optional tagged other reference ranges for this value in its particular measurement context.
-    pub other_reference_ranges: Option<openehr_base::containers::NonEmptyVec<ReferenceRange>>,
+    pub other_reference_ranges:
+        Option<openehr_base::containers::NonEmptyVec<ReferenceRange<DvOrdered>>>,
     /// Coded textual representation of this value in the scale range, which may be strings made from symbols or other enumerations of terms such as  `no breathlessness`, `very very slight`, `slight breathlessness`. Codes come from archetypes.
     ///
     /// In some cases, a scale may include values that have no code/symbol. In this case, the symbol will be a `DV-CODED_TEXT` including the `_terminology_id_` and a blank String value for `_code_string_`.

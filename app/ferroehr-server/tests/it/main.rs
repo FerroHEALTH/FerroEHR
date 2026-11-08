@@ -9,6 +9,7 @@
 //! exercised here: the authorization construction seam
 //! ([`build_authz`](ferroehr_server::build_authz), `authz_wiring`), [`Cli`](ferroehr_server::Cli) parsing (including the
 //! `--set key=value` override parser and the subcommand shapes), the
+//! extension each `ferroehr definitions load` file is read by, the
 //! pure-stdout `ferroehr config default` path through
 //! [`run`](ferroehr_server::run), and the `[privacy]` policy the run path
 //! compiles out of the shipped defaults. Everything past that seam is tested
@@ -23,4 +24,5 @@
 //! (`.claude/rules/testing.md` §One integration-test binary per crate).
 
 mod authz_wiring;
+mod definitions;
 mod wiring;

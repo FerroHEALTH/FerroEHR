@@ -24454,7 +24454,9 @@ impl<'de> ::serde::Deserialize<'de>
     }
 }
 
-impl ::serde::Serialize for crate::v1_1::data_types::quantity::reference_range::ReferenceRange {
+impl<T: ::serde::Serialize> ::serde::Serialize
+    for crate::v1_1::data_types::quantity::reference_range::ReferenceRange<T>
+{
     fn serialize<__S: ::serde::Serializer>(
         &self,
         __serializer: __S,
@@ -24468,8 +24470,8 @@ impl ::serde::Serialize for crate::v1_1::data_types::quantity::reference_range::
     }
 }
 
-impl<'de> ::serde::Deserialize<'de>
-    for crate::v1_1::data_types::quantity::reference_range::ReferenceRange
+impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
+    for crate::v1_1::data_types::quantity::reference_range::ReferenceRange<T>
 {
     fn deserialize<__D: ::serde::Deserializer<'de>>(
         __deserializer: __D,
@@ -24514,9 +24516,9 @@ impl<'de> ::serde::Deserialize<'de>
                 ::serde::Deserializer::deserialize_identifier(__deserializer, __KeyVisitor)
             }
         }
-        struct __Visitor;
-        impl<'de> ::serde::de::Visitor<'de> for __Visitor {
-            type Value = crate::v1_1::data_types::quantity::reference_range::ReferenceRange;
+        struct __Visitor<T>(::core::marker::PhantomData<(T,)>);
+        impl<'de, T: ::serde::de::DeserializeOwned> ::serde::de::Visitor<'de> for __Visitor<T> {
+            type Value = crate::v1_1::data_types::quantity::reference_range::ReferenceRange<T>;
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `REFERENCE_RANGE` object")
             }
@@ -24575,7 +24577,7 @@ impl<'de> ::serde::Deserialize<'de>
             __deserializer,
             "REFERENCE_RANGE",
             __FIELDS,
-            __Visitor,
+            __Visitor(::core::marker::PhantomData),
         )
     }
 }
@@ -54171,7 +54173,9 @@ impl<'de> ::serde::Deserialize<'de>
     }
 }
 
-impl ::serde::Serialize for crate::v1_2::data_types::quantity::reference_range::ReferenceRange {
+impl<T: ::serde::Serialize> ::serde::Serialize
+    for crate::v1_2::data_types::quantity::reference_range::ReferenceRange<T>
+{
     fn serialize<__S: ::serde::Serializer>(
         &self,
         __serializer: __S,
@@ -54185,8 +54189,8 @@ impl ::serde::Serialize for crate::v1_2::data_types::quantity::reference_range::
     }
 }
 
-impl<'de> ::serde::Deserialize<'de>
-    for crate::v1_2::data_types::quantity::reference_range::ReferenceRange
+impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
+    for crate::v1_2::data_types::quantity::reference_range::ReferenceRange<T>
 {
     fn deserialize<__D: ::serde::Deserializer<'de>>(
         __deserializer: __D,
@@ -54231,9 +54235,9 @@ impl<'de> ::serde::Deserialize<'de>
                 ::serde::Deserializer::deserialize_identifier(__deserializer, __KeyVisitor)
             }
         }
-        struct __Visitor;
-        impl<'de> ::serde::de::Visitor<'de> for __Visitor {
-            type Value = crate::v1_2::data_types::quantity::reference_range::ReferenceRange;
+        struct __Visitor<T>(::core::marker::PhantomData<(T,)>);
+        impl<'de, T: ::serde::de::DeserializeOwned> ::serde::de::Visitor<'de> for __Visitor<T> {
+            type Value = crate::v1_2::data_types::quantity::reference_range::ReferenceRange<T>;
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `REFERENCE_RANGE` object")
             }
@@ -54292,7 +54296,7 @@ impl<'de> ::serde::Deserialize<'de>
             __deserializer,
             "REFERENCE_RANGE",
             __FIELDS,
-            __Visitor,
+            __Visitor(::core::marker::PhantomData),
         )
     }
 }
