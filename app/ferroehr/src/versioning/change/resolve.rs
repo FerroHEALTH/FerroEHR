@@ -129,7 +129,7 @@ struct Prepared {
 /// change), and `feeder_audit` is content the version carries, so only the
 /// server-assigned `uid` leaves the digested bytes; the serializer is the one
 /// that writes `version.body`, so equal bodies digest equal.
-fn content_digest(canonical: &Value) -> Result<[u8; 32], ServiceError> {
+pub(crate) fn content_digest(canonical: &Value) -> Result<[u8; 32], ServiceError> {
     use sha2::Digest as _;
     let mut without_uid = canonical.clone();
     if let Some(root) = without_uid.as_object_mut() {

@@ -304,7 +304,7 @@ impl FerroEhrService {
 /// Returns [`NodeRebuildOutcome::Refused`] without propagating an error for
 /// every way the BODY can be the damaged copy, because the caller answers a
 /// refusal by rolling back rather than by failing the whole run.
-async fn rebuild_in_tx(
+pub(in crate::service) async fn rebuild_in_tx(
     tx: &mut PgConnection,
     vo_id: VoId,
     sys_version: i32,

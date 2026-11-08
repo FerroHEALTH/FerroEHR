@@ -175,3 +175,69 @@ pub async fn count_deactivation(
     .await?;
     Ok(true)
 }
+
+/// At most `limit` deleted `PERSON`s of the clients of `binding_issuers`
+/// whose contacts are due for erasure: a deprovisioned key row of one of
+/// those issuers at least `delay_minutes` old, and no erasure recorded.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn contacts_due(
+    conn: &mut PgConnection,
+    binding_issuers: &[String],
+    delay_minutes: u32,
+    limit: i64,
+) -> Result<Vec<VoId>, StorageError> {
+    let ids: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT DISTINCT t.party_id FROM binding_identifier t \
+         WHERE t.deprovisioned_at IS NOT NULL AND t.issuer = ANY($1) \
+           AND t.deprovisioned_at + make_interval(mins => $2) <= now() \
+           AND NOT EXISTS (SELECT 1 FROM scim_contact_erasure e WHERE e.party_id = t.party_id) \
+         ORDER BY t.party_id LIMIT $3",
+    )
+    .bind(binding_issuers)
+    .bind(i32::try_from(delay_minutes).unwrap_or(i32::MAX))
+    .bind(limit)
+    .fetch_all(&mut *conn)
+    .await?;
+    Ok(ids.into_iter().map(VoId).collect())
+}
+
+/// Locks the head row of `party` on the erasure transaction `tx`, so two
+/// replicas erasing at once queue on it; `false` when the party has no head
+/// or its contacts are already erased.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn lock_contact_erasure(
+    tx: &mut PgConnection,
+    party: VoId,
+) -> Result<bool, StorageError> {
+    let head: Option<Uuid> =
+        sqlx::query_scalar("SELECT vo_id FROM vo_head WHERE vo_id = $1 FOR UPDATE")
+            .bind(party)
+            .fetch_optional(&mut *tx)
+            .await?;
+    if head.is_none() {
+        return Ok(false);
+    }
+    let erased: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM scim_contact_erasure WHERE party_id = $1)",
+    )
+    .bind(party)
+    .fetch_one(&mut *tx)
+    .await?;
+    Ok(!erased)
+}
+
+/// Records on `tx` that the contacts of `party` are erased.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn mark_contacts_erased(tx: &mut PgConnection, party: VoId) -> Result<(), StorageError> {
+    sqlx::query("INSERT INTO scim_contact_erasure (party_id, erased_at) VALUES ($1, now())")
+        .bind(party)
+        .execute(&mut *tx)
+        .await?;
+    Ok(())
+}

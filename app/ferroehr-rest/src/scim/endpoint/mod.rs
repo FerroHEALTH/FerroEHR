@@ -28,6 +28,7 @@ mod user_map;
 mod users;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::Router;
 use axum::extract::{Path, Query, Request, State};
@@ -105,6 +106,13 @@ pub(crate) fn router(
             return None;
         }
     };
+    // NOTE: GDPR Art. 5(1)(e), a deleted User's contacts are kept no longer than necessary;
+    // the sweep runs while the endpoint that deletes Users is served.
+    service.spawn_contact_erasure(
+        config.scim.binding_issuers(),
+        config.scim.contact_erasure_minutes,
+        Duration::from_secs(60),
+    );
     let users = discovery
         .resource_schema("User")
         .cloned()

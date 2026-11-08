@@ -58,6 +58,7 @@ struct Inner {
     max_results: u64,
     filter: FilterSupport,
     limit: Deactivations,
+    contact_erasure_minutes: u32,
 }
 
 impl Users {
@@ -86,6 +87,7 @@ impl Users {
                     max: scim.max_deactivations,
                     window_minutes: scim.deactivation_window_minutes,
                 },
+                contact_erasure_minutes: scim.contact_erasure_minutes,
             }),
         })
     }
@@ -402,7 +404,13 @@ pub(crate) async fn delete(
         let party = user.row.party;
         let deleted = users
             .service
-            .delete_user(issuer, party, Some(&user.version_uid), users.inner.limit)
+            .delete_user(
+                issuer,
+                party,
+                Some(&user.version_uid),
+                users.inner.limit,
+                users.inner.contact_erasure_minutes,
+            )
             .await
             .map_err(write_refusal)?;
         if deleted {

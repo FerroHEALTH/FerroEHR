@@ -75,6 +75,7 @@ pub mod user_lifecycle;
 pub mod user_write;
 
 mod api;
+mod contact_erasure;
 mod contribution;
 mod party;
 mod relationship;

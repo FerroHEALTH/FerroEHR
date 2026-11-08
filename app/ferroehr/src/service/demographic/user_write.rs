@@ -161,6 +161,7 @@ impl FerroEhrService {
                 deactivates.then_some(limit),
                 change_type::MODIFICATION,
                 vec![change],
+                None,
             )
             .await?;
         }
@@ -171,6 +172,9 @@ impl FerroEhrService {
     /// its `PERSON` and its professional `ROLE`s in one demographic
     /// CONTRIBUTION (RM common `master06-change_control_package.adoc`
     /// §Logical Deletion). `false` when the id names no User of that client.
+    /// With `contact_erasure_minutes` zero, the same transaction erases the
+    /// contacts of every version of the `PERSON`; otherwise the sweep
+    /// ([`FerroEhrService::erase_due_contacts`]) erases them that long after.
     ///
     /// # Errors
     /// [`ServiceError::VersionConflict`] when the current version is not
@@ -182,6 +186,7 @@ impl FerroEhrService {
         id: VoId,
         expected: Option<&str>,
         limit: Deactivations,
+        contact_erasure_minutes: u32,
     ) -> Result<bool, UserWriteError> {
         let Some(user) = self.provisioned_user(binding_issuer, id).await? else {
             return Ok(false);
@@ -196,8 +201,15 @@ impl FerroEhrService {
             changes.push(Change::delete(role, Kind::Role, None));
         }
         // TODO(#5015): remove the User from every GROUP whose memberships target it.
-        self.commit_scim(binding_issuer, Some(limit), change_type::DELETED, changes)
-            .await?;
+        let erase = (contact_erasure_minutes == 0).then_some(id);
+        self.commit_scim(
+            binding_issuer,
+            Some(limit),
+            change_type::DELETED,
+            changes,
+            erase,
+        )
+        .await?;
         Ok(true)
     }
 
@@ -250,13 +262,15 @@ impl FerroEhrService {
 
     /// Commits `changes` in one demographic CONTRIBUTION of `change` type as
     /// the SCIM client of `binding_issuer`, counting it against `limit` in
-    /// the same transaction when it deactivates or deletes a User.
+    /// the same transaction when it deactivates or deletes a User, and
+    /// erasing the contacts of the `PERSON` `erase` before it commits.
     async fn commit_scim(
         &self,
         binding_issuer: &str,
         limit: Option<Deactivations>,
         change: &str,
         changes: Vec<Change>,
+        erase: Option<VoId>,
     ) -> Result<(), UserWriteError> {
         let audit = self.audit(change, "SCIM provisioning");
         let changes = changes
@@ -300,6 +314,9 @@ impl FerroEhrService {
             ),
         )
         .await?;
+        if let Some(party) = erase {
+            self.erase_contacts_in(&mut tx, party).await?;
+        }
         tx.commit().await?;
         Ok(())
     }

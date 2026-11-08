@@ -32,6 +32,8 @@ const ROLE: &str = "openEHR-DEMOGRAPHIC-ROLE.professional.v1.0.0";
 const KEY_PATH: &str = "/details[id2]/items[id3]";
 /// The name element.
 const NAME_PATH: &str = "/identities[id4]/details[id5]/items[id6]";
+/// The e-mail element under `contacts`.
+const EMAIL_PATH: &str = "/contacts[id10]/addresses[id11]/details[id12]/items[id13]";
 /// The `binding_issuer` of the client under test.
 const LOGIN: &str = "urn:example:staff-login";
 /// The `binding_issuer` of another client.
@@ -83,6 +85,23 @@ definition
                 }}
             }}
         }}
+        contacts matches {{
+            CONTACT[id10] matches {{
+                addresses matches {{
+                    ADDRESS[id11] matches {{
+                        details matches {{
+                            ITEM_TREE[id12] matches {{
+                                items matches {{
+                                    ELEMENT[id13] occurrences matches {{0..1}} matches {{
+                                        value matches {{ DV_TEXT[id14] }}
+                                    }}
+                                }}
+                            }}
+                        }}
+                    }}
+                }}
+            }}
+        }}
     }}
 
 terminology
@@ -94,6 +113,10 @@ terminology
             [\"id4\"] = <text = <\"Identity\"> description = <\"The identity.\">>
             [\"id5\"] = <text = <\"Name\"> description = <\"The name structure.\">>
             [\"id6\"] = <text = <\"Name text\"> description = <\"The name.\">>
+            [\"id10\"] = <text = <\"Contact\"> description = <\"A contact.\">>
+            [\"id11\"] = <text = <\"Address\"> description = <\"An address.\">>
+            [\"id12\"] = <text = <\"Address details\"> description = <\"The address.\">>
+            [\"id13\"] = <text = <\"Email\"> description = <\"An e-mail address.\">>
         >
     >
 "
@@ -601,7 +624,7 @@ async fn a_deleted_user_leaves_a_tombstone() {
     .expect("created")
     .row
     .party;
-    let deleted = as_client(Box::pin(svc.delete_user(LOGIN, id, None, BOUND)))
+    let deleted = as_client(Box::pin(svc.delete_user(LOGIN, id, None, BOUND, 0)))
         .await
         .expect("deleted");
     assert!(deleted);
@@ -675,11 +698,197 @@ async fn the_deactivation_bound_holds_across_two_replicas() {
         matches!(refused, UserWriteError::Limited { max: 2, .. }),
         "{refused:?}"
     );
-    let refused = as_client(Box::pin(replica.delete_user(LOGIN, ids[2], None, bound)))
+    let refused = as_client(Box::pin(replica.delete_user(LOGIN, ids[2], None, bound, 0)))
         .await
         .expect_err("a deletion counts against the same bound");
     assert!(
         matches!(refused, UserWriteError::Limited { .. }),
         "{refused:?}"
+    );
+}
+
+/// A User of `LOGIN` with the key `key` and the e-mail contact `email`,
+/// deactivated once so its second version shares the first one's content.
+async fn user_with_contact(svc: &FerroEhrService, key: &str, email: &str) -> VoId {
+    let mut new = user(LOGIN, key, email, &format!("ext-{key}"), "Ada Roe");
+    new.values.push((
+        EMAIL_PATH.to_owned(),
+        json!({ "_type": "DV_TEXT", "value": email }),
+    ));
+    let id = provision(svc, LOGIN, new).await.expect("created").row.party;
+    update(svc, id, active(false), BOUND)
+        .await
+        .expect("deactivated")
+        .expect("found");
+    id
+}
+
+/// The stored body of every version of `id` with content, in order.
+async fn stored_bodies(db: &testkit::TestDb, id: VoId) -> Vec<Value> {
+    let rows: Vec<String> = sqlx::query_scalar(
+        "SELECT body FROM party.version WHERE vo_id = $1 AND body IS NOT NULL \
+         ORDER BY sys_version",
+    )
+    .bind(id.0)
+    .fetch_all(&db.pool())
+    .await
+    .expect("the versions read");
+    rows.iter()
+        .map(|body| serde_json::from_str(body).expect("a JSON body"))
+        .collect()
+}
+
+/// How many node rows of `id` belong to a `CONTACT` or below one.
+async fn contact_rows(db: &testkit::TestDb, id: VoId) -> i64 {
+    sqlx::query_scalar(
+        "SELECT count(*) FROM party.node \
+         WHERE vo_id = $1 AND rm_type IN ('CONTACT', 'ADDRESS')",
+    )
+    .bind(id.0)
+    .fetch_one(&db.pool())
+    .await
+    .expect("the nodes count")
+}
+
+/// Asserts that every stored version of `id` holds the name and the three
+/// identifiers and no contact, and that the node rows agree with the bodies.
+async fn assert_attribution_minimum(db: &testkit::TestDb, svc: &FerroEhrService, id: VoId) {
+    let bodies = stored_bodies(db, id).await;
+    assert_eq!(bodies.len(), 2, "both versions with content are kept");
+    for body in &bodies {
+        assert!(body.get("contacts").is_none(), "no contact is left: {body}");
+        assert_eq!(
+            body.pointer("/identities/0/details/items/0/value/value"),
+            Some(&Value::from("Ada Roe")),
+            "the name stays"
+        );
+        let identifiers = body
+            .pointer("/details/items")
+            .and_then(Value::as_array)
+            .expect("the identifiers stay");
+        assert_eq!(identifiers.len(), 3, "{body}");
+    }
+    assert_eq!(contact_rows(db, id).await, 0, "no node row holds a contact");
+    let parity = svc
+        .rebuild_version_nodes(ferroehr::storage::integrity::StorageParityScope {
+            vo_id: Some(id.0),
+            ..Default::default()
+        })
+        .await
+        .expect("the sweep runs");
+    assert_eq!(parity.versions_damaged, 0, "{parity:?}");
+}
+
+/// #5178: with no period, the deletion erases the contacts of every version
+/// of the `PERSON` and keeps its name, key and identifiers; the tombstone
+/// still refuses the login, and the erasure is an access record.
+#[tokio::test]
+async fn a_deletion_erases_the_contacts_and_keeps_the_attribution_minimum() {
+    let (db, svc) = service().await;
+    let audit = ferroehr::system_log::config::AuditConfig {
+        enabled: true,
+        store: ferroehr::system_log::config::StoreConfig {
+            enabled: true,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let (sender, handle) = ferroehr::system_log::sender::start(audit, None, Some(db.pool()))
+        .await
+        .expect("the audit sender");
+    let svc = svc.with_audit(sender);
+    let key = "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d";
+    let id = user_with_contact(&svc, key, "ada@example.org").await;
+    assert_eq!(stored_bodies(&db, id).await.len(), 2);
+    assert!(contact_rows(&db, id).await > 0, "the contact is stored");
+
+    let deleted = as_client(Box::pin(svc.delete_user(LOGIN, id, None, BOUND, 0)))
+        .await
+        .expect("deleted");
+    assert!(deleted);
+    assert_attribution_minimum(&db, &svc, id).await;
+    let lookup = svc
+        .party_source(NAMESPACE)
+        .read(LOGIN, "guid", key, None, "2026-06-01")
+        .await
+        .expect("the source answers");
+    assert_eq!(lookup, Lookup::Deprovisioned);
+    assert_eq!(
+        svc.erase_due_contacts(&[LOGIN.to_owned()], 0)
+            .await
+            .expect("the sweep runs"),
+        0,
+        "the deletion erased them already"
+    );
+
+    drop(svc);
+    handle.shutdown(std::time::Duration::from_secs(5)).await;
+    let recorded: Vec<(String, Option<String>)> =
+        sqlx::query_as("SELECT action, principal FROM audit.audit_event WHERE resource_id = $1")
+            .bind(format!("party:{id}#contacts"))
+            .fetch_all(&db.pool())
+            .await
+            .expect("the audit store reads");
+    assert_eq!(
+        recorded,
+        vec![("D".to_owned(), Some("provisioning".to_owned()))],
+        "one deletion record naming the client"
+    );
+}
+
+/// #5178: with a period, the contacts stay until it has passed, and the
+/// sweep erases them once, for the deleted Users of the issuers it is given.
+#[tokio::test]
+async fn the_sweep_erases_the_contacts_once_the_period_has_passed() {
+    let (db, svc) = service().await;
+    let id = user_with_contact(
+        &svc,
+        "6b7c8d9e-0f1a-4b2c-9d3e-4f5a6b7c8d9e",
+        "bo@example.org",
+    )
+    .await;
+    as_client(Box::pin(svc.delete_user(LOGIN, id, None, BOUND, 60)))
+        .await
+        .expect("deleted");
+    let kept = stored_bodies(&db, id).await;
+    assert!(
+        kept.iter().all(|body| body.get("contacts").is_some()),
+        "the period has not passed"
+    );
+    assert_eq!(
+        svc.erase_due_contacts(&[LOGIN.to_owned()], 60)
+            .await
+            .expect("the sweep runs"),
+        0
+    );
+
+    sqlx::query(
+        "UPDATE party.binding_identifier SET deprovisioned_at = now() - interval '61 minutes' \
+         WHERE party_id = $1 AND deprovisioned_at IS NOT NULL",
+    )
+    .bind(id.0)
+    .execute(&db.pool())
+    .await
+    .expect("the deletion is backdated");
+    assert_eq!(
+        svc.erase_due_contacts(&[OTHER.to_owned()], 60)
+            .await
+            .expect("the sweep runs"),
+        0,
+        "another client's sweep does not reach the User"
+    );
+    assert_eq!(
+        svc.erase_due_contacts(&[LOGIN.to_owned()], 60)
+            .await
+            .expect("the sweep runs"),
+        1
+    );
+    assert_attribution_minimum(&db, &svc, id).await;
+    assert_eq!(
+        svc.erase_due_contacts(&[LOGIN.to_owned()], 60)
+            .await
+            .expect("the sweep runs"),
+        0,
+        "each User is erased once"
     );
 }

@@ -18,6 +18,10 @@ use ferrohealth_smart::kind::IssuerKind;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+/// The longest `contact_erasure_minutes` a deployment may configure: 30
+/// days.
+const MAX_CONTACT_ERASURE_MINUTES: u32 = 43_200;
+
 /// The `[scim]` section.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -37,6 +41,10 @@ pub struct ScimConfig {
     pub max_deactivations: u32,
     /// The length of that window, in minutes.
     pub deactivation_window_minutes: u32,
+    /// How long after a User's deletion the contacts of every version of its
+    /// `PERSON` are erased, in minutes; `0` erases them in the deletion
+    /// itself. The name, the binding key and the identifiers stay.
+    pub contact_erasure_minutes: u32,
     /// The provisioning clients.
     pub client: Vec<ScimClient>,
 }
@@ -49,6 +57,7 @@ impl Default for ScimConfig {
             max_results: 100,
             max_deactivations: 100,
             deactivation_window_minutes: 60,
+            contact_erasure_minutes: 0,
             client: Vec::new(),
         }
     }
@@ -78,6 +87,16 @@ impl ScimConfig {
         self.public_base_url
             .as_deref()
             .map(|origin| format!("{}/scim/v2", origin.trim().trim_end_matches('/')))
+    }
+
+    /// The `binding_issuer` of every client: the issuers whose deleted Users
+    /// the contact erasure reaches.
+    #[must_use]
+    pub fn binding_issuers(&self) -> Vec<String> {
+        self.client
+            .iter()
+            .map(|client| client.binding_issuer.clone())
+            .collect()
     }
 
     /// The boot refusals of `[scim]`, each naming its key; `resolved` is the
@@ -114,6 +133,13 @@ impl ScimConfig {
         }
         if self.deactivation_window_minutes == 0 {
             errors.push("scim.deactivation_window_minutes must be at least 1".to_owned());
+        }
+        if self.contact_erasure_minutes > MAX_CONTACT_ERASURE_MINUTES {
+            errors.push(format!(
+                "scim.contact_erasure_minutes must be at most {MAX_CONTACT_ERASURE_MINUTES} (30 \
+                 days): a deleted User's contacts serve no attribution and are kept no longer \
+                 than necessary (GDPR Art. 5(1)(e))"
+            ));
         }
         if self.client.is_empty() {
             errors.push(
@@ -286,5 +312,32 @@ mod tests {
                 .iter()
                 .any(|e| e.contains("declared twice"))
         );
+    }
+
+    #[test]
+    fn a_contact_erasure_period_past_thirty_days_is_refused() {
+        let config = ScimConfig {
+            enabled: true,
+            public_base_url: Some("https://cdr.example.com".to_owned()),
+            contact_erasure_minutes: 43_201,
+            client: vec![client(
+                "https://as.example",
+                "provisioning",
+                "urn:example:login",
+            )],
+            ..ScimConfig::default()
+        };
+        let refused = |config: &ScimConfig| {
+            config
+                .errors(None)
+                .iter()
+                .any(|error| error.contains("scim.contact_erasure_minutes"))
+        };
+        assert!(refused(&config), "{:?}", config.errors(None));
+        let config = ScimConfig {
+            contact_erasure_minutes: 43_200,
+            ..config
+        };
+        assert!(!refused(&config), "{:?}", config.errors(None));
     }
 }
