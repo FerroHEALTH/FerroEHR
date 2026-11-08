@@ -69,7 +69,27 @@ profile, and the server acts on the kind:
 - **A delegated person** reaches the server through a client or an RFC 8693
   actor that the issuer's profile lists in `delegates`. The token's subject is
   the person, so the request is bound and committed exactly as the person's
-  own; the client and the actor do not change who committed.
+  own; the client and the actor do not change who committed. The access
+  record carries `acting_mode = delegated`, the client and the actor chain.
+- **A Keycloak impersonation** is a delegated person. Keycloak 26.8 puts the
+  administrator who impersonates a user into an RFC 8693 `act` claim of every
+  token of the impersonation session, `{"sub": <the administrator's user
+  id>, "preferred_username": …}`, which "is always present and cannot be
+  disabled" (Keycloak 26.8.0 release notes, *Track impersonation across
+  token lifecycle and downstream services*). An impersonation is therefore
+  refused like any undeclared actor, unless the issuer's `delegates` lists
+  the administrator as an actor (`{ sub = "<user id>" }`). Then the request is
+  bound to the impersonated user and commits as that user, and the access
+  record names the administrator as the actor (EHDS Annex II 3.2(b) asks
+  for the natural person who accessed). Keycloak's `act` names no issuer,
+  so the actor is recorded under the token's issuer. The `impersonator`
+  claim (`id`, `username`) of Keycloak's built-in IMPERSONATOR_ID and
+  IMPERSONATOR_USERNAME session note mappers repeats `act` and decides
+  nothing. To refuse every impersonation, add those mappers and set
+  `impersonation_marker = "impersonator"` on the issuer: a token carrying
+  the claim is refused before any actor is read. A Keycloak older than 26.8
+  writes no `act`, so there the marker is the only way to see an
+  impersonation at all.
 - **A guest**, by the profile's `guest` markers (Entra ID marks one with
   `acct = 1` or an `idp` other than the issuer), is refused with `403`
   (`refused-guest`) unless the issuer's `[[auth.party]]` table sets

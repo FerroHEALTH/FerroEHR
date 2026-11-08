@@ -5,7 +5,8 @@
 //! router over a real `FerroEhrService` on a real `PostgreSQL` 18: a system
 //! caller holds `system/` scopes only and commits only as a declared client,
 //! a guest is admitted only where its issuer's `[[auth.party]]` table admits
-//! guests, and a delegated person is bound to their own `PERSON`.
+//! guests, and a delegated person is bound to their own `PERSON`, which
+//! covers a Keycloak impersonation (#5167).
 //!
 //! RFC 9068 §2.2 and §5 name the person in `sub` and mark an app-only token;
 //! RFC 8693 §4.1 names an actor in `act`; SMART on openEHR
@@ -32,7 +33,8 @@ use serde_json::{Value, json};
 
 use crate::common::{self, BASE};
 use crate::party_binding_http::{
-    AUDIENCE, ISSUER, LOGIN, audited_service, list, professional, refusal_rows, refused, service,
+    AUDIENCE, ISSUER, LOGIN, audited_service, list, professional, professional_of, refusal_rows,
+    refused, service,
 };
 
 /// The standards-only machines issuer.
@@ -45,6 +47,15 @@ const KEYCLOAK: &str = "https://keycloak.example/realms/care";
 const SERVICE_ACCOUNT: &str = "service-account-lab";
 /// The actor a delegated token names.
 const GATEWAY: &str = "gateway";
+/// The Keycloak realm whose staff sign in, a `persons` issuer.
+const KEYCLOAK_STAFF: &str = "https://keycloak.example/realms/staff";
+/// The `identifier_issuer` of that realm's `[[auth.party]]` table.
+const KEYCLOAK_LOGIN: &str = "https://keycloak.example/realms/staff/users";
+/// The realm's first-party client, named in `azp`.
+const VIEWER: &str = "ferroehr-viewer";
+/// The Keycloak user id of the administrator the realm declares may
+/// impersonate.
+const SUPPORT_ADMIN: &str = "0e1f2a3b-4c5d-4e6f-8a7b-9c0d1e2f3a4b";
 /// The SMART scopes of a backend client that reads templates and writes EHRs.
 const SYSTEM_SCOPES: &str = "system/composition-*.cruds system/template-*.r";
 
@@ -68,10 +79,38 @@ fn machines(issuer: &str, profile: Preset) -> IssuerEntry {
     }
 }
 
+/// The Keycloak `persons` issuer whose staff log in through [`VIEWER`],
+/// declaring [`SUPPORT_ADMIN`] an actor, with `impersonation_marker` set
+/// over the profile.
+fn keycloak_staff(impersonation_marker: Option<&str>) -> IssuerEntry {
+    IssuerEntry {
+        kind: Some(IssuerKind::Persons),
+        first_party_clients: Some(vec![VIEWER.to_owned()]),
+        app_only: Some(vec![Marker::Subjects(vec![
+            "service-account-viewer".to_owned(),
+        ])]),
+        delegates: Some(vec![Delegate::Actor {
+            issuer: None,
+            sub: SUPPORT_ADMIN.to_owned(),
+        }]),
+        impersonation_marker: impersonation_marker.map(str::to_owned),
+        ..machines(KEYCLOAK_STAFF, Preset::Keycloak)
+    }
+}
+
 /// The configuration trusting the persons issuer, whose guests the
 /// `[[auth.party]]` table admits when `guests`, and the three machines
 /// issuers, with `clients` declared.
 fn config(guests: bool, clients: Vec<SystemClient>) -> AppConfig {
+    config_marked(guests, clients, None)
+}
+
+/// [`config`], with the Keycloak staff realm's `impersonation_marker`.
+fn config_marked(
+    guests: bool,
+    clients: Vec<SystemClient>,
+    impersonation_marker: Option<&str>,
+) -> AppConfig {
     let persons = IssuerEntry {
         jwks_file: common::jwks_file().display().to_string(),
         guest: Some(vec![Marker::Claim {
@@ -94,14 +133,23 @@ fn config(guests: bool, clients: Vec<SystemClient>) -> AppConfig {
             machines(MACHINES, Preset::Rfc9068),
             machines(ENTRA, Preset::Entra),
             keycloak,
+            keycloak_staff(impersonation_marker),
         ]),
-        party: vec![PartySection {
-            issuer: ISSUER.to_owned(),
-            identifier_issuer: LOGIN.to_owned(),
-            identifier_type: "guid".to_owned(),
-            guests,
-            ..PartySection::default()
-        }],
+        party: vec![
+            PartySection {
+                issuer: ISSUER.to_owned(),
+                identifier_issuer: LOGIN.to_owned(),
+                identifier_type: "guid".to_owned(),
+                guests,
+                ..PartySection::default()
+            },
+            PartySection {
+                issuer: KEYCLOAK_STAFF.to_owned(),
+                identifier_issuer: KEYCLOAK_LOGIN.to_owned(),
+                identifier_type: "guid".to_owned(),
+                ..PartySection::default()
+            },
+        ],
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -282,6 +330,137 @@ async fn a_delegated_person_commits_as_their_own_person() {
     let committer = &version["commit_audit"]["committer"];
     assert_eq!(committer["external_ref"]["type"], "PERSON", "{committer}");
     assert_eq!(committer["identifiers"][0]["id"], key, "{committer}");
+}
+
+/// A Keycloak 26.8.2 token of an impersonation session for `key`: the
+/// impersonator in `act` (`sub`, `preferred_username`), and, when
+/// `mapped`, the `impersonator` claim of the built-in `IMPERSONATOR_ID` and
+/// `IMPERSONATOR_USERNAME` user session note mappers beside it.
+fn impersonated(key: &str, impersonator: &str, mapped: bool) -> String {
+    let mut claims = json!({
+        "sub": key, "azp": VIEWER,
+        "act": { "sub": impersonator, "preferred_username": "support" },
+    });
+    if mapped && let Some(claims) = claims.as_object_mut() {
+        claims.insert(
+            "impersonator".to_owned(),
+            json!({ "id": impersonator, "username": "support" }),
+        );
+    }
+    bearer(KEYCLOAK_STAFF, &audience(KEYCLOAK_STAFF), &claims)
+}
+
+/// The `(acting_mode, actor_chain, party id)` of the stored records of
+/// `operation` whose principal is `principal`, waiting for `count`.
+async fn delegated_rows(
+    pool: &sqlx::PgPool,
+    operation: &str,
+    principal: &str,
+    count: usize,
+) -> Vec<(Option<String>, Option<Value>, Option<String>)> {
+    for _ in 0..50 {
+        let rows: Vec<(Option<String>, Option<Value>, Option<String>)> = sqlx::query_as(
+            "SELECT acting_mode, actor_chain, party ->> 'id' FROM audit.audit_event \
+             WHERE operation = $1 AND principal = $2 ORDER BY recorded_at",
+        )
+        .bind(operation)
+        .bind(principal)
+        .fetch_all(pool)
+        .await
+        .expect("query");
+        if rows.len() >= count {
+            return rows;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    panic!("fewer than {count} {operation} records of {principal} were stored");
+}
+
+/// Keycloak 26.8.2 names the impersonator of an impersonation session in an
+/// RFC 8693 §4.1 `act` claim, "always present and cannot be disabled"
+/// (Keycloak 26.8.0 release notes, "Track impersonation across token
+/// lifecycle and downstream services"). An impersonator the realm declares
+/// in `delegates` acts as a delegate: the request is bound to the
+/// impersonated person, commits as that person, and the access record names
+/// the impersonator as the actor, whether or not the `impersonator` claim
+/// rides along.
+#[tokio::test]
+async fn a_keycloak_impersonation_is_recorded_with_the_impersonator_as_actor() {
+    let (db, _audit, svc) = audited_service().await;
+    let key = "9e0f1a2b-3c4d-4e5f-8a6b-7c8d9e0f1a2b";
+    let (person_uid, _) = professional_of(&svc, KEYCLOAK_LOGIN, key, "532").await;
+    let person = person_uid
+        .split("::")
+        .next()
+        .expect("the PERSON id")
+        .to_owned();
+    let app = router(Arc::clone(&svc), config(false, Vec::new())).await;
+    for mapped in [false, true] {
+        let token = impersonated(key, SUPPORT_ADMIN, mapped);
+        let (status, body) = create_ehr(&app, &token).await;
+        assert_eq!(status, StatusCode::CREATED, "mapped {mapped}: {body}");
+        let ehr: Value = serde_json::from_str(&body).expect("an EHR");
+        let ehr_id = ehr
+            .pointer("/ehr_id/value")
+            .and_then(Value::as_str)
+            .expect("the EHR id")
+            .to_owned();
+        let (status, version) = common::send_json(
+            &app,
+            common::req(
+                "GET",
+                format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version"),
+            )
+            .auth(&token)
+            .accept("application/json")
+            .build(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{version}");
+        let committer = &version["commit_audit"]["committer"];
+        assert_eq!(
+            committer["external_ref"]["id"]["value"], person,
+            "{committer}"
+        );
+        assert_eq!(committer["identifiers"][0]["id"], key, "{committer}");
+    }
+    let rows = delegated_rows(&db.pool(), "ehr_create", key, 2).await;
+    let actor = json!([format!("{KEYCLOAK_STAFF} {SUPPORT_ADMIN}")]);
+    for (mode, chain, party) in rows {
+        assert_eq!(mode.as_deref(), Some("delegated"));
+        assert_eq!(
+            chain.as_ref(),
+            Some(&actor),
+            "the impersonator is the actor"
+        );
+        assert_eq!(
+            party.as_deref(),
+            Some(person.as_str()),
+            "bound to the person"
+        );
+    }
+}
+
+/// An impersonation by a user the realm does not declare in `delegates` is
+/// refused as any undeclared actor is, and a realm that names Keycloak's
+/// `impersonator` claim in `impersonation_marker` refuses every
+/// impersonation that carries it, a declared impersonator's included.
+#[tokio::test]
+async fn an_undeclared_or_marked_keycloak_impersonation_is_refused() {
+    let (_db, svc) = service().await;
+    let key = "a0b1c2d3-e4f5-4a6b-9c7d-8e9f0a1b2c3d";
+    professional_of(&svc, KEYCLOAK_LOGIN, key, "532").await;
+    let app = router(Arc::clone(&svc), config(false, Vec::new())).await;
+    let stranger = "1f2a3b4c-5d6e-4f7a-8b9c-0d1e2f3a4b5c";
+    for mapped in [false, true] {
+        let (status, body) = list(&app, &impersonated(key, stranger, mapped)).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED, "mapped {mapped}: {body}");
+    }
+    let marked = router(svc, config_marked(false, Vec::new(), Some("impersonator"))).await;
+    let (status, body) = list(&marked, &impersonated(key, SUPPORT_ADMIN, true)).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED, "{body}");
+    let (status, body) = list(&marked, &impersonated(key, SUPPORT_ADMIN, false)).await;
+    assert_eq!(status, StatusCode::OK, "without the marker claim: {body}");
 }
 
 /// A system caller refused for a personal scope is recorded under
