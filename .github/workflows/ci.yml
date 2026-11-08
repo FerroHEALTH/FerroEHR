@@ -1365,6 +1365,9 @@ jobs:
         run: bash scripts/checks/vex-coverage.sh --self-test
       - name: OS VEX linkage detector self-test
         run: bash scripts/checks/vex-linkage.sh --self-test
+      # The check that trivy applies each judgement (#5153), on a planted statement.
+      - name: The applied-judgement detector names a judgement trivy left in place
+        run: bash scripts/security/vex-applied.sh --self-test
 
   clippy:
     name: clippy

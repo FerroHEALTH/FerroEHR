@@ -230,6 +230,7 @@ impl FerroEhrService {
 /// `locatable.adoc`) requires the `ARCHETYPED` block on the root.
 pub(in crate::service) fn initial_ehr_access_change() -> Change {
     Change::Create {
+        allocated: None,
         kind: Kind::EhrAccess,
         canonical: initial_ehr_access(),
         template_id: None,

@@ -133,6 +133,7 @@ impl FerroEhrService {
                 (
                     audit.clone(),
                     Change::Create {
+                        allocated: None,
                         kind: Kind::EhrStatus,
                         canonical: status.clone(),
                         template_id: None,

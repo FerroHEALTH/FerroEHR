@@ -16,10 +16,12 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use axum::response::Response;
 use ferroehr::config::agreement::{AccessClass, Accessor, Agreement};
 use ferroehr::config::clients::SystemClient;
 use ferroehr::versioning::committer::ExternalCaller;
 use ferroehr::versioning::committer::external::ExternalProfessional;
+use ferrohealth_server::caller_rate::{self, CallerKey, CallerLimit};
 use ferrohealth_smart::federation::{Attribute, External, Field};
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::resource::{Access, Caller};
@@ -32,12 +34,13 @@ use super::AuthError;
 pub(crate) struct Admitted(Arc<Held>);
 
 /// One agreement as this node holds it: the table, where its issuer reads a
-/// `chained` request's correlation id from, and whether its issuer is a
-/// MyHealth@EU contact point.
+/// `chained` request's correlation id from, its caller rate, and whether its
+/// issuer is a MyHealth@EU contact point.
 #[derive(Debug)]
 struct Held {
     agreement: Arc<Agreement>,
     correlation_source: Option<String>,
+    limit: Option<CallerLimit>,
     contact_point: bool,
 }
 
@@ -93,6 +96,7 @@ impl Declared {
                     let held = Held {
                         agreement: Arc::new(agreement),
                         correlation_source,
+                        limit: table.caller_rate.map(CallerLimit::new),
                         contact_point,
                     };
                     Some(((table.issuer.clone(), accessor), Arc::new(held)))
@@ -190,6 +194,33 @@ pub(super) fn contact_point(access: &Access) -> Option<&Arc<Agreement>> {
     held(access)
         .filter(|held| held.contact_point)
         .map(|held| &held.agreement)
+}
+
+/// The refusal of an external caller of `principal` above its agreement's
+/// `caller_rate`, keyed on its issuer's subject: `429` with `Retry-After`
+/// from the family's caller limit, carrying the caller and its binding record
+/// for the access log, which counts it into the caller's summary record.
+/// `None` within the rate or for any other caller.
+pub(super) fn over_rate(
+    principal: &super::Principal,
+    clients: &[Arc<SystemClient>],
+) -> Option<Response> {
+    let limit = held(&principal.access)?.limit.as_ref()?;
+    let caller = CallerKey(Arc::from(principal.subject.as_str()));
+    let wait = limit.take(&caller, tokio::time::Instant::now()).err()?;
+    let mut refusal = caller_rate::refusal(wait);
+    let committer = super::party::committer_identity(principal, clients);
+    if let Some(mut binding) = super::record::of_request(principal, &committer) {
+        binding
+            .detail
+            .insert("refusal".to_owned(), vec!["caller-rate".to_owned()]);
+        refusal.extensions_mut().insert(binding);
+    }
+    refusal
+        .extensions_mut()
+        .insert(crate::system_log::refusals::OverRate);
+    refusal.extensions_mut().insert(principal.clone());
+    Some(refusal)
 }
 
 /// What the external caller of `access` may commit, when it is one.

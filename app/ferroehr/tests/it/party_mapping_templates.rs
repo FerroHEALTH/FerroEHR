@@ -284,6 +284,62 @@ async fn a_mapped_write_keeps_what_it_does_not_map() {
     );
 }
 
+/// Two selectors at one path, the binding key and an `externalId`, each
+/// write the identifier of their own `type` and `issuer` and leave the
+/// other's as it is.
+#[tokio::test]
+async fn identifiers_at_one_path_are_told_apart_by_type_and_issuer() {
+    let (_db, svc) = service().await;
+    let identifier = |issuer: &str, kind: &str, id: &str| json!({ "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id, "type": kind });
+    let key = identifier(
+        "urn:example:staff-login",
+        "guid",
+        "4a5b6c7d-8e9f-4a0b-9c1d-2e3f4a5b6c7d",
+    );
+    let external = identifier("urn:example:scim-client", "external_id", "ext-1");
+    let written = |body: &Value| -> Vec<Value> {
+        body.pointer("/details/items")
+            .and_then(Value::as_array)
+            .expect("the details")
+            .iter()
+            .map(|item| item["value"].clone())
+            .collect()
+    };
+
+    let body = svc
+        .mapped_party_body(
+            None,
+            PERSON,
+            &[
+                (KEY_PATH.to_owned(), key.clone()),
+                (KEY_PATH.to_owned(), external.clone()),
+            ],
+        )
+        .await
+        .expect("the mapped write");
+    assert_eq!(written(&body), [key.clone(), external], "{body}");
+
+    // A new externalId replaces the old one and keeps the key.
+    let renamed = identifier("urn:example:scim-client", "external_id", "ext-2");
+    let body = svc
+        .mapped_party_body(
+            Some(&body),
+            PERSON,
+            &[(KEY_PATH.to_owned(), renamed.clone())],
+        )
+        .await
+        .expect("the mapped write");
+    assert_eq!(written(&body), [key.clone(), renamed.clone()], "{body}");
+
+    // An identifier of the same type under another issuer is a third one.
+    let other = identifier("urn:example:other-client", "external_id", "ext-3");
+    let body = svc
+        .mapped_party_body(Some(&body), PERSON, &[(KEY_PATH.to_owned(), other.clone())])
+        .await
+        .expect("the mapped write");
+    assert_eq!(written(&body), [key, renamed, other], "{body}");
+}
+
 #[tokio::test]
 async fn a_template_the_mapping_names_is_not_deleted() {
     let (db, svc) = crate::fixtures::service().await;

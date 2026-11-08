@@ -139,6 +139,51 @@ fn opt14_open_or_optional_context_keeps_the_context_node() {
     ))));
 }
 
+fn context_min(wt: &WebTemplate) -> Option<i32> {
+    wt.tree
+        .children
+        .iter()
+        .find(|c| c.aql_path == "/context")
+        .expect("the /context node")
+        .min
+}
+
+/// The `/context` node's `min` follows the template's existence on `context`,
+/// and the RM's `0..1` where the template declares none (#5154; AM
+/// `ADL2/master04.3-cadl_complex_types.adoc` §Existence: an archetype's
+/// existence constrains "the existence defined by the underlying reference
+/// model").
+#[test]
+fn the_context_node_min_follows_the_existence_and_defaults_to_the_rm() {
+    assert_eq!(context_min(&opt14_web_template(None)), Some(0), "open");
+    assert_eq!(
+        context_min(&opt14_web_template(Some(&context_attribute((0, 1), None)))),
+        Some(0),
+        "existence 0..1"
+    );
+    assert_eq!(
+        context_min(&opt14_web_template(Some(&context_attribute((1, 1), None)))),
+        Some(1),
+        "existence 1..1"
+    );
+    assert_eq!(
+        context_min(&opt14_web_template(Some(&context_attribute(
+            (0, 1),
+            Some((1, 1))
+        )))),
+        Some(0),
+        "existence 0..1 over an EVENT_CONTEXT of occurrences 1..1"
+    );
+    assert_eq!(
+        context_min(&opt14_web_template(Some(&context_attribute(
+            (1, 1),
+            Some((1, 1))
+        )))),
+        Some(1),
+        "existence 1..1 over an EVENT_CONTEXT of occurrences 1..1"
+    );
+}
+
 #[test]
 fn a_context_less_template_builds_and_round_trips_a_composition_without_context() {
     let wt = opt14_web_template(Some(&context_attribute((0, 0), None)));

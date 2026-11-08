@@ -70,10 +70,11 @@ impl Shape {
     }
 }
 
-/// Holds the caller of `principal` to the patient it may reach on `req`: a
-/// contact point's caller to the EHR of its TRC patient ([`confine`]), then a
-/// bound representative to the EHR of its subject; the refusal of either,
-/// before any patient lookup of the request itself.
+/// Holds the caller of `principal` to its agreement's `caller_rate`, then to
+/// the patient it may reach on `req`: a contact point's caller to the EHR of
+/// its TRC patient ([`confine`]), then a bound representative to the EHR of its
+/// subject; the refusal of any, before any patient lookup of the request
+/// itself.
 ///
 /// What it reads of `req` is read before it awaits anything, so the future
 /// holds no borrow of the request.
@@ -85,6 +86,10 @@ pub(super) fn patient_context<'a>(
     let shape = Shape::of(layer, req);
     let headers = req.headers().clone();
     async move {
+        let clients = &layer.authenticator.declared.system_clients;
+        if let Some(refusal) = super::declared::over_rate(principal, clients) {
+            return Some(refusal);
+        }
         if let Some(refusal) = confine(layer, principal, shape, &headers).await {
             return Some(refusal);
         }
