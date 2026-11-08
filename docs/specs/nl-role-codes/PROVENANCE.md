@@ -14,14 +14,17 @@ these lists (`app/ferroehr-rest/src/extensions/access/authn/wabvpz.rs`).
   manifest, `package.json`, vendored here;
   <https://creativecommons.org/publicdomain/zero/1.0/>). The package ships no
   licence file of its own.
-- What is taken: the `uzi-rolcode` CodeSystem
-  (`http://fhir.nl/fhir/NamingSystem/uzi-rolcode`, version 11.7.0, OID
-  2.16.840.1.113883.2.4.15.111), whose codes the UZI-register CPS below
-  defines; the `organization-type` CodeSystem
+- What is taken: the `organization-type` CodeSystem
   (`http://nictiz.nl/fhir/NamingSystem/organization-type`, OID
-  2.16.840.1.113883.2.4.15.1060); and the `OrganisatieTypeCodelijst` ValueSet
+  2.16.840.1.113883.2.4.15.1060) and the `OrganisatieTypeCodelijst` ValueSet
   (2.16.840.1.113883.2.4.3.11.60.40.2.17.2.3, 2020-09-01), the care provider
   types of the zib Zorgaanbieder
+- Cache only: the `uzi-rolcode` CodeSystem
+  (`http://fhir.nl/fhir/NamingSystem/uzi-rolcode`, version 11.7.0, OID
+  2.16.840.1.113883.2.4.15.111). Its codes and titles reproduce Bijlage 3 of
+  the UZI-register CPS below, which the package's CC0 cannot license, so the
+  script writes it into the git-ignored `.vendor-cache/nl-role-codes/`, the
+  Wabvpz tests read it there, and this repository carries none of it
 - Layout: the file names inside the package's `package/` directory,
   unchanged
 
@@ -46,10 +49,10 @@ these lists (`app/ferroehr-rest/src/extensions/access/authn/wabvpz.rs`).
 | File | sha256 |
 |---|---|
 | `package.json` | `b57d7f94a7400c07365959e5b245483acd5c4f2e8bd444e30de9e17e8a18e116` |
-| `CodeSystem-RoleCodeNLZorgverlenertypen-uzi-rolcode.json` | `676b3edb095f375a35f12a65f828cd74903f71fe4dfb4e7a1aebe9b58901805e` |
 | `CodeSystem-RoleCodeNLZorgaanbiederType-organization-type.json` | `f6b21a531b28dc7feccfb5b1381ab877c831dc4f9bd42dec5154c140b7c0fa1e` |
 | `ValueSet-OrganisatieTypeCodelijst-2.16.840.1.113883.2.4.3.11.60.40.2.17.2.3--20200901000000.json` | `838a64beb99897854ffab8882b9fe9d9d204f80ea36320bf907e4e55030b0786` |
 
 | File | sha256 | Status |
 |---|---|---|
+| `CodeSystem-RoleCodeNLZorgverlenertypen-uzi-rolcode.json` | `676b3edb095f375a35f12a65f828cd74903f71fe4dfb4e7a1aebe9b58901805e` | cache only |
 | `29-01-24+RK1+CPS+UZI-register+V11.7.pdf` | `dc9889a3d592a14409850d53bda9ddf1c61398e6873d40d78cfa0de47086d4a1` | cache only |

@@ -6,10 +6,11 @@
 //! system (paragraph 1), and neither has a care provider acting as an
 //! occupational or insurance physician (paragraph 2).
 //!
-//! The codes come from the lists `scripts/vendor/nl-role-codes.sh` vendors
-//! into `docs/specs/nl-role-codes/`: the UZI role codes of the `uzi-rolcode`
-//! `CodeSystem`, whose source is Bijlage 3 of the UZI-register CPS v11.7, and
-//! the care provider types of the `OrganisatieTypeCodelijst` `ValueSet`. The
+//! The codes come from the lists `scripts/vendor/nl-role-codes.sh` fetches:
+//! the UZI role codes of the `uzi-rolcode` `CodeSystem`, whose source is
+//! Bijlage 3 of the UZI-register CPS v11.7 and which, like the CPS, is cache
+//! only (`.vendor-cache/nl-role-codes/`), and the care provider types of the
+//! `OrganisatieTypeCodelijst` `ValueSet` in `docs/specs/nl-role-codes/`. The
 //! URA carries no organisation type and no published list types an insurer,
 //! so an organisation is admitted only when it asserts a care provider type
 //! of that list. The keurend arts of paragraph 2 has no role code, so boot
@@ -98,9 +99,9 @@ mod tests {
 
     use super::*;
 
-    const ROLE_CODES: &str = include_str!(
-        "../../../../../../docs/specs/nl-role-codes/CodeSystem-RoleCodeNLZorgverlenertypen-uzi-rolcode.json"
-    );
+    /// The cache-only `uzi-rolcode` `CodeSystem`, under the workspace root.
+    const ROLE_CODES: &str =
+        ".vendor-cache/nl-role-codes/CodeSystem-RoleCodeNLZorgverlenertypen-uzi-rolcode.json";
     const ORGANISATION_TYPES: &str = include_str!(
         "../../../../../../docs/specs/nl-role-codes/ValueSet-OrganisatieTypeCodelijst-2.16.840.1.113883.2.4.3.11.60.40.2.17.2.3--20200901000000.json"
     );
@@ -123,7 +124,16 @@ mod tests {
 
     #[test]
     fn the_refused_roles_are_the_vendored_bedrijfsarts_and_verzekeringsarts() {
-        let system: Value = serde_json::from_str(ROLE_CODES).expect("the CodeSystem");
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join(ROLE_CODES);
+        let text = std::fs::read_to_string(&path).unwrap_or_else(|e| {
+            panic!(
+                "read {}: {e}; run scripts/vendor/nl-role-codes.sh --test-inputs",
+                path.display()
+            )
+        });
+        let system: Value = serde_json::from_str(&text).expect("the CodeSystem");
         let display = |code: &str| {
             system["concept"]
                 .as_array()
