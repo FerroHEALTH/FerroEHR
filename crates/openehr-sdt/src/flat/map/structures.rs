@@ -32,7 +32,7 @@ pub(crate) fn emit_rm_attrs(rm: &Value, rm_type: &str, out: &mut SimNode) {
     let ty = rm
         .get("_type")
         .and_then(Value::as_str)
-        .unwrap_or_else(|| super::base_type(rm_type));
+        .unwrap_or_else(|| openehr_rm::v1_2::typing::base_name(rm_type));
 
     if is_locatable(ty) {
         emit_locatable_attrs(rm, out);

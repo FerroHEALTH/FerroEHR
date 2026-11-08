@@ -56,6 +56,8 @@ use std::str::FromStr;
 use openehr_base::v1_3::prelude::{ArchetypeId, ObjectVersionId, Uid};
 use uuid::Uuid;
 
+pub mod write;
+
 /// Error raised when parsing an openEHR path expression.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum PathError {

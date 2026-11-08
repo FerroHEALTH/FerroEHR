@@ -261,6 +261,20 @@ struct GroupSelectors {
     display_name: Option<NameSelector>,
 }
 
+/// What a SCIM Group is written with: the group template, its `externalId`
+/// and `displayName` selectors, and the membership archetype.
+#[derive(Debug, Clone, Copy)]
+pub struct GroupMapping<'a> {
+    /// The canonical id of the group template.
+    pub template: &'a str,
+    /// The `externalId` selector.
+    pub external_id: &'a IdentifierSelector,
+    /// The `displayName` selector.
+    pub display_name: &'a NameSelector,
+    /// The canonical id of the membership archetype.
+    pub membership: &'a str,
+}
+
 /// Compiles `path` to a lax SQL/JSON path that yields every value it
 /// addresses that passes `filter`, with the node ids as `$pN` variables (PostgreSQL 18, "The
 /// SQL/JSON Path Language": in lax mode `[*]` treats a non-array as a
@@ -471,6 +485,18 @@ impl BindingMapping {
     #[must_use]
     pub fn is_professional_role(&self, template_id: &str) -> bool {
         self.professional_role.as_deref() == Some(canonical_key(template_id).as_str())
+    }
+
+    /// What a SCIM Group is written with, when the mapping names all of it.
+    #[must_use]
+    pub fn group_mapping(&self) -> Option<GroupMapping<'_>> {
+        let group = self.group.as_ref()?;
+        Some(GroupMapping {
+            template: &group.template,
+            external_id: &group.external_id,
+            display_name: group.display_name.as_ref()?,
+            membership: self.membership.as_deref()?,
+        })
     }
 
     /// Returns the digest of everything the side-table rows are derived

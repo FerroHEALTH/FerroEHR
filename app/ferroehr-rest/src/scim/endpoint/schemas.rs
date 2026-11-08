@@ -111,18 +111,48 @@ pub(crate) fn discovery(
             primary: Some(true),
             ..AuthenticationScheme::oauth_bearer_token(None)
         }],
-        resource_types: vec![ResourceTypeConfig {
-            name: "User".to_owned(),
-            endpoint: "/Users".to_owned(),
+        resource_types: resource_types(binding, core_user, core, extensions),
+    })
+}
+
+/// The resource types served: the User, and the Group when `binding` maps
+/// one.
+fn resource_types(
+    binding: &PartyBindingConfig,
+    core_user: Schema,
+    core: Vec<AttrPath>,
+    extensions: Vec<ExtensionConfig>,
+) -> Vec<ResourceTypeConfig> {
+    let mut types = vec![ResourceTypeConfig {
+        name: "User".to_owned(),
+        endpoint: "/Users".to_owned(),
+        description: Some(
+            "A health professional, held as a demographic PERSON performing the professional \
+             ROLE"
+                .to_owned(),
+        ),
+        schema: SchemaSelection::only(core_user, core),
+        extensions,
+    }];
+    if groups_mapped(binding) {
+        types.push(ResourceTypeConfig {
+            name: "Group".to_owned(),
+            endpoint: "/Groups".to_owned(),
             description: Some(
-                "A health professional, held as a demographic PERSON performing the \
-                 professional ROLE"
+                "A group of professionals, held as a demographic GROUP whose members are its \
+                 inline PARTY_RELATIONSHIPs to their PERSONs"
                     .to_owned(),
             ),
-            schema: SchemaSelection::only(core_user, core),
-            extensions,
-        }],
-    })
+            schema: SchemaSelection::all(catalogue::core_group()),
+            extensions: Vec::new(),
+        });
+    }
+    types
+}
+
+/// Whether `binding` maps a SCIM Group: a group template, in any part.
+pub(crate) fn groups_mapped(binding: &PartyBindingConfig) -> bool {
+    binding.group.is_some() || binding.membership.is_some()
 }
 
 /// `scim_path` with the RFC 7644 §3.4.2.2 `valuePath` filter of its

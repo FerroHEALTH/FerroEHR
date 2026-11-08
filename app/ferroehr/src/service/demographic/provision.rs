@@ -188,7 +188,11 @@ impl FerroEhrService {
     /// The lifecycle state the first version of `body` commits in:
     /// `532|complete|` when it fits `template_id` in full, `553|incomplete|`
     /// when only the relaxed reading holds.
-    async fn first_state(&self, body: &Value, template_id: &str) -> Result<String, ServiceError> {
+    pub(super) async fn first_state(
+        &self,
+        body: &Value,
+        template_id: &str,
+    ) -> Result<String, ServiceError> {
         Ok(match self.party_template_fit(body, template_id).await? {
             TemplateFit::Complete => lifecycle::state::COMPLETE,
             TemplateFit::Incomplete(_) => lifecycle::state::INCOMPLETE,

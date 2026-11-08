@@ -267,7 +267,7 @@ paths.
 | `[[authz.party_binding.person.attribute]]` | `scim`, `oidc`, `jit`, `name`, `path` | One per mapped value: a SCIM attribute path (the RFC 7644 `valuePath` form, `emails[type eq "work"].value`, and the FerroEHR extension `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier` that feeds the binding key), an OpenID Connect claim, whether just-in-time creation writes it (`jit`, default `false`), whether it is the name the committer reads (`name`, at most one), and `path`, one path per template id. `id`, `schemas`, `meta`, `active`, `userName` and `externalId` are SCIM's own and are never mapped. |
 | `[authz.party_binding.professional_role]` | `template_id` | The template of the professional `ROLE`, rooted at `ROLE`. A `PERSON` is a professional while it lists a `ROLE` of this template that names it as `performer`, is `complete` or `incomplete`, and whose `time_validity` holds today. |
 | `[authz.party_binding.group]` | `template_id`, `external_id`, `display_name` | The template of a SCIM Group's `GROUP`, its `externalId` selector and the path of its `displayName`. |
-| `[authz.party_binding.membership]` | `archetype_id` | The `PARTY_RELATIONSHIP` archetype of a group membership. |
+| `[authz.party_binding.membership]` | `archetype_id` | The `PARTY_RELATIONSHIP` archetype of a group membership, as each membership's `archetype_node_id` carries it (the interface form of an ADL 2 id, `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1`). SCIM serves `/Groups` when the group table names a `display_name` and this table is set. |
 | `[authz.party_binding.representation]` | `archetype_id`, `relationship_codes` | The `PARTY_RELATIONSHIP` archetype a representative acts through, from the representative's `PERSON` to the subject's, and the code of the openEHR `subject_relationship` group each of its relationship types maps to. |
 
 A worked example over the `openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2`
@@ -549,6 +549,7 @@ by default.
 | `max_deactivations` | integer | `100` | The most Users one client deactivates or deletes per window. Past it, a deactivation or deletion is **429** with `Retry-After` and logged at `error`. The count is kept in the database, so every replica shares one bound. At least 1. |
 | `deactivation_window_minutes` | integer | `60` | The length of that window. At least 1. |
 | `contact_erasure_minutes` | integer | `0` | How long after a User's deletion the contacts of every version of its `PERSON` are erased. `0` erases them in the deletion itself; at most 43200 (30 days). |
+| `max_group_members` | integer | `5000` | The most members one Group holds. An add past it is **400** `invalidValue`. Every membership change stores all of the Group's memberships again, so the cap bounds a Group's version storage. At least 1. |
 
 Each `[[scim.client]]` table declares one provisioning client:
 
@@ -688,6 +689,63 @@ over the content the erasure changed. Each erasure is an access record, a
 delete of `party:<id>#contacts`. A login on the key is still refused as
 deprovisioned.
 
+### Groups
+
+When `[authz.party_binding.group]` names a `display_name` and
+`[authz.party_binding.membership]` is set, `/scim/v2/Groups` is served beside
+`/Users`, and `/scim/v2/ResourceTypes` lists the Group. A Group is a
+demographic `GROUP` of the group template:
+
+- its `displayName` is the `GROUP`'s `PARTY_IDENTITY`, unique across the live
+  Groups after case folding, so a duplicate is **409** `uniqueness`;
+- its `externalId` is a `DV_IDENTIFIER` at the `external_id` selector under
+  the `group_identifier_issuer` of the `[[auth.party]]` table whose
+  `identifier_issuer` is the client's `binding_issuer`, so the group claim of
+  that issuer's tokens matches it. `ferroehr config check` refuses a client
+  whose table sets no `group_identifier_issuer`;
+- each member is one inline `PARTY_RELATIONSHIP` of the membership archetype,
+  with the `GROUP` as `source` and the member's `PERSON` as `target`, stored
+  in the `GROUP`'s own version (RM demographic §Party Relationships). No
+  `ROLE` is created for a Group, and a Group with no member has
+  `relationships` Void.
+
+A Group belongs to the client that created it; every other client gets
+**404**. A member is a User of the same client: a member naming another
+client's User, an unknown id or a Group (nested Groups are not supported) is
+**400** `invalidValue`. What a Group allows stays with the token's scopes and
+roles; the access record lists the Groups the token names that the person
+belongs to, and a Group in `inactive` or `abandoned` lists no member.
+
+- `POST /scim/v2/Groups` creates the `GROUP` with its members, if any, and
+  answers **201** with the Group, its `Location` and `ETag`.
+- `GET /scim/v2/Groups/{id}` and `GET /scim/v2/Groups` filter with `eq` and
+  `and` over `displayName`, `externalId` and `id`, and
+  `excludedAttributes=members` leaves the members out. Each member is served
+  with its `value`, `$ref` and `type`.
+- `PATCH /scim/v2/Groups/{id}` answers **204** with the new `ETag` (RFC 7644
+  §3.5.2). `add` of `members` adds the listed members; `remove` with the
+  filter `members[value eq "<id>"]` removes that member, and `remove` of
+  `members` with neither a filter nor a value list removes them all.
+- `PUT /scim/v2/Groups/{id}` replaces the `displayName` and the members,
+  keeps a left-out `externalId`, and answers **200** with the Group.
+- `DELETE /scim/v2/Groups/{id}` logically deletes the `GROUP` with its
+  memberships, and every later request on the id is **404**.
+
+**Entra compatibility deviation.** A `remove` of `members` that carries a
+`value` list removes only the listed members, the request Microsoft Entra ID
+sends. RFC 7644 §3.5.2.2 removes "the attribute and all values" when no
+filter is specified; FerroEHR follows Entra only when the `value` list is
+present.
+
+Every membership change is a new version of the `GROUP`, so the Group's
+`ETag` changes and the member User's does not; the User serves no `groups`
+attribute. Each version holds every membership of the Group (RM demographic
+§Versioning Semantics), which `max_group_members` bounds. Deleting a User
+takes its memberships out of every live `GROUP` in the CONTRIBUTION that
+deletes its `PERSON`. A `GROUP` an administrator set `inactive` or
+`abandoned` keeps its version, since the version lifecycle draws no update of
+either state, and a SCIM write to such a Group is **400** `invalidValue`.
+
 ### Provision from Microsoft Entra ID
 
 Microsoft Entra ID provisions through a non-gallery enterprise application.
@@ -761,6 +819,12 @@ it, so the steps split between the two.
    undefined, so remove the rest of Entra's default mappings.
 6. **Protect against mass deactivation.** Turn on Entra's accidental
    deletions prevention, with a threshold at or below `max_deactivations`.
+7. **Provision groups.** Map the group's `objectId` to its `externalId`, so
+   the object ids Entra puts in the `groups` claim match, and provision only
+   the groups assigned to the application, which keeps a person's token under
+   the groups overage limit. Entra creates each Group with no member, reads it
+   with `excludedAttributes=members`, finds it by `displayName`, and adds and
+   removes members with PATCH.
 
 Entra writes `Replace` and `Add` with a capital letter, disables a User with
 `active = false`, sends `DELETE` once the user is removed, and never sends a

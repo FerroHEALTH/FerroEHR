@@ -61,6 +61,8 @@
 //! - `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.party_ref.adoc`
 //!   (`PARTY_REF.Type_validity`) + `…object_ref.adoc` (`OBJECT_REF.namespace`).
 
+pub mod group_provision;
+pub mod group_write;
 pub mod identifier;
 pub mod mapped_write;
 pub mod mapping;

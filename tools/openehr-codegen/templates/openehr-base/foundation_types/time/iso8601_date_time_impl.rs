@@ -64,8 +64,8 @@ use super::iso8601_duration::Iso8601Duration;
 use super::iso8601_parse::{
     EXACT_SECONDS_IN_DAY, EXACT_SECONDS_IN_HOUR, EXACT_SECONDS_IN_MINUTE, ExactSeconds,
     ParsedDateTime, ParsedTime, as_extended_date_time, civil_from_days, date_time_completion_range,
-    days_from_civil, hms_from_seconds_of_day, parse_date_time, range_before, render_date_extended,
-    render_duration, render_time_extended, scan_date_time, shift_months,
+    days_from_civil, fraction_digits, hms_from_seconds_of_day, parse_date_time, range_before,
+    render_date_extended, render_duration, render_time_extended, scan_date_time, shift_months,
 };
 use super::iso8601_time_impl::push_time_component_violations;
 use crate::validate::{InvariantViolation, Validate};
@@ -194,6 +194,19 @@ impl Iso8601DateTime {
     pub fn has_fractional_second(&self) -> bool {
         self.parsed()
             .is_some_and(|p| p.time.is_some_and(|t| t.fractional_second.is_some()))
+    }
+
+    /// The digits of the fractional second as written (`123456` of
+    /// `2021-03-04T10:00:00.123456Z`), `None` when the value writes none or does
+    /// not parse.
+    ///
+    /// [`Self::fractional_second`] is the same part as a `Real`, which keeps
+    /// neither trailing zeros nor digits past its precision.
+    #[must_use]
+    pub fn fraction_digits(&self) -> Option<&str> {
+        self.parsed()?.time?.fractional_second?;
+        let (_, time) = self.value.split_once('T')?;
+        fraction_digits(time)
     }
 
     /// `Iso8601_date_time.as_string`: "Return the string value in extended
@@ -384,6 +397,19 @@ impl Validate for Iso8601DateTime {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_fraction_digits_are_kept_as_written() {
+        let dt = |value: &str| Iso8601DateTime {
+            value: value.to_owned(),
+        };
+        assert_eq!(
+            dt("2021-03-04T10:00:00.1234560Z").fraction_digits(),
+            Some("1234560")
+        );
+        assert_eq!(dt("2021-03-04T10:00:00Z").fraction_digits(), None);
+        assert_eq!(dt("2021-03-04").fraction_digits(), None);
+    }
 
     fn dt(v: &str) -> Iso8601DateTime {
         Iso8601DateTime {

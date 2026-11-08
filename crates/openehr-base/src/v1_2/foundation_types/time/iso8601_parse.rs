@@ -207,6 +207,19 @@ fn parse_fixed(tok: &str, width: usize) -> Option<u32> {
     tok.parse::<u32>().ok()
 }
 
+/// The digits a valid time-of-day writes after its decimal sign, as written
+/// (`500` of `10:00:00.500`, `05` of `100000,05+0100`), `None` when it writes
+/// no fraction. The digits are text: a `Real` holds neither their count nor a
+/// value past its precision.
+pub(crate) fn fraction_digits(time: &str) -> Option<&str> {
+    let start = time.find(['.', ','])?.checked_add(1)?;
+    let rest = time.get(start..)?;
+    let end = rest
+        .find(|c: char| !c.is_ascii_digit())
+        .unwrap_or(rest.len());
+    rest.get(..end).filter(|digits| !digits.is_empty())
+}
+
 /// True for a Gregorian leap year (`master06`/`Time_definitions.days_in_month`
 /// calendar semantics).
 pub(crate) fn is_leap_year(year: u32) -> bool {

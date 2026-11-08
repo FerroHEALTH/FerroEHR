@@ -28,6 +28,7 @@ use crate::load::oas::{Oas, Operation, Param, Response};
 use crate::plan::overrides::{
     oas_monomorphization, rest_default_member, rest_docs_text_header, rest_docs_text_headers,
 };
+use crate::render::emit_rest_headers;
 use crate::render::naming;
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
@@ -51,7 +52,7 @@ fn clean(raw: &str) -> String {
 /// (`SNOMED-CT` → `snomed_ct`), and separators (`Content-Type` → `content_type`,
 /// `view:pass_through` → `view_pass_through`). A leading `_` (metadata keys like
 /// `_type`) is preserved. Pair with a `#[serde(rename)]` to keep the wire name.
-fn field_id(raw: &str) -> String {
+pub(super) fn field_id(raw: &str) -> String {
     let leading_us = raw.starts_with('_');
     let mut out = String::new();
     let mut prev_alnum_lower = false;
@@ -1756,33 +1757,12 @@ fn emit_response_headers(b: &mut String, op: &Operation) {
             }
         }
         b.push_str("}\n\n");
-        emit_response_headers_impl(b, &headers_name(op, &variant), &resp.headers);
-    }
-}
-
-/// The `ResponseHeaders` impl of one headers struct: a `Some` value is one
-/// field, every item of a list header one field line.
-fn emit_response_headers_impl(b: &mut String, name: &str, headers: &[String]) {
-    let _ = write!(
-        b,
-        "impl crate::rest::runtime::ResponseHeaders for {name} {{\n    \
-         fn into_header_map(\n        self,\n    \
-         ) -> Result<http::HeaderMap, crate::rest::runtime::HeaderError> {{\n        \
-         let mut map = http::HeaderMap::new();\n"
-    );
-    for h in headers {
-        let call = if LIST_HEADERS.contains(&h.as_str()) {
-            "append_headers"
-        } else {
-            "set_header"
-        };
-        let _ = writeln!(
+        emit_rest_headers::emit_response_headers_impl(
             b,
-            "        crate::rest::runtime::{call}(&mut map, \"{h}\", self.{})?;",
-            field_id(h)
+            &headers_name(op, &variant),
+            &resp.headers,
         );
     }
-    b.push_str("        Ok(map)\n    }\n}\n\n");
 }
 
 /// The success answers of `op` the server half answers with: the documented
@@ -2345,7 +2325,7 @@ fn client_responses(op: &Operation) -> Vec<Response> {
 /// NOTE: `ITS-REST/specifications/docs/overview/Requests_and_responses.md`
 /// §openehr-item-tag and openehr-version-item-tag: "The list of all `ITEM_TAG`"
 /// (the OAS types the header `string`, one field line per tag).
-const LIST_HEADERS: &[&str] = &["openehr-item-tag", "openehr-version-item-tag"];
+pub(super) const LIST_HEADERS: &[&str] = &["openehr-item-tag", "openehr-version-item-tag"];
 
 /// The client's typing of one documented response body.
 enum ClientBody {

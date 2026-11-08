@@ -15,6 +15,12 @@
 //! `userName` compared by its fold (RFC 7643 §4.1.1, `caseExact` false), an
 //! `externalId` and an `id` exactly (RFC 7643 §3.1). No openEHR spec governs
 //! the side table or its SQL: our own design.
+//!
+//! The Groups of a client are the `GROUP`s it created (`scim_group`) whose
+//! `displayName` row is live, so a deleted `GROUP` is no Group. A Group
+//! filter compares a `displayName` by its fold, since Microsoft Entra ID
+//! needs it unique, and an `externalId` under the client's group issuer
+//! exactly.
 
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
@@ -125,6 +131,191 @@ pub async fn users(
         });
     }
     Ok((total, out))
+}
+
+/// The ids among `ids` that are Users of the client of `binding_issuer` on
+/// `today` (`YYYY-MM-DD`): each a `PERSON` with a live key row of that issuer
+/// and a professional `ROLE` valid on that date.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn users_among(
+    conn: &mut PgConnection,
+    binding_issuer: &str,
+    ids: &[Uuid],
+    today: &str,
+) -> Result<Vec<Uuid>, StorageError> {
+    Ok(sqlx::query_scalar(
+        "SELECT DISTINCT k.party_id FROM binding_identifier k \
+         WHERE k.selector = 'key' AND k.issuer = $1 AND k.retired_at IS NULL \
+           AND k.professional @> $3::date AND k.party_id = ANY($2::uuid[]) \
+         ORDER BY k.party_id",
+    )
+    .bind(binding_issuer)
+    .bind(ids)
+    .bind(today)
+    .fetch_all(&mut *conn)
+    .await?)
+}
+
+/// The condition that the `GROUP` `o.group_id`, whose live `displayName` row
+/// is `d`, is a Group of the client of `$1` matching the ids `$3`, the
+/// `displayName`s `$4` and the `externalId`s `$5` under the group issuer `$2`.
+macro_rules! group_of_client {
+    () => {
+        "o.binding_issuer = $1 AND o.group_id = ALL($3::uuid[]) \
+         AND NOT EXISTS (SELECT 1 FROM unnest($4::text[]) AS n(v) \
+                         WHERE d.folded <> party.binding_fold(n.v)) \
+         AND NOT EXISTS (SELECT 1 FROM unnest($5::text[]) AS n(v) WHERE NOT EXISTS ( \
+             SELECT 1 FROM binding_identifier e WHERE e.party_id = o.group_id \
+               AND e.selector = 'group_external_id' AND e.issuer = $2 \
+               AND e.retired_at IS NULL AND e.value = n.v))"
+    };
+}
+
+/// One Group of a client, as the side table holds it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GroupRow {
+    /// The `GROUP`'s container: the Group's `id`.
+    pub party: VoId,
+    /// The `displayName`.
+    pub display_name: String,
+    /// The head's `version_lifecycle_state` code.
+    pub lifecycle_state: String,
+    /// The `externalId` under the client's group issuer.
+    pub external_id: Option<String>,
+}
+
+/// The equality tests a Group filter makes, each a list a Group must match
+/// in full.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct GroupFilter {
+    /// The `id`s the Group's container equals.
+    pub ids: Vec<Uuid>,
+    /// The `displayName`s the Group's `displayName` equals, by its fold.
+    pub display_names: Vec<String>,
+    /// The `externalId`s the Group's `externalId` equals.
+    pub external_ids: Vec<String>,
+}
+
+/// Who a Group query asks for: the client by its `binding_issuer`, and the
+/// issuer its Groups' `externalId`s are under.
+#[derive(Debug, Clone, Copy)]
+pub struct GroupClient<'a> {
+    /// The client's `binding_issuer`.
+    pub binding_issuer: &'a str,
+    /// The `group_identifier_issuer` its Groups' `externalId`s are under.
+    pub group_issuer: &'a str,
+}
+
+/// The live Groups the client `client` created matching `filter`: ordered
+/// by container, from the 0-based `offset`, at most `limit`; with the total
+/// match count. A Group is live while its `displayName` row is.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn groups(
+    conn: &mut PgConnection,
+    client: GroupClient<'_>,
+    filter: &GroupFilter,
+    page: (i64, i64),
+) -> Result<(i64, Vec<GroupRow>), StorageError> {
+    let rows = sqlx::query(concat!(
+        "WITH matched AS ( \
+             SELECT o.group_id, d.value, d.lifecycle_state FROM scim_group o \
+             JOIN binding_identifier d ON d.party_id = o.group_id \
+                  AND d.selector = 'group_display_name' AND d.retired_at IS NULL WHERE ",
+        group_of_client!(),
+        ") SELECT t.total, m.group_id, m.value, m.lifecycle_state, \
+                  (SELECT e.value FROM binding_identifier e \
+                   WHERE e.party_id = m.group_id AND e.selector = 'group_external_id' \
+                     AND e.issuer = $2 AND e.retired_at IS NULL ORDER BY e.value LIMIT 1) \
+                      AS external_id \
+           FROM (SELECT count(*) AS total FROM matched) AS t \
+           LEFT JOIN LATERAL (SELECT * FROM matched ORDER BY group_id OFFSET $6 LIMIT $7) AS m \
+                ON true \
+           ORDER BY m.group_id"
+    ))
+    .bind(client.binding_issuer)
+    .bind(client.group_issuer)
+    .bind(&filter.ids)
+    .bind(&filter.display_names)
+    .bind(&filter.external_ids)
+    .bind(page.0)
+    .bind(page.1)
+    .fetch_all(&mut *conn)
+    .await?;
+    let mut total = 0;
+    let mut out = Vec::with_capacity(rows.len());
+    for row in rows {
+        total = row.try_get("total")?;
+        // NOTE: a page past the last match joins no Group, so its one row carries the total alone.
+        let Some(party) = row.try_get::<Option<Uuid>, _>("group_id")? else {
+            continue;
+        };
+        out.push(GroupRow {
+            party: VoId(party),
+            display_name: row.try_get("value")?,
+            lifecycle_state: row.try_get("lifecycle_state")?,
+            external_id: row.try_get("external_id")?,
+        });
+    }
+    Ok((total, out))
+}
+
+/// Records on `tx` that the client of `binding_issuer` created the `GROUP`
+/// `group`, before the commit that creates it.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn record_group_owner(
+    tx: &mut PgConnection,
+    binding_issuer: &str,
+    group: VoId,
+) -> Result<(), StorageError> {
+    sqlx::query("INSERT INTO scim_group (group_id, binding_issuer) VALUES ($1, $2)")
+        .bind(group)
+        .bind(binding_issuer)
+        .execute(&mut *tx)
+        .await?;
+    Ok(())
+}
+
+/// Whether the client of `binding_issuer` created the `GROUP` `group`.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn owns_group(
+    conn: &mut PgConnection,
+    binding_issuer: &str,
+    group: VoId,
+) -> Result<bool, StorageError> {
+    Ok(sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM scim_group WHERE group_id = $1 AND binding_issuer = $2)",
+    )
+    .bind(group)
+    .bind(binding_issuer)
+    .fetch_one(&mut *conn)
+    .await?)
+}
+
+/// The `GROUP`s of the mapped group template whose live memberships target
+/// `member`.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn groups_of_member(
+    conn: &mut PgConnection,
+    member: VoId,
+) -> Result<Vec<VoId>, StorageError> {
+    let ids: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT DISTINCT group_id FROM binding_membership \
+         WHERE member_id = $1 AND retired_at IS NULL ORDER BY group_id",
+    )
+    .bind(member)
+    .fetch_all(&mut *conn)
+    .await?;
+    Ok(ids.into_iter().map(VoId).collect())
 }
 
 /// Counts one deactivation or deletion of the client of `binding_issuer` on

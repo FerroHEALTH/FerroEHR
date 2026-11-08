@@ -120,7 +120,7 @@ pub fn build_web_template_v2_4(
     );
     // master04 §"Web Template Metadata": the root `nodeId` is the archetype id
     // (interface form), not the internal concept code.
-    tree.node_id = Some(interface_id_of_hrid(&opt.archetype_id));
+    tree.node_id = Some(opt.archetype_id.local_semantic_id());
     tree.archetype_ref = Some(template_id.clone());
     tree.rm_release = Some(opt.rm_release.clone());
     tree.min = Some(1);
@@ -1776,40 +1776,14 @@ fn template_id_of(h: &ArchetypeHrid) -> String {
     }
 }
 
-/// The interface (major-version) archetype id used as a Web Template `nodeId` /
-/// aqlPath predicate, from a full HRID (namespace dropped — an
-/// `archetype_node_id` carries no namespace).
-fn interface_id_of_hrid(h: &ArchetypeHrid) -> String {
-    let major = h
-        .release_version
-        .split('.')
-        .next()
-        .unwrap_or(&h.release_version);
-    format!(
-        "{}-{}-{}.{}.v{}",
-        h.rm_publisher, h.rm_package, h.rm_class, h.concept_id, major
-    )
-}
-
-/// The interface (major-version) form of a full archetype-ref string
-/// (`…​.vMAJOR.MINOR.PATCH[-status.build]` → `…​.vMAJOR`; namespace dropped).
+/// The interface form a Web Template `nodeId` and aqlPath predicate carry for
+/// the archetype root a full archetype-ref string names
+/// ([`ArchetypeHrid::local_semantic_id`]).
 fn interface_id(full: &str) -> String {
-    let bare = full.split("::").last().unwrap_or(full);
-    if let Some(vpos) = bare.rfind(".v")
-        && let Some(head) = bare.get(..vpos + 2)
-    {
-        let major: String = bare
-            .get(vpos + 2..)
-            .unwrap_or_default()
-            .chars()
-            .take_while(char::is_ascii_digit)
-            .collect();
-        if major.is_empty() {
-            bare.to_owned()
-        } else {
-            format!("{head}{major}")
-        }
-    } else {
-        bare.to_owned()
+    match full.parse::<ArchetypeHrid>() {
+        Ok(hrid) => hrid.local_semantic_id(),
+        // NOTE: an OPT2 reference the HRID grammar refuses (ADL2 `master07.05-adl_identification.adoc`)
+        // is no archetype id, so the node keeps the identifier as the template wrote it.
+        Err(_) => full.to_owned(),
     }
 }
