@@ -3683,6 +3683,20 @@ impl crate::rest::runtime::ResponseHeaders for EhrCreateCreatedHeaders {
     }
 }
 
+impl EhrCreateCreatedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `POST /ehr`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -3700,6 +3714,20 @@ impl crate::rest::runtime::ResponseHeaders for EhrCreateNoContentHeaders {
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl EhrCreateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -3740,6 +3768,20 @@ impl crate::rest::runtime::ResponseHeaders for EhrCreateWithIdCreatedHeaders {
     }
 }
 
+impl EhrCreateWithIdCreatedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `PUT /ehr/{ehr_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -3757,6 +3799,20 @@ impl crate::rest::runtime::ResponseHeaders for EhrCreateWithIdNoContentHeaders {
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl EhrCreateWithIdNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -3793,6 +3849,20 @@ impl crate::rest::runtime::ResponseHeaders for EhrStatusGetByVersionIdOkHeaders 
     }
 }
 
+impl EhrStatusGetByVersionIdOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `GET /ehr/{ehr_id}/ehr_status`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -3823,6 +3893,20 @@ impl crate::rest::runtime::ResponseHeaders for EhrStatusGetAtTimeOkHeaders {
             self.openehr_version_item_tag,
         )?;
         Ok(map)
+    }
+}
+
+impl EhrStatusGetAtTimeOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -3859,6 +3943,20 @@ impl crate::rest::runtime::ResponseHeaders for EhrStatusUpdateOkHeaders {
     }
 }
 
+impl EhrStatusUpdateOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `PUT /ehr/{ehr_id}/ehr_status`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -3889,6 +3987,20 @@ impl crate::rest::runtime::ResponseHeaders for EhrStatusUpdateNoContentHeaders {
     }
 }
 
+impl EhrStatusUpdateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `412` answer of
 /// `PUT /ehr/{ehr_id}/ehr_status`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -3906,6 +4018,20 @@ impl crate::rest::runtime::ResponseHeaders for EhrStatusUpdatePreconditionFailed
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl EhrStatusUpdatePreconditionFailedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -3966,6 +4092,20 @@ impl crate::rest::runtime::ResponseHeaders for VersionedEhrStatusVersionGetAtTim
     }
 }
 
+impl VersionedEhrStatusVersionGetAtTimeOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `GET /ehr/{ehr_id}/versioned_ehr_status/version/{version_uid}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4016,6 +4156,20 @@ impl crate::rest::runtime::ResponseHeaders for CompositionCreateCreatedHeaders {
     }
 }
 
+impl CompositionCreateCreatedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `POST /ehr/{ehr_id}/composition`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4046,6 +4200,20 @@ impl crate::rest::runtime::ResponseHeaders for CompositionCreateNoContentHeaders
             self.openehr_version_item_tag,
         )?;
         Ok(map)
+    }
+}
+
+impl CompositionCreateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -4082,6 +4250,20 @@ impl crate::rest::runtime::ResponseHeaders for CompositionGetOkHeaders {
     }
 }
 
+impl CompositionGetOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `PUT /ehr/{ehr_id}/composition/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4115,6 +4297,20 @@ impl crate::rest::runtime::ResponseHeaders for CompositionUpdateOkHeaders {
     }
 }
 
+impl CompositionUpdateOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `PUT /ehr/{ehr_id}/composition/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4145,6 +4341,20 @@ impl crate::rest::runtime::ResponseHeaders for CompositionUpdateNoContentHeaders
     }
 }
 
+impl CompositionUpdateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `412` answer of
 /// `PUT /ehr/{ehr_id}/composition/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4162,6 +4372,20 @@ impl crate::rest::runtime::ResponseHeaders for CompositionUpdatePreconditionFail
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl CompositionUpdatePreconditionFailedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -4185,6 +4409,20 @@ impl crate::rest::runtime::ResponseHeaders for CompositionDeleteNoContentHeaders
     }
 }
 
+impl CompositionDeleteNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `409` answer of
 /// `DELETE /ehr/{ehr_id}/composition/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4202,6 +4440,20 @@ impl crate::rest::runtime::ResponseHeaders for CompositionDeleteConflictHeaders 
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl CompositionDeleteConflictHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -4262,6 +4514,20 @@ impl crate::rest::runtime::ResponseHeaders for VersionedCompositionVersionGetAtT
     }
 }
 
+impl VersionedCompositionVersionGetAtTimeOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `GET /ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version/{version_uid}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4319,6 +4585,20 @@ impl crate::rest::runtime::ResponseHeaders for DirectoryUpdateOkHeaders {
     }
 }
 
+impl DirectoryUpdateOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `PUT /ehr/{ehr_id}/directory`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4349,6 +4629,20 @@ impl crate::rest::runtime::ResponseHeaders for DirectoryUpdateNoContentHeaders {
     }
 }
 
+impl DirectoryUpdateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `412` answer of
 /// `PUT /ehr/{ehr_id}/directory`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4366,6 +4660,20 @@ impl crate::rest::runtime::ResponseHeaders for DirectoryUpdatePreconditionFailed
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl DirectoryUpdatePreconditionFailedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -4392,6 +4700,20 @@ impl crate::rest::runtime::ResponseHeaders for DirectoryCreateCreatedHeaders {
     }
 }
 
+impl DirectoryCreateCreatedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `POST /ehr/{ehr_id}/directory`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4415,6 +4737,20 @@ impl crate::rest::runtime::ResponseHeaders for DirectoryCreateNoContentHeaders {
     }
 }
 
+impl DirectoryCreateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `412` answer of
 /// `DELETE /ehr/{ehr_id}/directory`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4432,6 +4768,20 @@ impl crate::rest::runtime::ResponseHeaders for DirectoryDeletePreconditionFailed
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl DirectoryDeletePreconditionFailedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -4475,6 +4825,20 @@ impl crate::rest::runtime::ResponseHeaders for ContributionCreateCreatedHeaders 
     }
 }
 
+impl ContributionCreateCreatedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `POST /ehr/{ehr_id}/contribution`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4495,6 +4859,20 @@ impl crate::rest::runtime::ResponseHeaders for ContributionCreateNoContentHeader
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
         Ok(map)
+    }
+}
+
+impl ContributionCreateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 

@@ -30,6 +30,8 @@ pub mod client;
 #[cfg(feature = "rest")]
 pub mod decode;
 #[cfg(feature = "rest")]
+pub mod etag;
+#[cfg(feature = "rest")]
 pub mod generated;
 #[cfg(feature = "rest")]
 pub mod routes;
