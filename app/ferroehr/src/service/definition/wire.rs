@@ -18,6 +18,7 @@
 use regex::Regex;
 use serde_json::Value;
 
+use openehr_its::rest::stored_query::{QualifiedQueryName, QueryVersion, VersionPattern};
 use openehr_sdt::flat::example::{DetailLevel, ExampleType};
 
 use crate::error::ServiceError;
@@ -222,17 +223,15 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// - A `version` that is no SEMVER version or prefix → `precondition_violation`
-    ///   (`400`).
     /// - No stored query matching that name + version → not-found (`404`).
     /// - A row-decode failure (a genuine server fault) → `exception` (`500`).
     /// - A database failure (`exception` → `500`).
     pub async fn query_version_get(
         &self,
-        qualified_query_name: String,
-        version: String,
+        qualified_query_name: &QualifiedQueryName,
+        version: &VersionPattern,
     ) -> Result<Value, ServiceError> {
-        self.get_stored_query(&qualified_query_name, Some(&version))
+        self.get_stored_query(qualified_query_name, Some(version))
             .await
     }
 
@@ -249,7 +248,8 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// - A non-AQL `query_type` → `precondition_violation` (`400`).
+    /// - A non-AQL `query_type`, or the reserved query-name `aql` →
+    ///   `precondition_violation` (`400`).
     /// - A body that fails the AQL parse → `precondition_violation` (`400`).
     /// - With an explicit `version`, a non-exact SEMVER → `precondition_violation`
     ///   (`400`), and an already-existing `(name, version)` pair → conflict
@@ -257,18 +257,18 @@ impl FerroEhrService {
     /// - A database failure (`exception` → `500`).
     pub async fn query_store(
         &self,
-        qualified_query_name: String,
-        version: Option<String>,
-        query_type: String,
+        qualified_query_name: &QualifiedQueryName,
+        version: Option<VersionPattern>,
+        query_type: &str,
         body: String,
-    ) -> Result<String, ServiceError> {
-        if !is_aql_v1(&query_type) {
+    ) -> Result<QueryVersion, ServiceError> {
+        if !is_aql_v1(query_type) {
             return Err(ServiceError::precondition(format!(
                 "unsupported query formalism `{query_type}`: only AQL is supported for \
                  stored queries (parameters/query/query_type.yaml)"
             )));
         }
-        self.store_query_version(&qualified_query_name, version.as_deref(), body)
+        self.store_query_version(qualified_query_name, version, body)
             .await
     }
 }

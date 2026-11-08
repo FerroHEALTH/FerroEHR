@@ -349,3 +349,19 @@ async fn query_version_delete_unknown_is_404() {
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn query_version_delete_reads_its_parameters_by_the_its_rest_grammar() {
+    let (_pg, app) = common::app(common::api_config(true)).await;
+    // `Qualified_query_name.md`: a name is `[{namespace}::]{query-name}` over
+    // `[a-zA-Z0-9_.-]` and a version is `major.minor.patch`.
+    for path in [
+        "cnf.admin::aql::probe/1.0.0",
+        "cnf.admin::probe/1.0",
+        "cnf.admin::probe/01.0.0",
+    ] {
+        let (status, body) =
+            common::send_body(&app, common::delete(&format!("{EXT}/admin/query/{path}"))).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{path}: {body}");
+    }
+}

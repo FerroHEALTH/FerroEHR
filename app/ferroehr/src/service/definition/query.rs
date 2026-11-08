@@ -5,8 +5,8 @@
 //!
 //! DEFINITION owns query *registration*; the
 //! Query service only *resolves + executes* a stored query, so the stored-query
-//! store lives here, keyed by a qualified name (`reverse_domain_name ::
-//! semantic_id`) and a semantic version.
+//! store lives here, keyed by a qualified query name and a version, both read
+//! by the ITS-REST grammar (`openehr_its::rest::stored_query`).
 
 #![expect(
     clippy::disallowed_types,
@@ -17,6 +17,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use openehr_its::rest::stored_query::{QualifiedQueryName, QueryVersion, VersionPattern};
 use serde_json::{Value, json};
 
 use crate::aql::error::AqlError;
@@ -27,9 +28,7 @@ use crate::aql::terminology::TerminologyExpander;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::service::FerroEhrService;
-use crate::storage::stored_query_repo::{self, QueryName, StoredQueryRow, VersionMatch};
-
-use super::version_selector::{check_version_selector, is_partial_semver};
+use crate::storage::stored_query_repo::{self, StoredQueryRow};
 
 /// The SEMVER a no-version store assigns a query. The no-version store path is
 /// "stores a new query, or updates an existing query"
@@ -41,7 +40,7 @@ use super::version_selector::{check_version_selector, is_partial_semver};
 /// the latest `version` with the supplied prefix" is a rule for USING a stored
 /// query, not for storing one. The slot below is the lowest SEMVER a first store
 /// can carry, which keeps the version-less form idempotent.
-const DEFAULT_QUERY_VERSION: &str = "1.0.0";
+const DEFAULT_QUERY_VERSION: QueryVersion = QueryVersion::new(1, 0, 0);
 
 /// The value every `$parameter` is bound to while a stored query is analysed.
 ///
@@ -100,12 +99,10 @@ impl FerroEhrService {
     /// - `exception` — a database fault.
     pub async fn admin_query_delete(
         &self,
-        qualified_name: &str,
-        version: &str,
+        qualified_name: &QualifiedQueryName,
+        version: QueryVersion,
     ) -> Result<(), ServiceError> {
-        let qualified = parse_qualified_name(qualified_name).qualified();
-        let name = split_qualified(&qualified);
-        if !stored_query_repo::delete(&self.pool, name, version).await? {
+        if !stored_query_repo::delete(&self.pool, qualified_name, version).await? {
             return Err(ServiceError::not_found(
                 Missing::Artefact,
                 format!("stored query {qualified_name} at version {version}"),
@@ -143,65 +140,55 @@ impl FerroEhrService {
     /// - A database failure → `500`.
     pub(super) async fn store_query_version(
         &self,
-        qualified_name: &str,
-        version: Option<&str>,
+        qualified_name: &QualifiedQueryName,
+        version: Option<VersionPattern>,
         query_text: String,
-    ) -> Result<String, ServiceError> {
-        // The bare query-name segment must not be the reserved name `aql`,
-        // case-insensitively (ITS-REST query Qualified_query_name §NOTE: "The
-        // `query-name` value must not be `aql` (case-insensitive), as that is
-        // a reserved name") — it would collide with the ad-hoc
-        // `GET /query/aql` route. Decomposed via the name schemes so a
-        // three-part name's *formalism* segment (`ns::aql::name`) is never
-        // mistaken for the query-name.
-        if parse_qualified_name(qualified_name)
-            .name
-            .eq_ignore_ascii_case("aql")
-        {
-            return Err(ServiceError::precondition(format!(
-                "`{qualified_name}`: the query-name `aql` is reserved \
-                 (ITS-REST Qualified_query_name)"
-            )));
-        }
+    ) -> Result<QueryVersion, ServiceError> {
+        // ITS-REST `Qualified_query_name.md` §NOTE: "The `query-name` value must
+        // not be `aql` (case-insensitive), as that is a reserved name".
+        qualified_name.check_registrable().map_err(|err| {
+            ServiceError::precondition(format!(
+                "`{qualified_name}`: {err} (ITS-REST Qualified_query_name)"
+            ))
+        })?;
 
         self.analyse_stored_aql(&query_text).await?;
 
-        // ONE canonical key for every surface (a bare name takes the `misc`
-        // namespace), so the same identifier never resolves on one surface and
-        // 404s on another.
-        let qualified = parse_qualified_name(qualified_name).qualified();
-        let name = split_qualified(&qualified);
-        let Some(v) = version else {
+        let Some(pattern) = version else {
             // No-version store: case-insensitive upsert at the default version.
-            stored_query_repo::replace(&self.pool, name, DEFAULT_QUERY_VERSION, &query_text)
-                .await?;
-            return Ok(DEFAULT_QUERY_VERSION.to_owned());
+            stored_query_repo::replace(
+                &self.pool,
+                qualified_name,
+                DEFAULT_QUERY_VERSION,
+                &query_text,
+            )
+            .await?;
+            return Ok(DEFAULT_QUERY_VERSION);
         };
 
         // The versioned store requires an EXACT `major.minor.patch` (ITS-REST
         // `docs/query/Qualified_query_name.md`): the partial-prefix form is a
-        // READ-resolution semantic over versions that already exist, and storing
-        // one verbatim would break the surface's SEMVER ordering.
+        // READ-resolution semantic over versions that already exist.
         // NOTE: no released sentence completes a prefix into a version to
         // create, so the refusal status is the docs text's own generic client
         // error (`Requests_and_responses.md` §"HTTP status codes", `400`).
-        if !is_exact_semver(v) {
+        let Some(v) = pattern.exact() else {
             return Err(ServiceError::precondition(format!(
-                "`{v}` is not an exact SEMVER version: the versioned store requires \
+                "`{pattern}` is not an exact SEMVER version: the versioned store requires \
                  `major.minor.patch` (the {{major}}/{{major}}.{{minor}} prefix forms are \
                  read-side resolution patterns, parameters/path/version.yaml)"
             )));
-        }
+        };
 
         // Versioned store: insert-only, immutable pair. A case-insensitive match
         // at this version is a 409 (BASE master05 §Composite Identifiers and
         // Case).
-        if !stored_query_repo::insert(&self.pool, name, v, &query_text).await? {
+        if !stored_query_repo::insert(&self.pool, qualified_name, v, &query_text).await? {
             return Err(ServiceError::conflict(format!(
                 "a stored query '{qualified_name}' at version '{v}' already exists"
             )));
         }
-        Ok(v.to_owned())
+        Ok(v)
     }
 
     /// Runs the analysis an execution of `query_text` runs before it reaches
@@ -262,32 +249,21 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Retrieve a stored query — an exact `version`, a SEMVER **prefix**
-    /// (`{major}` or `{major}.{minor}` → the *highest* matching stored version,
-    /// `parameters/path/version.yaml`), or the latest when no version
-    /// is given. Identity is case-insensitive.
+    /// Retrieve a stored query: the highest stored version `version`
+    /// selects (an exact version, or a `{major}` or `{major}.{minor}` prefix,
+    /// `parameters/path/version.yaml`), or the latest when no version is
+    /// given. Identity is case-insensitive.
     ///
     /// # Errors
     ///
-    /// - A `version` that is no SEMVER version or prefix → `BadRequest`
-    ///   (`400`), before any lookup.
     /// - No stored query matches → not-found (`404`).
     /// - A database or row-decode failure → `500`.
     pub(in crate::service) async fn get_stored_query(
         &self,
-        qualified_name: &str,
-        version: Option<&str>,
+        qualified_name: &QualifiedQueryName,
+        version: Option<&VersionPattern>,
     ) -> Result<Value, ServiceError> {
-        version.map(check_version_selector).transpose()?;
-        // The same canonical key as the store path (the `misc` default).
-        let qualified = parse_qualified_name(qualified_name).qualified();
-        let name = split_qualified(&qualified);
-        let selected = match version {
-            Some(v) if is_partial_semver(v) => VersionMatch::Prefix(v),
-            Some(v) => VersionMatch::Exact(v),
-            None => VersionMatch::Latest,
-        };
-        let row = stored_query_repo::find(&self.pool, name, selected)
+        let row = stored_query_repo::find(&self.pool, qualified_name, version)
             .await?
             .ok_or_else(|| {
                 ServiceError::not_found(Missing::Artefact, format!("stored query {qualified_name}"))
@@ -296,17 +272,21 @@ impl FerroEhrService {
     }
 
     /// List stored queries whose qualified name starts with `name_pattern`
-    /// (`definition_query_list.yaml`: the name is a **prefix** — a bare
+    /// (`definition_query_list.yaml`: the name is a **prefix**: a bare
     /// `org.openehr` prefix "will list all versions of all queries with names
-    /// starting with `org.openehr`"; empty ⇒ wildcard). All stored versions of
+    /// starting with `org.openehr`"; `None` lists every query, the empty
+    /// pattern the operation calls a "wildcard"). All stored versions of
     /// every matching name are returned. The prefix match is case-insensitive,
     /// and a namespace-less pattern also matches under the `misc` namespace,
-    /// the canonical key every surface stores under.
+    /// the key a name without a namespace is stored under.
     ///
     /// # Errors
     ///
     /// A row-decode failure (a server fault) or a database failure (`500`).
-    pub async fn query_list(&self, name_pattern: &str) -> Result<Vec<Value>, ServiceError> {
+    pub async fn query_list(
+        &self,
+        name_pattern: Option<&QualifiedQueryName>,
+    ) -> Result<Vec<Value>, ServiceError> {
         Ok(stored_query_repo::list(&self.pool, name_pattern)
             .await?
             .iter()
@@ -333,79 +313,6 @@ fn stored_query_json(row: &StoredQueryRow) -> Value {
     })
 }
 
-// ── qualified names ──────────────────────────────────────────────────────────
-
-/// A qualified query name decomposed as ITS-REST `Qualified_query_name.md`
-/// spells it, `<namespace>::<query-name>`, or the three-part
-/// `<namespace>::<formalism>::<query-name>`.
-struct QualifiedName {
-    /// The namespace segment (`"misc"` when none was supplied — §Registered
-    /// Queries, l.34).
-    namespace: String,
-    /// The bare query-name segment (the store key, never carrying the
-    /// formalism).
-    name: String,
-}
-
-impl QualifiedName {
-    /// The canonical two-part `<namespace>::<query-name>` — the form the
-    /// stored-query store keys on (so a three-part input round-trips to the
-    /// same row and the formalism is never folded into the name).
-    fn qualified(&self) -> String {
-        format!("{}::{}", self.namespace, self.name)
-    }
-}
-
-/// Decompose a (possibly unqualified) query name: apply the `"misc"` default
-/// namespace, then recognise the two-part
-/// `<ns>::<name>` and three-part `<ns>::<formalism>::<name>` schemes. A
-/// three-part name's middle segment is the formalism, which is never folded
-/// into the name; a name of four or more segments keeps the
-/// first segment as the namespace and the remainder as the (`::`-bearing) name.
-fn parse_qualified_name(raw: &str) -> QualifiedName {
-    let qualified = qualify(raw);
-    // `qualify` guarantees a `::`, so the fallback arm is unreachable; it keeps
-    // the decomposition total without a panic path.
-    let (namespace, rest) = qualified.split_once("::").unwrap_or(("misc", &qualified));
-    match rest.split_once("::") {
-        // Exactly three segments: the middle one is the formalism.
-        Some((_formalism, name)) if !name.contains("::") => QualifiedName {
-            namespace: namespace.to_owned(),
-            name: name.to_owned(),
-        },
-        // Two segments, or four and more: the whole remainder is the name.
-        _ => QualifiedName {
-            namespace: namespace.to_owned(),
-            name: rest.to_owned(),
-        },
-    }
-}
-
-/// Apply the `"misc"` default namespace: a name with no `::` becomes
-/// `misc::<name>`. No openEHR wire spec names a default: our own design.
-fn qualify(name: &str) -> String {
-    if name.contains("::") {
-        name.to_owned()
-    } else {
-        format!("misc::{name}")
-    }
-}
-
-/// Split an already two-part-canonical query name into its
-/// `reverse_domain_name` and `semantic_id` on the first `::`, so the native and
-/// wire paths key `stored_query` rows identically. Callers pass the
-/// [`QualifiedName::qualified`] form, which is always two-part, so the
-/// formalism is never captured in `semantic_id`.
-fn split_qualified(qualified_name: &str) -> QueryName<'_> {
-    let (reverse_domain_name, semantic_id) = qualified_name
-        .split_once("::")
-        .unwrap_or(("", qualified_name));
-    QueryName {
-        reverse_domain_name,
-        semantic_id,
-    }
-}
-
 // ── formalism ────────────────────────────────────────────────────────────────
 
 /// Parse a formalism name (case-insensitive name, optional `::version`, major
@@ -427,55 +334,9 @@ pub(super) fn is_aql_v1(a_type: &str) -> bool {
     major == "1"
 }
 
-/// Whether a `version` value is an EXACT numeric `major.minor.patch` triple —
-/// the only form the versioned store accepts (the prefix forms of
-/// `parameters/path/version.yaml` are read-side resolution patterns; see
-/// [`FerroEhrService::store_query_version`]).
-fn is_exact_semver(version: &str) -> bool {
-    let segments: Vec<&str> = version.split('.').collect();
-    segments.len() == 3
-        && segments
-            .iter()
-            .all(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn qualify_applies_misc_default() {
-        // No namespace ⇒ "misc".
-        assert_eq!(qualify("all_over_50"), "misc::all_over_50");
-        assert_eq!(qualify("ehr::x"), "ehr::x");
-        assert_eq!(qualify("ns::aql::x"), "ns::aql::x");
-    }
-
-    #[test]
-    fn three_part_name_lifts_the_formalism_out_of_the_name() {
-        // The three-part scheme: <ns>::<formalism>::<name>.
-        // The formalism segment must NOT be folded into the stored name: the
-        // store key is the canonical two-part <ns>::<name>.
-        let q = parse_qualified_name("task_planning::aql::chemotherapy_plans");
-        assert_eq!(q.namespace, "task_planning");
-        assert_eq!(q.name, "chemotherapy_plans");
-        assert_eq!(q.qualified(), "task_planning::chemotherapy_plans");
-
-        // Two-part names keep the whole remainder as the name, no formalism.
-        let two = parse_qualified_name("ehr::all_over_50");
-        assert_eq!(two.namespace, "ehr");
-        assert_eq!(two.name, "all_over_50");
-
-        // Four and more segments: namespace + a `::`-bearing name, no
-        // formalism lift.
-        let four = parse_qualified_name("a::b::c::d");
-        assert_eq!(four.namespace, "a");
-        assert_eq!(four.name, "b::c::d");
-
-        // Unqualified ⇒ misc default, two-part canonical form.
-        let bare = parse_qualified_name("all_over_50");
-        assert_eq!(bare.qualified(), "misc::all_over_50");
-    }
 
     #[test]
     fn formalism_case_and_version_equivalence() {

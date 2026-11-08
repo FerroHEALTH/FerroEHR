@@ -21,6 +21,9 @@
 //! `responses/405.yaml`, and for the rest by the cross-cutting SHOULD in
 //! `docs/overview/Requests_and_responses.md` §"HTTP Methods".
 
+use std::fmt;
+use std::str::FromStr;
+
 use axum::Json;
 use axum::response::{IntoResponse, Response};
 use http::StatusCode;
@@ -28,6 +31,7 @@ use http::StatusCode;
 use openehr_its::rest::decode::query_component_octets;
 use openehr_its::rest::generated::admin::AdminEhrDeleteParams;
 use openehr_its::rest::runtime::ApiError;
+use openehr_its::rest::stored_query::{QualifiedQueryName, QueryVersion};
 
 use crate::api::RequestParts;
 use crate::overview::error::RestError;
@@ -84,11 +88,11 @@ pub(crate) async fn query_delete(
     state: AppState,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
-    let qualified_name = path_segment(&parts, "qualified_query_name")?;
-    let version = path_segment(&parts, "version")?;
+    let qualified_name: QualifiedQueryName = parse_segment(&parts, "qualified_query_name")?;
+    let version: QueryVersion = parse_segment(&parts, "version")?;
     state
         .backend()
-        .admin_query_delete(&qualified_name, &version)
+        .admin_query_delete(&qualified_name, version)
         .await?;
     Ok(negotiate::body::empty(StatusCode::NO_CONTENT))
 }
@@ -157,6 +161,23 @@ fn path_segment(parts: &RequestParts, key: &str) -> Result<String, RestError> {
     parts.path.get(key).cloned().ok_or_else(|| {
         RestError::from(ApiError::BadRequest(format!(
             "missing path parameter '{key}'"
+        )))
+    })
+}
+
+/// The path parameter `key` read by its grammar.
+///
+/// # Errors
+///
+/// [`ApiError::BadRequest`] when the parameter is missing or breaks the
+/// grammar, the overview `400` row for a malformed request.
+fn parse_segment<T>(parts: &RequestParts, key: &str) -> Result<T, RestError>
+where
+    T: FromStr<Err: fmt::Display>,
+{
+    path_segment(parts, key)?.parse().map_err(|err| {
+        RestError::from(ApiError::BadRequest(format!(
+            "path parameter '{key}': {err}"
         )))
     })
 }
