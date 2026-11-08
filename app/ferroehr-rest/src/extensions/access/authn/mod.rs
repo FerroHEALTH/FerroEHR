@@ -45,6 +45,7 @@ mod issuer;
 mod party;
 pub(crate) mod record;
 pub(crate) mod trc;
+mod wabvpz;
 
 use std::sync::Arc;
 

@@ -351,9 +351,7 @@ pub(crate) fn target_ehr(
 /// A read under a federation agreement whose `consent` condition applies
 /// needs the consent decision reference for that patient (Wabvpz Art. 1(j) and
 /// Art. 15a(1), `docs/law/nl/wabvpz/text.html`): the token's mapped
-/// `consent.reference`, which its `patient/` grants confine to that patient. A
-/// request on openEHR data under an NL agreement is refused until the Wabvpz
-/// Art. 15f roles and organisation types can be read.
+/// `consent.reference`, which its `patient/` grants confine to that patient.
 ///
 /// # Errors
 /// The reason the debug log records: the grants do not meet the requirement,
@@ -384,21 +382,15 @@ pub(crate) fn check(
     if let (Requirement::OpenEhr { permission, .. }, Some(agreement)) = (
         requirement,
         crate::extensions::access::authn::declared::admitted(&principal.access),
-    ) {
-        // TODO(#5107): refuse the Wabvpz Art. 15f roles and organisation types alone.
-        if agreement.jurisdiction == "NL" {
-            return Err("an NL federation request waits on the Wabvpz Art. 15f check");
-        }
-        if agreement.consent.is_some()
-            && principal
-                .access
-                .caller()
-                .and_then(ferrohealth_smart::resource::Caller::consent_reference)
-                .is_none()
-            && matches!(permission, Permission::Read | Permission::Search)
-        {
-            return Err("a consent-conditioned read carries no consent decision reference");
-        }
+    ) && agreement.consent.is_some()
+        && principal
+            .access
+            .caller()
+            .and_then(ferrohealth_smart::resource::Caller::consent_reference)
+            .is_none()
+        && matches!(permission, Permission::Read | Permission::Search)
+    {
+        return Err("a consent-conditioned read carries no consent decision reference");
     }
     if let Requirement::OpenEhr {
         family,

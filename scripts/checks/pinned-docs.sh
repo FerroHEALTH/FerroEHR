@@ -45,6 +45,7 @@ readonly TREES=(
   docs/specs/dicom-ps3-15
   docs/specs/rfc-independent
   docs/specs/nen-7513-sources
+  docs/specs/nl-role-codes
 )
 
 fail=0
