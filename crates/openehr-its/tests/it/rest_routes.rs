@@ -666,8 +666,13 @@ fn from_request_covers_the_stored_query_operations() {
         p.version,
         openehr_its::rest::stored_query::VersionPattern::Major(1)
     );
+    // A reserved query name decodes, so the stored query it names is the
+    // operation's 404 (responses/404_Query.yaml), never a 400.
+    let m = matched(&Method::GET, "/query/org.example::aql").unwrap();
+    let p = query::QueryExecuteStoredQueryParams::from_request(&m, None, &headers).unwrap();
+    assert!(p.qualified_query_name.is_reserved());
     for (path, refused) in [
-        ("/query/aql2::AQL", "qualified_query_name"),
+        ("/query/::vitals", "qualified_query_name"),
         ("/query/a::b::c", "qualified_query_name"),
         ("/query/org.example::vitals/1.0.0-rc.1", "version"),
     ] {

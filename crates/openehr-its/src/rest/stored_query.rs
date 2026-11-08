@@ -26,6 +26,11 @@ const RESERVED: &str = "aql";
 /// of characters, matched by the pattern `[a-zA-Z0-9_.-]`" and "must not be
 /// `aql` (case-insensitive), as that is a reserved name"; the optional
 /// namespace is "a reverse domain name", which takes the same characters.
+///
+/// A reserved name reads, because a request that names one addresses a
+/// stored query that cannot exist, which `responses/404_Query.yaml` answers;
+/// [`QualifiedQueryName::check_registrable`] refuses it where a query is
+/// stored.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct QualifiedQueryName {
     namespace: Option<String>,
@@ -69,9 +74,6 @@ impl QualifiedQueryName {
                 return Err(QueryNameError::Malformed);
             }
         }
-        if name.eq_ignore_ascii_case(RESERVED) {
-            return Err(QueryNameError::Reserved);
-        }
         // NOTE: the path parameter expands with `style: simple` (RFC 6570 §3.2.2), which keeps `.`,
         // and RFC 3986 §5.2.4 removes the dot-segments `.` and `..`, so no URL names such a query.
         if namespace.is_none() && matches!(name, "." | "..") {
@@ -93,6 +95,26 @@ impl QualifiedQueryName {
     #[must_use]
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    /// Whether the query name is the reserved `aql`, in any case.
+    #[must_use]
+    pub fn is_reserved(&self) -> bool {
+        self.name.eq_ignore_ascii_case(RESERVED)
+    }
+
+    /// Checks that a query may be stored under this name.
+    ///
+    /// # Errors
+    ///
+    /// [`QueryNameError::Reserved`] when the query name is `aql` in any case
+    /// (`Qualified_query_name.md`: it "must not be `aql`").
+    pub fn check_registrable(&self) -> Result<(), QueryNameError> {
+        if self.is_reserved() {
+            Err(QueryNameError::Reserved)
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -335,8 +357,6 @@ mod tests {
     #[test]
     fn a_name_outside_the_grammar_is_refused() {
         for (text, error) in [
-            ("AQL", QueryNameError::Reserved),
-            ("org.openehr::Aql", QueryNameError::Reserved),
             ("", QueryNameError::Empty),
             ("::name", QueryNameError::Empty),
             ("org::", QueryNameError::Empty),
@@ -350,6 +370,13 @@ mod tests {
             "org::..".parse::<QualifiedQueryName>().is_ok(),
             "a namespace keeps the segment"
         );
+        for text in ["AQL", "org.openehr::Aql"] {
+            let name: QualifiedQueryName = text.parse().expect("a reserved name reads");
+            assert!(name.is_reserved(), "{text}");
+            assert_eq!(name.check_registrable(), Err(QueryNameError::Reserved));
+        }
+        let name: QualifiedQueryName = "org.openehr::aqlx".parse().expect("valid");
+        assert_eq!(name.check_registrable(), Ok(()));
     }
 
     #[test]
@@ -400,7 +427,7 @@ mod tests {
     fn each_type_reads_and_writes_its_text_in_json() {
         let name: QualifiedQueryName = serde_json::from_str("\"ehr::q\"").expect("reads");
         assert_eq!(serde_json::to_string(&name).expect("writes"), "\"ehr::q\"");
-        assert!(serde_json::from_str::<QualifiedQueryName>("\"aql\"").is_err());
+        assert!(serde_json::from_str::<QualifiedQueryName>("\"a b\"").is_err());
         let version: QueryVersion = serde_json::from_str("\"1.0.2\"").expect("reads");
         assert_eq!(
             serde_json::to_string(&version).expect("writes"),
