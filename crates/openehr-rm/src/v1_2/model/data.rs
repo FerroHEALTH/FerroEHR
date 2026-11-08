@@ -33,6 +33,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "namespace",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -43,6 +44,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -53,6 +55,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "id",
                 declared_type: "OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -83,6 +86,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -93,6 +97,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -103,6 +108,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -113,6 +119,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -126,6 +133,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -136,6 +144,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -146,6 +155,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -156,6 +166,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "encoding",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -166,6 +177,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_participations",
                 declared_type: "PARTICIPATION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -179,6 +191,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "workflow_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -189,6 +202,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -199,6 +213,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "provider",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -209,6 +224,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "protocol",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -219,6 +235,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "guideline_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -229,6 +246,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -239,6 +257,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "ism_transition",
                 declared_type: "ISM_TRANSITION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -249,6 +268,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "instruction_details",
                 declared_type: "INSTRUCTION_DETAILS",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -259,6 +279,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "description",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -271,6 +292,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -281,6 +303,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -291,6 +314,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -301,6 +325,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject_is_self",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -323,6 +348,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -333,6 +359,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -343,6 +370,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -353,6 +381,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -366,6 +395,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -376,6 +406,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -386,6 +417,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "timing",
                 declared_type: "DV_PARSABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -396,6 +428,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "action_archetype_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -406,6 +439,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "description",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -418,6 +452,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -428,6 +463,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -438,6 +474,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -460,6 +497,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -470,6 +508,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -480,6 +519,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -490,6 +530,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -503,6 +544,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -513,6 +555,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -523,6 +566,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "identities",
                 declared_type: "PARTY_IDENTITY",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -536,6 +580,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "contacts",
                 declared_type: "CONTACT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -549,6 +594,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -559,6 +605,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "relationships",
                 declared_type: "PARTY_RELATIONSHIP",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -572,6 +619,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "languages",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -585,6 +633,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "roles",
                 declared_type: "PARTY_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -600,6 +649,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -610,6 +660,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -620,6 +671,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -630,6 +682,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -640,6 +693,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "reverse_relationships",
                 declared_type: "LOCATABLE_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -662,6 +716,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -672,6 +727,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -682,6 +738,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -692,6 +749,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -705,6 +763,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -715,6 +774,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -725,6 +785,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -737,6 +798,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -747,6 +809,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -757,6 +820,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -767,6 +831,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -789,6 +854,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "sender",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -799,6 +865,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "sender_reference",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -809,6 +876,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "addressees",
                 declared_type: "String",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -822,6 +890,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "urgency",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -832,6 +901,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "message",
                 declared_type: "MESSAGE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -855,6 +925,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -865,6 +936,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -875,6 +947,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -885,6 +958,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -898,6 +972,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -908,6 +983,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -918,6 +994,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -928,6 +1005,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "encoding",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -938,6 +1016,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_participations",
                 declared_type: "PARTICIPATION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -951,6 +1030,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "workflow_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -961,6 +1041,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -971,6 +1052,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "provider",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -981,6 +1063,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "data",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -993,6 +1076,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1003,6 +1087,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1013,6 +1098,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1023,6 +1109,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject_is_self",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1045,6 +1132,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1055,6 +1143,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1065,6 +1154,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1075,6 +1165,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -1088,6 +1179,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1098,6 +1190,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1108,6 +1201,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "identities",
                 declared_type: "PARTY_IDENTITY",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -1121,6 +1215,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "contacts",
                 declared_type: "CONTACT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -1134,6 +1229,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1144,6 +1240,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "relationships",
                 declared_type: "PARTY_RELATIONSHIP",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -1157,6 +1254,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "languages",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -1170,6 +1268,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "roles",
                 declared_type: "PARTY_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -1185,6 +1284,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1195,6 +1295,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1205,6 +1306,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1215,6 +1317,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1225,6 +1328,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "reverse_relationships",
                 declared_type: "LOCATABLE_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -1247,6 +1351,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_id",
                 declared_type: "ARCHETYPE_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1257,6 +1362,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "template_id",
                 declared_type: "TEMPLATE_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1267,6 +1373,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "rm_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1289,6 +1396,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "Hrid",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -1300,6 +1408,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "namespace",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1310,6 +1419,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "qualified_rm_entity",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1320,6 +1430,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "domain_concept",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1330,6 +1441,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "rm_originator",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1340,6 +1452,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "rm_name",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1350,6 +1463,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "rm_entity",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1360,6 +1474,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "specialisation",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1370,6 +1485,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1380,6 +1496,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "major_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1390,6 +1507,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minor_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1400,6 +1518,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "patch_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1422,6 +1541,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "system_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1432,6 +1552,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_committed",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1442,6 +1563,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "change_type",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1452,6 +1574,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "description",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1462,6 +1585,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "committer",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1472,6 +1596,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "attested_view",
                 declared_type: "DV_MULTIMEDIA",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1482,6 +1607,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "proof",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1492,6 +1618,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "items",
                 declared_type: "DV_EHR_URI",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -1505,6 +1632,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "reason",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1515,6 +1643,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_pending",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1538,6 +1667,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "system_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1548,6 +1678,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_committed",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1558,6 +1689,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "change_type",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1568,6 +1700,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "description",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1578,6 +1711,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "committer",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1601,6 +1735,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "original_language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1611,6 +1746,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_controlled",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1621,15 +1757,18 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "translations",
                 declared_type: "Hash",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                     RmTypeRef {
                         name: "TRANSLATION_DETAILS",
+                        formal: None,
                         params: &[],
                     },
                 ],
@@ -1640,6 +1779,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "description",
                 declared_type: "RESOURCE_DESCRIPTION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1650,6 +1790,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "revision_history",
                 declared_type: "REVISION_HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1662,6 +1803,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "current_revision",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1672,6 +1814,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "languages_available",
                 declared_type: "String",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -1787,6 +1930,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1797,6 +1941,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_empty",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1859,6 +2004,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         computed_attributes: &[RmAttribute {
             name: "negation",
             declared_type: "Boolean",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -1880,6 +2026,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1890,6 +2037,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1900,6 +2048,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1910,6 +2059,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -1923,6 +2073,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1933,6 +2084,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -1943,6 +2095,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "credentials",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1953,10 +2106,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_validity",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_DATE",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: None,
@@ -1968,6 +2123,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1978,6 +2134,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -1988,6 +2145,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2010,6 +2168,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2020,6 +2179,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2030,6 +2190,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2040,6 +2201,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -2053,6 +2215,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2063,6 +2226,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2073,6 +2237,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2083,6 +2248,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "encoding",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2093,6 +2259,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_participations",
                 declared_type: "PARTICIPATION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -2106,6 +2273,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "workflow_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2116,6 +2284,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2126,6 +2295,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "provider",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2136,6 +2306,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "protocol",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2146,6 +2317,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "guideline_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2158,6 +2330,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2168,6 +2341,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2178,6 +2352,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2188,6 +2363,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject_is_self",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2210,6 +2386,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2220,6 +2397,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2230,6 +2408,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2240,6 +2419,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -2253,6 +2433,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2263,6 +2444,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2273,6 +2455,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "items",
                 declared_type: "ITEM",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -2288,6 +2471,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2298,6 +2482,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2308,6 +2493,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2330,6 +2516,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "terminology_id",
                 declared_type: "TERMINOLOGY_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2340,6 +2527,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "code_string",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2350,6 +2538,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "preferred_term",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2374,6 +2563,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2384,6 +2574,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_codes",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -2406,6 +2597,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2416,6 +2608,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2426,6 +2619,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2436,6 +2630,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -2449,6 +2644,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2459,6 +2655,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2469,6 +2666,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2479,6 +2677,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "territory",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2489,6 +2688,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "category",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2499,6 +2699,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "context",
                 declared_type: "EVENT_CONTEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2509,6 +2710,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "composer",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2519,6 +2721,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "content",
                 declared_type: "CONTENT_ITEM",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -2534,6 +2737,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2544,6 +2748,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2554,6 +2759,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2564,6 +2770,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_persistent",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2586,6 +2793,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2596,6 +2804,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2606,6 +2815,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2616,6 +2826,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -2629,6 +2840,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2639,6 +2851,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2649,6 +2862,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "addresses",
                 declared_type: "ADDRESS",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -2662,10 +2876,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_validity",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_DATE",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: None,
@@ -2677,6 +2893,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2687,6 +2904,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2697,6 +2915,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2707,6 +2926,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "purpose",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2737,6 +2957,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2747,6 +2968,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2757,6 +2979,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2767,6 +2990,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -2780,6 +3004,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2790,6 +3015,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -2802,6 +3028,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2812,6 +3039,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2822,6 +3050,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2844,6 +3073,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2854,6 +3084,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "versions",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -2867,6 +3098,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "audit",
                 declared_type: "AUDIT_DETAILS",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2890,6 +3122,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "interval",
                 declared_type: "Multiplicity_interval",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2900,6 +3133,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_ordered",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2910,6 +3144,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_unique",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2922,6 +3157,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_bag",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2932,6 +3168,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_list",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2942,6 +3179,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_set",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2989,6 +3227,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -2999,6 +3238,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_empty",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3030,6 +3270,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3040,6 +3281,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3050,6 +3292,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3060,6 +3303,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -3073,6 +3317,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3083,6 +3328,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3095,6 +3341,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3105,6 +3352,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3115,6 +3363,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3125,6 +3374,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_hierarchy",
                 declared_type: "ITEM",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3190,6 +3440,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3200,6 +3451,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3210,10 +3462,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_ORDERED",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -3226,6 +3480,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude_status",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3236,6 +3491,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy",
                 declared_type: "DV_AMOUNT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3248,6 +3504,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3258,6 +3515,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3268,6 +3526,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "valid_magnitude_status",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3278,6 +3537,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude",
                 declared_type: "Ordered_Numeric",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3288,6 +3548,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3318,6 +3579,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3328,6 +3590,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3338,10 +3601,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_ORDERED",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -3354,6 +3619,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude_status",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3364,6 +3630,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3374,6 +3641,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_is_percent",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3386,6 +3654,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3396,6 +3665,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3406,6 +3676,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "valid_magnitude_status",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3416,6 +3687,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude",
                 declared_type: "Ordered_Numeric",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3426,6 +3698,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3436,6 +3709,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "negative",
                 declared_type: "DV_AMOUNT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3457,6 +3731,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "Boolean",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -3484,6 +3759,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "value",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3494,6 +3770,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "hyperlink",
                 declared_type: "DV_URI",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3504,6 +3781,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "formatting",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3514,6 +3792,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "mappings",
                 declared_type: "TERM_MAPPING",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -3527,6 +3806,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3537,6 +3817,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "encoding",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3547,6 +3828,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "defining_code",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3579,6 +3861,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3589,10 +3872,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_COUNT",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: None,
@@ -3602,10 +3887,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_COUNT",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -3618,6 +3905,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude_status",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3628,6 +3916,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3638,6 +3927,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_is_percent",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3648,6 +3938,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude",
                 declared_type: "Integer64",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3660,6 +3951,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3670,6 +3962,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3680,6 +3973,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "valid_magnitude_status",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3690,6 +3984,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3700,6 +3995,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "negative",
                 declared_type: "DV_AMOUNT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3736,6 +4032,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3746,6 +4043,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3756,10 +4054,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_ORDERED",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -3772,6 +4072,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude_status",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3782,6 +4083,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy",
                 declared_type: "DV_DURATION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3792,6 +4094,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "value",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3804,6 +4107,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3814,6 +4118,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3824,6 +4129,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "valid_magnitude_status",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3834,6 +4140,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3844,6 +4151,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3854,6 +4162,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_partial",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3864,6 +4173,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_extended",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3874,6 +4184,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "year",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3884,6 +4195,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "month",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3894,6 +4206,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "day",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3904,6 +4217,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "month_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3914,6 +4228,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "day_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3924,6 +4239,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_string",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -3960,6 +4276,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3970,6 +4287,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -3980,10 +4298,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_ORDERED",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -3996,6 +4316,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude_status",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4006,6 +4327,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy",
                 declared_type: "DV_DURATION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4016,6 +4338,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "value",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4028,6 +4351,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4038,6 +4362,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4048,6 +4373,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "valid_magnitude_status",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4058,6 +4384,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude",
                 declared_type: "Double",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4068,6 +4395,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4078,6 +4406,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_partial",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4088,6 +4417,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_extended",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4098,6 +4428,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "year",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4108,6 +4439,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "month",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4118,6 +4450,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "day",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4128,6 +4461,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "hour",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4138,6 +4472,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minute",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4148,6 +4483,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "second",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4158,6 +4494,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "fractional_second",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4168,6 +4505,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "timezone",
                 declared_type: "Iso8601_timezone",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4178,6 +4516,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "month_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4188,6 +4527,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "day_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4198,6 +4538,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minute_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4208,6 +4549,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "second_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4218,6 +4560,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_decimal_sign_comma",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4228,6 +4571,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "has_fractional_second",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4238,6 +4582,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_string",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4273,6 +4618,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4283,6 +4629,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4293,10 +4640,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_ORDERED",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -4309,6 +4658,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude_status",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4319,6 +4669,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4329,6 +4680,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_is_percent",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4339,6 +4691,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "value",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4351,6 +4704,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4361,6 +4715,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4371,6 +4726,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "valid_magnitude_status",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4381,6 +4737,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude",
                 declared_type: "Double",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4391,6 +4748,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4401,6 +4759,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "negative",
                 declared_type: "DV_DURATION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4411,6 +4770,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_partial",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4421,6 +4781,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_extended",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4431,6 +4792,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "years",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4441,6 +4803,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "months",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4451,6 +4814,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "days",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4461,6 +4825,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "hours",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4471,6 +4836,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minutes",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4481,6 +4847,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "seconds",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4491,6 +4858,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "fractional_seconds",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4501,6 +4869,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "weeks",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4511,6 +4880,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_decimal_sign_comma",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4521,6 +4891,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "to_seconds",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4531,6 +4902,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_string",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4557,6 +4929,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -4568,6 +4941,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "scheme",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4578,6 +4952,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "path",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4588,6 +4963,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "fragment_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4598,6 +4974,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "query",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4620,6 +4997,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "charset",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4630,6 +5008,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4657,6 +5036,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "DV_PARSABLE",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -4668,6 +5048,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "calendar_alignment",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4678,6 +5059,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "event_alignment",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4688,6 +5070,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "institution_specified",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4710,6 +5093,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "issuer",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4720,6 +5104,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "assigner",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4730,6 +5115,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4740,6 +5126,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4769,6 +5156,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower",
                 declared_type: "DV_ORDERED",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4779,6 +5167,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper",
                 declared_type: "DV_ORDERED",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4789,6 +5178,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower_unbounded",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4799,6 +5189,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper_unbounded",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4809,6 +5200,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower_included",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4819,6 +5211,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper_included",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4850,6 +5243,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "charset",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4860,6 +5254,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4870,6 +5265,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "alternate_text",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4880,6 +5276,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uri",
                 declared_type: "DV_URI",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4890,6 +5287,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "data",
                 declared_type: "Octet",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -4903,6 +5301,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "media_type",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4913,6 +5312,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "compression_algorithm",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4923,6 +5323,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "integrity_check",
                 declared_type: "Octet",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -4936,6 +5337,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "integrity_check_algorithm",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4946,6 +5348,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "thumbnail",
                 declared_type: "DV_MULTIMEDIA",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -4956,6 +5359,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "size",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4968,6 +5372,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_external",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4978,6 +5383,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_inline",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4988,6 +5394,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_compressed",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -4998,6 +5405,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "has_integrity_check",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5036,6 +5444,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5046,6 +5455,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5056,10 +5466,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_ORDERED",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -5074,6 +5486,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5084,6 +5497,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5113,6 +5527,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5123,6 +5538,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5133,10 +5549,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_ORDERED",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -5149,6 +5567,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "symbol",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5159,6 +5578,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "value",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5171,6 +5591,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5181,6 +5602,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5202,6 +5624,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "items",
             declared_type: "DV_TEXT",
+            formal: None,
             container: Container::List,
             is_mandatory: true,
             type_params: &[],
@@ -5232,6 +5655,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "charset",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5242,6 +5666,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5252,6 +5677,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "value",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5262,6 +5688,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "formalism",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5273,6 +5700,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         computed_attributes: &[RmAttribute {
             name: "size",
             declared_type: "Integer",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -5298,6 +5726,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "DV_PARSABLE",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -5309,6 +5738,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "calendar_alignment",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5319,6 +5749,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "event_alignment",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5329,6 +5760,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "institution_specified",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5339,6 +5771,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "period",
                 declared_type: "DV_DURATION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5374,6 +5807,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5384,10 +5818,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_PROPORTION",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: None,
@@ -5397,10 +5833,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_PROPORTION",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -5413,6 +5851,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude_status",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5423,6 +5862,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5433,6 +5873,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_is_percent",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5443,6 +5884,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "numerator",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5453,6 +5895,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "denominator",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5463,6 +5906,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5473,6 +5917,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "precision",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5485,6 +5930,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "negative",
                 declared_type: "DV_AMOUNT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5495,6 +5941,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5505,6 +5952,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5515,6 +5963,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "valid_magnitude_status",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5525,6 +5974,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5535,6 +5985,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5545,6 +5996,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_integral",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5582,6 +6034,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5592,6 +6045,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5602,10 +6056,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_ORDERED",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -5618,6 +6074,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude_status",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5628,6 +6085,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy",
                 declared_type: "Any",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5640,6 +6098,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5650,6 +6109,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5660,6 +6120,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "valid_magnitude_status",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5670,6 +6131,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude",
                 declared_type: "Ordered_Numeric",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5680,6 +6142,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5711,6 +6174,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5721,10 +6185,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_QUANTITY",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: None,
@@ -5734,10 +6200,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_QUANTITY",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -5750,6 +6218,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude_status",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5760,6 +6229,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5770,6 +6240,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_is_percent",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5780,6 +6251,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5790,6 +6262,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "precision",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5800,6 +6273,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "units",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5810,6 +6284,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "units_system",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5820,6 +6295,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "units_display_name",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5832,6 +6308,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5842,6 +6319,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5852,6 +6330,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "valid_magnitude_status",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5862,6 +6341,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5872,6 +6352,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "negative",
                 declared_type: "DV_AMOUNT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5882,6 +6363,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_integral",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5911,6 +6393,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5921,6 +6404,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -5931,10 +6415,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_ORDERED",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -5947,6 +6433,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "symbol",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5957,6 +6444,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "value",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5969,6 +6457,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -5979,6 +6468,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6001,6 +6491,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "value",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6011,6 +6502,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_terminal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6043,6 +6535,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6053,6 +6546,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6063,10 +6557,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_ORDERED",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -6079,6 +6575,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude_status",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6089,6 +6586,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy",
                 declared_type: "DV_DURATION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6101,6 +6599,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6111,6 +6610,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6121,6 +6621,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "valid_magnitude_status",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6131,6 +6632,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude",
                 declared_type: "Ordered_Numeric",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6141,6 +6643,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6163,6 +6666,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "value",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6173,6 +6677,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "hyperlink",
                 declared_type: "DV_URI",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6183,6 +6688,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "formatting",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6193,6 +6699,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "mappings",
                 declared_type: "TERM_MAPPING",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -6206,6 +6713,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6216,6 +6724,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "encoding",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6253,6 +6762,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_status",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6263,6 +6773,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "normal_range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6273,10 +6784,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_reference_ranges",
                 declared_type: "REFERENCE_RANGE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_ORDERED",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -6289,6 +6802,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude_status",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6299,6 +6813,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy",
                 declared_type: "DV_DURATION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6309,6 +6824,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "value",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6321,6 +6837,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_simple",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6331,6 +6848,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_normal",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6341,6 +6859,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "valid_magnitude_status",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6351,6 +6870,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "magnitude",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6361,6 +6881,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accuracy_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6371,6 +6892,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_partial",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6381,6 +6903,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_extended",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6391,6 +6914,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "hour",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6401,6 +6925,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minute",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6411,6 +6936,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "second",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6421,6 +6947,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "fractional_second",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6431,6 +6958,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "timezone",
                 declared_type: "Iso8601_timezone",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6441,6 +6969,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minute_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6451,6 +6980,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "second_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6461,6 +6991,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_decimal_sign_comma",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6471,6 +7002,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "has_fractional_second",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6481,6 +7013,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_string",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6505,6 +7038,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "DV_PARSABLE",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -6516,6 +7050,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "calendar_alignment",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6526,6 +7061,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "event_alignment",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6536,6 +7072,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "institution_specified",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6557,6 +7094,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -6568,6 +7106,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "scheme",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6578,6 +7117,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "path",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6588,6 +7128,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "fragment_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6598,6 +7139,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "query",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6621,6 +7163,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "negative",
                 declared_type: "Double",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6631,6 +7174,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "floor",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6653,6 +7197,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "system_id",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6663,6 +7208,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "ehr_id",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6673,6 +7219,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "contributions",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -6686,6 +7233,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "ehr_status",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6696,6 +7244,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "ehr_access",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6706,6 +7255,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "compositions",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -6719,6 +7269,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "directory",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6729,6 +7280,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6739,6 +7291,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "folders",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -6752,6 +7305,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "tags",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -6778,6 +7332,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6788,6 +7343,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6798,6 +7354,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6808,6 +7365,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -6821,6 +7379,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6831,6 +7390,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6841,6 +7401,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "settings",
                 declared_type: "ACCESS_CONTROL_SETTINGS",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6853,6 +7414,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6863,6 +7425,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6873,6 +7436,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6883,6 +7447,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "scheme",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6905,6 +7470,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6915,6 +7481,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6925,6 +7492,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6935,6 +7503,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -6948,6 +7517,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6958,6 +7528,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -6968,6 +7539,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject",
                 declared_type: "PARTY_SELF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6978,6 +7550,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_queryable",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6988,6 +7561,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_modifiable",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -6998,6 +7572,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7010,6 +7585,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7020,6 +7596,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7030,6 +7607,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7052,6 +7630,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7062,6 +7641,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7072,6 +7652,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7082,6 +7663,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -7095,6 +7677,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7105,6 +7688,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7115,6 +7699,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "null_flavour",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7125,6 +7710,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "value",
                 declared_type: "DATA_VALUE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7135,6 +7721,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "null_reason",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7147,6 +7734,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7157,6 +7745,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7167,6 +7756,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7177,6 +7767,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_null",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7205,6 +7796,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7215,6 +7807,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7225,6 +7818,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7235,6 +7829,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -7248,6 +7843,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7258,6 +7854,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7268,6 +7865,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7278,6 +7876,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "encoding",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7288,6 +7887,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_participations",
                 declared_type: "PARTICIPATION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -7301,6 +7901,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "workflow_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7311,6 +7912,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7321,6 +7923,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "provider",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7333,6 +7936,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7343,6 +7947,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7353,6 +7958,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7363,6 +7969,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject_is_self",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7392,6 +7999,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7402,6 +8010,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7412,6 +8021,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7422,6 +8032,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -7435,6 +8046,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7445,6 +8057,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7455,6 +8068,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7465,6 +8079,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "encoding",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7475,6 +8090,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_participations",
                 declared_type: "PARTICIPATION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -7488,6 +8104,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "workflow_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7498,6 +8115,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7508,6 +8126,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "provider",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7518,6 +8137,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "protocol",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7528,6 +8148,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "guideline_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7538,6 +8159,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "data",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7550,6 +8172,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7560,6 +8183,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7570,6 +8194,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7580,6 +8205,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject_is_self",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7602,6 +8228,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7612,6 +8239,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7622,6 +8250,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7632,6 +8261,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -7645,6 +8275,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7655,6 +8286,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7665,6 +8297,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7675,6 +8308,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "state",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7685,6 +8319,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "data",
                 declared_type: "ITEM_STRUCTURE",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7697,6 +8332,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7707,6 +8343,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7717,6 +8354,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7727,6 +8365,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "offset",
                 declared_type: "DV_DURATION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7752,6 +8391,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "start_time",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7762,6 +8402,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "end_time",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7772,6 +8413,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "location",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7782,6 +8424,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "setting",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7792,6 +8435,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_context",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7802,6 +8446,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "health_care_facility",
                 declared_type: "PARTY_IDENTIFIED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7812,6 +8457,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "participations",
                 declared_type: "PARTICIPATION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -7826,6 +8472,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         computed_attributes: &[RmAttribute {
             name: "parent",
             declared_type: "PATHABLE",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -7853,6 +8500,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "terminology_identifiers",
                 declared_type: "String",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -7863,15 +8511,18 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "openehr_code_sets",
                 declared_type: "Hash",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                 ],
@@ -7882,6 +8533,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "code_set_identifiers",
                 declared_type: "String",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -7904,6 +8556,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7914,6 +8567,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -7924,6 +8578,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7934,6 +8589,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -7947,6 +8603,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7957,6 +8614,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7967,6 +8625,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "chapters",
                 declared_type: "EXTRACT_CHAPTER",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -7980,6 +8639,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "specification",
                 declared_type: "EXTRACT_SPEC",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -7990,6 +8650,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "request_id",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8000,6 +8661,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8010,6 +8672,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "system_id",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8020,6 +8683,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "sequence_nr",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8030,6 +8694,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "participations",
                 declared_type: "EXTRACT_PARTICIPATION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -8045,6 +8710,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8055,6 +8721,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8065,6 +8732,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8087,6 +8755,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8097,6 +8766,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8107,6 +8777,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8117,6 +8788,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -8130,6 +8802,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8140,6 +8813,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8150,6 +8824,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "request_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8160,6 +8835,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "action",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8172,6 +8848,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8182,6 +8859,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8192,6 +8870,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8214,6 +8893,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8224,6 +8904,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8234,6 +8915,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8244,6 +8926,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -8257,6 +8940,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8267,6 +8951,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8277,6 +8962,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "items",
                 declared_type: "EXTRACT_ITEM",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -8292,6 +8978,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8302,6 +8989,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8312,6 +9000,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8334,6 +9023,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8344,6 +9034,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8354,6 +9045,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8364,6 +9056,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -8377,6 +9070,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8387,6 +9081,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8397,6 +9092,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_primary",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8407,6 +9103,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_changed",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8417,6 +9114,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_masked",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8427,6 +9125,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "item",
                 declared_type: "Any",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8439,6 +9138,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8449,6 +9149,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8459,6 +9160,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8481,6 +9183,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8491,6 +9194,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8501,6 +9205,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8511,6 +9216,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -8524,6 +9230,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8534,6 +9241,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8544,6 +9252,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "items",
                 declared_type: "EXTRACT_ITEM",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -8557,6 +9266,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "extract_id_key",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8569,6 +9279,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8579,6 +9290,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8589,6 +9301,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8611,6 +9324,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "extract_id_key",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8621,6 +9335,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "ehr_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8631,6 +9346,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8641,6 +9357,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_ids",
                 declared_type: "String",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -8654,6 +9371,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "item_list",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -8680,6 +9398,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "request_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8690,6 +9409,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "reason",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8713,6 +9433,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8723,6 +9444,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8733,6 +9455,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8743,6 +9466,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -8756,6 +9480,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8766,6 +9491,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8776,6 +9502,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "items",
                 declared_type: "EXTRACT_ITEM",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -8791,6 +9518,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8801,6 +9529,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8811,6 +9540,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8837,6 +9567,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8847,6 +9578,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8857,6 +9589,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8867,6 +9600,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -8880,6 +9614,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8890,6 +9625,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -8902,6 +9638,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8912,6 +9649,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8922,6 +9660,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8943,6 +9682,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "entities",
             declared_type: "EXTRACT_ENTITY_MANIFEST",
+            formal: None,
             container: Container::List,
             is_mandatory: true,
             type_params: &[],
@@ -8968,10 +9708,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_DATE_TIME",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: None,
@@ -8981,6 +9723,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "function",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -8991,6 +9734,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "mode",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9001,6 +9745,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "performer",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9024,6 +9769,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9034,6 +9780,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9044,6 +9791,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9054,6 +9802,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -9067,6 +9816,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9077,6 +9827,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9087,6 +9838,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "extract_spec",
                 declared_type: "EXTRACT_SPEC",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9097,6 +9849,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "update_spec",
                 declared_type: "EXTRACT_UPDATE_SPEC",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9109,6 +9862,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9119,6 +9873,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9129,6 +9884,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9151,6 +9907,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_spec",
                 declared_type: "EXTRACT_VERSION_SPEC",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9161,6 +9918,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "manifest",
                 declared_type: "EXTRACT_MANIFEST",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9171,6 +9929,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "extract_type",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9181,6 +9940,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "include_multimedia",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9191,6 +9951,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "priority",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9201,6 +9962,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "link_depth",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9211,6 +9973,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "criteria",
                 declared_type: "DV_PARSABLE",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -9224,6 +9987,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9247,6 +10011,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "persist_in_server",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9257,6 +10022,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "repeat_period",
                 declared_type: "DV_DURATION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9267,6 +10033,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "trigger_events",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -9280,6 +10047,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "update_method",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9303,6 +10071,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "include_all_versions",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9313,10 +10082,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "commit_time_interval",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_DATE_TIME",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: None,
@@ -9326,6 +10097,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "include_revision_history",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9336,6 +10108,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "include_data",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9360,6 +10133,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "current_date",
                 declared_type: "Iso8601_date",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9370,6 +10144,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "current_time",
                 declared_type: "Iso8601_time",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9380,6 +10155,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "current_date_time",
                 declared_type: "Iso8601_date_time",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9390,6 +10166,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "current_time_zone",
                 declared_type: "Iso8601_timezone",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9412,6 +10189,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "originating_system_item_ids",
                 declared_type: "DV_IDENTIFIER",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -9425,6 +10203,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_system_item_ids",
                 declared_type: "DV_IDENTIFIER",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -9438,6 +10217,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "original_content",
                 declared_type: "DV_ENCAPSULATED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9448,6 +10228,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "originating_system_audit",
                 declared_type: "FEEDER_AUDIT_DETAILS",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9458,6 +10239,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_system_audit",
                 declared_type: "FEEDER_AUDIT_DETAILS",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9481,6 +10263,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "system_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9491,6 +10274,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "location",
                 declared_type: "PARTY_IDENTIFIED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9501,6 +10285,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9511,6 +10296,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "provider",
                 declared_type: "PARTY_IDENTIFIED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9521,6 +10307,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9531,6 +10318,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9541,6 +10329,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9564,6 +10353,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9574,6 +10364,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9584,6 +10375,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9594,6 +10386,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -9607,6 +10400,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9617,6 +10411,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9627,6 +10422,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "items",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -9640,6 +10436,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "folders",
                 declared_type: "FOLDER",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -9653,6 +10450,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9665,6 +10463,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9675,6 +10474,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9685,6 +10485,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9734,6 +10535,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9744,6 +10546,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9754,6 +10557,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9764,6 +10568,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -9777,6 +10582,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9787,6 +10593,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9797,6 +10604,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_primary",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9807,6 +10615,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_changed",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9817,6 +10626,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_masked",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9827,6 +10637,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "item",
                 declared_type: "LOCATABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9837,6 +10648,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "item_type",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9847,6 +10659,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "item_type_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9857,6 +10670,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "author",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9867,6 +10681,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "creation_time",
                 declared_type: "Iso8601_date_time",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9877,6 +10692,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "authoriser",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9887,6 +10703,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "authorisation_time",
                 declared_type: "Iso8601_date_time",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9897,6 +10714,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "item_status",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9907,6 +10725,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9917,6 +10736,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_set_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9927,6 +10747,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "system_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -9937,15 +10758,18 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_details",
                 declared_type: "Hash",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                 ],
@@ -9958,6 +10782,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9968,6 +10793,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -9978,6 +10804,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10000,6 +10827,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10010,6 +10838,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10020,6 +10849,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10030,6 +10860,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -10043,6 +10874,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10053,6 +10885,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10063,6 +10896,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "data",
                 declared_type: "ITEM",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10075,6 +10909,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10085,6 +10920,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10095,6 +10931,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10117,6 +10954,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "value",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10127,6 +10965,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "scheme",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10150,6 +10989,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10160,6 +11000,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10170,6 +11011,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10180,6 +11022,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -10193,6 +11036,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10203,6 +11047,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10213,6 +11058,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "identities",
                 declared_type: "PARTY_IDENTITY",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -10226,6 +11072,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "contacts",
                 declared_type: "CONTACT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -10239,6 +11086,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10249,6 +11097,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "relationships",
                 declared_type: "PARTY_RELATIONSHIP",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -10262,6 +11111,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "languages",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -10275,6 +11125,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "roles",
                 declared_type: "PARTY_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -10290,6 +11141,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10300,6 +11152,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10310,6 +11163,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10320,6 +11174,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10330,6 +11185,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "reverse_relationships",
                 declared_type: "LOCATABLE_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -10351,6 +11207,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -10362,6 +11219,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "root",
                 declared_type: "UID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10372,6 +11230,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "extension",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10382,6 +11241,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "has_extension",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10404,6 +11264,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10414,6 +11275,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10424,6 +11286,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10434,6 +11297,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -10447,6 +11311,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10457,6 +11322,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10467,6 +11333,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "origin",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10477,6 +11344,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "period",
                 declared_type: "DV_DURATION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10487,6 +11355,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "duration",
                 declared_type: "DV_DURATION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10497,6 +11366,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "summary",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10507,10 +11377,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "events",
                 declared_type: "EVENT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "ITEM_STRUCTURE",
+                    formal: Some("T"),
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -10525,6 +11397,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10535,6 +11408,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10545,6 +11419,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10555,6 +11430,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_hierarchy",
                 declared_type: "ITEM",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10565,6 +11441,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_periodic",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10591,6 +11468,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10601,6 +11479,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_empty",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10633,6 +11512,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_empty",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10643,6 +11523,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_integer",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10653,6 +11534,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_integer",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10663,6 +11545,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_valid",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10673,6 +11556,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_namespaced",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10683,6 +11567,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "namespace",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10693,6 +11578,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "rm_publisher",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10703,6 +11589,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "rm_package",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10713,6 +11600,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "rm_class",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10723,6 +11611,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "qualified_rm_class_name",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10733,6 +11622,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10743,6 +11633,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10753,6 +11644,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "major_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10763,6 +11655,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minor_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10773,6 +11666,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "patch_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10783,6 +11677,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_status",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10793,6 +11688,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "build_count",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10815,6 +11711,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "contribution",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10825,6 +11722,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "signature",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10835,6 +11733,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "commit_audit",
                 declared_type: "AUDIT_DETAILS",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10845,10 +11744,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "item",
                 declared_type: "ORIGINAL_VERSION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[RmTypeRef {
                     name: "Any",
+                    formal: Some("T"),
                     params: &[],
                 }],
                 cardinality: None,
@@ -10860,6 +11761,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10870,6 +11772,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "preceding_version_uid",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10880,6 +11783,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "data",
                 declared_type: "Any",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10890,6 +11794,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lifecycle_state",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10900,6 +11805,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "canonical_form",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10910,6 +11816,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10920,6 +11827,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_branch",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10952,6 +11860,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10962,6 +11871,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -10972,6 +11882,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -10982,6 +11893,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -10995,6 +11907,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11005,6 +11918,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11015,6 +11929,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11025,6 +11940,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "encoding",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11035,6 +11951,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_participations",
                 declared_type: "PARTICIPATION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -11048,6 +11965,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "workflow_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11058,6 +11976,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11068,6 +11987,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "provider",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11078,6 +11998,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "protocol",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11088,6 +12009,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "guideline_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11098,6 +12020,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "narrative",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11108,6 +12031,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "expiry_time",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11118,6 +12042,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "wf_definition",
                 declared_type: "DV_PARSABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11128,6 +12053,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "activities",
                 declared_type: "ACTIVITY",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -11143,6 +12069,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11153,6 +12080,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11163,6 +12091,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11173,6 +12102,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject_is_self",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11195,6 +12125,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "instruction_id",
                 declared_type: "LOCATABLE_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11205,6 +12136,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "activity_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11215,6 +12147,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "wf_details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11226,6 +12159,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         computed_attributes: &[RmAttribute {
             name: "parent",
             declared_type: "PATHABLE",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -11246,6 +12180,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -11268,6 +12203,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11278,6 +12214,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11288,6 +12225,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11298,6 +12236,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -11311,6 +12250,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11321,6 +12261,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11331,6 +12272,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11341,6 +12283,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "state",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11351,6 +12294,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "data",
                 declared_type: "ITEM_STRUCTURE",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11361,6 +12305,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "width",
                 declared_type: "DV_DURATION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11371,6 +12316,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "sample_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11381,6 +12327,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "math_function",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11393,6 +12340,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11403,6 +12351,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11413,6 +12362,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11423,6 +12373,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "offset",
                 declared_type: "DV_DURATION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11433,6 +12384,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "interval_start_time",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11458,6 +12410,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "current_state",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11468,6 +12421,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "transition",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11478,6 +12432,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "careflow_step",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11488,6 +12443,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "reason",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -11502,6 +12458,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         computed_attributes: &[RmAttribute {
             name: "parent",
             declared_type: "PATHABLE",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -11522,6 +12479,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -11544,6 +12502,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11554,6 +12513,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11564,6 +12524,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11574,6 +12535,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -11587,6 +12549,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11597,6 +12560,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11609,6 +12573,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11619,6 +12584,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11629,6 +12595,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11657,6 +12624,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11667,6 +12635,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11677,6 +12646,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11687,6 +12657,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -11700,6 +12671,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11710,6 +12682,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11720,6 +12693,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "items",
                 declared_type: "ELEMENT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -11735,6 +12709,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11745,6 +12720,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11755,6 +12731,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11765,6 +12742,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_hierarchy",
                 declared_type: "CLUSTER",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11775,6 +12753,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "item_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11785,6 +12764,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "names",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -11813,6 +12793,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11823,6 +12804,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11833,6 +12815,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11843,6 +12826,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -11856,6 +12840,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11866,6 +12851,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11876,6 +12862,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "item",
                 declared_type: "ELEMENT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11888,6 +12875,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11898,6 +12886,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11908,6 +12897,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11918,6 +12908,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_hierarchy",
                 declared_type: "ELEMENT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11940,6 +12931,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11950,6 +12942,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -11960,6 +12953,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11970,6 +12964,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -11983,6 +12978,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -11993,6 +12989,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -12005,6 +13002,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12015,6 +13013,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12025,6 +13024,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12035,6 +13035,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_hierarchy",
                 declared_type: "ITEM",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12063,6 +13064,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12073,6 +13075,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12083,6 +13086,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -12093,6 +13097,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -12106,6 +13111,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -12116,6 +13122,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -12126,6 +13133,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "rows",
                 declared_type: "CLUSTER",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -12141,6 +13149,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12151,6 +13160,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12161,6 +13171,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12171,6 +13182,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_hierarchy",
                 declared_type: "CLUSTER",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12181,6 +13193,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "row_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12191,6 +13204,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "column_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12201,6 +13215,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "row_names",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -12211,6 +13226,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "column_names",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -12233,6 +13249,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "key",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12243,6 +13260,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "value",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -12253,6 +13271,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "target",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12263,6 +13282,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "target_path",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -12273,6 +13293,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12302,6 +13323,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12312,6 +13334,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12322,6 +13345,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -12332,6 +13356,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -12345,6 +13370,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -12355,6 +13381,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -12365,6 +13392,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "items",
                 declared_type: "ITEM",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -12380,6 +13408,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12390,6 +13419,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12400,6 +13430,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12410,6 +13441,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_hierarchy",
                 declared_type: "CLUSTER",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12432,6 +13464,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         computed_attributes: &[RmAttribute {
             name: "negative",
             declared_type: "Integer",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -12453,6 +13486,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         computed_attributes: &[RmAttribute {
             name: "negative",
             declared_type: "Integer64",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -12479,6 +13513,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower",
                 declared_type: "Ordered",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -12489,6 +13524,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper",
                 declared_type: "Ordered",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -12499,6 +13535,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower_unbounded",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12509,6 +13546,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper_unbounded",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12519,6 +13557,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower_included",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12529,6 +13568,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper_included",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12560,6 +13600,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -12571,6 +13612,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_partial",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12581,6 +13623,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_extended",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12591,6 +13634,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "year",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12601,6 +13645,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "month",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12611,6 +13656,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "day",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12621,6 +13667,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "month_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12631,6 +13678,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "day_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12641,6 +13689,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_string",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12668,6 +13717,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -12679,6 +13729,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_partial",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12689,6 +13740,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_extended",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12699,6 +13751,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "year",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12709,6 +13762,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "month",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12719,6 +13773,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "day",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12729,6 +13784,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "hour",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12739,6 +13795,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minute",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12749,6 +13806,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "second",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12759,6 +13817,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "fractional_second",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12769,6 +13828,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "timezone",
                 declared_type: "Iso8601_timezone",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12779,6 +13839,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "month_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12789,6 +13850,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "day_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12799,6 +13861,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minute_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12809,6 +13872,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "second_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12819,6 +13883,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_decimal_sign_comma",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12829,6 +13894,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "has_fractional_second",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12839,6 +13905,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_string",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12866,6 +13933,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -12877,6 +13945,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_partial",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12887,6 +13956,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_extended",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12897,6 +13967,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "years",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12907,6 +13978,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "months",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12917,6 +13989,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "days",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12927,6 +14000,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "hours",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12937,6 +14011,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minutes",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12947,6 +14022,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "seconds",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12957,6 +14033,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "fractional_seconds",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12967,6 +14044,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "weeks",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12977,6 +14055,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_decimal_sign_comma",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12987,6 +14066,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "to_seconds",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -12997,6 +14077,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_string",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13007,6 +14088,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "negative",
                 declared_type: "Iso8601_duration",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13034,6 +14116,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -13045,6 +14128,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_partial",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13055,6 +14139,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_extended",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13065,6 +14150,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "hour",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13075,6 +14161,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minute",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13085,6 +14172,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "second",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13095,6 +14183,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "fractional_second",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13105,6 +14194,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "timezone",
                 declared_type: "Iso8601_timezone",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13115,6 +14205,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minute_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13125,6 +14216,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "second_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13135,6 +14227,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_decimal_sign_comma",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13145,6 +14238,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "has_fractional_second",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13155,6 +14249,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_string",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13182,6 +14277,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -13193,6 +14289,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_partial",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13203,6 +14300,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_extended",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13213,6 +14311,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "hour",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13223,6 +14322,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minute",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13233,6 +14333,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "sign",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13243,6 +14344,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minute_unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13253,6 +14355,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_gmt",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13263,6 +14366,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_string",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13294,6 +14398,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -13305,6 +14410,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_partial",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13315,6 +14421,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_extended",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13337,6 +14444,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "meaning",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13347,6 +14455,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13357,6 +14466,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "target",
                 declared_type: "DV_EHR_URI",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13420,6 +14530,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13430,6 +14541,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13440,6 +14552,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -13450,6 +14563,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -13463,6 +14577,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -13473,6 +14588,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -13485,6 +14601,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13495,6 +14612,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13505,6 +14623,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13527,6 +14646,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "namespace",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13537,6 +14657,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13547,6 +14668,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "id",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13557,6 +14679,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "path",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -13568,6 +14691,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         computed_attributes: &[RmAttribute {
             name: "as_uri",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -13590,6 +14714,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13600,6 +14725,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_empty",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13610,6 +14736,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "first",
                 declared_type: "Any",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13620,6 +14747,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "last",
                 declared_type: "Any",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13645,6 +14773,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         computed_attributes: &[RmAttribute {
             name: "primary_language",
             declared_type: "Terminology_code",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -13678,6 +14807,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "audit",
                 declared_type: "AUDIT_DETAILS",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13688,6 +14818,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "author",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13698,6 +14829,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "content",
                 declared_type: "MESSAGE_CONTENT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13708,6 +14840,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "signature",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -13755,6 +14888,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -13765,6 +14899,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -13775,6 +14910,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower_unbounded",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13785,6 +14921,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper_unbounded",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13795,6 +14932,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower_included",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13805,6 +14943,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper_included",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13817,6 +14956,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_open",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13827,6 +14967,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_optional",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13837,6 +14978,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_mandatory",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13847,6 +14989,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_prohibited",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13876,6 +15019,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         computed_attributes: &[RmAttribute {
             name: "negative",
             declared_type: "Numeric",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -13903,6 +15047,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -13930,6 +15075,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "namespace",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13940,6 +15086,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13950,6 +15097,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "id",
                 declared_type: "OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13972,6 +15120,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -13983,6 +15132,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "root",
                 declared_type: "UID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -13993,6 +15143,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "extension",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14003,6 +15154,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "has_extension",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14013,6 +15165,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "object_id",
                 declared_type: "UID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14023,6 +15176,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "creating_system_id",
                 declared_type: "UID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14033,6 +15187,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_tree_id",
                 declared_type: "VERSION_TREE_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14043,6 +15198,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_branch",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14072,6 +15228,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14082,6 +15239,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14092,6 +15250,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14102,6 +15261,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -14115,6 +15275,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14125,6 +15286,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14135,6 +15297,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14145,6 +15308,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "encoding",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14155,6 +15319,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_participations",
                 declared_type: "PARTICIPATION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -14168,6 +15333,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "workflow_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14178,6 +15344,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14188,6 +15355,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "provider",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14198,6 +15366,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "protocol",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14208,6 +15377,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "guideline_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14218,10 +15388,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "data",
                 declared_type: "HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[RmTypeRef {
                     name: "ITEM_STRUCTURE",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: None,
@@ -14231,10 +15403,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "state",
                 declared_type: "HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "ITEM_STRUCTURE",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: None,
@@ -14246,6 +15420,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14256,6 +15431,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14266,6 +15442,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14276,6 +15453,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "subject_is_self",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14316,6 +15494,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14326,6 +15505,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14336,6 +15516,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14346,6 +15527,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -14359,6 +15541,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14369,6 +15552,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14379,6 +15563,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_primary",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14389,6 +15574,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_changed",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14399,6 +15585,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_masked",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14409,6 +15596,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "item",
                 declared_type: "X_VERSIONED_OBJECT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14421,6 +15609,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14431,6 +15620,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14441,6 +15631,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14514,6 +15705,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14524,6 +15716,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14534,6 +15727,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14544,6 +15738,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -14557,6 +15752,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14567,6 +15763,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14577,6 +15774,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "identities",
                 declared_type: "PARTY_IDENTITY",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -14590,6 +15788,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "contacts",
                 declared_type: "CONTACT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -14603,6 +15802,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14613,6 +15813,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "relationships",
                 declared_type: "PARTY_RELATIONSHIP",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -14626,6 +15827,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "languages",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -14639,6 +15841,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "roles",
                 declared_type: "PARTY_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -14654,6 +15857,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14664,6 +15868,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14674,6 +15879,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14684,6 +15890,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14694,6 +15901,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "reverse_relationships",
                 declared_type: "LOCATABLE_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -14716,6 +15924,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "contribution",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14726,6 +15935,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "signature",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14736,6 +15946,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "commit_audit",
                 declared_type: "AUDIT_DETAILS",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14746,6 +15957,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14756,6 +15968,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "preceding_version_uid",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14766,6 +15979,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_input_version_uids",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -14779,6 +15993,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lifecycle_state",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14789,6 +16004,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "attestations",
                 declared_type: "ATTESTATION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -14802,6 +16018,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "data",
                 declared_type: "Any",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14814,6 +16031,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "canonical_form",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14824,6 +16042,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14834,6 +16053,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_branch",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14844,6 +16064,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_merged",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14927,6 +16148,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         computed_attributes: &[RmAttribute {
             name: "negative",
             declared_type: "Numeric",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -14948,6 +16170,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "function",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14958,6 +16181,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "mode",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -14968,6 +16192,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "performer",
                 declared_type: "PARTY_PROXY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -14978,10 +16203,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_DATE_TIME",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: None,
@@ -15004,6 +16231,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15014,6 +16242,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15024,6 +16253,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15034,6 +16264,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15047,6 +16278,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15057,6 +16289,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15067,6 +16300,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "identities",
                 declared_type: "PARTY_IDENTITY",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -15080,6 +16314,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "contacts",
                 declared_type: "CONTACT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15093,6 +16328,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15103,6 +16339,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "relationships",
                 declared_type: "PARTY_RELATIONSHIP",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15118,6 +16355,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15128,6 +16366,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15138,6 +16377,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15148,6 +16388,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15158,6 +16399,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "reverse_relationships",
                 declared_type: "LOCATABLE_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15180,6 +16422,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "external_ref",
                 declared_type: "PARTY_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15190,6 +16433,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15200,6 +16444,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "identifiers",
                 declared_type: "DV_IDENTIFIER",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15226,6 +16471,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15236,6 +16482,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15246,6 +16493,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15256,6 +16504,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15269,6 +16518,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15279,6 +16529,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15289,6 +16540,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15301,6 +16553,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15311,6 +16564,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15321,6 +16575,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15331,6 +16586,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "purpose",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15352,6 +16608,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "external_ref",
             declared_type: "PARTY_REF",
+            formal: None,
             container: Container::None,
             is_mandatory: false,
             type_params: &[],
@@ -15374,6 +16631,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "namespace",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15384,6 +16642,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15394,6 +16653,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "id",
                 declared_type: "OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15417,6 +16677,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "external_ref",
                 declared_type: "PARTY_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15427,6 +16688,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15437,6 +16699,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "identifiers",
                 declared_type: "DV_IDENTIFIER",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15450,6 +16713,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "relationship",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15473,6 +16737,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15483,6 +16748,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15493,6 +16759,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15503,6 +16770,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15516,6 +16784,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15526,6 +16795,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15536,6 +16806,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15546,6 +16817,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "target",
                 declared_type: "PARTY_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15556,10 +16828,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_validity",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_DATE",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: None,
@@ -15569,6 +16843,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "source",
                 declared_type: "PARTY_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15581,6 +16856,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15591,6 +16867,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15601,6 +16878,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15611,6 +16889,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15632,6 +16911,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "external_ref",
             declared_type: "PARTY_REF",
+            formal: None,
             container: Container::None,
             is_mandatory: false,
             type_params: &[],
@@ -15697,6 +16977,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         computed_attributes: &[RmAttribute {
             name: "parent",
             declared_type: "PATHABLE",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -15718,6 +16999,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15728,6 +17010,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15738,6 +17021,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15748,6 +17032,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15761,6 +17046,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15771,6 +17057,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15781,6 +17068,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "identities",
                 declared_type: "PARTY_IDENTITY",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -15794,6 +17082,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "contacts",
                 declared_type: "CONTACT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15807,6 +17096,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15817,6 +17107,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "relationships",
                 declared_type: "PARTY_RELATIONSHIP",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15830,6 +17121,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "languages",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15843,6 +17135,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "roles",
                 declared_type: "PARTY_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15858,6 +17151,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15868,6 +17162,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15878,6 +17173,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15888,6 +17184,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15898,6 +17195,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "reverse_relationships",
                 declared_type: "LOCATABLE_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15920,6 +17218,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15930,6 +17229,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15940,6 +17240,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15950,6 +17251,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -15963,6 +17265,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15973,6 +17276,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -15983,6 +17287,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -15993,6 +17298,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "state",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16003,6 +17309,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "data",
                 declared_type: "ITEM_STRUCTURE",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16015,6 +17322,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16025,6 +17333,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16035,6 +17344,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16045,6 +17355,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "offset",
                 declared_type: "DV_DURATION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16085,6 +17396,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         computed_attributes: &[RmAttribute {
             name: "negative",
             declared_type: "Integer",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -16106,6 +17418,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower",
                 declared_type: "Ordered",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16116,6 +17429,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper",
                 declared_type: "Ordered",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16126,6 +17440,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower_unbounded",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16136,6 +17451,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper_unbounded",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16146,6 +17462,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower_included",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16156,6 +17473,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper_included",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16182,6 +17500,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower",
                 declared_type: "Ordered",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16192,6 +17511,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper",
                 declared_type: "Ordered",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16202,6 +17522,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower_unbounded",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16212,6 +17533,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper_unbounded",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16222,6 +17544,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lower_included",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16232,6 +17555,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "upper_included",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16270,6 +17594,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "meaning",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16280,10 +17605,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "range",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[RmTypeRef {
                     name: "DV_ORDERED",
+                    formal: Some("T"),
                     params: &[],
                 }],
                 cardinality: None,
@@ -16308,29 +17635,36 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "documentation",
             declared_type: "Hash",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[
                 RmTypeRef {
                     name: "String",
+                    formal: None,
                     params: &[],
                 },
                 RmTypeRef {
                     name: "Hash",
+                    formal: None,
                     params: &[
                         RmTypeRef {
                             name: "String",
+                            formal: None,
                             params: &[],
                         },
                         RmTypeRef {
                             name: "Hash",
+                            formal: None,
                             params: &[
                                 RmTypeRef {
                                     name: "String",
+                                    formal: None,
                                     params: &[],
                                 },
                                 RmTypeRef {
                                     name: "String",
+                                    formal: None,
                                     params: &[],
                                 },
                             ],
@@ -16357,15 +17691,18 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "original_author",
                 declared_type: "Hash",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                 ],
@@ -16376,6 +17713,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_contributors",
                 declared_type: "String",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -16389,6 +17727,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lifecycle_state",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16399,6 +17738,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "resource_package_uri",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16409,15 +17749,18 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_details",
                 declared_type: "Hash",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                 ],
@@ -16428,6 +17771,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent_resource",
                 declared_type: "AUTHORED_RESOURCE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16438,15 +17782,18 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "details",
                 declared_type: "Hash",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                     RmTypeRef {
                         name: "RESOURCE_DESCRIPTION_ITEM",
+                        formal: None,
                         params: &[],
                     },
                 ],
@@ -16470,6 +17817,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16480,6 +17828,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "purpose",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16490,6 +17839,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "keywords",
                 declared_type: "String",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -16503,6 +17853,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "use",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16513,6 +17864,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "misuse",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16523,6 +17875,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "copyright",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16533,15 +17886,18 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "original_resource_uri",
                 declared_type: "Hash",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                 ],
@@ -16552,15 +17908,18 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_details",
                 declared_type: "Hash",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                 ],
@@ -16583,6 +17942,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "items",
             declared_type: "REVISION_HISTORY_ITEM",
+            formal: None,
             container: Container::List,
             is_mandatory: true,
             type_params: &[],
@@ -16597,6 +17957,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "most_recent_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16607,6 +17968,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "most_recent_version_time_committed",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16629,6 +17991,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_id",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16639,6 +18002,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "audits",
                 declared_type: "AUDIT_DETAILS",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -16665,6 +18029,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16675,6 +18040,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16685,6 +18051,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16695,6 +18062,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -16708,6 +18076,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16718,6 +18087,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16728,6 +18098,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "identities",
                 declared_type: "PARTY_IDENTITY",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -16741,6 +18112,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "contacts",
                 declared_type: "CONTACT",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -16754,6 +18126,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "details",
                 declared_type: "ITEM_STRUCTURE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16764,6 +18137,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "relationships",
                 declared_type: "PARTY_RELATIONSHIP",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -16777,10 +18151,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_validity",
                 declared_type: "DV_INTERVAL",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "DV_DATE",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: None,
@@ -16790,6 +18166,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "performer",
                 declared_type: "PARTY_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16800,6 +18177,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "capabilities",
                 declared_type: "CAPABILITY",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -16815,6 +18193,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16825,6 +18204,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16835,6 +18215,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16845,6 +18226,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "type",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16855,6 +18237,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "reverse_relationships",
                 declared_type: "LOCATABLE_REF",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -16893,6 +18276,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "negative",
                 declared_type: "Real",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16903,6 +18287,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "floor",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16925,6 +18310,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16935,6 +18321,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_node_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -16945,6 +18332,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "UID_BASED_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16955,6 +18343,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "links",
                 declared_type: "LINK",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -16968,6 +18357,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "archetype_details",
                 declared_type: "ARCHETYPED",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16978,6 +18368,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "feeder_audit",
                 declared_type: "FEEDER_AUDIT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -16988,6 +18379,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "items",
                 declared_type: "CONTENT_ITEM",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -17003,6 +18395,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "parent",
                 declared_type: "PATHABLE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17013,6 +18406,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "DV_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17023,6 +18417,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_archetype_root",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17045,6 +18440,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "specification",
                 declared_type: "SYNC_EXTRACT_SPEC",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17055,6 +18451,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "items",
                 declared_type: "X_CONTRIBUTION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -17080,6 +18477,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "specification",
             declared_type: "SYNC_EXTRACT_SPEC",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -17102,6 +18500,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "includes_versions",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17112,6 +18511,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "contribution_list",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -17125,6 +18525,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "contributions_since",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -17135,6 +18536,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_contributions",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -17159,6 +18561,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17169,6 +18572,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_empty",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17207,6 +18611,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_empty",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17217,6 +18622,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_integer",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17227,6 +18633,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_integer",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17248,6 +18655,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -17259,6 +18667,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_hrid",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17269,6 +18678,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "namespace",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17279,6 +18689,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "qualified_rm_class_name",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17289,6 +18700,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17299,6 +18711,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17309,6 +18722,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "major_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17319,6 +18733,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "minor_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17329,6 +18744,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "patch_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17352,6 +18768,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17362,6 +18779,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_codes",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17372,6 +18790,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "has_code_for_group_id",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17393,6 +18812,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -17404,6 +18824,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "name",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17414,6 +18835,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17440,6 +18862,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "terminology_identifiers",
                 declared_type: "String",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -17450,15 +18873,18 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "openehr_code_sets",
                 declared_type: "Hash",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                 ],
@@ -17469,6 +18895,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "code_set_identifiers",
                 declared_type: "String",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[],
@@ -17491,6 +18918,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "match",
                 declared_type: "Character",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17501,6 +18929,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "purpose",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -17511,6 +18940,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "target",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17523,6 +18953,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "narrower",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17533,6 +18964,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "broader",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17543,6 +18975,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "equivalent",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17553,6 +18986,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "unknown",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17575,6 +19009,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "language",
                 declared_type: "CODE_PHRASE",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17585,15 +19020,18 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "author",
                 declared_type: "Hash",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                 ],
@@ -17604,6 +19042,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "accreditation",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -17614,15 +19053,18 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "other_details",
                 declared_type: "Hash",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                     RmTypeRef {
                         name: "String",
+                        formal: None,
                         params: &[],
                     },
                 ],
@@ -17716,6 +19158,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "terminology_id",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17726,6 +19169,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "terminology_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -17736,6 +19180,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "code_string",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17746,6 +19191,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uri",
                 declared_type: "Uri",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -17769,6 +19215,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "concept",
                 declared_type: "Terminology_code",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17779,6 +19226,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "text",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17824,6 +19272,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -17845,6 +19294,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -17856,6 +19306,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "root",
                 declared_type: "UID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17866,6 +19317,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "extension",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17876,6 +19328,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "has_extension",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17897,6 +19350,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -17920,6 +19374,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_empty",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17930,6 +19385,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_integer",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17940,6 +19396,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_integer",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17963,6 +19420,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_empty",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17973,6 +19431,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_integer",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -17983,6 +19442,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_integer",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18005,6 +19465,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "contribution",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18015,6 +19476,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "signature",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -18025,6 +19487,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "commit_audit",
                 declared_type: "AUDIT_DETAILS",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18037,6 +19500,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18047,6 +19511,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "preceding_version_uid",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18057,6 +19522,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "data",
                 declared_type: "Any",
+                formal: Some("T"),
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18067,6 +19533,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "lifecycle_state",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18077,6 +19544,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "canonical_form",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18087,6 +19555,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18097,6 +19566,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_branch",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18122,6 +19592,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18132,6 +19603,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18142,6 +19614,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18154,6 +19627,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18164,6 +19638,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_version_ids",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -18174,10 +19649,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_versions",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[RmTypeRef {
                     name: "Any",
+                    formal: Some("T"),
                     params: &[],
                 }],
                 cardinality: None,
@@ -18187,6 +19664,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "revision_history",
                 declared_type: "REVISION_HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18197,6 +19675,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "latest_version",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18207,6 +19686,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "latest_trunk_version",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18217,6 +19697,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "trunk_lifecycle_state",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18227,6 +19708,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_persistent",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18249,6 +19731,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18259,6 +19742,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18269,6 +19753,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18281,6 +19766,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18291,6 +19777,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_version_ids",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -18301,10 +19788,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_versions",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[RmTypeRef {
                     name: "Any",
+                    formal: Some("T"),
                     params: &[],
                 }],
                 cardinality: None,
@@ -18314,6 +19803,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "revision_history",
                 declared_type: "REVISION_HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18324,6 +19814,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "latest_version",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18334,6 +19825,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "latest_trunk_version",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18344,6 +19836,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "trunk_lifecycle_state",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18366,6 +19859,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18376,6 +19870,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18386,6 +19881,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18398,6 +19894,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18408,6 +19905,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_version_ids",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -18418,10 +19916,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_versions",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[RmTypeRef {
                     name: "Any",
+                    formal: Some("T"),
                     params: &[],
                 }],
                 cardinality: None,
@@ -18431,6 +19931,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "revision_history",
                 declared_type: "REVISION_HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18441,6 +19942,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "latest_version",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18451,6 +19953,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "latest_trunk_version",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18461,6 +19964,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "trunk_lifecycle_state",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18483,6 +19987,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18493,6 +19998,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18503,6 +20009,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18515,6 +20022,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18525,6 +20033,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_version_ids",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -18535,10 +20044,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_versions",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[RmTypeRef {
                     name: "Any",
+                    formal: Some("T"),
                     params: &[],
                 }],
                 cardinality: None,
@@ -18548,6 +20059,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "revision_history",
                 declared_type: "REVISION_HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18558,6 +20070,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "latest_version",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18568,6 +20081,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "latest_trunk_version",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18578,6 +20092,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "trunk_lifecycle_state",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18607,6 +20122,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18617,6 +20133,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18627,6 +20144,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18639,6 +20157,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18649,6 +20168,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_version_ids",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -18659,10 +20179,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_versions",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[RmTypeRef {
                     name: "Any",
+                    formal: Some("T"),
                     params: &[],
                 }],
                 cardinality: None,
@@ -18672,6 +20194,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "revision_history",
                 declared_type: "REVISION_HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18682,6 +20205,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "latest_version",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18692,6 +20216,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "latest_trunk_version",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18702,6 +20227,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "trunk_lifecycle_state",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18727,6 +20253,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18737,6 +20264,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18747,6 +20275,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18759,6 +20288,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18769,6 +20299,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_version_ids",
                 declared_type: "OBJECT_VERSION_ID",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[],
@@ -18779,10 +20310,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "all_versions",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: true,
                 type_params: &[RmTypeRef {
                     name: "Any",
+                    formal: Some("T"),
                     params: &[],
                 }],
                 cardinality: None,
@@ -18792,6 +20325,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "revision_history",
                 declared_type: "REVISION_HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18802,6 +20336,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "latest_version",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18812,6 +20347,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "latest_trunk_version",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18822,6 +20358,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "trunk_lifecycle_state",
                 declared_type: "DV_CODED_TEXT",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18845,6 +20382,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_empty",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18855,6 +20393,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_integer",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18865,6 +20404,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "as_integer",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18886,6 +20426,7 @@ pub(super) static CLASSES: &[RmClass] = &[
         attributes: &[RmAttribute {
             name: "value",
             declared_type: "String",
+            formal: None,
             container: Container::None,
             is_mandatory: true,
             type_params: &[],
@@ -18897,6 +20438,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "trunk_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18907,6 +20449,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_branch",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18917,6 +20460,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "is_first",
                 declared_type: "Boolean",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18927,6 +20471,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "branch_number",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18937,6 +20482,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "branch_version",
                 declared_type: "String",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18959,6 +20505,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18969,6 +20516,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "audit",
                 declared_type: "AUDIT_DETAILS",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -18979,10 +20527,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "versions",
                 declared_type: "VERSION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "X_CONTRIBUTION",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -19008,6 +20558,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19018,6 +20569,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19028,6 +20580,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19038,6 +20591,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "total_version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19048,6 +20602,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "extract_version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19058,6 +20613,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "revision_history",
                 declared_type: "REVISION_HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -19068,10 +20624,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "versions",
                 declared_type: "ORIGINAL_VERSION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "COMPOSITION",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -19097,6 +20655,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19107,6 +20666,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19117,6 +20677,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19127,6 +20688,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "total_version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19137,6 +20699,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "extract_version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19147,6 +20710,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "revision_history",
                 declared_type: "REVISION_HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -19157,10 +20721,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "versions",
                 declared_type: "ORIGINAL_VERSION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "EHR_ACCESS",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -19186,6 +20752,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19196,6 +20763,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19206,6 +20774,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19216,6 +20785,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "total_version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19226,6 +20796,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "extract_version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19236,6 +20807,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "revision_history",
                 declared_type: "REVISION_HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -19246,10 +20818,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "versions",
                 declared_type: "ORIGINAL_VERSION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "EHR_STATUS",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -19275,6 +20849,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19285,6 +20860,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19295,6 +20871,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19305,6 +20882,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "total_version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19315,6 +20893,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "extract_version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19325,6 +20904,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "revision_history",
                 declared_type: "REVISION_HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -19335,10 +20915,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "versions",
                 declared_type: "ORIGINAL_VERSION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "FOLDER",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -19371,6 +20953,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19381,6 +20964,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19391,6 +20975,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19401,6 +20986,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "total_version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19411,6 +20997,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "extract_version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19421,6 +21008,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "revision_history",
                 declared_type: "REVISION_HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -19431,10 +21019,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "versions",
                 declared_type: "ORIGINAL_VERSION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "Any",
+                    formal: Some("T"),
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
@@ -19463,6 +21053,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "uid",
                 declared_type: "HIER_OBJECT_ID",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19473,6 +21064,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "owner_id",
                 declared_type: "OBJECT_REF",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19483,6 +21075,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "time_created",
                 declared_type: "DV_DATE_TIME",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19493,6 +21086,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "total_version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19503,6 +21097,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "extract_version_count",
                 declared_type: "Integer",
+                formal: None,
                 container: Container::None,
                 is_mandatory: true,
                 type_params: &[],
@@ -19513,6 +21108,7 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "revision_history",
                 declared_type: "REVISION_HISTORY",
+                formal: None,
                 container: Container::None,
                 is_mandatory: false,
                 type_params: &[],
@@ -19523,10 +21119,12 @@ pub(super) static CLASSES: &[RmClass] = &[
             RmAttribute {
                 name: "versions",
                 declared_type: "ORIGINAL_VERSION",
+                formal: None,
                 container: Container::List,
                 is_mandatory: false,
                 type_params: &[RmTypeRef {
                     name: "PARTY",
+                    formal: None,
                     params: &[],
                 }],
                 cardinality: Some(Cardinality {
