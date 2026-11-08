@@ -266,17 +266,182 @@ impl ArchetypeHrid {
         self.qualified(&self.version_id())
     }
 
+    /// Returns the interface form of this identifier without its namespace,
+    /// `hrid_root '.v' major_version`.
+    ///
+    /// The shape is the legacy production of `master03-artefact_source_id.adoc`
+    /// §Formal Model, which a Web Template `nodeId` and `aqlPath` predicate
+    /// carry for every archetype root. The Simplified Formats specification
+    /// is silent on that spelling, so it is our own design. The same section
+    /// says a namespace is "never omitted, wildcarded or inferred", so this
+    /// form names no artefact, and [`HridRef::matches`] is how a reference is
+    /// compared with an identifier.
+    #[must_use]
+    pub fn local_semantic_id(&self) -> String {
+        self.root(self.major_version())
+    }
+
     /// The `hrid_root '.v' <version>` form, namespace-prefixed when the
     /// artefact is managed.
     fn qualified(&self, version: &str) -> String {
-        let root = format!(
+        let root = self.root(version);
+        match self.namespace() {
+            Some(ns) => format!("{ns}::{root}"),
+            None => root,
+        }
+    }
+
+    /// The `hrid_root '.v' <version>` form.
+    fn root(&self, version: &str) -> String {
+        format!(
             "{}-{}-{}.{}.v{version}",
             self.rm_publisher, self.rm_package, self.rm_class, self.concept_id
-        );
-        match self.namespace.as_deref() {
-            Some(ns) if !ns.is_empty() => format!("{ns}::{root}"),
-            _ => root,
+        )
+    }
+
+    /// The namespace, an empty one read as none.
+    fn namespace(&self) -> Option<&str> {
+        self.namespace.as_deref().filter(|ns| !ns.is_empty())
+    }
+
+    /// Whether `other` has the same namespace and `hrid_root`.
+    fn same_root(&self, other: &Self) -> bool {
+        self.namespace() == other.namespace()
+            && self.rm_publisher == other.rm_publisher
+            && self.rm_package == other.rm_package
+            && self.rm_class == other.rm_class
+            && self.concept_id == other.concept_id
+    }
+}
+
+/// How much of the version an archetype reference writes.
+///
+/// The three reference forms of BASE `master07-referencing.adoc`
+/// §Referencing: `ihrid_ref` (major), `sihrid_ref` (major and minor) and
+/// `phrid_ref` (all three parts). A pre-release version is referenced only by
+/// its full identifier, so a reference that writes a modifier is
+/// [`VersionPrecision::Full`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum VersionPrecision {
+    /// `ihrid_ref`: the major version only, the interface form.
+    Major,
+    /// `sihrid_ref`: the major and minor versions.
+    Minor,
+    /// `phrid_ref`, or a full identifier with a pre-release modifier.
+    Full,
+}
+
+/// An archetype reference: an HRID read with the version precision it was
+/// written at.
+///
+/// [`ArchetypeHrid`]'s [`FromStr`] normalises `v1` to `1.0.0`, as ADL 2
+/// `master07.05-adl_identification.adoc` §Human Readable Archetype Identifier
+/// tells a tool to do with a legacy identifier, which loses what the text
+/// asked for. A reference keeps it: the `hrid_ref` grammar of BASE
+/// `master07-referencing.adoc` §Referencing, `[ namespace '::' ] hrid_root
+/// '.v' version_ref`, where `version_ref` is numeric, or the full identifier
+/// of a pre-release version.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HridRef {
+    hrid: ArchetypeHrid,
+    precision: VersionPrecision,
+}
+
+impl FromStr for HridRef {
+    type Err = HridError;
+
+    /// Reads a reference in the physical form [`ArchetypeHrid`]'s [`FromStr`]
+    /// reads, keeping the number of version parts written.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let hrid: ArchetypeHrid = s.parse()?;
+        let precision = if hrid.version_status == VersionStatus::Released {
+            let version = version_marker(s)
+                .and_then(|at| s.get(at + 2..))
+                .unwrap_or_default();
+            match version.split('.').count() {
+                1 => VersionPrecision::Major,
+                2 => VersionPrecision::Minor,
+                _ => VersionPrecision::Full,
+            }
+        } else {
+            VersionPrecision::Full
+        };
+        Ok(Self { hrid, precision })
+    }
+}
+
+impl fmt::Display for HridRef {
+    /// Writes the reference at the precision it was read with, the form
+    /// [`FromStr`] reads back.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.hrid.qualified(&self.version_ref()))
+    }
+}
+
+impl HridRef {
+    /// Returns the identifier the reference names, its version normalised to
+    /// three parts.
+    #[must_use]
+    pub const fn hrid(&self) -> &ArchetypeHrid {
+        &self.hrid
+    }
+
+    /// Returns how much of the version the reference writes.
+    #[must_use]
+    pub const fn precision(&self) -> VersionPrecision {
+        self.precision
+    }
+
+    /// Whether the reference writes the full version, the form that
+    /// identifies one artefact (`phrid_ref`, BASE `master07-referencing.adoc`
+    /// §Referencing).
+    #[must_use]
+    pub fn is_full_version(&self) -> bool {
+        self.precision == VersionPrecision::Full
+    }
+
+    /// Returns the version as the reference writes it: `1`, `1.4`, `1.4.1` or
+    /// `1.4.1-rc.2`.
+    #[must_use]
+    pub fn version_ref(&self) -> String {
+        match self.precision {
+            VersionPrecision::Major => self.hrid.major_version().to_owned(),
+            VersionPrecision::Minor => format!(
+                "{}.{}",
+                self.hrid.major_version(),
+                self.hrid.minor_version()
+            ),
+            VersionPrecision::Full => self.hrid.version_id(),
         }
+    }
+
+    /// Whether this reference matches the identifier `carried`.
+    ///
+    /// BASE `master07-referencing.adoc` §Referencing: a reference identifies
+    /// the namespace of its artefact and "a namespace is never a wildcard", so
+    /// the namespace and `hrid_root` compare exactly. A major or a major and
+    /// minor reference matches every released or release-candidate version
+    /// carrying those parts (§Archetype External References). A full
+    /// reference "identifies artefact instances which are identical", and a
+    /// pre-release version is matched only by its full identifier.
+    #[must_use]
+    pub fn matches(&self, carried: &ArchetypeHrid) -> bool {
+        if !self.hrid.same_root(carried) {
+            return false;
+        }
+        let wanted = &self.hrid;
+        if self.precision == VersionPrecision::Full {
+            return wanted.version_id() == carried.version_id()
+                && wanted.version_status == carried.version_status;
+        }
+        let admitted = matches!(
+            carried.version_status,
+            VersionStatus::Released | VersionStatus::ReleaseCandidate
+        );
+        admitted
+            && wanted.major_version() == carried.major_version()
+            && (self.precision == VersionPrecision::Major
+                || wanted.minor_version() == carried.minor_version())
     }
 }
 
@@ -410,6 +575,130 @@ mod tests {
             "openEHR-EHR-OBSERVATION..v1".parse::<ArchetypeHrid>(),
             Err(HridError::EmptySegment(_))
         ));
+    }
+
+    fn reference(text: &str) -> HridRef {
+        text.parse().expect("a well-formed reference")
+    }
+
+    fn id(text: &str) -> ArchetypeHrid {
+        text.parse().expect("a well-formed identifier")
+    }
+
+    #[test]
+    fn the_local_semantic_id_drops_the_namespace_and_the_minor_parts() {
+        assert_eq!(
+            id("org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v2.1.4-rc.3")
+                .local_semantic_id(),
+            "openEHR-EHR-OBSERVATION.blood_pressure.v2"
+        );
+        assert_eq!(
+            id("openEHR-EHR-OBSERVATION.v1_score.v1").local_semantic_id(),
+            "openEHR-EHR-OBSERVATION.v1_score.v1"
+        );
+    }
+
+    #[test]
+    fn a_reference_keeps_the_precision_it_was_written_at() {
+        // BASE master07-referencing.adoc §Referencing: ihrid_ref, sihrid_ref,
+        // phrid_ref, and a pre-release referenced by its full identifier.
+        for (text, precision, version) in [
+            (
+                "openEHR-EHR-EVALUATION.note.v1",
+                VersionPrecision::Major,
+                "1",
+            ),
+            (
+                "openEHR-EHR-EVALUATION.note.v1.4",
+                VersionPrecision::Minor,
+                "1.4",
+            ),
+            (
+                "openEHR-EHR-EVALUATION.note.v1.4.1",
+                VersionPrecision::Full,
+                "1.4.1",
+            ),
+            (
+                "org.example::openEHR-EHR-ACTION.consent.v0.0.1-alpha",
+                VersionPrecision::Full,
+                "0.0.1-alpha",
+            ),
+            (
+                "openEHR-EHR-OBSERVATION.v1_score.v1",
+                VersionPrecision::Major,
+                "1",
+            ),
+        ] {
+            let parsed = reference(text);
+            assert_eq!(parsed.precision(), precision, "{text}");
+            assert_eq!(parsed.version_ref(), version, "{text}");
+            assert_eq!(
+                parsed.is_full_version(),
+                precision == VersionPrecision::Full
+            );
+            assert_eq!(parsed.to_string(), text, "{text} writes back unchanged");
+        }
+        assert_eq!(
+            reference("openEHR-EHR-EVALUATION.note.v1")
+                .hrid()
+                .release_version,
+            "1.0.0"
+        );
+        assert!("openEHR-EHR-EVALUATION.note".parse::<HridRef>().is_err());
+    }
+
+    #[test]
+    fn a_partial_reference_matches_every_release_and_candidate_of_its_parts() {
+        let major = reference("org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1");
+        let minor = reference("org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.1");
+        for carried in [
+            "org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.1.5",
+            "org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.1.7-rc.2",
+        ] {
+            assert!(major.matches(&id(carried)), "{carried}");
+            assert!(minor.matches(&id(carried)), "{carried}");
+        }
+        let other_minor = id("org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.2.0");
+        assert!(major.matches(&other_minor));
+        assert!(!minor.matches(&other_minor));
+        assert!(!major.matches(&id("org.openehr::openEHR-EHR-EVALUATION.diagnosis.v2.0.0")));
+        assert!(
+            !major.matches(&id(
+                "org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.3.0-alpha.1"
+            )),
+            "an alpha is referenced by its full identifier only"
+        );
+    }
+
+    #[test]
+    fn a_full_reference_matches_the_identical_artefact_only() {
+        let full = reference("org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.1.5");
+        assert!(full.matches(&id("org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.1.5")));
+        assert!(!full.matches(&id(
+            "org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.1.5-rc.1"
+        )));
+        assert!(!full.matches(&id("org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.1.6")));
+        let candidate = reference("org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.1.5-rc.1");
+        assert!(candidate.matches(&id(
+            "org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.1.5-rc.1"
+        )));
+        assert!(!candidate.matches(&id(
+            "org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.1.5-rc.2"
+        )));
+        assert!(!candidate.matches(&id("org.openehr::openEHR-EHR-EVALUATION.diagnosis.v1.1.5")));
+    }
+
+    #[test]
+    fn a_namespace_is_never_a_wildcard() {
+        // BASE master07-referencing.adoc §Referencing: "an omitted namespace
+        // does not mean 'any namespace'".
+        let legacy = reference("openEHR-EHR-EVALUATION.note.v1");
+        assert!(legacy.matches(&id("openEHR-EHR-EVALUATION.note.v1")));
+        assert!(!legacy.matches(&id("org.openehr::openEHR-EHR-EVALUATION.note.v1.0.0")));
+        let managed = reference("org.example::openEHR-EHR-EVALUATION.note.v1.0.0");
+        assert!(!managed.matches(&id("openEHR-EHR-EVALUATION.note.v1")));
+        assert!(!managed.matches(&id("org.openehr::openEHR-EHR-EVALUATION.note.v1.0.0")));
+        assert!(!legacy.matches(&id("openEHR-EHR-EVALUATION.notes.v1")));
     }
 
     #[test]
