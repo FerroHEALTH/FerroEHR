@@ -110,8 +110,16 @@ services:
       # role claims may grant the administrator role.
       FERROEHR__AUTH__PARTY__1__ISSUER: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:ferroehr:keycloak-quickstart-login
-      FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: uuid
+      FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: login
       FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
+      # A person is refused until a demographic party carries their login, so
+      # the realm's four users are provisioned through SCIM under that
+      # identifier issuer by the ferroehr-provision-keycloak one-shot below,
+      # with a second client of the development issuer.
+      FERROEHR__SCIM__CLIENT__1__ISSUER: http://localhost:8180/quickstart
+      FERROEHR__SCIM__CLIENT__1__CLIENT_ID: quickstart-scim-keycloak
+      FERROEHR__SCIM__CLIENT__1__SCOPE: ferroehr/scim
+      FERROEHR__SCIM__CLIENT__1__BINDING_ISSUER: urn:ferroehr:keycloak-quickstart-login
       # The development CA, trusted for the issuer's metadata and key set
       # beside the platform roots (`[auth] ca_file`) on every platform. It
       # needs a 5.5.0 or later image: 5.4.2 refuses the key.
@@ -156,6 +164,53 @@ services:
       FERROEHR_VIEWER__OIDC__CA_FILE: /run/ferroehr-dev-tls/ca/ca.crt
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
+
+  # Provisions the realm's four users as professional PERSONs through
+  # FerroEHR's SCIM endpoint (RFC 7644 §3.3), as the base file's
+  # ferroehr-provision does for the Basic user: each User's loginIdentifier is
+  # the fixed `id` the realm import gives that user, which Keycloak puts in
+  # `sub`. The service account is a system client and binds to no party. A
+  # User that exists already (409) is kept, and the one-shot then stays up and
+  # reports healthy, so `up --wait` returns once every login is bound.
+  ferroehr-provision-keycloak:
+    image: ${FERROEHR_CURL_IMAGE:-curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777}
+    network_mode: service:identity-issuer
+    depends_on:
+      ferroehr:
+        condition: service_healthy
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        set -e;
+        token=$$(curl -fsS -d grant_type=client_credentials -d client_id=quickstart-scim-keycloak
+        -d client_secret=quickstart -d scope=ferroehr/scim
+        http://localhost:8180/quickstart/token | sed -n 's/.*"access_token" *: *"\([^"]*\)".*/\1/p');
+        for user in
+        'ferroehr dd7f371e-4810-4857-a5aa-2a54cf4aa7cb Ferro EHR'
+        'clinician 1d3ed91a-4a4a-467b-a2d6-2be791406456 Clara Clinician'
+        'auditor e93246e4-4904-4d1b-b29b-4909ed40dc8b Ada Auditor'
+        'nobody 4a1a3a1d-66c5-4860-bd29-4822c6ec9918 Noa Nobody'; do
+        set -- $$user;
+        status=$$(curl -sS -o /tmp/answer -w '%{http_code}' -X POST
+        -H "Authorization: Bearer $$token" -H 'Content-Type: application/scim+json'
+        --data "{\"schemas\":[\"urn:ietf:params:scim:schemas:core:2.0:User\",\"urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User\"],\"userName\":\"keycloak-$$1\",\"name\":{\"formatted\":\"$$3 $$4\"},\"urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User\":{\"loginIdentifier\":\"$$2\"}}"
+        http://localhost:8080/scim/v2/Users);
+        case $$status in 201|409) ;; *) echo "provisioning $$1 answered $$status" >&2; cat /tmp/answer >&2; exit 1;; esac;
+        done;
+        touch /tmp/provisioned; echo 'the realm users are provisioned'; exec sleep infinity
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/provisioned"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
 
   # Generates the development CA and Keycloak's certificate once, into the
   # `keycloak-tls` volume, with the keytool of the Keycloak image itself. It
@@ -483,6 +538,7 @@ configs:
         ],
         "users": [
           {
+            "id": "dd7f371e-4810-4857-a5aa-2a54cf4aa7cb",
             "username": "ferroehr",
             "enabled": true,
             "email": "ferroehr@example.test",
@@ -502,6 +558,7 @@ configs:
             ]
           },
           {
+            "id": "1d3ed91a-4a4a-467b-a2d6-2be791406456",
             "username": "clinician",
             "enabled": true,
             "email": "clinician@example.test",
@@ -520,6 +577,7 @@ configs:
             ]
           },
           {
+            "id": "e93246e4-4904-4d1b-b29b-4909ed40dc8b",
             "username": "auditor",
             "enabled": true,
             "email": "auditor@example.test",
@@ -539,6 +597,7 @@ configs:
             ]
           },
           {
+            "id": "4a1a3a1d-66c5-4860-bd29-4822c6ec9918",
             "username": "nobody",
             "enabled": true,
             "email": "nobody@example.test",
