@@ -538,7 +538,9 @@ pub struct QueryExecuteStoredQueryVersionParams {
     /// `qualified_query_name` (path)
     pub qualified_query_name: super::common::QueryName,
     /// `version` (path)
-    pub version: String,
+    ///
+    /// Read by its grammar, parameters/path/version.yaml: "an exact version (e.g. `1.7.1`), or a pattern as partial prefix, in a form of `{major}` or `{major}.{minor}`".
+    pub version: crate::rest::stored_query::VersionPattern,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `ehr_id` (query)
     pub ehr_id: Option<String>,
@@ -659,7 +661,9 @@ pub struct QueryExecuteStoredQueryVersionBodyParams {
     /// `qualified_query_name` (path)
     pub qualified_query_name: super::common::QueryName,
     /// `version` (path)
-    pub version: String,
+    ///
+    /// Read by its grammar, parameters/path/version.yaml: "an exact version (e.g. `1.7.1`), or a pattern as partial prefix, in a form of `{major}` or `{major}.{minor}`".
+    pub version: crate::rest::stored_query::VersionPattern,
     #[serde(rename = "Accept")]
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)

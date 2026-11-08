@@ -44,7 +44,10 @@ pub(super) async fn list(state: &AppState, parts: &RequestParts) -> Result<Respo
     Ok(negotiate::body::respond(
         h,
         StatusCode::OK,
-        &state.backend().query_list(&p.qualified_query_name).await?,
+        &state
+            .backend()
+            .query_list(&p.qualified_query_name.to_string())
+            .await?,
     ))
 }
 
@@ -81,7 +84,7 @@ pub(super) async fn store(state: &AppState, parts: &RequestParts) -> Result<Resp
         DefinitionQueryStoreYamlParams::from_request,
         DefinitionQueryStoreYamlParams::PARAMS,
     )?;
-    let name = p.qualified_query_name.clone();
+    let name = p.qualified_query_name.to_string();
     let query_type = p
         .query_type
         .unwrap_or_else(|| DEFAULT_QUERY_TYPE.to_owned());
@@ -129,7 +132,7 @@ pub(super) async fn version_get(
         StatusCode::OK,
         &state
             .backend()
-            .query_version_get(p.qualified_query_name, p.version)
+            .query_version_get(p.qualified_query_name.to_string(), p.version.to_string())
             .await?,
     ))
 }
@@ -148,8 +151,8 @@ pub(super) async fn version_store(
         DefinitionQueryVersionStoreYamlParams::from_request,
         DefinitionQueryVersionStoreYamlParams::PARAMS,
     )?;
-    let name = p.qualified_query_name.clone();
-    let version = p.version.clone();
+    let name = p.qualified_query_name.to_string();
+    let version = p.version.to_string();
     let query_type = p
         .query_type
         .unwrap_or_else(|| DEFAULT_QUERY_TYPE.to_owned());

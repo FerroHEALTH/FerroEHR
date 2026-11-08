@@ -799,18 +799,22 @@ impl Ctx<'_> {
         );
     }
 
-    /// Map an OAS **parameter** schema to a Rust type.
+    /// Map an OAS **parameter** to a Rust type: the grammar type
+    /// [`crate::plan::rest_text_types`] records for its component, else its schema's.
     ///
-    /// A parameter is transported as TEXT, not as JSON: its wire form is fixed
-    /// by the parameter's `style`/`explode` serialization rules
-    /// (<https://spec.openapis.org/oas/v3.0.3#style-values>) — e.g. the
-    /// `openehr-item-tag` header is `style: simple, explode: true`, whose
-    /// values read `key="flag",value="follow-up"`, not JSON objects. So an
-    /// array parameter whose items are a structured schema carries the raw
-    /// parameter values (one `String` per occurrence) and the handler decodes
-    /// the style-encoded content; only primitive items keep their mapped type,
-    /// which is exactly what a text value can be coerced to.
-    fn param_rust_type(&self, schema: &Value) -> String {
+    /// A parameter is transported as TEXT, not as JSON: its wire form is fixed by
+    /// its `style`/`explode` rules (<https://spec.openapis.org/oas/v3.0.3#style-values>;
+    /// the `openehr-item-tag` header, `style: simple, explode: true`, reads
+    /// `key="flag",value="follow-up"`). So an array of structured items carries the
+    /// raw values (one `String` per occurrence) for the handler to decode; only
+    /// primitive items keep their mapped type, which a text value can be coerced to.
+    fn param_rust_type(&self, op: &Operation, p: &Param) -> String {
+        let schema = &p.schema;
+        if let Some(typed) =
+            crate::plan::rest_text_types::parameter_type(p.component.as_deref(), &op.operation_id)
+        {
+            return typed.rust_type.to_owned();
+        }
         if schema.get("type").and_then(Value::as_str) == Some("array") {
             let item = schema.get("items").map(|i| self.rust_type(i));
             let inner = item
@@ -919,13 +923,18 @@ fn emit_dto(b: &mut String, name: &str, schema: &Value, ctx: &Ctx) {
         emit_struct(b, name, &ty_name, &generic, &props, &required, schema, ctx);
     } else {
         // string/array/map/ref alias.
+        let typed = crate::plan::rest_text_types::schema_type(name);
         let _ = writeln!(
             b,
             "/// The `{name}` ITS-REST OAS component schema (a non-object shape, so\n\
-             /// it is an alias rather than a struct).\n\
+             /// it is an alias rather than a struct).{}\n\
              pub type {} = {};\n",
+            typed.map_or_else(String::new, |t| format!(
+                "\n///\n/// Read by its grammar, {}.",
+                t.citation
+            )),
             dto_type(name),
-            ctx.rust_type(schema)
+            typed.map_or_else(|| ctx.rust_type(schema), |t| t.rust_type.to_owned())
         );
     }
 }
@@ -1345,7 +1354,7 @@ fn emit_params_struct(b: &mut String, op: &Operation, ctx: &Ctx) {
     );
     for p in &op.parameters {
         let ident = field_id(&p.name);
-        let mut ty = ctx.param_rust_type(&p.schema);
+        let mut ty = ctx.param_rust_type(op, p);
         if !p.required {
             ty = format!("Option<{ty}>");
         }
@@ -1356,6 +1365,11 @@ fn emit_params_struct(b: &mut String, op: &Operation, ctx: &Ctx) {
             b.push_str(SKIP_NONE_ATTR);
         }
         let _ = writeln!(b, "    /// `{}` ({})", p.name, p.location);
+        let op_id = &op.operation_id;
+        if let Some(t) = crate::plan::rest_text_types::parameter_type(p.component.as_deref(), op_id)
+        {
+            let _ = writeln!(b, "    ///\n    /// Read by its grammar, {}.", t.citation);
+        }
         // A docs-text header carries its citation into the generated code (the
         // OAS declares no parameter for it; the ITS-REST docs text defines it).
         if let Some(h) = rest_docs_text_header(&op.operation_id, &p.name) {
@@ -2007,7 +2021,7 @@ fn param_shape(ty: &str) -> ParamShape {
 /// The extraction expression for one parameter, the inverse of what the
 /// client writes for it (`emit_query_param`, `emit_header_param`).
 fn param_extraction(op: &Operation, p: &Param, ctx: &Ctx) -> String {
-    let shape = param_shape(&ctx.param_rust_type(&p.schema));
+    let shape = param_shape(&ctx.param_rust_type(op, p));
     let name = &p.name;
     match p.location.as_str() {
         "path" => format!("path.value(\"{name}\")?"),
@@ -2518,7 +2532,7 @@ fn emit_client_method(b: &mut String, op: &Operation, ctx: &Ctx) {
     // Parameters, in declaration order: query → query string, header → headers.
     for p in &op.parameters {
         let ident = field_id(&p.name);
-        let ty = ctx.param_rust_type(&p.schema);
+        let ty = ctx.param_rust_type(op, p);
         match p.location.as_str() {
             "query" => emit_query_param(b, &p.name, &ident, &ty, p.required),
             "header" => emit_header_param(b, &p.name, &ident, &ty, p.required),

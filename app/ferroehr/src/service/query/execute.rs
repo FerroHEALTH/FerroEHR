@@ -38,6 +38,8 @@ use crate::storage::ehr_repo;
 use crate::storage::error::StorageError;
 use crate::system_log::categories::{AccessedContent, ContentIds};
 
+use openehr_its::rest::stored_query::{QualifiedQueryName, VersionPattern};
+
 use super::result_set::{build_params, result_set_json, substitute_params};
 
 impl FerroEhrService {
@@ -53,14 +55,17 @@ impl FerroEhrService {
     ///   conditions (the stored text executes identically).
     pub async fn execute_stored_query(
         &self,
-        qualified_query_name: String,
-        version: Option<String>,
+        qualified_query_name: QualifiedQueryName,
+        version: Option<VersionPattern>,
         request: AqlQueryRequest,
     ) -> Result<QueryOutcome, ServiceError> {
         // The stored AQL text resolves through the DEFINITION store by
         // exact/partial SEMVER, or the latest.
         let stored = self
-            .get_stored_query(&qualified_query_name, version.as_deref())
+            .get_stored_query(
+                &qualified_query_name.to_string(),
+                version.map(|v| v.to_string()).as_deref(),
+            )
             .await?;
         let aql = stored
             .get("q")
@@ -93,7 +98,7 @@ impl FerroEhrService {
     pub async fn execute_aql(
         &self,
         aql: &str,
-        name: Option<&str>,
+        name: Option<&QualifiedQueryName>,
         request: &AqlQueryRequest,
     ) -> Result<QueryOutcome, ServiceError> {
         let plan_start = Instant::now();
@@ -134,7 +139,7 @@ impl FerroEhrService {
         &self,
         ir: &QueryIr,
         aql: &str,
-        name: Option<&str>,
+        name: Option<&QualifiedQueryName>,
         request: &AqlQueryRequest,
         params: &Params,
     ) -> Result<QueryOutcome, Failure> {

@@ -20,6 +20,7 @@ pub(crate) mod its_json_bounds;
 pub(crate) mod ordered_hashes;
 pub(crate) mod overrides;
 pub(crate) mod rest_tagged;
+pub(crate) mod rest_text_types;
 pub(crate) mod xml_overrides;
 
 use crate::analyze::Model;
