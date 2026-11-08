@@ -382,27 +382,6 @@ pub fn document_section(
     )
 }
 
-/// The number of the version `version_uid` names: its last part, `3` of
-/// `uid::system::3`.
-#[must_use]
-pub fn version_number(version_uid: &str) -> String {
-    version_uid
-        .rsplit("::")
-        .next()
-        .unwrap_or_default()
-        .to_owned()
-}
-
-/// The `OBJECT_VERSION_ID` of version `number` of the object whose version
-/// `known` names: `known` with its last part replaced.
-#[must_use]
-pub fn version_uid_at(known: &str, number: &str) -> String {
-    match known.rsplit_once("::") {
-        Some((object, _)) => format!("{object}::{number}"),
-        None => known.to_owned(),
-    }
-}
-
 /// What an editor's docked bar says and offers.
 #[derive(Debug, Clone)]
 pub struct EditorDock {
