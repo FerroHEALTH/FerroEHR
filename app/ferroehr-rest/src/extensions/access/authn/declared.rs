@@ -34,12 +34,14 @@ use super::AuthError;
 pub(crate) struct Admitted(Arc<Held>);
 
 /// One agreement as this node holds it: the table, where its issuer reads a
-/// `chained` request's correlation id from, and its caller rate.
+/// `chained` request's correlation id from, its caller rate, and whether its
+/// issuer is a MyHealth@EU contact point.
 #[derive(Debug)]
 struct Held {
     agreement: Arc<Agreement>,
     correlation_source: Option<String>,
     limit: Option<CallerLimit>,
+    contact_point: bool,
 }
 
 /// The scope tokens an external caller may hold beside the agreement's
@@ -88,10 +90,14 @@ impl Declared {
                             .collect::<Vec<_>>()
                             .join(" ")
                     });
+                    let contact_point = config.auth.shared.federation.iter().any(|federation| {
+                        federation.issuer == table.issuer && federation.contact_point == Some(true)
+                    });
                     let held = Held {
                         agreement: Arc::new(agreement),
                         correlation_source,
                         limit: table.caller_rate.map(CallerLimit::new),
+                        contact_point,
                     };
                     Some(((table.issuer.clone(), accessor), Arc::new(held)))
                 })
@@ -182,25 +188,12 @@ pub(super) fn correlation_source(access: &Access) -> Option<&str> {
     held(access).and_then(|held| held.correlation_source.as_deref())
 }
 
-/// Holds the caller of `principal` to its agreement's `caller_rate`, then
-/// confines a bound representative to the EHR of its subject; the refusal of
-/// either, before any patient lookup of the request itself.
-pub(super) async fn prepare(
-    layer: &super::AuthLayer,
-    principal: &mut super::Principal,
-    headers: &http::HeaderMap,
-) -> Option<Response> {
-    let auth = &layer.authenticator;
-    if let Some(refusal) = over_rate(principal, &auth.declared.system_clients) {
-        return Some(refusal);
-    }
-    match super::party::represented_ehr(&layer.service, &principal.access).await {
-        Ok(represented) => {
-            principal.represented = represented;
-            None
-        }
-        Err(e) => Some(super::refused(auth, headers, &e, Some(principal.clone()))),
-    }
+/// The agreement of the caller of `access` when its issuer is a MyHealth@EU
+/// contact point.
+pub(super) fn contact_point(access: &Access) -> Option<&Arc<Agreement>> {
+    held(access)
+        .filter(|held| held.contact_point)
+        .map(|held| &held.agreement)
 }
 
 /// The refusal of an external caller of `principal` above its agreement's
@@ -208,7 +201,10 @@ pub(super) async fn prepare(
 /// from the family's caller limit, carrying the caller and its binding record
 /// for the access log, which counts it into the caller's summary record.
 /// `None` within the rate or for any other caller.
-fn over_rate(principal: &super::Principal, clients: &[Arc<SystemClient>]) -> Option<Response> {
+pub(super) fn over_rate(
+    principal: &super::Principal,
+    clients: &[Arc<SystemClient>],
+) -> Option<Response> {
     let limit = held(&principal.access)?.limit.as_ref()?;
     let caller = CallerKey(Arc::from(principal.subject.as_str()));
     let wait = limit.take(&caller, tokio::time::Instant::now()).err()?;
@@ -234,10 +230,15 @@ pub(super) fn committing(access: &Access) -> Option<ExternalCaller> {
         CallerKind::ExternalPerson(external) => Some(external.as_ref()),
         _ => None,
     });
+    let contact_point = contact_point(access).is_some();
     Some(match (agreement.accessor, external) {
         (Some(Accessor::Person), Some(external)) => ExternalCaller::Person {
             writes: agreement.writes.clone(),
-            professional: Box::new(professional(external)),
+            professional: Box::new(ExternalProfessional {
+                contact_point,
+                ..professional(external)
+            }),
+            discard_window_hours: agreement.discard.then_some(agreement.discard_window_hours),
         },
         _ => ExternalCaller::Organisation,
     })
@@ -267,5 +268,16 @@ fn professional(external: &External) -> ExternalProfessional {
         issuing_authority: text(Field::ProfessionalIssuingAuthorityName),
         provider_identifier: text(Field::ProviderHealthcareProviderIdentifier),
         provider_authority: text(Field::ProviderIssuingAuthorityName),
+        contact_point: false,
+        permissions: external.field(Field::ProfessionalPermissions).map_or_else(
+            Vec::new,
+            |permissions| {
+                permissions
+                    .values()
+                    .into_iter()
+                    .map(str::to_owned)
+                    .collect()
+            },
+        ),
     }
 }

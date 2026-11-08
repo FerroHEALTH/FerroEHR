@@ -63,11 +63,14 @@ pub enum Kind {
     RateLimited,
     /// A dump/load archive the server cannot read as an export archive.
     ArchiveInvalid,
+    /// A MyHealth@EU contact point's request outside the patient of its
+    /// treatment relationship confirmation.
+    TrcPatientMismatch,
 }
 
 impl Kind {
     /// Every kind, in the order the book lists them.
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 13] = [
         Self::AqlInvalid,
         Self::QueryTimeout,
         Self::ValidationFailed,
@@ -80,6 +83,7 @@ impl Kind {
         Self::Unavailable,
         Self::RateLimited,
         Self::ArchiveInvalid,
+        Self::TrcPatientMismatch,
     ];
 
     /// The slug the type URI ends in, the anchor on the book page.
@@ -98,6 +102,7 @@ impl Kind {
             Self::Unavailable => "unavailable",
             Self::RateLimited => "rate-limited",
             Self::ArchiveInvalid => "archive-invalid",
+            Self::TrcPatientMismatch => "trc-patient-mismatch",
         }
     }
 
@@ -117,6 +122,9 @@ impl Kind {
             Self::Unavailable => "The server is temporarily unavailable",
             Self::RateLimited => "The caller sent more requests than its rate allows",
             Self::ArchiveInvalid => "The archive cannot be loaded",
+            Self::TrcPatientMismatch => {
+                "No data for the patient of the treatment relationship confirmation"
+            }
         }
     }
 
@@ -133,6 +141,7 @@ impl Kind {
             Self::Forbidden | Self::ProcessingRestricted => StatusCode::FORBIDDEN,
             Self::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
             Self::RateLimited => StatusCode::TOO_MANY_REQUESTS,
+            Self::TrcPatientMismatch => StatusCode::NOT_FOUND,
         }
     }
 

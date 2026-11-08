@@ -88,14 +88,7 @@ pub(super) fn smart_refusal(
     req: &Request,
     principal: &Principal,
 ) -> Option<Response> {
-    let matched = req
-        .extensions()
-        .get::<MatchedPath>()
-        .map(MatchedPath::as_str);
-    let uri = req
-        .extensions()
-        .get::<OriginalUri>()
-        .map_or_else(|| req.uri(), |original| &original.0);
+    let (matched, uri) = route(req);
     let need = layer.smart.need(req.method(), matched, uri.path());
     let Need::Now(requirement) = need else {
         return None;
@@ -122,6 +115,20 @@ pub(super) fn smart_refusal(
     );
     resp.extensions_mut().insert(principal.clone());
     Some(resp)
+}
+
+/// The route `req` matched, as its full template, and the URI it was sent
+/// to, with the base path the nested API router strips.
+pub(super) fn route(req: &Request) -> (Option<&str>, &http::Uri) {
+    let matched = req
+        .extensions()
+        .get::<MatchedPath>()
+        .map(MatchedPath::as_str);
+    let uri = req
+        .extensions()
+        .get::<OriginalUri>()
+        .map_or_else(|| req.uri(), |original| &original.0);
+    (matched, uri)
 }
 
 /// Builds the response for a patient-data request the gate refused, attributed
