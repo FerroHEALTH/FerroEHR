@@ -14,6 +14,18 @@
 //! openEHR spec governs SCIM: our own design over RFC 7644.
 
 pub(crate) mod schemas;
+#[expect(
+    clippy::disallowed_types,
+    reason = "SCIM resource content (#1694 boundary class): a User is the RFC 7644 §3.8 JSON \
+              representation of an attribute-based schema, built from the PERSON's canonical body"
+)]
+mod user_map;
+#[expect(
+    clippy::disallowed_types,
+    reason = "SCIM resource content (#1694 boundary class): the RFC 7644 §3.8 JSON \
+              representation a request carries and a response serves"
+)]
+mod users;
 
 use std::sync::Arc;
 
@@ -23,6 +35,7 @@ use axum::middleware::{Next, from_fn, from_fn_with_state};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use ferroehr::config::scim::ScimClient;
+use ferroehr::service::FerroEhrService;
 use ferrohealth_server::caller_rate::{self, CallerLimit};
 use ferrohealth_smart::kind::CallerKind;
 use http::{HeaderValue, StatusCode, header};
@@ -49,13 +62,26 @@ struct Gate {
     clients: Arc<[Arc<ScimClient>]>,
 }
 
+/// Why a SCIM endpoint cannot be served.
+#[derive(Debug, thiserror::Error)]
+pub enum EndpointError {
+    /// A mapped attribute is no attribute of its SCIM schema.
+    #[error(transparent)]
+    Discovery(#[from] DiscoveryError),
+    /// The party mapping lacks what a User is written with.
+    #[error("{0}")]
+    Mapping(String),
+}
+
 /// Checks that `config` describes a SCIM endpoint that can be served.
 ///
 /// # Errors
-/// The [`DiscoveryError`] of a mapped attribute the schemas do not define.
-pub fn check(config: &AppConfig) -> Result<(), DiscoveryError> {
+/// The [`EndpointError`] of a mapped attribute the schemas do not define, or
+/// of a party mapping that lacks what a User is written with.
+pub fn check(config: &AppConfig) -> Result<(), EndpointError> {
     if config.scim.enabled {
         schemas::discovery(&config.scim, &config.party_binding)?;
+        user_map::UserMap::new(&config.party_binding).map_err(EndpointError::Mapping)?;
     }
     Ok(())
 }
@@ -67,6 +93,7 @@ pub fn check(config: &AppConfig) -> Result<(), DiscoveryError> {
 pub(crate) fn router(
     config: &AppConfig,
     authenticator: &Arc<Authenticator>,
+    service: Arc<FerroEhrService>,
 ) -> Option<Router<AppState>> {
     if !config.scim.enabled {
         return None;
@@ -75,6 +102,26 @@ pub(crate) fn router(
         Ok(discovery) => Arc::new(discovery),
         Err(error) => {
             tracing::error!(%error, "the SCIM endpoint is not mounted: its schemas do not build");
+            return None;
+        }
+    };
+    let users = discovery
+        .resource_schema("User")
+        .cloned()
+        .ok_or_else(|| "the discovery documents define no User".to_owned())
+        .and_then(|schema| {
+            users::Users::new(
+                service,
+                user_map::UserMap::new(&config.party_binding)?,
+                schema,
+                config.scim.base_url().unwrap_or_default(),
+                config.scim.max_results,
+            )
+        });
+    let users = match users {
+        Ok(users) => users,
+        Err(error) => {
+            tracing::error!(%error, "the SCIM endpoint is not mounted: its User mapping does not build");
             return None;
         }
     };
@@ -87,7 +134,13 @@ pub(crate) fn router(
         .route("/ResourceTypes/{id}", get(resource_type))
         .route("/Schemas", get(schema_list))
         .route("/Schemas/{id}", get(schema))
-        .with_state(Arc::clone(&discovery));
+        .with_state(Arc::clone(&discovery))
+        .merge(
+            Router::new()
+                .route("/Users", get(users::list).post(users::create))
+                .route("/Users/{id}", get(users::read))
+                .with_state(users),
+        );
     let gated = match config.server.caller_rate {
         Some(rate) => gated
             .route_layer(from_fn_with_state(
@@ -153,8 +206,10 @@ async fn admit(State(gate): State<Gate>, request: Request, next: Next) -> Respon
     request
         .extensions_mut()
         .insert(ScimCaller(Arc::clone(client)));
-    request.extensions_mut().insert(principal);
-    next.run(request).await
+    request.extensions_mut().insert(principal.clone());
+    gate.authenticator
+        .run_admitted(principal, next.run(request))
+        .await
 }
 
 /// The SCIM answer to an authentication refusal: `401` with the RFC 6750 §3

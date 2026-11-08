@@ -156,6 +156,17 @@ impl PersonAttribute {
         }
     }
 
+    /// The path the attribute maps for `template_id`, compared in the
+    /// canonical form of the id.
+    #[must_use]
+    pub fn path_for(&self, template_id: &str) -> Option<&str> {
+        let key = crate::templates::identity::canonical_key(template_id);
+        self.path
+            .iter()
+            .find(|(template, _)| crate::templates::identity::canonical_key(template) == key)
+            .map(|(_, path)| path.as_str())
+    }
+
     /// The label the boot refusals name the attribute by.
     #[must_use]
     pub fn label(&self) -> String {

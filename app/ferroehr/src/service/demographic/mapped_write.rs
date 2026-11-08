@@ -17,10 +17,13 @@
               fragment the seam produced once; stored-content serving"
 )]
 
+use openehr_base::prelude::{HierObjectId, ObjectId, PartyRef};
+use openehr_rm::prelude::{DvIdentifier, DvUri, DvUriData};
 use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 use serde_json::{Map, Value};
 
 use crate::error::{ServiceError, Violation};
+use crate::ids::VoId;
 use crate::service::FerroEhrService;
 
 /// The RM attributes of the demographic model that hold a list.
@@ -39,6 +42,7 @@ impl FerroEhrService {
     /// `head` (a new party of the template when `None`) with the data value
     /// of each of `values` set at its path, and nothing else changed.
     ///
+    /// A body with no identity takes the template's first one ([`identity`]).
     /// Each path names an `ELEMENT` (or its `value`) of the template. Several
     /// identifiers can share one path: a `DV_IDENTIFIER` value replaces the
     /// one of its `type` and `issuer`, and leaves the others as they are.
@@ -61,8 +65,203 @@ impl FerroEhrService {
         for (path, value) in values {
             set(&mut body, &wt, path, value.clone())?;
         }
+        let named = body
+            .get("identities")
+            .and_then(Value::as_array)
+            .is_some_and(|identities| !identities.is_empty());
+        if let Some(object) = body.as_object_mut()
+            && !named
+        {
+            object.insert("identities".to_owned(), Value::Array(vec![identity(&wt)?]));
+        }
         Ok(body)
     }
+
+    /// Returns the data value `text` takes at the `ELEMENT` `path` of
+    /// `template_id`, by the RM type the template draws there: a
+    /// `DV_IDENTIFIER` of `identifier`'s issuer and type, a `DV_TEXT` or a
+    /// `DV_URI`.
+    ///
+    /// # Errors
+    /// The [`Self::web_template`] refusals, and a `422` naming the path when
+    /// the template draws no data value there that a text fills.
+    pub async fn mapped_text_value(
+        &self,
+        template_id: &str,
+        path: &str,
+        text: &str,
+        identifier: (&str, &str),
+    ) -> Result<Value, ServiceError> {
+        let wt = self.web_template(template_id).await?;
+        let types = super::mapping::value_types(&wt.tree, path);
+        let drawn = |rm_type: &str| types.iter().any(|t| t == rm_type);
+        if drawn("DV_IDENTIFIER") {
+            let (issuer, identifier_type) = identifier;
+            return Ok(openehr_its::json::to_canonical_value(&DvIdentifier {
+                issuer: Some(issuer.to_owned()),
+                assigner: None,
+                id: text.to_owned(),
+                r#type: Some(identifier_type.to_owned()),
+            }));
+        }
+        if drawn("DV_TEXT") {
+            return Ok(openehr_its::json::to_canonical_value(
+                &crate::versioning::audit::dv_text(text),
+            ));
+        }
+        if drawn("DV_URI") {
+            return Ok(openehr_its::json::to_canonical_value(&DvUri::DvUri(
+                DvUriData {
+                    value: text.to_owned(),
+                },
+            )));
+        }
+        Err(ServiceError::content_invalid(
+            Violation::new(format!(
+                "the template draws {} here, which a text does not fill",
+                if types.is_empty() {
+                    "no data value".to_owned()
+                } else {
+                    types.join(" or ")
+                }
+            ))
+            .with_path(path),
+        ))
+    }
+}
+
+/// The data value of the first `ELEMENT` at `path` in the party `body`, the
+/// one of `identifier`'s `type` and `issuer` when given.
+#[must_use]
+pub fn mapped_value<'a>(
+    body: &'a Value,
+    path: &str,
+    identifier: Option<(&str, &str)>,
+) -> Option<&'a Value> {
+    let steps: Vec<&str> = path
+        .trim_end_matches("/value")
+        .trim_start_matches('/')
+        .split('/')
+        .collect();
+    let mut current = vec![body];
+    for step in steps {
+        let (attribute, node_id) = match step.split_once('[') {
+            Some((attribute, predicate)) => (attribute, Some(predicate.trim_end_matches(']'))),
+            None => (step, None),
+        };
+        let held = |item: &&Value| {
+            node_id
+                .is_none_or(|id| item.get("archetype_node_id").and_then(Value::as_str) == Some(id))
+        };
+        current = current
+            .into_iter()
+            .filter_map(|node| node.get(attribute))
+            .flat_map(|slot| match slot {
+                Value::Array(items) => items.iter().filter(held).collect::<Vec<_>>(),
+                single => std::iter::once(single).filter(held).collect(),
+            })
+            .collect();
+    }
+    current
+        .into_iter()
+        .filter_map(|element| element.get("value"))
+        .find(|value| {
+            identifier.is_none_or(|(identifier_type, issuer)| {
+                identifier_slot(Some(value)) == Some((Some(identifier_type), Some(issuer)))
+            })
+        })
+}
+
+impl FerroEhrService {
+    /// Returns the body of a new professional `ROLE` of `template_id`
+    /// performed by the `PERSON` `performer`, named under `namespace`.
+    ///
+    /// The `ROLE` carries the template's first identity ([`identity`]); a
+    /// template that requires an item in it makes the `ROLE` incomplete until
+    /// an administrator fills it.
+    ///
+    /// # Errors
+    /// The [`Self::web_template`] refusals, and a `422` when the template
+    /// draws no `PARTY_IDENTITY` with its `details`.
+    pub async fn professional_role_body(
+        &self,
+        template_id: &str,
+        performer: VoId,
+        namespace: &str,
+    ) -> Result<Value, ServiceError> {
+        let wt = self.web_template(template_id).await?;
+        let mut body = new_party(&wt);
+        if let Some(object) = body.as_object_mut() {
+            object.insert("identities".to_owned(), Value::Array(vec![identity(&wt)?]));
+            object.insert(
+                "performer".to_owned(),
+                party_ref(namespace, "PERSON", performer),
+            );
+        }
+        Ok(body)
+    }
+}
+
+/// The canonical `PARTY_REF` to the party container `id` of the RM class
+/// `class`, named under `namespace`.
+pub(crate) fn party_ref(namespace: &str, class: &str, id: VoId) -> Value {
+    openehr_its::json::to_canonical_value(&PartyRef {
+        namespace: namespace.to_owned(),
+        r#type: class.to_owned(),
+        id: ObjectId::HierObjectId(HierObjectId::from(id.0)),
+    })
+}
+
+/// The first `PARTY_IDENTITY` the template `wt` draws, with its `details`
+/// structure, each named as the template names it and holding no item.
+///
+/// RM demographic `PARTY` requires an identity (`Identities_valid`) and
+/// `PARTY_IDENTITY` its `details`; a template that requires an item makes the
+/// party incomplete until the item is written.
+fn identity(wt: &WebTemplate) -> Result<Value, ServiceError> {
+    let undrawn = || {
+        ServiceError::content_invalid(
+            Violation::new("the template draws no PARTY_IDENTITY with its details")
+                .with_path("/identities"),
+        )
+    };
+    let identity = wt
+        .tree
+        .children
+        .iter()
+        .find(|child| base_type(&child.rm_type) == "PARTY_IDENTITY")
+        .ok_or_else(undrawn)?;
+    // NOTE: a web template leaves the structure out and draws its items, so
+    // the `details` node id is read from the path of an item under it.
+    let identity_path = super::mapping::plain(&identity.aql_path);
+    let details_id = identity
+        .children
+        .iter()
+        .find_map(|child| {
+            let path = super::mapping::plain(&child.aql_path);
+            let rest = path
+                .strip_prefix(&identity_path)?
+                .strip_prefix("/details[")?;
+            rest.split(']').next().map(str::to_owned)
+        })
+        .ok_or_else(undrawn)?;
+    let details = created(
+        wt,
+        &format!("{identity_path}/details[{details_id}]"),
+        "details",
+        Some(&details_id),
+        false,
+    );
+    let mut drawn = node(identity);
+    if let Some(object) = drawn.as_object_mut() {
+        object.insert("details".to_owned(), details);
+    }
+    Ok(drawn)
+}
+
+/// `rm_type` without its generic parameters.
+fn base_type(rm_type: &str) -> &str {
+    rm_type.split('<').next().unwrap_or(rm_type)
 }
 
 /// A party of the template `wt` holding only its root.
@@ -90,13 +289,7 @@ fn node(wt: &WebTemplateNode) -> Value {
     let mut object = Map::new();
     object.insert(
         "_type".to_owned(),
-        Value::String(
-            wt.rm_type
-                .split('<')
-                .next()
-                .unwrap_or(&wt.rm_type)
-                .to_owned(),
-        ),
+        Value::String(base_type(&wt.rm_type).to_owned()),
     );
     if let Some(node_id) = &wt.node_id {
         object.insert(
