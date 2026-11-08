@@ -5,8 +5,8 @@
 //!
 //! `binding_identifier`, `binding_membership` and `binding_representation`
 //! hold the rows each party head contributes. A commit derives them from the
-//! body it holds ([`super::derive`]) and writes only the rows that changed
-//! ([`super::rows`]), in its own transaction; [`refill`], an archive load and
+//! body it holds (`party_binding::derive`) and writes only the rows that changed
+//! (`party_binding::rows`), in its own transaction; [`refill`], an archive load and
 //! an import derive them with the same function from the stored heads; the
 //! lookup reads them.
 //!

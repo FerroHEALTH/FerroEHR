@@ -57,7 +57,7 @@ pub enum SelectorError {
 ///
 /// Every identifier of a party can sit at one path (the repeated element of an
 /// identifier cluster), so a selector is never a path alone. The path is
-/// parsed once into its steps, which [`IdentifierSelector::identifiers`]
+/// parsed once into its steps, which `IdentifierSelector::identifiers`
 /// walks over a body.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IdentifierSelector {
