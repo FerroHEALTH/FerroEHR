@@ -169,13 +169,15 @@ pub fn adl2_catalog_from_json(json: &str) -> Result<CatalogNode, ViewerError> {
         openehr_am::v2_4::aom2::archetype::operational_template::OperationalTemplate,
     >(json)
     .map_err(|e| ViewerError::failed(tr(DefinitionsMsg::Operationaltemplatev2Parse), e))?;
-    let web_template = openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4(&opt)
-        .map_err(|e| {
-            ViewerError::Internal(tr_with(
-                DefinitionsMsg::WebtemplateBuild,
-                &[("value0", (crate::error::error_chain(&e)).clone().into())],
-            ))
-        })?;
+    let web_template =
+        openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4(&opt, &[]).map_err(
+            |e| {
+                ViewerError::Internal(tr_with(
+                    DefinitionsMsg::WebtemplateBuild,
+                    &[("value0", (crate::error::error_chain(&e)).clone().into())],
+                ))
+            },
+        )?;
     Ok(crate::builder::catalog::from_web_template(&web_template))
 }
 

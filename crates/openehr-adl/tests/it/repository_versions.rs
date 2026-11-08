@@ -125,7 +125,9 @@ fn one_template_compiles_against_both_major_versions() {
         "openEHR-EHR-COMPOSITION.repo_uses_both.v1.0.0",
         &[&id("1"), &id("2")],
     );
-    let opt = create_opt(&template, &repo).expect("both fillers resolve");
+    let opt = create_opt(&template, &repo)
+        .expect("both fillers resolve")
+        .template;
     let text = format!("{opt:?}");
     for held in [id("1.10.0"), id("2.1.0")] {
         assert!(text.contains(&format!("Held {held}")), "{held} is inlined");

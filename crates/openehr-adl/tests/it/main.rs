@@ -46,6 +46,7 @@ mod opt14_conversion;
 mod opt_adl14_specialised;
 mod opt_archetype_scope;
 mod opt_ckm_parent;
+mod opt_prohibited_attributes;
 mod opt_spec;
 mod opt_term_constraint;
 mod repository_versions;

@@ -106,7 +106,9 @@ fn template() -> Archetype {
 }
 
 fn opt() -> OperationalTemplate {
-    create_opt(&template(), &repo()).unwrap_or_else(|e| panic!("create_opt failed: {e}"))
+    create_opt(&template(), &repo())
+        .unwrap_or_else(|e| panic!("create_opt failed: {e}"))
+        .template
 }
 
 /// The objects directly under `attribute` of the complex object at `path`,
@@ -263,6 +265,8 @@ fn an_opt_over_an_adl14_specialised_archetype_needs_no_parent_of_it() {
         unresolved_constituents(&template, &repo).is_empty(),
         "report-result is its own flat form, so report.v1 is not needed"
     );
-    let without_parent = create_opt(&template, &repo).expect("the OPT builds without report.v1");
+    let without_parent = create_opt(&template, &repo)
+        .expect("the OPT builds without report.v1")
+        .template;
     assert_eq!(without_parent, opt(), "the parent adds nothing to the OPT");
 }

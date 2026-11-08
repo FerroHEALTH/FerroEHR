@@ -181,7 +181,9 @@ fn opt_over(constituent: Archetype) -> OperationalTemplate {
     let mut repo = ArchetypeRepository::default();
     repo.insert(constituent);
     let template = parse_artefact(TEMPLATE, Dialect::Adl2).expect("the template parses");
-    create_opt(&template, &repo).unwrap_or_else(|e| panic!("create_opt failed: {e}"))
+    create_opt(&template, &repo)
+        .unwrap_or_else(|e| panic!("create_opt failed: {e}"))
+        .template
 }
 
 fn as_artefact(opt: OperationalTemplate) -> Archetype {
@@ -283,7 +285,9 @@ fn opt_over_unconverted_14() -> OperationalTemplate {
         repo.insert(parse_artefact(source, Dialect::Adl14).expect("the CKM source parses as 1.4"));
     }
     let template = parse_artefact(TEMPLATE_14, Dialect::Adl2).expect("the template parses");
-    create_opt(&template, &repo).unwrap_or_else(|e| panic!("create_opt failed: {e}"))
+    create_opt(&template, &repo)
+        .unwrap_or_else(|e| panic!("create_opt failed: {e}"))
+        .template
 }
 
 /// The constraint of the `C_TERMINOLOGY_CODE` under the order's own `ELEMENT`
