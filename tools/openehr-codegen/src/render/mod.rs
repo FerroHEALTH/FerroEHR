@@ -21,6 +21,7 @@ pub(crate) mod emit;
 pub(crate) mod emit_json;
 pub(crate) mod emit_opt;
 pub(crate) mod emit_rest;
+pub(crate) mod emit_rest_headers;
 pub(crate) mod emit_rm_model;
 pub(crate) mod emit_rm_model_api;
 pub(crate) mod emit_templates;

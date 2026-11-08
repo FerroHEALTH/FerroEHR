@@ -4452,6 +4452,20 @@ impl crate::rest::runtime::ResponseHeaders for AgentCreateCreatedHeaders {
     }
 }
 
+impl AgentCreateCreatedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `POST /demographic/agent`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4482,6 +4496,20 @@ impl crate::rest::runtime::ResponseHeaders for AgentCreateNoContentHeaders {
             self.openehr_version_item_tag,
         )?;
         Ok(map)
+    }
+}
+
+impl AgentCreateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -4518,6 +4546,20 @@ impl crate::rest::runtime::ResponseHeaders for AgentGetOkHeaders {
     }
 }
 
+impl AgentGetOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `PUT /demographic/agent/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4551,6 +4593,20 @@ impl crate::rest::runtime::ResponseHeaders for AgentUpdateOkHeaders {
     }
 }
 
+impl AgentUpdateOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `PUT /demographic/agent/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4581,6 +4637,20 @@ impl crate::rest::runtime::ResponseHeaders for AgentUpdateNoContentHeaders {
     }
 }
 
+impl AgentUpdateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `412` answer of
 /// `PUT /demographic/agent/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4598,6 +4668,20 @@ impl crate::rest::runtime::ResponseHeaders for AgentUpdatePreconditionFailedHead
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl AgentUpdatePreconditionFailedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -4621,6 +4705,20 @@ impl crate::rest::runtime::ResponseHeaders for AgentDeleteNoContentHeaders {
     }
 }
 
+impl AgentDeleteNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `409` answer of
 /// `DELETE /demographic/agent/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4638,6 +4736,20 @@ impl crate::rest::runtime::ResponseHeaders for AgentDeleteConflictHeaders {
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl AgentDeleteConflictHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -4674,6 +4786,20 @@ impl crate::rest::runtime::ResponseHeaders for GroupCreateCreatedHeaders {
     }
 }
 
+impl GroupCreateCreatedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `POST /demographic/group`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4704,6 +4830,20 @@ impl crate::rest::runtime::ResponseHeaders for GroupCreateNoContentHeaders {
             self.openehr_version_item_tag,
         )?;
         Ok(map)
+    }
+}
+
+impl GroupCreateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -4740,6 +4880,20 @@ impl crate::rest::runtime::ResponseHeaders for GroupGetOkHeaders {
     }
 }
 
+impl GroupGetOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `PUT /demographic/group/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4773,6 +4927,20 @@ impl crate::rest::runtime::ResponseHeaders for GroupUpdateOkHeaders {
     }
 }
 
+impl GroupUpdateOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `PUT /demographic/group/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4803,6 +4971,20 @@ impl crate::rest::runtime::ResponseHeaders for GroupUpdateNoContentHeaders {
     }
 }
 
+impl GroupUpdateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `412` answer of
 /// `PUT /demographic/group/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4820,6 +5002,20 @@ impl crate::rest::runtime::ResponseHeaders for GroupUpdatePreconditionFailedHead
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl GroupUpdatePreconditionFailedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -4843,6 +5039,20 @@ impl crate::rest::runtime::ResponseHeaders for GroupDeleteNoContentHeaders {
     }
 }
 
+impl GroupDeleteNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `409` answer of
 /// `DELETE /demographic/group/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4860,6 +5070,20 @@ impl crate::rest::runtime::ResponseHeaders for GroupDeleteConflictHeaders {
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl GroupDeleteConflictHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -4896,6 +5120,20 @@ impl crate::rest::runtime::ResponseHeaders for OrganisationCreateCreatedHeaders 
     }
 }
 
+impl OrganisationCreateCreatedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `POST /demographic/organisation`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4926,6 +5164,20 @@ impl crate::rest::runtime::ResponseHeaders for OrganisationCreateNoContentHeader
             self.openehr_version_item_tag,
         )?;
         Ok(map)
+    }
+}
+
+impl OrganisationCreateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -4962,6 +5214,20 @@ impl crate::rest::runtime::ResponseHeaders for OrganisationGetOkHeaders {
     }
 }
 
+impl OrganisationGetOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `PUT /demographic/organisation/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -4995,6 +5261,20 @@ impl crate::rest::runtime::ResponseHeaders for OrganisationUpdateOkHeaders {
     }
 }
 
+impl OrganisationUpdateOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `PUT /demographic/organisation/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5025,6 +5305,20 @@ impl crate::rest::runtime::ResponseHeaders for OrganisationUpdateNoContentHeader
     }
 }
 
+impl OrganisationUpdateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `412` answer of
 /// `PUT /demographic/organisation/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5042,6 +5336,20 @@ impl crate::rest::runtime::ResponseHeaders for OrganisationUpdatePreconditionFai
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl OrganisationUpdatePreconditionFailedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -5065,6 +5373,20 @@ impl crate::rest::runtime::ResponseHeaders for OrganisationDeleteNoContentHeader
     }
 }
 
+impl OrganisationDeleteNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `409` answer of
 /// `DELETE /demographic/organisation/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5082,6 +5404,20 @@ impl crate::rest::runtime::ResponseHeaders for OrganisationDeleteConflictHeaders
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl OrganisationDeleteConflictHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -5118,6 +5454,20 @@ impl crate::rest::runtime::ResponseHeaders for PersonCreateCreatedHeaders {
     }
 }
 
+impl PersonCreateCreatedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `POST /demographic/person`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5148,6 +5498,20 @@ impl crate::rest::runtime::ResponseHeaders for PersonCreateNoContentHeaders {
             self.openehr_version_item_tag,
         )?;
         Ok(map)
+    }
+}
+
+impl PersonCreateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -5184,6 +5548,20 @@ impl crate::rest::runtime::ResponseHeaders for PersonGetOkHeaders {
     }
 }
 
+impl PersonGetOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `PUT /demographic/person/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5217,6 +5595,20 @@ impl crate::rest::runtime::ResponseHeaders for PersonUpdateOkHeaders {
     }
 }
 
+impl PersonUpdateOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `PUT /demographic/person/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5247,6 +5639,20 @@ impl crate::rest::runtime::ResponseHeaders for PersonUpdateNoContentHeaders {
     }
 }
 
+impl PersonUpdateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `412` answer of
 /// `PUT /demographic/person/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5264,6 +5670,20 @@ impl crate::rest::runtime::ResponseHeaders for PersonUpdatePreconditionFailedHea
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl PersonUpdatePreconditionFailedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -5287,6 +5707,20 @@ impl crate::rest::runtime::ResponseHeaders for PersonDeleteNoContentHeaders {
     }
 }
 
+impl PersonDeleteNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `409` answer of
 /// `DELETE /demographic/person/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5304,6 +5738,20 @@ impl crate::rest::runtime::ResponseHeaders for PersonDeleteConflictHeaders {
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl PersonDeleteConflictHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -5340,6 +5788,20 @@ impl crate::rest::runtime::ResponseHeaders for RoleCreateCreatedHeaders {
     }
 }
 
+impl RoleCreateCreatedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `POST /demographic/role`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5370,6 +5832,20 @@ impl crate::rest::runtime::ResponseHeaders for RoleCreateNoContentHeaders {
             self.openehr_version_item_tag,
         )?;
         Ok(map)
+    }
+}
+
+impl RoleCreateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -5406,6 +5882,20 @@ impl crate::rest::runtime::ResponseHeaders for RoleGetOkHeaders {
     }
 }
 
+impl RoleGetOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `PUT /demographic/role/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5439,6 +5929,20 @@ impl crate::rest::runtime::ResponseHeaders for RoleUpdateOkHeaders {
     }
 }
 
+impl RoleUpdateOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `PUT /demographic/role/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5469,6 +5973,20 @@ impl crate::rest::runtime::ResponseHeaders for RoleUpdateNoContentHeaders {
     }
 }
 
+impl RoleUpdateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `412` answer of
 /// `PUT /demographic/role/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5486,6 +6004,20 @@ impl crate::rest::runtime::ResponseHeaders for RoleUpdatePreconditionFailedHeade
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl RoleUpdatePreconditionFailedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -5509,6 +6041,20 @@ impl crate::rest::runtime::ResponseHeaders for RoleDeleteNoContentHeaders {
     }
 }
 
+impl RoleDeleteNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `409` answer of
 /// `DELETE /demographic/role/{uid_based_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5526,6 +6072,20 @@ impl crate::rest::runtime::ResponseHeaders for RoleDeleteConflictHeaders {
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         Ok(map)
+    }
+}
+
+impl RoleDeleteConflictHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -5586,6 +6146,20 @@ impl crate::rest::runtime::ResponseHeaders for VersionedPartyVersionGetAtTimeOkH
     }
 }
 
+impl VersionedPartyVersionGetAtTimeOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `GET /demographic/versioned_party/{versioned_object_uid}/version/{version_uid}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5626,6 +6200,20 @@ impl crate::rest::runtime::ResponseHeaders for ContributionCreateCreatedHeaders 
     }
 }
 
+impl ContributionCreateCreatedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `POST /demographic/contribution`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -5646,6 +6234,20 @@ impl crate::rest::runtime::ResponseHeaders for ContributionCreateNoContentHeader
         crate::rest::runtime::set_header(&mut map, "Location", self.location)?;
         crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
         Ok(map)
+    }
+}
+
+impl ContributionCreateNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 

@@ -772,6 +772,20 @@ impl crate::rest::runtime::ResponseHeaders for QueryExecuteAdhocQueryOkHeaders {
     }
 }
 
+impl QueryExecuteAdhocQueryOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `POST /query/aql`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -789,6 +803,20 @@ impl crate::rest::runtime::ResponseHeaders for QueryExecuteAdhocQueryBodyOkHeade
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
         Ok(map)
+    }
+}
+
+impl QueryExecuteAdhocQueryBodyOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -812,6 +840,20 @@ impl crate::rest::runtime::ResponseHeaders for QueryExecuteStoredQueryOkHeaders 
     }
 }
 
+impl QueryExecuteStoredQueryOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `POST /query/{qualified_query_name}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -829,6 +871,20 @@ impl crate::rest::runtime::ResponseHeaders for QueryExecuteStoredQueryBodyOkHead
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
         Ok(map)
+    }
+}
+
+impl QueryExecuteStoredQueryBodyOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -852,6 +908,20 @@ impl crate::rest::runtime::ResponseHeaders for QueryExecuteStoredQueryVersionOkH
     }
 }
 
+impl QueryExecuteStoredQueryVersionOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `POST /query/{qualified_query_name}/{version}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -869,6 +939,20 @@ impl crate::rest::runtime::ResponseHeaders for QueryExecuteStoredQueryVersionBod
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
         Ok(map)
+    }
+}
+
+impl QueryExecuteStoredQueryVersionBodyOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 

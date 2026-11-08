@@ -2178,6 +2178,20 @@ impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl14UploadCrea
     }
 }
 
+impl DefinitionTemplateAdl14UploadCreatedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `POST /definition/template/adl1.4`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -2201,6 +2215,20 @@ impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl14UploadNoCo
     }
 }
 
+impl DefinitionTemplateAdl14UploadNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `200` answer of
 /// `GET /definition/template/adl1.4/{template_id}`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -2218,6 +2246,20 @@ impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl14GetOkHeade
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
         Ok(map)
+    }
+}
+
+impl DefinitionTemplateAdl14GetOkHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
@@ -2278,6 +2320,20 @@ impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl2UploadCreat
     }
 }
 
+impl DefinitionTemplateAdl2UploadCreatedHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
+    }
+}
+
 /// The response headers the OAS declares for the `204` answer of
 /// `POST /definition/template/adl2`: each value the answer carries, `None` (or an empty list)
 /// when it carries none.
@@ -2298,6 +2354,20 @@ impl crate::rest::runtime::ResponseHeaders for DefinitionTemplateAdl2UploadNoCon
         crate::rest::runtime::set_header(&mut map, "ETag", self.etag)?;
         crate::rest::runtime::set_header(&mut map, "Content-Type", self.content_type)?;
         Ok(map)
+    }
+}
+
+impl DefinitionTemplateAdl2UploadNoContentHeaders {
+    /// The `ETag` read as an entity tag, `None` when the answer carries none.
+    ///
+    /// # Errors
+    ///
+    /// The inner [`crate::rest::etag::EntityTagError`] when the value is no
+    /// RFC 9110 entity tag.
+    pub fn entity_tag(
+        &self,
+    ) -> Option<Result<crate::rest::etag::EntityTag, crate::rest::etag::EntityTagError>> {
+        self.etag.as_deref().map(str::parse)
     }
 }
 
