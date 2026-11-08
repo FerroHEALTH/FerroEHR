@@ -583,9 +583,8 @@ pub(crate) async fn middleware(
             mut principal,
             fresh,
         }) => {
-            match party::represented_ehr(&layer.service, &principal.access).await {
-                Ok(represented) => principal.represented = represented,
-                Err(e) => return refused(auth, req.headers(), &e, Some(principal)),
+            if let Some(refusal) = declared::prepare(&layer, &mut principal, req.headers()).await {
+                return refusal;
             }
             // NOTE: RFC 9110 §15.5.6; whether a method is served is the
             // resource's property, so no grant changes the `405`.
