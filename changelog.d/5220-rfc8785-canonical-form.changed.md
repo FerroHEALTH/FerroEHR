@@ -1,0 +1,1 @@
+- `openehr-rm` writes the RFC 8785 canonical form a `VERSION` signature covers in one pass over the version, sorting each object's members by reference. A 3.3 MB `GROUP` version canonicalises about seven times faster than through `serde_jcs`, with byte-identical output, so signed versions verify unchanged. `serde_jcs` remains the test oracle (#5220).

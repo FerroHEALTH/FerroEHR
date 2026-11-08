@@ -73,11 +73,14 @@ the last file; new ones via `sqlx migrate add --sequential`, and a file the
 latest release tag or a pre-release tag above it carries is never edited
 (`.claude/rules/sqlx-conventions.md`).
 
-Serialization & formats: `serde` 1, `serde_json` 1 (`preserve_order`),
+Serialization & formats: `serde` 1, `serde_json` 1 (`preserve_order`,
+`float_roundtrip`),
 `serde_with` 3, `serde_path_to_error` 0.1, `quick-xml` 0.41 (with
 `serialize`), `base64` 0.22, `rust_decimal` 1 (+`rust_decimal_macros`) as the
-BigDecimal replacement for DV_QUANTITY, `ordered-float` 4, canonical JSON via
-`serde_jcs` 0.2 or a ~150-LoC hand-roll. C14N (canonical XML): `xmllint
+BigDecimal replacement for DV_QUANTITY, `ordered-float` 4, canonical JSON
+(RFC 8785) written by `openehr-rm`'s `canonical_form_impl` with `ryu-js` 0.2
+for the ECMAScript number form, held byte-equal to `serde_jcs` 0.2, its test
+oracle (#5220). C14N (canonical XML): `xmllint
 --c14n` fallback for now.
 
 Parsers (native ADL/cADL/ODIN/AQL): `logos` 0.16 (lexer), `chumsky` 0.13
