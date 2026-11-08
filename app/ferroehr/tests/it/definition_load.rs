@@ -191,3 +191,57 @@ async fn the_professional_fixtures_load_and_carry_the_lanes_mapping() {
         .expect("the store answers");
     assert!(errors.is_empty(), "{errors:?}");
 }
+
+/// Reads a YAML file of the repository.
+fn repo_yaml(relative: &str) -> serde_norway::Value {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(relative);
+    let text = std::fs::read_to_string(path).expect("the YAML file is readable");
+    serde_norway::from_str(&text).expect("the YAML file parses")
+}
+
+/// The copies of the professional fixture set the quickstart and the Helm CI
+/// values carry are the files of `deploy/definitions/professional/`, so a
+/// lane loads what `the_professional_fixtures_load_and_carry_the_lanes_mapping`
+/// checks.
+#[test]
+fn the_lanes_carry_the_professional_fixtures_unchanged() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../deploy/definitions/professional");
+    let source = |file: &str| std::fs::read_to_string(dir.join(file)).expect("readable");
+    let compose = repo_yaml("docker-compose.yml");
+    for (config, file) in [
+        ("ferroehr-definition-person", PROFESSIONAL[0]),
+        ("ferroehr-definition-role", PROFESSIONAL[1]),
+    ] {
+        assert_eq!(
+            compose["configs"][config]["content"].as_str(),
+            Some(source(file).as_str()),
+            "the compose config {config} is a copy of {file}"
+        );
+    }
+    let helm = repo_yaml("deploy/helm/ci/basic-auth-values.yaml");
+    let files = helm["definitions"]["files"]
+        .as_sequence()
+        .expect("the Helm CI values load definitions");
+    let carried: Vec<(&str, &str)> = files
+        .iter()
+        .map(|entry| {
+            (
+                entry["name"].as_str().expect("a name"),
+                entry["content"].as_str().expect("a content"),
+            )
+        })
+        .collect();
+    let expected: Vec<String> = PROFESSIONAL.iter().map(|file| source(file)).collect();
+    assert_eq!(
+        carried,
+        PROFESSIONAL
+            .iter()
+            .zip(&expected)
+            .map(|(file, text)| (*file, text.as_str()))
+            .collect::<Vec<_>>(),
+        "the Helm CI values load the fixture set in its order"
+    );
+}

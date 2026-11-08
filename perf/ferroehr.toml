@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 # The server configuration of the performance gate (scripts/perf/gate.sh):
-# the shipped defaults with one Basic user for the request set, bound as the
-# development configuration binds its users, and the EHR index kept local, so
-# the gate measures FerroEHR and no FerroPIX. The background workers run as
-# the defaults start them.
+# the shipped defaults with one Basic user for the request set, bound through
+# SCIM as the development configuration binds its users, and the EHR index
+# kept local, so the gate measures FerroEHR and no FerroPIX. The background
+# workers run as the defaults start them.
 
 deployment_profile = "sandbox"
 
@@ -26,6 +26,16 @@ issuer = "https://basic-users.ferroehr.invalid"
 identifier_issuer = "urn:ferroehr:basic-user"
 identifier_type = "login"
 
+# The issuer of the provisioning client scripts/perf/gate.sh binds the Basic
+# user through: a machines issuer over the COMMITTED TEST key set of
+# docs/conformance/party/scim/ (never production material).
+[[auth.issuer]]
+issuer = "https://scim.ferroehr.invalid"
+kind = "machines"
+audience = ["ferroehr-scim"]
+token_types = ["at+jwt"]
+jwks_file = "/etc/ferroehr/scim-jwks.json"
+
 # ferroehr / ferroehr (Argon2id), the request set's one caller.
 [[auth.basic.users]]
 user = "ferroehr"
@@ -43,6 +53,35 @@ provider = { issuer = "urn:oid:2.999.7.9", id = "perf" }
 user = "ferroehr"
 key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr"
+
+# The party mapping over the professional PERSON and ROLE pair of
+# deploy/definitions/professional/, which the gate loads with
+# `ferroehr definitions load` before `serve`, as docker/ferroehr.dev.toml maps it.
+[[authz.party_binding.person.template]]
+template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
+default = true
+key = { path = "/details[id2]/items[id3]", type = "login" }
+user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
+external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
+
+[[authz.party_binding.person.attribute]]
+scim = "name.formatted"
+name = true
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
+
+[authz.party_binding.professional_role]
+template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
+
+# The SCIM endpoint the gate provisions the Basic user through.
+[scim]
+enabled = true
+public_base_url = "http://127.0.0.1:58080"
+
+[[scim.client]]
+issuer = "https://scim.ferroehr.invalid"
+client_id = "basic-users"
+scope = "ferroehr/scim"
+binding_issuer = "urn:ferroehr:basic-user"
 
 [ehr_index]
 provider = "local"

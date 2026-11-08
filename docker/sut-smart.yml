@@ -43,23 +43,32 @@ services:
       # ── trust the committed CNF test issuer ───────────────────────────────
       # The lane validates the runner-minted tokens against a STATIC key set, so
       # no Authorization Server has to be running for the scope cases to
-      # execute. It is the second [[auth.issuer]] table (index 1), beside the
-      # issuer the Basic users of docker/ferroehr.dev.toml bind under. The
+      # execute. It is the third [[auth.issuer]] table (index 2), after the
+      # issuer the Basic users of docker/ferroehr.dev.toml bind under and its
+      # SCIM client's issuer. The
       # runner mints plain RS256 JWTs (`typ` JWT, no `client_id` or `jti`), so
       # the issuer accepts that type and those claims, and its audience stands
       # in for the client the tokens do not name.
-      FERROEHR__AUTH__ISSUER__1__ISSUER: "https://as.cnf.test"
-      FERROEHR__AUTH__ISSUER__1__KIND: "persons"
-      FERROEHR__AUTH__ISSUER__1__AUDIENCE: "cnf-smart-sut"
-      FERROEHR__AUTH__ISSUER__1__ALGORITHMS: "RS256"
-      FERROEHR__AUTH__ISSUER__1__TOKEN_TYPES: "JWT"
-      FERROEHR__AUTH__ISSUER__1__REQUIRED_CLAIMS: "iss,exp,aud,sub"
-      FERROEHR__AUTH__ISSUER__1__CLIENT_CLAIMS: "client_id,azp,aud"
-      FERROEHR__AUTH__ISSUER__1__FIRST_PARTY_CLIENTS: "cnf-smart-sut"
-      FERROEHR__AUTH__ISSUER__1__JWKS_FILE: /etc/ferroehr/cnf-smart-jwks.json
+      FERROEHR__AUTH__ISSUER__2__ISSUER: "https://as.cnf.test"
+      FERROEHR__AUTH__ISSUER__2__KIND: "persons"
+      FERROEHR__AUTH__ISSUER__2__AUDIENCE: "cnf-smart-sut"
+      FERROEHR__AUTH__ISSUER__2__ALGORITHMS: "RS256"
+      FERROEHR__AUTH__ISSUER__2__TOKEN_TYPES: "JWT"
+      FERROEHR__AUTH__ISSUER__2__REQUIRED_CLAIMS: "iss,exp,aud,sub"
+      FERROEHR__AUTH__ISSUER__2__CLIENT_CLAIMS: "client_id,azp,aud"
+      FERROEHR__AUTH__ISSUER__2__FIRST_PARTY_CLIENTS: "cnf-smart-sut"
+      FERROEHR__AUTH__ISSUER__2__JWKS_FILE: /etc/ferroehr/cnf-smart-jwks.json
       FERROEHR__AUTH__PARTY__1__ISSUER: "https://as.cnf.test"
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: "urn:ferroehr:cnf-smart-login"
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: "login"
+      # The SCIM client that provisions the runner's subject `cnf-smart-app`
+      # (docs/conformance/party/ferroehr/ixit.json `scoped_tokens.mint`) under
+      # this issuer's identifier issuer: a second client, since no two clients
+      # share a binding_issuer (docs/conformance/party/scim/README.md).
+      FERROEHR__SCIM__CLIENT__1__ISSUER: "https://scim.ferroehr.invalid"
+      FERROEHR__SCIM__CLIENT__1__CLIENT_ID: "cnf-smart"
+      FERROEHR__SCIM__CLIENT__1__SCOPE: "ferroehr/scim"
+      FERROEHR__SCIM__CLIENT__1__BINDING_ISSUER: "urn:ferroehr:cnf-smart-login"
     volumes:
       - ./docs/conformance/party/smart/jwks.json:/etc/ferroehr/cnf-smart-jwks.json:ro
       - ./docs/conformance/party/smart/issuer-metadata.json:/etc/ferroehr/cnf-smart-issuer-metadata.json:ro

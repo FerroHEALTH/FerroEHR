@@ -321,7 +321,7 @@ probes_multimedia_off() {
   # difference here is the switch and nothing else.
   probe "P-MM-OFF" "$PROBE_OFF" "server" "-" \
     "with externalization off, a large DV_MULTIMEDIA is stored inline"
-  FERROEHR__MULTIMEDIA__ENABLED=false compose_up ferroehr
+  FERROEHR__MULTIMEDIA__ENABLED=false compose_up ferroehr ferroehr-provision
   if ! wait_http "$CDR/health/readiness" 90; then
     probe_fail "a serving CDR with multimedia off" "readiness never returned" \
       "turning an integration off must not stop the server starting"
@@ -344,7 +344,7 @@ probes_multimedia_off() {
   probe_done
 
   # Put the stack back the way the rest of the run expects it.
-  compose_up ferroehr
+  compose_up ferroehr ferroehr-provision
   wait_http "$CDR/health/readiness" 90 || true
 }
 

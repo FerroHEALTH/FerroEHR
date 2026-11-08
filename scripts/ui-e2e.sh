@@ -171,6 +171,15 @@ if [[ -z "${UI_E2E_NO_COMPOSE:-}" ]]; then
     up -d "${BUILD_ARGS[@]}" ferroehr-postgres ferroehr keycloak
 fi
 wait_http "$CDR_URL/ferroehr/rest/status" 150
+# Every login the journeys use is bound to a demographic PERSON first: the
+# three Basic users of docker/ferroehr.dev.toml, and the dev realm's users by
+# the ids its export fixes (docker/keycloak/import/ferroehr-realm-exported.json),
+# each through its own SCIM client (docs/conformance/party/scim/README.md).
+bash scripts/scim-provision.sh "$CDR_URL" basic-users \
+  ferroehr ferroehr-admin ferroehr-readonly
+bash scripts/scim-provision.sh "$CDR_URL" keycloak-dev \
+  keycloak-ferroehr-admin=d06b336b-8343-4253-b5e5-e6dace5cff0c \
+  keycloak-ferroehr-user=aca7c611-779e-4f68-99fb-06cc57e7ed26
 wait_http "$KEYCLOAK_URL/auth/realms/ferroehr/.well-known/openid-configuration" 90
 
 # The development CA Keycloak's TLS certificate chains to (docker-compose.dev.yml
