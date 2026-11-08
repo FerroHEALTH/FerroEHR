@@ -137,7 +137,7 @@ a failed row, and it stays failed in the results, the badges and the committed
 record. FerroEHR carries one deviation on purpose. The server writes the
 committer of every version from the authenticated, bound caller, and refuses
 with **403** a stated committer that names someone else (RM Common
-`AUDIT_DETAILS.committer`, "Identity [...] of user who committed the item").
+`AUDIT_DETAILS.committer`, "Identity \[...\] of user who committed the item").
 ITS-REST asks that whatever committer a client supplies "MUST be merged"
 (`Requests_and_responses.md` §openehr-version and openehr-audit-details), so
 the catalogue rows that state another committer and expect it recorded fail.
