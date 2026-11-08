@@ -17,6 +17,7 @@
 //! `model-query` report (BMM facts beside the current field-shape decisions) —
 //! a text producer over the same stages, never generated code.
 
+pub(crate) mod bound_presence;
 pub(crate) mod emit;
 pub(crate) mod emit_json;
 pub(crate) mod emit_opt;

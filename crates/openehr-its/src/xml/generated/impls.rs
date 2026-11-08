@@ -1253,13 +1253,15 @@ impl crate::xml::runtime::FromXml
                 }
             }
         }
+        let __present_lower = __lower.is_some();
+        let __present_upper = __upper.is_some();
         Ok(openehr_base::v1_2::foundation_types::interval::multiplicity_interval::MultiplicityInterval {
 lower: __lower,
 upper: __upper,
-lower_unbounded: __lower_unbounded.unwrap_or(false),
-upper_unbounded: __upper_unbounded.unwrap_or(false),
-lower_included: __lower_included.unwrap_or(true),
-upper_included: __upper_included.unwrap_or(true),
+lower_unbounded: __lower_unbounded.unwrap_or(!__present_lower),
+upper_unbounded: __upper_unbounded.unwrap_or(!__present_upper),
+lower_included: __lower_included.unwrap_or(__present_lower),
+upper_included: __upper_included.unwrap_or(__present_upper),
 })
     }
 }
@@ -1791,14 +1793,16 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                 }
             }
         }
+        let __present_lower = __lower.is_some();
+        let __present_upper = __upper.is_some();
         Ok(
             openehr_base::v1_2::foundation_types::interval::proper_interval::ProperIntervalData {
                 lower: __lower,
                 upper: __upper,
-                lower_unbounded: __lower_unbounded.unwrap_or(false),
-                upper_unbounded: __upper_unbounded.unwrap_or(false),
-                lower_included: __lower_included.unwrap_or(true),
-                upper_included: __upper_included.unwrap_or(true),
+                lower_unbounded: __lower_unbounded.unwrap_or(!__present_lower),
+                upper_unbounded: __upper_unbounded.unwrap_or(!__present_upper),
+                lower_included: __lower_included.unwrap_or(__present_lower),
+                upper_included: __upper_included.unwrap_or(__present_upper),
             },
         )
     }
@@ -4338,13 +4342,15 @@ impl crate::xml::runtime::FromXml
                 }
             }
         }
+        let __present_lower = __lower.is_some();
+        let __present_upper = __upper.is_some();
         Ok(openehr_base::v1_3::foundation_types::interval::multiplicity_interval::MultiplicityInterval {
 lower: __lower,
 upper: __upper,
-lower_unbounded: __lower_unbounded.unwrap_or(false),
-upper_unbounded: __upper_unbounded.unwrap_or(false),
-lower_included: __lower_included.unwrap_or(true),
-upper_included: __upper_included.unwrap_or(true),
+lower_unbounded: __lower_unbounded.unwrap_or(!__present_lower),
+upper_unbounded: __upper_unbounded.unwrap_or(!__present_upper),
+lower_included: __lower_included.unwrap_or(__present_lower),
+upper_included: __upper_included.unwrap_or(__present_upper),
 })
     }
 }
@@ -4876,14 +4882,16 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                 }
             }
         }
+        let __present_lower = __lower.is_some();
+        let __present_upper = __upper.is_some();
         Ok(
             openehr_base::v1_3::foundation_types::interval::proper_interval::ProperIntervalData {
                 lower: __lower,
                 upper: __upper,
-                lower_unbounded: __lower_unbounded.unwrap_or(false),
-                upper_unbounded: __upper_unbounded.unwrap_or(false),
-                lower_included: __lower_included.unwrap_or(true),
-                upper_included: __upper_included.unwrap_or(true),
+                lower_unbounded: __lower_unbounded.unwrap_or(!__present_lower),
+                upper_unbounded: __upper_unbounded.unwrap_or(!__present_upper),
+                lower_included: __lower_included.unwrap_or(__present_lower),
+                upper_included: __upper_included.unwrap_or(__present_upper),
             },
         )
     }
@@ -10152,14 +10160,16 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                 }
             }
         }
+        let __present_lower = __lower.is_some();
+        let __present_upper = __upper.is_some();
         Ok(
             openehr_rm::v1_1::data_types::quantity::dv_interval::DvInterval {
                 lower: __lower,
                 upper: __upper,
-                lower_unbounded: __lower_unbounded.unwrap_or(false),
-                upper_unbounded: __upper_unbounded.unwrap_or(false),
-                lower_included: __lower_included.unwrap_or(true),
-                upper_included: __upper_included.unwrap_or(true),
+                lower_unbounded: __lower_unbounded.unwrap_or(!__present_lower),
+                upper_unbounded: __upper_unbounded.unwrap_or(!__present_upper),
+                lower_included: __lower_included.unwrap_or(__present_lower),
+                upper_included: __upper_included.unwrap_or(__present_upper),
             },
         )
     }
@@ -27879,14 +27889,16 @@ impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
                 }
             }
         }
+        let __present_lower = __lower.is_some();
+        let __present_upper = __upper.is_some();
         Ok(
             openehr_rm::v1_2::data_types::quantity::dv_interval::DvInterval {
                 lower: __lower,
                 upper: __upper,
-                lower_unbounded: __lower_unbounded.unwrap_or(false),
-                upper_unbounded: __upper_unbounded.unwrap_or(false),
-                lower_included: __lower_included.unwrap_or(true),
-                upper_included: __upper_included.unwrap_or(true),
+                lower_unbounded: __lower_unbounded.unwrap_or(!__present_lower),
+                upper_unbounded: __upper_unbounded.unwrap_or(!__present_upper),
+                lower_included: __lower_included.unwrap_or(__present_lower),
+                upper_included: __upper_included.unwrap_or(__present_upper),
             },
         )
     }

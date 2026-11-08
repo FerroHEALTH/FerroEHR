@@ -883,6 +883,7 @@ fn emit_struct_deserialize(
         .enumerate()
         .map(|(i, f)| field_final(f, i, schema))
         .collect();
+    b.push_str(&crate::render::bound_presence::json_locals(fields));
     if let Some((params, fallible)) = door {
         assert_eq!(
             params.len(),
@@ -942,8 +943,7 @@ fn emit_struct_deserialize(
 
 /// The expression that turns field `i`'s map slot into the final field value.
 ///
-/// A mandatory field with a default falls back to it, resolved for this
-/// generation (`schema`) when it is an enumeration-constant marker.
+/// A mandatory field with a default falls back to it (an enumeration marker resolved for `schema`).
 fn field_final(f: &JsonField, i: usize, schema: &JsonSchema<'_>) -> String {
     let wire = &f.wire_name;
     match (&f.kind, &f.default) {

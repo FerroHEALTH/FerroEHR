@@ -2104,13 +2104,15 @@ impl<'de> ::serde::Deserialize<'de>
                         }
                     }
                 }
+                let __present_lower = __s0.as_ref().is_some_and(Option::is_some);
+                let __present_upper = __s1.as_ref().is_some_and(Option::is_some);
                 ::core::result::Result::Ok(crate::v1_2::foundation_types::interval::multiplicity_interval::MultiplicityInterval {
 lower: __s0.flatten(),
 upper: __s1.flatten(),
-lower_unbounded: __s2.flatten().unwrap_or(false),
-upper_unbounded: __s3.flatten().unwrap_or(false),
-lower_included: __s4.flatten().unwrap_or(true),
-upper_included: __s5.flatten().unwrap_or(true),
+lower_unbounded: __s2.flatten().unwrap_or(!__present_lower),
+upper_unbounded: __s3.flatten().unwrap_or(!__present_upper),
+lower_included: __s4.flatten().unwrap_or(__present_lower),
+upper_included: __s5.flatten().unwrap_or(__present_upper),
 })
             }
         }
@@ -3058,14 +3060,16 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
                         }
                     }
                 }
+                let __present_lower = __s0.as_ref().is_some_and(Option::is_some);
+                let __present_upper = __s1.as_ref().is_some_and(Option::is_some);
                 ::core::result::Result::Ok(
                     crate::v1_2::foundation_types::interval::proper_interval::ProperIntervalData {
                         lower: __s0.flatten(),
                         upper: __s1.flatten(),
-                        lower_unbounded: __s2.flatten().unwrap_or(false),
-                        upper_unbounded: __s3.flatten().unwrap_or(false),
-                        lower_included: __s4.flatten().unwrap_or(true),
-                        upper_included: __s5.flatten().unwrap_or(true),
+                        lower_unbounded: __s2.flatten().unwrap_or(!__present_lower),
+                        upper_unbounded: __s3.flatten().unwrap_or(!__present_upper),
+                        lower_included: __s4.flatten().unwrap_or(__present_lower),
+                        upper_included: __s5.flatten().unwrap_or(__present_upper),
                     },
                 )
             }
@@ -7283,13 +7287,15 @@ impl<'de> ::serde::Deserialize<'de>
                         }
                     }
                 }
+                let __present_lower = __s0.as_ref().is_some_and(Option::is_some);
+                let __present_upper = __s1.as_ref().is_some_and(Option::is_some);
                 ::core::result::Result::Ok(crate::v1_3::foundation_types::interval::multiplicity_interval::MultiplicityInterval {
 lower: __s0.flatten(),
 upper: __s1.flatten(),
-lower_unbounded: __s2.flatten().unwrap_or(false),
-upper_unbounded: __s3.flatten().unwrap_or(false),
-lower_included: __s4.flatten().unwrap_or(true),
-upper_included: __s5.flatten().unwrap_or(true),
+lower_unbounded: __s2.flatten().unwrap_or(!__present_lower),
+upper_unbounded: __s3.flatten().unwrap_or(!__present_upper),
+lower_included: __s4.flatten().unwrap_or(__present_lower),
+upper_included: __s5.flatten().unwrap_or(__present_upper),
 })
             }
         }
@@ -8237,14 +8243,16 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
                         }
                     }
                 }
+                let __present_lower = __s0.as_ref().is_some_and(Option::is_some);
+                let __present_upper = __s1.as_ref().is_some_and(Option::is_some);
                 ::core::result::Result::Ok(
                     crate::v1_3::foundation_types::interval::proper_interval::ProperIntervalData {
                         lower: __s0.flatten(),
                         upper: __s1.flatten(),
-                        lower_unbounded: __s2.flatten().unwrap_or(false),
-                        upper_unbounded: __s3.flatten().unwrap_or(false),
-                        lower_included: __s4.flatten().unwrap_or(true),
-                        upper_included: __s5.flatten().unwrap_or(true),
+                        lower_unbounded: __s2.flatten().unwrap_or(!__present_lower),
+                        upper_unbounded: __s3.flatten().unwrap_or(!__present_upper),
+                        lower_included: __s4.flatten().unwrap_or(__present_lower),
+                        upper_included: __s5.flatten().unwrap_or(__present_upper),
                     },
                 )
             }

@@ -625,6 +625,7 @@ fn emit_struct_from_xml(
             )
         })
         .collect();
+    b.push_str(&crate::render::bound_presence::xml_locals(fields, acc_var));
     emit_read_construction(b, target, &values, door_env);
     b.push_str("}\n}\n\n");
 }
@@ -823,8 +824,7 @@ fn element_read_expr(f: &XmlField, spec: &str, door_env: Option<&XmlSchema<'_>>)
         return var;
     }
     if let Some(default) = &f.default {
-        // Mandatory field archie omits at its default (Interval flags): use the
-        // default when the element is absent.
+        // A mandatory field archie omits (the Interval flags) reads its default when absent.
         let default = resolve_default(default, |marker| match door_env {
             Some(env) => door_param(env, marker),
             None => panic!(
