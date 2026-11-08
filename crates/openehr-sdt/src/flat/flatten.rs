@@ -30,6 +30,7 @@
 
 use std::borrow::Cow;
 
+use openehr_rm::v1_2::typing::base_name;
 use serde_json::Value;
 
 use crate::flat::ctx;
@@ -151,12 +152,12 @@ fn walk(node: &WebTemplateNode, rm: &Value, out: &mut SimNode) {
         map::data_values::emit_leaf(rm, &node.rm_type, list_open, out);
         // Value-level `_` RM attributes of the leaf value itself
         // (`master05` per-type tables: `_normal_range`, `_mapping`, …).
-        map::structures::emit_rm_attrs(rm, base_type(&node.rm_type), out);
+        map::structures::emit_rm_attrs(rm, base_name(&node.rm_type), out);
         return;
     }
     // Container-level `_` RM attribute families (`master05` per-class
     // tables: `_uid`, `_link:i`, `_feeder_audit`, `_work_flow_id`, …).
-    map::structures::emit_rm_attrs(rm, base_type(&node.rm_type), out);
+    map::structures::emit_rm_attrs(rm, base_name(&node.rm_type), out);
 
     let names = name_fallback(node);
     for child in &node.children {
@@ -246,7 +247,7 @@ fn shadowed_by_earlier_alternative(node: &WebTemplateNode, child: &WebTemplateNo
     node.children
         .iter()
         .take_while(|c| !std::ptr::eq(*c, child))
-        .any(|c| c.aql_path == child.aql_path && base_type(&c.rm_type) == base_type(&child.rm_type))
+        .any(|c| c.aql_path == child.aql_path && base_name(&c.rm_type) == base_name(&child.rm_type))
 }
 
 /// One emitted occurrence of a template child: the RM value its relative path
@@ -373,7 +374,7 @@ fn attr_emitted(node: &WebTemplateNode, out: &SimNode, attr: &str) -> bool {
 /// `setting` are NOT emitted here — they surface through the `ctx/` vocabulary
 /// (master06; [`crate::flat::ctx`]) to avoid a duplicate encoding of the same datum.
 fn emit_direct_rm_paths(node: &WebTemplateNode, rm: &Value, out: &mut SimNode) {
-    match base_type(&node.rm_type) {
+    match base_name(&node.rm_type) {
         "ACTION" => emit_action_paths(node, rm, out),
         // master05 §ISM_TRANSITION: the three coded rows are addressable on the
         // transition node itself, so one the template leaves unconstrained is
@@ -532,11 +533,6 @@ fn emit_ism_transition(ism: &Value, out: &mut SimNode) {
     map::structures::emit_rm_attrs(ism, "ISM_TRANSITION", out);
 }
 
-/// The base (generic-stripped) RM type name.
-fn base_type(rm_type: &str) -> &str {
-    rm_type.split('<').next().unwrap_or(rm_type)
-}
-
 /// Whether an RM leaf value's `_type` conforms to the template's declared
 /// leaf type, including the specialisations the simplified mappings handle
 /// natively: DV_TEXT ⇄ DV_CODED_TEXT (the `|other` open-value-set pair,
@@ -547,7 +543,7 @@ fn leaf_type_conforms(rm: &Value, declared: &str) -> bool {
     let Some(actual) = rm.get("_type").and_then(Value::as_str) else {
         return true;
     };
-    let declared = base_type(declared);
+    let declared = base_name(declared);
     if actual == declared {
         return true;
     }

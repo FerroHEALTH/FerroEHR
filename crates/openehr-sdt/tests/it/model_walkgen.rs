@@ -94,10 +94,9 @@ fn constrained_attribute(class: &str, attr: &str) -> Option<Value> {
 /// `_type`-tagged, every mandatory attribute present; optionals included when
 /// `rich`. Abstract attribute types instantiate their first concrete
 /// descendant (deterministic); when the class is generic and the caller
-/// supplied type arguments, an attribute declared as the bare parameter
-/// (which the static model resolves to its BOUND) substitutes the argument —
-/// `DV_INTERVAL<DV_QUANTITY>.lower` generates a `DV_QUANTITY`, never an
-/// arbitrary `Ordered` descendant. `unknown` collects type names neither the
+/// supplied type arguments, an attribute written as the formal parameter
+/// substitutes the argument (`DV_INTERVAL<DV_QUANTITY>.lower` generates a
+/// `DV_QUANTITY`, never an arbitrary `Ordered` descendant). `unknown` collects type names neither the
 /// model nor the primitive table covers.
 fn generate(
     class: &str,
@@ -160,36 +159,30 @@ fn attribute_value(
 
 /// The effective type (and type arguments) of one attribute in `class`'s scope.
 ///
-/// An attribute whose declared type equals a generic parameter's bound takes the
-/// caller's argument. A BARE reference to a generic class (the BMM drops the
-/// argument: `IMPORTED_VERSION.item: ORIGINAL_VERSION`) is monomorphized by the
-/// emitter with the enclosing scope's type argument (`item: OriginalVersion<T>`),
-/// so the caller's argument is threaded the same way — the emitted type is what
-/// the codec enforces, and an unthreaded element is not an instance of it.
+/// The model keeps the formal parameter an attribute or a type argument is
+/// written as (`DV_INTERVAL.lower: T`, `REFERENCE_RANGE.range: DV_INTERVAL<T>`,
+/// `IMPORTED_VERSION.item: ORIGINAL_VERSION<T>`); the caller's argument for
+/// that parameter replaces it, so the element is an instance of the type the
+/// codec enforces.
 fn attribute_type<'a>(
     class: &str,
     attr: &'static openehr_rm::v1_2::model::RmAttribute,
     args: &[&'a openehr_rm::v1_2::model::RmTypeRef],
-) -> (&'static str, Vec<&'a openehr_rm::v1_2::model::RmTypeRef>) {
-    let generic_params =
-        openehr_rm::v1_2::model::class(class).map_or(&[][..], |c| c.generic_params);
-    let substituted = generic_params
+) -> (&'a str, Vec<&'a openehr_rm::v1_2::model::RmTypeRef>) {
+    let argument = |formal: Option<&str>| {
+        let params = openehr_rm::v1_2::model::class(class)?.generic_params;
+        let index = params.iter().position(|p| Some(p.name) == formal)?;
+        args.get(index).copied()
+    };
+    if let Some(arg) = argument(attr.formal) {
+        return (arg.name, arg.params.iter().collect());
+    }
+    let ty_args = attr
+        .type_params
         .iter()
-        .zip(args.iter())
-        .find(|(p, _)| p.conforms_to.unwrap_or("Any") == attr.declared_type)
-        .map(|(_, a)| (a.name, a.params.iter().collect()));
-    substituted.unwrap_or_else(|| {
-        let mut ty_args: Vec<&openehr_rm::v1_2::model::RmTypeRef> =
-            attr.type_params.iter().collect();
-        if ty_args.is_empty()
-            && !args.is_empty()
-            && openehr_rm::v1_2::model::class(attr.declared_type)
-                .is_some_and(|c| !c.generic_params.is_empty())
-        {
-            ty_args = args.to_vec();
-        }
-        (attr.declared_type, ty_args)
-    })
+        .map(|p| argument(p.formal).unwrap_or(p))
+        .collect();
+    (attr.declared_type, ty_args)
 }
 
 /// A value of declared type `ty` (with its generic arguments): a class with a

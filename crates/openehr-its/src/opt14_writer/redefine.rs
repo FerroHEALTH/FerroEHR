@@ -10,6 +10,7 @@ use super::interval;
 use super::leaf;
 use super::path;
 use crate::opt14::types::{CAttribute, CObject, Intervalofinteger};
+use openehr_rm::v1_2::typing::{RmType, base_name};
 
 /// Where a redefinition applies, for its diagnostics.
 pub(super) struct Site<'a> {
@@ -56,17 +57,12 @@ pub(super) fn conforms(given: &str, archetype: &str) -> bool {
     if given == archetype {
         return true;
     }
-    let (given_class, given_params) = split_generic(given);
-    let (archetype_class, archetype_params) = split_generic(archetype);
-    openehr_rm::v1_2::model::is_a(given_class, archetype_class)
-        && (archetype_params.is_none() || given_params == archetype_params)
-}
-
-fn split_generic(rm_type: &str) -> (&str, Option<&str>) {
-    match rm_type.split_once('<') {
-        Some((class, params)) => (class, Some(params)),
-        None => (rm_type, None),
-    }
+    // NOTE: a text that is no RM type name (RM class tables) conforms only to itself, checked above.
+    let (Ok(given), Ok(archetype)) = (given.parse::<RmType>(), archetype.parse::<RmType>()) else {
+        return false;
+    };
+    openehr_rm::v1_2::model::is_a(given.name(), archetype.name())
+        && (archetype.params().is_empty() || given.params() == archetype.params())
 }
 
 /// Overlays `given` on the children of `attribute`.
@@ -246,7 +242,7 @@ fn overlay_object(
                 merged.remove(index);
             }
         } else {
-            let class = split_generic(given_type).0;
+            let class = base_name(given_type);
             if openehr_rm::v1_2::model::attribute(class, name).is_none() {
                 return Err(WriteError::AttributeNotInModel {
                     archetype_id: site.archetype_id.to_owned(),

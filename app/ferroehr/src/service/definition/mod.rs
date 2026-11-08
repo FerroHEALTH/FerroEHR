@@ -24,6 +24,8 @@
 //!   template/query shapes). Their route
 //!   wiring is the ITS-REST layer's concern; behaviour rides on the logic
 //!   in the sibling files.
+//! - `load` — `ferroehr definitions load`: a definition from a file, through
+//!   the upload path of its format, left alone when stored with the same text.
 //! - `version_selector` — the ITS-REST `version` path parameter: its SEMVER
 //!   grammar, checked before any versioned read resolves, and its matching.
 //! - [`types`] — the shared data shapes ([`types::TemplateListFilter`],
@@ -50,6 +52,7 @@ mod adl2_terminology;
 mod binding_uri;
 pub mod declared;
 pub(super) mod lineage;
+pub mod load;
 mod opt14;
 mod query;
 mod version_selector;
