@@ -235,7 +235,9 @@ fn base_repo() -> ArchetypeRepository {
 
 fn build_opt() -> OperationalTemplate {
     let template = parse(TEMPLATE_T_DISCHARGE);
-    create_opt(&template, &base_repo()).unwrap_or_else(|e| panic!("create_opt failed: {e}"))
+    create_opt(&template, &base_repo())
+        .unwrap_or_else(|e| panic!("create_opt failed: {e}"))
+        .template
 }
 
 // ── navigation helpers ──────────────────────────────────────────────────────

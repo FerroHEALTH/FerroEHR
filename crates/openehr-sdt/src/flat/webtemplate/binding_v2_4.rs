@@ -17,7 +17,10 @@
 
 use std::collections::BTreeMap;
 
+use indexmap::IndexMap;
 use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTerminology;
+
+use super::model::WebTemplateBindingCodedValue;
 
 /// The terminology an `@ttttt` operational binding names on a constraint,
 /// split from the constraint's code: `ac1@snomed_ct` reads as `ac1` and
@@ -80,6 +83,37 @@ pub(super) fn bound_codes<'t>(
 fn bound_term_code(uri: &str) -> Option<String> {
     let (_, code) = uri.trim().rsplit_once("/id/")?;
     (!code.is_empty() && !code.contains('/')).then(|| code.to_owned())
+}
+
+/// The external term bindings for `code` in `term` (master04 §"Web Template
+/// Metadata": a `termBindings` map). `v2_4` `term_bindings` maps terminology →
+/// code → target URI (`ARCHETYPE_TERMINOLOGY.term_bindings`); the bound URI is
+/// surfaced as the coded value.
+pub(super) fn term_bindings_of(
+    term: &ArchetypeTerminology,
+    code: &str,
+) -> IndexMap<String, WebTemplateBindingCodedValue> {
+    let mut out = IndexMap::new();
+    if code.is_empty() {
+        return out;
+    }
+    let Some(bindings) = &term.term_bindings else {
+        return out;
+    };
+    for (terminology, map) in bindings {
+        if let Some(uri) = map.get(code)
+            && !uri.trim().is_empty()
+        {
+            out.insert(
+                terminology.clone(),
+                WebTemplateBindingCodedValue {
+                    value: uri.clone(),
+                    terminology_id: terminology.clone(),
+                },
+            );
+        }
+    }
+    out
 }
 
 #[cfg(test)]

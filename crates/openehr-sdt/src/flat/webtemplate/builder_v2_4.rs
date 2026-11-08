@@ -55,7 +55,7 @@ use openehr_am::v2_4::beom::core::expression::Expression;
 use openehr_base::prelude::{Cardinality, MultiplicityInterval};
 use openehr_lang::v1_1::beom::core::operator_kind::OperatorKind;
 
-use super::binding_v2_4::{bound_codes, split_operational};
+use super::binding_v2_4::{bound_codes, split_operational, term_bindings_of};
 use super::implicit;
 use super::inputs::{assumed_code, default_string};
 use super::interval_v2_4::{
@@ -63,11 +63,11 @@ use super::interval_v2_4::{
     range_union, real_default, real_range, sole_interval,
 };
 use super::model::{
-    WebTemplate, WebTemplateArchetypeSlot, WebTemplateBindingCodedValue, WebTemplateCardinality,
-    WebTemplateClosedAttribute, WebTemplateCodedValue, WebTemplateExistence, WebTemplateInput,
-    WebTemplateInputType, WebTemplateNode, WebTemplateStructuralStub, WebTemplateValidation,
+    WebTemplate, WebTemplateArchetypeSlot, WebTemplateCardinality, WebTemplateClosedAttribute,
+    WebTemplateCodedValue, WebTemplateExistence, WebTemplateInput, WebTemplateInputType,
+    WebTemplateNode, WebTemplateStructuralStub, WebTemplateValidation,
 };
-use super::path_v2_4::{build_path, name_constraint};
+use super::path_v2_4::{build_path, name_constraint, object_path, prohibited_under};
 use super::shape;
 
 /// Build a [`WebTemplate`] from a parsed `v2_4` operational template (OPT2).
@@ -77,13 +77,17 @@ use super::shape;
 /// master04-basic_concepts.adoc` (§"Web Template Metadata", §"Node ID Generation
 /// Rules", §"Level Removal"). `version` is the format version string; `semVer`
 /// carries the OPT2 release version (`master07.05` — an ADL2/OPT2 concept the
-/// OPT 1.4 form lacks).
+/// OPT 1.4 form lacks). `prohibited_attributes` names the attributes the OPT
+/// removed for `existence matches {0}`, as `openehr_adl::opt::RawOpt` carries
+/// them, so a COMPOSITION that deletes `context` gets no `/context` node; an
+/// OPT received without them passes none.
 ///
 /// # Errors
 /// [`crate::flat::error::FlatError::InvalidTemplate`] if the template lacks an
 /// archetype id.
 pub fn build_web_template_v2_4(
     opt: &OperationalTemplate,
+    prohibited_attributes: &[String],
 ) -> Result<WebTemplate, crate::flat::error::FlatError> {
     let template_id = template_id_of(&opt.archetype_id);
     if template_id.is_empty() {
@@ -97,6 +101,7 @@ pub fn build_web_template_v2_4(
         default_language,
         components: opt.component_terminologies.as_ref(),
         overlay_parents: overlay_parents(opt),
+        prohibited: prohibited_attributes,
     };
 
     // The OPT definition root is a plain `C_COMPLEX_OBJECT` (rm type COMPOSITION,
@@ -111,6 +116,7 @@ pub fn build_web_template_v2_4(
         &root_co,
         None,
         shape::Identity::Archetyped,
+        "",
     );
     // master04 §"Web Template Metadata": the root `nodeId` is the archetype id
     // (interface form), not the internal concept code.
@@ -231,6 +237,8 @@ struct Ctx<'a> {
     /// the overlay's full id, as `openehr-adl` records it in the OPT's
     /// `other_meta_data`.
     overlay_parents: BTreeMap<String, String>,
+    /// The OPT paths of the attributes the OPT removed for `existence {0}`.
+    prohibited: &'a [String],
 }
 
 impl Ctx<'_> {
@@ -281,37 +289,6 @@ fn rubric_text(term: &ArchetypeTerminology, code: &str, lang: &str) -> Option<St
         .filter(|s| !s.is_empty())
 }
 
-/// The external term bindings for `code` in `term` (master04 §"Web Template
-/// Metadata": a `termBindings` map). `v2_4` `term_bindings` maps terminology →
-/// code → target URI (`ARCHETYPE_TERMINOLOGY.term_bindings`); the bound URI is
-/// surfaced as the coded value.
-fn term_bindings_of(
-    term: &ArchetypeTerminology,
-    code: &str,
-) -> IndexMap<String, WebTemplateBindingCodedValue> {
-    let mut out = IndexMap::new();
-    if code.is_empty() {
-        return out;
-    }
-    let Some(bindings) = &term.term_bindings else {
-        return out;
-    };
-    for (terminology, map) in bindings {
-        if let Some(uri) = map.get(code)
-            && !uri.trim().is_empty()
-        {
-            out.insert(
-                terminology.clone(),
-                WebTemplateBindingCodedValue {
-                    value: uri.clone(),
-                    terminology_id: terminology.clone(),
-                },
-            );
-        }
-    }
-    out
-}
-
 // ── node build ───────────────────────────────────────────────────────────────
 
 fn build_node(
@@ -321,6 +298,7 @@ fn build_node(
     co: &CObject,
     parent: Option<&WebTemplateNode>,
     identity: shape::Identity,
+    path: &str,
 ) -> WebTemplateNode {
     // A `C_ARCHETYPE_ROOT` switches the terminology scope to its constituent's
     // for its CHILDREN (OPT2 master03 §Terminology). The root node's OWN rubric
@@ -336,7 +314,7 @@ fn build_node(
         _ => term,
     };
     let mut node = create_node(ctx, term, child_term, owner, co, parent, identity);
-    build_children(ctx, child_term, co, &mut node);
+    build_children(ctx, child_term, co, &mut node, path);
     node
 }
 
@@ -417,7 +395,9 @@ fn build_attribute_children(
     attr: &CAttribute,
     node: &WebTemplateNode,
     children: &mut Vec<WebTemplateNode>,
+    path: &str,
 ) {
+    let attr_path = format!("{path}/{}", attr.rm_attribute_name);
     let merged = attr.rm_attribute_name == shape::MERGED_ATTRIBUTE;
     let identity = if merged {
         shape::Identity::AttributeOnly
@@ -436,6 +416,7 @@ fn build_attribute_children(
             child_co,
             Some(node),
             identity,
+            &object_path(&attr_path, object_node_id(child_co)),
         ));
     }
     if !merged {
@@ -455,6 +436,7 @@ fn build_children(
     term: &ArchetypeTerminology,
     co: &CObject,
     node: &mut WebTemplateNode,
+    path: &str,
 ) {
     let is_data_value = node.rm_type.starts_with("DV_");
     let recurse_attrs = !is_data_value || node.rm_type.starts_with("DV_INTERVAL");
@@ -464,12 +446,12 @@ fn build_children(
         for attr in co_attributes(co) {
             // The name attribute names the node (master04 §"Field Identifiers").
             if attr.rm_attribute_name != "name" {
-                build_attribute_children(ctx, term, attr, node, &mut children);
+                build_attribute_children(ctx, term, attr, node, &mut children, path);
             }
         }
         let declared = children.len();
         for attr in implicit::interval_parts_v2_4(&node.rm_type, co_attributes(co)) {
-            build_attribute_children(ctx, term, &attr, node, &mut children);
+            build_attribute_children(ctx, term, &attr, node, &mut children, path);
         }
         children
             .iter_mut()
@@ -498,6 +480,7 @@ fn build_children(
     // handled by `inputs` (mirrors the OPT-1.4 front end's `recurse_attrs` guard).
     if recurse_attrs {
         node.existence = existence_constraints(co, &node.aql_path);
+        node.prohibited_attributes = prohibited_under(ctx.prohibited, path);
         node.closed_attributes = closed_attributes(co, &node.aql_path, &ctx.overlay_parents);
         node.structural_stubs = structural_stubs(ctx, term, co, &node.aql_path);
     }

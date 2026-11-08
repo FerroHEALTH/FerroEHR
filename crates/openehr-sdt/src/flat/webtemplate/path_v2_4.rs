@@ -54,3 +54,26 @@ pub(super) fn name_constraint(co: &CObject) -> Option<String> {
         }
     })
 }
+
+/// The OPT path of an object with `node_id` under the attribute at
+/// `attr_path`: `attr_path[node_id]`, or `attr_path` for an object with no node
+/// id (ADL2 `master05-paths.adoc` §Overview), the form
+/// `openehr_adl::opt::RawOpt` writes its prohibited attributes in.
+pub(super) fn object_path(attr_path: &str, node_id: &str) -> String {
+    if node_id.is_empty() {
+        attr_path.to_owned()
+    } else {
+        format!("{attr_path}[{node_id}]")
+    }
+}
+
+/// The names of the attributes `prohibited` lists directly under the object at
+/// OPT path `owner`.
+pub(super) fn prohibited_under(prohibited: &[String], owner: &str) -> Vec<String> {
+    prohibited
+        .iter()
+        .filter_map(|path| path.strip_prefix(owner)?.strip_prefix('/'))
+        .filter(|name| !name.contains(['/', '[']))
+        .map(str::to_owned)
+        .collect()
+}

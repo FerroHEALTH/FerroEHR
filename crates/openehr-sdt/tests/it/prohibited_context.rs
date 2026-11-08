@@ -10,17 +10,24 @@
 //! open keeps the synthesized node of ITS-REST `simplified_formats`
 //! master04 §"Web Template Metadata". An OPT2 carries no such constraint: a
 //! raw OPT removes every attribute of existence `0..0` and every object of
-//! occurrences `0..0` (AM `OPT2/master03-opt_raw.adoc`).
+//! occurrences `0..0` (AM `OPT2/master03-opt_raw.adoc`), so `openehr-adl`
+//! names the removed attributes beside the OPT and the `v2_4` front end reads
+//! them (#5154).
 #![expect(
     clippy::expect_used,
     clippy::panic,
     reason = "integration-test assertions and fixture plumbing outside #[test] fns, which the clippy.toml allow-*-in-tests scoping does not reach"
 )]
 
+use openehr_adl::artefact::ArchetypeRepository;
+use openehr_adl::assemble::parse_artefact;
+use openehr_adl::opt::create_opt;
+use openehr_adl::parse::Dialect;
 use openehr_its::opt14;
 use openehr_sdt::flat::convert::{composition_from_flat, composition_to_flat};
 use openehr_sdt::flat::example::{DetailLevel, example_composition};
 use openehr_sdt::flat::webtemplate::builder::build_web_template;
+use openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4;
 use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 use openehr_sdt::rm_instance::validate_composition;
 
@@ -216,4 +223,97 @@ fn a_context_less_template_builds_and_round_trips_a_composition_without_context(
             "the rebuild adds no context"
         );
     }
+}
+
+/// The Web Template of an ADL2 COMPOSITION archetype with `constraints` on its
+/// root, compiled to its OPT2 and built with the attributes the OPT removed
+/// when `with_prohibited`, or with none as for an OPT2 received compiled.
+fn opt2_web_template(constraints: &str, with_prohibited: bool) -> WebTemplate {
+    let source = format!(
+        "archetype (adl_version=2.0.6; rm_release=1.0.2; generated)\n    \
+         openEHR-EHR-COMPOSITION.context_probe.v1.0.0\n\n\
+         language\n    original_language = <[ISO_639-1::en]>\n\n\
+         description\n    lifecycle_state = <\"unmanaged\">\n\n\
+         definition\n    COMPOSITION[id1] matches {{\n        {constraints}\n        \
+         content cardinality matches {{0..*; unordered}} matches {{\n            \
+         OBSERVATION[id2] occurrences matches {{0..*}}\n        }}\n    }}\n\n\
+         terminology\n    term_definitions = <\n        [\"en\"] = <\n            \
+         [\"id1\"] = <text = <\"Probe\">; description = <\"A probe\">>\n            \
+         [\"id2\"] = <text = <\"Observation\">; description = <\"An observation\">>\n        \
+         >\n    >\n"
+    );
+    let archetype = parse_artefact(&source, Dialect::Adl2).expect("the probe parses");
+    let opt = create_opt(&archetype, &ArchetypeRepository::default()).expect("the OPT builds");
+    let prohibited: &[String] = if with_prohibited {
+        &opt.prohibited_attributes
+    } else {
+        &[]
+    };
+    build_web_template_v2_4(&opt.template, prohibited).expect("build web template")
+}
+
+#[test]
+fn opt2_deleted_context_prohibits_the_context_node() {
+    let wt = opt2_web_template("context existence matches {0}", true);
+    assert_no_context(&wt);
+    let ids: Vec<&str> = wt.tree.children.iter().map(|c| c.id.as_str()).collect();
+    for expected in ["category", "language", "territory", "composer"] {
+        assert!(ids.contains(&expected), "missing {expected}: {ids:?}");
+    }
+}
+
+#[test]
+fn opt2_open_or_optional_context_keeps_the_context_node() {
+    assert_context_with_leaves(&opt2_web_template("", true));
+    assert_context_with_leaves(&opt2_web_template("context existence matches {0..1}", true));
+    // An OPT2 received compiled names no removed attribute, so its deleted
+    // context reads at the RM's 0..1.
+    assert_context_with_leaves(&opt2_web_template("context existence matches {0}", false));
+}
+
+#[test]
+fn a_context_less_opt2_refuses_a_composition_carrying_context() {
+    let open = opt2_web_template("", true);
+    let deleted = opt2_web_template("context existence matches {0}", true);
+    let example = example_composition(&open, DetailLevel::Complete).expect("the example builds");
+    assert!(
+        example.get("context").is_some(),
+        "the open template's example carries a context"
+    );
+    assert!(
+        validate_composition(&example, &open).is_empty(),
+        "the example validates against its own template"
+    );
+    assert!(
+        !validate_composition(&example, &deleted).is_empty(),
+        "a template that deletes context refuses a composition carrying one"
+    );
+    let own = example_composition(&deleted, DetailLevel::Complete).expect("the example builds");
+    assert!(
+        own.get("context").is_none(),
+        "no context in its own example"
+    );
+    let messages = validate_composition(&own, &deleted);
+    assert!(
+        messages.is_empty(),
+        "its own example validates: {messages:?}"
+    );
+}
+
+#[test]
+fn a_context_less_opt14_refuses_a_composition_carrying_context() {
+    let open = opt14_web_template(None);
+    let prohibited = opt14_web_template(Some(&context_attribute((0, 0), None)));
+    let example = example_composition(&open, DetailLevel::Complete).expect("the example builds");
+    assert!(
+        example.get("context").is_some(),
+        "the example carries a context"
+    );
+    let messages = validate_composition(&example, &prohibited);
+    assert!(
+        messages
+            .iter()
+            .any(|m| m.path == "/context" && m.message.contains("prohibited")),
+        "a template that prohibits context refuses a composition carrying one: {messages:?}"
+    );
 }

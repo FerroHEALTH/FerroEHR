@@ -76,8 +76,10 @@ use crate::aom::access::{
 use crate::artefact::{ArchetypeRepository, view};
 use crate::flatten::{FlattenError, flat_form};
 use crate::odin::nil_uuid;
-use crate::paths::parse_path;
+use crate::paths::{child_path, parse_path};
 use openehr_lang::nesting::Nesting;
+
+mod profile;
 
 /// A failure while generating or profiling an operational template.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -132,9 +134,28 @@ pub enum OptError {
 /// `meta_data_value` string.
 pub const OVERLAY_PARENTS_KEY: &str = "template_overlay_parents";
 
-/// Generate the raw operational template from a source `root` template (or
-/// archetype) and a `repo` supplying its specialisation parent and every
-/// referenced constituent archetype.
+/// A raw operational template with the attributes its transform removed.
+///
+/// OPT2 `master03` §Flattening removes every attribute of `existence matches
+/// {0}`, so the OPT alone reads such an attribute at its reference-model
+/// existence (ADL2 `master04.3` §Existence). The paths keep the prohibition
+/// beside the OPT, which keeps its `master03` shape (no specification governs
+/// this: our own design).
+#[derive(Debug, Clone, PartialEq)]
+pub struct RawOpt {
+    /// The raw operational template.
+    pub template: OperationalTemplate,
+    /// The path of every attribute removed for `existence matches {0}`, as
+    /// the ADL path of its owning object in the OPT followed by
+    /// `/<attribute>` (`/context` for one of the root), in walk order.
+    pub prohibited_attributes: Vec<String>,
+}
+
+/// Generate the raw operational template of a source `root` template (or
+/// archetype), with the attributes it removed ([`RawOpt`]).
+///
+/// `repo` supplies the root's specialisation parent and every referenced
+/// constituent archetype.
 ///
 /// The root's own `template_overlay` blocks are registered as local
 /// constituents before flattening, so `use_archetype` references to them
@@ -154,10 +175,7 @@ pub const OVERLAY_PARENTS_KEY: &str = "template_overlay_parents";
 /// from `repo`, [`OptError::CyclicReference`] if the fillers reference each
 /// other in a cycle, [`OptError::NestingTooDeep`] if inlining composes a tree
 /// past the engine bound.
-pub fn create_opt(
-    root: &Archetype,
-    repo: &ArchetypeRepository,
-) -> Result<OperationalTemplate, OptError> {
+pub fn create_opt(root: &Archetype, repo: &ArchetypeRepository) -> Result<RawOpt, OptError> {
     // A working repository seeded with the passed repo plus the root's local
     // overlays (master10: overlays are local specialised archetypes, referenced
     // as slot fillers and inlined here).
@@ -182,8 +200,9 @@ pub fn create_opt(
         overlay_parents: BTreeMap::new(),
         root_id: &root_id,
         inlining: vec![root_id.clone()],
+        prohibited: Vec::new(),
     };
-    let opt_def = transform.complex(parts.definition.clone(), Nesting::ROOT)?;
+    let opt_def = transform.complex(parts.definition.clone(), Nesting::ROOT, "")?;
     let components = transform.components;
     let mut other_meta_data = BTreeMap::new();
     if !transform.overlay_parents.is_empty() {
@@ -195,7 +214,7 @@ pub fn create_opt(
         other_meta_data.insert(OVERLAY_PARENTS_KEY.to_owned(), pairs.join(","));
     }
 
-    Ok(OperationalTemplate {
+    let template = OperationalTemplate {
         parent_archetype_id: root_parent(root, &work),
         archetype_id: parts.archetype_id,
         is_differential: false,
@@ -217,6 +236,10 @@ pub fn create_opt(
         other_meta_data,
         component_terminologies: (!components.is_empty()).then_some(components),
         terminology_extracts: None,
+    };
+    Ok(RawOpt {
+        template,
+        prohibited_attributes: transform.prohibited,
     })
 }
 
@@ -315,14 +338,21 @@ struct Transform<'a> {
     overlay_parents: BTreeMap<String, String>,
     root_id: &'a str,
     inlining: Vec<String>,
+    /// The path of every attribute removed for `existence matches {0}`.
+    prohibited: Vec<String>,
 }
 
 impl Transform<'_> {
     /// OPT-transform a `C_COMPLEX_OBJECT` (or `C_ARCHETYPE_ROOT`) root at
-    /// `level`: strip sibling markers and rewrite its attribute list. The
-    /// object is its own proxy root — the flat artefact against which its
-    /// `use_node` target paths resolve.
-    fn complex(&mut self, def: CComplexObject, level: Nesting) -> Result<CComplexObject, OptError> {
+    /// `level` and OPT path `path`: strip sibling markers and rewrite its
+    /// attribute list. The object is its own proxy root — the flat artefact
+    /// against which its `use_node` target paths resolve.
+    fn complex(
+        &mut self,
+        def: CComplexObject,
+        level: Nesting,
+        path: &str,
+    ) -> Result<CComplexObject, OptError> {
         let proxy_root = def.clone();
         match def {
             CComplexObject::CComplexObject(mut d) => {
@@ -331,6 +361,7 @@ impl Transform<'_> {
                     d.attributes.unwrap_or_default(),
                     &proxy_root,
                     level,
+                    path,
                 )?);
                 Ok(CComplexObject::CComplexObject(d))
             }
@@ -340,6 +371,7 @@ impl Transform<'_> {
                     r.attributes.unwrap_or_default(),
                     &proxy_root,
                     level,
+                    path,
                 )?);
                 Ok(CComplexObject::CArchetypeRoot(r))
             }
@@ -347,19 +379,22 @@ impl Transform<'_> {
     }
 
     /// OPT-transform an attribute list: drop `existence matches {0}` attributes
-    /// (master03 §Flattening — deleted attributes removed), and rewrite each
-    /// attribute's children one level deeper through [`Self::object`].
+    /// (master03 §Flattening — deleted attributes removed) and record their
+    /// paths under the owning object's `path`, and rewrite each attribute's
+    /// children one level deeper through [`Self::object`].
     fn attributes(
         &mut self,
         attrs: Vec<CAttribute>,
         proxy_root: &CComplexObject,
         level: Nesting,
+        path: &str,
     ) -> Result<Vec<CAttribute>, OptError> {
         let child_level = level
             .descend()
             .map_err(|e| OptError::NestingTooDeep { limit: e.limit })?;
         let mut out = Vec::new();
         for mut attr in attrs {
+            let attr_path = format!("{path}/{}", attr.rm_attribute_name);
             // `existence matches {0}` — a logically-removed attribute (master03
             // §Flattening: "attribute nodes that have `existence matches {0}` … are
             // removed").
@@ -368,11 +403,12 @@ impl Transform<'_> {
                 .as_ref()
                 .is_some_and(MultiplicityInterval::is_prohibited)
             {
+                self.prohibited.push(attr_path);
                 continue;
             }
             let mut kept = Vec::new();
             for child in std::mem::take(&mut attr.children).into_iter().flatten() {
-                if let Some(node) = self.object(child, proxy_root, child_level)? {
+                if let Some(node) = self.object(child, proxy_root, child_level, &attr_path)? {
                     kept.push(node);
                 }
             }
@@ -384,14 +420,15 @@ impl Transform<'_> {
         Ok(out)
     }
 
-    /// OPT-transform a single object node. Returns `None` when the node is
-    /// removed (`occurrences matches {0}` object or a `closed` slot; master03
-    /// §Flattening).
+    /// OPT-transform a single object node under the attribute at `attr_path`.
+    /// Returns `None` when the node is removed (`occurrences matches {0}`
+    /// object or a `closed` slot; master03 §Flattening).
     fn object(
         &mut self,
         obj: CObject,
         proxy_root: &CComplexObject,
         level: Nesting,
+        attr_path: &str,
     ) -> Result<Option<CObject>, OptError> {
         // `occurrences matches {0}` — a logically-removed object (master03
         // §Flattening: "object … nodes with `occurrences matches {0}` [are
@@ -421,18 +458,21 @@ impl Transform<'_> {
                 let deeper = level
                     .descend()
                     .map_err(|e| OptError::NestingTooDeep { limit: e.limit })?;
-                self.object(inlined, proxy_root, deeper)
+                self.object(inlined, proxy_root, deeper, attr_path)
             }
             CObject::CComplexObject(CComplexObject::CArchetypeRoot(r)) => {
-                let node = self.inline_filler(*r, level)?;
+                let path = child_path(attr_path, &r.node_id);
+                let node = self.inline_filler(*r, level, &path)?;
                 Ok(Some(node))
             }
             CObject::CComplexObject(CComplexObject::CComplexObject(mut d)) => {
                 d.sibling_order = None;
+                let path = child_path(attr_path, &d.node_id);
                 d.attributes = openehr_base::containers::present(self.attributes(
                     d.attributes.unwrap_or_default(),
                     proxy_root,
                     level,
+                    &path,
                 )?);
                 Ok(Some(CObject::CComplexObject(
                     CComplexObject::CComplexObject(d),
@@ -458,6 +498,7 @@ impl Transform<'_> {
         &mut self,
         mut r: CArchetypeRoot,
         level: Nesting,
+        path: &str,
     ) -> Result<CObject, OptError> {
         let work = self.work;
         let referrer = self.inlining.last().and_then(|id| id.rsplit_once("::"));
@@ -502,7 +543,7 @@ impl Transform<'_> {
         // proxies / deletions inside the constituent are handled too), at the
         // level of the slot it fills.
         self.inlining.push(full_id.clone());
-        let opt_def = self.complex(definition, level);
+        let opt_def = self.complex(definition, level, path);
         self.inlining.pop();
         let (rm_type, attributes, attribute_tuples) = match opt_def? {
             CComplexObject::CComplexObject(d) => (d.rm_type_name, d.attributes, d.attribute_tuples),
@@ -642,80 +683,18 @@ pub fn profile_opt(
 
     // Language filtering (master04 §Language Filtering).
     if let Some(keep) = &spec.keep_languages {
-        filter_languages(&mut out, keep)?;
+        profile::filter_languages(&mut out, keep)?;
     }
 
     // Terminology binding filtering (master04 §Terminology Binding Filtering).
-    filter_bindings(&mut out.terminology, &spec.bindings);
+    profile::filter_bindings(&mut out.terminology, &spec.bindings);
     if let Some(components) = out.component_terminologies.as_mut() {
         for term in components.values_mut() {
-            filter_bindings(term, &spec.bindings);
+            profile::filter_bindings(term, &spec.bindings);
         }
     }
 
     Ok(out)
-}
-
-/// Keep only the listed languages across the OPT's language / terminology /
-/// description sections (master04 §Language Filtering). At least one language
-/// must remain.
-fn filter_languages(opt: &mut OperationalTemplate, keep: &[String]) -> Result<(), OptError> {
-    let keep_set: std::collections::BTreeSet<&str> = keep.iter().map(String::as_str).collect();
-
-    // The resulting language set must be non-empty.
-    let root_lang = opt.original_language.code_string.clone();
-    let surviving: Vec<&String> = opt
-        .terminology
-        .term_definitions
-        .keys()
-        .filter(|l| keep_set.contains(l.as_str()))
-        .collect();
-    if surviving.is_empty() && !keep_set.contains(root_lang.as_str()) {
-        return Err(OptError::NoLanguagesLeft);
-    }
-
-    retain_languages_terminology(&mut opt.terminology, &keep_set);
-    if let Some(components) = opt.component_terminologies.as_mut() {
-        for term in components.values_mut() {
-            retain_languages_terminology(term, &keep_set);
-        }
-    }
-    if let Some(translations) = opt.translations.as_mut() {
-        translations.retain(|lang, _| keep_set.contains(lang.as_str()));
-    }
-    if let Some(description) = opt.description.as_mut()
-        && let Some(details) = description.details.as_mut()
-    {
-        details.retain(|lang, _| keep_set.contains(lang.as_str()));
-    }
-    Ok(())
-}
-
-fn retain_languages_terminology(
-    term: &mut ArchetypeTerminology,
-    keep: &std::collections::BTreeSet<&str>,
-) {
-    term.term_definitions
-        .retain(|lang, _| keep.contains(lang.as_str()));
-}
-
-/// Remove terminology bindings per `filter` (master04 §Terminology Binding
-/// Filtering).
-fn filter_bindings(term: &mut ArchetypeTerminology, filter: &BindingFilter) {
-    match filter {
-        BindingFilter::KeepAll => {}
-        BindingFilter::RemoveAll => term.term_bindings = None,
-        BindingFilter::Remove(terminologies) => {
-            if let Some(bindings) = term.term_bindings.as_mut() {
-                for t in terminologies {
-                    bindings.remove(t);
-                }
-                if bindings.is_empty() {
-                    term.term_bindings = None;
-                }
-            }
-        }
-    }
 }
 
 // ── root-field extraction ──────────────────────────────────────────────────

@@ -25,7 +25,7 @@ use openehr_adl::artefact::ArchetypeRepository;
 use openehr_adl::assemble::parse_artefact;
 use openehr_adl::hrid::raw_id_concept;
 use openehr_adl::meta::{ArtefactSummary, summarize};
-use openehr_adl::opt::{OptError, create_opt, unresolved_constituents};
+use openehr_adl::opt::{OptError, RawOpt, create_opt, unresolved_constituents};
 use openehr_adl::parse::Dialect;
 use openehr_adl::validate::catalogue::Severity;
 use openehr_adl::validate::resource_meta::check_base_description;
@@ -33,7 +33,6 @@ use openehr_adl::validate::rm::{ProductionRmModel, production_model_governs};
 use openehr_adl::validate::{validate_source, validate_source_integrity};
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetype;
-use openehr_am::v2_4::aom2::archetype::operational_template::OperationalTemplate;
 use openehr_base::validate::InvariantViolation;
 use openehr_sdt::flat::example::{DetailLevel, ExampleType, apply_output_uid};
 use openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4;
@@ -276,7 +275,7 @@ impl FerroEhrService {
     /// - The OPT cannot be compiled otherwise → `Unprocessable` (`422`).
     pub(super) async fn adl2_opt_json(&self, source: &str) -> Result<String, ServiceError> {
         let opt = self.adl2_operational_template(source).await?;
-        Ok(openehr_its::json::to_canonical_json(&opt))
+        Ok(openehr_its::json::to_canonical_json(&opt.template))
     }
 
     /// Generate an example COMPOSITION for a stored ADL2 template
@@ -338,7 +337,7 @@ impl FerroEhrService {
     ///   built into a `WebTemplate`.
     pub async fn web_template_adl2(&self, template_id: &str) -> Result<WebTemplate, ServiceError> {
         let opt = self.adl2_operational_template_for(template_id).await?;
-        build_web_template_v2_4(&opt).map_err(|e| {
+        build_web_template_v2_4(&opt.template, &opt.prohibited_attributes).map_err(|e| {
             ServiceError::content_invalid(
                 Violation::new(format!(
                     "ADL2 template {template_id} could not be built into a WebTemplate: {e}"
@@ -397,7 +396,9 @@ impl FerroEhrService {
             Err(e) => return Err(e),
         };
         self.web_templates
-            .get_or_build(&key, || build_web_template_v2_4(&opt))
+            .get_or_build(&key, || {
+                build_web_template_v2_4(&opt.template, &opt.prohibited_attributes)
+            })
             .await
             .map_err(|e| {
                 ServiceError::content_invalid(
@@ -423,16 +424,17 @@ impl FerroEhrService {
     async fn adl2_operational_template_for(
         &self,
         template_id: &str,
-    ) -> Result<OperationalTemplate, ServiceError> {
+    ) -> Result<RawOpt, ServiceError> {
         let hrid = self.adl2_resolve(template_id, None).await?;
         let source = self.adl2_get(&hrid).await?;
         self.adl2_operational_template(&source).await
     }
 
     /// Compile stored ADL2 `source` to its operational template: a stored
-    /// `operational_template` is parsed as-is; any other kind is flattened +
-    /// compiled via `create_opt` (OPT2 master03). Both steps run on the
-    /// engine stack ([`on_engine_stack`]).
+    /// `operational_template` is parsed as-is, with no prohibited attributes
+    /// beside it; any other kind is flattened + compiled via `create_opt`
+    /// (OPT2 master03), which names the attributes it removed for `existence
+    /// {0}`. Both steps run on the engine stack ([`on_engine_stack`]).
     ///
     /// # Errors
     ///
@@ -444,10 +446,7 @@ impl FerroEhrService {
     /// - The OPT cannot be compiled otherwise (a cyclic constituent reference,
     ///   a lineage or nesting past the engine bound) → `Unprocessable`
     ///   (`422`).
-    async fn adl2_operational_template(
-        &self,
-        source: &str,
-    ) -> Result<OperationalTemplate, ServiceError> {
+    async fn adl2_operational_template(&self, source: &str) -> Result<RawOpt, ServiceError> {
         let owned = source.to_owned();
         let archetype = on_engine_stack(move || parse_artefact(&owned, Dialect::Adl2))
             .await?
@@ -460,7 +459,10 @@ impl FerroEhrService {
         if let Archetype::AuthoredArchetype(a) = &archetype
             && let AuthoredArchetype::OperationalTemplate(opt) = a.as_ref()
         {
-            return Ok(opt.as_ref().clone());
+            return Ok(RawOpt {
+                template: opt.as_ref().clone(),
+                prohibited_attributes: Vec::new(),
+            });
         }
         let repo = self
             .adl2_repository(&mut *acquire(&self.pool).await?)

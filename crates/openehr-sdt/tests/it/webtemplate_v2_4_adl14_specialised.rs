@@ -81,7 +81,8 @@ fn web_template() -> WebTemplate {
     }
     let template = parse_artefact(TEMPLATE, Dialect::Adl2).expect("the template parses");
     let opt = create_opt(&template, &repo).expect("the operational template builds");
-    build_web_template_v2_4(&opt).expect("the web template builds")
+    build_web_template_v2_4(&opt.template, &opt.prohibited_attributes)
+        .expect("the web template builds")
 }
 
 /// Every node under `node`, itself included, whose AQL path is `aql_path`.

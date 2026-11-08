@@ -45,6 +45,7 @@
 
 mod leaf;
 pub(crate) mod node_ids;
+mod presence;
 mod subtype;
 
 use indexmap::IndexMap;
@@ -811,6 +812,7 @@ impl Validator {
 
         self.check_cardinalities(instance, wt, plan);
         self.check_existence(instance, wt, plan);
+        self.check_prohibited(instance, wt);
         self.check_slots(instance, plan);
         self.check_closure(instance, wt, plan);
     }
@@ -1028,7 +1030,7 @@ impl Validator {
             let containers =
                 rmpath::navigate_matched(&[instance], intermediate, &plan.name_fallback);
             for container in &containers {
-                if attr_absent(container, &last.attribute) {
+                if presence::attr_absent(container, &last.attribute) {
                     self.push(
                         ex.path.clone(),
                         format!(
@@ -1448,17 +1450,6 @@ fn slot_admits(slot: &WebTemplateArchetypeSlot, child_type: &str, archetype_id: 
         }
     }
     true
-}
-
-/// Whether an RM attribute field is absent (missing, JSON `null`, or an empty
-/// array) on a node — the negation of "the attribute is present" for the
-/// existence check.
-fn attr_absent(node: &Value, attr: &str) -> bool {
-    match node.get(attr) {
-        None | Some(Value::Null) => true,
-        Some(Value::Array(a)) => a.is_empty(),
-        Some(_) => false,
-    }
 }
 
 #[cfg(test)]

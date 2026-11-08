@@ -86,7 +86,8 @@ fn corpus_repo() -> ArchetypeRepository {
 fn web_template(rel: &str) -> WebTemplate {
     let archetype = parse_artefact(&read(rel), Dialect::Adl2).expect("parse ADL2");
     let opt = create_opt(&archetype, &corpus_repo()).expect("create_opt");
-    build_web_template_v2_4(&opt).expect("build v2_4 web template")
+    build_web_template_v2_4(&opt.template, &opt.prohibited_attributes)
+        .expect("build v2_4 web template")
 }
 
 fn rm_types(node: &WebTemplateNode) -> Vec<String> {
@@ -536,7 +537,8 @@ fn v2_4_template_filler_subtree_reaches_the_web_template() {
     repo.insert(parse_artefact(FILLER_ARCHETYPE, Dialect::Adl2).expect("parse filler archetype"));
     let template = parse_artefact(FILLER_TEMPLATE, Dialect::Adl2).expect("parse template");
     let opt = create_opt(&template, &repo).expect("create_opt inlines the filler");
-    let wt = build_web_template_v2_4(&opt).expect("build v2_4 web template");
+    let wt = build_web_template_v2_4(&opt.template, &opt.prohibited_attributes)
+        .expect("build v2_4 web template");
 
     let mut observations = Vec::new();
     collect_typed(&wt.tree, "OBSERVATION", &mut observations);
@@ -615,8 +617,9 @@ fn v2_4_slot_patterns_come_from_the_assertion_tree() {
     // Strip every `string_expression`: the attribute is optional in the model
     // and only a serialisation of the tree, so a probe reading the tree is
     // unaffected while a string scan goes blind.
-    strip_string_expressions(&mut opt.definition);
-    let wt = build_web_template_v2_4(&opt).expect("build v2_4 web template");
+    strip_string_expressions(&mut opt.template.definition);
+    let wt = build_web_template_v2_4(&opt.template, &opt.prohibited_attributes)
+        .expect("build v2_4 web template");
 
     let mut includes: Vec<String> = wt
         .tree
@@ -834,7 +837,8 @@ fn a_node_under_a_template_overlay_carries_the_parent_archetype_id() {
     );
     let template = parse_artefact(OVERLAY_TEMPLATE, Dialect::Adl2).expect("the template parses");
     let opt = create_opt(&template, &repo).expect("the operational template builds");
-    let wt = build_web_template_v2_4(&opt).expect("the web template builds");
+    let wt = build_web_template_v2_4(&opt.template, &opt.prohibited_attributes)
+        .expect("the web template builds");
     let mut sections = Vec::new();
     collect_typed(&wt.tree, "SECTION", &mut sections);
     let [section] = sections.as_slice() else {
@@ -1001,7 +1005,8 @@ fn an_adl14_qualified_term_constraint_reads_as_its_codes() {
     let template =
         parse_artefact(ADL14_CODED_TEMPLATE, Dialect::Adl2).expect("the template parses");
     let opt = create_opt(&template, &repo).expect("the operational template builds");
-    let wt = build_web_template_v2_4(&opt).expect("the web template builds");
+    let wt = build_web_template_v2_4(&opt.template, &opt.prohibited_attributes)
+        .expect("the web template builds");
 
     let category = find(&wt.tree, "category").expect("a category node");
     let input = category.inputs.first().expect("a code input");
@@ -1040,7 +1045,8 @@ fn an_adl14_ordinal_reads_as_its_symbols() {
     let template =
         parse_artefact(ADL14_CODED_TEMPLATE, Dialect::Adl2).expect("the template parses");
     let opt = create_opt(&template, &repo).expect("the operational template builds");
-    let wt = build_web_template_v2_4(&opt).expect("the web template builds");
+    let wt = build_web_template_v2_4(&opt.template, &opt.prohibited_attributes)
+        .expect("the web template builds");
     let severity = find(&wt.tree, "severity").expect("a severity node");
     let input = severity.inputs.first().expect("an ordinal input");
     let symbols: Vec<(&str, Option<&str>, Option<i32>)> = input

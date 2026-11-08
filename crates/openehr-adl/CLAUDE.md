@@ -57,7 +57,7 @@ else; each helper has exactly ONE home.
 | `validate/conformance` | the `master04.5` conformance functions |
 | `validate/flat` | the flat-form walk (`FlatScan`: `validate_flat_form_structure` + the 1.4 VDFPT twin) + the deferred flat-form halves (`validate_flat_form`) |
 | `flatten` | specialisation flattening (`flatten`, `flat_form`) |
-| `opt` | OPT2 generation — raw via `create_opt`, profiled via `profile_opt`; `unresolved_constituents` names every archetype an OPT lacks |
+| `opt` | OPT2 generation — raw via `create_opt`, which returns a `RawOpt` naming beside the OPT every attribute removed for `existence matches {0}`, profiled via `profile_opt` (its language and binding filters in `opt/profile`); `unresolved_constituents` names every archetype an OPT lacks |
 | `print/mod` | the printer state, the artefact-kind projection, the top-level section driver, `print` + `assertion_text` |
 | `print/header` | identification / `language` / `description` / `annotations` / `rm_overlay` / `component_terminologies` |
 | `print/terminology` | the `terminology` section body (shared with `component_terminologies`) |
