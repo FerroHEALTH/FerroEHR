@@ -58,7 +58,7 @@ pub(crate) fn mapping() -> BindingMapping {
 
 /// The `[auth]` table trusting `ISSUER`, whose logins the `[[auth.party]]`
 /// table binds by `person_key`, reading groups from `groups`.
-fn config(person_key: Option<&str>) -> AppConfig {
+pub(crate) fn config(person_key: Option<&str>) -> AppConfig {
     let mut auth = common::auth(AuthSection {
         issuer: IssuerKey::List(vec![IssuerEntry {
             jwks_file: common::jwks_file().display().to_string(),
@@ -86,16 +86,15 @@ fn config(person_key: Option<&str>) -> AppConfig {
 /// The router over `svc`, looking every caller up in its party source.
 async fn router(svc: Arc<FerroEhrService>, person_key: Option<&str>) -> Router {
     let source = Arc::new(svc.party_source("demographic"));
-    router_over(svc, person_key, source).await
+    router_with(svc, config(person_key), source).await
 }
 
-/// The router over `svc`, looking every caller up in `source`.
-async fn router_over(
+/// The router over `svc` under `config`, looking every caller up in `source`.
+pub(crate) async fn router_with(
     svc: Arc<FerroEhrService>,
-    person_key: Option<&str>,
+    config: AppConfig,
     source: Arc<dyn BindingSource>,
 ) -> Router {
-    let config = config(person_key);
     let authenticator = Authenticator::new(
         &config,
         None,
@@ -156,7 +155,7 @@ fn identities() -> Value {
                                       "name": text("name"), "value": text("professional") }] } }])
 }
 
-fn person(identifier_issuer: &str, key: &str) -> Value {
+pub(crate) fn person(identifier_issuer: &str, key: &str) -> Value {
     json!({
         "_type": "PERSON", "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
         "archetype_details": archetyped("openEHR-DEMOGRAPHIC-PERSON.person.v1", PERSON_TEMPLATE),
@@ -185,7 +184,7 @@ fn uid(response: &ferroehr::service::response::ServiceResponse) -> String {
     response.meta.as_ref().expect("a version").uid.clone()
 }
 
-fn vo(uid: &str) -> VoId {
+pub(crate) fn vo(uid: &str) -> VoId {
     VoId(
         uid.split("::")
             .next()
@@ -316,7 +315,7 @@ impl PartySource for Twice {
 #[tokio::test]
 async fn a_login_matching_two_parties_is_refused_naming_the_caller() {
     let (_db, svc) = service().await;
-    let app = router_over(svc, None, Arc::new(Twice)).await;
+    let app = router_with(svc, config(None), Arc::new(Twice)).await;
     let twice = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
     refused(&app, &token(twice, &json!({})), "refused-ambiguous").await;
     // The refusal carries the refused caller, which the failed-authentication
