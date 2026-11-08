@@ -474,7 +474,7 @@ pub(super) fn fill_common(
     // vouched for the person and which application they used, as the BALP
     // `agent:user` names them.
     event.issuer = principal.and_then(|p| claim(p, "iss"));
-    event.client_id = principal.and_then(|p| claim(p, "client_id").or_else(|| claim(p, "azp")));
+    event.client_id = principal.and_then(recorded_client);
     // The roles the person held (NEN 7513's role element, #3239): the RFC 9068
     // §2.2.3.1 claim carriers for a bearer, the user definition for Basic.
     event.roles = principal.map(|p| p.roles.clone()).unwrap_or_default();
@@ -489,6 +489,18 @@ pub(super) fn fill_common(
     event.binding = caller.binding.cloned();
     event.client_ip = client_ip;
     event.timestamp = timestamp;
+}
+
+/// The client a record names: the one the caller's issuer profile reads from
+/// `client_claims`, which the classification and the
+/// `[[authz.system_client]]` check admitted, never another client claim the
+/// token carries (#5194).
+fn recorded_client(principal: &Principal) -> Option<String> {
+    principal
+        .access
+        .caller()
+        .and_then(|caller| caller.client_id())
+        .map(str::to_owned)
 }
 
 /// Returns the string claim `name` of a Bearer principal's validated token,
