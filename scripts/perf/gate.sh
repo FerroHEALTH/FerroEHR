@@ -45,6 +45,9 @@ readonly PREFIX=ferroehr-perf
 readonly NETWORK="${PREFIX}-net"
 readonly PG="${PREFIX}-postgres"
 readonly SERVER="${PREFIX}-server"
+# The throwaway database's roles, which the image's init script creates.
+readonly PG_SECRET=ferroehr
+readonly PG_SUPER_SECRET=postgres
 readonly PG_PORT=55432
 readonly HTTP_PORT=58080
 readonly BASE="/ferroehr/rest/openehr/v1"
@@ -119,14 +122,14 @@ up() { # <image> <pg-image>
   teardown
   docker network create "$NETWORK" >/dev/null
   docker run -d --name "$PG" --network "$NETWORK" -p "127.0.0.1:${PG_PORT}:5432" \
-    -e POSTGRES_PASSWORD=postgres -e PG_INIT_USER=ferroehr -e PG_INIT_PASSWORD=ferroehr \
+    -e "POSTGRES_PASSWORD=$PG_SUPER_SECRET" -e PG_INIT_USER=ferroehr -e "PG_INIT_PASSWORD=$PG_SECRET" \
     -e PG_INIT_DB=ferroehr "$pg_image" >/dev/null
   wait_for "PostgreSQL" 60 docker exec "$PG" pg_isready -h 127.0.0.1 -U ferroehr -d ferroehr
   STARTED=1
   local -a process=(--network "$NETWORK" --read-only --tmpfs /tmp --cap-drop ALL
     --security-opt no-new-privileges:true
     -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml
-    -e "FERROEHR__DB__URL=postgres://ferroehr:ferroehr@${PG}:5432/ferroehr"
+    -e "FERROEHR__DB__URL=postgres://ferroehr:${PG_SECRET}@${PG}:5432/ferroehr"
     -e FERROEHR__USAGE_REPORT__ENABLED=false
     -v "$ROOT/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro"
     -v "$ROOT/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
@@ -138,7 +141,7 @@ up() { # <image> <pg-image>
   docker run -d --name "$SERVER" -p "127.0.0.1:${HTTP_PORT}:8080" "${process[@]}" \
     "$image" >/dev/null
   SERVER_URL="http://127.0.0.1:${HTTP_PORT}"
-  DATABASE_URL="postgres://postgres:postgres@127.0.0.1:${PG_PORT}/ferroehr"
+  DATABASE_URL="postgres://postgres:${PG_SUPER_SECRET}@127.0.0.1:${PG_PORT}/ferroehr"
   TARGET=(--container "$(docker inspect -f '{{.Id}}' "$SERVER")")
   wait_for "FerroEHR" 120 curl -fsS "$SERVER_URL/health/readiness"
   bash "$ROOT/scripts/scim-provision.sh" "$SERVER_URL" basic-users ferroehr >/dev/null

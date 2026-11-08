@@ -492,6 +492,8 @@ crate::locale::messages! {
         ContributionCommit = "contribution-commit",
         /// `The CDR refused the contribution, so nothing was committed.`
         ContributionCommitRefused = "contribution-commit-refused",
+        /// `The session carries no verified subject to commit as.`
+        ContributionNoSubject = "contribution-no-subject",
         /// `The composition to amend could not be read.`
         ContributionCompositionRefused = "contribution-composition-refused",
         /// `{ $count ->`

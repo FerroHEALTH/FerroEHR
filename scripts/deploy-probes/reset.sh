@@ -159,6 +159,9 @@ probes_decommission() {
   status=0
   out="$(dc exec -T ferroehr /usr/local/bin/ferroehr db erase --confirm "$token" 2>&1)" || status=$?
   assert_eq "0" "$status" "the confirmed erase exits 0: $out"
+  # The quickstart's own start order: the party mapping's templates are stored
+  # before serve, and the erase removed them with everything else.
+  dc -f docker-compose.yml run --rm ferroehr-definitions >/dev/null 2>&1 || true
   dc -f docker-compose.yml restart ferroehr >/dev/null 2>&1 || true
   if wait_http "$CDR/health/readiness" 90; then
     assert_eq "404" "$(http_code -u "$BASIC" "$API/ehr/$ehr_id")" \

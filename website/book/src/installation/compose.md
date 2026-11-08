@@ -350,10 +350,10 @@ the CA's private key; the server (`[auth] ca_file`) and the viewer
 `docker compose down --volumes` deletes the volume, and the next `up`
 generates a new CA. Keycloak also answers plain HTTP on port 8081 for the token
 call below, and the tokens it mints there name the HTTPS issuer. Keycloak's
-access tokens carry `typ: JWT`, so the overlay adds the realm as a second
+access tokens carry `typ: JWT`, so the overlay adds the realm as a third
 `[[auth.issuer]]` table with `profile = "keycloak"`
-(`FERROEHR__AUTH__ISSUER__1__PROFILE=keycloak`), beside the issuer the
-quickstart's Basic user binds under.
+(`FERROEHR__AUTH__ISSUER__2__PROFILE=keycloak`), beside the issuer the
+quickstart's Basic user binds under and the issuer of its SCIM client.
 
 Start the viewer too and sign in at <http://localhost:3000> as any user below:
 

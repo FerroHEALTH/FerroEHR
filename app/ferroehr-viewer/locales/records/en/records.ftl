@@ -300,6 +300,7 @@ contribution-made-versions = { $count ->
 }
 contribution-not-committed = Not committed
 contribution-commit-refused = The CDR refused the contribution, so nothing was committed.
+contribution-no-subject = The session carries no verified subject to commit as.
 contribution-choices-refused = The templates or compositions to pick from could not be read.
 contribution-composition-refused = The composition to amend could not be read.
 contribution-commit = { $count ->

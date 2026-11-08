@@ -67,7 +67,9 @@ impl Cdr {
     /// [`ViewerError::Internal`] for a bearer session without a verified `sub`.
     pub fn login(&self) -> Result<&login::Login, ViewerError> {
         self.login.as_ref().ok_or_else(|| {
-            ViewerError::Internal("the session carries no verified subject to commit as".to_owned())
+            ViewerError::Internal(crate::locale::tr(
+                crate::locale::records::RecordsMsg::ContributionNoSubject,
+            ))
         })
     }
 
