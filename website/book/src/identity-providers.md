@@ -137,7 +137,9 @@ profile, and the server acts on the kind:
     included;
   - an external person commits only a COMPOSITION of a template the
     agreement's `writes` lists; an organisation commits nothing, and neither
-    deletes, attests or writes a demographic party;
+    attests or writes a demographic party. Neither deletes, except the
+    discard of a dispensation described under
+    [the MyHealth@EU contact-point route](#the-myhealtheu-contact-point-route);
   - an external person's commit records the server's committer, a
     `PARTY_IDENTIFIED` with no `external_ref`: the asserted name as one
     string, the professional's `hp_identifier` under the issuer
@@ -160,6 +162,53 @@ profile, and the server acts on the kind:
 - **Attestations** come only from a person bound to a professional `PERSON`.
   A patient, a representative, a system caller and an unbound caller are
   refused with `403` (RM common master04 §Attestation).
+
+### The MyHealth@EU contact-point route
+
+A `federation` issuer with `contact_point = true` in its `[[auth.federation]]`
+table is a MyHealth@EU national contact point (NCPeH-A's authorization
+server). Its person agreement names the service it serves in `ehdsi_service`
+(`patient_summary`, `eprescription` or `orcd`), and its issuer goes into
+`[smart] patient_issuers`. Every request runs with a sender-constrained token
+(`sender_constraint = "required"`). On every patient-data route:
+
+- The token carries the patient of the treatment relationship confirmation
+  in `ehdsi.patient.id`, as `system|value`, the patient identifier's
+  assigning authority and value. A token without it, or with a value of
+  another form, is refused with `403` whose `detail` opens with
+  `ERROR_SEC_DATA_INTEGRITY_NOT_ENSURED` (MyHealth@EU Requirements Catalogue
+  10.0.0 requirement 11.01.02), recorded as `refused-trc-missing`, before
+  the EHR index is asked.
+- The patient is resolved to its EHR through the deployment's
+  [EHR index](installation/config-integrations.md#ehr_index), compared on the value and the
+  assigning authority, and the request must name that EHR: the route's
+  `{ehr_id}`, or a query's `ehr_id`. The EHR stands in for the launch
+  context the token does not carry (eHDSI XCA Profile 8.0.1 §4.2.1).
+- Another patient's EHR, an EHR the server does not hold, an EHR an
+  opted-out patient's record keeps out of reach, a TRC patient no EHR
+  belongs to, and a request that names no EHR all get one answer, `404` of
+  type [`trc-patient-mismatch`](using-the-api/problems.md#trc-patient-mismatch)
+  whose `detail` opens with the service's `*_NOT_FOUND` code
+  (`ERROR_PS_NOT_FOUND`, `ERROR_EP_NOT_FOUND` or `ERROR_ORCD_NOT_FOUND`),
+  which the contact point answers as "No Data". Each is recorded as a
+  `refused-trc-patient-mismatch` security event, once per request and never
+  summarised (eHDSI XCA Profile 8.0.1 §4.2.2).
+- Where the agreement sets `discard`, the person may discard a dispensation
+  of a template its `writes` lists, as a logical delete
+  (`DELETE /ehr/{ehr_id}/composition/{preceding_version_uid}`), within
+  `discard_window_hours` of its first commit (MyHealth@EU Requirements
+  Catalogue 10.0.0, requirement 07.04). The eHDSI point of care is a name
+  only, so the dispensation's `EVENT_CONTEXT.health_care_facility` must
+  carry every identifier the discarding token names its point of care by:
+  the `provider.healthcare_provider_identifier` under the
+  `provider.issuing_authority_name`, and the same identifier under the issuer
+  `urn:oasis:names:tc:xspa:1.0:subject:organization-id`, the HCPO's
+  `organization-id` (eHDSI SAML Profile 10.0.0 §2.3). Any other discard is
+  refused with `403`.
+- A token that carries permissions (`ehdsi.professional.permissions`) records
+  a dispensation and discards one only with `PPD-046` among them, as the code
+  or its `urn:oasis:names:tc:xspa:1.0:subject:hl7:permission:` URN (eHDSI SAML
+  Profile 10.0.0 §2.5); otherwise it is refused with `403`.
 
 ## Microsoft Entra ID (Azure AD)
 

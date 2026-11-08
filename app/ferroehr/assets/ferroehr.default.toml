@@ -480,6 +480,7 @@ trusted_systems = []
 #? writes = []
 #? discard = false
 #? discard_window_hours = 24
+#? ehdsi_service = "eprescription"  # patient_summary | eprescription | orcd: a contact point's person agreement only
 #? caller_rate = { requests_per_second = 5, burst = 10 }
 #? opt_out_override = false
 #? access_class = "chained"          # automated | chained

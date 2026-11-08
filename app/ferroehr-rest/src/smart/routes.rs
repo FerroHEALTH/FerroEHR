@@ -406,7 +406,11 @@ pub(crate) fn check(
             resource.as_deref(),
             principal.honoured,
         );
-        if openehr::confined(&covering) {
+        // NOTE: a contact point's caller carries no launch context; the EHR of its TRC
+        // patient stands in for it (eHDSI XCA Profile 8.0.1 §4.2.1).
+        if openehr::confined(&covering)
+            && !crate::extensions::access::authn::trc::is_bound(&principal.access)
+        {
             match (target, principal.access.ehr_id()) {
                 (Some(target), Some(launched)) if target == launched => {}
                 _ => return Err("a patient grant reaches only the EHR of the launch context"),

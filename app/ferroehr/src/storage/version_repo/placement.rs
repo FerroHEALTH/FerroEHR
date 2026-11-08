@@ -258,6 +258,49 @@ pub async fn head_template(
     Ok(template.flatten())
 }
 
+/// What a discard of `vo_id` is judged on: the template and the canonical
+/// body of its trunk head, and the instant its first version was committed.
+#[derive(Debug, Clone)]
+pub struct Dispensed {
+    /// The trunk head's template.
+    pub template: Option<String>,
+    /// The trunk head's canonical body, `None` for a deleted head.
+    pub body: Option<String>,
+    /// When the object's first version was committed.
+    pub first_committed: jiff::Timestamp,
+}
+
+/// The head of `vo_id` as [`Dispensed`] holds it, or `None` for an unknown
+/// object.
+///
+/// No openEHR spec governs the SQL: our own design.
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn dispensed(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+) -> Result<Option<Dispensed>, StorageError> {
+    let row = sqlx::query(
+        "SELECT h.template_id, \
+                (SELECT v.body FROM version v WHERE v.vo_id = h.vo_id \
+                   AND v.sys_version = h.trunk_head_sys_version) AS body, \
+                (SELECT min(v.committed_at) FROM version v WHERE v.vo_id = h.vo_id) AS first \
+         FROM vo_head h WHERE h.vo_id = $1",
+    )
+    .bind(vo_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    Ok(Some(Dispensed {
+        template: row.try_get("template_id")?,
+        body: row.try_get("body")?,
+        first_committed: row.try_get::<jiff_sqlx::Timestamp, _>("first")?.to_jiff(),
+    }))
+}
+
 /// The composition-update mega-read: [`next_placement`]'s current-trunk-tip
 /// form plus every column the update pre-checks need
 /// ([`UpdatePlacement`]).

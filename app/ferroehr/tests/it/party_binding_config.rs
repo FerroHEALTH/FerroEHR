@@ -417,6 +417,60 @@ fn every_organisation_agreement_refusal_is_named() {
     assert!(text.contains("names a contact_point issuer"), "{text}");
 }
 
+/// A contact point's person agreement names the MyHealth@EU service its
+/// refusals answer for, and no other issuer's agreement does (#5102).
+#[test]
+fn a_contact_points_person_agreement_names_its_ehdsi_service() {
+    let contact = full()
+        .replacen(
+            "mapping = \"iua\"\ncontact_point = false",
+            "mapping = \"ehdsi\"\ncontact_point = true",
+            1,
+        )
+        .replacen(
+            "provider_identifier_prefixes = [\"urn:example:de:\"]\n",
+            "",
+            1,
+        )
+        .replacen(
+            "audience = [\"ferroehr-federation\"]",
+            "audience = [\"ferroehr-federation\"]\nsender_constraint = \"required\"",
+            1,
+        )
+        .replacen(
+            "[authz.import]",
+            "[auth.dpop]\nexternal_url = \"https://ehr.example\"\n\n[authz.import]",
+            1,
+        );
+    let start = contact
+        .find("\n[[authz.federation.agreement]]\nissuer = \"https://federation.example\"\naccessor = \"organisation\"")
+        .expect("the organisation agreement");
+    let persons = contact.split_at(start).0.to_owned();
+    let text = refusal(&persons);
+    assert!(
+        text.contains("contact point's and needs ehdsi_service"),
+        "{text}"
+    );
+    let served = persons.replacen(
+        "accessor = \"person\"",
+        "accessor = \"person\"\nehdsi_service = \"eprescription\"",
+        1,
+    );
+    assemble(&served)
+        .expect("assembles")
+        .validate()
+        .expect("a contact point's person agreement naming its service loads");
+    let domestic = with(
+        "accessor = \"person\"",
+        "accessor = \"person\"\nehdsi_service = \"patient_summary\"",
+    );
+    let text = refusal(&domestic);
+    assert!(
+        text.contains("sets ehdsi_service, which only a contact_point issuer's agreement may"),
+        "{text}"
+    );
+}
+
 /// A `chained` agreement's issuer reads the correlation id from its token,
 /// never from a constant (#5120).
 #[test]

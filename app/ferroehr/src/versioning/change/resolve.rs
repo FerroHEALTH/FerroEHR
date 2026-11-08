@@ -55,7 +55,7 @@ pub(super) async fn resolve_delete(
     .await?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
     system::admit_delete(tx, kind, vo_id).await?;
-    external::admit_delete()?;
+    external::admit_delete(tx, kind, vo_id).await?;
     lifecycle::refuse_already_deleted(kind, vo_id, &next.preceding_lifecycle)?;
     retire_protected_identifiers(tx, ctx, kind, vo_id).await?;
     // A deleted version carries no data — its `ORIGINAL_VERSION.data` is

@@ -44,6 +44,12 @@ pub struct ExternalProfessional {
     pub provider_identifier: Option<String>,
     /// Table 2 `issuing_authority_name`.
     pub provider_authority: Option<String>,
+    /// Whether the token comes through a MyHealth@EU contact point, whose
+    /// provider identifier is the HCPO's `organization-id`.
+    pub contact_point: bool,
+    /// The permissions the HP Identity Assertion carries (eHDSI SAML Profile
+    /// 10.0.0 §2.3, `urn:oasis:names:tc:xspa:1.0:subject:hl7:permission`).
+    pub permissions: Vec<String>,
 }
 
 impl std::fmt::Debug for ExternalProfessional {
@@ -121,6 +127,52 @@ pub fn provider(professional: &ExternalProfessional) -> Result<(String, String),
         "provider.issuing_authority_name",
     )?;
     Ok((issuer, id.to_owned()))
+}
+
+/// The `DV_IDENTIFIER.issuer` of the HCPO's `organization-id` in a
+/// facility's identifiers: the attribute name eHDSI SAML Profile 10.0.0 §2.3
+/// gives the Healthcare Professional Organisation ID.
+// NOTE: no openEHR spec governs the issuer string, our own design (#5005): the
+// SAML attribute name names the identifier's scheme.
+pub const ORGANIZATION_ID_ISSUER: &str = "urn:oasis:names:tc:xspa:1.0:subject:organization-id";
+
+/// The permission a dispensation and its discard need (eHDSI SAML Profile
+/// 10.0.0 §2.5: "Notification on Dispensation" and "Notification on
+/// Dispensation Discard", PPD-046).
+const DISPENSE: &str = "PPD-046";
+
+/// The `(issuer, id)` pairs naming the point of care of an external write.
+///
+/// They are the provider's identifier under its issuing authority, and on the
+/// MyHealth@EU route the HCPO's `organization-id` under
+/// [`ORGANIZATION_ID_ISSUER`] beside it.
+///
+/// # Errors
+/// As [`provider`].
+pub fn point_of_care(
+    professional: &ExternalProfessional,
+) -> Result<Vec<(String, String)>, ServiceError> {
+    let provider = provider(professional)?;
+    let organization = professional
+        .contact_point
+        .then(|| (ORGANIZATION_ID_ISSUER.to_owned(), provider.1.clone()));
+    Ok(std::iter::once(provider).chain(organization).collect())
+}
+
+/// Whether `professional` may record a dispensation or discard one.
+///
+/// A token carrying no permissions leaves the decision to the structural
+/// role, and one carrying any must hold PPD-046 (eHDSI SAML Profile 10.0.0
+/// §2.3, §2.5).
+#[must_use]
+pub fn may_dispense(professional: &ExternalProfessional) -> bool {
+    professional.permissions.is_empty()
+        || professional.permissions.iter().any(|permission| {
+            permission == DISPENSE
+                || permission
+                    .strip_suffix(DISPENSE)
+                    .is_some_and(|scheme| scheme.ends_with(':'))
+        })
 }
 
 /// `value`, refused naming `field` when the token carries none or a blank one.
@@ -207,6 +259,8 @@ mod tests {
             issuing_authority: Some("  Bundes\u{0061}\u{0308}rztekammer   Registry ".to_owned()),
             provider_identifier: Some("urn:oid:2.999.7".to_owned()),
             provider_authority: Some("Registry".to_owned()),
+            contact_point: false,
+            permissions: Vec::new(),
         }
     }
 
@@ -311,5 +365,43 @@ mod tests {
                 .to_string()
                 .contains("provider.healthcare_provider_identifier")
         );
+    }
+
+    #[test]
+    fn the_point_of_care_adds_the_organization_id_on_the_contact_point_route() {
+        let pair = ("Registry".to_owned(), "urn:oid:2.999.7".to_owned());
+        assert_eq!(
+            point_of_care(&professional()).expect("a point of care"),
+            vec![pair.clone()]
+        );
+        let relayed = ExternalProfessional {
+            contact_point: true,
+            ..professional()
+        };
+        assert_eq!(
+            point_of_care(&relayed).expect("a point of care"),
+            vec![
+                pair,
+                (
+                    ORGANIZATION_ID_ISSUER.to_owned(),
+                    "urn:oid:2.999.7".to_owned()
+                )
+            ]
+        );
+    }
+
+    #[test]
+    fn a_dispensation_needs_ppd_046_only_where_permissions_are_asserted() {
+        let with = |permissions: &[&str]| ExternalProfessional {
+            permissions: permissions.iter().map(|p| (*p).to_owned()).collect(),
+            ..professional()
+        };
+        assert!(may_dispense(&with(&[])));
+        assert!(may_dispense(&with(&["PRD-010", "PPD-046"])));
+        assert!(may_dispense(&with(&[
+            "urn:oasis:names:tc:xspa:1.0:subject:hl7:permission:PPD-046"
+        ])));
+        assert!(!may_dispense(&with(&["PRD-010"])));
+        assert!(!may_dispense(&with(&["XPPD-046"])));
     }
 }

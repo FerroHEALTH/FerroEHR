@@ -128,3 +128,18 @@ archive again, or repair the entry; `detail` names it.
 
 With `Prefer: return=representation`: `archive`, `{"entry": …}` for the entry
 that cannot be read or `{"format": …}` for the declared format.
+
+## `trc-patient-mismatch`
+
+**Status:** `404 Not Found`. **Title:** No data for the patient of the
+treatment relationship confirmation.
+
+A MyHealth@EU contact point's request reaches beyond the patient its
+treatment relationship confirmation names: another patient's EHR, an EHR this
+server does not hold, a TRC patient no EHR belongs to, or a route that names
+no EHR. Every case gets this one answer, so it never tells whether an EHR
+exists (eHDSI XCA Profile 8.0.1 §4.2.1, §4.2.2). `detail` opens with the
+agreement service's MyHealth@EU `*_NOT_FOUND` code, such as
+`ERROR_PS_NOT_FOUND`, which the contact point answers as "No Data", and the
+server records the request as a `refused-trc-patient-mismatch` security event
+([Identity providers](../identity-providers.md#the-myhealtheu-contact-point-route)).
