@@ -1703,6 +1703,10 @@ jobs:
       - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-nextest
+      - name: Fetch the cache-only test inputs
+        # The UZI role code CodeSystem is cache only (CIBG copyright), so the
+        # Wabvpz tests read it from .vendor-cache/, which this fetches by pin.
+        run: bash scripts/vendor/nl-role-codes.sh --test-inputs
       # The viewer has its own job below, which replays its recorded CDR.
       # --no-tests=pass: empty crates are expected until P17 (nextest exits 4 otherwise)
       # The shard index reaches the command through `env:`, never interpolated

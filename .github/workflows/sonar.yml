@@ -182,6 +182,10 @@ jobs:
       - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-llvm-cov,cargo-nextest
+      - name: Fetch the cache-only test inputs
+        # The UZI role code CodeSystem is cache only (CIBG copyright), so the
+        # Wabvpz tests read it from .vendor-cache/, which this fetches by pin.
+        run: bash scripts/vendor/nl-role-codes.sh --test-inputs
       # The shard index reaches the command through `env:`, never interpolated
       # into the script (the workflow-security rule in reliability.md).
       - run: cargo llvm-cov --no-report nextest --locked --workspace --exclude ferroehr-viewer --all-features --no-tests=pass --profile ci --partition "hash:${SHARD}/${SHARD_COUNT}"

@@ -2,20 +2,30 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Vendor the Dutch code lists the Wabvpz Art. 15f check reads into
-# docs/specs/nl-role-codes/: the UZI role codes (`uzi-rolcode`) and the care
-# provider types (`OrganisatieTypeCodelijst`) of Nictiz's zib 2020 FHIR
-# package, and record the UZI-register CPS v11.7 the role codes come from.
+# docs/specs/nl-role-codes/: the care provider types (`organization-type`,
+# `OrganisatieTypeCodelijst`) of Nictiz's zib 2020 FHIR package, and record the
+# UZI role codes (`uzi-rolcode`) of that package and the UZI-register CPS v11.7
+# they come from.
 #
-# The package is CC0-1.0, so its files are copied verbatim. The CPS is
-# "Copyright CIBG 2024" with no reproduction without written permission, so it
-# is cache only: fetched into the git-ignored .vendor-cache/nl-role-codes/ and
+# The package is CC0-1.0, so Nictiz's own files are copied verbatim. The CPS
+# is "Copyright CIBG 2024" with no reproduction without written permission, so
+# it and the `uzi-rolcode` CodeSystem that reproduces its codes and titles are
+# cache only: written into the git-ignored .vendor-cache/nl-role-codes/ and
 # never committed (.claude/rules/vendored-corpora.md).
 #
 # Usage:
-#   scripts/vendor/nl-role-codes.sh
+#   scripts/vendor/nl-role-codes.sh               the tree and the cache
+#   scripts/vendor/nl-role-codes.sh --test-inputs only the cached CodeSystem
+#                                                 the Wabvpz tests read
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+TEST_INPUTS=false
+case "${1:-}" in
+  "") ;;
+  --test-inputs) TEST_INPUTS=true ;;
+  *) echo "usage: $0 [--test-inputs]" >&2; exit 2 ;;
+esac
 # shellcheck source=scripts/vendor/lib/pinned.sh
 . "$ROOT/scripts/vendor/lib/pinned.sh"
 
@@ -31,15 +41,21 @@ RETRIEVED="2026-11-08"
 # `path sha256` per file taken from the package, by its path under package/.
 PINS=(
   "package.json b57d7f94a7400c07365959e5b245483acd5c4f2e8bd444e30de9e17e8a18e116"
-  "CodeSystem-RoleCodeNLZorgverlenertypen-uzi-rolcode.json 676b3edb095f375a35f12a65f828cd74903f71fe4dfb4e7a1aebe9b58901805e"
   "CodeSystem-RoleCodeNLZorgaanbiederType-organization-type.json f6b21a531b28dc7feccfb5b1381ab877c831dc4f9bd42dec5154c140b7c0fa1e"
   "ValueSet-OrganisatieTypeCodelijst-2.16.840.1.113883.2.4.3.11.60.40.2.17.2.3--20200901000000.json 838a64beb99897854ffab8882b9fe9d9d204f80ea36320bf907e4e55030b0786"
+)
+
+# `path sha256` per cache-only file taken from the package, by its path under
+# package/.
+CACHED_PINS=(
+  "CodeSystem-RoleCodeNLZorgverlenertypen-uzi-rolcode.json 676b3edb095f375a35f12a65f828cd74903f71fe4dfb4e7a1aebe9b58901805e"
 )
 
 # `file sha256` per cache-only document, by its name on the UZI-register site.
 CACHED=(
   "29-01-24+RK1+CPS+UZI-register+V11.7.pdf dc9889a3d592a14409850d53bda9ddf1c61398e6873d40d78cfa0de47086d4a1"
 )
+CACHE="$ROOT/.vendor-cache/nl-role-codes"
 
 pinned_require curl shasum tar
 
@@ -49,14 +65,29 @@ mkdir -p "$work/tree"
 
 pinned_fetch "$PACKAGE_URL" "$work/package.tgz" "$PACKAGE_SHA256"
 members=()
-for pin in "${PINS[@]}"; do
+for pin in "${PINS[@]}" "${CACHED_PINS[@]}"; do
   members+=("package/${pin% *}")
 done
 tar -xzf "$work/package.tgz" -C "$work" "${members[@]}"
+# Refuses the run unless package/$1 hashes to $2.
+check_member() {
+  local got
+  got="$(pinned_sha256 "$work/package/$1")"
+  [[ "$got" == "$2" ]] || die "package/$1 hashes to $got, the pin records $2"
+}
+mkdir -p "$CACHE"
+for pin in "${CACHED_PINS[@]}"; do
+  path="${pin% *}"
+  check_member "$path" "${pin##* }"
+  cp "$work/package/$path" "$CACHE/$path"
+  say "$path (cache only)"
+done
+if [[ "$TEST_INPUTS" == true ]]; then
+  exit 0
+fi
 for pin in "${PINS[@]}"; do
   path="${pin% *}"
-  got="$(pinned_sha256 "$work/package/$path")"
-  [[ "$got" == "${pin##* }" ]] || die "package/$path hashes to $got, the pin records ${pin##* }"
+  check_member "$path" "${pin##* }"
   cp "$work/package/$path" "$work/tree/$path"
   say "$path"
 done
@@ -82,14 +113,17 @@ these lists (\`app/ferroehr-rest/src/extensions/access/authn/wabvpz.rs\`).
   manifest, \`package.json\`, vendored here;
   <https://creativecommons.org/publicdomain/zero/1.0/>). The package ships no
   licence file of its own.
-- What is taken: the \`uzi-rolcode\` CodeSystem
-  (\`http://fhir.nl/fhir/NamingSystem/uzi-rolcode\`, version 11.7.0, OID
-  2.16.840.1.113883.2.4.15.111), whose codes the UZI-register CPS below
-  defines; the \`organization-type\` CodeSystem
+- What is taken: the \`organization-type\` CodeSystem
   (\`http://nictiz.nl/fhir/NamingSystem/organization-type\`, OID
-  2.16.840.1.113883.2.4.15.1060); and the \`OrganisatieTypeCodelijst\` ValueSet
+  2.16.840.1.113883.2.4.15.1060) and the \`OrganisatieTypeCodelijst\` ValueSet
   (2.16.840.1.113883.2.4.3.11.60.40.2.17.2.3, 2020-09-01), the care provider
   types of the zib Zorgaanbieder
+- Cache only: the \`uzi-rolcode\` CodeSystem
+  (\`http://fhir.nl/fhir/NamingSystem/uzi-rolcode\`, version 11.7.0, OID
+  2.16.840.1.113883.2.4.15.111). Its codes and titles reproduce Bijlage 3 of
+  the UZI-register CPS below, which the package's CC0 cannot license, so the
+  script writes it into the git-ignored \`.vendor-cache/nl-role-codes/\`, the
+  Wabvpz tests read it there, and this repository carries none of it
 - Layout: the file names inside the package's \`package/\` directory,
   unchanged
 
@@ -117,8 +151,8 @@ $(pinned_rows "${PINS[@]}")
 
 | File | sha256 | Status |
 |---|---|---|
-$(pinned_status_rows "cache only" "${CACHED[@]}")
+$(pinned_status_rows "cache only" "${CACHED_PINS[@]}" "${CACHED[@]}")
 EOF
 
 pinned_install "$work/tree" "$DEST"
-say "${#PINS[@]} files vendored and ${#CACHED[@]} document cache only, in docs/specs/nl-role-codes/"
+say "${#PINS[@]} files vendored in docs/specs/nl-role-codes/, and $((${#CACHED_PINS[@]} + ${#CACHED[@]})) cache only in .vendor-cache/nl-role-codes/"

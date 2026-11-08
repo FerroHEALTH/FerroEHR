@@ -576,7 +576,8 @@ precedence = "override"
 SPDX-FileCopyrightText = "Logius"
 SPDX-License-Identifier = "CC-BY-4.0 OR W3C-20150513"
 
-# Nictiz's zib 2020 package excerpt: the CC0 1.0 its package manifest states.
+# Nictiz's zib 2020 package excerpt (its own care provider types; the UZI role
+# codes are cache only): the CC0 1.0 its package manifest states.
 [[annotations]]
 path = "docs/specs/nl-role-codes/**"
 precedence = "override"
