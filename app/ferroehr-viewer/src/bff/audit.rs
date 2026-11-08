@@ -14,7 +14,7 @@
 //! The CDR answering `404` (the local audit store disabled) is a first-class
 //! rendered state, not an error.
 
-use fhir_types::codec::{Json, Object, Path};
+use fhir_types::codec::Json;
 use fhir_types::r4::audit_event::AuditEvent;
 use fhir_types::r4::bundle::Bundle;
 use fhir_types::r4::reference::Reference;
@@ -171,10 +171,8 @@ struct NotAnAuditEvent {
 /// (FHIR R4 `bundle.html` §Bundle.entry.search.mode) and makes no row; any
 /// other entry that is no `AuditEvent` refuses the page.
 fn parse_bundle(body: &str, offset: u32) -> Result<AuditPage, ViewerError> {
-    let refused = |e| ViewerError::failed(tr(ConsoleMsg::AuditeventBundleJson), e);
-    let object = serde_json::from_str::<Object>(body)
+    let bundle = serde_json::from_str::<Bundle>(body)
         .map_err(|e| ViewerError::failed(tr(ConsoleMsg::AuditeventBundleJson), e))?;
-    let bundle = Bundle::from_json(&object, &mut Path::root("Bundle")).map_err(refused)?;
     let total = bundle
         .total
         .and_then(|total| total.value)
