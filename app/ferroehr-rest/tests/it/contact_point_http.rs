@@ -428,13 +428,13 @@ async fn a_contact_points_dispensation_and_discard_record_the_ida_nameid() {
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
     assert!(body.contains("organization-id"), "{body}");
 
-    let (status, uid) = dispense(&app, &mine, &credential, &point_of_care(PROVIDER)).await;
-    assert_eq!(status, StatusCode::CREATED, "{uid}");
-    let vo = uid.split("::").next().expect("the versioned object id");
+    let (status, version) = dispense(&app, &mine, &credential, &point_of_care(PROVIDER)).await;
+    assert_eq!(status, StatusCode::CREATED, "the dispensation commits");
+    let vo = version.split("::").next().expect("the versioned object id");
     let (status, body) = send(
         &app,
         "DELETE",
-        &format!("/ehr/{mine}/composition/{uid}"),
+        &format!("/ehr/{mine}/composition/{version}"),
         &credential,
         None,
     )
