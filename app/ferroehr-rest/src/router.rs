@@ -17,9 +17,10 @@
 //! layer would otherwise treat it as a preflight. [`router`] wraps those routes
 //! in `ferrohealth_server::stack::app`, which adds the request id, the panic
 //! catch, the request timeout, the body limit, the overload bound, compression,
-//! the request log and the health routes, and writes its panics and refusals as
+//! the request log, the health routes and, outermost, the API security headers
+//! (`ferrohealth_server::api_headers`), and writes its panics and refusals as
 //! RFC 9457 problem details ([`stack_policy`]). The trailing-slash
-//! normalization runs before routing and the security headers outermost.
+//! normalization runs before routing.
 //!
 //! The overload bound covers every FerroEHR route and never the health routes,
 //! so an orchestrator can always probe an overloaded server. No openEHR spec
@@ -43,13 +44,12 @@ use ferrohealth_server::panic::PanicBody;
 use ferrohealth_server::refusal::RefusalBody;
 use ferrohealth_server::request_id::RequestIds;
 use ferrohealth_server::stack::{self, StackPolicy};
+use http::StatusCode;
 use http::header::AUTHORIZATION;
-use http::{HeaderName, HeaderValue, StatusCode, header};
 use tower::{Layer as _, ServiceBuilder};
 use tower_http::cors::CorsLayer;
 use tower_http::normalize_path::NormalizePathLayer;
 use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
-use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::api::system;
 use crate::extensions::access::authn::{self, Authenticator, Principal};
@@ -63,8 +63,8 @@ use ferroehr::config::management::AccessLevel;
 use ferrohealth_telemetry::request_log::RequestLog;
 
 /// Assembles the full application: [`routes`] inside the family stack, the
-/// management surface merged when it shares the main listener, the
-/// trailing-slash normalization and the security headers.
+/// management surface merged when it shares the main listener, and the
+/// trailing-slash normalization.
 pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
     let cfg = state.config().clone();
     let observability = state.observability().clone();
@@ -89,7 +89,7 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
             FhirBase::of(&cfg.rest.rest_root()),
         ),
     );
-    with_security_headers(normalized(app))
+    normalized(app)
 }
 
 /// Runs the request inside [`ferroehr::db::acquire::request_scope`], so it
@@ -306,52 +306,6 @@ fn refusal_body(fhir: FhirBase) -> RefusalBody {
 /// Trims a trailing slash before routing, so `/ehr/` and `/ehr` reach one route.
 fn normalized(app: Router) -> Router {
     Router::new().fallback_service(NormalizePathLayer::trim_trailing_slash().layer(app))
-}
-
-/// Applies the response headers every surface carries, per the OWASP HTTP
-/// Headers Cheat Sheet.
-///
-/// Outermost, so they reach transport-layer responses (the body-limit `413`, the
-/// timeout `408`, the panic-handler `500`) as well as handler ones. The set is
-/// chosen for a clinical JSON API: `Cache-Control: no-store` because responses
-/// carry patient data, `X-Content-Type-Options: nosniff`, a
-/// `Referrer-Policy` that keeps `ehr_id`-bearing paths out of cross-origin
-/// `Referer` headers, `Cross-Origin-Resource-Policy: same-site`, and
-/// `X-Frame-Options: DENY` plus a minimal CSP for the HTML this origin can serve.
-///
-/// `Strict-Transport-Security` is deliberately absent: RFC 6797 §7.2 requires a
-/// browser to ignore it over plain HTTP, and this server is commonly reached over
-/// HTTP behind a proxy that owns the header.
-fn with_security_headers(app: Router) -> Router {
-    app.layer(
-        ServiceBuilder::new()
-            .layer(SetResponseHeaderLayer::overriding(
-                header::CACHE_CONTROL,
-                HeaderValue::from_static("no-store"),
-            ))
-            .layer(SetResponseHeaderLayer::overriding(
-                header::X_CONTENT_TYPE_OPTIONS,
-                HeaderValue::from_static("nosniff"),
-            ))
-            .layer(SetResponseHeaderLayer::overriding(
-                header::REFERRER_POLICY,
-                HeaderValue::from_static("strict-origin-when-cross-origin"),
-            ))
-            .layer(SetResponseHeaderLayer::overriding(
-                HeaderName::from_static("cross-origin-resource-policy"),
-                HeaderValue::from_static("same-site"),
-            ))
-            .layer(SetResponseHeaderLayer::overriding(
-                header::X_FRAME_OPTIONS,
-                HeaderValue::from_static("DENY"),
-            ))
-            // `if_not_present`, not `overriding`: a rendered surface needs its
-            // own policy, and this outermost layer would otherwise erase it.
-            .layer(SetResponseHeaderLayer::if_not_present(
-                header::CONTENT_SECURITY_POLICY,
-                HeaderValue::from_static("default-src 'none'; frame-ancestors 'none'"),
-            )),
-    )
 }
 
 /// Mounts the public, pre-auth surface around the API tree: the REST-root

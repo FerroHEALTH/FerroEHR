@@ -224,7 +224,9 @@ Every response carries a Content-Security-Policy that admits scripts and
 styles from the viewer's own origin alone (`script-src 'self'; style-src
 'self'`), with no nonce and neither `'unsafe-inline'` nor `'unsafe-eval'`,
 beside `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
-`Referrer-Policy: no-referrer` and `Cross-Origin-Opener-Policy: same-origin`.
+`Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin` and
+`Cross-Origin-Resource-Policy: same-site`; when the viewer serves TLS itself
+(`server.tls`), `Strict-Transport-Security: max-age=31536000` as well.
 Every document is `Cache-Control: no-store`; FerroUI's stylesheet, theme and
 scripts under `/ferrohealth-ui/<version>/` are `no-cache`, so a browser
 revalidates them. A request that is not a
