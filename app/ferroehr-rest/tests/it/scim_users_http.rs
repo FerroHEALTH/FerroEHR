@@ -198,11 +198,24 @@ async fn app() -> (testkit::TestDb, Router) {
     (db, app)
 }
 
+/// [`app`] whose clients deactivate or delete at most `max` Users an hour.
+async fn app_limited(max: u32) -> (testkit::TestDb, Router) {
+    let mut config = config();
+    config.scim.max_deactivations = max;
+    let (db, _pool, app) = app_of(config, false).await;
+    (db, app)
+}
+
 /// [`app`], recording every access to the local audit store when
 /// `audited`; with the store's pool.
 async fn app_auditing(audited: bool) -> (testkit::TestDb, sqlx::PgPool, Router) {
+    app_of(config(), audited).await
+}
+
+/// The router of `config` over a fresh database holding the archetypes,
+/// auditing when `audited`; with the store's pool.
+async fn app_of(config: AppConfig, audited: bool) -> (testkit::TestDb, sqlx::PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
-    let config = config();
     let sections = config.party_binding.sections();
     let mapping = sections
         .binding_mapping(&[LOGIN.to_owned(), OTHER_LOGIN.to_owned()], "ADMIN")
@@ -536,4 +549,325 @@ async fn each_request_is_an_access_record_of_the_client_naming_the_person() {
             (CLIENT.to_owned(), "E".to_owned()),
         ]
     );
+}
+
+/// Creates the User `user_name` for `client_id` and returns its id and
+/// version.
+async fn created(app: &Router, client_id: &str, user_name: &str, key: &str) -> (String, String) {
+    let (status, _, body) = call(
+        app,
+        "POST",
+        "/Users",
+        client_id,
+        Some(&create_body(user_name, user_name, key)),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    (
+        body["id"].as_str().expect("an id").to_owned(),
+        body["meta"]["version"]
+            .as_str()
+            .expect("a version")
+            .to_owned(),
+    )
+}
+
+/// A `PatchOp` message of `operations` (RFC 7644 §3.5.2).
+fn patch_op(operations: Value) -> Value {
+    let mut message = json!({ "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"] });
+    message["Operations"] = operations;
+    message
+}
+
+/// The RFC 7644 §3.5.2.3 replace of a mapped attribute, the Entra ID
+/// disable (`Replace` without a `path`, the operation in another case,
+/// Microsoft's "SCIM protocol requests and responses"), and the lifecycle
+/// that follows: an inactive User is still read, refuses an attribute change
+/// until it is reactivated, and is reactivated by `active = true`.
+#[tokio::test]
+async fn patch_replaces_a_mapped_value_and_active_drives_the_lifecycle() {
+    let (_db, app) = app().await;
+    let (id, version) = created(
+        &app,
+        CLIENT,
+        "bjensen",
+        "2819c223-7f76-453a-919d-413861904646",
+    )
+    .await;
+    let path = format!("/Users/{id}");
+
+    let replace =
+        patch_op(json!([{ "op": "replace", "path": "name.formatted", "value": "Babs Jensen" }]));
+    let (status, headers, body) = call(
+        &app,
+        "PATCH",
+        &path,
+        CLIENT,
+        Some(&replace),
+        &[("if-match", &version)],
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["name"]["formatted"], "Babs Jensen");
+    assert_eq!(body["active"], true);
+    let patched = body["meta"]["version"]
+        .as_str()
+        .expect("a version")
+        .to_owned();
+    assert_ne!(patched, version, "one new version");
+    assert_eq!(headers[header::ETAG], patched.as_str());
+
+    // RFC 7644 §3.14: an If-Match naming an older version is 412.
+    let (status, _, body) = call(
+        &app,
+        "PATCH",
+        &path,
+        CLIENT,
+        Some(&replace),
+        &[("if-match", &version)],
+    )
+    .await;
+    assert_eq!(status, StatusCode::PRECONDITION_FAILED, "{body}");
+
+    let disable = patch_op(json!([{ "op": "Replace", "value": { "active": false } }]));
+    let (status, _, body) = call(&app, "PATCH", &path, CLIENT, Some(&disable), &[]).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["active"], false);
+    assert_eq!(body[EXTENSION]["lifecycleState"], "inactive");
+    let (status, _, body) = call(&app, "GET", &path, CLIENT, None, &[]).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "an inactive User is still read: {body}"
+    );
+
+    // An attribute change to an inactive User is refused, and the state stays.
+    let (status, _, body) = call(&app, "PATCH", &path, CLIENT, Some(&replace), &[]).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "the same value changes nothing: {body}"
+    );
+    let rename =
+        patch_op(json!([{ "op": "replace", "path": "name.formatted", "value": "B. Jensen" }]));
+    let (status, _, body) = call(&app, "PATCH", &path, CLIENT, Some(&rename), &[]).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["scimType"], "invalidValue");
+    let (_, _, body) = call(&app, "GET", &path, CLIENT, None, &[]).await;
+    assert_eq!(body["active"], false);
+
+    let enable = patch_op(json!([{ "op": "replace", "path": "active", "value": true }]));
+    let (status, _, body) = call(&app, "PATCH", &path, CLIENT, Some(&enable), &[]).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["active"], true);
+    assert!(body[EXTENSION].get("lifecycleState").is_none(), "{body}");
+}
+
+/// A PUT clears an omitted mapped attribute, keeps the binding key and
+/// `externalId`, and keeps the lifecycle state when it omits `active`
+/// (RFC 7644 §3.5.1); a changed key is 400 `mutability` (RFC 7643 §2.2).
+#[tokio::test]
+async fn put_clears_an_omitted_attribute_and_keeps_the_key_external_id_and_state() {
+    let (_db, app) = app().await;
+    let key = "2819c223-7f76-453a-919d-413861904646";
+    let (id, _) = created(&app, CLIENT, "bjensen", key).await;
+    let path = format!("/Users/{id}");
+    let disable = patch_op(json!([{ "op": "replace", "path": "active", "value": false }]));
+    let (status, _, _) = call(&app, "PATCH", &path, CLIENT, Some(&disable), &[]).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let put = json!({
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "userName": "bjensen"
+    });
+    let (status, _, body) = call(&app, "PUT", &path, CLIENT, Some(&put), &[]).await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "clearing the name changes an inactive User, which needs active = true: {body}"
+    );
+    let mut put = put;
+    put["active"] = json!(true);
+    let (status, _, body) = call(&app, "PUT", &path, CLIENT, Some(&put), &[]).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert!(
+        body.get("name").is_none(),
+        "the omitted name is cleared: {body}"
+    );
+    assert_eq!(body["externalId"], "bjensen");
+    assert_eq!(body[EXTENSION]["loginIdentifier"], key);
+    assert_eq!(body["active"], true);
+
+    // The same PUT without active keeps the state.
+    put.as_object_mut().expect("an object").remove("active");
+    let (status, _, body) = call(&app, "PUT", &path, CLIENT, Some(&put), &[]).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["active"], true);
+
+    let rekey = patch_op(json!([{
+        "op": "replace",
+        "path": format!("{EXTENSION}:loginIdentifier"),
+        "value": "3819c223-7f76-453a-919d-413861904646"
+    }]));
+    let (status, _, body) = call(&app, "PATCH", &path, CLIENT, Some(&rekey), &[]).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["scimType"], "mutability");
+
+    // Another client's User is 404 to a write.
+    let (status, _, _) = call(&app, "PUT", &path, OTHER, Some(&put), &[]).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+/// RFC 7644 §3.6: a deleted User is 404 to every request and absent from
+/// every list, and its `userName` may be reused.
+#[tokio::test]
+async fn a_deleted_user_is_404_and_its_user_name_is_free() {
+    let (_db, app) = app().await;
+    let (id, version) = created(
+        &app,
+        CLIENT,
+        "bjensen",
+        "2819c223-7f76-453a-919d-413861904646",
+    )
+    .await;
+    let path = format!("/Users/{id}");
+    let (status, _, _) = call(
+        &app,
+        "DELETE",
+        &path,
+        CLIENT,
+        None,
+        &[("if-match", "W/\"other\"")],
+    )
+    .await;
+    assert_eq!(status, StatusCode::PRECONDITION_FAILED, "RFC 7644 §3.14");
+    let (status, _, body) = call(
+        &app,
+        "DELETE",
+        &path,
+        CLIENT,
+        None,
+        &[("if-match", &version)],
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+
+    let replace = patch_op(json!([{ "op": "replace", "path": "name.formatted", "value": "x" }]));
+    for (method, body) in [("GET", None), ("PATCH", Some(&replace)), ("DELETE", None)] {
+        let (status, _, answer) = call(&app, method, &path, CLIENT, body, &[]).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{method}: {answer}");
+    }
+    let (_, _, list) = call(&app, "GET", "/Users", CLIENT, None, &[]).await;
+    assert_eq!(list["totalResults"], 0, "{list}");
+    let (again, _) = created(
+        &app,
+        CLIENT,
+        "bjensen",
+        "3819c223-7f76-453a-919d-413861904646",
+    )
+    .await;
+    assert_ne!(again, id, "a new PERSON");
+}
+
+/// Past `max_deactivations` a deactivation and a deletion are refused with
+/// 429 and `Retry-After` (RFC 6585 §4), and nothing is written.
+#[tokio::test]
+async fn deactivations_past_the_bound_are_429() {
+    let (_db, app) = app_limited(2).await;
+    let mut ids = Vec::new();
+    for (index, key) in [
+        "2819c223-7f76-453a-919d-413861904646",
+        "3819c223-7f76-453a-919d-413861904646",
+        "4819c223-7f76-453a-919d-413861904646",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        ids.push(created(&app, CLIENT, &format!("user{index}"), key).await.0);
+    }
+    let disable = patch_op(json!([{ "op": "replace", "path": "active", "value": false }]));
+    let (status, _, _) = call(
+        &app,
+        "PATCH",
+        &format!("/Users/{}", ids[0]),
+        CLIENT,
+        Some(&disable),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, _, _) = call(
+        &app,
+        "DELETE",
+        &format!("/Users/{}", ids[1]),
+        CLIENT,
+        None,
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+
+    let (status, headers, body) = call(
+        &app,
+        "PATCH",
+        &format!("/Users/{}", ids[2]),
+        CLIENT,
+        Some(&disable),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS, "{body}");
+    assert_eq!(headers[header::RETRY_AFTER], "3600");
+    let (status, _, _) = call(
+        &app,
+        "DELETE",
+        &format!("/Users/{}", ids[2]),
+        CLIENT,
+        None,
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
+    let (_, _, body) = call(
+        &app,
+        "GET",
+        &format!("/Users/{}", ids[2]),
+        CLIENT,
+        None,
+        &[],
+    )
+    .await;
+    assert_eq!(body["active"], true, "nothing was written: {body}");
+
+    // The bound is the client's own: another client is not held by it, and
+    // a write that deactivates nothing passes.
+    let rename = patch_op(json!([{ "op": "replace", "path": "name.formatted", "value": "y" }]));
+    let (status, _, _) = call(
+        &app,
+        "PATCH",
+        &format!("/Users/{}", ids[2]),
+        CLIENT,
+        Some(&rename),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (theirs, _) = created(
+        &app,
+        OTHER,
+        "ajones",
+        "5819c223-7f76-453a-919d-413861904646",
+    )
+    .await;
+    let (status, _, _) = call(
+        &app,
+        "DELETE",
+        &format!("/Users/{theirs}"),
+        OTHER,
+        None,
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
 }

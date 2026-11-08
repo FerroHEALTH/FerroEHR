@@ -220,9 +220,97 @@ impl UserMap {
         Ok(values)
     }
 
-    /// The representation of `user` (RFC 7643 §8.1), with its `meta`
-    /// naming it under `base_url` (RFC 7643 §3.1).
-    pub(crate) fn representation(&self, user: &ProvisionedUser, base_url: &str) -> Value {
+    /// The mapped values to set and the mapped paths to clear in the
+    /// `PERSON` `body` of the client of `issuer`, for its User to go from
+    /// `old` to `new`.
+    ///
+    /// # Errors
+    /// A `400` `mutability` when the binding key changes; the
+    /// [`Self::values`] refusals of a new value.
+    pub(crate) async fn changes(
+        &self,
+        service: &FerroEhrService,
+        body: &Value,
+        (old, new): (&Resource, &Resource),
+        issuer: &str,
+    ) -> Result<
+        (
+            Vec<(String, Value)>,
+            Vec<(String, Option<(String, String)>)>,
+        ),
+        ScimError,
+    > {
+        let ours = Container::Extension(EXTENSION_URN);
+        if text(old.get(ours, schemas::LOGIN_IDENTIFIER))?
+            != text(new.get(ours, schemas::LOGIN_IDENTIFIER))?
+        {
+            return Err(ScimError::bad_request(
+                ScimType::Mutability,
+                "The binding key is immutable (RFC 7643 §2.2).",
+            ));
+        }
+        let template = template_of(body);
+        let mut set = Vec::new();
+        let mut clear = Vec::new();
+        let mut selectors = vec![("userName", &self.user_name)];
+        if let Some(external_id) = &self.external_id {
+            selectors.push(("externalId", external_id));
+        }
+        for (name, selector) in selectors {
+            let (before, after) = (
+                text(old.get(Container::Core, name))?,
+                text(new.get(Container::Core, name))?,
+            );
+            let slot = (selector.identifier_type.clone(), issuer.to_owned());
+            match after {
+                Some(after) if Some(&after) != before.as_ref() => {
+                    set.push((selector.path.clone(), after, slot.0));
+                }
+                None if before.is_some() => clear.push((selector.path.clone(), Some(slot))),
+                _ => {}
+            }
+        }
+        for mapped in &self.attributes {
+            let Some(path) = mapped.attribute.path_for(template) else {
+                continue;
+            };
+            let (before, after) = (
+                text(read(old, &mapped.target))?,
+                text(read(new, &mapped.target))?,
+            );
+            match after {
+                Some(after) if Some(&after) != before.as_ref() => {
+                    set.push((path.to_owned(), after, mapped.identifier_type.clone()));
+                }
+                None if before.is_some() => {
+                    let slot = (mapped.identifier_type.clone(), issuer.to_owned());
+                    let identifier = mapped_value(body, path, Some((&slot.0, &slot.1)))
+                        .is_some()
+                        .then_some(slot);
+                    clear.push((path.to_owned(), identifier));
+                }
+                _ => {}
+            }
+        }
+        let mut values = Vec::with_capacity(set.len());
+        for (path, value, identifier_type) in set {
+            let data = service
+                .mapped_text_value(template, &path, &value, (issuer, &identifier_type))
+                .await
+                .map_err(|error| service_refusal(&error))?;
+            values.push((path, data));
+        }
+        Ok((values, clear))
+    }
+
+    /// The representation of `user` of the client of `issuer` (RFC 7643
+    /// §8.1), with its `meta` naming it under `base_url` (RFC 7643 §3.1).
+    pub(crate) fn representation(
+        &self,
+        user: &ProvisionedUser,
+        base_url: &str,
+        issuer: &str,
+    ) -> Value {
         let mut attributes = Map::new();
         let mut schemas = vec![Value::from(urn::CORE_USER)];
         attributes.insert("id".to_owned(), Value::from(user.row.party.to_string()));
@@ -237,16 +325,14 @@ impl UserMap {
             "active".to_owned(),
             Value::Bool(matches!(state, "532" | "553")),
         );
-        let template = user
-            .body
-            .pointer("/archetype_details/template_id/value")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
+        let template = template_of(&user.body);
         for mapped in &self.attributes {
             let Some(text) = mapped
                 .attribute
                 .path_for(template)
-                .and_then(|path| mapped_value(&user.body, path, None))
+                .and_then(|path| {
+                    attribute_value(&user.body, path, (&mapped.identifier_type, issuer))
+                })
                 .and_then(served_text)
             else {
                 continue;
@@ -272,6 +358,24 @@ impl UserMap {
         body.extend(attributes);
         Value::Object(body)
     }
+}
+
+/// The template the `PERSON` `body` names.
+fn template_of(body: &Value) -> &str {
+    body.pointer("/archetype_details/template_id/value")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+}
+
+/// The data value of a mapped attribute at `path` in the `PERSON` `body`:
+/// the identifier of its `slot` (type and issuer) when the path holds one,
+/// and otherwise the first value that is no identifier, so a path the
+/// selectors share never serves another attribute's identifier.
+fn attribute_value<'a>(body: &'a Value, path: &str, slot: (&str, &str)) -> Option<&'a Value> {
+    mapped_value(body, path, Some(slot)).or_else(|| {
+        mapped_value(body, path, None)
+            .filter(|value| value.get("_type").and_then(Value::as_str) != Some("DV_IDENTIFIER"))
+    })
 }
 
 /// The entity tag of `user`: its version as a weak tag (RFC 7644 §3.14).

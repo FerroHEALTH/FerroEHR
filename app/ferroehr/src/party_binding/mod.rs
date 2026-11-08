@@ -466,6 +466,13 @@ impl BindingMapping {
             || self.group.as_ref().is_some_and(|g| g.template == key)
     }
 
+    /// Whether `template_id` (in any case) is the professional role
+    /// template.
+    #[must_use]
+    pub fn is_professional_role(&self, template_id: &str) -> bool {
+        self.professional_role.as_deref() == Some(canonical_key(template_id).as_str())
+    }
+
     /// Returns the digest of everything the side-table rows are derived
     /// under: two mappings with one digest derive the same rows.
     ///

@@ -20,7 +20,9 @@ use ferroehr::party_binding::{BindingMapping, IdentifierSelector, PersonSelector
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::provision::{NewUser, ProvisionedUser};
 use ferroehr::service::demographic::template::MappedPartyTemplates;
+use ferroehr::service::demographic::user_write::{Deactivations, UserUpdate, UserWriteError};
 use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
+use ferrohealth_smart::party::source::Lookup;
 
 /// The professional `PERSON` archetype.
 const PERSON: &str = "openEHR-DEMOGRAPHIC-PERSON.professional.v1.0.0";
@@ -433,5 +435,251 @@ async fn a_user_whose_person_lacks_a_required_value_is_incomplete() {
             .await
             .expect("answers")
             .is_some()
+    );
+}
+
+/// The bound of one hundred deactivations an hour, the `[scim]` default.
+const BOUND: Deactivations = Deactivations {
+    max: 100,
+    window_minutes: 60,
+};
+
+/// Writes `update` to the User `id` of the client of `LOGIN` with `limit`.
+async fn update(
+    svc: &FerroEhrService,
+    id: VoId,
+    update: UserUpdate,
+    limit: Deactivations,
+) -> Result<Option<ProvisionedUser>, UserWriteError> {
+    as_client(Box::pin(svc.update_user(LOGIN, id, update, limit))).await
+}
+
+/// The `active` write of `active`.
+fn active(active: bool) -> UserUpdate {
+    UserUpdate {
+        active: Some(active),
+        ..UserUpdate::default()
+    }
+}
+
+/// RM common master06 §Version Lifecycle: an abandoned User completed in one
+/// request is retrieved to `incomplete` and completed, two commits.
+#[tokio::test]
+async fn an_abandoned_user_completes_in_two_commits() {
+    let (_db, svc) = service().await;
+    let mut new = user(
+        LOGIN,
+        "9d0e1f2a-3b4c-4d5e-8f6a-8b9c0d1e2f3a",
+        "lee@example.org",
+        "ext-5",
+        "Lee Roe",
+    );
+    new.values.retain(|(path, _)| path != NAME_PATH);
+    let id = provision(&svc, LOGIN, new)
+        .await
+        .expect("created")
+        .row
+        .party;
+    let abandoned = update(&svc, id, active(false), BOUND)
+        .await
+        .expect("abandoned")
+        .expect("found");
+    assert_eq!(abandoned.row.lifecycle_state, "801");
+    let versions = |svc: &FerroEhrService| {
+        let svc = svc.clone();
+        async move {
+            svc.versioned_party_revision_history(id)
+                .await
+                .expect("the history reads")
+                .body["items"]
+                .as_array()
+                .map_or(0, Vec::len)
+        }
+    };
+    let before = versions(&svc).await;
+    let completed = update(
+        &svc,
+        id,
+        UserUpdate {
+            set: vec![(
+                NAME_PATH.to_owned(),
+                json!({ "_type": "DV_TEXT", "value": "Lee Roe" }),
+            )],
+            active: Some(true),
+            ..UserUpdate::default()
+        },
+        BOUND,
+    )
+    .await
+    .expect("completed")
+    .expect("found");
+    assert_eq!(completed.row.lifecycle_state, "532");
+    assert_eq!(versions(&svc).await, before + 2, "two commits");
+}
+
+/// The test trigger that refuses every `complete` version the party store
+/// writes, so the second commit of an abandoned User's completion fails.
+const REFUSE_COMPLETE: &str = "
+    CREATE FUNCTION party.refuse_complete() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+        IF NEW.lifecycle_state = '532' THEN
+            RAISE EXCEPTION 'the second commit fails';
+        END IF;
+        RETURN NEW;
+    END $$;
+    CREATE TRIGGER refuse_complete BEFORE INSERT ON party.version
+        FOR EACH ROW EXECUTE FUNCTION party.refuse_complete();
+";
+
+/// RM common master06 §Version Lifecycle: when the second commit of an
+/// abandoned User's completion fails, the first stands, the User is left
+/// `incomplete`, and the same request completes it on retry.
+#[tokio::test]
+async fn a_failed_second_commit_leaves_the_user_incomplete_until_a_retry() {
+    let (db, svc) = service().await;
+    let mut new = user(
+        LOGIN,
+        "4a5b6c7d-8e9f-4a0b-9c1d-2e3f4a5b6c7d",
+        "kim@example.org",
+        "ext-9",
+        "Kim Doe",
+    );
+    new.values.retain(|(path, _)| path != NAME_PATH);
+    let id = provision(&svc, LOGIN, new)
+        .await
+        .expect("created")
+        .row
+        .party;
+    let abandoned = update(&svc, id, active(false), BOUND)
+        .await
+        .expect("abandoned")
+        .expect("found");
+    assert_eq!(abandoned.row.lifecycle_state, "801");
+    let complete = || UserUpdate {
+        set: vec![(
+            NAME_PATH.to_owned(),
+            json!({ "_type": "DV_TEXT", "value": "Kim Doe" }),
+        )],
+        active: Some(true),
+        ..UserUpdate::default()
+    };
+    sqlx::raw_sql(REFUSE_COMPLETE)
+        .execute(&db.pool())
+        .await
+        .expect("the trigger installs");
+    let failed = update(&svc, id, complete(), BOUND).await;
+    assert!(failed.is_err(), "the second commit fails: {failed:?}");
+    let left = svc
+        .provisioned_user(LOGIN, id)
+        .await
+        .expect("reads")
+        .expect("found");
+    assert_eq!(left.row.lifecycle_state, "553", "the retrieval stands");
+    sqlx::raw_sql("DROP TRIGGER refuse_complete ON party.version")
+        .execute(&db.pool())
+        .await
+        .expect("the trigger drops");
+    let completed = update(&svc, id, complete(), BOUND)
+        .await
+        .expect("completed on retry")
+        .expect("found");
+    assert_eq!(completed.row.lifecycle_state, "532");
+}
+
+/// A deleted User's key stays behind as a tombstone: a later login on it is
+/// refused as deprovisioned.
+#[tokio::test]
+async fn a_deleted_user_leaves_a_tombstone() {
+    let (_db, svc) = service().await;
+    let key = "0e1f2a3b-4c5d-4e6f-9a7b-9c0d1e2f3a4b";
+    let id = provision(
+        &svc,
+        LOGIN,
+        user(LOGIN, key, "max@example.org", "ext-6", "Max Roe"),
+    )
+    .await
+    .expect("created")
+    .row
+    .party;
+    let deleted = as_client(Box::pin(svc.delete_user(LOGIN, id, None, BOUND)))
+        .await
+        .expect("deleted");
+    assert!(deleted);
+    assert!(
+        svc.provisioned_user(LOGIN, id)
+            .await
+            .expect("answers")
+            .is_none()
+    );
+    let lookup = svc
+        .party_source(NAMESPACE)
+        .read(LOGIN, "guid", key, None, "2026-06-01")
+        .await
+        .expect("the source answers");
+    assert_eq!(lookup, Lookup::Deprovisioned);
+}
+
+/// Two replicas on one database share one bound on deactivations.
+#[tokio::test]
+async fn the_deactivation_bound_holds_across_two_replicas() {
+    let (db, svc) = service().await;
+    let replica = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
+        .with_mapped_party_templates(
+            MappedPartyTemplates::default()
+                .with_person_template(PERSON)
+                .with_role_template(ROLE),
+        )
+        .with_binding_mapping(
+            BindingMapping::default()
+                .with_person_selectors(PERSON, selectors())
+                .with_professional_role(ROLE),
+        );
+    let mut ids = Vec::new();
+    for (index, key) in [
+        "1f2a3b4c-5d6e-4f7a-8b8c-0d1e2f3a4b5c",
+        "2a3b4c5d-6e7f-4a8b-9c9d-1e2f3a4b5c6d",
+        "3b4c5d6e-7f8a-4b9c-8d0e-2f3a4b5c6d7e",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let new = user(
+            LOGIN,
+            key,
+            &format!("u{index}@example.org"),
+            &format!("e{index}"),
+            "R",
+        );
+        ids.push(
+            provision(&svc, LOGIN, new)
+                .await
+                .expect("created")
+                .row
+                .party,
+        );
+    }
+    let bound = Deactivations {
+        max: 2,
+        window_minutes: 60,
+    };
+    update(&svc, ids[0], active(false), bound)
+        .await
+        .expect("the first deactivation");
+    update(&replica, ids[1], active(false), bound)
+        .await
+        .expect("the second, on the other replica");
+    let refused = update(&svc, ids[2], active(false), bound)
+        .await
+        .expect_err("the third is past the bound");
+    assert!(
+        matches!(refused, UserWriteError::Limited { max: 2, .. }),
+        "{refused:?}"
+    );
+    let refused = as_client(Box::pin(replica.delete_user(LOGIN, ids[2], None, bound)))
+        .await
+        .expect_err("a deletion counts against the same bound");
+    assert!(
+        matches!(refused, UserWriteError::Limited { .. }),
+        "{refused:?}"
     );
 }

@@ -114,8 +114,7 @@ pub(crate) fn router(
                 service,
                 user_map::UserMap::new(&config.party_binding)?,
                 schema,
-                config.scim.base_url().unwrap_or_default(),
-                config.scim.max_results,
+                &config.scim,
             )
         });
     let users = match users {
@@ -138,7 +137,13 @@ pub(crate) fn router(
         .merge(
             Router::new()
                 .route("/Users", get(users::list).post(users::create))
-                .route("/Users/{id}", get(users::read))
+                .route(
+                    "/Users/{id}",
+                    get(users::read)
+                        .put(users::modify)
+                        .patch(users::modify)
+                        .delete(users::delete),
+                )
                 .with_state(users),
         );
     let gated = match config.server.caller_rate {

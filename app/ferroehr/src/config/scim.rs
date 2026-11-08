@@ -32,6 +32,11 @@ pub struct ScimConfig {
     /// The most resources one list response returns (RFC 7643 §5,
     /// `filter.maxResults`).
     pub max_results: u64,
+    /// The most Users one client deactivates or deletes in one window; past
+    /// it, a deactivation or a deletion is refused with `429`.
+    pub max_deactivations: u32,
+    /// The length of that window, in minutes.
+    pub deactivation_window_minutes: u32,
     /// The provisioning clients.
     pub client: Vec<ScimClient>,
 }
@@ -42,6 +47,8 @@ impl Default for ScimConfig {
             enabled: false,
             public_base_url: None,
             max_results: 100,
+            max_deactivations: 100,
+            deactivation_window_minutes: 60,
             client: Vec::new(),
         }
     }
@@ -101,6 +108,12 @@ impl ScimConfig {
         }
         if self.max_results == 0 {
             errors.push("scim.max_results must be at least 1".to_owned());
+        }
+        if self.max_deactivations == 0 {
+            errors.push("scim.max_deactivations must be at least 1".to_owned());
+        }
+        if self.deactivation_window_minutes == 0 {
+            errors.push("scim.deactivation_window_minutes must be at least 1".to_owned());
         }
         if self.client.is_empty() {
             errors.push(
