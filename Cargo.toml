@@ -293,17 +293,17 @@ ferrobridge-term = { version = "=0.1.143", features = ["smart"] }
 # record, the Art 14(1) categories and their classification map, the Art 9(2)
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
-# crates.io 2026-11-06 (the 0.4 line takes ferrohealth-smart 0.9).
-ihe-atna = { version = "=0.4.0", default-features = false }
-ehds-logging = { version = "=0.4.0", default-features = false }
+# crates.io 2026-11-08 (FerroAUDIT v0.5.2).
+ihe-atna = { version = "=0.5.2", default-features = false }
+ehds-logging = { version = "=0.5.2", default-features = false }
 
 # ── Patient identity (the shared IHE ITI client library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly. `pixm` is the
 # PIXm Patient Identifier Cross-reference Consumer (ITI-83) the IHE patient
 # identity source of the EHR index is asked through (`[ehr_index]`); `smart` is
-# its ferrohealth-smart token authorizer. Verified on crates.io 2026-11-06
-# (FerroPIX v0.0.19).
-ihe-iti = { version = "=0.0.76", default-features = false }
+# its ferrohealth-smart token authorizer. Verified on crates.io 2026-11-08
+# (ihe-iti 0.0.77, which takes ihe-atna 0.5).
+ihe-iti = { version = "=0.0.77", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
