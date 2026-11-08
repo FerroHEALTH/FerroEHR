@@ -17,7 +17,9 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use axum::Router;
-use ferroehr::config::agreement::{AccessClass, Accessor, Agreement, ConsentSource, LegalGround};
+use ferroehr::config::agreement::{
+    AccessClass, Accessor, Agreement, ConsentSource, LegalGround, Purpose,
+};
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::version_update::WriteRequest;
@@ -52,6 +54,10 @@ const CONSENT_CLAIM: &str = "consent_ref";
 /// The organisation statement's member carrying a chained request's
 /// correlation id.
 const CORRELATION_MEMBER: &str = "correlation_id";
+/// The claim the issuer carries a Dutch professional's UZI role in.
+const NL_ROLE_CLAIM: &str = "nl_role";
+/// The claim the issuer carries a Dutch organisation type in.
+const NL_TYPE_CLAIM: &str = "nl_organisation_type";
 
 /// The `[[auth.federation]]` table of [`FEDERATION`]: IHE IUA claims, the
 /// country and issuing authority beside them, the consent decision
@@ -83,6 +89,11 @@ fn federation_table() -> FederationSection {
             (
                 Field::CorrelationId,
                 vec![Source::AuthorizationDetails(CORRELATION_MEMBER.to_owned())],
+            ),
+            (Field::NlRole, vec![Source::Claim(NL_ROLE_CLAIM.to_owned())]),
+            (
+                Field::NlOrganisationType,
+                vec![Source::Claim(NL_TYPE_CLAIM.to_owned())],
             ),
         ]),
         countries: vec!["DE".to_owned()],
@@ -706,6 +717,7 @@ fn contact_point_token(certificate: &ClientCertificate) -> String {
             "assertion": {
                 "issuer": "https://ncp-b.example",
                 "id": "urn:uuid:ida-1",
+                "name_id_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:X509SubjectName",
                 "not_before": now - 60,
                 "not_on_or_after": now + 3600
             },
@@ -833,4 +845,101 @@ async fn an_external_persons_write_records_its_committer_and_names_its_provider(
             { "_type": "DV_IDENTIFIER", "issuer": FEDERATION, "id": "hp-remote-1",
               "type": "oauth2" } ] })
     );
+}
+
+/// An NL agreement of `accessor` for care, conditioned on the local consent.
+fn nl(accessor: Accessor) -> Agreement {
+    Agreement {
+        jurisdiction: "NL".to_owned(),
+        consent: Some(ConsentSource::Local),
+        purpose: Some(Purpose::Care),
+        ..agreement(accessor)
+    }
+}
+
+/// The consent decision reference an NL read carries beside `claims`.
+fn consented(claims: &Value) -> Value {
+    let mut all = json!({ CONSENT_CLAIM: "https://consent.example/fhir/Consent/c-1" });
+    if let (Some(all), Some(claims)) = (all.as_object_mut(), claims.as_object()) {
+        all.extend(claims.clone());
+    }
+    all
+}
+
+/// Under an NL agreement, Wabvpz Art. 15f refuses an occupational or insurance
+/// physician and a professional of an organisation asserting no care provider
+/// type, each recorded under its code; a care provider's professional is
+/// served (#5107).
+#[tokio::test]
+async fn an_nl_agreement_admits_only_a_care_providers_professional() {
+    let (db, svc, app) = serve(vec![nl(Accessor::Person)]).await;
+    let target = ehr(&svc).await.to_string();
+    let asserting = |claims: Value| professional(Some(&target), &consented(&claims));
+    for admitted in [
+        json!({ NL_ROLE_CLAIM: "01.015", NL_TYPE_CLAIM: "Z3" }),
+        json!({ NL_ROLE_CLAIM: ["01.015"], NL_TYPE_CLAIM: ["V4"] }),
+    ] {
+        assert_eq!(
+            read(&app, &target, &asserting(admitted.clone()), None).await,
+            StatusCode::OK,
+            "{admitted}"
+        );
+    }
+    for role in ["01.008", "01.048"] {
+        let credential = asserting(json!({ NL_ROLE_CLAIM: role, NL_TYPE_CLAIM: "Z3" }));
+        assert_eq!(
+            read(&app, &target, &credential, None).await,
+            StatusCode::FORBIDDEN,
+            "{role}"
+        );
+    }
+    crate::party_binding_http::refusal_rows(&db.pool(), "refused-wabvpz-role", 2).await;
+    for refused in [
+        json!({ NL_ROLE_CLAIM: "01.015" }),
+        json!({ NL_ROLE_CLAIM: "01.015", NL_TYPE_CLAIM: "ZV" }),
+        json!({ NL_ROLE_CLAIM: "01.015", NL_TYPE_CLAIM: ["V4", "ZV"] }),
+    ] {
+        assert_eq!(
+            read(&app, &target, &asserting(refused.clone()), None).await,
+            StatusCode::FORBIDDEN,
+            "{refused}"
+        );
+    }
+    crate::party_binding_http::refusal_rows(&db.pool(), "refused-wabvpz-organisation-type", 3)
+        .await;
+}
+
+/// An organisation under an NL agreement is served only when it asserts a care
+/// provider type; an insurer, which asserts none, is refused (Wabvpz
+/// Art. 15f(1), #5107).
+#[tokio::test]
+async fn an_nl_agreement_admits_only_a_care_provider_organisation() {
+    let (_db, svc, app) = serve(vec![nl(Accessor::Organisation)]).await;
+    let target = ehr(&svc).await.to_string();
+    let asserting = |claims: &Value| {
+        let mut all = consented(claims);
+        all["sub"] = json!("remote-system");
+        all["client_id"] = json!("remote-system");
+        all["ehrId"] = json!(target);
+        all["authorization_details"] =
+            json!([{ "type": ORGANISATION_ACCESS, "locations": [AUDIENCE] }]);
+        token(&all)
+    };
+    assert_eq!(
+        read(
+            &app,
+            &target,
+            &asserting(&json!({ NL_TYPE_CLAIM: "V4" })),
+            None
+        )
+        .await,
+        StatusCode::OK
+    );
+    for refused in [json!({}), json!({ NL_TYPE_CLAIM: "ZV" })] {
+        assert_eq!(
+            read(&app, &target, &asserting(&refused), None).await,
+            StatusCode::FORBIDDEN,
+            "{refused}"
+        );
+    }
 }

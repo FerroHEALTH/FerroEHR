@@ -174,6 +174,9 @@ role_tags_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Re
 role_tags_update	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Update, object: Demographic })	Update	false	false	false
 role_update	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Update, object: Demographic })	Update	false	false	false
 root_health	false	-	None	None	-	Skip	None	-	false	false	false
+scim_user_create	false	-	None	None	-	Skip	Some(Audited { action: Create, object: Demographic })	-	false	false	false
+scim_user_get	false	-	None	None	-	Skip	Some(Audited { action: Read, object: Demographic })	-	false	false	false
+scim_user_list	false	-	None	None	-	Skip	Some(Audited { action: Execute, object: Demographic })	-	false	false	false
 status	false	-	None	None	-	Skip	None	-	false	false	false
 status_view	false	-	None	None	-	Skip	None	-	false	false	false
 swagger_ui_index	false	-	None	None	-	Skip	None	-	false	false	false

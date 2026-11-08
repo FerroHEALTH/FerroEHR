@@ -426,6 +426,7 @@ own accessor kind; every agreement is listed on the boot line and in
 | `name`, `version` | string | `""` | The agreement; required for an organisation. |
 | `jurisdiction` | ISO 3166-1 alpha-2 | `""` | An issuer with `profile = "nl"` implies `NL`. |
 | `exchange` | string | `""` | The kind of exchange the agreement covers. |
+| `purpose` | `care` or `keuring` | unset | What the exchange is for. Required for every NL agreement, and an NL agreement for a `keuring` (a medical examination for employment, insurance or a licence) refuses the start, since a keurend arts has no access to an exchange system (Wabvpz Art. 15f(2)). |
 | `legal_ground` | `{ gdpr_6_1, gdpr_9_2, national }` | unset | The GDPR Art. 6(1) point (`a` to `f`), the Art. 9(2) point (`a` to `j`) and the national provision; in the Netherlands Art. 9(2)(h) with UAVG Art. 30(3)(a). Required for an organisation. |
 | `consent` | `mitz` or `local` | unset | The source of the consent the exchange is conditioned on, never its legal ground. A read under it needs the consent decision reference the token carries in the field its `[[auth.federation]]` table maps to `consent.reference`, and is refused with `403` without it. Required for every NL agreement with `reads` (Wabvpz Art. 15a(1)); an organisation may not take it from Mitz, whose closed question needs a responsible professional. |
 | `reads` | list of `patient/` scopes | `[]` | The most an external caller may read; a `user/` or `system/` scope refuses the start. |
@@ -558,7 +559,10 @@ Each `[[scim.client]]` table declares one provisioning client:
 The start is refused when `enabled` is set without `public_base_url` or
 without a client, and for a client that misses a key, is declared twice,
 shares a `binding_issuer`, names an issuer that is not of kind `machines`, or
-names a `binding_issuer` no `[[auth.party]]` table carries.
+names a `binding_issuer` no `[[auth.party]]` table carries. It is refused too
+when the [party mapping](#authzparty_binding) lacks what a User is written
+with: a default person template with a `user_name` selector, and
+`[authz.party_binding.professional_role]`.
 
 ```toml
 [scim]
@@ -591,9 +595,40 @@ reduced to `userName`, `active` and the SCIM attributes
 `[[authz.party_binding.person.attribute]]` maps, and FerroEHR's extension
 `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User` with
 `loginIdentifier`, the attribute that feeds the binding key. `/ResourceTypes`
-lists the `User` type at `/Users`; that endpoint is not served yet, and
-`ServiceProviderConfig` declares PATCH and entity tags unsupported until it
-is.
+lists the `User` type at `/Users`.
+
+### Users
+
+A User is a `PERSON` of the default person template performing the
+professional `ROLE`. The client serves these operations (RFC 7644 §3):
+
+- `POST /scim/v2/Users` creates the `PERSON` and its `ROLE` in one demographic
+  CONTRIBUTION, under the client as committer, and answers **201** with the
+  User, its `Location` and its `ETag`. The body carries `userName` and the
+  binding key in `loginIdentifier`; `externalId` and every mapped attribute
+  are optional. A version that fits its template in full is `complete`, and
+  one that fits only with every lower limit at zero is `incomplete`, which the
+  User's `lifecycleState` and `missingPaths` name. A User created with
+  `active = false` is **400** `invalidValue`.
+- `GET /scim/v2/Users/{id}` answers the User with its `ETag`, the weak tag of
+  its version, and **304** to an `If-None-Match` naming that version.
+- `GET /scim/v2/Users` answers a `ListResponse`, an empty one with **200**
+  when nothing matches. `filter` takes `eq` and `and` over `userName`,
+  `externalId` and `id`; names and operators are compared in any case, and
+  anything else is **400** `invalidFilter`. `startIndex` and `count` page the
+  result, at most `max_results` at a time.
+
+The User's `userName`, `externalId` and binding key are `DV_IDENTIFIER`s at
+their selectors, issued by the client's `binding_issuer`. A client sees only
+its own Users, the ones whose key its `binding_issuer` issues: every other id
+is **404** and absent from every list, as is a `PERSON` without a live
+professional `ROLE`. The `userName` index spans every client, so a **409**
+`uniqueness` tells one client that a `userName` exists under another;
+`externalId` is unique within one client. Every SCIM request is an access
+record of the client, with the `PERSON` as its object.
+
+`ServiceProviderConfig` declares entity tags supported and PATCH unsupported:
+`PUT`, `PATCH` and `DELETE` on a User are not served yet.
 
 ## `[access_delay]`
 
