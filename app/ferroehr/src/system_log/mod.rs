@@ -70,6 +70,7 @@
     )
 )]
 
+pub(crate) mod access_binding;
 pub mod access_context;
 pub mod binding;
 pub mod categories;

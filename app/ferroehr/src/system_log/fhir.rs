@@ -24,8 +24,8 @@ use ehds_logging::balp::ObjectIds;
 use ehds_logging::emergency::EmergencyPurposes;
 use ehds_logging::label::LabelPolicy;
 use ehds_logging::record::{
-    AccessRecord, Action, AssuranceLevel, DataSubject, EhrAt, Origin, Outcome, PatientIdentifier,
-    PatientLookup, Purpose, Request,
+    AccessRecord, Action, DataSubject, EhrAt, Origin, Outcome, PatientIdentifier, PatientLookup,
+    Purpose, Request,
 };
 use ehds_logging::retention::RetentionPolicy;
 use ihe_atna::balp::{
@@ -142,7 +142,7 @@ pub fn to_fhir(
         host: NetworkAddress::host(&nonempty(&ctx.server_ip, &ctx.value_if_missing)),
         source_types: vec![SOURCE_APPLICATION_SERVER],
     };
-    let exchange = match access_record(event, ctx, subject) {
+    let exchange = match access_record(event, ctx, subject)? {
         Some(record) => ehds_logging::balp::exchange_with(&record, &endpoint, &object_ids()?),
         None => exchange(event, ctx, subject, &endpoint),
     };
@@ -188,8 +188,10 @@ pub(crate) fn access_record(
     event: &AuditEvent,
     ctx: &AuditContext,
     subject: Option<&str>,
-) -> Option<AccessRecord> {
-    let category = event.category.as_ref()?;
+) -> Result<Option<AccessRecord>, AuditError> {
+    let Some(category) = event.category.as_ref() else {
+        return Ok(None);
+    };
     let missing = ctx.value_if_missing.as_str();
     let action = match (event.object, event.action) {
         (ObjectClass::Query, _) | (_, EventActionCode::Execute) => Action::Query,
@@ -227,12 +229,13 @@ pub(crate) fn access_record(
         .recording
         .labels
         .label(&classification, origins.iter().filter_map(Origin::key));
-    Some(AccessRecord {
+    let (accessor, correlation) = accessor(event, missing, purposes.clone())?;
+    Ok(Some(AccessRecord {
         action,
         recorded: event.timestamp,
         outcome: outcome(event.outcome),
         outcome_description: Some(outcome_description(event.outcome).to_owned()),
-        accessor: accessor(event, missing, purposes.clone()),
+        accessor,
         subject: DataSubject {
             patient: None,
             ehrs,
@@ -258,7 +261,7 @@ pub(crate) fn access_record(
                 .flatten(),
             stored_query: None,
             client_address: client_address(event),
-            correlation: None,
+            correlation,
         },
         retention,
         labels,
@@ -268,7 +271,7 @@ pub(crate) fn access_record(
             .flatten(),
         inserted: None,
         transformations: Vec::new(),
-    })
+    }))
 }
 
 /// The origins of the data an access read, from the systems its `FEEDER_AUDIT`s
@@ -546,16 +549,6 @@ const fn balp_outcome(outcome: EventOutcome) -> ihe_atna::balp::Outcome {
         EventOutcome::Success => ihe_atna::balp::Outcome::Success,
         EventOutcome::MinorFailure => ihe_atna::balp::Outcome::MinorFailure,
         EventOutcome::SeriousFailure => ihe_atna::balp::Outcome::SeriousFailure,
-    }
-}
-
-pub(super) const fn assurance(
-    level: ferrohealth_smart::assurance::AssuranceLevel,
-) -> AssuranceLevel {
-    match level {
-        ferrohealth_smart::assurance::AssuranceLevel::Low => AssuranceLevel::Low,
-        ferrohealth_smart::assurance::AssuranceLevel::Substantial => AssuranceLevel::Substantial,
-        ferrohealth_smart::assurance::AssuranceLevel::High => AssuranceLevel::High,
     }
 }
 

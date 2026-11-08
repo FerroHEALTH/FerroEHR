@@ -139,3 +139,43 @@ async fn read(path: &str) -> Result<Vec<u8>, AuditError> {
         .await
         .map_err(|e| AuditError::Transport(Box::new(e)))
 }
+
+#[cfg(test)]
+mod tests {
+    use secrecy::ExposeSecret as _;
+
+    use super::*;
+    use crate::system_log::access_binding::tests::{dicom_details, system};
+    use crate::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
+    use crate::system_log::message::{AuditContext, to_xml};
+
+    /// The ITI-20 syslog frame carries the DICOM message with its binding
+    /// objects (ITI TF-2 §3.20.4.1.2: the message is the MSG).
+    #[test]
+    fn the_syslog_frame_carries_the_binding_details() {
+        let mut event = AuditEvent::new(
+            EventActionCode::Read,
+            ObjectClass::Composition,
+            EventOutcome::Success,
+        );
+        event.user_id = "client-1".to_owned();
+        event.binding = Some(system());
+        let ctx = AuditContext {
+            source_id: "ferroehr".to_owned(),
+            value_if_missing: "UNKNOWN".to_owned(),
+            ..AuditContext::default()
+        };
+        let xml = to_xml(&event, &ctx, Some("patient-42")).expect("xml");
+        let sender = Sender::new("ferroehr.example.org", "ferroehr", PROCID).expect("a sender");
+        let frame = sender.frame(Timestamp::UNIX_EPOCH, &xml);
+        let text = String::from_utf8(frame.expose_secret().to_vec()).expect("UTF-8");
+        assert!(text.contains("IHE+RFC-3881"), "{text}");
+        assert!(
+            dicom_details(&text, "ehds-accessor").contains(&(
+                "acts-for".to_owned(),
+                "urn:oid:2.999.7|provider-1".to_owned()
+            )),
+            "{text}"
+        );
+    }
+}
