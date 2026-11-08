@@ -1060,11 +1060,15 @@ skip_identical_resend = false
 # `max_deactivations` caps the Users one client deactivates or deletes per
 # `deactivation_window_minutes`, counted in the database so every replica
 # shares the bound; past it a deactivation or deletion is refused with 429.
+# `contact_erasure_minutes` after a User's deletion (0: in the deletion, at
+# most 43200) the contacts of every version of its PERSON are erased; the
+# name, the binding key and the identifiers stay.
 [scim]
 enabled = false
 max_results = 100
 max_deactivations = 100
 deactivation_window_minutes = 60
+contact_erasure_minutes = 0
 #? public_base_url = "https://cdr.example.com"
 #? [[scim.client]]
 #? issuer = "https://as.example.com"

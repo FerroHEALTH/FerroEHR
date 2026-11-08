@@ -43,7 +43,7 @@ use crate::versioning::{Kind, SigningCtx, integrity, restriction};
 
 mod construct;
 pub(crate) mod precondition;
-mod resolve;
+pub(crate) mod resolve;
 
 use resolve::{Content, Placing, resolve_create, resolve_delete, resolve_modify};
 
@@ -988,7 +988,7 @@ fn root_archetype(rows: &[NodeRow]) -> Option<String> {
 /// # Errors
 /// [`ServiceError`] when the value cannot serialize (a non-finite number —
 /// unreachable for a codec-produced canonical value, refused loudly anyway).
-fn canonical_body_text(canonical: &Value) -> Result<String, ServiceError> {
+pub(crate) fn canonical_body_text(canonical: &Value) -> Result<String, ServiceError> {
     serde_json::to_string(canonical)
         .map_err(|e| ServiceError::internal("serialize the canonical body", e))
 }

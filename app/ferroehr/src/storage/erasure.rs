@@ -299,3 +299,48 @@ pub async fn write_erase_tombstone(
     .await?;
     Ok(())
 }
+
+/// Every version of `vo_id` in `sys_version` order with its stored body
+/// (`None` on a logical delete), each row locked for the erasure of part of
+/// its content.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn locked_version_bodies(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+) -> Result<Vec<(i32, Option<String>)>, StorageError> {
+    Ok(sqlx::query_as(
+        "SELECT sys_version, body FROM version WHERE vo_id = $1 ORDER BY sys_version FOR UPDATE",
+    )
+    .bind(vo_id)
+    .fetch_all(tx)
+    .await?)
+}
+
+/// Replaces the stored body of one version of `vo_id` with `body`, its
+/// content digest with `digest`, and voids its signature, which was taken
+/// over the content the erasure removed part of.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn replace_version_body(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+    sys_version: i32,
+    body: &str,
+    digest: &[u8],
+) -> Result<(), StorageError> {
+    sqlx::query(
+        "UPDATE version SET body = $3, content_digest = $4, signature = NULL, \
+                signature_client_supplied = false \
+         WHERE vo_id = $1 AND sys_version = $2",
+    )
+    .bind(vo_id)
+    .bind(sys_version)
+    .bind(body)
+    .bind(digest)
+    .execute(tx)
+    .await?;
+    Ok(())
+}

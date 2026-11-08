@@ -35,6 +35,9 @@ use crate::service::demographic::types::PartyKind;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::storage::version_repo;
 use crate::storage::version_repo::read::VersionAt;
+use crate::system_log::event::{
+    AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
+};
 use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::change::Committed;
@@ -370,5 +373,31 @@ impl FerroEhrService {
         let signer = self.signing_ctx().signer;
         let ov = version_envelope(&read, signer)?;
         Ok(ServiceResponse::new(ov, meta))
+    }
+}
+
+impl FerroEhrService {
+    /// Records `action` on the demographic object `object_id` as an access
+    /// record of the request's committer; nothing while auditing is off.
+    ///
+    /// # Errors
+    /// [`ServiceError::Unrecorded`] when the audit trail refuses the record.
+    pub(in crate::service::demographic) fn record_party_access(
+        &self,
+        action: EventActionCode,
+        object_id: String,
+    ) -> Result<(), ServiceError> {
+        if !self.audit_enabled() {
+            return Ok(());
+        }
+        let mut event = AuditEvent::new(action, ObjectClass::Demographic, EventOutcome::Success);
+        event.domain = AccessDomain::Demographic;
+        event.object_id = Some(object_id);
+        // NOTE: a write outside a request (a sweep, an unwired re-key) names no reader.
+        event.user_id = crate::versioning::committer::current_committer()
+            .map(|committer| committer.subject)
+            .unwrap_or_default();
+        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
+        self.record_access(event)
     }
 }

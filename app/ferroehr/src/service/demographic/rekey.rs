@@ -28,9 +28,7 @@ use crate::service::FerroEhrService;
 use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::types::PartyKind;
 use crate::service::version_update::WriteRequest;
-use crate::system_log::event::{
-    AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
-};
+use crate::system_log::event::EventActionCode;
 
 /// A binding key: its `DV_IDENTIFIER.issuer` and its value.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -105,35 +103,13 @@ impl FerroEhrService {
             )),
             other => other,
         })?;
-        self.record_rekey(party, &from, &to)
-    }
-
-    /// Records the re-key of `party` from `from` to `to`.
-    fn record_rekey(
-        &self,
-        party: VoId,
-        from: &BindingKey,
-        to: &BindingKey,
-    ) -> Result<(), ServiceError> {
-        if !self.audit_enabled() {
-            return Ok(());
-        }
-        let mut event = AuditEvent::new(
+        self.record_party_access(
             EventActionCode::Update,
-            ObjectClass::Demographic,
-            EventOutcome::Success,
-        );
-        event.domain = AccessDomain::Demographic;
-        event.object_id = Some(format!(
-            "party:{}#binding-key:{}|{}>{}|{}",
-            party.0, from.issuer, from.value, to.issuer, to.value
-        ));
-        // NOTE: a re-key outside a request (none is wired) names no reader.
-        event.user_id = crate::versioning::committer::current_committer()
-            .map(|committer| committer.subject)
-            .unwrap_or_default();
-        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event)
+            format!(
+                "party:{}#binding-key:{}|{}>{}|{}",
+                party.0, from.issuer, from.value, to.issuer, to.value
+            ),
+        )
     }
 }
 

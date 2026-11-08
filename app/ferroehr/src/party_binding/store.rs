@@ -668,8 +668,8 @@ async fn reindex_groups(
 }
 
 /// Deletes every side-table row naming any of `vo_ids`, on the erasure
-/// transaction `tx`: an erased party leaves no key, tombstone, membership or
-/// representation behind.
+/// transaction `tx`: an erased party leaves no key, tombstone, membership,
+/// representation or contact-erasure record behind.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -689,5 +689,9 @@ pub async fn erase(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), Storage
     .bind(vo_ids)
     .execute(&mut *tx)
     .await?;
+    sqlx::query("DELETE FROM scim_contact_erasure WHERE party_id = ANY($1)")
+        .bind(vo_ids)
+        .execute(&mut *tx)
+        .await?;
     Ok(())
 }

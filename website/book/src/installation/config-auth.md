@@ -548,6 +548,7 @@ by default.
 | `max_results` | integer | `100` | The most resources one list response returns, which `ServiceProviderConfig` declares as `filter.maxResults`. At least 1. |
 | `max_deactivations` | integer | `100` | The most Users one client deactivates or deletes per window. Past it, a deactivation or deletion is **429** with `Retry-After` and logged at `error`. The count is kept in the database, so every replica shares one bound. At least 1. |
 | `deactivation_window_minutes` | integer | `60` | The length of that window. At least 1. |
+| `contact_erasure_minutes` | integer | `0` | How long after a User's deletion the contacts of every version of its `PERSON` are erased. `0` erases them in the deletion itself; at most 43200 (30 days). |
 
 Each `[[scim.client]]` table declares one provisioning client:
 
@@ -672,6 +673,20 @@ logging duty of the Besluit elektronische gegevensverwerking door
 zorgaanbieders). Outside the Netherlands, name your national retention
 provision. Enable the identity provider's protection against accidental
 deletions beside `max_deactivations`.
+
+Only the attribution minimum waits for that horizon: the name, the binding key
+and the identifiers, `userName` and `externalId` among them. The contacts
+serve no attribution, so FerroEHR erases them (GDPR Art. 5(1)(e)): with
+`contact_erasure_minutes = 0` the deletion removes the `contacts` of every
+version of the `PERSON` in the same transaction, and with a period a sweep
+that runs every minute removes them once the period has passed. The sweep
+reaches every deleted `PERSON` whose binding key a `[[scim.client]]` issues,
+an administrator's demographic `DELETE` included. Each version keeps its uid,
+audit and contribution, and its node rows are derived again from the erased
+body. A server signature on such a version is removed, because it was taken
+over the content the erasure changed. Each erasure is an access record, a
+delete of `party:<id>#contacts`. A login on the key is still refused as
+deprovisioned.
 
 ### Provision from Microsoft Entra ID
 
