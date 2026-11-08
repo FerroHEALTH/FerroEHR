@@ -15,7 +15,9 @@
 # Last it measures the login lookup at 50 000 persons and 5 000 groups
 # (scripts/perf/party-lookup.sh, #5087): main over the quickstart's own binding
 # rows against a seeded side table, and the lookup timed against its 2 ms p99
-# budget, reported and never judged.
+# budget, reported and never judged. Then it builds a SCIM Group to its
+# 5 000-member cap one member per change (scripts/perf/scim-groups.sh, #5015)
+# and judges each change against its budgets; a miss turns the run red.
 #
 # A relative A/B on one runner is what makes a hosted runner usable here: both
 # sides share its noise, where an absolute figure would not be comparable
@@ -108,12 +110,21 @@ jobs:
           LOADTEST_BIN: target/release/loadtest
           SCALESEED_BIN: target/release/scaleseed
         run: bash scripts/perf/party-lookup.sh "$CANDIDATE" ferroehr-postgres:perf perf-lookup
+      # A SCIM Group at its 5 000-member cap (#5015): the p99 of a membership
+      # change, the bytes a change and the build store, and the side-table rows
+      # a change writes, each judged against its budget.
+      - name: A SCIM Group at its cap
+        if: always()
+        env:
+          SCALESEED_BIN: target/release/scaleseed
+        run: bash scripts/perf/scim-groups.sh ferroehr-postgres:perf perf-scim-groups
       - name: Summary
         if: always()
         run: |
           if [ -f perf-out/summary.md ]; then cat perf-out/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
           if [ -f perf-audit/summary.md ]; then cat perf-audit/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
           if [ -f perf-lookup/summary.md ]; then cat perf-lookup/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f perf-scim-groups/summary.md ]; then cat perf-scim-groups/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
       - name: Keep the reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -123,4 +134,5 @@ jobs:
             perf-out/
             perf-audit/
             perf-lookup/
+            perf-scim-groups/
           if-no-files-found: ignore
