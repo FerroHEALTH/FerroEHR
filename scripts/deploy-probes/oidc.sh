@@ -36,7 +36,10 @@ oidc_up() {
   # Keycloak first: its one-shot writes the CA the overlay's server reads at load.
   dc "${oidc_files[@]}" up -d keycloak >/dev/null 2>&1
   binding_refill "${oidc_files[@]}"
-  dc "${oidc_files[@]}" up -d ferroehr keycloak >/dev/null 2>&1
+  # A login no demographic party carries is refused, so the up waits for the
+  # two provisioning one-shots: the Basic user's and the realm users'.
+  dc "${oidc_files[@]}" up -d --wait \
+    ferroehr keycloak ferroehr-provision ferroehr-provision-keycloak >/dev/null 2>&1
 }
 
 # Puts the quickstart back for the families after this one.

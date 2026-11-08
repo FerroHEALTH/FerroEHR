@@ -377,6 +377,17 @@ representation relationship to (`refused-representation-unrecorded`). A party
 store or an identity provider that cannot answer is answered `503`, with
 `Retry-After` when the identity provider gave one.
 
+A person whose login matches no party is refused with `403` and
+`refused-unbound` on every request, reads and writes alike; only the public
+endpoints outside the auth layer answer. The problem names the identifier
+issuer to provision the person under, and the refusal of a token without the
+key claim names the missing claim instead. No setting serves an unbound person
+under a login-only committer, so provision every professional (through
+[SCIM](#scim) or the demographic API) before you add a `persons` issuer. Each
+refusal writes one `warn` line naming the issuer and the outcome, never the
+claim value, and counts into the `binding_refusals` metric by `issuer` and
+`outcome`.
+
 A representative reaches only the EHR whose `EHR_STATUS.subject.external_ref`
 names the subject it represents: the issuer's `representation` claim carries
 the subject's party id, matched without regard to case, and the subject must
