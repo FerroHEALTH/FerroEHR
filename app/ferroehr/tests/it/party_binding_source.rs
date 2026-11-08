@@ -814,6 +814,125 @@ async fn a_membership_change_writes_one_row() {
     );
 }
 
+/// The live memberships of `group` and the targets the reverse index names
+/// for it, each sorted.
+async fn group_rows(pool: &sqlx::PgPool, group: VoId) -> (Vec<VoId>, Vec<VoId>) {
+    let members: Vec<VoId> = sqlx::query_scalar(
+        "SELECT member_id FROM party.binding_membership \
+         WHERE group_id = $1 AND retired_at IS NULL ORDER BY 1",
+    )
+    .bind(group)
+    .fetch_all(pool)
+    .await
+    .expect("the memberships read");
+    let targets: Vec<VoId> = sqlx::query_scalar(
+        "SELECT target_party_id FROM party.party_relationship_target \
+         WHERE source_vo_id = $1 ORDER BY 1",
+    )
+    .bind(group)
+    .fetch_all(pool)
+    .await
+    .expect("the reverse index reads");
+    (members, targets)
+}
+
+#[tokio::test]
+async fn a_large_group_writes_only_the_rows_a_change_changes() {
+    let (db, svc) = service().await;
+    let pool = db.pool();
+    let mut people = Vec::new();
+    for _ in 0..60 {
+        people.push(
+            create(&svc, PartyKind::Person, &person(OTHER_TEMPLATE, &[]))
+                .await
+                .0,
+        );
+    }
+    let body = group(GROUP_TEMPLATE, "ward");
+    let (vo, uid) = create(&svc, PartyKind::Group, &body).await;
+    let with = |members: &[VoId]| {
+        let mut b = body.clone();
+        b["relationships"] = members
+            .iter()
+            .map(|m| relationship(MEMBERSHIP, ("GROUP", vo), ("PERSON", *m), "at0001", None))
+            .collect();
+        b
+    };
+    let sorted = |members: &[VoId]| {
+        let mut members = members.to_vec();
+        members.sort();
+        members
+    };
+    let all = people.get(..50).expect("fifty people").to_vec();
+    let uid = update(&svc, PartyKind::Group, vo, &uid, &with(&all), "532").await;
+    assert_eq!(group_rows(&pool, vo).await, (sorted(&all), sorted(&all)));
+
+    // Ten members leave and five join in one version: the forty kept rows
+    // stay as they were, the ten are retired and the five inserted.
+    let mut changed = people.get(10..55).expect("forty-five people").to_vec();
+    changed.rotate_left(7);
+    let kept: Vec<String> = people
+        .get(10..50)
+        .expect("the kept members")
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    let kept_written: Vec<String> = sqlx::query_scalar(
+        "SELECT member_id::text || written_at::text FROM party.binding_membership \
+         WHERE group_id = $1 AND member_id::text = ANY($2) ORDER BY 1",
+    )
+    .bind(vo)
+    .bind(&kept)
+    .fetch_all(&pool)
+    .await
+    .expect("the kept rows read");
+    let uid = update(&svc, PartyKind::Group, vo, &uid, &with(&changed), "532").await;
+    assert_eq!(
+        group_rows(&pool, vo).await,
+        (sorted(&changed), sorted(&changed))
+    );
+    let rows: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM party.binding_membership WHERE group_id = $1")
+            .bind(vo)
+            .fetch_one(&pool)
+            .await
+            .expect("count");
+    assert_eq!(
+        rows, 55,
+        "fifty first rows and five added ones, none written twice"
+    );
+    let kept_after: Vec<String> = sqlx::query_scalar(
+        "SELECT member_id::text || written_at::text FROM party.binding_membership \
+         WHERE group_id = $1 AND member_id::text = ANY($2) AND retired_at IS NULL ORDER BY 1",
+    )
+    .bind(vo)
+    .bind(&kept)
+    .fetch_all(&pool)
+    .await
+    .expect("the kept rows read");
+    assert_eq!(kept_after, kept_written, "a kept membership keeps its row");
+
+    // A membership whose target is no container of this store is neither a
+    // member nor indexed, and a refill rebuilds the same live rows.
+    let mut foreign = with(&changed);
+    foreign["relationships"]
+        .as_array_mut()
+        .expect("relationships")
+        .push(json!({
+            "_type": "PARTY_RELATIONSHIP",
+            "archetype_node_id": MEMBERSHIP,
+            "name": text("elsewhere"),
+            "source": party_ref("GROUP", vo),
+            "target": { "_type": "PARTY_REF", "namespace": NAMESPACE, "type": "PERSON",
+                        "id": { "_type": "GENERIC_ID", "value": "1.2.3", "scheme": "oid" } }
+        }));
+    update(&svc, PartyKind::Group, vo, &uid, &foreign, "532").await;
+    let before = group_rows(&pool, vo).await;
+    assert_eq!(before, (sorted(&changed), sorted(&changed)));
+    svc.refill_binding_table().await.expect("the refill runs");
+    assert_eq!(group_rows(&pool, vo).await, before);
+}
+
 #[tokio::test]
 async fn a_representative_reports_only_its_live_subjects() {
     let (_db, svc) = service().await;

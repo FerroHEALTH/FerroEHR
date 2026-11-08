@@ -4,8 +4,10 @@
 //! Row I/O for the binding side table.
 //!
 //! `binding_identifier`, `binding_membership` and `binding_representation`
-//! hold the rows each party head contributes, derived in the commit's
-//! transaction; [`refill`] rebuilds them from the versions alone, and the
+//! hold the rows each party head contributes. A commit derives them from the
+//! body it holds ([`super::derive`]) and writes only the rows that changed
+//! ([`super::rows`]), in its own transaction; [`refill`], an archive load and
+//! an import derive them with the same function from the stored heads; the
 //! lookup reads them.
 //!
 //! A `PERSON` of a mapped template has a key row for each identifier at its
@@ -22,107 +24,60 @@
 //! §Party Relationships); standalone relationship containers never count. No
 //! openEHR spec governs the side table or its SQL: our own design.
 
+#![expect(
+    clippy::disallowed_types,
+    reason = "owner-approved 2026-08-03 (#1694 family 1): the stored canonical party bodies \
+              a refill or a load derives the side table from"
+)]
+
+use std::collections::BTreeMap;
+
+use serde_json::Value;
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
 use crate::error::ServiceError;
 use crate::error::refusal::{Clash, Refusal};
 use crate::ids::VoId;
-use crate::party_binding::{BindingMapping, IdentifierSelector};
+use crate::party_binding::BindingMapping;
+use crate::party_binding::derive::{Facts, container};
+use crate::party_binding::rows::{
+    self, IdentifierRow, Professional, RepresentationRow, write_identifiers,
+};
 use crate::storage::error::StorageError;
 use crate::storage::party_reverse;
 use crate::versioning::change::Committed;
 use crate::versioning::{Kind, SigningCtx};
 
-/// The trunk head of each party of `$1` (every party when `$1` is NULL) of
-/// the kind `$2` whose body names the canonical template `$3` in
-/// `archetype_details.template_id`, not deleted, with its body:
-/// the `p` relation the derivations below share.
-macro_rules! heads {
-    () => {
-        "WITH p AS ( \
-             SELECT h.vo_id, h.lifecycle_state, v.body::jsonb AS body \
-             FROM vo_head h \
-             JOIN version v ON v.tier = h.tier AND v.vo_id = h.vo_id \
-                           AND v.sys_version = h.trunk_head_sys_version \
-             WHERE h.kind = $2 AND h.lifecycle_state <> '523' AND v.body IS NOT NULL \
-               AND lower(btrim(v.body::jsonb -> 'archetype_details' -> 'template_id' ->> 'value')) \
-                   = $3 \
-               AND ($1::uuid[] IS NULL OR h.vo_id = ANY($1::uuid[])) \
-         ) "
-    };
+/// The `version_lifecycle_state` code of a logically deleted head.
+const DELETED: &str = "523";
+/// The parties one refill page derives.
+const PAGE: i64 = 500;
+
+/// The trunk head of a party as the side table reads it.
+#[derive(Debug)]
+struct Head {
+    /// The party's container.
+    vo_id: Uuid,
+    /// The head's `version_lifecycle_state` code.
+    lifecycle_state: String,
+    /// What the head's body holds; `None` for a head without one.
+    facts: Option<Facts>,
+    /// What the last version with a body holds, with its lifecycle state, for
+    /// a deleted head: the key its tombstone keeps.
+    last: Option<(String, Facts)>,
 }
 
-/// The root of a `PARTY_REF.id` value `$reference`, as a container UUID when
-/// it is one: a party container id is a UUID, and a reference whose root is
-/// another `UID` form names no container of this store.
-macro_rules! container {
-    ($reference:literal) => {
-        concat!(
-            "(SELECT CASE WHEN root ~ '",
-            "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            "' THEN root::uuid END FROM (SELECT lower(split_part(",
-            $reference,
-            ", '::', 1)) AS root) AS r)"
-        )
-    };
-}
-
-/// The inline `relationships` of each `p.body`, one `rel` row each.
-macro_rules! relationships {
-    () => {
-        "CROSS JOIN LATERAL jsonb_array_elements( \
-             CASE WHEN jsonb_typeof(p.body -> 'relationships') = 'array' \
-                  THEN p.body -> 'relationships' ELSE '[]'::jsonb END) AS r(rel) "
-    };
-}
-
-/// The canonical form of `DV_IDENTIFIER` `id`, the value of `id.type`: lower
-/// case for a GUID or UUID, as `ferrohealth-smart` puts a claim value.
-macro_rules! canonical_value {
-    ($id:literal) => {
-        concat!(
-            "CASE WHEN lower(",
-            $id,
-            " ->> 'type') IN ('guid', 'uuid') THEN lower(",
-            $id,
-            " ->> 'id') ELSE ",
-            $id,
-            " ->> 'id' END"
-        )
-    };
-}
-
-/// Rebuilds the side-table rows the party `vo_id` of `kind` contributes, on
-/// the commit transaction `tx`, after the write has advanced its head row.
-///
-/// A `PERSON` rebuilds its key and representation rows, and a deleted one
-/// leaves its key as a tombstone; a `ROLE` rebuilds the rows of every
-/// `PERSON` it names as performer; a `GROUP` rebuilds its `externalId` and its
-/// memberships. Every other kind contributes nothing.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub async fn reindex(
-    tx: &mut PgConnection,
-    mapping: &BindingMapping,
-    kind: Kind,
-    vo_id: VoId,
-) -> Result<(), StorageError> {
-    if mapping.is_empty() {
-        return Ok(());
-    }
-    match kind {
-        Kind::Person => reindex_persons(tx, mapping, Some(&[vo_id.0]), true).await,
-        Kind::Role => {
-            let performers = performers(tx, vo_id).await?;
-            if performers.is_empty() {
-                return Ok(());
-            }
-            reindex_persons(tx, mapping, Some(&performers), false).await
+impl Head {
+    /// What a live head of the template `template` holds; `None` for a
+    /// deleted head, one without a body and one of another template.
+    fn live_of(&self, template: &str) -> Option<&Facts> {
+        if self.lifecycle_state == DELETED {
+            return None;
         }
-        Kind::Group => reindex_groups(tx, mapping, Some(&[vo_id.0])).await,
-        _ => Ok(()),
+        self.facts
+            .as_ref()
+            .filter(|facts| facts.template.as_deref() == Some(template))
     }
 }
 
@@ -158,9 +113,11 @@ pub(crate) fn selector_in_use(e: StorageError) -> ServiceError {
 }
 
 /// Judges the party commit `committed` against the protection rules
-/// ([`crate::party_binding::protect`]), then rebuilds its
-/// reverse-relationship index and side-table rows, on its commit transaction
-/// `tx`.
+/// ([`crate::party_binding::protect`]), then brings its reverse-relationship
+/// index and side-table rows to its new head, on its commit transaction `tx`.
+///
+/// `facts` is what the committed body holds, `None` for a logical delete: the
+/// hooks read it and never the stored body (#5220).
 ///
 /// # Errors
 /// The protection refusals, the `409` of [`selector_in_use`], and a storage
@@ -169,6 +126,7 @@ pub(crate) async fn reindex_committed(
     tx: &mut PgConnection,
     ctx: &SigningCtx<'_>,
     committed: &Committed,
+    facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
     if crate::versioning::committer::person_commits() {
         // NOTE: RM common master04 §Audit Details, PARTY_SELF names the record
@@ -178,11 +136,53 @@ pub(crate) async fn reindex_committed(
              version has no record subject for PARTY_SELF to name",
         ));
     }
-    crate::party_binding::protect::check(tx, ctx.binding, committed.kind, committed.vo_id).await?;
-    party_reverse::reindex(tx, committed.vo_id).await?;
-    reindex(tx, ctx.binding, committed.kind, committed.vo_id)
+    crate::party_binding::protect::check(tx, ctx.binding, committed, facts).await?;
+    let (lifecycle_state, trunk_head) = head_of(tx, committed.vo_id).await?;
+    let head = if trunk_head == Some(committed.sys_version) {
+        Head {
+            vo_id: committed.vo_id.0,
+            lifecycle_state,
+            facts: facts.cloned(),
+            last: None,
+        }
+    } else {
+        let mut heads = stored_heads(
+            tx,
+            ctx.binding,
+            committed.kind,
+            Some(&[committed.vo_id.0]),
+            None,
+        )
+        .await?;
+        match heads.pop() {
+            Some(head) => head,
+            None => return Ok(()),
+        }
+    };
+    let head = with_last(tx, ctx.binding, committed.kind, head).await?;
+    reindex_heads(tx, ctx.binding, committed.kind, vec![head])
         .await
         .map_err(selector_in_use)
+}
+
+/// Brings the reverse-relationship index and the side-table rows of the party
+/// `vo_id` of `kind` to its stored head, on `tx`: what an import or an archive
+/// load writes after the versions it lands.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub(crate) async fn reindex_stored(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    kind: Kind,
+    vo_id: VoId,
+) -> Result<(), StorageError> {
+    let mut heads = stored_heads(tx, mapping, kind, Some(&[vo_id.0]), None).await?;
+    let Some(head) = heads.pop() else {
+        return party_reverse::replace(tx, vo_id, &[]).await;
+    };
+    let head = with_last(tx, mapping, kind, head).await?;
+    reindex_heads(tx, mapping, kind, vec![head]).await
 }
 
 /// Rebuilds the reverse-relationship index and the side-table rows of the
@@ -199,41 +199,48 @@ pub(crate) async fn reindex_loaded(
     kind: &str,
     vo_id: VoId,
 ) -> Result<(), StorageError> {
-    party_reverse::reindex(tx, vo_id).await?;
     match Kind::from_type(kind) {
-        Some(kind) => reindex(tx, mapping, kind, vo_id).await,
-        None => Ok(()),
+        Some(kind) => reindex_stored(tx, mapping, kind, vo_id).await,
+        None => party_reverse::replace(tx, vo_id, &[]).await,
     }
 }
 
-/// The statement `sql` with the seven parameters the selector derivations
-/// share: the parties `$1`, the kind `$2`, the canonical template `$3`, and
-/// the selector's path `$4`, variables `$5`, type `$6` and issuers `$7`
-/// (NULL for every issuer).
-fn selected<'q>(
-    sql: &'static str,
-    ids: Option<&'q [Uuid]>,
+/// Writes the reverse index and the side-table rows of `heads`, each of
+/// `kind`.
+async fn reindex_heads(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
     kind: Kind,
-    template: &'q str,
-    selector: &'q IdentifierSelector,
-) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
-    sqlx::query(sql)
-        .bind(ids)
-        .bind(kind.as_str())
-        .bind(template)
-        .bind(&selector.json_path)
-        .bind(&selector.variables)
-        .bind(&selector.identifier_type)
-        .bind(selector.issuer_filter())
-}
-
-/// The condition that `id` is a complete identifier of the selector's type and
-/// issuers, with the parameters [`selected`] binds.
-macro_rules! identifier_of_selector {
-    () => {
-        "id ->> 'type' = $6 AND id ->> 'issuer' IS NOT NULL AND id ->> 'id' IS NOT NULL \
-         AND ($7::text[] IS NULL OR id ->> 'issuer' = ANY($7::text[]))"
-    };
+    heads: Vec<Head>,
+) -> Result<(), StorageError> {
+    for head in &heads {
+        let targets = head
+            .facts
+            .as_ref()
+            .map_or(&[][..], |f| f.targets.as_slice());
+        party_reverse::replace(tx, VoId(head.vo_id), targets).await?;
+    }
+    if mapping.is_empty() {
+        return Ok(());
+    }
+    match kind {
+        Kind::Person => write_persons(tx, mapping, &heads, true).await,
+        Kind::Role => {
+            let mut performers = Vec::new();
+            for head in &heads {
+                performers.extend(performers_of(tx, head.vo_id).await?);
+            }
+            performers.sort_unstable();
+            performers.dedup();
+            if performers.is_empty() {
+                return Ok(());
+            }
+            let persons = stored_heads(tx, mapping, Kind::Person, Some(&performers), None).await?;
+            write_persons(tx, mapping, &persons, false).await
+        }
+        Kind::Group => write_groups(tx, mapping, &heads).await,
+        _ => Ok(()),
+    }
 }
 
 /// Rebuilds every row of the side table from the party versions alone, on
@@ -252,8 +259,25 @@ pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(
     ] {
         sqlx::query(statement).execute(&mut *tx).await?;
     }
-    reindex_persons(tx, mapping, None, true).await?;
-    reindex_groups(tx, mapping, None).await
+    for kind in [Kind::Person, Kind::Group] {
+        let mut after = None;
+        loop {
+            let page = stored_heads(tx, mapping, kind, None, after).await?;
+            let Some(last) = page.last() else {
+                break;
+            };
+            after = Some(last.vo_id);
+            let mut heads = Vec::with_capacity(page.len());
+            for head in page {
+                heads.push(with_last(tx, mapping, kind, head).await?);
+            }
+            match kind {
+                Kind::Person => write_persons(tx, mapping, &heads, true).await?,
+                _ => write_groups(tx, mapping, &heads).await?,
+            }
+        }
+    }
+    Ok(())
 }
 
 /// One selector identifier of a live `PERSON` head, as the unique indexes
@@ -283,36 +307,55 @@ pub async fn held_selectors(
     mapping: &BindingMapping,
 ) -> Result<Vec<HeldSelector>, StorageError> {
     let mut out = Vec::new();
-    for (template, selectors) in &mapping.persons {
-        for (selector, chosen) in selectors.each() {
-            let rows = selected(
-                concat!(
-                    heads!(),
-                    "SELECT DISTINCT p.vo_id, \
-                            CASE WHEN $8 = 'user_name' THEN '' ELSE id ->> 'issuer' END AS issuer, \
-                            CASE WHEN $8 = 'user_name' THEN party.binding_fold(id ->> 'id') \
-                                 WHEN $8 = 'key' THEN ",
-                    canonical_value!("id"),
-                    " ELSE id ->> 'id' END AS value \
-                 FROM p CROSS JOIN LATERAL jsonb_path_query(p.body, $4::jsonpath, $5::jsonb) AS id \
-                 WHERE ",
-                    identifier_of_selector!()
-                ),
-                None,
-                Kind::Person,
-                template,
-                chosen,
-            )
-            .bind(selector)
-            .fetch_all(&mut *tx)
-            .await?;
-            for row in rows {
+    let mut after = None;
+    loop {
+        let page = stored_heads(tx, mapping, Kind::Person, None, after).await?;
+        let Some(last) = page.last() else {
+            break;
+        };
+        after = Some(last.vo_id);
+        let start = out.len();
+        let mut names = Vec::new();
+        for head in &page {
+            let Some(facts) = head
+                .facts
+                .as_ref()
+                .filter(|_| head.lifecycle_state != DELETED)
+            else {
+                continue;
+            };
+            if !facts
+                .template
+                .as_ref()
+                .is_some_and(|t| mapping.persons.contains_key(t))
+            {
+                continue;
+            }
+            for (selector, identifier) in &facts.identifiers {
+                let (issuer, value) = match *selector {
+                    "key" => (identifier.issuer.clone(), identifier.canonical()),
+                    "user_name" => {
+                        names.push(identifier.id.clone());
+                        (String::new(), identifier.id.clone())
+                    }
+                    _ => (identifier.issuer.clone(), identifier.id.clone()),
+                };
                 out.push(HeldSelector {
                     selector,
-                    issuer: row.try_get("issuer")?,
-                    value: row.try_get("value")?,
-                    party_id: row.try_get("vo_id")?,
+                    issuer,
+                    value,
+                    party_id: head.vo_id,
                 });
+            }
+        }
+        let folded = fold(tx, &names).await?;
+        for held in out
+            .iter_mut()
+            .skip(start)
+            .filter(|h| h.selector == "user_name")
+        {
+            if let Some(value) = folded.get(&held.value) {
+                held.value.clone_from(value);
             }
         }
     }
@@ -321,350 +364,330 @@ pub async fn held_selectors(
     Ok(out)
 }
 
-/// The `PERSON` containers every version of the `ROLE` `role` names as its
-/// performer, so a `ROLE` whose performer changed rebuilds both.
-async fn performers(tx: &mut PgConnection, role: VoId) -> Result<Vec<Uuid>, StorageError> {
-    let ids: Vec<Option<Uuid>> = sqlx::query_scalar(concat!(
-        "SELECT DISTINCT ",
-        container!("v.body::jsonb -> 'performer' -> 'id' ->> 'value'"),
-        " FROM version v WHERE v.vo_id = $1 AND v.body IS NOT NULL"
-    ))
-    .bind(role)
+/// The fold of each of `values`, as `party.binding_fold` compares a
+/// `userName`.
+async fn fold(
+    tx: &mut PgConnection,
+    values: &[String],
+) -> Result<BTreeMap<String, String>, StorageError> {
+    if values.is_empty() {
+        return Ok(BTreeMap::new());
+    }
+    let rows = sqlx::query(
+        "SELECT DISTINCT v, party.binding_fold(v) AS folded FROM unnest($1::text[]) AS t(v)",
+    )
+    .bind(values)
     .fetch_all(&mut *tx)
     .await?;
-    Ok(ids.into_iter().flatten().collect())
+    let mut out = BTreeMap::new();
+    for row in rows {
+        out.insert(row.try_get("v")?, row.try_get("folded")?);
+    }
+    Ok(out)
 }
 
-/// Rebuilds the key and representation rows of the `PERSON`s `ids` (every
-/// `PERSON` when `None`), and, when `tombstones` is set, leaves the key of
+/// Writes the key, `userName`, `externalId` and representation rows of the
+/// `PERSON` heads `heads`, and, when `tombstones` is set, leaves the key of
 /// each deleted one as a tombstone.
-async fn reindex_persons(
+///
+/// A key row is written for a `PERSON` that performs a professional `ROLE`
+/// (RM demographic `role.adoc`: a `ROLE` listed in `roles`, whose
+/// `performer` names the `PERSON` and whose head is `complete` or
+/// `incomplete`) or is the source of a representation relationship.
+async fn write_persons(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
-    ids: Option<&[Uuid]>,
+    heads: &[Head],
     tombstones: bool,
 ) -> Result<(), StorageError> {
-    if let Some(ids) = ids {
-        sqlx::query(
-            "UPDATE binding_identifier SET retired_at = now() \
-             WHERE party_id = ANY($1) AND selector IN ('key', 'user_name', 'external_id') \
-               AND retired_at IS NULL",
-        )
-        .bind(ids)
-        .execute(&mut *tx)
-        .await?;
-        sqlx::query(
-            "UPDATE binding_representation SET retired_at = now() \
-             WHERE representative_id = ANY($1) AND retired_at IS NULL",
-        )
-        .bind(ids)
-        .execute(&mut *tx)
-        .await?;
-    }
-    for (template, selectors) in &mapping.persons {
-        insert_representations(tx, mapping, ids, template).await?;
-        insert_keys(tx, mapping, ids, template, &selectors.key).await?;
-        for (selector, chosen) in [
-            ("user_name", selectors.user_name.as_ref()),
-            ("external_id", selectors.external_id.as_ref()),
-        ] {
-            if let Some(chosen) = chosen {
-                insert_selector(tx, ids, Kind::Person, template, selector, chosen).await?;
-            }
+    let parties: Vec<Uuid> = heads.iter().map(|h| h.vo_id).collect();
+    let mut identifiers = Vec::new();
+    let mut representations = Vec::new();
+    let mut listed = Vec::new();
+    for head in heads {
+        let Some(facts) = mapping
+            .persons
+            .keys()
+            .find_map(|template| head.live_of(template))
+        else {
+            continue;
+        };
+        if mapping.representation.is_some() {
+            representations.extend(facts.representations.iter().map(|r| RepresentationRow {
+                representative: head.vo_id,
+                subject: r.subject,
+                code: r.code.clone(),
+                validity: r.validity.clone(),
+            }));
         }
-        if tombstones {
-            insert_tombstones(tx, ids, template, &selectors.key).await?;
+        for (selector, identifier) in &facts.identifiers {
+            identifiers.push(IdentifierRow {
+                party: head.vo_id,
+                selector,
+                issuer: identifier.issuer.clone(),
+                identifier_type: identifier.id_type.clone(),
+                value: if *selector == "key" {
+                    identifier.canonical()
+                } else {
+                    identifier.id.clone()
+                },
+                lifecycle_state: head.lifecycle_state.clone(),
+                representative: !facts.representations.is_empty(),
+            });
         }
+        listed.extend(facts.roles.iter().map(|role| (*role, head.vo_id)));
     }
-    // A key a live row binds again is no longer a tombstone.
-    sqlx::query(
-        "UPDATE binding_identifier t SET deprovisioned_at = NULL \
-         FROM binding_identifier l \
-         WHERE ($1::uuid[] IS NULL OR l.party_id = ANY($1::uuid[])) \
-           AND l.selector = 'key' AND l.retired_at IS NULL \
-           AND t.selector = 'key' AND t.deprovisioned_at IS NOT NULL \
-           AND t.issuer = l.issuer AND t.identifier_type = l.identifier_type \
-           AND t.value = l.value",
-    )
-    .bind(ids)
-    .execute(&mut *tx)
-    .await?;
-    Ok(())
-}
-
-/// Inserts the representation rows of the `PERSON`s `ids` of `template`.
-async fn insert_representations(
-    tx: &mut PgConnection,
-    mapping: &BindingMapping,
-    ids: Option<&[Uuid]>,
-    template: &str,
-) -> Result<(), StorageError> {
-    let Some(archetype) = &mapping.representation else {
-        return Ok(());
-    };
+    let professional = professional(tx, mapping, &listed).await?;
     let (codes, mapped): (Vec<&str>, Vec<&str>) = mapping
         .relationship_codes
         .iter()
         .map(|(code, mapped)| (code.as_str(), mapped.as_str()))
         .unzip();
-    sqlx::query(concat!(
-        heads!(),
-        "INSERT INTO binding_representation \
-             (representative_id, subject_id, relationship, validity) \
-         SELECT p.vo_id, t.subject, \
-                (SELECT c.mapped FROM unnest($5::text[], $6::text[]) AS c(code, mapped) \
-                 WHERE c.code = r.rel -> 'name' -> 'defining_code' ->> 'code_string'), \
-                range_agg(party.binding_validity(r.rel -> 'time_validity')) \
-         FROM p ",
-        relationships!(),
-        "CROSS JOIN LATERAL (SELECT ",
-        container!("r.rel -> 'target' -> 'id' ->> 'value'"),
-        " AS subject) AS t \
-         WHERE lower(r.rel ->> 'archetype_node_id') = $4 AND t.subject IS NOT NULL \
-         GROUP BY 1, 2, 3"
-    ))
-    .bind(ids)
-    .bind(Kind::Person.as_str())
-    .bind(template)
-    .bind(archetype)
-    .bind(codes)
-    .bind(mapped)
-    .execute(&mut *tx)
+    rows::write_representations(tx, &parties, &representations, (&codes, &mapped)).await?;
+    write_identifiers(
+        tx,
+        &parties,
+        &["key", "user_name", "external_id"],
+        &identifiers,
+        &professional,
+    )
     .await?;
-    Ok(())
+    if tombstones {
+        rows::insert_tombstones(tx, &tombstones_of(mapping, heads)).await?;
+    }
+    rows::revive_keys(tx, &parties).await
 }
 
-/// Inserts the live key rows of the `PERSON`s `ids` of `template`: one per
-/// identifier at `key`, for a `PERSON` that performs a professional `ROLE` or
-/// is the source of a representation relationship.
-async fn insert_keys(
+/// The tombstone rows of the deleted heads among `heads`: the binding keys
+/// each carried in its last version with a body, of a mapped template.
+fn tombstones_of(mapping: &BindingMapping, heads: &[Head]) -> Vec<IdentifierRow> {
+    let mut out = Vec::new();
+    for head in heads.iter().filter(|h| h.lifecycle_state == DELETED) {
+        let Some((lifecycle_state, facts)) = &head.last else {
+            continue;
+        };
+        if !facts
+            .template
+            .as_ref()
+            .is_some_and(|t| mapping.persons.contains_key(t))
+        {
+            continue;
+        }
+        for (_, identifier) in facts.identifiers.iter().filter(|(s, _)| *s == "key") {
+            out.push(IdentifierRow {
+                party: head.vo_id,
+                selector: "key",
+                issuer: identifier.issuer.clone(),
+                identifier_type: identifier.id_type.clone(),
+                value: identifier.canonical(),
+                lifecycle_state: lifecycle_state.clone(),
+                representative: false,
+            });
+        }
+    }
+    out
+}
+
+/// The validities of the professional `ROLE`s among `listed`, each a `ROLE`
+/// container and the `PERSON` that lists it: a `ROLE` of the professional
+/// template whose head is `complete` or `incomplete` and whose `performer`
+/// names that `PERSON`.
+async fn professional(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
-    ids: Option<&[Uuid]>,
-    template: &str,
-    key: &IdentifierSelector,
-) -> Result<(), StorageError> {
-    selected(
-        concat!(
-        heads!(),
-        ", professional AS ( \
-             SELECT p.vo_id, range_agg(party.binding_validity(rv.body::jsonb -> 'time_validity')) \
-                    AS dates \
-             FROM p \
-             CROSS JOIN LATERAL jsonb_array_elements( \
-                 CASE WHEN jsonb_typeof(p.body -> 'roles') = 'array' \
-                      THEN p.body -> 'roles' ELSE '[]'::jsonb END) AS r(ref) \
-             CROSS JOIN LATERAL (SELECT ",
-        container!("r.ref -> 'id' ->> 'value'"),
-        " AS role_id) AS listed \
-             JOIN vo_head rh ON rh.vo_id = listed.role_id \
-             JOIN version rv ON rv.tier = rh.tier AND rv.vo_id = rh.vo_id \
-                            AND rv.sys_version = rh.trunk_head_sys_version \
-             WHERE $8::text IS NOT NULL AND rh.kind = 'ROLE' \
-               AND rh.lifecycle_state IN ('532', '553') \
-               AND rv.body IS NOT NULL \
-               AND lower(btrim(rv.body::jsonb -> 'archetype_details' -> 'template_id' ->> 'value')) \
-                   = $8 \
-               AND ",
-        container!("rv.body::jsonb -> 'performer' -> 'id' ->> 'value'"),
-        " = p.vo_id \
-             GROUP BY p.vo_id \
-         ) \
-         INSERT INTO binding_identifier \
-             (party_id, selector, issuer, identifier_type, value, folded, lifecycle_state, \
-              professional, representative) \
-         SELECT DISTINCT ON (p.vo_id, id ->> 'issuer', ",
-        canonical_value!("id"),
-        ") p.vo_id, 'key', id ->> 'issuer', id ->> 'type', c.value, c.value, \
-                p.lifecycle_state, coalesce(pr.dates, '{}'), rep.present \
-         FROM p \
-         CROSS JOIN LATERAL jsonb_path_query(p.body, $4::jsonpath, $5::jsonb) AS id \
-         CROSS JOIN LATERAL (SELECT ",
-        canonical_value!("id"),
-        " AS value) AS c \
-         LEFT JOIN professional pr ON pr.vo_id = p.vo_id \
-         CROSS JOIN LATERAL (SELECT EXISTS ( \
-             SELECT 1 FROM binding_representation b \
-             WHERE b.representative_id = p.vo_id AND b.retired_at IS NULL) AS present) AS rep \
-         WHERE ",
-        identifier_of_selector!(),
-        " AND (NOT isempty(coalesce(pr.dates, '{}')) OR rep.present)"
-        ),
-        ids,
-        Kind::Person,
-        template,
-        key,
-    )
-    .bind(mapping.professional_role.as_deref())
-    .execute(&mut *tx)
-    .await?;
-    Ok(())
+    listed: &[(Uuid, Uuid)],
+) -> Result<Vec<Professional>, StorageError> {
+    let Some(template) = mapping.professional_role.as_deref() else {
+        return Ok(Vec::new());
+    };
+    if listed.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut ids: Vec<Uuid> = listed.iter().map(|(role, _)| *role).collect();
+    ids.sort_unstable();
+    ids.dedup();
+    let roles: BTreeMap<Uuid, Facts> = stored_heads(tx, mapping, Kind::Role, Some(&ids), None)
+        .await?
+        .into_iter()
+        .filter(|head| matches!(head.lifecycle_state.as_str(), "532" | "553"))
+        .filter_map(|head| Some((head.vo_id, head.facts?)))
+        .filter(|(_, facts)| facts.template.as_deref() == Some(template))
+        .collect();
+    Ok(listed
+        .iter()
+        .filter_map(|(role, person)| {
+            let facts = roles.get(role)?;
+            let performer = facts.performer.as_deref().and_then(container)?;
+            (performer == *person).then(|| Professional {
+                party: *person,
+                validity: facts.validity.clone(),
+            })
+        })
+        .collect())
 }
 
-/// Inserts the live `selector` rows (`user_name`, `external_id` or
-/// `group_external_id`) of the parties `ids` of `kind` and `template`: one
-/// per identifier `chosen` selects, of every live head, whether or not it
-/// binds, so the unique indexes hold each value to one party. A `userName` is
-/// compared by its fold.
-async fn insert_selector(
-    tx: &mut PgConnection,
-    ids: Option<&[Uuid]>,
-    kind: Kind,
-    template: &str,
-    selector: &str,
-    chosen: &IdentifierSelector,
-) -> Result<(), StorageError> {
-    selected(
-        concat!(
-            heads!(),
-            "INSERT INTO binding_identifier \
-             (party_id, selector, issuer, identifier_type, value, folded, lifecycle_state) \
-         SELECT DISTINCT ON (p.vo_id, id ->> 'issuer', id ->> 'id') \
-                p.vo_id, $8, id ->> 'issuer', id ->> 'type', id ->> 'id', \
-                CASE WHEN $8 = 'user_name' THEN party.binding_fold(id ->> 'id') \
-                     ELSE id ->> 'id' END, \
-                p.lifecycle_state \
-         FROM p CROSS JOIN LATERAL jsonb_path_query(p.body, $4::jsonpath, $5::jsonb) AS id \
-         WHERE ",
-            identifier_of_selector!()
-        ),
-        ids,
-        kind,
-        template,
-        chosen,
-    )
-    .bind(selector)
-    .execute(&mut *tx)
-    .await?;
-    Ok(())
-}
-
-/// Inserts the tombstones of the deleted `PERSON`s `ids` of `template`: the
-/// key each carried in its last version with content, retired and
-/// deprovisioned, once per key.
-async fn insert_tombstones(
-    tx: &mut PgConnection,
-    ids: Option<&[Uuid]>,
-    template: &str,
-    key: &IdentifierSelector,
-) -> Result<(), StorageError> {
-    selected(
-        concat!(
-            "INSERT INTO binding_identifier \
-             (party_id, selector, issuer, identifier_type, value, folded, lifecycle_state, \
-              retired_at, deprovisioned_at) \
-         SELECT DISTINCT h.vo_id, 'key', id ->> 'issuer', id ->> 'type', ",
-            canonical_value!("id"),
-            ", ",
-            canonical_value!("id"),
-            ", last.lifecycle_state, now(), now() \
-         FROM vo_head h \
-         CROSS JOIN LATERAL ( \
-             SELECT v.body::jsonb AS body, v.lifecycle_state FROM version v \
-             WHERE v.tier = h.tier AND v.vo_id = h.vo_id AND v.body IS NOT NULL \
-             ORDER BY v.sys_version DESC LIMIT 1) AS last \
-         CROSS JOIN LATERAL jsonb_path_query(last.body, $4::jsonpath, $5::jsonb) AS id \
-         WHERE h.kind = $2 AND h.lifecycle_state = '523' \
-           AND ($1::uuid[] IS NULL OR h.vo_id = ANY($1::uuid[])) \
-           AND lower(btrim(last.body -> 'archetype_details' -> 'template_id' ->> 'value')) = $3 \
-           AND ",
-            identifier_of_selector!(),
-            " AND NOT EXISTS ( \
-               SELECT 1 FROM binding_identifier t \
-               WHERE t.party_id = h.vo_id AND t.deprovisioned_at IS NOT NULL)"
-        ),
-        ids,
-        Kind::Person,
-        template,
-        key,
-    )
-    .execute(&mut *tx)
-    .await?;
-    Ok(())
-}
-
-/// Rebuilds the `externalId` and membership rows of the `GROUP`s `ids`
-/// (every `GROUP` when `None`).
+/// Writes the `externalId`, `displayName` and membership rows of the `GROUP`
+/// heads `heads`.
 ///
 /// A membership a version keeps keeps its row; a removed one is retired, and
 /// an added one inserted, so a change writes one row per member it changes.
-async fn reindex_groups(
+async fn write_groups(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
-    ids: Option<&[Uuid]>,
+    heads: &[Head],
 ) -> Result<(), StorageError> {
     let Some(group) = &mapping.group else {
         return Ok(());
     };
-    let template = &group.template;
-    if let Some(ids) = ids {
-        sqlx::query(
-            "UPDATE binding_identifier SET retired_at = now() \
-             WHERE party_id = ANY($1) AND selector IN ('group_external_id', 'group_display_name') \
-               AND retired_at IS NULL",
-        )
-        .bind(ids)
-        .execute(&mut *tx)
-        .await?;
+    let groups: Vec<Uuid> = heads.iter().map(|h| h.vo_id).collect();
+    let mut identifiers = Vec::new();
+    let mut members = Vec::new();
+    for head in heads {
+        let Some(facts) = head.live_of(&group.template) else {
+            continue;
+        };
+        let row = |selector, issuer: &str, identifier_type: &str, value: &str| IdentifierRow {
+            party: head.vo_id,
+            selector,
+            issuer: issuer.to_owned(),
+            identifier_type: identifier_type.to_owned(),
+            value: value.to_owned(),
+            lifecycle_state: head.lifecycle_state.clone(),
+            representative: false,
+        };
+        for id in &facts.group_external_ids {
+            identifiers.push(row("group_external_id", &id.issuer, &id.id_type, &id.id));
+        }
+        for name in &facts.display_names {
+            identifiers.push(row("group_display_name", "", "", name));
+        }
+        if mapping.membership.is_some() {
+            members.extend(facts.members.iter().map(|member| (head.vo_id, *member)));
+        }
     }
-    insert_selector(
+    write_identifiers(
         tx,
-        ids,
-        Kind::Group,
-        template,
-        "group_external_id",
-        &group.external_id,
+        &groups,
+        &["group_external_id", "group_display_name"],
+        &identifiers,
+        &[],
     )
     .await?;
-    if let Some(display_name) = &group.display_name {
-        sqlx::query(concat!(
-            heads!(),
-            "INSERT INTO binding_identifier \
-             (party_id, selector, issuer, identifier_type, value, folded, lifecycle_state) \
-         SELECT DISTINCT ON (p.vo_id, party.binding_fold(name ->> 'value')) \
-                p.vo_id, 'group_display_name', '', '', name ->> 'value', \
-                party.binding_fold(name ->> 'value'), p.lifecycle_state \
-         FROM p CROSS JOIN LATERAL jsonb_path_query(p.body, $4::jsonpath, $5::jsonb) AS name \
-         WHERE name ->> 'value' IS NOT NULL"
-        ))
-        .bind(ids)
-        .bind(Kind::Group.as_str())
-        .bind(template)
-        .bind(&display_name.json_path)
-        .bind(&display_name.variables)
-        .execute(&mut *tx)
-        .await?;
-    }
-    sqlx::query(concat!(
-        heads!(),
-        ", wanted AS ( \
-             SELECT DISTINCT p.vo_id AS group_id, t.member AS member_id FROM p ",
-        relationships!(),
-        "CROSS JOIN LATERAL (SELECT ",
-        container!("r.rel -> 'target' -> 'id' ->> 'value'"),
-        " AS member) AS t \
-             WHERE $4::text IS NOT NULL AND lower(r.rel ->> 'archetype_node_id') = $4 \
-               AND t.member IS NOT NULL \
-         ), gone AS ( \
-             UPDATE binding_membership m SET retired_at = now() \
-             WHERE m.retired_at IS NULL \
-               AND ($1::uuid[] IS NULL OR m.group_id = ANY($1::uuid[])) \
-               AND NOT EXISTS (SELECT 1 FROM wanted w \
-                               WHERE w.group_id = m.group_id AND w.member_id = m.member_id) \
-         ) \
-         INSERT INTO binding_membership (group_id, member_id) \
-         SELECT w.group_id, w.member_id FROM wanted w \
-         WHERE NOT EXISTS (SELECT 1 FROM binding_membership m \
-                           WHERE m.group_id = w.group_id AND m.member_id = w.member_id \
-                             AND m.retired_at IS NULL)"
+    rows::write_memberships(tx, &groups, &members).await
+}
+
+/// The head's lifecycle state and trunk head of the party `vo_id`.
+async fn head_of(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+) -> Result<(String, Option<i32>), StorageError> {
+    let row =
+        sqlx::query("SELECT lifecycle_state, trunk_head_sys_version FROM vo_head WHERE vo_id = $1")
+            .bind(vo_id)
+            .fetch_one(&mut *tx)
+            .await?;
+    Ok((
+        row.try_get("lifecycle_state")?,
+        row.try_get("trunk_head_sys_version")?,
     ))
+}
+
+/// The trunk heads of the parties of `kind` among `ids` (every party of
+/// `kind` when `None`), after `after` in container order, one page at most,
+/// each with what its body holds.
+async fn stored_heads(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    kind: Kind,
+    ids: Option<&[Uuid]>,
+    after: Option<Uuid>,
+) -> Result<Vec<Head>, StorageError> {
+    let rows = sqlx::query(
+        "SELECT h.vo_id, h.lifecycle_state, v.body FROM vo_head h \
+         LEFT JOIN version v ON v.tier = h.tier AND v.vo_id = h.vo_id \
+                            AND v.sys_version = h.trunk_head_sys_version \
+         WHERE h.kind = $1 AND ($2::uuid[] IS NULL OR h.vo_id = ANY($2::uuid[])) \
+           AND ($3::uuid IS NULL OR h.vo_id > $3) \
+         ORDER BY h.vo_id LIMIT $4",
+    )
+    .bind(kind.as_str())
     .bind(ids)
-    .bind(Kind::Group.as_str())
-    .bind(template)
-    .bind(mapping.membership.as_deref())
-    .execute(&mut *tx)
+    .bind(after)
+    .bind(PAGE)
+    .fetch_all(&mut *tx)
     .await?;
-    Ok(())
+    let mut out = Vec::with_capacity(rows.len());
+    for row in rows {
+        let body: Option<String> = row.try_get("body")?;
+        out.push(Head {
+            vo_id: row.try_get("vo_id")?,
+            lifecycle_state: row.try_get("lifecycle_state")?,
+            facts: body
+                .as_deref()
+                .map(|body| parsed(kind, body, mapping))
+                .transpose()?,
+            last: None,
+        });
+    }
+    Ok(out)
+}
+
+/// `head` with what its last version with a body holds, when it is a deleted
+/// `PERSON`: the key its tombstone keeps.
+async fn with_last(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    kind: Kind,
+    mut head: Head,
+) -> Result<Head, StorageError> {
+    if kind != Kind::Person || head.lifecycle_state != DELETED {
+        return Ok(head);
+    }
+    let row = sqlx::query(
+        "SELECT v.body, v.lifecycle_state FROM version v \
+         WHERE v.vo_id = $1 AND v.body IS NOT NULL ORDER BY v.sys_version DESC LIMIT 1",
+    )
+    .bind(head.vo_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    if let Some(row) = row {
+        let body: String = row.try_get("body")?;
+        head.last = Some((
+            row.try_get("lifecycle_state")?,
+            parsed(kind, &body, mapping)?,
+        ));
+    }
+    Ok(head)
+}
+
+/// The `PERSON` containers every version of the `ROLE` `role` names as its
+/// performer, so a `ROLE` whose performer changed rebuilds both.
+async fn performers_of(tx: &mut PgConnection, role: Uuid) -> Result<Vec<Uuid>, StorageError> {
+    let bodies: Vec<String> =
+        sqlx::query_scalar("SELECT body FROM version WHERE vo_id = $1 AND body IS NOT NULL")
+            .bind(role)
+            .fetch_all(&mut *tx)
+            .await?;
+    let mut out = Vec::new();
+    for body in bodies {
+        let facts = parsed(Kind::Role, &body, &BindingMapping::default())?;
+        out.extend(facts.performer.as_deref().and_then(container));
+    }
+    Ok(out)
+}
+
+/// What the stored body `body` of a party of `kind` holds.
+///
+/// # Errors
+/// [`StorageError::BodyDecode`] when the stored body is no JSON, which a
+/// committed version never is.
+pub(crate) fn parsed(
+    kind: Kind,
+    body: &str,
+    mapping: &BindingMapping,
+) -> Result<Facts, StorageError> {
+    let value: Value = serde_json::from_str(body).map_err(StorageError::BodyDecode)?;
+    Ok(Facts::of(kind, &value, mapping))
 }
 
 /// Deletes every side-table row naming any of `vo_ids`, on the erasure

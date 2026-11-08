@@ -524,6 +524,10 @@ struct ResolvedWrite {
     /// SHA-256 over the canonical body with the root `uid` removed
     /// (`version.content_digest`); `None` on a logical delete.
     content_digest: Option<[u8; 32]>,
+    /// What a party body holds that the binding hooks read, derived before
+    /// the body was decomposed (#5220); `None` for a logical delete and for
+    /// every kind but a party.
+    party_facts: Option<Box<crate::party_binding::derive::Facts>>,
     /// The version whose node rows this one reads when its content equals the
     /// preceding tip's (`version.content_sys_version`, #4415); the rows are
     /// then decomposed for the signature and not written.
@@ -581,7 +585,10 @@ struct ResolvedWrite {
 /// `OBJECT_VERSION_ID` — the stamped identity goes through the BASE
 /// construction door, so a malformed one is refused before it is written,
 /// signed and served.
-fn stamp_version_uid(canonical: &mut Value, version_uid: &str) -> Result<(), VersionIdError> {
+pub(crate) fn stamp_version_uid(
+    canonical: &mut Value,
+    version_uid: &str,
+) -> Result<(), VersionIdError> {
     if let Value::Object(map) = canonical {
         let uid =
             ObjectVersionId::new(version_uid).map_err(|source| VersionIdError::Malformed {
@@ -732,7 +739,7 @@ async fn apply_change(
         known_now,
         preplaced,
     };
-    let resolved = match change {
+    let mut resolved = match change {
         Change::Create {
             allocated,
             kind,
@@ -801,13 +808,20 @@ async fn apply_change(
     if skip_identical && let Some(existing) = skipped_resend(&resolved, audit) {
         return Ok((existing, Uuid::nil()));
     }
+    let party_facts = resolved.party_facts.take();
     // Boxed: the resolved write and the folded commit hold the whole
     // version in their state, which would otherwise put every caller's
     // future over the size the lint allows.
     let committed = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
     crate::versioning::access_delay::hold_on_creation(tx, ctx, ehr_id, &committed.0).await?;
     if committed.0.kind.is_party() {
-        crate::party_binding::store::reindex_committed(tx, ctx, &committed.0).await?;
+        Box::pin(crate::party_binding::store::reindex_committed(
+            tx,
+            ctx,
+            &committed.0,
+            party_facts.as_deref(),
+        ))
+        .await?;
     }
     Ok(committed)
 }
@@ -1012,7 +1026,10 @@ fn body_and_signature(
     r: &ResolvedWrite,
     at_committal_attestations: &[Value],
 ) -> Result<(Option<String>, bool), ServiceError> {
-    let body = if r.rows.is_empty() {
+    // Only a server signature reads the body: reassembling it for nothing
+    // costs as much as the version is large (#5220).
+    let signs = r.client_signature.is_none() && ctx.signer.enabled();
+    let body = if r.rows.is_empty() || !signs {
         None
     } else {
         Some(reassemble(&r.rows)?)

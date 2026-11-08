@@ -29,8 +29,8 @@ use crate::ids::VoId;
 use crate::party_binding::provisioned;
 use crate::service::FerroEhrService;
 use crate::service::demographic::group_provision::{
-    GroupState, GroupWriter, ProvisionedGroup, distinct, is_membership, service_error, target_of,
-    too_many,
+    GroupState, GroupWriter, ProvisionedGroup, distinct, is_membership, members_of, service_error,
+    target_of, too_many,
 };
 use crate::service::demographic::template::TemplateFit;
 use crate::service::demographic::types::PartyKind;
@@ -100,6 +100,7 @@ impl FerroEhrService {
             TemplateFit::Complete => state::COMPLETE,
             TemplateFit::Incomplete(_) => state::INCOMPLETE,
         };
+        let mut written = body.clone();
         let change = Change::modify(
             id,
             Kind::Group,
@@ -112,10 +113,31 @@ impl FerroEhrService {
             },
         );
         let commit = ScimCommit::new(writer.client.binding_issuer, change_type::MODIFICATION);
-        self.commit_scim(commit, vec![change])
+        let committed = self
+            .commit_scim(commit, vec![change])
             .await
             .map_err(service_error)?;
-        self.provisioned_group(writer.client, id).await
+        let version = committed.versions.into_iter().next().ok_or_else(|| {
+            ServiceError::exception(format!("the change of the GROUP {id} committed no version"))
+        })?;
+        // The Group as this commit wrote it: reading it back would parse a
+        // body as large as the Group again (#5220).
+        let version_uid = version.version_uid();
+        crate::versioning::change::stamp_version_uid(&mut written, &version_uid)
+            .map_err(|e| ServiceError::internal("stamp the GROUP version uid", e))?;
+        Ok(Some(ProvisionedGroup {
+            row: provisioned::GroupRow {
+                party: id,
+                display_name: state.display_name,
+                lifecycle_state: lifecycle.to_owned(),
+                external_id: state.external_id,
+            },
+            version_uid,
+            created: group.created,
+            last_modified: version.time_committed,
+            members: members_of(&written, mapping.membership),
+            body: written,
+        }))
     }
 
     /// Logically deletes the Group `id` of the client of `writer`: its
