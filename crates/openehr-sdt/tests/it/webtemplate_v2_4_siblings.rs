@@ -184,7 +184,8 @@ fn web_template() -> WebTemplate {
     repo.insert(parse_artefact(COMPOSITION, Dialect::Adl2).expect("the composition parses"));
     let template = parse_artefact(&template(), Dialect::Adl2).expect("the template parses");
     let opt = create_opt(&template, &repo).expect("the operational template builds");
-    build_web_template_v2_4(&opt).expect("the web template builds")
+    build_web_template_v2_4(&opt.template, &opt.prohibited_attributes)
+        .expect("the web template builds")
 }
 
 fn sections(node: &WebTemplateNode, out: &mut Vec<String>) {

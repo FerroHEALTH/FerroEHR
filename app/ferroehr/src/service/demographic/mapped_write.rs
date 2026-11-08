@@ -131,6 +131,75 @@ impl FerroEhrService {
     }
 }
 
+/// Removes `ELEMENT`s at `path` from the party `body`, reporting whether one
+/// was removed.
+///
+/// With `identifier`, only the one of its `type` and `issuer` goes; without,
+/// every one that holds no `DV_IDENTIFIER`, so the identifiers of the
+/// selectors that share the path stay.
+pub fn clear_mapped_value(body: &mut Value, path: &str, identifier: Option<(&str, &str)>) -> bool {
+    let steps: Vec<&str> = path
+        .trim_end_matches("/value")
+        .trim_start_matches('/')
+        .split('/')
+        .collect();
+    remove_under(body, &steps, identifier)
+}
+
+/// Removes, under `node`, the items the last of `steps` names (see
+/// [`clear_mapped_value`]) in every node the steps before it reach.
+fn remove_under(node: &mut Value, steps: &[&str], identifier: Option<(&str, &str)>) -> bool {
+    let Some((step, rest)) = steps.split_first() else {
+        return false;
+    };
+    if rest.is_empty() {
+        return remove_at(node, step, identifier);
+    }
+    let (attribute, node_id) = step_parts(step);
+    match node.get_mut(attribute) {
+        Some(Value::Array(items)) => items
+            .iter_mut()
+            .filter(|item| held(item, node_id))
+            .fold(false, |removed, item| {
+                remove_under(item, rest, identifier) | removed
+            }),
+        Some(single) if held(single, node_id) => remove_under(single, rest, identifier),
+        _ => false,
+    }
+}
+
+/// Removes the items of the step `step` under `holder` that hold
+/// `identifier` (every item when `None`).
+fn remove_at(holder: &mut Value, step: &str, identifier: Option<(&str, &str)>) -> bool {
+    let (attribute, node_id) = step_parts(step);
+    let Some(Value::Array(items)) = holder.get_mut(attribute) else {
+        return false;
+    };
+    let before = items.len();
+    items.retain(|item| {
+        let slot = identifier_slot(item.get("value"));
+        let chosen = match identifier {
+            Some((identifier_type, issuer)) => slot == Some((Some(identifier_type), Some(issuer))),
+            None => slot.is_none(),
+        };
+        !(held(item, node_id) && chosen)
+    });
+    items.len() != before
+}
+
+/// A path step as its attribute and its node id predicate.
+fn step_parts(step: &str) -> (&str, Option<&str>) {
+    match step.split_once('[') {
+        Some((attribute, predicate)) => (attribute, Some(predicate.trim_end_matches(']'))),
+        None => (step, None),
+    }
+}
+
+/// Whether `item` carries the node id `node_id` (any item when `None`).
+fn held(item: &Value, node_id: Option<&str>) -> bool {
+    node_id.is_none_or(|id| item.get("archetype_node_id").and_then(Value::as_str) == Some(id))
+}
+
 /// The data value of the first `ELEMENT` at `path` in the party `body`, the
 /// one of `identifier`'s `type` and `issuer` when given.
 #[must_use]
@@ -146,20 +215,17 @@ pub fn mapped_value<'a>(
         .collect();
     let mut current = vec![body];
     for step in steps {
-        let (attribute, node_id) = match step.split_once('[') {
-            Some((attribute, predicate)) => (attribute, Some(predicate.trim_end_matches(']'))),
-            None => (step, None),
-        };
-        let held = |item: &&Value| {
-            node_id
-                .is_none_or(|id| item.get("archetype_node_id").and_then(Value::as_str) == Some(id))
-        };
+        let (attribute, node_id) = step_parts(step);
         current = current
             .into_iter()
             .filter_map(|node| node.get(attribute))
             .flat_map(|slot| match slot {
-                Value::Array(items) => items.iter().filter(held).collect::<Vec<_>>(),
-                single => std::iter::once(single).filter(held).collect(),
+                Value::Array(items) => items
+                    .iter()
+                    .filter(|item| held(item, node_id))
+                    .collect::<Vec<_>>(),
+                single if held(single, node_id) => vec![single],
+                _ => Vec::new(),
             })
             .collect();
     }

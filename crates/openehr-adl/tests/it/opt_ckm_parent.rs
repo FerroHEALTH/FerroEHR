@@ -79,7 +79,9 @@ fn build(template_src: &str, sources: &[(&str, Dialect)]) -> OperationalTemplate
         repo.insert(parse_artefact(source, *dialect).expect("the CKM source parses"));
     }
     let root = parse_artefact(template_src, Dialect::Adl2).expect("the template parses");
-    create_opt(&root, &repo).unwrap_or_else(|e| panic!("create_opt failed: {e}"))
+    create_opt(&root, &repo)
+        .unwrap_or_else(|e| panic!("create_opt failed: {e}"))
+        .template
 }
 
 #[test]

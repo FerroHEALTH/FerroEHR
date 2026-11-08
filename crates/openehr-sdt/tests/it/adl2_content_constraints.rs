@@ -99,7 +99,7 @@ fn web_template(id: &str, source: &str) -> WebTemplate {
     let AuthoredArchetype::OperationalTemplate(opt) = *authored else {
         panic!("{id} is not an operational template");
     };
-    build_web_template_v2_4(&opt).unwrap_or_else(|e| panic!("build {id}: {e}"))
+    build_web_template_v2_4(&opt, &[]).unwrap_or_else(|e| panic!("build {id}: {e}"))
 }
 
 /// Every setup template, built into its Web Template and keyed by the upload

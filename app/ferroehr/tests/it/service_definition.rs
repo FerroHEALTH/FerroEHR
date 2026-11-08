@@ -1345,3 +1345,72 @@ async fn adl2_template_with_filler_projects_the_filled_web_template() {
         "the filler's constrained leaf must appear in the projected WebTemplate"
     );
 }
+
+/// A stored ADL2 template that deletes `context` (`existence matches {0}`)
+/// compiles to an OPT2 without it (AM `OPT2/master03-opt_raw.adoc`
+/// §Flattening), and the commit path still refuses a composition carrying a
+/// context, since `create_opt` names the removed attribute beside the OPT
+/// (#5154).
+#[tokio::test]
+async fn adl2_template_that_deletes_context_refuses_a_commit_carrying_one() {
+    use serde_json::json;
+
+    const PARENT: &str = "openEHR-EHR-COMPOSITION.no_context_parent.v1.0.0";
+    const HRID: &str = "openEHR-EHR-COMPOSITION.no_context.v1.0.0";
+
+    let (_db, svc) = crate::fixtures::service().await;
+    svc.template_adl2_upload(&adl2_source("archetype", PARENT, None))
+        .await
+        .expect("upload the parent archetype");
+    let source = adl2_source("template", HRID, Some(PARENT)).replace(
+        "COMPOSITION[id1.1] matches { *}",
+        "COMPOSITION[id1.1] matches {\n        context existence matches {0}\n    }",
+    );
+    svc.template_adl2_upload(&source)
+        .await
+        .expect("upload the ADL2 template");
+
+    let wt = svc
+        .web_template(HRID)
+        .await
+        .expect("the ADL2 template resolves on the commit path");
+    assert!(
+        wt.tree.children.iter().all(|c| c.aql_path != "/context"),
+        "no /context node"
+    );
+    let mut comp = openehr_sdt::flat::example::example_composition(
+        &wt,
+        openehr_sdt::flat::example::DetailLevel::Complete,
+    )
+    .expect("the example builds");
+    assert!(
+        comp.get("context").is_none(),
+        "the example carries no context"
+    );
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    svc.create_composition(ehr, crate::fixtures::uv(&comp, "249", None))
+        .await
+        .expect("the composition without context commits");
+
+    comp["context"] = json!({
+        "_type": "EVENT_CONTEXT",
+        "start_time": {"_type": "DV_DATE_TIME", "value": "2026-01-01T00:00:00Z"},
+        "setting": {
+            "_type": "DV_CODED_TEXT",
+            "value": "other care",
+            "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"},
+                "code_string": "238"
+            }
+        }
+    });
+    let refused = svc
+        .create_composition(ehr, crate::fixtures::uv(&comp, "249", None))
+        .await
+        .expect_err("a template that deletes context refuses a composition carrying one");
+    assert!(
+        format!("{refused:?}").contains("prohibited"),
+        "refused for the prohibited context: {refused:?}"
+    );
+}
