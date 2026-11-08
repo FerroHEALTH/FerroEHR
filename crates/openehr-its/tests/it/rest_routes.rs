@@ -648,7 +648,7 @@ fn from_request_covers_the_stored_query_operations() {
     let m = matched(&Method::GET, "/query/org.example%3A%3Avitals").unwrap();
     let p = query::QueryExecuteStoredQueryParams::from_request(&m, Some("ehr_id=e1&n=2"), &headers)
         .unwrap();
-    assert_eq!(p.qualified_query_name, "org.example::vitals");
+    assert_eq!(p.qualified_query_name.to_string(), "org.example::vitals");
     assert_eq!(p.ehr_id.as_deref(), Some("e1"));
     assert_eq!(p.accept.as_deref(), Some("application/json"));
     assert_eq!(
@@ -657,9 +657,31 @@ fn from_request_covers_the_stored_query_operations() {
     );
     let m = matched(&Method::GET, "/query/org.example::vitals/1.0.2").unwrap();
     let p = query::QueryExecuteStoredQueryVersionParams::from_request(&m, None, &headers).unwrap();
-    assert_eq!(p.qualified_query_name, "org.example::vitals");
-    assert_eq!(p.version, "1.0.2");
+    assert_eq!(p.qualified_query_name.to_string(), "org.example::vitals");
+    assert_eq!(p.version.to_string(), "1.0.2");
     assert!(p.query_parameters.is_none());
+    let m = matched(&Method::GET, "/query/org.example::vitals/1").unwrap();
+    let p = query::QueryExecuteStoredQueryVersionParams::from_request(&m, None, &headers).unwrap();
+    assert_eq!(
+        p.version,
+        openehr_its::rest::stored_query::VersionPattern::Major(1)
+    );
+    for (path, refused) in [
+        ("/query/aql2::AQL", "qualified_query_name"),
+        ("/query/a::b::c", "qualified_query_name"),
+        ("/query/org.example::vitals/1.0.0-rc.1", "version"),
+    ] {
+        let m = matched(&Method::GET, path).unwrap();
+        let outcome = if refused == "version" {
+            query::QueryExecuteStoredQueryVersionParams::from_request(&m, None, &headers).map(drop)
+        } else {
+            query::QueryExecuteStoredQueryParams::from_request(&m, None, &headers).map(drop)
+        };
+        assert!(
+            matches!(&outcome, Err(openehr_its::rest::runtime::ApiError::BadRequest(m)) if m.contains(refused)),
+            "{path} is refused on `{refused}`: {outcome:?}"
+        );
+    }
     let m = matched(&Method::PUT, "/definition/query/org.example::vitals").unwrap();
     let p = definition::DefinitionQueryStoreYamlParams::from_request(
         &m,
@@ -667,7 +689,7 @@ fn from_request_covers_the_stored_query_operations() {
         &headers,
     )
     .unwrap();
-    assert_eq!(p.qualified_query_name, "org.example::vitals");
+    assert_eq!(p.qualified_query_name.to_string(), "org.example::vitals");
     assert_eq!(p.query_type.as_deref(), Some("AQL"));
 }
 
