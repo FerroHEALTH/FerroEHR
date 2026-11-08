@@ -84,9 +84,10 @@ pub enum ServeError {
     #[error("authentication configuration error: {0}")]
     Auth(String),
     /// The `[scim]` endpoint cannot be served: a mapped attribute is no
-    /// attribute of its SCIM schema.
+    /// attribute of its SCIM schema, or the party mapping lacks what a User
+    /// is written with.
     #[error("scim configuration error")]
-    Scim(#[source] scim::protocol::discovery::DiscoveryError),
+    Scim(#[source] scim::endpoint::EndpointError),
     /// Binding a listener failed.
     #[error("binding the listener failed")]
     Io(#[from] std::io::Error),

@@ -89,9 +89,9 @@ pub(crate) fn discovery(
     Discovery::build(DiscoveryConfig {
         base_url: scim.base_url().unwrap_or_default(),
         documentation_uri: None,
-        // TODO(#5014): declare PATCH and entity tags once /Users serves them.
+        // TODO(#5014): declare PATCH once /Users serves it.
         patch: false,
-        etag: false,
+        etag: true,
         filter: FilterConfig {
             supported: true,
             max_results: scim.max_results,
@@ -245,6 +245,7 @@ mod tests {
         );
         assert!(discovery.schema(urn::ENTERPRISE_USER).is_none());
         assert!(!discovery.service_provider_config().patch.supported);
+        assert!(discovery.service_provider_config().etag.supported);
     }
 
     #[test]

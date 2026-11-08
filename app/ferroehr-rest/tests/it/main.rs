@@ -106,6 +106,7 @@ mod representation_http;
 mod sandbox_seed_http;
 mod scim_endpoint;
 mod scim_protocol;
+mod scim_users_http;
 mod served_openapi;
 mod served_openapi_snapshot;
 mod server_tls;

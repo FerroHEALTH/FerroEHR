@@ -44,6 +44,7 @@ mod gates;
 mod issuer;
 mod party;
 pub(crate) mod record;
+mod scope;
 pub(crate) mod trc;
 mod wabvpz;
 

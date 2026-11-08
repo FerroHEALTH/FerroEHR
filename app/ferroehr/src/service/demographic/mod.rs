@@ -66,6 +66,7 @@ pub mod mapped_write;
 pub mod mapping;
 pub mod party_set;
 pub mod precondition;
+pub mod provision;
 pub mod rekey;
 pub mod reverse;
 pub mod template;

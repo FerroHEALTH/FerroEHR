@@ -217,7 +217,7 @@ fn state(code: &str) -> PartyState {
 ///
 /// `DV_DATE` carries no zone (RM `data_types` `DV_DATE`), so which zone a
 /// date is read in is our own design: the server reads every date in UTC.
-fn today() -> String {
+pub(crate) fn today() -> String {
     jiff::Timestamp::now()
         .to_zoned(jiff::tz::TimeZone::UTC)
         .date()
