@@ -45,6 +45,11 @@ pub struct ScimConfig {
     /// `PERSON` are erased, in minutes; `0` erases them in the deletion
     /// itself. The name, the binding key and the identifiers stay.
     pub contact_erasure_minutes: u32,
+    /// The most members one Group holds; an add past it is refused with
+    /// `400`. Each membership change stores every membership of the Group
+    /// again (RM demographic master02 §Versioning Semantics), so the cap bounds
+    /// a Group's version storage.
+    pub max_group_members: u32,
     /// The provisioning clients.
     pub client: Vec<ScimClient>,
 }
@@ -58,6 +63,7 @@ impl Default for ScimConfig {
             max_deactivations: 100,
             deactivation_window_minutes: 60,
             contact_erasure_minutes: 0,
+            max_group_members: 5_000,
             client: Vec::new(),
         }
     }
@@ -130,6 +136,9 @@ impl ScimConfig {
         }
         if self.max_deactivations == 0 {
             errors.push("scim.max_deactivations must be at least 1".to_owned());
+        }
+        if self.max_group_members == 0 {
+            errors.push("scim.max_group_members must be at least 1".to_owned());
         }
         if self.deactivation_window_minutes == 0 {
             errors.push("scim.deactivation_window_minutes must be at least 1".to_owned());

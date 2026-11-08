@@ -1063,12 +1063,18 @@ skip_identical_resend = false
 # `contact_erasure_minutes` after a User's deletion (0: in the deletion, at
 # most 43200) the contacts of every version of its PERSON are erased; the
 # name, the binding key and the identifiers stay.
+# /scim/v2/Groups is served when [authz.party_binding] names a group template
+# with its display_name and a membership archetype; a client's Groups carry
+# their externalId under the group_identifier_issuer of its [[auth.party]]
+# table. `max_group_members` caps one Group: every membership change stores
+# all of the Group's memberships again, and an add past the cap is refused.
 [scim]
 enabled = false
 max_results = 100
 max_deactivations = 100
 deactivation_window_minutes = 60
 contact_erasure_minutes = 0
+max_group_members = 5000
 #? public_base_url = "https://cdr.example.com"
 #? [[scim.client]]
 #? issuer = "https://as.example.com"

@@ -12,8 +12,8 @@
 //! can plant a key-bearing `PERSON`, grant themselves the professional
 //! `ROLE` or point a colleague's `PERSON` at their own login. A SCIM client
 //! writes the ones it owns: a `PERSON` whose binding keys its
-//! `binding_issuer` issues, and a professional `ROLE` that `PERSON` performs
-//! (RFC 7644 §3: a client manages its own resources). A present
+//! `binding_issuer` issues, a professional `ROLE` that `PERSON` performs, and
+//! a `GROUP` it created (RFC 7644 §3: a client manages its own resources). A present
 //! binding key is immutable: RFC 7643 §2.2 `mutability: "immutable"`, "SHALL
 //! NOT be updated", and only [`rekey`] changes one. An administrator's version
 //! that leaves a protected identifier out is refused, so nothing is carried
@@ -207,7 +207,9 @@ pub(crate) async fn check(
 ///
 /// A `PERSON` is owned when it carries a binding key and each of its keys,
 /// before and after the write, is of `issuer`. A professional `ROLE` is owned
-/// when every `PERSON` it names as `performer` is.
+/// when every `PERSON` it names as `performer` is. A `GROUP` is owned when
+/// the client created it, and a version of any other `GROUP` is admitted
+/// when all it does is drop memberships of `PERSON`s the client owns.
 async fn owned(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
@@ -227,23 +229,96 @@ async fn owned(
                 return Ok(false);
             }
             for named in performers {
-                // NOTE: a reference whose root is no UUID names no container of this store.
-                let Ok(performer) = VoId::from_uid_head(&named) else {
-                    return Ok(false);
-                };
-                let Some(sys_version) = last_body(tx, performer).await? else {
-                    return Ok(false);
-                };
-                let protected = read(tx, mapping, Kind::Person, performer, sys_version).await?;
-                if !keyed_by_client(&[&protected]) {
+                if !person_of(tx, mapping, &named, issuer).await? {
                     return Ok(false);
                 }
             }
             Ok(true)
         }
-        // TODO(#5015): admit the SCIM client that created the GROUP.
+        Kind::Group => {
+            if crate::party_binding::provisioned::owns_group(tx, issuer, vo_id).await? {
+                return Ok(true);
+            }
+            let [Some(current), Some(previous)] = held else {
+                return Ok(false);
+            };
+            let Some(removed) = removed_members(tx, vo_id, (current, previous)).await? else {
+                return Ok(false);
+            };
+            for named in removed {
+                if !person_of(tx, mapping, &named, issuer).await? {
+                    return Ok(false);
+                }
+            }
+            Ok(true)
+        }
         _ => Ok(false),
     }
+}
+
+/// Whether the reference id `named` is a `PERSON` of this store whose last
+/// body carries binding keys all of `issuer`.
+async fn person_of(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    named: &str,
+    issuer: &str,
+) -> Result<bool, ServiceError> {
+    // NOTE: a reference whose root is no UUID names no container of this store.
+    let Ok(person) = VoId::from_uid_head(named) else {
+        return Ok(false);
+    };
+    let Some(sys_version) = last_body(tx, person).await? else {
+        return Ok(false);
+    };
+    let protected = read(tx, mapping, Kind::Person, person, sys_version).await?;
+    let keys = protected.keys();
+    Ok(!keys.is_empty() && keys.iter().all(|(of, _)| of == issuer))
+}
+
+/// The targets of the inline relationships the version `current` of the
+/// `GROUP` `vo_id` drops from `previous`, when that is all it changes;
+/// `None` when it changes anything else.
+///
+/// A SCIM client deleting one of its Users removes the User's memberships
+/// from every `GROUP` in the same CONTRIBUTION, an administrator's included.
+async fn removed_members(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+    (current, previous): (i32, i32),
+) -> Result<Option<Vec<String>>, ServiceError> {
+    let row = sqlx::query(
+        "WITH b AS (SELECT v.body::jsonb AS j FROM version v \
+                    WHERE v.vo_id = $1 AND v.sys_version = $3), \
+              a AS (SELECT v.body::jsonb AS j FROM version v \
+                    WHERE v.vo_id = $1 AND v.sys_version = $2), \
+              br AS (SELECT r.x FROM b, jsonb_array_elements( \
+                        CASE WHEN jsonb_typeof(b.j -> 'relationships') = 'array' \
+                             THEN b.j -> 'relationships' ELSE '[]'::jsonb END) AS r(x)), \
+              ar AS (SELECT r.x FROM a, jsonb_array_elements( \
+                        CASE WHEN jsonb_typeof(a.j -> 'relationships') = 'array' \
+                             THEN a.j -> 'relationships' ELSE '[]'::jsonb END) AS r(x)) \
+         SELECT (SELECT j - 'relationships' - 'uid' FROM b) \
+                    = (SELECT j - 'relationships' - 'uid' FROM a) \
+                AND NOT EXISTS (SELECT 1 FROM ar WHERE ar.x NOT IN (SELECT x FROM br)) \
+                    AS only_removes, \
+                ARRAY(SELECT br.x -> 'target' -> 'id' ->> 'value' FROM br \
+                      WHERE br.x NOT IN (SELECT x FROM ar)) AS removed",
+    )
+    .bind(vo_id)
+    .bind(current)
+    .bind(previous)
+    .fetch_one(&mut *tx)
+    .await?;
+    if !row
+        .try_get::<Option<bool>, _>("only_removes")?
+        .unwrap_or(false)
+    {
+        return Ok(None);
+    }
+    let removed: Vec<Option<String>> = row.try_get("removed")?;
+    let removed: Option<Vec<String>> = removed.into_iter().collect();
+    Ok(removed.filter(|removed| !removed.is_empty()))
 }
 
 /// The `PARTY_REF.id` values the versions `held` of the `ROLE` `vo_id` name

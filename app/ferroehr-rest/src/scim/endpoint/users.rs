@@ -24,24 +24,22 @@ use ferroehr::party_binding::provisioned::UserFilter;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::provision::{NewUser, ProvisionedUser};
 use ferroehr::service::demographic::user_write::{Deactivations, UserUpdate, UserWriteError};
-use ferroehr::system_log::event::AccessDomain;
 use http::{HeaderMap, HeaderValue, Method, StatusCode, header};
-use serde::Deserialize;
 use serde_json::Value;
 
+use crate::scim::endpoint::listing::{
+    ListQuery, Listing, ReadQuery, audited, equalities, json_body, listed,
+};
 use crate::scim::endpoint::user_map::{self, UserMap};
 use crate::scim::endpoint::{ScimCaller, refusal, scim_json};
 use crate::scim::protocol::error::{ScimError, ScimType};
 use crate::scim::protocol::etag::{self, ReadPrecondition};
-use crate::scim::protocol::filter::{
-    self, CompValue, CompareOp, Filter, FilterSupport, Logic, Term, Test,
-};
-use crate::scim::protocol::list::{ListResponse, Page, Projection};
+use crate::scim::protocol::filter::Filter;
+use crate::scim::protocol::list::Projection;
 use crate::scim::protocol::patch::PatchRequest;
 use crate::scim::protocol::path::AttrPath;
 use crate::scim::protocol::resource::{Container, Resource, ResourceSchema};
 use crate::scim::protocol::urn;
-use crate::system_log::middleware::{AuditObject, AuditOpId};
 
 /// What the `/Users` handlers share.
 #[derive(Clone)]
@@ -53,10 +51,7 @@ pub(crate) struct Users {
 /// The configuration the handlers read.
 struct Inner {
     map: UserMap,
-    schema: ResourceSchema,
-    base_url: String,
-    max_results: u64,
-    filter: FilterSupport,
+    listing: Listing,
     limit: Deactivations,
     contact_erasure_minutes: u32,
 }
@@ -72,17 +67,17 @@ impl Users {
         schema: ResourceSchema,
         scim: &ferroehr::config::scim::ScimConfig,
     ) -> Result<Self, String> {
-        let filter =
-            FilterSupport::equality_conjunction(urn::CORE_USER, &["userName", "externalId", "id"])
-                .map_err(|error| error.to_string())?;
+        let listing = Listing::new(
+            schema,
+            scim,
+            urn::CORE_USER,
+            &["userName", "externalId", "id"],
+        )?;
         Ok(Self {
             service,
             inner: Arc::new(Inner {
                 map,
-                schema,
-                base_url: scim.base_url().unwrap_or_default(),
-                max_results: scim.max_results,
-                filter,
+                listing,
                 limit: Deactivations {
                     max: scim.max_deactivations,
                     window_minutes: scim.deactivation_window_minutes,
@@ -93,25 +88,6 @@ impl Users {
     }
 }
 
-/// The query of `GET /Users` (RFC 7644 §3.4.2).
-#[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ListQuery {
-    filter: Option<String>,
-    start_index: Option<String>,
-    count: Option<String>,
-    attributes: Option<String>,
-    excluded_attributes: Option<String>,
-}
-
-/// The attribute projection of `GET /Users/{id}` (RFC 7644 §3.9).
-#[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ReadQuery {
-    attributes: Option<String>,
-    excluded_attributes: Option<String>,
-}
-
 /// `POST /Users` (RFC 7644 §3.3).
 pub(crate) async fn create(
     State(users): State<Users>,
@@ -119,8 +95,7 @@ pub(crate) async fn create(
     body: Bytes,
 ) -> Response {
     let outcome = async {
-        let body = json_body(&body)?;
-        let parsed = Resource::from_request(&body, &users.inner.schema)?;
+        let parsed = users.inner.listing.requested(&body)?;
         let resource = parsed.resource();
         // NOTE: RM common master06 §Version Lifecycle, a first version is complete or incomplete.
         if resource.get(Container::Core, "active") == Some(&Value::Bool(false)) {
@@ -147,19 +122,17 @@ pub(crate) async fn create(
     .await;
     match outcome {
         Ok(user) => {
-            let mut response = served(
+            let response = served(
                 &users,
                 &user,
                 &client.binding_issuer,
                 StatusCode::CREATED,
                 &Projection::default(),
             );
-            if let Ok(location) = HeaderValue::from_str(&format!(
-                "{}/Users/{}",
-                users.inner.base_url, user.row.party
-            )) {
-                response.headers_mut().insert(header::LOCATION, location);
-            }
+            let response = users
+                .inner
+                .listing
+                .located(response, "Users", user.row.party);
             audited(response, "scim_user_create", Some(user.row.party), None)
         }
         Err(error) => audited(refusal(&error), "scim_user_create", None, None),
@@ -176,10 +149,7 @@ pub(crate) async fn read(
     headers: HeaderMap,
 ) -> Response {
     let outcome = async {
-        let projection = Projection::parse(
-            query.attributes.as_deref(),
-            query.excluded_attributes.as_deref(),
-        )?;
+        let projection = query.projection()?;
         let user = find(&users, &client.binding_issuer, &id).await?;
         Ok((user, projection))
     }
@@ -215,21 +185,9 @@ pub(crate) async fn list(
     Query(query): Query<ListQuery>,
 ) -> Response {
     let outcome = async {
-        let page = Page::parse(
-            query.start_index.as_deref(),
-            query.count.as_deref(),
-            users.inner.max_results,
-        )?;
-        let projection = Projection::parse(
-            query.attributes.as_deref(),
-            query.excluded_attributes.as_deref(),
-        )?;
-        let filter = match query.filter.as_deref() {
-            Some(text) => {
-                let parsed = filter::parse(text)?;
-                users.inner.filter.check(&parsed)?;
-                criteria(&parsed)?
-            }
+        let (page, projection, parsed) = users.inner.listing.asked(&query)?;
+        let filter = match parsed {
+            Some(parsed) => criteria(&parsed)?,
             None => Some(UserFilter::default()),
         };
         let found = match filter {
@@ -248,21 +206,13 @@ pub(crate) async fn list(
     .await;
     match outcome {
         Ok((page, projection, found)) => {
-            let only = match found.users.as_slice() {
-                [one] => Some(one.row.party),
-                _ => None,
-            };
-            let count = u64::try_from(found.users.len()).unwrap_or(u64::MAX);
+            let ids: Vec<VoId> = found.users.iter().map(|user| user.row.party).collect();
             let resources: Vec<Value> = found
                 .users
                 .iter()
                 .map(|user| represented(&users, user, &client.binding_issuer, &projection))
                 .collect();
-            let response = scim_json(
-                StatusCode::OK,
-                &ListResponse::new(resources, found.total, page.start_index()),
-            );
-            audited(response, "scim_user_list", only, Some(count))
+            listed(resources, (found.total, &page), "scim_user_list", &ids)
         }
         Err(error) => audited(refusal(&error), "scim_user_list", None, None),
     }
@@ -295,7 +245,7 @@ pub(crate) async fn modify(
         };
         let (after, active) = if let Some(request) = request {
             let patched = request
-                .apply(&current, &users.inner.schema)?
+                .apply(&current, &users.inner.listing.schema)?
                 .into_resource();
             let after = active_of(&patched);
             let active = (after != active_of(&current)).then_some(after).flatten();
@@ -305,7 +255,7 @@ pub(crate) async fn modify(
                 ScimError::new(StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
             })?];
             let replaced = current
-                .replace(&body, &users.inner.schema, &keep)?
+                .replace(&body, &users.inner.listing.schema, &keep)?
                 .into_resource();
             let active = active_of(&replaced);
             (replaced, active)
@@ -351,8 +301,8 @@ async fn current(
         &users
             .inner
             .map
-            .representation(&user, &users.inner.base_url, issuer),
-        &users.inner.schema,
+            .representation(&user, &users.inner.listing.base_url, issuer),
+        &users.inner.listing.schema,
     )?;
     Ok((user, current))
 }
@@ -463,16 +413,6 @@ fn refused(users: &Users, error: &ScimError, op: &'static str) -> Response {
     audited(response, op, None, None)
 }
 
-/// The JSON object `body` holds.
-///
-/// # Errors
-/// A `400` `invalidSyntax` when it is not JSON.
-fn json_body(body: &[u8]) -> Result<Value, ScimError> {
-    serde_json::from_slice(body).map_err(|_error| {
-        ScimError::bad_request(ScimType::InvalidSyntax, "The body is not a JSON object.")
-    })
-}
-
 /// The User `id` of the client of `issuer`, or the `404` of an id naming
 /// none (RFC 7644 §3.12).
 async fn find(users: &Users, issuer: &str, id: &str) -> Result<ProvisionedUser, ScimError> {
@@ -497,15 +437,7 @@ async fn find(users: &Users, issuer: &str, id: &str) -> Result<ProvisionedUser, 
 /// string.
 fn criteria(parsed: &Filter) -> Result<Option<UserFilter>, ScimError> {
     let mut filter = UserFilter::default();
-    let mut leaves = Vec::new();
-    collect(parsed, &mut leaves);
-    for (name, value) in leaves {
-        let Some(value) = value else {
-            return Err(ScimError::bad_request(
-                ScimType::InvalidFilter,
-                format!("'{name}' is compared with a string."),
-            ));
-        };
+    for (name, value) in equalities(parsed)? {
         if name.eq_ignore_ascii_case("userName") {
             filter.user_names.push(value.to_owned());
         } else if name.eq_ignore_ascii_case("externalId") {
@@ -519,27 +451,6 @@ fn criteria(parsed: &Filter) -> Result<Option<UserFilter>, ScimError> {
         }
     }
     Ok(Some(filter))
-}
-
-/// The `eq` comparisons of the supported filter `parsed`, each its attribute
-/// name and its string value.
-fn collect<'a>(parsed: &'a Filter, leaves: &mut Vec<(&'a str, Option<&'a str>)>) {
-    match parsed {
-        Logic::Leaf(Term::Attr(expression)) => {
-            let value = match &expression.test {
-                Test::Compare(CompareOp::Eq, CompValue::String(value)) => Some(value.as_str()),
-                _ => None,
-            };
-            leaves.push((expression.path.name.as_str(), value));
-        }
-        Logic::And(parts) => {
-            for part in parts {
-                collect(part, leaves);
-            }
-        }
-        // NOTE: `FilterSupport::check` admitted only `eq` and `and`.
-        Logic::Leaf(Term::ValuePath(..)) | Logic::Or(_) | Logic::Not(_) => {}
-    }
 }
 
 /// `user` as the response `status`, with its `ETag` (RFC 7644 §3.14).
@@ -565,14 +476,8 @@ fn represented(
     let full = users
         .inner
         .map
-        .representation(user, &users.inner.base_url, issuer);
-    match Resource::from_representation(&full, &users.inner.schema) {
-        Ok(resource) => projection.apply(&resource, &users.inner.schema),
-        Err(error) => {
-            tracing::error!(%error, "a User representation does not meet its schema");
-            full
-        }
-    }
+        .representation(user, &users.inner.listing.base_url, issuer);
+    users.inner.listing.projected(full, projection, "User")
 }
 
 /// Puts `user`'s entity tag on `response`.
@@ -582,22 +487,4 @@ fn set_etag(response: &mut Response, user: &ProvisionedUser) {
     {
         response.headers_mut().insert(header::ETAG, value);
     }
-}
-
-/// `response` with the access record's operation and object: the `PERSON`
-/// `party`, and the number of Users a query served.
-fn audited(
-    mut response: Response,
-    op: &'static str,
-    party: Option<VoId>,
-    result_count: Option<u64>,
-) -> Response {
-    response.extensions_mut().insert(AuditOpId(op));
-    response.extensions_mut().insert(AuditObject {
-        uid: party.map(|party| party.to_string()),
-        result_count,
-        domain: Some(AccessDomain::Demographic),
-        ..AuditObject::default()
-    });
-    response
 }

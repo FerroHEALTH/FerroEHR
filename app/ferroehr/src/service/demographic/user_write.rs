@@ -156,22 +156,19 @@ impl FerroEhrService {
             };
             let change = Change::modify(id, Kind::Person, body.clone(), Some(tree), None, envelope);
             let deactivates = matches!(*lifecycle, state::INACTIVE | state::ABANDONED);
-            self.commit_scim(
-                binding_issuer,
-                deactivates.then_some(limit),
-                change_type::MODIFICATION,
-                vec![change],
-                None,
-            )
-            .await?;
+            let commit = ScimCommit {
+                limit: deactivates.then_some(limit),
+                ..ScimCommit::new(binding_issuer, change_type::MODIFICATION)
+            };
+            self.commit_scim(commit, vec![change]).await?;
         }
         Ok(self.provisioned_user(binding_issuer, id).await?)
     }
 
     /// Logically deletes the User `id` of the client of `binding_issuer`:
-    /// its `PERSON` and its professional `ROLE`s in one demographic
-    /// CONTRIBUTION (RM common `master06-change_control_package.adoc`
-    /// §Logical Deletion). `false` when the id names no User of that client.
+    /// its `PERSON` and its professional `ROLE`s, with its memberships taken
+    /// out of every live `GROUP`, in one demographic CONTRIBUTION (RM common
+    /// `master06-change_control_package.adoc` §Logical Deletion). `false` when the id names no User of that client.
     /// With `contact_erasure_minutes` zero, the same transaction erases the
     /// contacts of every version of the `PERSON`; otherwise the sweep
     /// ([`FerroEhrService::erase_due_contacts`]) erases them that long after.
@@ -200,16 +197,13 @@ impl FerroEhrService {
         for role in self.professional_roles(&user.body).await? {
             changes.push(Change::delete(role, Kind::Role, None));
         }
-        // TODO(#5015): remove the User from every GROUP whose memberships target it.
-        let erase = (contact_erasure_minutes == 0).then_some(id);
-        self.commit_scim(
-            binding_issuer,
-            Some(limit),
-            change_type::DELETED,
-            changes,
-            erase,
-        )
-        .await?;
+        changes.extend(self.membership_removals(id).await?);
+        let commit = ScimCommit {
+            limit: Some(limit),
+            erase: (contact_erasure_minutes == 0).then_some(id),
+            ..ScimCommit::new(binding_issuer, change_type::DELETED)
+        };
+        self.commit_scim(commit, changes).await?;
         Ok(true)
     }
 
@@ -260,18 +254,24 @@ impl FerroEhrService {
             .tree)
     }
 
-    /// Commits `changes` in one demographic CONTRIBUTION of `change` type as
-    /// the SCIM client of `binding_issuer`, counting it against `limit` in
-    /// the same transaction when it deactivates or deletes a User, and
-    /// erasing the contacts of the `PERSON` `erase` before it commits.
-    async fn commit_scim(
+    /// Commits `changes` in one demographic CONTRIBUTION as `commit` names
+    /// it: of its change type, as the SCIM client of its `binding_issuer`,
+    /// counted against its `limit` in the same transaction when it
+    /// deactivates or deletes a User, recording the client as the owner of
+    /// the `GROUP` it creates, and erasing the contacts of the `PERSON` it
+    /// names before it commits.
+    pub(super) async fn commit_scim(
         &self,
-        binding_issuer: &str,
-        limit: Option<Deactivations>,
-        change: &str,
+        commit: ScimCommit<'_>,
         changes: Vec<Change>,
-        erase: Option<VoId>,
     ) -> Result<(), UserWriteError> {
+        let ScimCommit {
+            binding_issuer,
+            limit,
+            change_type: change,
+            erase,
+            created_group,
+        } = commit;
         let audit = self.audit(change, "SCIM provisioning");
         let changes = changes
             .into_iter()
@@ -301,6 +301,9 @@ impl FerroEhrService {
                 window_minutes: limit.window_minutes,
             });
         }
+        if let Some(group) = created_group {
+            provisioned::record_group_owner(&mut tx, binding_issuer, group).await?;
+        }
         crate::party_binding::protect::provisioning(
             binding_issuer.to_owned(),
             change::commit_contribution(
@@ -319,6 +322,35 @@ impl FerroEhrService {
         }
         tx.commit().await?;
         Ok(())
+    }
+}
+
+/// How [`FerroEhrService::commit_scim`] commits a SCIM client's change-set.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ScimCommit<'a> {
+    /// The client's `binding_issuer`.
+    pub(super) binding_issuer: &'a str,
+    /// The bound a deactivation or deletion counts against.
+    pub(super) limit: Option<Deactivations>,
+    /// The CONTRIBUTION's change type code.
+    pub(super) change_type: &'a str,
+    /// The `PERSON` whose contacts are erased in the same transaction.
+    pub(super) erase: Option<VoId>,
+    /// The `GROUP` the change-set creates, recorded as the client's.
+    pub(super) created_group: Option<VoId>,
+}
+
+impl<'a> ScimCommit<'a> {
+    /// A commit of `change_type` by the client of `binding_issuer`, with no
+    /// bound, no erasure and no `GROUP` created.
+    pub(super) const fn new(binding_issuer: &'a str, change_type: &'a str) -> Self {
+        Self {
+            binding_issuer,
+            limit: None,
+            change_type,
+            erase: None,
+            created_group: None,
+        }
     }
 }
 
