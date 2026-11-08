@@ -1057,9 +1057,14 @@ skip_identical_resend = false
 # `public_base_url` is the externally reachable origin every meta.location and
 # discovery document names, required when enabled. /scim/v2/ServiceProviderConfig
 # is readable without a token; every other path needs a client's token.
+# `max_deactivations` caps the Users one client deactivates or deletes per
+# `deactivation_window_minutes`, counted in the database so every replica
+# shares the bound; past it a deactivation or deletion is refused with 429.
 [scim]
 enabled = false
 max_results = 100
+max_deactivations = 100
+deactivation_window_minutes = 60
 #? public_base_url = "https://cdr.example.com"
 # [[scim.client]]
 # issuer = "https://as.example.com"

@@ -546,6 +546,8 @@ by default.
 | `enabled` | bool | `false` | Serve `/scim/v2/`. Off, every path under it answers `404`. |
 | `public_base_url` | string | none | The externally reachable origin, such as `https://cdr.example.com`, that every `meta.location` and discovery document names as `<public_base_url>/scim/v2` (RFC 7643 §3.1). Required when `enabled`; it carries no userinfo, query or fragment. |
 | `max_results` | integer | `100` | The most resources one list response returns, which `ServiceProviderConfig` declares as `filter.maxResults`. At least 1. |
+| `max_deactivations` | integer | `100` | The most Users one client deactivates or deletes per window. Past it, a deactivation or deletion is **429** with `Retry-After` and logged at `error`. The count is kept in the database, so every replica shares one bound. At least 1. |
+| `deactivation_window_minutes` | integer | `60` | The length of that window. At least 1. |
 
 Each `[[scim.client]]` table declares one provisioning client:
 
@@ -627,8 +629,49 @@ professional `ROLE`. The `userName` index spans every client, so a **409**
 `externalId` is unique within one client. Every SCIM request is an access
 record of the client, with the `PERSON` as its object.
 
-`ServiceProviderConfig` declares entity tags supported and PATCH unsupported:
-`PUT`, `PATCH` and `DELETE` on a User are not served yet.
+A User is changed and removed through these operations:
+
+- `PUT /scim/v2/Users/{id}` replaces the User (RFC 7644 §3.5.1). A mapped
+  attribute the body leaves out is cleared; the binding key and `externalId`
+  are kept, and a left-out `active` keeps the lifecycle state.
+- `PATCH /scim/v2/Users/{id}` applies the RFC 7644 §3.5.2 operations, value
+  paths and a `replace` without `path` included, and commits the result as
+  one version. The operation is read in any case, as the Entra ID client
+  sends `Replace`.
+- `DELETE /scim/v2/Users/{id}` logically deletes the `PERSON` and its
+  professional `ROLE` in one demographic CONTRIBUTION and answers **204**.
+  Every later request on the id is **404**, the User leaves every list, and a
+  new User may take its `userName`. The binding key stays behind as a
+  tombstone: a login on it is refused as deprovisioned until the owning
+  client creates a User with it again.
+
+Each write answers with the User and its new `ETag`. An `If-Match` naming
+another version is **412**, a changed binding key is **400** `mutability`, and
+a write without `If-Match` is accepted (RFC 7644 §3.14 makes entity tags a
+MAY). `active` drives the lifecycle state of the `PERSON` (RM common
+§Version Lifecycle):
+
+| Current state | `active` in the request | Result |
+|---|---|---|
+| `complete` or `incomplete` | `true` or left out | `complete` when the template holds in full, else `incomplete` |
+| `complete` | `false` | `inactive` |
+| `incomplete` | `false` | `abandoned` |
+| `inactive` | `true` | `complete`, or `incomplete` when the template does not hold |
+| `abandoned` | `true` | `incomplete`, then `complete` in a second version when the template holds |
+| `inactive` or `abandoned` | `false` or left out, with a change | **400** `invalidValue`: reactivate the User first |
+| `inactive` or `abandoned` | `false` or left out, without a change | **200**, no new version |
+
+An inactive or abandoned User is still read and found by a filter, so its
+client can reactivate it. When the second version of an `abandoned` User
+fails, the User stays `incomplete` and the same request completes it.
+
+The versions of a deleted User are kept for the record-keeping duties that
+need the professional's identification (GDPR Art. 6(1)(c), laid down in law
+as Art. 6(3) requires: in the Netherlands BW 7:454(3), twenty years, and the
+logging duty of the Besluit elektronische gegevensverwerking door
+zorgaanbieders). Outside the Netherlands, name your national retention
+provision. Enable the identity provider's protection against accidental
+deletions beside `max_deactivations`.
 
 ## `[access_delay]`
 

@@ -126,3 +126,52 @@ pub async fn users(
     }
     Ok((total, out))
 }
+
+/// Counts one deactivation or deletion of the client of `binding_issuer` on
+/// the write transaction `tx`.
+///
+/// The bound is `max` per window of `window_minutes`; `false` when the
+/// window already holds `max`, and nothing is counted.
+/// The client's row is read under `FOR UPDATE`, so two replicas counting at
+/// once queue on it and share one bound.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn count_deactivation(
+    tx: &mut PgConnection,
+    binding_issuer: &str,
+    max: u32,
+    window_minutes: u32,
+) -> Result<bool, StorageError> {
+    sqlx::query(
+        "INSERT INTO scim_deactivation (binding_issuer, window_start, counted) \
+         VALUES ($1, now(), 0) ON CONFLICT (binding_issuer) DO NOTHING",
+    )
+    .bind(binding_issuer)
+    .execute(&mut *tx)
+    .await?;
+    let row = sqlx::query(
+        "SELECT window_start + make_interval(mins => $2) <= now() AS expired, counted \
+         FROM scim_deactivation WHERE binding_issuer = $1 FOR UPDATE",
+    )
+    .bind(binding_issuer)
+    .bind(i32::try_from(window_minutes).unwrap_or(i32::MAX))
+    .fetch_one(&mut *tx)
+    .await?;
+    let expired: bool = row.try_get("expired")?;
+    let counted: i32 = if expired { 0 } else { row.try_get("counted")? };
+    if i64::from(counted) >= i64::from(max) {
+        return Ok(false);
+    }
+    sqlx::query(
+        "UPDATE scim_deactivation \
+         SET window_start = CASE WHEN $2 THEN now() ELSE window_start END, counted = $3 \
+         WHERE binding_issuer = $1",
+    )
+    .bind(binding_issuer)
+    .bind(expired)
+    .bind(counted.saturating_add(1))
+    .execute(&mut *tx)
+    .await?;
+    Ok(true)
+}

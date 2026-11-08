@@ -89,8 +89,7 @@ pub(crate) fn discovery(
     Discovery::build(DiscoveryConfig {
         base_url: scim.base_url().unwrap_or_default(),
         documentation_uri: None,
-        // TODO(#5014): declare PATCH once /Users serves it.
-        patch: false,
+        patch: true,
         etag: true,
         filter: FilterConfig {
             supported: true,
@@ -244,7 +243,7 @@ mod tests {
             ]
         );
         assert!(discovery.schema(urn::ENTERPRISE_USER).is_none());
-        assert!(!discovery.service_provider_config().patch.supported);
+        assert!(discovery.service_provider_config().patch.supported);
         assert!(discovery.service_provider_config().etag.supported);
     }
 
