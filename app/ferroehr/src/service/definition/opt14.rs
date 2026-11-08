@@ -222,6 +222,31 @@ impl FerroEhrService {
             .await
     }
 
+    /// The [`WebTemplate`] a composition commit naming `template_id` is
+    /// validated against: [`web_template`](Self::web_template), for an address
+    /// `template_ref` registers.
+    ///
+    /// RM `ARCHETYPED.template_id` names a template, and only a template is
+    /// registered, so a stored ADL2 archetype, which party templates may name
+    /// through [`web_template`](Self::web_template), is no commit address.
+    ///
+    /// # Errors
+    ///
+    /// - [`ServiceError::Unprocessable`] (ITS-REST `422`) when `template_id` is
+    ///   no registered template, as for an unknown one.
+    /// - Every error of [`web_template`](Self::web_template).
+    pub(crate) async fn commit_web_template(
+        &self,
+        template_id: &str,
+    ) -> Result<Arc<WebTemplate>, ServiceError> {
+        if !template_repo::template_ref_exists(&self.pool, template_id).await? {
+            return Err(ServiceError::content_invalid(Violation::new(format!(
+                "operational template not known: {template_id}"
+            ))));
+        }
+        self.web_template(template_id).await
+    }
+
     /// Generate an example COMPOSITION, or an example party for a demographic
     /// template, for a stored operational template
     /// (`GET /definition/template/adl1.4/{template_id}/example`).

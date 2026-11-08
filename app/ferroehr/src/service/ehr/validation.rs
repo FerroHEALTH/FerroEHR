@@ -213,7 +213,7 @@ impl FerroEhrService {
             .pointer("/archetype_details/template_id/value")
             .and_then(Value::as_str)
         {
-            let wt = self.web_template(template_id).await?;
+            let wt = self.commit_web_template(template_id).await?;
             messages.extend(run_validation_pass(hand_off, || {
                 if incomplete {
                     openehr_sdt::flat::validation::validate_archetype_conformance_incomplete(
