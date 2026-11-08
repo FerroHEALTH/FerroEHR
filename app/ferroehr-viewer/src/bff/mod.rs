@@ -18,6 +18,7 @@ pub mod ehr_detail;
 pub mod ehr_tags;
 pub mod ehrs;
 pub mod item_tags;
+pub mod login;
 pub mod system;
 pub mod template_adl2;
 pub mod template_detail;
@@ -33,7 +34,7 @@ use crate::error::ViewerError;
 pub struct Cdr {
     client: crate::cdr::CdrClient,
     credential: ferrohealth_session::record::Credential,
-    identity: String,
+    login: Option<login::Login>,
 }
 
 /// The handle of the session the request carries.
@@ -51,18 +52,23 @@ pub struct Cdr {
 /// page's session.
 pub fn cdr() -> Result<Cdr, ViewerError> {
     let session = crate::session::require_session()?;
+    let state = crate::scope::state()?;
     Ok(Cdr {
-        client: crate::scope::state()?.cdr,
+        login: login::Login::of(&session, &state.config.oidc.issuer),
+        client: state.cdr,
         credential: session.credential().clone(),
-        identity: crate::session::identity(&session),
     })
 }
 
 impl Cdr {
-    /// Who the session signed in as.
-    #[must_use]
-    pub fn identity(&self) -> &str {
-        &self.identity
+    /// The login the CDR authenticates the session as.
+    ///
+    /// # Errors
+    /// [`ViewerError::Internal`] for a bearer session without a verified `sub`.
+    pub fn login(&self) -> Result<&login::Login, ViewerError> {
+        self.login.as_ref().ok_or_else(|| {
+            ViewerError::Internal("the session carries no verified subject to commit as".to_owned())
+        })
     }
 
     /// A `GET` of `url`.

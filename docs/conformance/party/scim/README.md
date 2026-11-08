@@ -43,3 +43,11 @@ own client, because no two clients share a `binding_issuer`:
 Each lane loads the professional templates (`ferroehr definitions load`),
 starts `serve`, then runs `scripts/scim-provision.sh` with its client and
 users.
+
+The conformance harness (`scripts/conformance.sh`) provisions the catalogue's
+logins with `--name Veredictum`. They are the instrument's own logins, and
+the catalogue states its committer as `{_type: PARTY_IDENTIFIED, name:
+Veredictum}`. Giving the bound `PERSON` that name makes the stated committer
+the caller's own, which the server accepts and replaces with the committer it
+derives from the login. A committer naming anyone else is refused with `403`
+(#5002, reported upstream in #5019).

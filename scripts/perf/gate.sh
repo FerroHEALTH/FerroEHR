@@ -10,10 +10,13 @@
 # The server runs in a container of the image under test with
 # perf/ferroehr.toml as its configuration, its database in a container of the
 # FerroEHR PostgreSQL image, both on a network of their own; ferrohealth-perf
-# reads the server's cgroup and counts the transactions of its database. The
-# seed writes one EHR the reads use and never changes, one EHR the commits
-# write into, the lab-results template with a result, and a PERSON, and the
-# plan is rendered with their ids (perf/plan.toml, `@NAME@`).
+# reads the server's cgroup and counts the transactions of its database.
+# Before serve, the professional templates of deploy/definitions/professional/
+# are loaded, and once it is ready the Basic user is bound to a PERSON through
+# SCIM (scripts/scim-provision.sh). The seed writes one EHR the reads use and
+# never changes, one EHR the commits write into, the lab-results template with
+# a result, and a PERSON, and the plan is rendered with their ids
+# (perf/plan.toml, `@NAME@`).
 #
 # Usage:
 #   scripts/perf/gate.sh install                     the pinned ferrohealth-perf into target/tools/perf
@@ -53,7 +56,7 @@ OUT="${PERF_OUT:-$ROOT/target/perf}"
 readonly OUT
 
 usage() {
-  sed -n '18,26p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+  sed -n '21,29p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -120,17 +123,25 @@ up() { # <image> <pg-image>
     -e PG_INIT_DB=ferroehr "$pg_image" >/dev/null
   wait_for "PostgreSQL" 60 docker exec "$PG" pg_isready -h 127.0.0.1 -U ferroehr -d ferroehr
   STARTED=1
-  docker run -d --name "$SERVER" --network "$NETWORK" -p "127.0.0.1:${HTTP_PORT}:8080" \
-    --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true \
-    -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml \
-    -e "FERROEHR__DB__URL=postgres://ferroehr:ferroehr@${PG}:5432/ferroehr" \
-    -e FERROEHR__USAGE_REPORT__ENABLED=false \
-    -v "$ROOT/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro" \
+  local -a process=(--network "$NETWORK" --read-only --tmpfs /tmp --cap-drop ALL
+    --security-opt no-new-privileges:true
+    -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml
+    -e "FERROEHR__DB__URL=postgres://ferroehr:ferroehr@${PG}:5432/ferroehr"
+    -e FERROEHR__USAGE_REPORT__ENABLED=false
+    -v "$ROOT/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro"
+    -v "$ROOT/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
+    -v "$ROOT/deploy/definitions/professional:/etc/ferroehr/definitions:ro")
+  # The professional templates the party mapping names are stored before serve.
+  docker run --rm "${process[@]}" "$image" definitions load \
+    /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls \
+    /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls >/dev/null
+  docker run -d --name "$SERVER" -p "127.0.0.1:${HTTP_PORT}:8080" "${process[@]}" \
     "$image" >/dev/null
   SERVER_URL="http://127.0.0.1:${HTTP_PORT}"
   DATABASE_URL="postgres://postgres:postgres@127.0.0.1:${PG_PORT}/ferroehr"
   TARGET=(--container "$(docker inspect -f '{{.Id}}' "$SERVER")")
   wait_for "FerroEHR" 120 curl -fsS "$SERVER_URL/health/readiness"
+  bash "$ROOT/scripts/scim-provision.sh" "$SERVER_URL" basic-users ferroehr >/dev/null
 }
 
 # call <method> <path> <content-type> <body-file|-> <want-status>: the

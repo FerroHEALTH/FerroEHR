@@ -14,13 +14,17 @@
 # spec governs provisioning a lane: our own design.
 #
 # Usage:
-#   scripts/scim-provision.sh <base-url> <client-id> <user>[=<login-key>]...
+#   scripts/scim-provision.sh <base-url> <client-id> [--name <formatted>] <user>[=<login-key>]...
 #
 #   <base-url>   the server origin, such as http://localhost:8080
 #   <client-id>  the [[scim.client]] the token names; its binding_issuer
 #                issues every key this call provisions
 #   <user>       the SCIM userName; <login-key> is the binding key the login
 #                carries (loginIdentifier), the userName when omitted
+#   --name       the User's name.formatted, the PERSON's name the server
+#                writes as the committer it records (RFC 7643 §4.1.1); it
+#                applies to every <user> after it, and a User without one has
+#                no name
 #
 # Environment (each defaults to the dev lanes' SCIM issuer):
 #   SCIM_KEY_FILE   the RS256 private key (docs/conformance/party/scim/scim-test.key.pem)
@@ -31,7 +35,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scim-provision.sh <base-url> <client-id> <user>[=<login-key>]..." >&2
+  echo "usage: scim-provision.sh <base-url> <client-id> [--name <formatted>] <user>[=<login-key>]..." >&2
   exit 2
 }
 [[ $# -ge 3 ]] || usage
@@ -62,12 +66,23 @@ token="$header.$payload.$signature"
 body_file="$(mktemp)"
 trap 'rm -f "$body_file"' EXIT
 
-for entry in "$@"; do
+formatted=""
+while [[ $# -gt 0 ]]; do
+  if [[ "$1" == --name ]]; then
+    [[ $# -ge 3 ]] || usage
+    formatted="$2"
+    shift 2
+    continue
+  fi
+  entry="$1"
+  shift
   user="${entry%%=*}"
   key="${entry#*=}"
   body="$(jq -cn --arg user "$user" --arg key "$key" --arg ext "$extension" \
+    --arg formatted "$formatted" \
     '{schemas: ["urn:ietf:params:scim:schemas:core:2.0:User", $ext],
-      userName: $user, ($ext): {loginIdentifier: $key}}')"
+      userName: $user, ($ext): {loginIdentifier: $key}}
+     + (if $formatted == "" then {} else {name: {formatted: $formatted}} end)')"
   status="$(curl -sS -o "$body_file" -w '%{http_code}' -X POST \
     -H "Authorization: Bearer $token" -H 'Content-Type: application/scim+json' \
     --data "$body" "$base_url/scim/v2/Users")"

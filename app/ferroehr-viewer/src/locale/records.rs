@@ -58,8 +58,6 @@ crate::locale::messages! {
         ContributionNewAudit = "contribution-new-audit",
         /// `Contribution committed`
         ContributionCommitted = "contribution-committed",
-        /// `a committer is required on a CONTRIBUTION audit`
-        CommitterRequiredContributionAudit = "committer-required-contribution-audit",
         /// `stage at least one change before committing`
         StageLeastOneChangeBeforeCommitting = "stage-least-one-change-before-committing",
         /// `a creation commits a NEW versioned object, so it carries no preceding version`
@@ -494,8 +492,6 @@ crate::locale::messages! {
         ContributionCommit = "contribution-commit",
         /// `The CDR refused the contribution, so nothing was committed.`
         ContributionCommitRefused = "contribution-commit-refused",
-        /// `Leave empty to commit as { $name }`
-        ContributionCommitterPlaceholder = "contribution-committer-placeholder",
         /// `The composition to amend could not be read.`
         ContributionCompositionRefused = "contribution-composition-refused",
         /// `{ $count ->`
