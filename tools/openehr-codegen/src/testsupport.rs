@@ -1040,32 +1040,8 @@ pub fn decision_maps() -> Vec<DeclMap> {
                 })
                 .collect(),
         },
-        DeclMap {
-            map: "class_binding",
-            check_existence: true,
-            entries: overrides::CLASS_BINDINGS
-                .iter()
-                .map(|e| DeclEntry {
-                    key: e.class.to_string(),
-                    decision: format!("{} → {}", e.param, e.concrete),
-                    citation: e.citation.to_string(),
-                    reason: e.reason.to_string(),
-                })
-                .collect(),
-        },
-        DeclMap {
-            map: "elided_argument",
-            check_existence: true,
-            entries: overrides::ELIDED_ARGUMENTS
-                .iter()
-                .map(|e| DeclEntry {
-                    key: format!("{}.{}", e.class, e.property),
-                    decision: format!("{}<{}>", e.root, e.arguments.join(", ")),
-                    citation: e.citation.to_string(),
-                    reason: e.reason.to_string(),
-                })
-                .collect(),
-        },
+        decision_checks::class_binding_map(),
+        decision_checks::elided_argument_map(),
         DeclMap {
             map: "type_override",
             check_existence: true,

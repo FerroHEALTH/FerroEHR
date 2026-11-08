@@ -34,7 +34,7 @@
 
 use crate::analyze::{External, Model, emittable_specs};
 use crate::load::bmm::BmmSchema;
-use crate::plan::overrides::restore_elided_arguments;
+use crate::plan::elided_arguments::restore_elided_arguments;
 use std::collections::BTreeMap;
 use std::path::Path;
 
@@ -423,8 +423,8 @@ pub(crate) fn lookup(key: &str) -> Result<&'static CrateComposition, Box<dyn std
 }
 
 /// Load and parse one vendored BMM file (relative to [`VENDOR`]), with the
-/// generic arguments [`ELIDED_ARGUMENTS`](crate::plan::overrides::ELIDED_ARGUMENTS)
-/// restores.
+/// generic arguments
+/// [`ELIDED_ARGUMENTS`](crate::plan::elided_arguments::ELIDED_ARGUMENTS) restores.
 ///
 /// # Errors
 /// Returns an error if the file cannot be read or parsed, or declares an
@@ -444,7 +444,7 @@ pub(crate) struct ComposedUnit {
     /// The table row this unit was resolved from.
     pub spec: &'static GenerationUnit,
     /// This unit's own schema: one vendored file, with the elided generic
-    /// arguments `plan::overrides::ELIDED_ARGUMENTS` restores.
+    /// arguments `plan::elided_arguments::ELIDED_ARGUMENTS` restores.
     pub schema: BmmSchema,
     /// The merged resolution model (the generation's dependency schemas,
     /// then this unit alone) — a class of one unit never resolves an

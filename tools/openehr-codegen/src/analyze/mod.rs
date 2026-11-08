@@ -352,9 +352,9 @@ impl Model {
             .iter()
             .map(|g| g.name.as_str())
             .collect();
-        // NOTE: an argument the BMM drops (`IMPORTED_VERSION.item: ORIGINAL_VERSION`)
-        // is restored at load from the cited `plan::overrides::ELIDED_ARGUMENTS`, so a
-        // parameter is used only where it appears literally.
+        // NOTE: an argument the BMM drops (`IMPORTED_VERSION.item: ORIGINAL_VERSION`) is
+        // restored at load from the cited `plan::elided_arguments::ELIDED_ARGUMENTS`,
+        // so a parameter is used only where it appears literally.
         let mut used = BTreeSet::new();
         for rp in self.flattened_props(class) {
             match &rp.prop.kind {
