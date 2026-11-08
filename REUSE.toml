@@ -162,6 +162,16 @@ precedence = "override"
 SPDX-FileCopyrightText = ["openEHR Foundation", "Cadasto B.V."]
 SPDX-License-Identifier = "CC-BY-SA-3.0"
 
+# The professional PERSON and ROLE definitions the lanes load before `serve`
+# are repo-authored adaptations of openEHR CKM archetypes (CC-BY-SA 3.0), so
+# they carry that licence and both copyright holders. Their PROVENANCE.md
+# names each source archetype and every change.
+[[annotations]]
+path = "deploy/definitions/professional/*.adls"
+precedence = "override"
+SPDX-FileCopyrightText = ["openEHR Foundation", "Cadasto B.V."]
+SPDX-License-Identifier = "CC-BY-SA-3.0"
+
 # Three BMM reference models inside that set are offered by their authors under
 # a Mozilla Public License 1.1 / GPL 2.0 / LGPL 2.1 TRI-LICENCE. This project
 # TAKES THEM UNDER MPL-1.1 — the election is recorded in that corpus's

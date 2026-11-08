@@ -6,9 +6,10 @@ migrations (`db::run_migrations`) → ATNA audit sender → `FerroEhrService` �
 `ferroehr_rest::serve_full`, plus graceful shutdown (the audit queue drains
 before exit), the detached usage-report task (started after the service is
 assembled, aborted at shutdown) and the family's `serve`/`config check`/`healthcheck`
-(`ferrohealth_server::cli::Common`, flattened) beside FerroEHR's `db`/`usage-report`/`report`
-subcommands (`db` = `migrate`, `verify`, and `erase`, whose dry run and
-confirmation live in `ferroehr::decommission`); `src/main.rs` is a
+(`ferrohealth_server::cli::Common`, flattened) beside FerroEHR's `db`/`definitions`/`party-binding`/`usage-report`/`report`
+subcommands (`db` = `migrate`, `verify`, and `erase` in `src/db_cmd.rs`, whose dry run and
+confirmation live in `ferroehr::decommission`; `definitions load` in
+`src/definitions.rs` over `ferroehr::service::definition::load`); `src/main.rs` is a
 thin `ferroehr_server::run(Cli::parse())` shell and must stay that way (a
 bin-only crate is untestable by construction — Book ch11.3).
 
