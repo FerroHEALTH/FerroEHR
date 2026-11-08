@@ -337,6 +337,17 @@ That starts **Keycloak** with a small demo realm (`ferroehr`) defined inline and
 points the server's bearer validation at it. Basic auth from the base file keeps
 working, so the server then advertises `Basic, Bearer`.
 
+The overlay adds the realm's `[[auth.party]]` table, which changes the party
+mapping. On a volume the base quickstart already started, the server refuses
+to boot on the changed mapping until the binding side table is refilled, so
+add or remove the overlay with the server stopped and refill first:
+
+```shell
+docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up -d keycloak
+docker compose -f docker-compose.yml -f docker-compose.keycloak.yml stop ferroehr
+docker compose -f docker-compose.yml -f docker-compose.keycloak.yml run --rm --no-deps ferroehr party-binding refill
+```
+
 The server accepts a token issuer only over HTTPS, or plain HTTP on a loopback
 host, so Keycloak serves the issuer over TLS at
 `https://keycloak.localhost:8443/auth/realms/ferroehr`. The containers resolve
