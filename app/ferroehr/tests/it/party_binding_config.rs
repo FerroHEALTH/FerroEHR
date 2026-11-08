@@ -472,6 +472,30 @@ fn every_agreement_needs_a_caller_rate_and_patient_reads() {
     );
 }
 
+/// An NL agreement declares its purpose, and boot refuses one for a keuring,
+/// whose keurend arts has no access to an exchange system (Wabvpz
+/// Art. 15f(2), #5107).
+#[test]
+fn an_nl_agreement_for_a_keuring_or_without_a_purpose_is_refused() {
+    let nl = |purpose: &str| {
+        with(
+            "jurisdiction = \"DE\"",
+            &format!("jurisdiction = \"NL\"\nconsent = \"local\"\n{purpose}"),
+        )
+    };
+    let text = refusal(&nl(""));
+    assert!(
+        text.contains("is an NL agreement and needs purpose"),
+        "{text}"
+    );
+    let text = refusal(&nl("purpose = \"keuring\""));
+    assert!(text.contains("is an NL agreement for a keuring"), "{text}");
+    assemble(&nl("purpose = \"care\""))
+        .expect("assembles")
+        .validate()
+        .expect("an NL agreement for care loads");
+}
+
 #[test]
 fn a_namespace_outside_the_object_ref_pattern_is_refused() {
     let text = refusal(&with(

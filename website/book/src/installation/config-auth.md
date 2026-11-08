@@ -426,6 +426,7 @@ own accessor kind; every agreement is listed on the boot line and in
 | `name`, `version` | string | `""` | The agreement; required for an organisation. |
 | `jurisdiction` | ISO 3166-1 alpha-2 | `""` | An issuer with `profile = "nl"` implies `NL`. |
 | `exchange` | string | `""` | The kind of exchange the agreement covers. |
+| `purpose` | `care` or `keuring` | unset | What the exchange is for. Required for every NL agreement, and an NL agreement for a `keuring` (a medical examination for employment, insurance or a licence) refuses the start, since a keurend arts has no access to an exchange system (Wabvpz Art. 15f(2)). |
 | `legal_ground` | `{ gdpr_6_1, gdpr_9_2, national }` | unset | The GDPR Art. 6(1) point (`a` to `f`), the Art. 9(2) point (`a` to `j`) and the national provision; in the Netherlands Art. 9(2)(h) with UAVG Art. 30(3)(a). Required for an organisation. |
 | `consent` | `mitz` or `local` | unset | The source of the consent the exchange is conditioned on, never its legal ground. A read under it needs the consent decision reference the token carries in the field its `[[auth.federation]]` table maps to `consent.reference`, and is refused with `403` without it. Required for every NL agreement with `reads` (Wabvpz Art. 15a(1)); an organisation may not take it from Mitz, whose closed question needs a responsible professional. |
 | `reads` | list of `patient/` scopes | `[]` | The most an external caller may read; a `user/` or `system/` scope refuses the start. |

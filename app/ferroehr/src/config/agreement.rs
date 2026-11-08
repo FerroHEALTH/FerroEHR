@@ -55,6 +55,9 @@ pub struct Agreement {
     pub jurisdiction: String,
     /// The kind of exchange the agreement covers.
     pub exchange: String,
+    /// What the exchange is for; required of an NL agreement, which may not
+    /// serve a keuring (Wabvpz Art. 15f(2)).
+    pub purpose: Option<Purpose>,
     /// The legal ground of the processing.
     pub legal_ground: Option<LegalGround>,
     /// The source of the consent the exchange is conditioned on, never its
@@ -92,6 +95,7 @@ impl Default for Agreement {
             version: String::new(),
             jurisdiction: String::new(),
             exchange: String::new(),
+            purpose: None,
             legal_ground: None,
             consent: None,
             reads: Vec::new(),
@@ -134,6 +138,17 @@ pub enum AccessClass {
     /// The requester logs the person behind each request, and each request
     /// carries the requester's correlation id as an attested claim.
     Chained,
+}
+
+/// What an agreement's exchange is for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Purpose {
+    /// The care of the patient by the requesting care provider.
+    Care,
+    /// A keuring: a medical examination for employment, insurance or a
+    /// licence, as the Wet op de medische keuringen governs.
+    Keuring,
 }
 
 /// Where the consent an exchange is conditioned on is registered.
@@ -273,6 +288,18 @@ fn common(agreement: &Agreement, auth: &AuthSection, name: &str, errors: &mut Ve
             "{name} is an NL agreement with reads and needs consent = \"mitz\" or \"local\" \
              (Wabvpz Art. 15a(1))"
         ));
+    }
+    if jurisdiction == NL {
+        match agreement.purpose {
+            Some(Purpose::Care) => {}
+            Some(Purpose::Keuring) => errors.push(format!(
+                "{name} is an NL agreement for a keuring, which has no access to an exchange \
+                 system (Wabvpz Art. 15f(2))"
+            )),
+            None => errors.push(format!(
+                "{name} is an NL agreement and needs purpose = \"care\" (Wabvpz Art. 15f(2))"
+            )),
+        }
     }
 }
 

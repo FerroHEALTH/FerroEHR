@@ -74,12 +74,18 @@ pub enum BindingCode {
     /// Refused: a `chained` organisation request carries no attested
     /// correlation id.
     RefusedCorrelationMissing,
+    /// Refused: an NL agreement's caller asserts the UZI role of an
+    /// occupational or insurance physician (Wabvpz Art. 15f(2)).
+    RefusedWabvpzRole,
+    /// Refused: an NL agreement's caller asserts no care provider type
+    /// (Wabvpz Art. 15f(1)).
+    RefusedWabvpzOrganisationType,
 }
 
 impl BindingCode {
     /// Every code, in the order the `ck_audit_event_binding` constraint lists
     /// them.
-    pub const ALL: [Self; 23] = [
+    pub const ALL: [Self; 25] = [
         Self::Bound,
         Self::Provisional,
         Self::External,
@@ -103,6 +109,8 @@ impl BindingCode {
         Self::RefusedNoAgreement,
         Self::RefusedScopeBeyondAgreement,
         Self::RefusedCorrelationMissing,
+        Self::RefusedWabvpzRole,
+        Self::RefusedWabvpzOrganisationType,
     ];
 
     /// Whether a refusal under this code is a security event, recorded once
@@ -143,6 +151,8 @@ impl BindingCode {
             Self::RefusedNoAgreement => "refused-no-agreement",
             Self::RefusedScopeBeyondAgreement => "refused-scope-beyond-agreement",
             Self::RefusedCorrelationMissing => "refused-correlation-missing",
+            Self::RefusedWabvpzRole => "refused-wabvpz-role",
+            Self::RefusedWabvpzOrganisationType => "refused-wabvpz-organisation-type",
         }
     }
 

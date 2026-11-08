@@ -576,6 +576,13 @@ precedence = "override"
 SPDX-FileCopyrightText = "Logius"
 SPDX-License-Identifier = "CC-BY-4.0 OR W3C-20150513"
 
+# Nictiz's zib 2020 package excerpt: the CC0 1.0 its package manifest states.
+[[annotations]]
+path = "docs/specs/nl-role-codes/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Nictiz"
+SPDX-License-Identifier = "CC0-1.0"
+
 # The provenance records of those trees, the cache-only records of the Mitz
 # document, DICOM PS3.15 and the Independent Submission RFCs, and the record
 # of the ISO standards, are first-party prose about the material. Placed LAST:
@@ -599,6 +606,7 @@ path = [
   "docs/specs/rfc-independent/PROVENANCE.md",
   "docs/specs/iso-health-informatics/PROVENANCE.md",
   "docs/specs/nen-7513-sources/PROVENANCE.md",
+  "docs/specs/nl-role-codes/PROVENANCE.md",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "Cadasto B.V."

@@ -32,6 +32,7 @@ docs/specs/nuts-rfc/** -text
 docs/specs/ihe-balp/** -text
 docs/specs/fhir-auditevent/** -text
 docs/specs/nen-7513-sources/** -text
+docs/specs/nl-role-codes/** -text
 
 # Binary assets
 *.png  binary

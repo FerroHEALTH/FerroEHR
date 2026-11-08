@@ -119,8 +119,14 @@ profile, and the server acts on the kind:
     (a coded value refuses the token with `401`), and its `patient/` grant
     holds it to the launch-context patient. A read without it is refused with
     `403`, and the access record carries the reference with the other
-    external fields. Every request on openEHR data under an NL agreement is
-    refused until the Wabvpz Art. 15f roles can be read;
+    external fields;
+  - under an NL agreement, Wabvpz Art. 15f holds an insurer and an
+    occupational or insurance physician out. A caller whose `nl.role` is the
+    UZI role 01.008 (bedrijfsarts) or 01.048 (verzekeringsarts) is refused
+    with `403` as `refused-wabvpz-role`, and a caller whose
+    `nl.organisation_type` is missing or is not a care provider type of
+    Nictiz's `OrganisatieTypeCodelijst` is refused with `403` as
+    `refused-wabvpz-organisation-type`, which is how an insurer is refused;
   - a `chained` organisation request carries the requester's correlation id
     in the claim or attested `authorization_details` member its
     `[[auth.federation]]` table maps to `correlation_id`, as one string; a
