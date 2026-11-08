@@ -706,6 +706,7 @@ fn contact_point_token(certificate: &ClientCertificate) -> String {
             "assertion": {
                 "issuer": "https://ncp-b.example",
                 "id": "urn:uuid:ida-1",
+                "name_id_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:X509SubjectName",
                 "not_before": now - 60,
                 "not_on_or_after": now + 3600
             },

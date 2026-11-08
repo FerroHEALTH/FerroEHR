@@ -12,8 +12,13 @@
 //! under its issuing authority beside the login the federation issuer vouched
 //! for, and the write names the provider in `EVENT_CONTEXT.health_care_facility`.
 //! The `"<country_code>:<issuing_authority_name>"` issuer and its
-//! normalisation are our own design (#5005); the MyHealth@EU forms are #5144.
+//! normalisation are our own design (#5005). On the MyHealth@EU route the
+//! professional's identifier is the HP Identity Assertion's `NameID` under the
+//! assertion's issuer, typed by its format, because one string under two
+//! formats names two identifiers (eHDSI SAML Profile 10.0.0 §2.1), and the
+//! point of care adds the HCPO's `organization-id` (§2.3).
 
+use ferrohealth_smart::federation::contact::NameId;
 use openehr_rm::prelude::{DvIdentifier, PartyIdentified, PartyIdentifiedData, PartyProxy};
 use unicode_normalization::UnicodeNormalization;
 
@@ -50,6 +55,11 @@ pub struct ExternalProfessional {
     /// The permissions the HP Identity Assertion carries (eHDSI SAML Profile
     /// 10.0.0 §2.3, `urn:oasis:names:tc:xspa:1.0:subject:hl7:permission`).
     pub permissions: Vec<String>,
+    /// The HP Identity Assertion's `NameID` with its format, on the
+    /// MyHealth@EU route.
+    pub name_id: Option<NameId>,
+    /// The HP Identity Assertion's issuer, on the MyHealth@EU route.
+    pub assertion_issuer: Option<String>,
 }
 
 impl std::fmt::Debug for ExternalProfessional {
@@ -62,16 +72,65 @@ impl std::fmt::Debug for ExternalProfessional {
 /// The committer of the external person `professional` whose token `identity` carries.
 ///
 /// It is `PARTY_IDENTIFIED{name, identifiers = [the professional's
-/// identifier, the token's issuer and subject]}` with no `external_ref`.
+/// identifier, the token's issuer and subject]}` with no `external_ref`. The
+/// professional's identifier is [`professional_identifier`].
+///
+/// # Errors
+/// As [`professional_identifier`].
+pub fn committer(
+    identity: &CommitterIdentity,
+    professional: &ExternalProfessional,
+) -> Result<PartyProxy, ServiceError> {
+    let mut identifiers =
+        openehr_base::containers::NonEmptyVec::of(professional_identifier(professional)?);
+    identifiers.push(DvIdentifier {
+        issuer: identity.issuer.clone(),
+        assigner: None,
+        id: identity.subject.clone(),
+        r#type: Some(identity.id_type.to_owned()),
+    });
+    Ok(PartyProxy::PartyIdentified(
+        PartyIdentified::PartyIdentified(PartyIdentifiedData {
+            external_ref: None,
+            name: professional.name.clone(),
+            identifiers: Some(identifiers),
+        }),
+    ))
+}
+
+/// The professional's identifier in an external committer.
+///
+/// On a domestic route it is `{issuer = "<country_code>:<issuing_authority_name>",
+/// id = hp_identifier, type = "hp_identifier"}`. On the MyHealth@EU route it
+/// is `{issuer = the IdA's issuer, id = the IdA NameID, type =
+/// "hp_identifier:<NameID format>"}`.
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) naming the field that is missing, a
 /// country code that is no upper-case ISO 3166-1 alpha-2 code, or an issuing
 /// authority that holds a `:`, a control or a bidi character.
-pub fn committer(
-    identity: &CommitterIdentity,
+pub fn professional_identifier(
     professional: &ExternalProfessional,
-) -> Result<PartyProxy, ServiceError> {
+) -> Result<DvIdentifier, ServiceError> {
+    if professional.contact_point {
+        let name_id = professional.name_id.as_ref().ok_or_else(|| {
+            refused(
+                "assertion.name_id_format",
+                "the contact point's token carries no NameID with one of the eHDSI SAML \
+                 Profile 10.0.0 §2.1 formats",
+            )
+        })?;
+        let issuer = required(professional.assertion_issuer.as_deref(), "assertion.issuer")?;
+        return Ok(DvIdentifier {
+            issuer: Some(issuer.to_owned()),
+            assigner: None,
+            id: name_id.value().to_owned(),
+            r#type: Some(format!(
+                "{HP_IDENTIFIER_TYPE}:{}",
+                name_id.format().as_str()
+            )),
+        });
+    }
     let hp_identifier = required(
         professional.hp_identifier.as_deref(),
         "professional.hp_identifier",
@@ -87,25 +146,12 @@ pub fn committer(
         )?,
         "professional.issuing_authority_name",
     )?;
-    let mut identifiers = openehr_base::containers::NonEmptyVec::of(DvIdentifier {
+    Ok(DvIdentifier {
         issuer: Some(format!("{country}:{authority}")),
         assigner: None,
         id: hp_identifier.to_owned(),
         r#type: Some(HP_IDENTIFIER_TYPE.to_owned()),
-    });
-    identifiers.push(DvIdentifier {
-        issuer: identity.issuer.clone(),
-        assigner: None,
-        id: identity.subject.clone(),
-        r#type: Some(identity.id_type.to_owned()),
-    });
-    Ok(PartyProxy::PartyIdentified(
-        PartyIdentified::PartyIdentified(PartyIdentifiedData {
-            external_ref: None,
-            name: professional.name.clone(),
-            identifiers: Some(identifiers),
-        }),
-    ))
+    })
 }
 
 /// The `(issuer, id)` the facility of an external write must carry: the
@@ -261,6 +307,8 @@ mod tests {
             provider_authority: Some("Registry".to_owned()),
             contact_point: false,
             permissions: Vec::new(),
+            name_id: None,
+            assertion_issuer: None,
         }
     }
 
@@ -403,5 +451,19 @@ mod tests {
         ])));
         assert!(!may_dispense(&with(&["PRD-010"])));
         assert!(!may_dispense(&with(&["XPPD-046"])));
+    }
+
+    #[test]
+    fn a_contact_points_committer_needs_the_nameid_with_its_format() {
+        let relayed = ExternalProfessional {
+            contact_point: true,
+            assertion_issuer: Some("https://ncp-b.example".to_owned()),
+            ..professional()
+        };
+        let error = committer(&identity(), &relayed).expect_err("no NameID");
+        assert!(
+            error.to_string().contains("assertion.name_id_format"),
+            "{error}"
+        );
     }
 }

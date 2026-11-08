@@ -269,6 +269,8 @@ fn professional(external: &External) -> ExternalProfessional {
         provider_identifier: text(Field::ProviderHealthcareProviderIdentifier),
         provider_authority: text(Field::ProviderIssuingAuthorityName),
         contact_point: false,
+        name_id: external.name_id(),
+        assertion_issuer: text(Field::AssertionIssuer),
         permissions: external.field(Field::ProfessionalPermissions).map_or_else(
             Vec::new,
             |permissions| {
