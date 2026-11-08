@@ -103,8 +103,10 @@ if [[ -z "${FERROEHR_POSTGRES_IMAGE:-}" ]]; then
 fi
 
 compose_down
-bold "bringing the stack up (postgres + CDR + seaweedfs + init)"
-compose_up ferroehr seaweedfs seaweedfs-init
+bold "bringing the stack up (postgres + CDR + seaweedfs + init + the Basic user's provisioning)"
+# A login no demographic party carries is refused, so the Basic user is bound
+# through SCIM before any probe calls with it.
+compose_up ferroehr seaweedfs seaweedfs-init ferroehr-provision
 
 # One family, or all of them. The terminology family needs a licensed release
 # and ~8 GB, so its CI lane runs it alone rather than paying for every other
