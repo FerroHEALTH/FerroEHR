@@ -66,7 +66,7 @@ pub(super) struct JoinRequest<'a> {
     /// The AQL text as submitted.
     pub(super) aql: &'a str,
     /// The stored-query name for the result metadata, `None` for ad hoc.
-    pub(super) name: Option<&'a str>,
+    pub(super) name: Option<&'a openehr_its::rest::stored_query::QualifiedQueryName>,
     /// The paging, binds and scope of the execution.
     pub(super) request: &'a AqlQueryRequest,
     /// The two halves.

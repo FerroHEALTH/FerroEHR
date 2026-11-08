@@ -20,6 +20,7 @@ use http::HeaderMap;
 use openehr_its::rest::generated::query::{
     Query as StoredQueryBody, QueryExecuteStoredQueryParams, QueryExecuteStoredQueryVersionParams,
 };
+use openehr_its::rest::runtime::ApiError;
 
 use ferroehr::service::query::request::{AqlQueryRequest, QueryOutcome};
 
@@ -70,7 +71,7 @@ pub(super) async fn post(
 ) -> Result<QueryOutcome, RestError> {
     let h = &parts.headers;
     let q = parts.query.as_deref();
-    let name = response::path_segment(parts, "qualified_query_name")?;
+    let name = typed_segment(parts, "qualified_query_name")?;
     let request = scope.apply(stored_body_request(q, h, &parts.body)?);
     Ok(state
         .backend()
@@ -111,13 +112,29 @@ pub(super) async fn version_post(
 ) -> Result<QueryOutcome, RestError> {
     let h = &parts.headers;
     let q = parts.query.as_deref();
-    let name = response::path_segment(parts, "qualified_query_name")?;
-    let version = response::path_segment(parts, "version")?;
+    let name = typed_segment(parts, "qualified_query_name")?;
+    let version = typed_segment(parts, "version")?;
     let request = scope.apply(stored_body_request(q, h, &parts.body)?);
     Ok(state
         .backend()
         .execute_stored_query(name, Some(version), request)
         .await?)
+}
+
+/// The path parameter `key` read by its ITS-REST grammar
+/// (`openehr_its::rest::stored_query`), a value outside it a `400`.
+fn typed_segment<T>(parts: &RequestParts, key: &str) -> Result<T, RestError>
+where
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+{
+    response::path_segment(parts, key)?
+        .parse()
+        .map_err(|refusal| {
+            RestError::from(ApiError::BadRequest(format!(
+                "path parameter `{key}`: {refusal}"
+            )))
+        })
 }
 
 /// Build the request for a stored-query `POST` body (`Query` schema: `offset`,

@@ -29,8 +29,11 @@ use uuid::Uuid;
 
 use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
-use crate::party_binding::{BindingMapping, IdentifierSelector};
+use crate::party_binding::BindingMapping;
+use crate::party_binding::derive::Facts;
+use crate::party_binding::store::parsed;
 use crate::versioning::Kind;
+use crate::versioning::change::Committed;
 
 task_local! {
     /// The key change the running administrator re-key may make.
@@ -99,8 +102,11 @@ impl Protected {
 /// Judges the commit of the party `vo_id` of `kind`, whose new head the
 /// commit transaction `tx` has just written, against the protection rules.
 ///
-/// It reads the new head and the version before it, so it runs after the
-/// write and before the side-table rows are rebuilt.
+/// It reads the new head from `facts`, what the committed body holds (`None`
+/// for a logical delete), and the version before it from storage: a
+/// `PERSON`'s body, and only the template of a `ROLE` or a `GROUP`, so a
+/// change to a large `GROUP` parses no body (#5220). It runs after the write
+/// and before the side-table rows are rebuilt.
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) when a caller who is neither an
@@ -112,9 +118,10 @@ impl Protected {
 pub(crate) async fn check(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
-    kind: Kind,
-    vo_id: VoId,
+    committed: &Committed,
+    facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
+    let (kind, vo_id) = (committed.kind, committed.vo_id);
     if mapping.is_empty() || !matches!(kind, Kind::Person | Kind::Role | Kind::Group) {
         return Ok(());
     }
@@ -123,9 +130,10 @@ pub(crate) async fn check(
         Some(sys_version) => read(tx, mapping, kind, vo_id, sys_version).await?,
         None => Protected::default(),
     };
-    let after = match current {
-        Some(sys_version) => read(tx, mapping, kind, vo_id, sys_version).await?,
-        None => Protected::default(),
+    let after = match (current, facts) {
+        (Some(_), Some(facts)) => protected(mapping, kind, facts),
+        (Some(sys_version), None) => read(tx, mapping, kind, vo_id, sys_version).await?,
+        (None, _) => Protected::default(),
     };
     if !(before.protected() || after.protected()) {
         return Ok(());
@@ -137,7 +145,7 @@ pub(crate) async fn check(
                 tx,
                 mapping,
                 (kind, vo_id, held),
-                &[&before, &after],
+                (&[&before, &after], facts),
                 &issuer,
             )
             .await?
@@ -214,7 +222,7 @@ async fn owned(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
     (kind, vo_id, held): (Kind, VoId, [Option<i32>; 2]),
-    versions: &[&Protected],
+    (versions, facts): (&[&Protected], Option<&Facts>),
     issuer: &str,
 ) -> Result<bool, ServiceError> {
     let keyed_by_client = |protected: &[&Protected]| {
@@ -224,7 +232,7 @@ async fn owned(
     match kind {
         Kind::Person => Ok(keyed_by_client(versions)),
         Kind::Role => {
-            let performers = performers(tx, vo_id, held).await?;
+            let performers = performers(tx, vo_id, held, facts).await?;
             if performers.is_empty() {
                 return Ok(false);
             }
@@ -271,8 +279,10 @@ async fn person_of(
     let Some(sys_version) = last_body(tx, person).await? else {
         return Ok(false);
     };
-    let protected = read(tx, mapping, Kind::Person, person, sys_version).await?;
-    let keys = protected.keys();
+    let keys = match body(tx, person, sys_version).await? {
+        Some(body) => parsed(Kind::Person, &body, mapping)?.keys(),
+        None => BTreeSet::new(),
+    };
     Ok(!keys.is_empty() && keys.iter().all(|(of, _)| of == issuer))
 }
 
@@ -287,38 +297,15 @@ async fn removed_members(
     vo_id: VoId,
     (current, previous): (i32, i32),
 ) -> Result<Option<Vec<String>>, ServiceError> {
-    let row = sqlx::query(
-        "WITH b AS (SELECT v.body::jsonb AS j FROM version v \
-                    WHERE v.vo_id = $1 AND v.sys_version = $3), \
-              a AS (SELECT v.body::jsonb AS j FROM version v \
-                    WHERE v.vo_id = $1 AND v.sys_version = $2), \
-              br AS (SELECT r.x FROM b, jsonb_array_elements( \
-                        CASE WHEN jsonb_typeof(b.j -> 'relationships') = 'array' \
-                             THEN b.j -> 'relationships' ELSE '[]'::jsonb END) AS r(x)), \
-              ar AS (SELECT r.x FROM a, jsonb_array_elements( \
-                        CASE WHEN jsonb_typeof(a.j -> 'relationships') = 'array' \
-                             THEN a.j -> 'relationships' ELSE '[]'::jsonb END) AS r(x)) \
-         SELECT (SELECT j - 'relationships' - 'uid' FROM b) \
-                    = (SELECT j - 'relationships' - 'uid' FROM a) \
-                AND NOT EXISTS (SELECT 1 FROM ar WHERE ar.x NOT IN (SELECT x FROM br)) \
-                    AS only_removes, \
-                ARRAY(SELECT br.x -> 'target' -> 'id' ->> 'value' FROM br \
-                      WHERE br.x NOT IN (SELECT x FROM ar)) AS removed",
-    )
-    .bind(vo_id)
-    .bind(current)
-    .bind(previous)
-    .fetch_one(&mut *tx)
-    .await?;
-    if !row
-        .try_get::<Option<bool>, _>("only_removes")?
-        .unwrap_or(false)
-    {
+    let (Some(after), Some(before)) = (
+        body(tx, vo_id, current).await?,
+        body(tx, vo_id, previous).await?,
+    ) else {
         return Ok(None);
-    }
-    let removed: Vec<Option<String>> = row.try_get("removed")?;
-    let removed: Option<Vec<String>> = removed.into_iter().collect();
-    Ok(removed.filter(|removed| !removed.is_empty()))
+    };
+    Ok(crate::party_binding::derive::removed_relationships(
+        &before, &after,
+    )?)
 }
 
 /// The `PARTY_REF.id` values the versions `held` of the `ROLE` `vo_id` name
@@ -327,24 +314,50 @@ async fn performers(
     tx: &mut PgConnection,
     vo_id: VoId,
     held: [Option<i32>; 2],
+    facts: Option<&Facts>,
 ) -> Result<BTreeSet<String>, ServiceError> {
-    let held: Vec<i32> = held.into_iter().flatten().collect();
-    let rows = sqlx::query(
-        "SELECT v.body::jsonb -> 'performer' -> 'id' ->> 'value' AS performer FROM version v \
-         WHERE v.vo_id = $1 AND v.sys_version = ANY($2::int4[]) AND v.body IS NOT NULL",
-    )
-    .bind(vo_id)
-    .bind(&held)
-    .fetch_all(&mut *tx)
-    .await?;
+    let [current, previous] = held;
     let mut out = BTreeSet::new();
-    for row in rows {
+    let mut read = |facts: &Facts| {
         // NOTE: RM demographic `role.adoc`: `performer` is 1..1, so a version without one names nobody.
-        if let Some(performer) = row.try_get::<Option<String>, _>("performer")? {
-            out.insert(performer);
+        if let Some(performer) = &facts.performer {
+            out.insert(performer.clone());
         }
+    };
+    match (current, facts) {
+        (Some(_), Some(facts)) => read(facts),
+        (Some(sys_version), None) => {
+            if let Some(body) = body(tx, vo_id, sys_version).await? {
+                read(&parsed(Kind::Role, &body, &BindingMapping::default())?);
+            }
+        }
+        (None, _) => {}
+    }
+    if let Some(sys_version) = previous
+        && let Some(body) = body(tx, vo_id, sys_version).await?
+    {
+        read(&parsed(Kind::Role, &body, &BindingMapping::default())?);
     }
     Ok(out)
+}
+
+/// The stored body of the version `sys_version` of `vo_id`, `None` when it
+/// holds none.
+async fn body(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+    sys_version: i32,
+) -> Result<Option<String>, ServiceError> {
+    Ok(
+        sqlx::query_scalar(
+            "SELECT v.body FROM version v WHERE v.vo_id = $1 AND v.sys_version = $2",
+        )
+        .bind(vo_id)
+        .bind(sys_version)
+        .fetch_optional(&mut *tx)
+        .await?
+        .flatten(),
+    )
 }
 
 /// The `sys_version` of the last version of `vo_id` that holds a body.
@@ -405,7 +418,8 @@ async fn versions(
 }
 
 /// What the version `sys_version` of the party `vo_id` of `kind` holds that
-/// is protected.
+/// is protected: a `PERSON`'s from its stored body, and a `ROLE`'s or a
+/// `GROUP`'s from the template its root node names, which reads no body.
 async fn read(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
@@ -413,89 +427,64 @@ async fn read(
     vo_id: VoId,
     sys_version: i32,
 ) -> Result<Protected, ServiceError> {
-    let row = sqlx::query(
-        "SELECT lower(btrim(v.body::jsonb -> 'archetype_details' -> 'template_id' ->> 'value')) \
-                    AS template, \
-                $3::text IS NOT NULL AND EXISTS ( \
-                    SELECT 1 FROM jsonb_array_elements( \
-                        CASE WHEN jsonb_typeof(v.body::jsonb -> 'relationships') = 'array' \
-                             THEN v.body::jsonb -> 'relationships' ELSE '[]'::jsonb END) AS r(rel) \
-                    WHERE lower(r.rel ->> 'archetype_node_id') = $3) AS represents \
-         FROM version v WHERE v.vo_id = $1 AND v.sys_version = $2",
+    if kind == Kind::Person {
+        return Ok(match body(tx, vo_id, sys_version).await? {
+            Some(body) => protected(mapping, kind, &parsed(kind, &body, mapping)?),
+            None => Protected::default(),
+        });
+    }
+    let template: Option<String> = sqlx::query_scalar(
+        "SELECT CASE WHEN n.rm_version IS NULL OR (n.data -> 'archetype_details') IS NOT NULL \
+                     THEN n.data -> 'archetype_details' \
+                     ELSE ext.node_archetype_details(n.archetype, n.rm_version, v.template_id) \
+                END -> 'template_id' ->> 'value' \
+         FROM version v \
+         JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id \
+                    AND n.sys_version = v.content_key AND n.num = 0 \
+         WHERE v.vo_id = $1 AND v.sys_version = $2",
     )
     .bind(vo_id)
     .bind(sys_version)
-    .bind(mapping.representation.as_deref())
     .fetch_optional(&mut *tx)
-    .await?;
-    let mut protected = Protected::default();
-    let Some(row) = row else {
-        return Ok(protected);
+    .await?
+    .flatten();
+    let facts = Facts {
+        template: template
+            .as_deref()
+            .map(crate::templates::identity::canonical_key),
+        ..Facts::default()
     };
-    let Some(template): Option<String> = row.try_get("template")? else {
-        return Ok(protected);
+    Ok(protected(mapping, kind, &facts))
+}
+
+/// What `facts`, held by a party of `kind`, hold that is protected.
+fn protected(mapping: &BindingMapping, kind: Kind, facts: &Facts) -> Protected {
+    let mut protected = Protected::default();
+    let Some(template) = &facts.template else {
+        return protected;
     };
     match kind {
-        Kind::Role => protected.whole = mapping.professional_role.as_ref() == Some(&template),
+        Kind::Role => protected.whole = mapping.professional_role.as_ref() == Some(template),
         Kind::Group => {
             protected.whole = mapping
                 .group
                 .as_ref()
-                .is_some_and(|g| g.template == template);
+                .is_some_and(|g| &g.template == template);
         }
         _ => {
-            let Some(selectors) = mapping.persons.get(&template) else {
-                return Ok(protected);
-            };
-            for (selector, chosen) in selectors.each() {
-                for (issuer, identifier_type, value) in
-                    identifiers(tx, vo_id, sys_version, chosen).await?
-                {
-                    protected
-                        .identifiers
-                        .insert((selector, issuer, identifier_type, value));
-                }
+            if !mapping.persons.contains_key(template) {
+                return protected;
             }
-            protected.whole = row.try_get("represents")?;
+            for (selector, identifier) in &facts.identifiers {
+                protected.identifiers.insert((
+                    selector,
+                    identifier.issuer.clone(),
+                    identifier.id_type.clone(),
+                    identifier.canonical(),
+                ));
+            }
+            protected.whole = facts.represents;
         }
     }
-    Ok(protected)
-}
-
-/// The identifiers `chosen` selects in the version `sys_version` of `vo_id`,
-/// each as its issuer, type and canonical value (a GUID or UUID in lower
-/// case), the form the side table holds.
-async fn identifiers(
-    tx: &mut PgConnection,
-    vo_id: VoId,
-    sys_version: i32,
-    chosen: &IdentifierSelector,
-) -> Result<Vec<(String, String, String)>, ServiceError> {
-    let rows = sqlx::query(
-        "SELECT id ->> 'issuer' AS issuer, id ->> 'type' AS identifier_type, \
-                CASE WHEN lower(id ->> 'type') IN ('guid', 'uuid') THEN lower(id ->> 'id') \
-                     ELSE id ->> 'id' END AS value \
-         FROM version v \
-         CROSS JOIN LATERAL jsonb_path_query(v.body::jsonb, $3::jsonpath, $4::jsonb) AS id \
-         WHERE v.vo_id = $1 AND v.sys_version = $2 \
-           AND id ->> 'type' = $5 AND id ->> 'issuer' IS NOT NULL AND id ->> 'id' IS NOT NULL \
-           AND ($6::text[] IS NULL OR id ->> 'issuer' = ANY($6::text[]))",
-    )
-    .bind(vo_id)
-    .bind(sys_version)
-    .bind(&chosen.json_path)
-    .bind(&chosen.variables)
-    .bind(&chosen.identifier_type)
-    .bind(chosen.issuer_filter())
-    .fetch_all(&mut *tx)
-    .await?;
-    let mut out = Vec::with_capacity(rows.len());
-    for row in rows {
-        out.push((
-            row.try_get("issuer")?,
-            row.try_get("identifier_type")?,
-            row.try_get("value")?,
-        ));
-    }
-    Ok(out)
+    protected
 }

@@ -175,7 +175,9 @@ pub type ListOfCapability = Vec<openehr_rm::v1_2::demographic::capability::Capab
 
 /// The `QueryName` ITS-REST OAS component schema (a non-object shape, so
 /// it is an alias rather than a struct).
-pub type QueryName = String;
+///
+/// Read by its grammar, docs/query/Qualified_query_name.md: `[{namespace}::]{query-name}`, the name over `[a-zA-Z0-9_.-]` and never `aql` (case-insensitive).
+pub type QueryName = crate::rest::stored_query::QualifiedQueryName;
 
 /// The `AQL` ITS-REST OAS component schema (a non-object shape, so
 /// it is an alias rather than a struct).

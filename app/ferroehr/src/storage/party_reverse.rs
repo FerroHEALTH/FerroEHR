@@ -7,7 +7,7 @@
 //! RM demographic `master02-demographic_package.adoc` §Party Relationships
 //! stores a relationship in the data of its source party and lists it, at the
 //! target end, in `reverse_relationships`. The source body holds the forward
-//! direction; this index holds the reverse one, rebuilt from the source's
+//! direction; this index holds the reverse one, brought to the source's
 //! current trunk version on every write that changes it. No openEHR spec
 //! governs the index relation or its SQL: our own design.
 
@@ -18,8 +18,8 @@ use crate::storage::error::StorageError;
 
 /// The relationships of the current trunk version of each party `h` names,
 /// one row each with its position, its target root and its identity within
-/// the body: the `FROM` clause the two statements below share, completed by
-/// their own `WHERE`.
+/// the body: the `FROM` clause of [`reverse_of`], completed by its own
+/// `WHERE`.
 ///
 /// The `relationships` attribute is read only when it is an array, so a body
 /// without one contributes no row. A target id is a `HIER_OBJECT_ID` value,
@@ -38,34 +38,34 @@ macro_rules! current_relationships {
     };
 }
 
-/// A party container id is a UUID; a target whose root is another `UID` form
-/// (an ISO OID, an internet id) names no container of this store.
-const UUID_PATTERN: &str = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
-
-/// Rebuilds the index rows `source` contributes, on the caller's transaction.
+/// Writes the index rows `source` contributes: one per target container of
+/// its current trunk version's inline relationships, `targets`.
 ///
-/// Every row naming it as the source goes, and one row per distinct UUID
-/// target of its current trunk version's `relationships` comes back. A
-/// logically deleted current version carries no body, so it contributes none.
-///
-/// Runs after the write has advanced the object's head row, so it reads the
-/// version that write made current.
+/// A row of a target the version no longer names goes, a row of a new
+/// target comes, and every other row stays, so a change writes one row per
+/// target it changes (#5220). The targets are derived from the body the
+/// commit holds (`crate::party_binding::derive`), never from the stored body
+/// again; a logically deleted head names none.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
-pub async fn reindex(tx: &mut PgConnection, source: VoId) -> Result<(), StorageError> {
-    sqlx::query("DELETE FROM party_relationship_target WHERE source_vo_id = $1")
-        .bind(source)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query(concat!(
-        "INSERT INTO party_relationship_target (target_party_id, source_vo_id) \
-         SELECT DISTINCT target.root::uuid, h.vo_id FROM vo_head h ",
-        current_relationships!(),
-        "AND h.vo_id = $1 AND target.root ~ $2"
-    ))
+pub async fn replace(
+    tx: &mut PgConnection,
+    source: VoId,
+    targets: &[uuid::Uuid],
+) -> Result<(), StorageError> {
+    sqlx::query(
+        "WITH gone AS ( \
+             DELETE FROM party_relationship_target t \
+             WHERE t.source_vo_id = $1 \
+               AND t.target_party_id NOT IN (SELECT unnest($2::uuid[])) \
+         ) \
+         INSERT INTO party_relationship_target (target_party_id, source_vo_id) \
+         SELECT DISTINCT t.target, $1 FROM unnest($2::uuid[]) AS t(target) \
+         ON CONFLICT ON CONSTRAINT pk_party_relationship_target DO NOTHING",
+    )
     .bind(source)
-    .bind(UUID_PATTERN)
+    .bind(targets)
     .execute(&mut *tx)
     .await?;
     Ok(())

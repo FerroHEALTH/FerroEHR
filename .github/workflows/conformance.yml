@@ -427,6 +427,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           RELEASED_EXIT: ${{ steps.released.outputs.exit-code }}
+          RELEASED_RESULTS: ${{ steps.released.outputs.results }}
           DEVELOPMENT_EXIT: ${{ steps.development.outputs.exit-code }}
           ADVISORY: ${{ inputs.advisory == true }}
         shell: bash
@@ -440,10 +441,32 @@ jobs:
             3) echo "::warning::the development-profile run has inconclusive rows; it is published beside the record and is no verdict" ;;
             *) problems+=("the development-profile run could not run (exit status ${DEVELOPMENT_EXIT:-none})"); bad=1 ;;
           esac
-          if [ "$RELEASED_EXIT" != 0 ]; then
-            problems+=("the released-profile run exited ${RELEASED_EXIT:-without a status}")
-            bad=1
-          fi
+          # A released run whose only red rows are the deviations FerroEHR carries on
+          # purpose passes; each stays red in the results (deviations.json).
+          bash scripts/conformance-deviations.sh --self-test
+          case "$RELEASED_EXIT" in
+            0 | 1)
+              status=0
+              if [ ! -f "${RELEASED_RESULTS:-}" ]; then
+                judged="::error::the released-profile run wrote no results.json to judge"
+                status=1
+              else
+                judged="$(bash scripts/conformance-deviations.sh "$RELEASED_RESULTS" \
+                  docs/conformance/party/ferroehr/deviations.json "$GITHUB_STEP_SUMMARY" 2>&1)" || status=$?
+              fi
+              grep -v '^::error::' <<<"$judged" || true
+              if [ "$status" != 0 ]; then
+                while IFS= read -r line; do
+                  case "$line" in "::error::"*) problems+=("${line#::error::}") ;; esac
+                done <<<"$judged"
+                bad=1
+              fi
+              ;;
+            *)
+              problems+=("the released-profile run exited ${RELEASED_EXIT:-without a status}")
+              bad=1
+              ;;
+          esac
           if [ "$bad" = 0 ]; then verdict=passed; else verdict=failed; fi
           echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
           if [ "$ADVISORY" = true ]; then

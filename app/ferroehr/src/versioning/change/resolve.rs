@@ -75,6 +75,7 @@ pub(super) async fn resolve_delete(
         rows: Vec::new(),
         canonical_text: None,
         content_digest: None,
+        party_facts: None,
         shared_from: None,
         preceding: None,
         // A deleted version's data is Void (master06 §Logical
@@ -118,6 +119,9 @@ struct Prepared {
     /// SHA-256 over the canonical body with the root `uid` removed
     /// ([`content_digest`]).
     content_digest: [u8; 32],
+    /// What a party body holds that the binding hooks read, derived before
+    /// the body is decomposed (#5220); `None` for every other kind.
+    party_facts: Option<Box<crate::party_binding::derive::Facts>>,
 }
 
 /// SHA-256 over the canonical ITS-JSON bytes of `canonical` with the root
@@ -131,12 +135,28 @@ struct Prepared {
 /// that writes `version.body`, so equal bodies digest equal.
 pub(crate) fn content_digest(canonical: &Value) -> Result<[u8; 32], ServiceError> {
     use sha2::Digest as _;
-    let mut without_uid = canonical.clone();
-    if let Some(root) = without_uid.as_object_mut() {
-        root.shift_remove("uid");
-    }
-    let text = canonical_body_text(&without_uid)?;
+    let text = serde_json::to_string(&WithoutUid(canonical))
+        .map_err(|e| ServiceError::internal("serialize the canonical body", e))?;
     Ok(sha2::Sha256::digest(text.as_bytes()).into())
+}
+
+/// A canonical body serialized as [`canonical_body_text`] writes it, less
+/// the root `uid`, without a copy of the body (#5220).
+struct WithoutUid<'a>(&'a Value);
+
+impl serde::Serialize for WithoutUid<'_> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap as _;
+        let Value::Object(map) = self.0 else {
+            return self.0.serialize(serializer);
+        };
+        let kept = map.len() - usize::from(map.contains_key("uid"));
+        let mut out = serializer.serialize_map(Some(kept))?;
+        for (key, value) in map.iter().filter(|(key, _)| key.as_str() != "uid") {
+            out.serialize_entry(key, value)?;
+        }
+        out.end()
+    }
 }
 
 /// The lifecycle state a content write commits: the large inline
@@ -190,12 +210,20 @@ async fn prepare_body(
     let origins = crate::versioning::origins::origins(&ctx.direct_origin, &canonical);
     let canonical_text = Some(canonical_body_text(&canonical)?);
     let content_digest = content_digest(&canonical)?;
+    let party_facts = kind.is_party().then(|| {
+        Box::new(crate::party_binding::derive::Facts::of(
+            kind,
+            &canonical,
+            ctx.binding,
+        ))
+    });
     Ok(Prepared {
         rows: decompose(canonical)?,
         canonical_text,
         stable_compatible,
         origins,
         content_digest,
+        party_facts,
     })
 }
 
@@ -245,6 +273,7 @@ pub(super) async fn resolve_create(
         rows: body.rows,
         canonical_text: body.canonical_text,
         content_digest: Some(body.content_digest),
+        party_facts: body.party_facts,
         shared_from: None,
         preceding: None,
         stable_compatible: body.stable_compatible,
@@ -304,6 +333,7 @@ pub(super) async fn resolve_modify(
         rows: body.rows,
         canonical_text: body.canonical_text,
         content_digest: Some(body.content_digest),
+        party_facts: body.party_facts,
         shared_from,
         preceding: Some(next.preceding),
         stable_compatible: body.stable_compatible,
