@@ -312,9 +312,10 @@ formalism, default `AQL` (case-insensitive); anything else is rejected **400**
 with an honest "unsupported formalism" message rather than a misleading "invalid
 AQL".
 
-**Naming.** The qualified name is `[{namespace}::]{query-name}`, and the
-three-part `{namespace}::{formalism}::{query-name}` form is recognised as well.
-The namespace is optional: a bare name is stored under the assumed namespace
+**Naming.** The qualified name is `[{namespace}::]{query-name}`, each part over
+the characters `a-z`, `A-Z`, `0-9`, `_`, `.` and `-`; a name outside that
+grammar, a three-part `{namespace}::{formalism}::{query-name}` included, is a
+**400**, and the formalism goes in the `query_type` parameter. The namespace is optional: a bare name is stored under the assumed namespace
 `misc`, so `my_compositions` and `misc::my_compositions` are the same query and
 listings show the qualified form. Identity is case-insensitive while the casing
 you stored is preserved. The query-name `aql` is **reserved** (case-insensitive; it would collide with

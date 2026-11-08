@@ -21,7 +21,7 @@
 //!   is emitted as the weak `W/"{uid}"` form (`negotiate::resource::resource_etag`,
 //!   used by `negotiate::resource::set_versioning_headers` and the template path).
 //!   Inbound `If-Match` accepts both the weak and the deprecated bare quoted
-//!   forms (`version_id::strip_etag`).
+//!   forms (`ferroehr::versioning::object_version_id::entity_tag_value`).
 //! - **Committal headers — DONE.** The development-edition value forms
 //!   `openehr-version: lifecycle_state.code_string="…"` and
 //!   `openehr-audit-details: change_type.code_string="…"` / `description.value`

@@ -44,7 +44,7 @@ use crate::error::ViewerError;
 use crate::locale::Msg;
 use crate::locale::records::RecordsMsg;
 use crate::locale::{tr, tr_served, tr_with};
-use crate::uid::container_uid_of;
+use crate::uid::{container_uid_of, full_version_uid};
 
 /// The viewer's view of one party version.
 ///
@@ -258,12 +258,9 @@ pub async fn delete_party(
     let cdr = crate::bff::cdr()?;
     let kind = PartyKind::from_segment(&kind)
         .ok_or_else(|| super::unknown_segment(&kind, &tr_served(RecordsMsg::PartyKind)))?;
-    let version_uid = version_uid.trim();
-    if !version_uid.contains("::") {
-        return Err(ViewerError::Invalid(tr_served(
-            RecordsMsg::DeletingPartyNeedsLatestVersionS,
-        )));
-    }
+    let version_uid = full_version_uid(&version_uid, || {
+        tr_served(RecordsMsg::DeletingPartyNeedsLatestVersionS)
+    })?;
     let url = cdr.rest_v1(&format!(
         "demographic/{}/{}",
         kind.segment(),

@@ -10,31 +10,22 @@
 //! (`string_to_array(semver, '.')::int[]`). No openEHR spec governs the SQL:
 //! our own design.
 
+use openehr_its::rest::stored_query::{QualifiedQueryName, QueryVersion, VersionPattern};
 use sqlx::Connection as _;
 use sqlx::{PgPool, Row as _};
 
 use crate::db::acquire::acquire;
 use crate::storage::error::StorageError;
 
-/// The two-part name a stored query is keyed by.
-#[derive(Debug, Clone, Copy)]
-pub struct QueryName<'a> {
-    /// The namespace segment.
-    pub reverse_domain_name: &'a str,
-    /// The query-name segment.
-    pub semantic_id: &'a str,
-}
+/// The namespace a name without one is stored under.
+///
+/// NOTE: ITS-REST `Qualified_query_name.md` makes the namespace optional and names no default:
+/// our own design, one key per query so `q` and `misc::q` address the same row.
+const DEFAULT_NAMESPACE: &str = "misc";
 
-/// Which stored version of a name to read.
-#[derive(Debug, Clone, Copy)]
-pub enum VersionMatch<'a> {
-    /// Exactly this version.
-    Exact(&'a str),
-    /// The highest version equal to this prefix or extending it on a dot
-    /// boundary (`1` matches `1.x.y`, `1.0` matches `1.0.x`).
-    Prefix(&'a str),
-    /// The highest stored version.
-    Latest,
+/// The `(reverse_domain_name, semantic_id)` key `name` is stored under.
+fn key(name: &QualifiedQueryName) -> (&str, &str) {
+    (name.namespace().unwrap_or(DEFAULT_NAMESPACE), name.name())
 }
 
 /// One `stored_query` row.
@@ -74,10 +65,12 @@ fn stored_query_row(row: &sqlx::postgres::PgRow) -> Result<StoredQueryRow, Stora
 /// [`StorageError::Database`] on a driver failure.
 pub async fn replace(
     pool: &PgPool,
-    name: QueryName<'_>,
-    version: &str,
+    name: &QualifiedQueryName,
+    version: QueryVersion,
     query_text: &str,
 ) -> Result<(), StorageError> {
+    let (reverse_domain_name, semantic_id) = key(name);
+    let version = version.to_string();
     let mut conn = acquire(pool).await?;
     let mut tx = conn.begin().await?;
     sqlx::query(
@@ -85,9 +78,9 @@ pub async fn replace(
          WHERE lower(reverse_domain_name) = lower($1) \
          AND lower(semantic_id) = lower($2) AND semver = $3",
     )
-    .bind(name.reverse_domain_name)
-    .bind(name.semantic_id)
-    .bind(version)
+    .bind(reverse_domain_name)
+    .bind(semantic_id)
+    .bind(&version)
     .execute(&mut *tx)
     .await?;
     sqlx::query(
@@ -95,9 +88,9 @@ pub async fn replace(
          (reverse_domain_name, semantic_id, semver, query_type, query_text) \
          VALUES ($1, $2, $3, 'AQL', $4)",
     )
-    .bind(name.reverse_domain_name)
-    .bind(name.semantic_id)
-    .bind(version)
+    .bind(reverse_domain_name)
+    .bind(semantic_id)
+    .bind(&version)
     .bind(query_text)
     .execute(&mut *tx)
     .await?;
@@ -116,18 +109,20 @@ pub async fn replace(
 /// [`StorageError::Database`] on a driver failure.
 pub async fn insert(
     pool: &PgPool,
-    name: QueryName<'_>,
-    version: &str,
+    name: &QualifiedQueryName,
+    version: QueryVersion,
     query_text: &str,
 ) -> Result<bool, StorageError> {
+    let (reverse_domain_name, semantic_id) = key(name);
+    let version = version.to_string();
     let exists: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM stored_query \
          WHERE lower(reverse_domain_name) = lower($1) \
          AND lower(semantic_id) = lower($2) AND semver = $3)",
     )
-    .bind(name.reverse_domain_name)
-    .bind(name.semantic_id)
-    .bind(version)
+    .bind(reverse_domain_name)
+    .bind(semantic_id)
+    .bind(&version)
     .fetch_one(&mut *acquire(pool).await?)
     .await?;
     if exists {
@@ -139,9 +134,9 @@ pub async fn insert(
          VALUES ($1, $2, $3, 'AQL', $4) \
          ON CONFLICT (reverse_domain_name, semantic_id, semver) DO NOTHING",
     )
-    .bind(name.reverse_domain_name)
-    .bind(name.semantic_id)
-    .bind(version)
+    .bind(reverse_domain_name)
+    .bind(semantic_id)
+    .bind(&version)
     .bind(query_text)
     .execute(&mut *acquire(pool).await?)
     .await?
@@ -149,45 +144,47 @@ pub async fn insert(
     Ok(inserted > 0)
 }
 
-/// The stored query of `name` at the version `version` selects, or `None`.
+/// The stored query of `name` at the highest version `version` selects, or
+/// at the highest stored version when `version` is `None`.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure or a column that does not
 /// decode.
 pub async fn find(
     pool: &PgPool,
-    name: QueryName<'_>,
-    version: VersionMatch<'_>,
+    name: &QualifiedQueryName,
+    version: Option<&VersionPattern>,
 ) -> Result<Option<StoredQueryRow>, StorageError> {
+    let (reverse_domain_name, semantic_id) = key(name);
     let query = match version {
-        // `left(...)` rather than LIKE, so no pattern metacharacter needs escaping.
-        VersionMatch::Prefix(v) => sqlx::query(
-            "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, \
-             created_at FROM stored_query \
-             WHERE lower(reverse_domain_name) = lower($1) AND lower(semantic_id) = lower($2) \
-             AND (semver = $3 OR left(semver, length($3) + 1) = $3 || '.') \
-             ORDER BY string_to_array(semver, '.')::int[] DESC LIMIT 1",
-        )
-        .bind(name.reverse_domain_name)
-        .bind(name.semantic_id)
-        .bind(v),
-        VersionMatch::Exact(v) => sqlx::query(
+        Some(VersionPattern::Exact(exact)) => sqlx::query(
             "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, \
              created_at FROM stored_query \
              WHERE lower(reverse_domain_name) = lower($1) AND lower(semantic_id) = lower($2) \
              AND semver = $3",
         )
-        .bind(name.reverse_domain_name)
-        .bind(name.semantic_id)
-        .bind(v),
-        VersionMatch::Latest => sqlx::query(
+        .bind(reverse_domain_name)
+        .bind(semantic_id)
+        .bind(exact.to_string()),
+        // `left(...)` rather than LIKE, so no pattern metacharacter needs escaping.
+        Some(prefix) => sqlx::query(
+            "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, \
+             created_at FROM stored_query \
+             WHERE lower(reverse_domain_name) = lower($1) AND lower(semantic_id) = lower($2) \
+             AND left(semver, length($3)) = $3 \
+             ORDER BY string_to_array(semver, '.')::int[] DESC LIMIT 1",
+        )
+        .bind(reverse_domain_name)
+        .bind(semantic_id)
+        .bind(format!("{prefix}.")),
+        None => sqlx::query(
             "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, \
              created_at FROM stored_query \
              WHERE lower(reverse_domain_name) = lower($1) AND lower(semantic_id) = lower($2) \
              ORDER BY string_to_array(semver, '.')::int[] DESC LIMIT 1",
         )
-        .bind(name.reverse_domain_name)
-        .bind(name.semantic_id),
+        .bind(reverse_domain_name)
+        .bind(semantic_id),
     };
     query
         .fetch_optional(&mut *acquire(pool).await?)
@@ -197,28 +194,36 @@ pub async fn find(
         .transpose()
 }
 
-/// Every stored version of every query whose qualified name starts with
-/// `name_prefix`, case-insensitively.
+/// Every stored version of every query whose qualified name starts with the
+/// text of `name_prefix`, case-insensitively, or of every query when it is
+/// `None`.
 ///
-/// A prefix with no `::` also matches under the `misc` namespace. The rows are
-/// ordered by name, then numerically by version.
+/// A prefix with no namespace also matches under the default namespace. The
+/// rows are ordered by name, then numerically by version.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure or a column that does not
 /// decode.
-pub async fn list(pool: &PgPool, name_prefix: &str) -> Result<Vec<StoredQueryRow>, StorageError> {
+pub async fn list(
+    pool: &PgPool,
+    name_prefix: Option<&QualifiedQueryName>,
+) -> Result<Vec<StoredQueryRow>, StorageError> {
+    let prefix = name_prefix.map(ToString::to_string).unwrap_or_default();
+    let defaulted = name_prefix
+        .filter(|name| name.namespace().is_none())
+        .map(|name| format!("{DEFAULT_NAMESPACE}::{name}"));
     let rows = sqlx::query(
         "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, created_at \
          FROM stored_query \
          WHERE left(lower(CASE WHEN reverse_domain_name = '' THEN semantic_id \
                          ELSE reverse_domain_name || '::' || semantic_id END), \
                     length($1)) = lower($1) \
-            OR ($1 NOT LIKE '%::%' AND \
-                left(lower(reverse_domain_name || '::' || semantic_id), \
-                     length('misc::' || $1)) = lower('misc::' || $1)) \
+            OR left(lower(reverse_domain_name || '::' || semantic_id), \
+                    length($2)) = lower($2) \
          ORDER BY reverse_domain_name, semantic_id, string_to_array(semver, '.')::int[]",
     )
-    .bind(name_prefix)
+    .bind(prefix)
+    .bind(defaulted)
     .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter().map(stored_query_row).collect()
@@ -231,17 +236,19 @@ pub async fn list(pool: &PgPool, name_prefix: &str) -> Result<Vec<StoredQueryRow
 /// [`StorageError::Database`] on a driver failure.
 pub async fn delete(
     pool: &PgPool,
-    name: QueryName<'_>,
-    version: &str,
+    name: &QualifiedQueryName,
+    version: QueryVersion,
 ) -> Result<bool, StorageError> {
+    let (reverse_domain_name, semantic_id) = key(name);
+    let version = version.to_string();
     let deleted = sqlx::query(
         "DELETE FROM stored_query \
          WHERE lower(reverse_domain_name) = lower($1) \
            AND lower(semantic_id) = lower($2) AND semver = $3",
     )
-    .bind(name.reverse_domain_name)
-    .bind(name.semantic_id)
-    .bind(version)
+    .bind(reverse_domain_name)
+    .bind(semantic_id)
+    .bind(&version)
     .execute(&mut *acquire(pool).await?)
     .await?
     .rows_affected();

@@ -19,7 +19,7 @@
 )]
 
 use axum::Json;
-use ferroehr::config::redact::mask_if_url;
+use ferrohealth_smart::config::mask_userinfo;
 use serde_json::Value;
 
 /// Substrings (case-insensitive) that mark a JSON key as naming a secret value.
@@ -45,7 +45,7 @@ pub(super) fn env(snapshot: &Value) -> Json<Value> {
 }
 
 /// Recursively redact a config value: secret-keyed values → [`MASK`]; the
-/// every URL string → masked by [`mask_if_url`].
+/// every URL string → masked by [`mask_userinfo`].
 #[must_use]
 pub(crate) fn redact(value: &Value) -> Value {
     match value {
@@ -61,7 +61,7 @@ pub(crate) fn redact(value: &Value) -> Value {
                 .collect(),
         ),
         Value::Array(items) => Value::Array(items.iter().map(redact).collect()),
-        Value::String(s) => Value::String(mask_if_url(s)),
+        Value::String(s) => Value::String(mask_userinfo(s)),
         other => other.clone(),
     }
 }

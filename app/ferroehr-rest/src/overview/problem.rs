@@ -23,6 +23,7 @@ use std::sync::LazyLock;
 use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse as _, Response};
+use ferroehr::versioning::object_version_id::entity_tag_value;
 use ferrohealth_server::problem::{Problem, ProblemError, ProblemType, ProblemTypes};
 use ferrohealth_telemetry::request_log::RequestId;
 use http::{HeaderValue, StatusCode, header};
@@ -30,7 +31,6 @@ use http::{HeaderValue, StatusCode, header};
 use crate::overview::negotiate::prefer::{
     AppliedPreference, PREFERENCE_APPLIED, Preference, prefers,
 };
-use crate::overview::version_id::strip_etag;
 
 /// The base URI every FerroEHR problem type is under: the book page that
 /// documents each type at the anchor of its slug.
@@ -369,10 +369,11 @@ impl Refused {
     }
 }
 
-/// The version an `ETag` names, without the weak marker and the quotes.
+/// The version an `ETag` names, read by [`entity_tag_value`], or `None` for an
+/// empty one.
 fn version_of(etag: &HeaderValue) -> Option<String> {
-    let text = strip_etag(etag.to_str().ok()?);
-    (!text.is_empty()).then(|| text.to_owned())
+    let value = entity_tag_value(etag.to_str().ok()?);
+    (!value.is_empty()).then(|| value.into_owned())
 }
 
 /// The FHIR base under the REST root, whose routes answer an

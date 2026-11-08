@@ -12,10 +12,13 @@
 mod confined;
 mod diagnostic;
 
+use std::str::FromStr;
+
 use crate::error::ViewerError;
 use confined::{RootError, Roots};
 use diagnostic::{diagnostic_of, without_lead};
 use ferrohealth_session::record::Credential;
+use openehr_its::rest::etag::EntityTag;
 
 /// How many CDR requests one screen's fan-out has in flight at once.
 ///
@@ -111,14 +114,12 @@ impl CdrResponse {
     /// pre-1.1.0 server may still omit
     /// (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Requests_and_responses.md`
     /// §`ETag` and `Last-Modified`), so both shapes reduce to the same identifier
-    /// here. `None` when the CDR sent no `ETag`, or an empty one.
+    /// here, read as an RFC 9110 §8.8.3 entity tag. `None` when the CDR sent no
+    /// `ETag`, an empty one, or a value that is no entity tag.
     #[must_use]
     pub fn etag_version_uid(&self) -> Option<String> {
-        self.etag
-            .as_deref()
-            .map(strip_etag)
-            .filter(|value| !value.is_empty())
-            .map(str::to_owned)
+        let tag = EntityTag::from_str(self.etag.as_deref()?.trim()).ok()?;
+        (!tag.tag().is_empty()).then(|| tag.tag().to_owned())
     }
 
     /// Assemble the normalized response from the parts `reqwest` hands back.
@@ -138,22 +139,6 @@ fn header_text(headers: &http::HeaderMap, name: &str) -> Option<String> {
         .get(name)
         .and_then(|value| value.to_str().ok())
         .map(str::to_owned)
-}
-
-/// Reduce an `ETag` / `If-Match` field value to the bare identifier it wraps:
-/// the weakness indicator and the surrounding quotes come off.
-///
-/// The weak form is what the release mandates and the bare form is the
-/// deprecated one it still permits
-/// (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Requests_and_responses.md`
-/// §`ETag` and `Last-Modified`), so a viewer that reads either can talk to both.
-fn strip_etag(raw: &str) -> &str {
-    let trimmed = raw.trim();
-    let unweak = trimmed
-        .strip_prefix("W/")
-        .or_else(|| trimmed.strip_prefix("w/"))
-        .unwrap_or(trimmed);
-    unweak.trim().trim_matches('"')
 }
 
 /// The CDR client could not be built from its configuration.
@@ -455,7 +440,7 @@ impl CdrCall {
 
 #[cfg(test)]
 mod tests {
-    use super::{CdrClient, CdrResponse, strip_etag};
+    use super::{CdrClient, CdrResponse};
     use crate::error::ViewerError;
 
     /// A served version identifier, in the shape the overview's own `ETag`
@@ -639,12 +624,21 @@ mod tests {
     fn an_etag_reduces_to_its_identifier_in_either_published_shape() {
         // The weak form is what Release-1.1.0 mandates; the bare one is the
         // deprecated shape it still permits (§`ETag` and `Last-Modified`).
-        assert_eq!(strip_etag(&format!("W/\"{UID}\"")), UID);
-        assert_eq!(strip_etag(&format!("\"{UID}\"")), UID);
-        assert_eq!(strip_etag(&format!("  w/\"{UID}\"  ")), UID);
-        assert_eq!(strip_etag(UID), UID);
-        assert_eq!(strip_etag("\"\""), "");
-        assert_eq!(strip_etag(""), "");
+        let read = |etag: &str| {
+            CdrResponse {
+                etag: Some(etag.to_owned()),
+                ..response(http::StatusCode::OK, "")
+            }
+            .etag_version_uid()
+        };
+        assert_eq!(read(&format!("W/\"{UID}\"")).as_deref(), Some(UID));
+        assert_eq!(read(&format!("\"{UID}\"")).as_deref(), Some(UID));
+        // RFC 9110 §8.8.3: `weak = %s"W/"` is case-sensitive and the tag is
+        // quoted, so a lower-case `w/` and an unquoted value are no entity tag.
+        assert_eq!(read(&format!("  w/\"{UID}\"  ")), None);
+        assert_eq!(read(UID), None);
+        assert_eq!(read("\"\""), None);
+        assert_eq!(read(""), None);
     }
 
     #[test]

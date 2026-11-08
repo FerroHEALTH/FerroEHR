@@ -21,9 +21,8 @@ use std::path::PathBuf;
 
 use ferrohealth_secret::secret::Secret;
 use ferrohealth_secret::secret_url::SecretUrl;
+use ferrohealth_smart::config::mask_userinfo;
 use serde::{Deserialize, Serialize};
-
-use crate::config::redact::mask_if_url;
 use url::Url;
 
 /// DV_MULTIMEDIA externalization settings.
@@ -77,7 +76,7 @@ impl Default for MultimediaConfig {
 
 /// Why [`MultimediaConfig::endpoint_url`] refused `multimedia.endpoint`.
 ///
-/// Every message quotes the endpoint only through [`mask_if_url`], so no
+/// Every message quotes the endpoint only through [`mask_userinfo`], so no
 /// refusal carries a credential.
 #[derive(Debug, thiserror::Error)]
 pub enum EndpointError {
@@ -135,12 +134,12 @@ impl MultimediaConfig {
             return Err(EndpointError::Empty);
         }
         let url = Url::parse(trimmed).map_err(|reason| EndpointError::NotAbsolute {
-            shown: mask_if_url(trimmed),
+            shown: mask_userinfo(trimmed),
             reason,
         })?;
         if !matches!(url.scheme(), "http" | "https") {
             return Err(EndpointError::NotHttp {
-                shown: mask_if_url(trimmed),
+                shown: mask_userinfo(trimmed),
                 scheme: url.scheme().to_owned(),
             });
         }

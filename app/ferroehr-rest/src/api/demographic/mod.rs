@@ -66,15 +66,14 @@ fn object_of(raw: &str) -> Result<VoId, RestError> {
 }
 
 /// The target of a demographic update and its mandatory `If-Match`, whose
-/// `W/"…"` or quoted entity-tag syntax is decoded here so the precondition
-/// holds a bare `OBJECT_VERSION_ID` (overview §"`ETag` and Last-Modified").
+/// `W/"…"` or quoted entity-tag syntax the precondition decodes into a bare
+/// `OBJECT_VERSION_ID` (overview §"`ETag` and Last-Modified").
 ///
 /// # Errors
 /// A `400` when `raw` or the `If-Match` value is malformed.
 fn update_target(raw: &str, if_match: &str) -> Result<(VoId, Precondition), RestError> {
     let vo_id = object_of(raw)?;
-    let token = crate::overview::version_id::strip_etag(if_match);
-    Ok((vo_id, Precondition::parse(Some(token), None)?))
+    Ok((vo_id, Precondition::parse(Some(if_match), None)?))
 }
 
 /// The precondition of a demographic delete: the path names the version it

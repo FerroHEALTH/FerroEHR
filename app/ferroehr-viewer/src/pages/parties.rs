@@ -55,15 +55,15 @@ use crate::locale::records::RecordsMsg;
 use crate::locale::{Msg, current, message, tr, tr_with};
 use crate::markup::{attr, flag, h, opt, t};
 use crate::pages::common::{
-    EditorDock, Refused, card_panel, count, dock_editor, document_section, findings_of, info_note,
-    marks_of, panel, plain_section, section, short, shortened, state_mark, version_number, when,
+    EditorDock, Refused, card_panel, count, discarded, dock_editor, document_section, findings_of,
+    info_note, is_status, marks_of, panel, plain_section, section, short, shortened, state_mark,
+    when,
 };
-use crate::pages::common::{discarded, is_status, version_uid_at};
 use crate::pages::form::Form;
-use crate::pages::item_tags::{TagAct, tag_act, tag_done};
-use crate::pages::item_tags::{TagPanel, tag_panel};
+use crate::pages::item_tags::{TagAct, TagPanel, tag_act, tag_done, tag_panel};
 use crate::pages::versions::{History, history};
 use crate::routes::Drawn;
+use crate::uid::{version_number, version_uid_at};
 
 /// The id of Delete party's confirmation dialog.
 const DELETE_DIALOG: &str = "delete-party";
