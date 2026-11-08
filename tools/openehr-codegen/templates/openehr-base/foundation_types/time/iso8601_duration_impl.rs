@@ -53,7 +53,115 @@ use super::iso8601_duration::Iso8601Duration;
 use super::iso8601_parse::{ExactSeconds, ParsedDuration, parse_duration, render_duration};
 use crate::validate::{InvariantViolation, Validate};
 
+/// One designator of an ISO 8601 duration, in the order the production fixes
+/// (BASE `foundation_types/master06-time_types.adoc` §Durations).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum DurationDesignator {
+    /// `nY`.
+    Years,
+    /// `nM` before the `T`.
+    Months,
+    /// `nW`.
+    Weeks,
+    /// `nD`.
+    Days,
+    /// `nH`.
+    Hours,
+    /// `nM` after the `T`.
+    Minutes,
+    /// `nS`, the one component openEHR lets carry a fraction.
+    Seconds,
+}
+
+impl DurationDesignator {
+    /// The designator letter (`M` for both months and minutes).
+    #[must_use]
+    pub const fn letter(self) -> char {
+        match self {
+            Self::Years => 'Y',
+            Self::Months | Self::Minutes => 'M',
+            Self::Weeks => 'W',
+            Self::Days => 'D',
+            Self::Hours => 'H',
+            Self::Seconds => 'S',
+        }
+    }
+
+    /// Whether the designator follows the `T`.
+    #[must_use]
+    pub const fn is_time(self) -> bool {
+        matches!(self, Self::Hours | Self::Minutes | Self::Seconds)
+    }
+
+    /// The designator `letter` names on its side of the `T`.
+    const fn of(letter: char, time: bool) -> Option<Self> {
+        match (letter, time) {
+            ('Y', false) => Some(Self::Years),
+            ('M', false) => Some(Self::Months),
+            ('W', false) => Some(Self::Weeks),
+            ('D', false) => Some(Self::Days),
+            ('H', true) => Some(Self::Hours),
+            ('M', true) => Some(Self::Minutes),
+            ('S', true) => Some(Self::Seconds),
+            _ => None,
+        }
+    }
+}
+
+/// One component of a duration as written: its designator and the number in
+/// front of it, verbatim (`0.500` of `PT0.500S`, with a `,` decimal sign kept).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DurationPart<'a> {
+    /// The designator.
+    pub designator: DurationDesignator,
+    /// The number as written.
+    pub text: &'a str,
+}
+
 impl Iso8601Duration {
+    /// The components as written, in order, with the sign left to
+    /// [`Self::is_negative`]; `None` when the value does not parse.
+    ///
+    /// The integer accessors ([`Self::hours`], …) and [`Self::fractional_seconds`]
+    /// give the same parts as numbers; the text keeps leading zeros, the
+    /// decimal sign and every digit of the seconds' fraction.
+    #[must_use]
+    pub fn parts(&self) -> Option<Vec<DurationPart<'_>>> {
+        self.parsed()?;
+        let unsigned = self.value.strip_prefix('-').unwrap_or(&self.value);
+        let body = unsigned.strip_prefix('P')?;
+        let mut parts = Vec::new();
+        let mut time = false;
+        let mut start = 0;
+        for (at, letter) in body.char_indices() {
+            if letter.is_ascii_digit() || letter == '.' || letter == ',' {
+                continue;
+            }
+            if letter == 'T' {
+                time = true;
+            } else {
+                parts.push(DurationPart {
+                    designator: DurationDesignator::of(letter, time)?,
+                    text: body.get(start..at)?,
+                });
+            }
+            start = at.checked_add(letter.len_utf8())?;
+        }
+        Some(parts)
+    }
+
+    /// The digits of the seconds' fraction as written (`050` of `PT1.050S`),
+    /// `None` when the value writes none or does not parse.
+    #[must_use]
+    pub fn fraction_digits(&self) -> Option<&str> {
+        let seconds = self
+            .parts()?
+            .into_iter()
+            .find(|part| part.designator == DurationDesignator::Seconds)?;
+        let (_, digits) = seconds.text.split_once(['.', ','])?;
+        Some(digits).filter(|digits| !digits.is_empty())
+    }
+
     /// Parsed components, or `None` when `value` is not a valid ISO 8601
     /// duration. Crate-visible because a duration is the argument of every
     /// other time type's computational functions.
@@ -270,6 +378,44 @@ impl Validate for Iso8601Duration {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_parts_are_kept_as_written() {
+        let d = Iso8601Duration {
+            value: "-P1Y02M3DT4H0,050S".to_owned(),
+        };
+        let parts: Vec<(DurationDesignator, &str)> = d
+            .parts()
+            .unwrap()
+            .into_iter()
+            .map(|p| (p.designator, p.text))
+            .collect();
+        assert_eq!(
+            parts,
+            [
+                (DurationDesignator::Years, "1"),
+                (DurationDesignator::Months, "02"),
+                (DurationDesignator::Days, "3"),
+                (DurationDesignator::Hours, "4"),
+                (DurationDesignator::Seconds, "0,050"),
+            ]
+        );
+        assert_eq!(d.fraction_digits(), Some("050"));
+        assert_eq!(d.is_negative(), Some(true));
+        let minutes = Iso8601Duration {
+            value: "PT5M".to_owned(),
+        };
+        assert_eq!(
+            minutes.parts().unwrap().first().map(|p| p.designator),
+            Some(DurationDesignator::Minutes)
+        );
+        assert_eq!(minutes.fraction_digits(), None);
+        // BASE master06 §Durations: only the seconds carry a fraction in openEHR.
+        let hours = Iso8601Duration {
+            value: "PT1.5H".to_owned(),
+        };
+        assert_eq!(hours.parts(), None);
+    }
 
     fn dur(v: &str) -> Iso8601Duration {
         Iso8601Duration {

@@ -61,8 +61,8 @@ use std::cmp::Ordering;
 use super::iso8601_duration::Iso8601Duration;
 use super::iso8601_parse::{
     EXACT_SECONDS_IN_DAY, EXACT_SECONDS_IN_HOUR, EXACT_SECONDS_IN_MINUTE, ExactSeconds, ParsedTime,
-    as_extended_time, hms_from_seconds_of_day, parse_time, range_before, render_duration,
-    render_time_extended, scan_time, time_completion_range,
+    as_extended_time, fraction_digits, hms_from_seconds_of_day, parse_time, range_before,
+    render_duration, render_time_extended, scan_time, time_completion_range,
 };
 use super::iso8601_time::Iso8601Time;
 use crate::validate::{InvariantViolation, Validate};
@@ -153,6 +153,17 @@ impl Iso8601Time {
     #[must_use]
     pub fn has_fractional_second(&self) -> bool {
         self.parsed().is_some_and(|p| p.fractional_second.is_some())
+    }
+
+    /// The digits of the fractional second as written (`050` of
+    /// `10:00:00.050`), `None` when the value writes none or does not parse.
+    ///
+    /// [`Self::fractional_second`] is the same part as a `Real`, which keeps
+    /// neither trailing zeros nor digits past its precision.
+    #[must_use]
+    pub fn fraction_digits(&self) -> Option<&str> {
+        self.parsed()?.fractional_second?;
+        fraction_digits(&self.value)
     }
 
     /// `Iso8601_time.as_string`: "Return string value in extended format" — a
@@ -321,6 +332,21 @@ impl Validate for Iso8601Time {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_fraction_digits_are_kept_as_written() {
+        let t = |value: &str| Iso8601Time {
+            value: value.to_owned(),
+        };
+        assert_eq!(t("10:00:00.500").fraction_digits(), Some("500"));
+        assert_eq!(t("100000,0500+0100").fraction_digits(), Some("0500"));
+        assert_eq!(
+            t("10:00:00.123456789012").fraction_digits(),
+            Some("123456789012")
+        );
+        assert_eq!(t("10:00:00").fraction_digits(), None);
+        assert_eq!(t("not a time.5").fraction_digits(), None);
+    }
 
     fn time(v: &str) -> Iso8601Time {
         Iso8601Time {

@@ -9,7 +9,9 @@
 //! `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.object_version_id.adoc`.
 //! Lexical form: `object_id '::' creating_system_id '::' version_tree_id`
 //! (exactly three `::`-delimited parts).
-//! - `object_id()` — the logical object's UID (part 1).
+//! - `object_id()` — the logical object's UID (part 1), with `object_id_str()`
+//!   as its verbatim sibling and `versioned_object_id()` as the verbatim
+//!   `HIER_OBJECT_ID` of the versioned object.
 //! - `creating_system_id()` — the UID of the creating system (part 2), with
 //!   `creating_system_id_str()` as its verbatim (case-preserving) sibling.
 //! - `version_tree_id()` — the `VERSION_TREE_ID` (part 3).
@@ -20,6 +22,7 @@
 //! id in `ETag`/`Location`/version paths); we express it as `Value_format_valid`
 //! in the same spirit as the ISO-8601 `Value_valid` invariants elsewhere.
 
+use super::hier_object_id::HierObjectId;
 use super::lexical::{IdComponent, IdError, IdProduction, is_uid, make_uid};
 use super::object_version_id::ObjectVersionId;
 use super::uid::Uid;
@@ -45,8 +48,33 @@ impl ObjectVersionId {
     /// the whole value for a malformed id so the accessor is total.
     #[must_use]
     pub fn object_id(&self) -> Uid {
-        let s = split3(&self.value).map_or(self.value.as_str(), |p| p[0]);
-        make_uid(s)
+        make_uid(self.object_id_str())
+    }
+
+    /// The `object_id` part **verbatim**: the exact text of the first
+    /// `::`-delimited component, borrowed from `value` (the whole value for a
+    /// malformed id, as [`object_id`](Self::object_id) reads it).
+    ///
+    /// [`object_id`](Self::object_id) types the part as a [`Uid`], which
+    /// normalises a `UUID` to lower case; BASE
+    /// `master05-identification_package.adoc` §"Composite Identifiers and Case"
+    /// requires an identifier to keep its case through copying and transfer.
+    #[must_use]
+    pub fn object_id_str(&self) -> &str {
+        split3(&self.value).map_or(self.value.as_str(), |p| p[0])
+    }
+
+    /// The `HIER_OBJECT_ID` of the versioned object this version belongs to:
+    /// the `object_id` part, verbatim ([`object_id_str`](Self::object_id_str)).
+    ///
+    /// BASE `object_version_id.adoc`: `object_id` is the "unique identifier for
+    /// logical object of which this identifier identifies one version", the
+    /// `uid` of its `VERSIONED_OBJECT` (RM common `versioned_object.adoc`).
+    #[must_use]
+    pub fn versioned_object_id(&self) -> HierObjectId {
+        HierObjectId {
+            value: self.object_id_str().to_owned(),
+        }
     }
 
     /// Identifier of the system that created this version — the second
@@ -233,6 +261,18 @@ mod tests {
         ObjectVersionId {
             value: value.to_owned(),
         }
+    }
+
+    #[test]
+    fn the_object_id_is_kept_as_written() {
+        let o = ovid("8849182C-82AD-4088-A07F-48EAD4180515::Host.Example::2");
+        assert_eq!(o.object_id_str(), "8849182C-82AD-4088-A07F-48EAD4180515");
+        assert_eq!(
+            o.versioned_object_id().value,
+            "8849182C-82AD-4088-A07F-48EAD4180515"
+        );
+        assert_eq!(o.creating_system_id_str(), "Host.Example");
+        assert_eq!(ovid("no-separators").object_id_str(), "no-separators");
     }
 
     #[test]
