@@ -42,7 +42,8 @@ impl FerroEhrService {
     /// `head` (a new party of the template when `None`) with the data value
     /// of each of `values` set at its path, and nothing else changed.
     ///
-    /// A body with no identity takes the template's first one ([`identity`]).
+    /// A body with no identity takes the template's first `PARTY_IDENTITY`,
+    /// with its empty `details`.
     /// Each path names an `ELEMENT` (or its `value`) of the template. Several
     /// identifiers can share one path: a `DV_IDENTIFIER` value replaces the
     /// one of its `type` and `issuer`, and leaves the others as they are.
@@ -176,7 +177,7 @@ impl FerroEhrService {
     /// Returns the body of a new professional `ROLE` of `template_id`
     /// performed by the `PERSON` `performer`, named under `namespace`.
     ///
-    /// The `ROLE` carries the template's first identity ([`identity`]); a
+    /// The `ROLE` carries the template's first `PARTY_IDENTITY` with its empty `details`; a
     /// template that requires an item in it makes the `ROLE` incomplete until
     /// an administrator fills it.
     ///
