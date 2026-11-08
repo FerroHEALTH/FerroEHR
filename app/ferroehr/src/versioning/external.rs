@@ -28,7 +28,7 @@ use crate::ids::VoId;
 use crate::versioning::Kind;
 use crate::versioning::committer::ExternalCaller;
 use crate::versioning::committer::external::{
-    ExternalProfessional, committer, may_dispense, point_of_care, provider,
+    ExternalProfessional, ORGANIZATION_ID_ISSUER, committer, may_dispense, point_of_care, provider,
 };
 use crate::versioning::system::{facility_of, identifiers, template_of};
 
@@ -169,25 +169,42 @@ fn discard_refused(why: &str) -> ServiceError {
 }
 
 /// Refuses a COMPOSITION whose facility does not carry the identifier of the
-/// healthcare provider `professional`'s token asserts (EHDS Art. 13(4)).
+/// healthcare provider `professional`'s token asserts (EHDS Art. 13(4)) and,
+/// on the MyHealth@EU route, the HCPO's `organization-id` beside it (eHDSI
+/// SAML Profile 10.0.0 §2.3), so a later discard is matched to its point of
+/// care from the version alone.
 fn admit_facility(
     professional: &ExternalProfessional,
     canonical: &Value,
 ) -> Result<(), ServiceError> {
     let (issuer, id) = provider(professional)?;
     let (facility, path) = facility_of(canonical);
-    if identifiers(facility).any(|named| named == (issuer.as_str(), id.as_str())) {
-        crate::system_log::access_context::record_facility(&issuer, &id);
-        return Ok(());
+    let named: Vec<(&str, &str)> = identifiers(facility).collect();
+    if !named.contains(&(issuer.as_str(), id.as_str())) {
+        return Err(ServiceError::content_invalid(
+            Violation::new(
+                "carries no identifier of the healthcare provider the federation token \
+                 asserts, its healthcare_provider_identifier under its issuing_authority_name; \
+                 the server writes no facility (EHDS Art. 13(4))",
+            )
+            .with_path(path),
+        ));
     }
-    Err(ServiceError::content_invalid(
-        Violation::new(
-            "carries no identifier of the healthcare provider the federation token asserts, \
-             its healthcare_provider_identifier under its issuing_authority_name; the server \
-             writes no facility (EHDS Art. 13(4))",
-        )
-        .with_path(path),
-    ))
+    if point_of_care(professional)?
+        .iter()
+        .any(|(issuer, id)| !named.contains(&(issuer.as_str(), id.as_str())))
+    {
+        return Err(ServiceError::content_invalid(
+            Violation::new(format!(
+                "carries no identifier of the healthcare provider organisation's \
+                 organization-id under the issuer {ORGANIZATION_ID_ISSUER} beside the \
+                 provider's (eHDSI SAML Profile 10.0.0 §2.3); the server writes no facility"
+            ))
+            .with_path(path),
+        ));
+    }
+    crate::system_log::access_context::record_facility(&issuer, &id);
+    Ok(())
 }
 
 /// The request's external caller, when there is one.

@@ -48,6 +48,12 @@ const PROVIDER: &str = "urn:oid:1.2.3.4";
 const AUTHORITY: &str = "NCP-A Registry";
 /// The dispensation template.
 const DISPENSATION: &str = "International Patient Summary";
+/// The issuer of the HP Identity Assertion, NCP-B.
+const IDA_ISSUER: &str = "https://ncp-b.example";
+/// The format of the HP Identity Assertion's `NameID`.
+const NAME_ID_FORMAT: &str = "urn:oasis:names:tc:SAML:1.1:nameid-format:X509SubjectName";
+/// The HP Identity Assertion's `NameID`.
+const NAME_ID: &str = "CN=Synthetic Pharmacist,O=Pharmacy,C=BE";
 /// The scopes a contact point's caller holds.
 const SCOPE: &str = "patient/composition-*.crud";
 
@@ -166,7 +172,7 @@ async fn patient_ehr(svc: &FerroEhrService, id: &str) -> String {
 fn token(patient: Option<&str>, provider: &str, extra: &Value) -> String {
     let now = jiff::Timestamp::now().as_second();
     let mut professional = json!({
-        "hp_identifier": "CN=Synthetic Pharmacist,O=Pharmacy,C=BE",
+        "hp_identifier": NAME_ID,
         "name": "Synthetic Pharmacist",
         "hp_professional_role": [{ "system": "2.16.840.1.113883.2.9.6.2.7", "code": "2262" }],
         "authentication_method": ferrohealth_smart::federation::contact::AUTHENTICATION_CLASSES[4]
@@ -184,8 +190,9 @@ fn token(patient: Option<&str>, provider: &str, extra: &Value) -> String {
         "point_of_care": "Synthetic Pharmacy",
         "purpose_of_use": "TREATMENT",
         "assertion": {
-            "issuer": "https://ncp-b.example",
+            "issuer": IDA_ISSUER,
             "id": "urn:uuid:ida-1",
+            "name_id_format": NAME_ID_FORMAT,
             "not_before": now - 60,
             "not_on_or_after": now + 3600
         },
@@ -395,4 +402,66 @@ async fn a_dispensation_without_ppd_046_and_a_discard_after_the_window_are_refus
     let (status, body) = send(&app, "DELETE", &path, &credential, None).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
     assert!(body.contains("discard window has passed"), "{body}");
+}
+
+/// The external committer of a contact point's caller, as the stored
+/// `AUDIT_DETAILS` carries it (#5144).
+fn relayed_committer() -> Value {
+    json!({ "_type": "PARTY_IDENTIFIED", "name": "Synthetic Pharmacist", "identifiers": [
+        { "_type": "DV_IDENTIFIER", "issuer": IDA_ISSUER, "id": NAME_ID,
+          "type": format!("hp_identifier:{NAME_ID_FORMAT}") },
+        { "_type": "DV_IDENTIFIER", "issuer": CONTACT_POINT, "id": "hp-nameid",
+          "type": "oauth2" } ] })
+}
+
+/// A contact point's dispensation records the IdA NameID under the IdA's
+/// issuer, typed by its format, beside the voucher's login, and its discard
+/// is a logical delete under the same committer; a dispensation without the
+/// `organization-id` is refused with `422` (#5144).
+#[tokio::test]
+async fn a_contact_points_dispensation_and_discard_record_the_ida_nameid() {
+    let (_db, svc, app) = serve(eprescription(24)).await;
+    let mine = patient_ehr(&svc, "SYNTHETIC-1").await;
+    let credential = token(Some("SYNTHETIC-1"), PROVIDER, &json!({}));
+    let (status, body) = dispense(&app, &mine, &credential, &[(AUTHORITY, PROVIDER)]).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert!(body.contains("organization-id"), "{body}");
+
+    let (status, uid) = dispense(&app, &mine, &credential, &point_of_care(PROVIDER)).await;
+    assert_eq!(status, StatusCode::CREATED, "{uid}");
+    let vo = uid.split("::").next().expect("the versioned object id");
+    let (status, body) = send(
+        &app,
+        "DELETE",
+        &format!("/ehr/{mine}/composition/{uid}"),
+        &credential,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+    let (status, body) = send(
+        &app,
+        "GET",
+        &format!("/ehr/{mine}/versioned_composition/{vo}/revision_history"),
+        &credential,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let history: Value = serde_json::from_str(&body).expect("a REVISION_HISTORY");
+    let audits: Vec<&Value> = history["items"]
+        .as_array()
+        .expect("the revision history items")
+        .iter()
+        .flat_map(|item| item["audits"].as_array().into_iter().flatten())
+        .collect();
+    assert_eq!(audits.len(), 2, "the dispensation and its discard: {body}");
+    for audit in audits {
+        assert_eq!(audit["committer"], relayed_committer(), "{body}");
+    }
+    assert_eq!(
+        history["items"][1]["audits"][0]["change_type"]["defining_code"]["code_string"],
+        json!("523"),
+        "the discard is a logical delete: {body}"
+    );
 }

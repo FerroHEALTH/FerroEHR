@@ -34,6 +34,8 @@ fn asserted() -> ExternalProfessional {
         provider_authority: Some(AUTHORITY.to_owned()),
         contact_point: false,
         permissions: Vec::new(),
+        name_id: None,
+        assertion_issuer: None,
     }
 }
 

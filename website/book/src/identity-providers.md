@@ -148,8 +148,7 @@ profile, and the server acts on the kind:
     `provider.issuing_authority_name` as `issuer`. The server writes no
     facility and refuses a composition without it with `422` (EHDS
     Art. 13(4)). This is the domestic form; the MyHealth@EU contact-point
-    form, with the identity assertion's `NameID` and the `organization-id`,
-    is planned.
+    form follows.
 - **Attestations** come only from a person bound to a professional `PERSON`.
   A patient, a representative, a system caller and an unbound caller are
   refused with `403` (RM common master04 §Attestation).
@@ -196,6 +195,22 @@ server). Its person agreement names the service it serves in `ehdsi_service`
   `urn:oasis:names:tc:xspa:1.0:subject:organization-id`, the HCPO's
   `organization-id` (eHDSI SAML Profile 10.0.0 §2.3). Any other discard is
   refused with `403`.
+- The committer of a contact point's caller names the professional by the HP
+  Identity Assertion's `NameID`: a `DV_IDENTIFIER` with the assertion's issuer
+  (`ehdsi.assertion.issuer`, NCP-B) as `issuer`, the `NameID`
+  (`ehdsi.professional.hp_identifier`) as `id`, and
+  `hp_identifier:<NameID format>` as `type`, such as
+  `hp_identifier:urn:oasis:names:tc:SAML:1.1:nameid-format:X509SubjectName`,
+  because one string under two formats names two identifiers (eHDSI SAML
+  Profile 10.0.0 §2.1). The token's `iss` and `sub` follow with type
+  `oauth2`, as on a domestic route. A discard is a logical delete under the
+  same committer.
+- A contact point's COMPOSITION carries, in
+  `EVENT_CONTEXT.health_care_facility.identifiers`, the provider's identifier
+  under `provider.issuing_authority_name` and, as a second `DV_IDENTIFIER`,
+  the HCPO's `organization-id` under the issuer
+  `urn:oasis:names:tc:xspa:1.0:subject:organization-id`. A commit without the
+  second is refused with `422`; the server writes neither.
 - A token that carries permissions (`ehdsi.professional.permissions`) records
   a dispensation and discards one only with `PPD-046` among them, as the code
   or its `urn:oasis:names:tc:xspa:1.0:subject:hl7:permission:` URN (eHDSI SAML

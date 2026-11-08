@@ -2605,9 +2605,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-smart"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0befc25ffddd60d925d528eaa19b215a083acd9694f85b6c6913d58a44624eb"
+checksum = "f9a38d8cce9d780b734d5186e0399930be43d138807a673f34b12d3877e73f8e"
 dependencies = [
  "argon2 0.6.0",
  "aws-lc-rs",
