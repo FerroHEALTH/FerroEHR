@@ -177,9 +177,9 @@ impl FerroEhrService {
     /// Returns the body of a new professional `ROLE` of `template_id`
     /// performed by the `PERSON` `performer`, named under `namespace`.
     ///
-    /// The `ROLE` carries the template's first `PARTY_IDENTITY` with its empty `details`; a
-    /// template that requires an item in it makes the `ROLE` incomplete until
-    /// an administrator fills it.
+    /// The `ROLE` carries the template's first `PARTY_IDENTITY` with its
+    /// empty `details`; a template that requires an item in it makes the
+    /// `ROLE` incomplete until an administrator fills it.
     ///
     /// # Errors
     /// The [`Self::web_template`] refusals, and a `422` when the template
