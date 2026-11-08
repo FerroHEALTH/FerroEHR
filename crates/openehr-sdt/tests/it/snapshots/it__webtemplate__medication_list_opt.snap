@@ -30,7 +30,7 @@ expression: wt
         "id": "context",
         "rmType": "EVENT_CONTEXT",
         "nodeId": "",
-        "min": 1,
+        "min": 0,
         "max": 1,
         "aqlPath": "/context",
         "children": [

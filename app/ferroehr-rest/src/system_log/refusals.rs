@@ -37,6 +37,12 @@ const SUMMARY_EHR_IDS: usize = 64;
 #[derive(Debug, Clone, Copy)]
 pub struct Reason(pub &'static str);
 
+/// The mark of a refusal of a federation caller above its agreement's
+/// `caller_rate`, which goes into the caller's summary record and is never
+/// recorded by itself.
+#[derive(Debug, Clone, Copy)]
+pub struct OverRate;
+
 /// The refusal limits of one replica.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RefusalLimits {
@@ -103,6 +109,9 @@ pub struct Refusal<'a> {
     pub ehr_id: Option<&'a str>,
     /// Its access record.
     pub event: &'a AuditEvent,
+    /// Whether it goes into its caller's summary record whatever the caller's
+    /// count: a refusal above an agreement's `caller_rate`.
+    pub summarised: bool,
 }
 
 /// Whether a refusal is recorded by itself.
@@ -270,7 +279,7 @@ impl RefusalLedger {
             Disposition::Summarised
         } else {
             let tally = class.callers.entry(refusal.charged.clone()).or_default();
-            if tally.recorded < self.limits.per_caller {
+            if !refusal.summarised && tally.recorded < self.limits.per_caller {
                 tally.recorded += 1;
                 class.recorded = class.recorded.saturating_add(1);
                 Disposition::Record
@@ -437,6 +446,7 @@ mod tests {
                     .map_or("invalid_token", |binding| binding.code.as_str()),
                 ehr_id: ehr,
                 event,
+                summarised: false,
             },
         )
     }
@@ -602,10 +612,52 @@ mod tests {
                 outcome: "refused-unbound",
                 ehr_id: None,
                 event: &refused,
+                summarised: false,
             },
         );
         assert!(!rejected, "a dropped record is not a fail-closed rejection");
         assert_eq!(state.refusals().unwritten(), 1);
+    }
+
+    #[test]
+    fn a_refusal_above_a_caller_rate_goes_into_the_callers_summary_from_the_first() {
+        let ledger = RefusalLedger::new(limits());
+        let now = Instant::now();
+        let over = event(Some(BindingCode::External), "https://federation", "hp-1");
+        let charged = Charged::Caller {
+            issuer: "https://federation".to_owned(),
+            subject: "hp-1".to_owned(),
+        };
+        let mut close_at = Vec::new();
+        for ehr in ["e1", "e2", "e1"] {
+            let charge = ledger.charge(
+                now,
+                &Refusal {
+                    charged: charged.clone(),
+                    outcome: "caller-rate",
+                    ehr_id: Some(ehr),
+                    event: &over,
+                    summarised: true,
+                },
+            );
+            assert_eq!(charge.disposition, Disposition::Summarised);
+            close_at.extend(charge.close_at);
+        }
+        assert_eq!(
+            close_at.len(),
+            1,
+            "the first summarised refusal closes the window"
+        );
+        let due = ledger.close_due(now + limits().window);
+        assert_eq!(due.len(), 1);
+        assert_eq!(
+            due[0].summary,
+            Some(Summary {
+                count: 3,
+                ehr_ids: vec!["e1".to_owned(), "e2".to_owned()],
+            })
+        );
+        assert_eq!(due[0].user_id, "hp-1", "the summary names its caller");
     }
 
     #[test]
