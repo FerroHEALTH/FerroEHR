@@ -20816,8 +20816,8 @@ impl crate::xml::runtime::FromXml
     }
 }
 
-impl crate::xml::runtime::ToXml
-    for openehr_rm::v1_1::data_types::quantity::reference_range::ReferenceRange
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_1::data_types::quantity::reference_range::ReferenceRange<T>
 {
     fn xml_type_name(&self) -> &'static str {
         "REFERENCE_RANGE"
@@ -20846,8 +20846,8 @@ impl crate::xml::runtime::ToXml
     }
 }
 
-impl crate::xml::runtime::FromXml
-    for openehr_rm::v1_1::data_types::quantity::reference_range::ReferenceRange
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_1::data_types::quantity::reference_range::ReferenceRange<T>
 {
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
@@ -38447,8 +38447,8 @@ impl crate::xml::runtime::FromXml
     }
 }
 
-impl crate::xml::runtime::ToXml
-    for openehr_rm::v1_2::data_types::quantity::reference_range::ReferenceRange
+impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
+    for openehr_rm::v1_2::data_types::quantity::reference_range::ReferenceRange<T>
 {
     fn xml_type_name(&self) -> &'static str {
         "REFERENCE_RANGE"
@@ -38477,8 +38477,8 @@ impl crate::xml::runtime::ToXml
     }
 }
 
-impl crate::xml::runtime::FromXml
-    for openehr_rm::v1_2::data_types::quantity::reference_range::ReferenceRange
+impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
+    for openehr_rm::v1_2::data_types::quantity::reference_range::ReferenceRange<T>
 {
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,

@@ -38,7 +38,8 @@ pub struct DvOrdinal {
     /// Optional normal range.
     pub normal_range: Option<Box<DvInterval<DvOrdered>>>,
     /// Optional tagged other reference ranges for this value in its particular measurement context.
-    pub other_reference_ranges: Option<openehr_base::containers::NonEmptyVec<ReferenceRange>>,
+    pub other_reference_ranges:
+        Option<openehr_base::containers::NonEmptyVec<ReferenceRange<DvOrdered>>>,
     /// Coded textual representation of this value in the enumeration, which may be strings made from  +  symbols, or other enumerations of terms such as  `mild`, `moderate`, `severe`, or even the same number series as the values, e.g. 1, 2, 3.
     pub symbol: DvCodedText,
     /// Value in ordered enumeration of values. Any integer value can be used.

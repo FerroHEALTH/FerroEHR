@@ -100,6 +100,12 @@ pub struct RmAttribute {
     /// `"CONTENT_ITEM"`; a generic parameter is resolved to its bound). This is
     /// the root/base name; [`Self::type_params`] carries any generic arguments.
     pub declared_type: &'static str,
+    /// The formal generic parameter the declared value type is written as
+    /// (`Some("T")` for `DV_INTERVAL.lower`, whose [`Self::declared_type`] is
+    /// the bound `DV_ORDERED`), `None` when it names a class. A parameter a
+    /// class binds in its ancestry (`X_VERSIONED_COMPOSITION` binds `T` to
+    /// `COMPOSITION`) is recorded as the bound class with no formal.
+    pub formal: Option<&'static str>,
     /// The attribute's container shape.
     pub container: Container,
     /// Whether the attribute is mandatory (existence ≥ 1).
@@ -132,6 +138,10 @@ pub struct RmAttribute {
 pub struct RmTypeRef {
     /// The root/base spec-type name (a bare generic parameter resolved to bound).
     pub name: &'static str,
+    /// The formal generic parameter this reference is written as, whose bound
+    /// is [`Self::name`] (`Some("T")` in `REFERENCE_RANGE.range:
+    /// DV_INTERVAL<T>`), `None` when it names a class.
+    pub formal: Option<&'static str>,
     /// This type's own generic arguments (empty when it is not generic).
     pub params: &'static [RmTypeRef],
 }

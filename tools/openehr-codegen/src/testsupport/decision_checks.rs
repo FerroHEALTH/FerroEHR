@@ -7,6 +7,7 @@
 
 use super::{DeclEntry, DeclMap, Error, compose, crate_keys};
 use crate::load::bmm::{BmmPropKind, BmmProperty, BmmType};
+use crate::plan::elided_arguments::ELIDED_ARGUMENTS;
 use crate::plan::its_json_bounds::ITS_JSON_MIN_ITEMS;
 use crate::plan::ordered_hashes::ORDERED_HASHES;
 use crate::plan::overrides;
@@ -21,6 +22,40 @@ pub(super) fn ordered_hash_map() -> DeclMap {
             .map(|e| DeclEntry {
                 key: format!("{}.{}", e.owner, e.field),
                 decision: "indexmap::IndexMap".to_string(),
+                citation: e.citation.to_string(),
+                reason: e.reason.to_string(),
+            })
+            .collect(),
+    }
+}
+
+/// The ancestor-generic class bindings as a declarative decision map.
+pub(super) fn class_binding_map() -> DeclMap {
+    DeclMap {
+        map: "class_binding",
+        check_existence: true,
+        entries: overrides::CLASS_BINDINGS
+            .iter()
+            .map(|e| DeclEntry {
+                key: e.class.to_string(),
+                decision: format!("{} → {}", e.param, e.concrete),
+                citation: e.citation.to_string(),
+                reason: e.reason.to_string(),
+            })
+            .collect(),
+    }
+}
+
+/// The elided generic arguments as a declarative decision map.
+pub(super) fn elided_argument_map() -> DeclMap {
+    DeclMap {
+        map: "elided_argument",
+        check_existence: true,
+        entries: ELIDED_ARGUMENTS
+            .iter()
+            .map(|e| DeclEntry {
+                key: format!("{}.{}", e.class, e.property),
+                decision: format!("{}<{}>", e.root, e.arguments.join(", ")),
                 citation: e.citation.to_string(),
                 reason: e.reason.to_string(),
             })

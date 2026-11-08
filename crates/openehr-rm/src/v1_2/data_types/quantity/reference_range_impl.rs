@@ -15,8 +15,13 @@
 //!   base `Interval.has` semantics over openEHR ordered magnitudes
 //!   (`dv_interval_impl` / `dv_ordered_impl`). `None` when the comparison is
 //!   undecidable (incomparable types/units or unavailable magnitude).
+//!
+//! The class is generic over its limit type `T` as `REFERENCE_RANGE<T>`
+//! declares, with `range: DV_INTERVAL<T>` restored by the generator (the class
+//! table leaves `T` unused, tracker issue #5196); `ReferenceRange<DvQuantity>`
+//! is the range of a `DV_QUANTITY`, `ReferenceRange<DvOrdered>` the open form.
 
-use crate::v1_2::data_types::quantity::dv_ordered::DvOrdered;
+use crate::v1_2::data_types::quantity::dv_ordered_impl::OrderedLimit;
 use crate::v1_2::data_types::quantity::reference_range::ReferenceRange;
 use openehr_base::validate::{InvariantViolation, Validate};
 
@@ -29,21 +34,23 @@ use openehr_base::validate::{InvariantViolation, Validate};
 /// `interval.adoc` §Attributes declares `lower`/`upper` `0..1` and requires no
 /// value when the flag is false, so demanding one here refused a range
 /// `DV_INTERVAL` itself accepts.
-fn limit_ok(unbounded: bool, limit: Option<&DvOrdered>) -> bool {
-    unbounded || limit.is_none_or(DvOrdered::is_simple)
+/// A limit whose simplicity is undecidable (`OrderedLimit::is_simple` gives
+/// `None`) raises nothing, by the same reading.
+fn limit_ok<T: OrderedLimit>(unbounded: bool, limit: Option<&T>) -> bool {
+    unbounded || limit.is_none_or(|l| l.is_simple() != Some(false))
 }
 
-impl ReferenceRange {
+impl<T: OrderedLimit> ReferenceRange<T> {
     /// RM `REFERENCE_RANGE.is_in_range(v)`: `true` when `v` is inside `range`.
     /// `None` when `v` is not strictly comparable to the range limits or a
     /// magnitude is unavailable.
     #[must_use]
-    pub fn is_in_range(&self, v: &DvOrdered) -> Option<bool> {
+    pub fn is_in_range(&self, v: &T) -> Option<bool> {
         self.range.has(v)
     }
 }
 
-impl Validate for ReferenceRange {
+impl<T: OrderedLimit> Validate for ReferenceRange<T> {
     fn validate_invariants(&self, out: &mut Vec<InvariantViolation>) {
         let r = &self.range;
         if !(limit_ok(r.lower_unbounded, r.lower.as_ref())
@@ -60,6 +67,7 @@ impl Validate for ReferenceRange {
 mod tests {
     use super::*;
     use crate::v1_2::data_types::quantity::dv_interval::DvInterval;
+    use crate::v1_2::data_types::quantity::dv_ordered::DvOrdered;
     use crate::v1_2::data_types::quantity::dv_quantity::DvQuantity;
     use crate::v1_2::data_types::text::dv_text::{DvText, DvTextData};
 
@@ -90,7 +98,7 @@ mod tests {
         })
     }
 
-    fn range_with(lower: DvQuantity, upper: DvQuantity) -> ReferenceRange {
+    fn range_with(lower: DvQuantity, upper: DvQuantity) -> ReferenceRange<DvOrdered> {
         ReferenceRange {
             meaning: meaning(),
             range: DvInterval {
@@ -147,5 +155,45 @@ mod tests {
         let mut other = quantity(5.0);
         other.units = "mm[Hg]".to_owned();
         assert_eq!(r.is_in_range(&DvOrdered::DvQuantity(other)), None);
+    }
+
+    fn quantity_range(lower: DvQuantity, upper: DvQuantity) -> ReferenceRange<DvQuantity> {
+        ReferenceRange {
+            meaning: meaning(),
+            range: DvInterval {
+                lower: Some(lower),
+                upper: Some(upper),
+                lower_unbounded: false,
+                upper_unbounded: false,
+                lower_included: true,
+                upper_included: false,
+            },
+        }
+    }
+
+    /// The range of a `REFERENCE_RANGE<DV_QUANTITY>` holds quantities, so its
+    /// limits and the value tested need no `DV_ORDERED` wrapping.
+    #[test]
+    fn a_quantity_range_holds_quantities() {
+        let r = quantity_range(quantity(0.0), quantity(10.0));
+        assert_eq!(r.invariants(), Vec::<InvariantViolation>::new());
+        assert_eq!(r.is_in_range(&quantity(5.0)), Some(true));
+        assert_eq!(r.is_in_range(&quantity(10.0)), Some(false));
+    }
+
+    #[test]
+    fn a_nested_quantity_limit_breaks_range_is_simple() {
+        let mut top = quantity(10.0);
+        top.other_reference_ranges =
+            openehr_base::containers::present_nonempty(vec![quantity_range(
+                quantity(0.0),
+                quantity(1.0),
+            )]);
+        let v = quantity_range(quantity(0.0), top).invariants();
+        assert!(
+            v.iter()
+                .any(|m| m.message == "Invariant Range_is_simple failed on type REFERENCE_RANGE"),
+            "got {v:?}"
+        );
     }
 }
