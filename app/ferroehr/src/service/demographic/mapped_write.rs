@@ -39,7 +39,9 @@ impl FerroEhrService {
     /// `head` (a new party of the template when `None`) with the data value
     /// of each of `values` set at its path, and nothing else changed.
     ///
-    /// Each path names an `ELEMENT` (or its `value`) of the template.
+    /// Each path names an `ELEMENT` (or its `value`) of the template. Several
+    /// identifiers can share one path: a `DV_IDENTIFIER` value replaces the
+    /// one of its `type` and `issuer`, and leaves the others as they are.
     ///
     /// # Errors
     /// The [`Self::web_template`] refusals when the template does not
@@ -122,12 +124,16 @@ fn node(wt: &WebTemplateNode) -> Value {
 /// holds (RM demographic: `details` an `ITEM_TREE`, `identities` a
 /// `PARTY_IDENTITY`; an item an `ELEMENT` at the end of the path and a
 /// `CLUSTER` before it) and the name the template gives it, else its node id.
+///
+/// A `DV_IDENTIFIER` replaces only the identifier of its own `type` and
+/// `issuer` at the path, and is added beside the others when there is none.
 fn set(body: &mut Value, wt: &WebTemplate, path: &str, value: Value) -> Result<(), ServiceError> {
     let element_path = path.trim_end_matches("/value");
     if super::mapping::value_types(&wt.tree, element_path).is_empty() {
         return Err(unmapped(path));
     }
     let steps: Vec<&str> = element_path.trim_start_matches('/').split('/').collect();
+    let identifier = identifier_slot(Some(&value));
     let mut current = body;
     let mut walked = String::new();
     for (index, step) in steps.iter().enumerate() {
@@ -154,7 +160,9 @@ fn set(body: &mut Value, wt: &WebTemplate, path: &str, value: Value) -> Result<(
                 let found = items.iter().position(|item| {
                     node_id.is_none_or(|id| {
                         item.get("archetype_node_id").and_then(Value::as_str) == Some(id)
-                    })
+                    }) && (!last
+                        || identifier
+                            .is_none_or(|held| identifier_slot(item.get("value")) == Some(held)))
                 });
                 let index = found.unwrap_or_else(|| {
                     items.push(fresh());
@@ -175,6 +183,21 @@ fn set(body: &mut Value, wt: &WebTemplate, path: &str, value: Value) -> Result<(
     };
     element.insert("value".to_owned(), value);
     Ok(())
+}
+
+/// The `type` and `issuer` of a `DV_IDENTIFIER` `value`, which tell apart
+/// the identifiers of two selectors at one path; `None` for any other value.
+/// Both are attributes of the identifier (RM
+/// `org.openehr.rm.data_types.dv_identifier.adoc`), and a selector holds the
+/// identifiers of one type and issuer set.
+fn identifier_slot(value: Option<&Value>) -> Option<(Option<&str>, Option<&str>)> {
+    let value = value?;
+    (value.get("_type").and_then(Value::as_str) == Some("DV_IDENTIFIER")).then(|| {
+        (
+            value.get("type").and_then(Value::as_str),
+            value.get("issuer").and_then(Value::as_str),
+        )
+    })
 }
 
 /// The node created at `walked`, the step `attribute[node_id]` of a mapped
