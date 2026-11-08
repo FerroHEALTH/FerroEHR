@@ -19,7 +19,7 @@ mod filter_properties;
 mod patch;
 mod resource;
 mod schema;
-mod source;
+pub(crate) mod source;
 
 use ferroehr_rest::scim::protocol::discovery::{
     AuthenticationScheme, Discovery, DiscoveryConfig, ExtensionConfig, FilterConfig,

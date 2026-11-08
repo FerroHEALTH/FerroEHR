@@ -673,6 +673,85 @@ zorgaanbieders). Outside the Netherlands, name your national retention
 provision. Enable the identity provider's protection against accidental
 deletions beside `max_deactivations`.
 
+### Provision from Microsoft Entra ID
+
+Microsoft Entra ID provisions through a non-gallery enterprise application.
+FerroEHR validates the access token your own authorization server issues to
+it, so the steps split between the two.
+
+1. **Map the person template.** Give the default
+   `[[authz.party_binding.person.template]]` a `user_name` and an
+   `external_id` selector, and map the attributes Entra sends, for example:
+
+   ```toml
+   [[authz.party_binding.person.attribute]]
+   scim = "name.formatted"
+   name = true
+   path = { "FerroEHR professional" = "/identities[at0002]/details[at0003]/items[at0004]" }
+
+   [[authz.party_binding.person.attribute]]
+   scim = 'emails[type eq "work"].value'
+   path = { "FerroEHR professional" = "/contacts[at0005]/addresses[at0006]/details[at0007]/items[at0008]" }
+   ```
+
+   A value path such as `emails[type eq "work"].value` serves the value and
+   its `type`. FerroEHR holds one value per `type` and no preference among
+   them, so `/scim/v2/Schemas` declares `primary` read-only and the `primary`
+   Entra sends is ignored (RFC 7644 §3.3).
+2. **Declare the client.** Add a `[[scim.client]]` whose `issuer` is your
+   authorization server, an `[[auth.issuer]]` of kind `machines`, and whose
+   `binding_issuer` is the `identifier_issuer` of the `[[auth.party]]` your
+   professionals log in through. Set `public_base_url` to the origin Entra
+   reaches. In the Helm chart, `config.scim.enabled: true` also adds the
+   `/scim/v2` path to the Ingress. `ferroehr config check` refuses a mapping
+   the endpoint cannot serve.
+3. **Federate Entra's credential at your authorization server.** Entra's
+   Workload Identity Federation presents a signed assertion, which your
+   authorization server exchanges for a client-credentials access token
+   (RFC 7523 §2.2). These checks are your authorization server's, not
+   FerroEHR's, so verify each one there, as Microsoft's "Workload Identity
+   Federation for SCIM Provisioning" guide requires:
+   - [ ] `iss` is pinned to your full tenant issuer,
+     `https://login.microsoftonline.com/<tenant>/v2.0`, and the assertion
+     verifies against that tenant's key set.
+   - [ ] `aud` is pinned to `api://<workload-identity-app-id>`, with one
+     workload-identity application per FerroEHR deployment.
+   - [ ] `azp` is pinned to the application id of Microsoft's provisioning
+     service.
+   - [ ] `uti` is cached for the lifetime of the assertion, and an assertion
+     whose `uti` was seen before is refused as a replay.
+   - [ ] The access token it issues holds the client's `scope`, names the
+     client in `client_id`, and lives between 1 and 6 hours, the range
+     Microsoft's guide asks for.
+
+   The assertion's `sub` is the object id of a Microsoft application that
+   every integration in the tenant shares, never your `client_id`, so it does
+   not meet RFC 7523 §3 item 2.B. Accepting it is a deviation of your
+   authorization server; record it there. Leaving Entra's **Secret Token**
+   blank, so that Entra uses its own token, is not supported: Microsoft
+   reserves it for testing, and every non-gallery application in the tenant
+   receives a token with the same `iss` and `aud` (RFC 9700 §2.3). A
+   long-lived bearer token is not supported either.
+4. **Point Entra at FerroEHR.** Set the **Tenant URL** to
+   `<public_base_url>/scim/v2` and run **Test Connection**. Entra queries
+   `/Users` with `filter=externalId eq "<random guid>"`, which FerroEHR
+   answers with an empty `ListResponse`, and fetches a random User and a
+   random Group, each answered **404**.
+5. **Map the attributes in Entra.** Map `userName`, `externalId`, `active`
+   and the attributes of step 1. Map the attribute that carries the
+   professional's login identifier to
+   `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`;
+   Entra sends it without listing the extension in `schemas`, which FerroEHR
+   accepts. An attribute the person template does not map is refused as
+   undefined, so remove the rest of Entra's default mappings.
+6. **Protect against mass deactivation.** Turn on Entra's accidental
+   deletions prevention, with a threshold at or below `max_deactivations`.
+
+Entra writes `Replace` and `Add` with a capital letter, disables a User with
+`active = false`, sends `DELETE` once the user is removed, and never sends a
+null. A value cleared in Entra therefore stays in FerroEHR until the User is
+replaced or deleted, or an administrator removes it.
+
 ## `[access_delay]`
 
 The EHDS Art. 3(3) delay of the person's own access to newly registered data,

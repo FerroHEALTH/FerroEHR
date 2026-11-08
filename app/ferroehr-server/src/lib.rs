@@ -497,11 +497,11 @@ fn run_config_check(config: Option<&Path>, set: &[(String, String)]) -> anyhow::
     let (loaded, cfg) = ferroehr::config::load_with_provenance(config, set)?;
     cfg.validate()?;
     ferroehr::config::auth::require_mechanism(&cfg.auth.shared)?;
+    ferroehr_rest::scim::endpoint::check(&AppConfig::from(&cfg))?;
     let rendered = ferrohealth_config::report::check_report(&loaded)?;
     print!("{rendered}");
-    // The resolved placement of the four storage domains, so an
-    // operator can see whether the deployment they configured is the
-    // one the server would run. It names no DSN.
+    // The resolved placement of the four storage domains, so an operator can see whether the
+    // deployment they configured is the one the server would run. It names no DSN.
     println!("{}", cfg.storage.layout(&cfg.db).describe());
     if cfg.db.is_dev_default() {
         eprintln!(

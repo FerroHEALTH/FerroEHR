@@ -106,6 +106,26 @@ config:
       # The healthcare provider this deployment acts for (an example id
       # under the OID arc 2.999).
       provider: { issuer: "urn:oid:2.999.7.9", id: "all-features" }
+      # The PERSON mapping SCIM provisions through: the binding key, userName
+      # and externalId as three identifiers at one path, the name, and the
+      # professional ROLE each User performs.
+      person:
+        template:
+          - template_id: FerroEHR professional
+            default: true
+            key: { path: "/details[at0001]/items[at0001]", type: uuid }
+            user_name: { path: "/details[at0001]/items[at0001]", type: scim_user_name }
+            external_id: { path: "/details[at0001]/items[at0001]", type: scim_external_id }
+        attribute:
+          - scim: name.formatted
+            oidc: name
+            jit: true
+            name: true
+            path: { "FerroEHR professional": "/identities[at0002]/details[at0003]/items[at0004]" }
+          - scim: emails[type eq "work"].value
+            path: { "FerroEHR professional": "/contacts[at0005]/addresses[at0006]/details[at0007]/items[at0008]" }
+      professional_role:
+        template_id: FerroEHR professional role
     # FerroBRIDGE commits what $toopenehr maps, relaying the record of
     # another system, as the healthcare provider this deployment acts for.
     system_client:
@@ -124,6 +144,17 @@ config:
       patient_claim: patient_id
       cedar:
         policy_dir: /etc/ferroehr
+  # Microsoft Entra ID provisions the professionals through SCIM with a
+  # token of the machines issuer; the logins of the persons issuer then bind
+  # to the PERSON carrying their key under the same identifier issuer.
+  scim:
+    enabled: true
+    public_base_url: https://ferroehr.example.com
+    client:
+      - issuer: https://machines.example.org/realms/ferroehr
+        client_id: entra-provisioning
+        scope: ferroehr/scim
+        binding_issuer: urn:example:ferroehr-login
   admin:
     enabled: true
   smart:

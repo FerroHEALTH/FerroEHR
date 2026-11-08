@@ -180,7 +180,12 @@ pub(crate) async fn check(
         .identifiers
         .iter()
         .filter(|held| !(rekeyed && held.0 == "key"))
-        .filter(|held| !after.identifiers.contains(*held))
+        .filter(|(selector, issuer, identifier_type, _)| {
+            !after
+                .identifiers
+                .iter()
+                .any(|(s, i, t, _)| (s, i, t) == (selector, issuer, identifier_type))
+        })
         .collect();
     if let Some((selector, issuer, identifier_type, _)) = dropped.first() {
         return Err(ServiceError::content_invalid(
