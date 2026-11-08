@@ -14,7 +14,7 @@
 
 use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 
-use crate::config::binding::person::{PersonAttribute, Sections, Source};
+use crate::config::binding::person::{Sections, Source};
 use crate::error::ServiceError;
 use crate::party_binding::fill::{FillError, Lease};
 use crate::service::FerroEhrService;
@@ -83,7 +83,7 @@ impl FerroEhrService {
                 );
             }
             for attribute in &sections.person.attribute {
-                let Some(path) = attribute_path(attribute, &template.template_id) else {
+                let Some(path) = attribute.path_for(&template.template_id) else {
                     continue;
                 };
                 let carries = match attribute.source() {
@@ -200,17 +200,6 @@ impl FerroEhrService {
         }
         Ok(Some(wt))
     }
-}
-
-/// The path `attribute` maps for `template_id`, compared in the canonical
-/// form of the id.
-fn attribute_path<'a>(attribute: &'a PersonAttribute, template_id: &str) -> Option<&'a str> {
-    let key = crate::templates::identity::canonical_key(template_id);
-    attribute
-        .path
-        .iter()
-        .find(|(template, _)| crate::templates::identity::canonical_key(template) == key)
-        .map(|(_, path)| path.as_str())
 }
 
 /// Pushes the refusal of `path` when `wt` has no node there, or the value

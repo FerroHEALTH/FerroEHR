@@ -378,8 +378,16 @@ fn mount_public_surface(
         .merge(api)
         .merge(status::router(rest_root))
         .merge(discovery);
-    if let Some(scim) = crate::scim::endpoint::router(cfg, authenticator) {
-        inner = inner.merge(scim);
+    if let Some(scim) = crate::scim::endpoint::router(cfg, authenticator, state.backend_handle()) {
+        // Every SCIM request is an access record of its client, run on one
+        // connection per pool like an API request.
+        inner = inner.merge(
+            scim.layer(from_fn_with_state(
+                state.clone(),
+                crate::system_log::middleware::middleware,
+            ))
+            .layer(axum::middleware::from_fn(one_connection_per_request)),
+        );
     }
 
     match cfg.rest.swagger_ui {

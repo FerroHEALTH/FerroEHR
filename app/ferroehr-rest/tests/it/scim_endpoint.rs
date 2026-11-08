@@ -10,6 +10,8 @@
 use std::num::NonZeroU32;
 
 use axum::Router;
+use ferroehr::config::binding::PartyBindingConfig;
+use ferroehr::config::binding::person::{PersonSection, PersonTemplate, RoleSection, Selector};
 use ferroehr::config::scim::{ScimClient, ScimConfig};
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_server::section::CallerRate;
@@ -33,6 +35,31 @@ const LOGIN: &str = "urn:example:login";
 /// The client and its scope.
 const CLIENT: &str = "provisioning";
 const SCOPE: &str = "ferroehr/scim";
+
+/// The party mapping a User is written with: the default person template
+/// with its key and `userName` selectors, and the professional role.
+fn binding() -> PartyBindingConfig {
+    let selector = |kind: &str| Selector {
+        path: "/details[at0001]/items[at0002]".to_owned(),
+        identifier_type: kind.to_owned(),
+    };
+    PartyBindingConfig {
+        person: PersonSection {
+            template: vec![PersonTemplate {
+                template_id: "FerroEHR professional".to_owned(),
+                key: selector("guid"),
+                user_name: Some(selector("scim_user_name")),
+                default: true,
+                ..PersonTemplate::default()
+            }],
+            ..PersonSection::default()
+        },
+        professional_role: Some(RoleSection {
+            template_id: "FerroEHR professional role".to_owned(),
+        }),
+        ..PartyBindingConfig::default()
+    }
+}
 
 fn config(rate: Option<CallerRate>) -> AppConfig {
     let machines = IssuerEntry {
@@ -65,6 +92,7 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
     AppConfig {
         server,
         auth,
+        party_binding: binding(),
         scim: ScimConfig {
             enabled: true,
             public_base_url: Some("https://cdr.example.com".to_owned()),

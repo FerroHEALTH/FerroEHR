@@ -21,6 +21,7 @@
 pub mod fill;
 pub mod lookup;
 pub mod protect;
+pub mod provisioned;
 pub mod source;
 pub mod store;
 
