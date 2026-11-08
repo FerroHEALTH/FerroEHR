@@ -32,7 +32,7 @@ app/ferroehr/src/aql/sql/from.rs 1231
 app/ferroehr/src/aql/sql/value.rs 988
 app/ferroehr/src/config/auth.rs 979
 app/ferroehr/src/config/deployment.rs 1124
-app/ferroehr/src/config/mod.rs 2988
+app/ferroehr/src/config/mod.rs 2394
 app/ferroehr/src/db/mod.rs 2108
 app/ferroehr/src/privacy/detect.rs 901
 app/ferroehr/src/service/admin/dump_load.rs 1854
@@ -47,8 +47,8 @@ app/ferroehr/src/storage/version_repo/read.rs 845
 app/ferroehr/src/system_log/categories.rs 989
 app/ferroehr/src/system_log/fhir.rs 1336
 app/ferroehr/src/system_log/sender.rs 1180
-app/ferroehr/src/system_log/store.rs 1925
-app/ferroehr/src/versioning/change.rs 1362
+app/ferroehr/src/system_log/store.rs 1865
+app/ferroehr/src/versioning/change.rs 1312
 app/ferroehr/src/versioning/contribution.rs 1019
 crates/openehr-adl/src/adl14/domain.rs 1111
 crates/openehr-adl/src/assemble.rs 831
@@ -80,13 +80,11 @@ crates/openehr-sdt/src/flat/example.rs 1917
 crates/openehr-sdt/src/flat/map/data_values.rs 1053
 crates/openehr-sdt/src/flat/map/structures.rs 906
 crates/openehr-sdt/src/flat/validation/leaf.rs 1109
-crates/openehr-sdt/src/flat/validation/mod.rs 2778
-crates/openehr-sdt/src/flat/webtemplate/builder.rs 1615
-crates/openehr-sdt/src/flat/webtemplate/builder_v2_4.rs 1832
+crates/openehr-sdt/src/flat/validation/mod.rs 2769
+crates/openehr-sdt/src/flat/webtemplate/builder.rs 1546
+crates/openehr-sdt/src/flat/webtemplate/builder_v2_4.rs 1815
 crates/openehr-sdt/src/flat/webtemplate/inputs.rs 1274
-crates/openehr-sdt/src/flat/webtemplate/shape.rs 886
 crates/openehr-term/src/bundle.rs 876
-tools/loadtest/src/main.rs 824
 tools/openehr-codegen/src/analyze/mod.rs 812
 tools/openehr-codegen/src/cli.rs 1402
 tools/openehr-codegen/src/load/bmm.rs 874
