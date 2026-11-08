@@ -12,6 +12,7 @@ use openehr_am::v2_4::aom2::constraint_model::{c_attribute, c_complex_object, c_
 use openehr_its::opt14::types::{
     CAttribute, CComplexObject, CObject, CSingleAttribute, Intervalofinteger,
 };
+use openehr_rm::v1_2::typing::RmType;
 
 use super::inputs;
 
@@ -21,8 +22,13 @@ use super::inputs;
 const INTERVAL_PARTS: [&str; 2] = ["lower", "upper"];
 
 /// The parameter `T` of a `DV_INTERVAL<T>` RM type, `None` for another type.
-fn interval_parameter(rm_type: &str) -> Option<&str> {
-    rm_type.strip_prefix("DV_INTERVAL<")?.strip_suffix('>')
+fn interval_parameter(rm_type: &str) -> Option<String> {
+    // NOTE: a type that is no RM type name (RM class tables) is no `DV_INTERVAL<T>`.
+    let parsed = rm_type.parse::<RmType>().ok()?;
+    match parsed.params() {
+        [parameter] if parsed.name() == "DV_INTERVAL" => Some(parameter.to_string()),
+        _ => None,
+    }
 }
 
 /// The `C_ATTRIBUTE.existence` interval of `attr` (AOM 1.4
@@ -155,7 +161,7 @@ pub(super) fn interval_parts_v1_4(co: &CObject, rm_type: &str) -> Vec<CAttribute
             CAttribute::CSingleAttribute(CSingleAttribute {
                 rm_attribute_name: part.to_owned(),
                 existence: optional(),
-                children: vec![open_object(parameter, optional())],
+                children: vec![open_object(&parameter, optional())],
             })
         })
         .collect()
@@ -194,7 +200,7 @@ pub(super) fn interval_parts_v2_4(
                 c_complex_object::CComplexObject::CComplexObject(CComplexObjectData {
                     parent: None,
                     soc_parent: None,
-                    rm_type_name: parameter.to_owned(),
+                    rm_type_name: parameter.clone(),
                     occurrences: None,
                     node_id: String::new(),
                     alternative_ids: None,

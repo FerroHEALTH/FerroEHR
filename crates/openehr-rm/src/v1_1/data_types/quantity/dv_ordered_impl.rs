@@ -311,6 +311,11 @@ pub trait OrderedLimit {
         let _ = other;
         None
     }
+    /// RM `DV_ORDERED.is_simple`: whether this limit carries no reference
+    /// ranges, as `REFERENCE_RANGE`'s `Range_is_simple` reads it.
+    fn is_simple(&self) -> Option<bool> {
+        None
+    }
 }
 
 /// A `serde_json::Value` element carries no RM ordering — every comparison is
@@ -346,6 +351,7 @@ macro_rules! ordered_limit {
                 let ($x, $y) = (self, other);
                 Some($ord? != core::cmp::Ordering::Greater)
             }
+            ordered_limit!(@simple);
         }
 
         ordered_limit!(@surface $ty);
@@ -385,9 +391,17 @@ macro_rules! ordered_limit {
                 }?;
                 Some(a <= b)
             }
+            ordered_limit!(@simple);
         }
 
         ordered_limit!(@surface $ty);
+    };
+
+    // `DV_ORDERED.is_simple`, identical for every concrete subtype.
+    (@simple) => {
+        fn is_simple(&self) -> Option<bool> {
+            Some(self.normal_range.is_none() && self.other_reference_ranges.is_none())
+        }
     };
 
     // The RM-facing inherent methods, identical for every arm.
@@ -589,6 +603,10 @@ impl DvOrdered {
     /// RM `DV_ORDERED.is_simple`: `true` if this value carries no reference
     /// ranges (no `normal_range` and no `other_reference_ranges`).
     #[must_use]
+    #[expect(
+        clippy::same_name_method,
+        reason = "the inherent method IS the RM `DV_ORDERED.is_simple` surface; the `OrderedLimit` method of the same name forwards to it"
+    )]
     pub fn is_simple(&self) -> bool {
         macro_rules! simple {
             ($x:expr) => {
@@ -785,6 +803,10 @@ impl OrderedLimit for DvOrdered {
             DvDateTime,
             DvDuration
         )
+    }
+
+    fn is_simple(&self) -> Option<bool> {
+        Some(Self::is_simple(self))
     }
 }
 

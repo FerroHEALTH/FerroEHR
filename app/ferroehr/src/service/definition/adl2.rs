@@ -634,7 +634,7 @@ fn join_syntax_errors(errs: &[openehr_adl::error::SyntaxError]) -> String {
 /// content)"). AOM2 validation-phase failures (V-codes) on a *parsed* source
 /// are [`ServiceError::ValidationFailed`] instead (see
 /// [`FerroEhrService::template_adl2_upload`]), which the template upload answers `400` too.
-fn syntax_bad_request(errs: &[openehr_adl::error::SyntaxError]) -> ServiceError {
+pub(super) fn syntax_bad_request(errs: &[openehr_adl::error::SyntaxError]) -> ServiceError {
     ServiceError::precondition(format!(
         "syntactically invalid ADL2 content: {}",
         join_syntax_errors(errs)

@@ -56,6 +56,13 @@ the package version is the crate's own SemVer line
   subtype sets → untagged enums; recursion → `Box`; `_type` via the EMITTED
   manual `serde::Serialize`/`Deserialize` impls in `src/json_serde.rs` (never a
   serde DERIVE); flattened concrete structs.
+- `typing.rs` and `paths/write.rs` are generation-twin TEMPLATES
+  (`tools/openehr-codegen/templates/openehr-rm/`): `typing` parses and prints
+  generic RM type names (`RmType`) and types an attribute or an `RmPath` below
+  an instantiated class over the static model, substituting the formal
+  parameter each `RmAttribute`/`RmTypeRef` keeps in `formal`; `paths::write`
+  is `item_at_path_mut` and `set_at_path`, the writes the RM does not define
+  (our own design, documented in the module).
 - The BMM-generated RM *model* (attribute→types, multiplicity,
   descendants, and the computed attributes the BMM's no-argument functions
   declare, kept apart from the stored ones) feeds the AQL planner and the

@@ -430,7 +430,7 @@ pub(super) fn example_or_refusal(
 ///   well-formed XML (including an empty document).
 /// - [`ServiceError::Unprocessable`] (→ ITS-REST `422`) when well-formed XML
 ///   does not decode as an OPT 1.4 `OPERATIONAL_TEMPLATE` document.
-fn parse_opt(xml: &str) -> Result<OperationalTemplate, ServiceError> {
+pub(super) fn parse_opt(xml: &str) -> Result<OperationalTemplate, ServiceError> {
     require_well_formed_xml(xml)?;
     openehr_its::opt14::from_xml(xml).map_err(|e| {
         // NOTE: no specification names this status token: our own design for a
