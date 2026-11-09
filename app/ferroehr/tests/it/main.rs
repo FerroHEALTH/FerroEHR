@@ -87,6 +87,7 @@ mod node_readers;
 mod one_schema_per_statement;
 mod opt_resource_meta;
 mod outbox_feed;
+mod party_binding_adopt;
 mod party_binding_check;
 mod party_binding_config;
 mod party_binding_source;
