@@ -30,7 +30,7 @@ openehr-query = { path = "../../crates/openehr-query" }
 # master08) is the ONE parser the CDR's scope gate and the viewer's scope
 # previewer share, so what the drawer explains can never drift from what the CDR
 # enforces.
-ferrohealth-smart = { workspace = true, features = ["openehr-scopes"] }
+ferrohealth-smart = { workspace = true, features = ["openehr-scopes", "server-tls"] }
 # The console sign-in and session: the `[oidc]` and `[session]` sections, the
 # sealed store the multi-instance viewer runs on, and the four sign-in routes
 # with the middleware every page sits behind (`axum`).
@@ -58,6 +58,7 @@ ferrohealth-health = { workspace = true, features = ["registry"] }
 # The viewer's own string catalogs under locales/.
 fluent-templates.workspace = true
 serde.workspace = true
+toml.workspace = true
 serde_json.workspace = true
 # ISO 8601 parsing/formatting for the results chart's time axis.
 jiff.workspace = true
@@ -83,7 +84,7 @@ ferrohealth-secret.workspace = true
 # drain, `cli::Common` and the healthcheck, the console's browser security
 # headers and same-origin check (`console`), and the outbound TLS of the OIDC
 # and CDR clients (`reqwest`).
-ferrohealth-server = { workspace = true, features = ["console", "reqwest"] }
+ferrohealth-server = { workspace = true, features = ["console", "otlp", "reqwest"] }
 clap.workspace = true
 # The public URL the same-origin check compares `Origin` with.
 url.workspace = true

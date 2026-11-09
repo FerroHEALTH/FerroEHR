@@ -99,14 +99,20 @@ fn check_clients(config: &ViewerConfig) -> anyhow::Result<()> {
 }
 
 /// Serves the viewer until `SIGTERM` or `SIGINT`, then drains within
-/// `server.shutdown_timeout_ms`, with the request log on `telemetry`.
+/// `server.shutdown_timeout`, with the request log on `telemetry`.
 async fn serve(config: ViewerConfig, telemetry: &Telemetry) -> anyhow::Result<()> {
     let request_log = crate::telemetry::request_log(&config, telemetry);
     let cdr = crate::cdr::CdrClient::new(&config.cdr)?;
     // NOTE: ferrohealth-session 0.2.1 `config::OidcSettings::relying_party`: the provider's
     // metadata is discovered at the start, so a broken provider refuses it.
     let party = if config.auth.oidc_enabled {
-        Some(config.oidc.check()?.relying_party().await?)
+        Some(
+            config
+                .oidc
+                .check_with_tls(&ferrohealth_smart::config::ServerTls)?
+                .relying_party()
+                .await?,
+        )
     } else {
         None
     };

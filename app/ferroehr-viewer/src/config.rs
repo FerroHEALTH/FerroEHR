@@ -14,10 +14,10 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use ferrohealth_config::loader::Loader;
+use ferrohealth_config::tls::TlsClientSection;
+use ferrohealth_config::tls::TlsVersion;
 use ferrohealth_server::section::ServerSection;
-use ferrohealth_server::tls_client::TlsClientSection;
-use ferrohealth_session::config::{OidcSection, OidcTlsSection, SessionSection};
-use ferrohealth_smart::client::TlsVersion;
+use ferrohealth_session::config::{OidcSection, SessionSection};
 use ferrohealth_telemetry::section::TelemetrySection;
 use serde::Deserialize;
 
@@ -54,8 +54,8 @@ impl Default for ViewerConfig {
             // whole templates and compositions, and a page may wait on several CDR calls.
             server: ServerSection {
                 listen: std::net::SocketAddr::from(([127, 0, 0, 1], 3000)),
-                request_timeout_ms: 60_000,
-                body_limit_bytes: 16 * 1024 * 1024,
+                request_timeout: ferrohealth_config::units::Duration::from_mins(1),
+                body_limit: ferrohealth_config::units::ByteSize::from_mib(16),
                 ..ServerSection::default()
             },
             cdr: CdrConfig::default(),
@@ -63,9 +63,9 @@ impl Default for ViewerConfig {
             // NOTE: no specification governs this: our own design; the provider connection
             // keeps the TLS 1.3 floor the viewer's issuer client had before ferrohealth-session.
             oidc: OidcSection {
-                tls: OidcTlsSection {
+                tls: TlsClientSection {
                     min_version: TlsVersion::Tls13,
-                    ..OidcTlsSection::default()
+                    ..TlsClientSection::default()
                 },
                 ..OidcSection::default()
             },
@@ -73,8 +73,8 @@ impl Default for ViewerConfig {
             // NOTE: no specification governs this: our own design; the viewer keeps the hour
             // idle and twelve hours absolute it ran on before ferrohealth-session.
             session: SessionSection {
-                idle_timeout_s: 3600,
-                absolute_timeout_s: 43_200,
+                idle_timeout: ferrohealth_config::units::Duration::from_hours(1),
+                absolute_timeout: ferrohealth_config::units::Duration::from_hours(12),
                 ..SessionSection::default()
             },
             ui: UiConfig::default(),
@@ -127,8 +127,8 @@ pub struct CdrConfig {
     /// openEHR spec governs a management surface — our own operational
     /// extension.
     pub management_base_url: String,
-    /// Per-request timeout in seconds.
-    pub request_timeout_secs: u64,
+    /// How long one request to the CDR may take.
+    pub timeout: ferrohealth_config::units::Duration,
     /// The trust roots beside the platform's and the client identity the CDR
     /// client presents (`[cdr.tls]`).
     pub tls: TlsClientSection,
@@ -140,7 +140,7 @@ impl Default for CdrConfig {
             base_url: "http://localhost:8080".to_owned(),
             base_path: "/ferroehr/rest/openehr/v1".to_owned(),
             management_base_url: String::new(),
-            request_timeout_secs: 30,
+            timeout: ferrohealth_config::units::Duration::from_secs(30),
             tls: TlsClientSection::default(),
         }
     }
@@ -238,6 +238,9 @@ pub enum ConfigError {
     /// The tree read but one of its values is refused.
     #[error("{0}")]
     Invalid(String),
+    /// Keys v5.6 read and v5.7.0 retired, each named with its replacement.
+    #[error(transparent)]
+    Retired(#[from] ferrohealth_config::removed::RemovedKeys),
     /// `[oidc]` or `[session]` is refused.
     #[error(transparent)]
     Session(Box<ferrohealth_session::config::ConfigError>),
@@ -288,8 +291,25 @@ pub fn load(path: Option<&Path>, sets: &[(String, String)]) -> Result<ViewerConf
         .collect();
     let viewer_loader = loader()?;
     sweep(&viewer_loader, &environment)?;
+    refuse_retired(viewer_loader.load_with::<toml::Table>(path, sets))?;
     let loaded = viewer_loader.load_with::<ViewerConfig>(path, sets)?;
     finish(loaded.settings().clone())
+}
+
+/// Refuses every key v5.6 read and v5.7.0 retired that the merged tree sets,
+/// which the typed load would refuse only as unknown.
+fn refuse_retired(
+    tree: Result<
+        ferrohealth_config::loader::Loaded<toml::Table>,
+        ferrohealth_config::error::ConfigError,
+    >,
+) -> Result<(), ConfigError> {
+    // NOTE: no specification governs this: our own design; a tree that does not
+    // merge is refused by the typed load that follows, with its position.
+    let Ok(tree) = tree else {
+        return Ok(());
+    };
+    Ok(crate::retired::removals(tree.settings()).finish()?)
 }
 
 /// Refuses every variable under `FERROEHR_VIEWER_` that is neither an
@@ -319,6 +339,7 @@ pub fn load_sources(
 ) -> Result<ViewerConfig, ConfigError> {
     let viewer_loader = loader()?;
     sweep(&viewer_loader, env)?;
+    refuse_retired(viewer_loader.load_sources::<toml::Table>(file, None, env))?;
     let loaded = viewer_loader.load_sources::<ViewerConfig>(file, None, env)?;
     finish(loaded.settings().clone())
 }
@@ -380,7 +401,10 @@ fn finish(mut cfg: ViewerConfig) -> Result<ViewerConfig, ConfigError> {
     // NOTE: ferrohealth-session 0.2.1 `config`: a sealed store with no key, a key beside a
     // memory store and an absolute lifetime shorter than the idle one refuse the start.
     if cfg.auth.oidc_enabled {
-        cfg.session.check(&cfg.oidc.check()?)?;
+        cfg.session.check(
+            &cfg.oidc
+                .check_with_tls(&ferrohealth_smart::config::ServerTls)?,
+        )?;
     } else {
         cfg.session.check_with(false)?;
     }
@@ -411,6 +435,8 @@ pub fn public_origin(public_base_url: &str) -> Result<url::Url, ConfigError> {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
+
+    use ferrohealth_config::tls::TlsVersion;
 
     use super::{CdrConfig, ViewerConfig, load_sources};
 
@@ -527,16 +553,22 @@ mod tests {
     #[test]
     fn the_session_section_is_checked_when_it_loads() {
         let defaults = load_sources(None, &BTreeMap::new()).unwrap();
-        assert_eq!(3600, defaults.session.idle_timeout_s);
-        assert_eq!(43_200, defaults.session.absolute_timeout_s);
+        assert_eq!(
+            ferrohealth_config::units::Duration::from_hours(1),
+            defaults.session.idle_timeout
+        );
+        assert_eq!(
+            ferrohealth_config::units::Duration::from_hours(12),
+            defaults.session.absolute_timeout
+        );
         for (refused, key) in [
             (
-                "[session]\nabsolute_timeout_s = 0\n",
-                "session.absolute_timeout_s",
+                "[session]\nabsolute_timeout = \"0s\"\n",
+                "session.absolute_timeout",
             ),
             (
-                "[session]\nidle_timeout_s = 90\nabsolute_timeout_s = 60\n",
-                "session.absolute_timeout_s",
+                "[session]\nidle_timeout = \"90s\"\nabsolute_timeout = \"60s\"\n",
+                "session.absolute_timeout",
             ),
             ("[session]\nstore = \"sealed\"\n", "session.key"),
         ] {
@@ -546,11 +578,14 @@ mod tests {
             assert!(err.contains(key), "{refused}: {err}");
         }
         let equal = load_sources(
-            Some("[session]\nidle_timeout_s = 60\nabsolute_timeout_s = 60\n"),
+            Some("[session]\nidle_timeout = \"60s\"\nabsolute_timeout = \"60s\"\n"),
             &BTreeMap::new(),
         )
         .unwrap();
-        assert_eq!(60, equal.session.absolute_timeout_s);
+        assert_eq!(
+            ferrohealth_config::units::Duration::from_secs(60),
+            equal.session.absolute_timeout
+        );
     }
 
     #[test]
@@ -589,17 +624,23 @@ mod tests {
     fn the_server_section_layers_over_the_viewers_defaults() {
         let defaults = load_sources(None, &BTreeMap::new()).unwrap();
         assert_eq!("127.0.0.1:3000", defaults.server.listen.to_string());
-        assert_eq!(16 * 1024 * 1024, defaults.server.body_limit_bytes);
-        assert_eq!(60_000, defaults.server.request_timeout_ms);
+        assert_eq!(16 * 1024 * 1024, defaults.server.body_limit_bytes());
+        assert_eq!(
+            ferrohealth_config::units::Duration::from_mins(1),
+            defaults.server.request_timeout
+        );
 
         let env = BTreeMap::from([(
             "FERROEHR_VIEWER__SERVER__LISTEN".to_owned(),
             "0.0.0.0:3000".to_owned(),
         )]);
-        let partial = load_sources(Some("[server]\ndrain_delay_ms = 5000\n"), &env).unwrap();
+        let partial = load_sources(Some("[server]\ndrain_delay = \"5s\"\n"), &env).unwrap();
         assert_eq!("0.0.0.0:3000", partial.server.listen.to_string());
-        assert_eq!(5_000, partial.server.drain_delay_ms);
-        assert_eq!(16 * 1024 * 1024, partial.server.body_limit_bytes);
+        assert_eq!(
+            ferrohealth_config::units::Duration::from_secs(5),
+            partial.server.drain_delay
+        );
+        assert_eq!(16 * 1024 * 1024, partial.server.body_limit_bytes());
     }
 
     /// The keys of `[server]` the viewer cannot apply refuse the start.
@@ -627,9 +668,9 @@ mod tests {
         let parsed = load_sources(
             Some(
                 "[cdr.tls]\ntrust_roots_file = \"/run/cdr-ca.pem\"\nmin_version = \"1.2\"\n\n\
-                 [oidc]\nca_file = \"/run/issuer-ca.pem\"\nresolve = [\"keycloak=127.0.0.1:8443\"]\n\n\
-                 [oidc.tls]\nclient_certificate = \"/run/viewer.crt\"\nclient_key_file = \"/run/viewer.key\"\n\
-                 min_version = \"1.3\"\n",
+                 [oidc]\nresolve = [\"keycloak=127.0.0.1:8443\"]\n\n\
+                 [oidc.tls]\ntrust_roots_file = \"/run/issuer-ca.pem\"\n\
+                 client_identity_file = \"/run/viewer.pem\"\nmin_version = \"1.3\"\n",
             ),
             &BTreeMap::new(),
         )
@@ -640,31 +681,28 @@ mod tests {
         );
         assert_eq!(
             Some(std::path::PathBuf::from("/run/issuer-ca.pem")),
-            parsed.oidc.ca_file
+            parsed.oidc.tls.trust_roots_file
         );
         assert_eq!(parsed.oidc.resolve, ["keycloak=127.0.0.1:8443"]);
         assert_eq!(
-            Some(std::path::PathBuf::from("/run/viewer.crt")),
-            parsed.oidc.tls.client_certificate
+            Some(std::path::PathBuf::from("/run/viewer.pem")),
+            parsed.oidc.tls.client_identity_file
         );
-        assert_eq!(
-            ferrohealth_smart::client::TlsVersion::Tls13,
-            parsed.oidc.tls.min_version
-        );
+        assert_eq!(TlsVersion::Tls13, parsed.oidc.tls.min_version);
         let floor = load_sources(
             Some("[oidc.tls]\nmin_version = \"1.2\"\n"),
             &BTreeMap::new(),
         )
         .unwrap();
         assert_eq!(
-            ferrohealth_smart::client::TlsVersion::Tls12,
+            TlsVersion::Tls12,
             floor.oidc.tls.min_version,
             "the floor is lowered only when asked"
         );
         assert_eq!(
-            ferrohealth_smart::client::TlsVersion::Tls13,
+            TlsVersion::Tls13,
             load_sources(
-                Some("[oidc]\nca_file = \"/run/ca.pem\"\n"),
+                Some("[oidc]\nresolve = [\"keycloak=127.0.0.1:8443\"]\n"),
                 &BTreeMap::new()
             )
             .unwrap()

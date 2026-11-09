@@ -257,10 +257,9 @@ startup.
 | `kid` | string | the RFC 7638 thumbprint | The `kid` the client assertion names. |
 | `assertion_alg` | string | by key type | The algorithm the client assertion is signed with. |
 | `assertion_audience` | enum{token_endpoint,issuer} | `token_endpoint` | The `aud` of the client assertion; `issuer` needs `issuer` set. |
-| `client_certificate_file` / `client_key_file` | path | unset | The client certificate chain and its key presented over mutual TLS (RFC 8705); set together. |
-| `ca_file` | path | unset | PEM trust roots added to the built-in ones, for a token endpoint behind a private certificate authority. |
-| `refresh_margin_ms` | int | `30000` | How long before the token expires a new one is fetched. |
-| `timeout_ms` | int | `10000` | How long one call to the authorization server may take. |
+| `tls` | table | platform roots | The family's outbound TLS table: `trust_roots_file`, PEM trust roots added to the platform's for a token endpoint behind a private certificate authority; `client_identity_file`, one PEM holding the client certificate chain and its key presented over mutual TLS (RFC 8705); and `min_version`. |
+| `refresh_margin` | duration | `"30s"` | How long before the token expires a new one is fetched. |
+| `timeout` | duration | `"10s"` | How long one call to the authorization server may take. |
 
 With the local store on, the feed delivers from the store and loses nothing
 across a repository outage. With the store off it delivers from an in-memory

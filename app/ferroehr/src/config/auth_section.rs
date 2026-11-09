@@ -205,28 +205,13 @@ impl<'de, K: DeserializeSeed<'de>> Visitor<'de> for KeyOrOwn<'_, K> {
 /// Returns the issuer key of one `machines` issuer `issuer` for the
 /// `ferroehr` audience, the table the configuration tests trust.
 #[cfg(test)]
-pub(crate) fn machines(issuer: &str) -> ferrohealth_smart::config::IssuerKey {
-    ferrohealth_smart::config::IssuerKey::List(vec![ferrohealth_smart::config::IssuerEntry {
+pub(crate) fn machines(issuer: &str) -> Vec<ferrohealth_smart::config::IssuerEntry> {
+    vec![ferrohealth_smart::config::IssuerEntry {
         issuer: issuer.to_owned(),
         kind: Some(ferrohealth_smart::kind::IssuerKind::Machines),
         audience: vec!["ferroehr".to_owned()],
         ..ferrohealth_smart::config::IssuerEntry::default()
-    }])
-}
-
-/// Returns `fields` without the keys the crate keeps only to refuse them
-/// ([`ferrohealth_smart::config::ConfigError::Removed`]).
-#[cfg(test)]
-pub(crate) fn live_fields(fields: Vec<String>) -> Vec<String> {
-    let removed = |field: &str| {
-        toml::from_str::<AuthSection>(&format!("{field} = 1")).is_ok_and(|section| {
-            matches!(
-                section.resolve(),
-                Err(ferrohealth_smart::config::ConfigError::Removed { .. })
-            )
-        })
-    };
-    fields.into_iter().filter(|field| !removed(field)).collect()
+    }]
 }
 
 #[cfg(test)]

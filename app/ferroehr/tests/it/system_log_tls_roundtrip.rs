@@ -22,9 +22,9 @@ async fn tls_octet_counted_frame_round_trips() {
     let mut listener = SyslogTlsListener::bind(0).await.expect("listener");
     let config = SyslogConfig {
         url: format!("tls://{}:{}", "localhost".to_owned(), listener.port),
-        tls: ferrohealth_server::tls_client::TlsClientSection {
+        tls: ferrohealth_config::tls::TlsClientSection {
             trust_roots_file: Some(listener.ca_file.clone()),
-            ..ferrohealth_server::tls_client::TlsClientSection::default()
+            ..ferrohealth_config::tls::TlsClientSection::default()
         },
         ..SyslogConfig::default()
     };
@@ -63,9 +63,9 @@ async fn a_record_whose_send_fails_is_delivered_later() {
     let mut listener = SyslogTlsListener::bind(1).await.expect("listener");
     let config = SyslogConfig {
         url: format!("tls://{}:{}", "localhost".to_owned(), listener.port),
-        tls: ferrohealth_server::tls_client::TlsClientSection {
+        tls: ferrohealth_config::tls::TlsClientSection {
             trust_roots_file: Some(listener.ca_file.clone()),
-            ..ferrohealth_server::tls_client::TlsClientSection::default()
+            ..ferrohealth_config::tls::TlsClientSection::default()
         },
         retry: ferroehr::system_log::config::SinkRetry {
             max_backoff: ferrohealth_config::units::Duration::from_millis(500),
@@ -122,9 +122,9 @@ async fn the_drain_closes_its_connection_with_close_notify_when_it_exits() {
         },
         syslog: Some(SyslogConfig {
             url: format!("tls://{}:{}", "localhost".to_owned(), listener.port),
-            tls: ferrohealth_server::tls_client::TlsClientSection {
+            tls: ferrohealth_config::tls::TlsClientSection {
                 trust_roots_file: Some(listener.ca_file.clone()),
-                ..ferrohealth_server::tls_client::TlsClientSection::default()
+                ..ferrohealth_config::tls::TlsClientSection::default()
             },
             ..SyslogConfig::default()
         }),

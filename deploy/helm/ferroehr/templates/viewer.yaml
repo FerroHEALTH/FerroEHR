@@ -140,8 +140,8 @@ spec:
               value: /etc/ferroehr-viewer-secrets/client_secret
             {{- end }}
             {{- if .Values.viewer.auth.oidc.caExistingSecret }}
-            # The provider's CA, beside the image's own roots (`[oidc] ca_file`).
-            - name: FERROEHR_VIEWER__OIDC__CA_FILE
+            # The provider's CA, beside the image's own roots (`[oidc.tls] trust_roots_file`).
+            - name: FERROEHR_VIEWER__OIDC__TLS__TRUST_ROOTS_FILE
               value: /etc/ferroehr-viewer-oidc-ca/ca.crt
             {{- end }}
             {{- end }}

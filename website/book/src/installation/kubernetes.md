@@ -626,7 +626,7 @@ config:
     tls:
       certificate_file: /etc/ferroehr-tls/tls.crt
       key_file: /etc/ferroehr-tls/tls.key
-      reload_interval_s: 60
+      reload_interval: 1min
 extraVolumes:
   - name: server-tls
     secret:
@@ -647,7 +647,7 @@ ingress:
 
 When cert-manager renews the certificate, the kubelet updates the mounted
 files and the server serves the new pair within
-`config.server.tls.reload_interval_s` (60 seconds above; unset, only `SIGHUP`
+`config.server.tls.reload_interval` (a minute above; unset, only `SIGHUP`
 reads the files again), with no restart; a renewed pair that fails to load is logged and the old one stays in
 service. A rotated client CA (`client_ca_file`, for `client_auth`) is picked up
 on the same interval, and the connections already open keep the trust anchor
@@ -660,10 +660,10 @@ peers that verify through the platform verifier stay trusted. For an OIDC
 issuer whose certificate comes from a private CA, name a Secret holding that
 CA in `viewer.auth.oidc.caExistingSecret` (key `viewer.auth.oidc.caExistingSecretKey`,
 `ca.crt` by default): the chart mounts it and points the viewer's
-`[oidc] ca_file` at it. For the server's own `[auth]`
+`[oidc.tls] trust_roots_file` at it. For the server's own `[auth]`
 issuer behind a private CA, name the Secret in `auth.caExistingSecret` (key
 `auth.caExistingSecretKey`, `ca.crt` by default): the chart mounts it and points
-the server's `[auth] ca_file` at it. The ServiceMonitor reads the Secret from its own namespace, and
+the server's `[auth.tls] trust_roots_file` at it. The ServiceMonitor reads the Secret from its own namespace, and
 the `prometheus.io/scheme: https` pod annotation follows the listener when
 `metrics.enabled` is set. With `config.server.tls.client_auth: required` the
 kubelet probes cannot present a client certificate, so the chart refuses to
@@ -1346,8 +1346,8 @@ disruption, so ordinary cluster maintenance during a release cannot exhaust
 anywhere in the logs.
 
 **A reused connection is not closed under a client.** The server closes a
-kept-alive connection only after `config.server.idle_timeout_ms` (120 s by
-default) with no request, and counts `config.server.header_read_timeout_ms`
+kept-alive connection only after `config.server.idle_timeout` (two minutes by
+default) with no request, and counts `config.server.header_read_timeout`
 from the first byte of each request. Keep the idle limit longer than the idle
 timeout of your clients (90 s for a Go client) and of the ingress controller or
 load balancer in front, so they close an idle connection first. A client that

@@ -409,19 +409,20 @@ impl FerroEhrConfig {
 
     /// The clinical body tier sits inside the listener's limit.
     ///
-    /// The listener refuses every body above `server.body_limit_bytes` before
+    /// The listener refuses every body above `server.body_limit` before
     /// a route is matched, so a clinical tier at or above it would never be
     /// the limit that applies. No openEHR spec bounds a request body — our own
     /// design.
     fn validate_body_tier(&self, errors: &mut Vec<ConfigError>) {
         if let Some(tier) = self.api.body_limit
-            && usize::try_from(tier.bytes()).is_ok_and(|tier| tier >= self.server.body_limit_bytes)
+            && usize::try_from(tier.bytes())
+                .is_ok_and(|tier| tier >= self.server.body_limit_bytes())
                 | usize::try_from(tier.bytes()).is_err()
         {
             errors.push(ConfigError::semantic(format!(
-                "api.body_limit (\"{tier}\") must be below server.body_limit_bytes ({}), \
+                "api.body_limit (\"{tier}\") must be below server.body_limit (\"{}\"), \
                  the limit of the bulk routes and the ceiling of every route",
-                self.server.body_limit_bytes
+                self.server.body_limit
             )));
         }
     }

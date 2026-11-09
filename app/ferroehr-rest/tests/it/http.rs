@@ -990,7 +990,7 @@ async fn hsts_is_deliberately_absent() {
 async fn an_over_limit_chunked_body_is_413_not_400() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.body_limit_bytes = 1024;
+    cfg.server.body_limit = ferrohealth_config::units::ByteSize::from_bytes(1024);
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
@@ -1014,14 +1014,14 @@ async fn an_over_limit_chunked_body_is_413_not_400() {
     );
 }
 
-/// A declared body over the listener's `server.body_limit_bytes` is refused
+/// A declared body over the listener's `server.body_limit` is refused
 /// `413` by the family stack before any route reads it, in the openEHR
 /// problem details every other refusal carries.
 #[tokio::test]
 async fn a_declared_body_over_the_ceiling_is_413_in_the_openehr_body() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.body_limit_bytes = 1024;
+    cfg.server.body_limit = ferrohealth_config::units::ByteSize::from_bytes(1024);
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
@@ -1049,7 +1049,7 @@ async fn a_refusal_names_the_server_id_when_the_client_sends_its_own() {
     const CLIENT_ID: &str = "7d2c41e8-93b0-4f6a-8e15-c0a9b3d7e254";
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.body_limit_bytes = 1024;
+    cfg.server.body_limit = ferrohealth_config::units::ByteSize::from_bytes(1024);
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
@@ -1090,7 +1090,7 @@ async fn a_refusal_names_the_server_id_when_the_client_sends_its_own() {
 async fn the_bulk_tier_accepts_what_the_clinical_tier_refuses() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.body_limit_bytes = 65536;
+    cfg.server.body_limit = ferrohealth_config::units::ByteSize::from_bytes(65536);
     cfg.api.body_limit = Some(ferrohealth_config::units::ByteSize::from_bytes(512));
     let app = common::router_with(cfg, service).await;
     let _keep = pg;

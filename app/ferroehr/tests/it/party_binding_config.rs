@@ -305,7 +305,7 @@ fn a_removed_key_is_refused_naming_the_new_shape() {
         "[authz.party_binding]\nenabled = true\n",
     ));
     assert!(
-        text.contains("authz.party_binding.enabled is removed"),
+        text.contains("authz.party_binding.enabled was removed"),
         "{text}"
     );
     let text = refusal("[auth]\nissuer = \"https://idp.example\"\n");
@@ -319,13 +319,13 @@ fn a_removed_key_is_refused_naming_the_new_shape() {
             "first_party_clients = [\"ferroehr-viewer\"]",
             &format!("first_party_clients = [\"ferroehr-viewer\"]\n{key}"),
         ));
-        assert!(text.contains("is removed"), "{key}: {text}");
+        assert!(text.contains("was replaced by"), "{key}: {text}");
     }
     let text = refusal(&format!(
         "{}\n[authz.professional]\nclaim = \"sub\"\n",
         full()
     ));
-    assert!(text.contains("authz.professional is removed"), "{text}");
+    assert!(text.contains("authz.professional was removed"), "{text}");
 }
 
 #[test]
@@ -379,13 +379,15 @@ fn a_party_claim_and_a_token_profile_are_refused() {
         "identifier_type = \"guid\"",
         "identifier_type = \"guid\"\nclaim = \"oid\"",
     ));
-    assert!(text.contains("auth.party.claim"), "{text}");
-    assert!(text.contains("is removed"), "{text}");
+    assert!(text.contains("auth.party[0].claim was removed"), "{text}");
     let text = refusal(&with(
         "first_party_clients = [\"ferroehr-viewer\"]",
         "first_party_clients = [\"ferroehr-viewer\"]\ntoken_profile = \"jwt\"",
     ));
-    assert!(text.contains("token_profile is removed"), "{text}");
+    assert!(
+        text.contains("token_profile was replaced by profile"),
+        "{text}"
+    );
 }
 
 #[test]

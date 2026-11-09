@@ -51,9 +51,10 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
     config.database.party.url = Some(SecretUrl::new(format!(
         "postgres://partyuser:{PARTY_PW}@127.0.0.1:1/ferroehr"
     )));
-    config.auth.shared.issuer = ferrohealth_smart::config::IssuerKey::Flat(format!(
-        "https://idpuser:{ISSUER_PW}@idp.example/realms/ferroehr"
-    ));
+    config.auth.shared.issuer = vec![ferrohealth_smart::config::IssuerEntry {
+        issuer: format!("https://idpuser:{ISSUER_PW}@idp.example/realms/ferroehr"),
+        ..ferrohealth_smart::config::IssuerEntry::default()
+    }];
     config.auth.shared.basic = Some(ferrohealth_smart::config::BasicSection {
         users: vec![ferrohealth_smart::config::BasicUser {
             user: "reporter".to_owned(),
@@ -62,7 +63,7 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
             scopes: Vec::new(),
             roles: Vec::new(),
         }],
-        cache_ttl_seconds: 0,
+        cache_ttl: ferrohealth_config::units::Duration::ZERO,
     });
     config.terminology = Some(
         ferroehr::service::terminology::config::TerminologyServerConfig {

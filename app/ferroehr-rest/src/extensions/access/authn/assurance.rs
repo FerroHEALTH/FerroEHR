@@ -171,7 +171,8 @@ impl PatientDataGate {
 
 /// How a caller of `kind` acts for the person its token names: as that
 /// person, or as a client the person delegated to; `None` for a caller that
-/// names no person of this deployment.
+/// names no person of this deployment (the patient, someone acting for the
+/// patient, and a guest, whose inner kind the caller reads).
 const fn acting(kind: &CallerKind) -> Option<ActingMode> {
     match kind {
         CallerKind::Person | CallerKind::Representative { .. } => Some(ActingMode::Person),
@@ -180,6 +181,11 @@ const fn acting(kind: &CallerKind) -> Option<ActingMode> {
         CallerKind::ExternalPerson(_) | CallerKind::ExternalOrganisation(_) => {
             Some(ActingMode::External)
         }
+        CallerKind::Patient | CallerKind::PatientRepresentative { .. } | CallerKind::Guest(_) => {
+            None
+        }
+        // NOTE: ferrohealth-smart `kind::CallerKind` is `#[non_exhaustive]`; a kind
+        // a later release adds names no person here until it is matched above.
         _ => None,
     }
 }

@@ -3,7 +3,7 @@
 
 //! Per-route-family request-body limits.
 //!
-//! The family stack's `server.body_limit_bytes` is a single ceiling for the
+//! The family stack's `server.body_limit` is a single ceiling for the
 //! whole tree. This module adds the tier the ceiling cannot express: the
 //! routes that accept bulk by design (operational-template upload and EHR-Extract
 //! import) accept the ceiling, while the ordinary clinical surface
@@ -76,7 +76,7 @@ pub(crate) async fn middleware(
             .api
             .body_limit
             .and_then(|tier| usize::try_from(tier.bytes()).ok()),
-        config.server.body_limit_bytes,
+        config.server.body_limit_bytes(),
     );
 
     let declared = request
@@ -133,7 +133,7 @@ fn too_large(limit: usize) -> Response {
         StatusCode::PAYLOAD_TOO_LARGE,
         &format!(
             "request body exceeds the {limit}-byte limit for this route \
-             (raise `rest.body_limit_bytes` or `server.body_limit_bytes`)"
+             (raise `api.body_limit` or `server.body_limit`)"
         ),
     )
 }

@@ -20,36 +20,36 @@ request log, the health routes and the bounded drain on `SIGTERM`.
 [server]
 listen = "0.0.0.0:8080"
 base_path = ""
-request_timeout_ms = 30000
-header_read_timeout_ms = 30000
-idle_timeout_ms = 120000
-body_limit_bytes = 67108864
-drain_delay_ms = 0
-shutdown_timeout_ms = 10000
+request_timeout = "30s"
+header_read_timeout = "30s"
+idle_timeout = "2min"
+body_limit = "64MiB"
+drain_delay = "0s"
+shutdown_timeout = "10s"
 # max_concurrent_requests = 256
-retry_after_s = 1
+retry_after = "1s"
 trusted_proxies = []
 forwarded_header = "forwarded"
 compression = true
-compression_min_bytes = 1024
+compression_min_size = "1KiB"
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `listen` | socket address | `0.0.0.0:8080` | The IP address and port the listener binds: every interface at the port the container image exposes. A host name is refused at startup. `PORT` alone gives `0.0.0.0:<PORT>`, and `FERROEHR__SERVER__LISTEN` wins over both. Set `127.0.0.1:8080` to keep a bare binary on the loopback. |
 | `base_path` | string | empty | The path every route is served under, the health routes included. Empty serves them at the process root. The openEHR API path is [`api.base_path`](#api). |
-| `request_timeout_ms` | int | `30000` | A request still running after this long is answered `408` with the openEHR error body. |
-| `header_read_timeout_ms` | int | `30000` | How long a client may take to send its request head, counted from accept for a connection's first request and from the first byte of each later request on a kept-alive connection; a client that has not sent it by then, one that sent nothing after connecting included, is disconnected. Bounds the slow-header and the silent connection, which no other limit reaches. `0` is refused. |
-| `idle_timeout_ms` | int | `120000` | How long a kept-alive HTTP/1.1 connection may wait for its next request; past it the server closes the connection with a clean end of stream. Keep it longer than the idle timeout of your clients (Go's `http.DefaultTransport` keeps an idle connection 90 s) and of any load balancer, ingress controller or proxy in front, so they close an idle connection first and never send a request into one the server is closing. `0` is refused. |
-| `body_limit_bytes` | int | `67108864` (64 MiB) | The largest request body any route reads, refused `413` above it. The bulk routes (operational-template upload, `/message/import`) take up to this; [`api.body_limit`](#api) narrows the rest of the clinical surface below it. The largest operational template in the vendored CKM corpus is several megabytes, well below this ceiling. |
-| `drain_delay_ms` | int | `0` | On `SIGTERM` or `SIGINT`, readiness answers `503` this long while the listener still accepts, so an orchestrator stops routing first. |
-| `shutdown_timeout_ms` | int | `10000` | Then the listener closes and the requests in flight get this long to finish; a connection still open after it is dropped. |
+| `request_timeout` | duration | `"30s"` | A request still running after this long is answered `408` with the openEHR error body. |
+| `header_read_timeout` | duration | `"30s"` | How long a client may take to send its request head, counted from accept for a connection's first request and from the first byte of each later request on a kept-alive connection; a client that has not sent it by then, one that sent nothing after connecting included, is disconnected. Bounds the slow-header and the silent connection, which no other limit reaches. `"0s"` is refused. |
+| `idle_timeout` | duration | `"2min"` | How long a kept-alive HTTP/1.1 connection may wait for its next request; past it the server closes the connection with a clean end of stream. Keep it longer than the idle timeout of your clients (Go's `http.DefaultTransport` keeps an idle connection 90 s) and of any load balancer, ingress controller or proxy in front, so they close an idle connection first and never send a request into one the server is closing. `"0s"` is refused. |
+| `body_limit` | size | `"64MiB"` | The largest request body any route reads, refused `413` above it. The bulk routes (operational-template upload, `/message/import`) take up to this; [`api.body_limit`](#api) narrows the rest of the clinical surface below it. The largest operational template in the vendored CKM corpus is several megabytes, well below this ceiling. |
+| `drain_delay` | duration | `"0s"` | On `SIGTERM` or `SIGINT`, readiness answers `503` this long while the listener still accepts, so an orchestrator stops routing first. |
+| `shutdown_timeout` | duration | `"10s"` | Then the listener closes and the requests in flight get this long to finish; a connection still open after it is dropped. |
 | `max_concurrent_requests` | int | unset | The requests served at once. Past it a request is answered `503` with `Retry-After` and the openEHR error body, never queued, so offered load beyond capacity cannot exhaust memory. The health routes are never refused. Unset, there is no bound. |
-| `retry_after_s` | int | `1` | The `Retry-After` of a `503` or `429` the listener writes. |
+| `retry_after` | duration | `"1s"` | The `Retry-After` of a `503` or `429` the listener writes, in whole seconds (RFC 9110 §10.2.3). |
 | `trusted_proxies` | list | `[]` | The reverse proxies, as addresses or CIDR blocks, whose forwarded client address is believed. Empty, every request is named by its peer address. |
 | `forwarded_header` | enum{forwarded,x-forwarded-for} | `forwarded` | The header a trusted proxy names the client in (`Forwarded` is RFC 7239). |
 | `compression` | bool | `true` | Compress a response with gzip or Brotli when the client accepts one. |
-| `compression_min_bytes` | int | `1024` | The smallest response body that is compressed. |
+| `compression_min_size` | size | `"1KiB"` | The smallest response body that is compressed. |
 
 A refusal the listener writes itself (`408`, `413`, `429`, `503`) and a handler
 that panics (`500`) answer the standard openEHR `{ error, message }` body. `413`
@@ -112,7 +112,7 @@ certificate_file = "/etc/ferroehr/server.pem"
 key_file = "/etc/ferroehr/server.key"
 client_auth = "none"
 min_version = "1.3"
-# reload_interval_s = 60
+# reload_interval = "1min"
 ```
 
 | Key | Type | Default | Description |
@@ -122,7 +122,7 @@ min_version = "1.3"
 | `client_auth` | enum{none,optional,required} | `none` | Client-certificate policy. `optional` verifies a certificate when one is presented and still accepts connections without; `required` rejects any client without a verified certificate at the handshake. |
 | `client_ca_file` | path | unset | The explicit CA bundle client certificates must chain to, never the web PKI. Required when `client_auth` is `optional` or `required`, and refused at load when it is `none`, since a listener under `none` asks no client certificate. |
 | `min_version` | enum{"1.3","1.2"} | `"1.3"` | The lowest TLS version this listener negotiates. `"1.0"` and `"1.1"` are refused when the configuration is read (RFC 8996). |
-| `reload_interval_s` | int | unset | How often the certificate, key and client CA are read again while the server runs. The files are always read again on `SIGHUP`. A changed pair is served, and a changed client CA verifies, from the next handshake on without a restart; a read that fails is logged and the running configuration stays. |
+| `reload_interval` | duration | unset | How often the certificate, key and client CA are read again while the server runs. The files are always read again on `SIGHUP`. A changed pair is served, and a changed client CA verifies, from the next handshake on without a restart; a read that fails is logged and the running configuration stays. |
 | `healthcheck_identity_file` | path | unset | The client certificate chain and key, in one PEM, that `ferroehr healthcheck` presents to a listener requiring one. |
 
 Before 5.5.0, `client_ca_file` alone meant that every client presents a
@@ -158,7 +158,7 @@ The openEHR REST surface the listener serves.
 base_path = "/ferroehr/rest/openehr/v1"
 openapi_ui = "private"
 system_id = "ferroehr.local"
-# body_limit_bytes = 16777216
+# body_limit = "16MiB"
 ```
 
 | Key | Type | Default | Description |
@@ -166,11 +166,10 @@ system_id = "ferroehr.local"
 | `base_path` | string | `/ferroehr/rest/openehr/v1` | ITS-REST base path all API routes hang off. Shortening it is supported; see [below](#base_path-shortening-the-rest-base-path). The served OpenAPI document describes whatever paths this setting produces, never the defaults. |
 | `openapi_ui` | enum{off,admin_only,private,public} | `private` | Who may read the Swagger UI and the OpenAPI documents under the REST root: `off` does not mount them, `admin_only` needs the admin role, `private` needs any authenticated principal (unauthenticated is `401` with the server's `WWW-Authenticate` challenge, so a browser prompts for the Basic credential), `public` needs nothing. The documents list the whole enabled operation surface, admin and message groups included, so `public` discloses it to anyone who can reach the port; the [hosted sandbox](https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui) sets it deliberately. With authentication off the guard admits everyone, as the management endpoints do. |
 | `cors` | table | absent | `[api.cors]`, the CORS protocol answers (Fetch Standard §3.2.3): `allow_origins`, `allow_methods`, `allow_headers`, `expose_headers`, `allow_credentials` and `max_age` (a duration), each named for the header it sets. Absent, no CORS header is sent. `allow_origins = ["*"]` admits any origin, which the server warns about at boot and which refuses `allow_credentials`. Production lists its origins. |
-| `body_limit` | size | unset | The largest body the clinical surface accepts, below `server.body_limit_bytes`, which the bulk routes keep. |
+| `body_limit` | size | unset | The largest body the ordinary clinical surface accepts, below [`server.body_limit`](#server), which the bulk routes keep. Unset, every route takes the listener's limit. A value at or above the listener's is refused at startup. The largest example composition in the vendored corpus is 526 KB; raise it if your compositions embed large `DV_MULTIMEDIA` data. |
 | `admin` | bool | `false` | Serve the ADMIN API group (physical delete); off, every admin route answers `405`. |
 | `terminology` | bool | `false` | Mount the terminology extension API; the server it asks is [`[terminology]`](config-integrations.md#terminology). |
 | `system_id` | string | `ferroehr.local` | **This deployment's own openEHR system identifier**; see [below](#system_id-the-data-authoring-identity). Set a stable, deployment-unique name in production (`FERROEHR__API__SYSTEM_ID`). |
-| `body_limit_bytes` | int | unset | The largest body the ordinary clinical surface accepts, below [`server.body_limit_bytes`](#server), which the bulk routes keep. Unset, every route takes the listener's limit. A value at or above the listener's is refused at startup. The largest example composition in the vendored corpus is 526 KB; raise it if your compositions embed large `DV_MULTIMEDIA` data. |
 
 ### `base_path`: shortening the REST base path
 
@@ -484,9 +483,6 @@ deployment = "unknown"
 | `endpoint` | URL | `https://report.ferropulse.eu/v1/report` | Where reports go. Must be an absolute `https` URL without credentials; plain `http` is accepted for a loopback host only. Anything else is refused when the configuration is read. Environment: `FERROEHR__USAGE_REPORT__ENDPOINT`. |
 | `deployment` | enum{helm,compose,binary,unknown} | `unknown` | How the instance was deployed, as the report states it. The Helm chart sets it to `helm`. Environment: `FERROEHR__USAGE_REPORT__DEPLOYMENT`. |
 | `state_dir` | path | unset | Refused. The section is the one every FerroHEALTH product shares, where this key names the directory of the instance id; FerroEHR keeps the instance id and the counts in the clinical database, so every replica reports as one installation. |
-
-`slow_aql_ms` is no longer a key: the report carries no AQL series. A
-configuration that still sets it is refused at boot; remove the line.
 
 Under the Helm chart, set the switch with `usageReport.enabled`. The chart
 writes `enabled` and `deployment = "helm"` into the rendered file itself and

@@ -328,7 +328,7 @@ fn redacted_json_masks_every_secret_field() {
             scopes: vec!["user/composition-*.r".to_owned()],
             roles: Vec::new(),
         }],
-        cache_ttl_seconds: 0,
+        cache_ttl: ferrohealth_config::units::Duration::ZERO,
     });
     c.auth.shared.issuer = auth_section::machines("https://idp.example");
     c.record.signing.key_passphrase = Some(Secret::new(PASSPHRASE));

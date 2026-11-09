@@ -168,13 +168,13 @@ fn same_origin_check(state: &AppState) -> SameOrigin {
 }
 
 /// The form a post to a page carries, read as
-/// `application/x-www-form-urlencoded` up to `server.body_limit_bytes`.
+/// `application/x-www-form-urlencoded` up to `server.body_limit`.
 async fn form_of(
     state: &AppState,
     parts: &http::request::Parts,
     body: axum::body::Body,
 ) -> Result<crate::posted::Posted, Box<axum::response::Response>> {
-    let Ok(bytes) = axum::body::to_bytes(body, state.config.server.body_limit_bytes).await else {
+    let Ok(bytes) = axum::body::to_bytes(body, state.config.server.body_limit_bytes()).await else {
         return Err(Box::new(
             (http::StatusCode::PAYLOAD_TOO_LARGE, "the form is too large").into_response(),
         ));

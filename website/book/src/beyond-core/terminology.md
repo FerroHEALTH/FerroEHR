@@ -139,7 +139,7 @@ FHIR terminology client, over the FHIR R4B operation definitions. Each
 operation is a `POST` of a `Parameters` resource to the operation's path under
 the configured base URL, so a code never travels in a URL. The `at_date` of a
 term lookup or a membership test is sent as the operation's `date` input. Each
-call is made once, without a retry, so `request_timeout_ms` bounds the whole
+call is made once, without a retry, so `[terminology] timeout` bounds the whole
 call on the commit path.
 
 A response that does not fit the operation's R4B definition is treated as an

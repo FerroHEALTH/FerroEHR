@@ -243,7 +243,7 @@ async fn endpoint_levels_are_independent() {
     // Anonymous: only the `public` endpoint answers. The `admin_only` and
     // `private` ones challenge; the `off` one is not mounted at all, and says
     // 404 rather than 401 — its absence is not a credential problem.
-    let (_db, app) = app_with_mixed_levels(&["ADMIN"]).await;
+    let (_db, app) = Box::pin(app_with_mixed_levels(&["ADMIN"])).await;
     assert_eq!(
         status_of(app, get("/management/prometheus")).await,
         StatusCode::OK
@@ -253,7 +253,7 @@ async fn endpoint_levels_are_independent() {
         ("/management/env", StatusCode::UNAUTHORIZED),
         ("/management/metrics", StatusCode::NOT_FOUND),
     ] {
-        let (_db, app) = app_with_mixed_levels(&["ADMIN"]).await;
+        let (_db, app) = Box::pin(app_with_mixed_levels(&["ADMIN"])).await;
         assert_eq!(
             status_of(app, get(path)).await,
             expected,
@@ -269,7 +269,7 @@ async fn endpoint_levels_are_independent() {
         ("/management/env", StatusCode::FORBIDDEN),
         ("/management/metrics", StatusCode::NOT_FOUND),
     ] {
-        let (_db, app) = app_with_mixed_levels(&["USER"]).await;
+        let (_db, app) = Box::pin(app_with_mixed_levels(&["USER"])).await;
         assert_eq!(
             status_of(app, get_auth(path)).await,
             expected,
@@ -284,7 +284,7 @@ async fn endpoint_levels_are_independent() {
         ("/management/env", StatusCode::OK),
         ("/management/metrics", StatusCode::NOT_FOUND),
     ] {
-        let (_db, app) = app_with_mixed_levels(&["ADMIN"]).await;
+        let (_db, app) = Box::pin(app_with_mixed_levels(&["ADMIN"])).await;
         assert_eq!(
             status_of(app, get_auth(path)).await,
             expected,
@@ -393,7 +393,7 @@ async fn json_of(app: Router, req: Request<Body>) -> (StatusCode, serde_json::Va
 /// probes — our own design.
 #[tokio::test]
 async fn readiness_is_status_only_and_management_health_carries_the_detail() {
-    let (_db, app) = app_with_detail(AccessLevel::AdminOnly, &["ADMIN"]).await;
+    let (_db, app) = Box::pin(app_with_detail(AccessLevel::AdminOnly, &["ADMIN"])).await;
     let (status, body) = json_of(app.clone(), get("/health/readiness")).await;
     assert_eq!(status, StatusCode::OK, "DEGRADED still serves: {body}");
     assert_eq!(
@@ -423,7 +423,7 @@ async fn readiness_is_status_only_and_management_health_carries_the_detail() {
         "the management view carries the detail: {body}"
     );
 
-    let (_db, app) = app_with_detail(AccessLevel::AdminOnly, &["USER"]).await;
+    let (_db, app) = Box::pin(app_with_detail(AccessLevel::AdminOnly, &["USER"])).await;
     assert_eq!(
         status_of(app, get_auth("/management/health")).await,
         StatusCode::FORBIDDEN
@@ -468,7 +468,7 @@ async fn a_draining_process_is_not_ready() {
 /// Art. 13(19); the rest is our own design).
 #[tokio::test]
 async fn management_status_carries_what_the_public_status_withholds() {
-    let (_db, app) = app_with_detail(AccessLevel::Private, &["USER"]).await;
+    let (_db, app) = Box::pin(app_with_detail(AccessLevel::Private, &["USER"])).await;
 
     let (status, public) = json_of(app.clone(), get("/ferroehr/rest/status")).await;
     assert_eq!(status, StatusCode::OK);

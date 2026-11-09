@@ -43,8 +43,8 @@ The section keys:
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `true` | Master switch. `false` = all requests pass unauthenticated (development only). With `true` and **no mechanism configured the server refuses to start**; see below. |
-| `issuer` | `[[auth.issuer]]` tables | none | The trusted issuers, one table each; see below. The flat `issuer = "…"` form is refused at boot, naming the table form. |
-| `ca_file` | path | unset | A PEM bundle of certificate authorities trusted in addition to the platform roots, on every platform, for an issuer behind a private PKI: every issuer's metadata and key set are read trusting it, and under `mode = "introspection"` the introspection and token calls too. A file that cannot be read, holds no certificate, or does not parse refuses the start. |
+| `issuer` | `[[auth.issuer]]` tables | none | The trusted issuers, one table each; see below. A flat `issuer = "…"` string is a type error at boot. |
+| `tls` | table | platform roots | `[auth.tls]`, the family's outbound TLS table: `trust_roots_file`, a PEM bundle of certificate authorities trusted in addition to the platform roots for an issuer behind a private PKI (every issuer's metadata and key set are read trusting it), `client_identity_file` (one PEM holding a client certificate chain and its key) and `min_version` (`"1.3"` by default). An introspection grant's calls use the grant's own `tls` table. A file that cannot be read, holds no certificate, or does not parse refuses the start. |
 | `realm` | string | `""` ⇒ `ferroehr` | The realm every `WWW-Authenticate` challenge names. |
 | `scopeless_subjects` | list of `{ issuer, sub }` | `[]` | The subjects whose token, when it carries no resource scope of either the SMART on openEHR or the SMART on FHIR grammar, meets every SMART on openEHR requirement. Only a system (app-only) caller of that issuer is admitted by an entry. A token that carries resource scopes gets only its scopes, and the allowlist reaches neither the ADMIN API nor the DEMOGRAPHIC API, which need the product scope. A string entry refuses the start. |
 | `capabilities` | list of string | `[]` | SMART capabilities the discovery document adds: one SMART App Launch or the SMART on openEHR draft lists, or a full URI. |
@@ -53,10 +53,12 @@ The section keys:
 
 The keys `audience`, `algorithms`, `token_profile`, `clock_skew_seconds`,
 `jwks_max_age_seconds`, `jwks_refresh_interval_seconds`, `jwks_file`,
-`timeout_ms`, `mode`, `introspection`, `role_claims`, `acting_for_claim` and
-`client_tokens` are refused at the section level, each naming what replaces
-it: the first ones live on each `[[auth.issuer]]` table, and the caller
-classification replaces the last two.
+`timeout_ms`, `mode`, `introspection`, `role_claims`, `acting_for_claim`,
+`client_tokens` and `ca_file`, which v5.6 read in `[auth]`, are refused in
+v5.7.0 naming what replaces each: the first ones live on each
+`[[auth.issuer]]` table, the caller classification replaces
+`acting_for_claim` and `client_tokens`, and `[auth.tls]` replaces `ca_file`.
+From v5.8.0 they are unknown keys.
 
 ### `[[auth.issuer]]`: the trusted issuers
 
@@ -75,11 +77,11 @@ operator rule boot cannot see.
 | `profile` | `rfc9068`, `entra`, `keycloak`, `okta` or `nl` | `rfc9068` | The preset of what the issuer's tokens look like, each value labelled with its source in the crate. Every profile key below may be set on the table over it. |
 | `audience` | list of string | **required** | Accepted `aud` values; a token naming none of them is refused (RFC 9068 §4, RFC 8725 §3.9). |
 | `algorithms` | list of string | `["RS256","RS384","PS256","PS384","ES256","ES384"]` | Accepted signature algorithms. Asymmetric only: an `HS*` algorithm is a boot error, and `none` is no algorithm at all (RFC 8725 §3.1, §3.2). |
-| `clock_skew_seconds` | int | `60` | Leeway on `exp`, `nbf` and `iat`. At most `300`. |
-| `jwks_max_age_seconds` | int | `600` | A key set older than this is read again. |
-| `jwks_refresh_interval_seconds` | int | `60` | A token naming an unknown `kid` reads the key set again at most once per interval. |
+| `clock_skew` | duration | `"60s"` | Leeway on `exp`, `nbf` and `iat`. At most `"5min"`. |
+| `jwks_max_age` | duration | `"10min"` | A key set older than this is read again. |
+| `jwks_refresh_interval` | duration | `"1min"` | A token naming an unknown `kid` reads the key set again at most once per interval. |
 | `jwks_file` | path | `""` | A JWK Set of public keys handed over out of band, read instead of the issuer's metadata. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error. An issuer read from a file has no metadata, so it serves the SMART discovery document only with [`[auth.smart] issuer_metadata_file`](#authsmart) set. |
-| `timeout_ms` | int | `10000` | One call to the authorization server. |
+| `timeout` | duration | `"10s"` | One call to the authorization server. |
 | `mode` | `jwt` or `introspection` | `jwt` | How the issuer's tokens are checked: as JWTs against its key set, or posted to its RFC 7662 endpoint (see [Opaque tokens](#opaque-tokens-by-introspection)). |
 | `role_claims` | list of string | `["roles","groups","entitlements"]` | Token claim paths the caller's roles are read from; dotted paths walk nested claims, and a role is matched without regard to case. **`scope` is not a role source**. A `federation` issuer reads no role. Whether a role grants `admin_role` and the other privileged roles is [`[authz.rbac] role_issuers`](#authzrbac). |
 | `sender_constraint` | `none` or `required` | `none` | `required` admits only a token bound to a DPoP key (RFC 9449) or to the client certificate of a mutual-TLS connection (RFC 8705 §3). A token carrying `cnf` is held to it under either value. |
@@ -87,6 +89,7 @@ operator rule boot cannot see.
 | `person_key` | string | `sub` (preset) | The claim a person is bound by. `email`, `phone_number`, `preferred_username` and `name` are never accepted as a key (OpenID Connect Core 1.0 §5.7). |
 | `first_party_clients` | list of string | `[]` | The deployment's own clients. **A `persons` token is admitted only through a client listed here or in `delegates`.** |
 | `delegates` | list of `{ client }` or `{ sub, issuer }` | `[]` | Third-party clients or RFC 8693 actors that act for a person; their tokens are recorded as the client acting for the person the token names. |
+| `act_represents_patient` | bool | unset | On a `patients` issuer, read a token whose `sub` is the patient and whose top-level `act` (RFC 8693 §4.1) names someone else as that person acting for the patient. FerroEHR binds no party to such a representative, so it refuses the token with `403` (`refused-patient-representative`). Without the key, `ferrohealth-smart` refuses a `patients` token that carries `act` with `401`. |
 | `token_types`, `required_claims`, `scope_claim`, `app_only_scope_claim` | | preset | The token shape that replaces `token_profile`: the accepted `typ` values, the claims every token carries, and where its scopes are read. For an issuer that minted under `token_profile = "jwt"`, set `token_types = ["JWT"]` and the `required_claims` its tokens carry. |
 | `client_claims`, `app_only`, `guest`, `impersonation_marker`, `expect`, `user_claims`, `person_equality`, `unstable_claims`, `max_actor_chain`, `representation`, `tenant_claim`, `adapter`, `onward_*` | | preset | The other profile keys of `ferrohealth-smart`: which claim names the client, what marks an app-only token or a guest, what refuses an impersonation, the claims a token must carry exactly, how a representative names whom it acts for, the claim naming the tenant, the vendor adapter (`idp-entra`) and the onward grants. |
 
@@ -96,8 +99,8 @@ operator rule boot cannot see.
 |---|---|
 | `[[auth.party]]` | One per `persons` issuer, keyed by `issuer`: where its logins are looked up. `identifier_issuer` and `identifier_type` (`guid` and `uuid` compare in lower case) name the identifiers the issuer profile's `person_key` is matched against; `group_claim` with `group_identifier_issuer` reads the groups a token asserts; `guests` looks a guest up. **Boot refuses a `persons` issuer without one**, a table that sets `claim` (the profile's `person_key` is the key), two tables sharing an issuer or an `identifier_issuer`, and a table whose `identifier_type` is the `type` of no [`[[authz.party_binding.person.template]]`](#authzparty_binding) `key`: SCIM and just-in-time creation write the key under that type and the lookup compares the type exactly, so no login of the issuer would bind. |
 | `[[auth.federation]]` | One per `federation` issuer: how its tokens' claims map to the fields of another party's professional or organisation (`mapping = "iua"`, `"ehdsi"` or per field), the countries, issuing authorities and provider prefixes that bound them, and `contact_point` for a MyHealth@EU contact point. `fields` maps a field to its claim (`{ claim = "..." }`) or `authorization_details` member, among them `consent.reference`, the consent decision reference of a consent-conditioned read, and `correlation_id`, the requester's id a `chained` organisation request carries. |
-| `[auth.dpop]` | The DPoP proof check of a sender-constrained issuer: `external_url` (required, the base URL clients address; a proof's `htu` is it plus the request path), `max_age_seconds` (`60`), `clock_skew_seconds` (`10`) and `algorithms`. Each accepted proof is recorded in the database every replica shares until its window ends, so a proof is accepted once across all of them (RFC 9449 §11.1), and a database that cannot record it refuses the request with `503`. |
-| `[auth.idp.entra]` | The Microsoft Graph access of the `idp-entra` adapter, which an issuer turns on with `adapter = "idp-entra"` to read the groups of an Entra ID groups overage: `base_url` (`https://graph.microsoft.com/v1.0`), `timeout_ms` (`2000`), `max_response_bytes`, `security_enabled_only` and the client credentials of `[auth.idp.entra.credentials]`. An issuer naming the adapter without this table refuses the start. |
+| `[auth.dpop]` | The DPoP proof check of a sender-constrained issuer: `external_url` (required, the base URL clients address; a proof's `htu` is it plus the request path), `max_age` (`"60s"`), `clock_skew` (`"10s"`) and `algorithms`. Each accepted proof is recorded in the database every replica shares until its window ends, so a proof is accepted once across all of them (RFC 9449 §11.1), and a database that cannot record it refuses the request with `503`. |
+| `[auth.idp.entra]` | The Microsoft Graph access of the `idp-entra` adapter, which an issuer turns on with `adapter = "idp-entra"` to read the groups of an Entra ID groups overage: `base_url` (`https://graph.microsoft.com/v1.0`), `timeout` (`"2s"`), `max_response_size` (a size), `security_enabled_only` and the client credentials of `[auth.idp.entra.credentials]`. An issuer naming the adapter without this table refuses the start. |
 
 > [!WARNING]
 > **`auth.enabled = true` with no mechanism is a boot error.** Such a server
@@ -130,12 +133,12 @@ introspection endpoint (RFC 7662 §2.1), and the active response stands in for
 the JWT claims: `sub`, `scope`, the roles of `role_claims`, `aud` against
 `audience` and `iss` against the issuer. An inactive token is a `401`. An
 endpoint that cannot answer is a `503`, because the server cannot decide. An
-active response is reused until its `exp`, at most `cache_max_age_seconds`.
+active response is reused until its `exp`, at most `cache_max_age`.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `endpoint` | URL | unset | The introspection endpoint; unset reads the `introspection_endpoint` of the issuer's metadata. `https`, or `http` on a loopback host. |
-| `cache_max_age_seconds` | int | `60` | The longest an active response is used; `0` caches nothing. |
+| `cache_max_age` | duration | `"60s"` | The longest an active response is used; `"0s"` caches nothing. |
 | `cache_capacity` | int | `10000` | The most responses held at once. |
 | `client` | table | unset | The client authentication of the call (RFC 7662 §2.1), with the keys of an outbound grant: `client_id` and `client_secret`, `private_key_jwt` or mutual TLS (see [the grant keys](config-integrations.md#authenticating-to-the-terminology-server)). |
 | `bearer` | table | unset | A client credentials grant whose token authorizes the call instead (SMART App Launch 2.2.0, Token Introspection). Exactly one of `client` and `bearer`. |
@@ -167,13 +170,13 @@ Basic user refuses the start.
 | `password_hash` | secret | required | Argon2**id** PHC hash (`$argon2id$v=19$…`), never a plaintext password. Boot-validated against the OWASP floor; see below. |
 | `password_hash_file` | path | unset | Read the hash from a file instead, for a mounted secret. A hash is an offline cracking target, so prefer this wherever the configuration file itself is not treated as sensitive. Exactly one of the pair is required. |
 | `scopes` | list of string | `[]` | The SMART on openEHR scopes the user holds, checked on every route exactly like a token's `scope` claim. A user with none is refused everywhere a requirement applies. |
-| `roles` | list of string | `[]` | The user's RBAC roles, upper-cased on authentication. A user with none holds no role and is refused wherever [`[authz.rbac]`](#authzrbac) asks for one. The former `[authz.rbac.basic_roles]` table is refused at boot. |
+| `roles` | list of string | `[]` | The user's RBAC roles, upper-cased on authentication. A user with none holds no role and is refused wherever [`[authz.rbac]`](#authzrbac) asks for one. |
 
 `[auth.basic]` itself takes one key beside the users:
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `cache_ttl_seconds` | int | `300` | How long a credential that verified is kept, so a repeat request skips the Argon2id derivation; `0` turns the cache off and checks every request. The entry is named by a keyed hash of `user-id:password` under a key drawn at boot, never the password, and only a credential that verified is kept, so a wrong password always pays the derivation. The cache holds at most 4096 credentials and empties at a restart. The TTL bounds how long a removed user keeps working, which matters only until the restart that applies the new user list. Argon2id is slow by design, so with the cache off its cost bounds how many Basic requests a core can answer. |
+| `cache_ttl` | duration | `"5min"` | How long a credential that verified is kept, so a repeat request skips the Argon2id derivation; `"0s"` turns the cache off and checks every request. The entry is named by a keyed hash of `user-id:password` under a key drawn at boot, never the password, and only a credential that verified is kept, so a wrong password always pays the derivation. The cache holds at most 4096 credentials and empties at a restart. The TTL bounds how long a removed user keeps working, which matters only until the restart that applies the new user list. Argon2id is slow by design, so with the cache off its cost bounds how many Basic requests a core can answer. |
 
 > [!WARNING]
 > **Every `password_hash` must meet the OWASP Argon2id floor: `m>=19456`

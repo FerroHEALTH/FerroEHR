@@ -49,7 +49,7 @@ fn deployment(mapped: bool) -> AppConfig {
                 .collect(),
             roles: Vec::new(),
         }],
-        cache_ttl_seconds: 60,
+        cache_ttl: ferrohealth_config::units::Duration::from_secs(60),
     });
     if mapped {
         config.party_binding.basic_user = vec![BasicUserKey {

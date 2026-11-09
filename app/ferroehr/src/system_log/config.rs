@@ -18,8 +18,8 @@ use ferrohealth_config::units::{ByteSize, Duration};
 use serde::{Deserialize, Serialize};
 
 use crate::config::retention::RetentionPeriod;
+use ferrohealth_config::tls::TlsClientSection;
 use ferrohealth_secret::secret_url::SecretUrl;
-use ferrohealth_server::tls_client::TlsClientSection;
 
 /// Behaviour when an audit record cannot be enqueued/delivered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]

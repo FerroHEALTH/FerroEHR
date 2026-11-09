@@ -32,7 +32,7 @@ async fn serve() -> u16 {
         .expect("bind");
     let port = listener.local_addr().expect("addr").port();
     let section = ServerSection {
-        header_read_timeout_ms: std::num::NonZeroU64::new(1_000).expect("non-zero"),
+        header_read_timeout: ferrohealth_config::units::Duration::from_secs(1),
         ..ServerSection::default()
     };
     tokio::spawn(async move {
@@ -139,7 +139,7 @@ async fn a_silent_connection_is_closed_at_the_header_read_bound() {
 async fn serve_ferroehr() -> (testkit::TestDb, u16) {
     let (db, app) = common::test_router().await;
     let section = ServerSection {
-        header_read_timeout_ms: std::num::NonZeroU64::new(1_000).expect("non-zero"),
+        header_read_timeout: ferrohealth_config::units::Duration::from_secs(1),
         ..common::server()
     };
     (db, serve_router(app, section).await)
@@ -199,7 +199,7 @@ async fn read_response(socket: &mut tokio::net::TcpStream) -> String {
 /// A kept-alive connection that idles past the header-read bound and then
 /// carries a composition commit whose head arrives in two parts is answered
 /// (#4381): the head bound counts from the request's first byte, and only
-/// `[server] idle_timeout_ms` bounds the wait between requests, so a client
+/// `[server] idle_timeout` bounds the wait between requests, so a client
 /// that reuses an idle connection and never retries a `POST` sees its commit
 /// answered instead of an end of stream.
 #[tokio::test]
@@ -214,8 +214,8 @@ async fn a_commit_on_a_connection_idle_past_the_head_bound_is_answered() {
     assert_eq!(http::StatusCode::CREATED, status, "OPT upload: {body}");
     let ehr_id = common::create_ehr(&app).await;
     let section = ServerSection {
-        header_read_timeout_ms: std::num::NonZeroU64::new(1_000).expect("non-zero"),
-        idle_timeout_ms: std::num::NonZeroU64::new(30_000).expect("non-zero"),
+        header_read_timeout: ferrohealth_config::units::Duration::from_secs(1),
+        idle_timeout: ferrohealth_config::units::Duration::from_secs(30),
         ..common::server()
     };
     let port = serve_router(app, section).await;
@@ -261,7 +261,7 @@ async fn a_commit_on_a_connection_idle_past_the_head_bound_is_answered() {
     );
 }
 
-/// A kept-alive connection idle past `[server] idle_timeout_ms` is ended by the
+/// A kept-alive connection idle past `[server] idle_timeout` is ended by the
 /// server with a clean end of stream before the client writes a byte of a
 /// next request, so no request is ever half read and dropped unanswered; the
 /// head bound, shorter than the idle limit, does not end it first.
@@ -270,8 +270,8 @@ async fn an_idle_connection_ends_cleanly_at_the_idle_limit() {
     // Short of the idle limit by scheduling slack, longer than the head bound.
     const SLACK: Duration = Duration::from_millis(2_300);
     let section = ServerSection {
-        header_read_timeout_ms: std::num::NonZeroU64::new(1_000).expect("non-zero"),
-        idle_timeout_ms: std::num::NonZeroU64::new(2_500).expect("non-zero"),
+        header_read_timeout: ferrohealth_config::units::Duration::from_secs(1),
+        idle_timeout: ferrohealth_config::units::Duration::from_millis(2_500),
         ..ServerSection::default()
     };
     let app = axum::Router::new().route("/ok", axum::routing::get(|| async { "OK" }));

@@ -29,7 +29,7 @@ use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
 use ferrohealth_server::section::CallerRate;
 use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection};
-use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::federation::{FederationSection, Field, Mapping, Source};
 use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::sender::proof::DpopSection;
@@ -171,7 +171,7 @@ async fn serve_also(
         dpop = Some(proof);
     }
     let mut auth = common::auth(AuthSection {
-        issuer: IssuerKey::List(entries),
+        issuer: entries,
         federation: tables,
         dpop,
         ..AuthSection::default()

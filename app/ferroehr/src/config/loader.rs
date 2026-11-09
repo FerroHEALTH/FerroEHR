@@ -150,7 +150,9 @@ pub fn load_process(
     cli_config: Option<&Path>,
     overrides: &[(String, String)],
 ) -> Result<(Loaded<FerroEhrConfig>, FerroEhrConfig), ConfigErrors> {
-    let loaded = loader()?
+    let sources = loader()?;
+    refuse_shared(sources.load_with::<toml::Table>(cli_config, overrides))?;
+    let loaded = sources
         .load_with::<FerroEhrConfig>(cli_config, overrides)
         .map_err(ConfigError::from)?;
     let config = finish(loaded.settings().clone())?;
@@ -195,11 +197,42 @@ pub fn assemble_from<S: std::hash::BuildHasher>(
         .iter()
         .map(|(name, value)| (name.clone(), value.clone()))
         .collect();
-    let loaded = loader()?
+    let sources = loader()?;
+    refuse_shared(sources.load_sources_with::<toml::Table>(
+        text.as_deref(),
+        file,
+        &environment,
+        overrides,
+    ))?;
+    let loaded = sources
         .load_sources_with::<FerroEhrConfig>(text.as_deref(), file, &environment, overrides)
         .map_err(ConfigError::from)?;
     let config = finish(loaded.settings().clone())?;
     Ok((loaded, config))
+}
+
+/// Refuses every retired key of a family section the merged tree sets, which
+/// the typed load would refuse only as unknown.
+fn refuse_shared(
+    tree: Result<Loaded<toml::Table>, ferrohealth_config::error::ConfigError>,
+) -> Result<(), ConfigErrors> {
+    // NOTE: no specification governs this: our own design; a tree that does not
+    // merge is refused by the typed load that follows, with its position.
+    let Ok(tree) = tree else {
+        return Ok(());
+    };
+    let removals = super::retired_shared::removals(tree.settings());
+    if removals.is_empty() {
+        return Ok(());
+    }
+    Err(ConfigErrors(
+        removals
+            .removals()
+            .iter()
+            .cloned()
+            .map(ConfigError::Removed)
+            .collect(),
+    ))
 }
 
 /// Refuses every retired key `config` sets, then resolves every `*_file`
@@ -354,9 +387,9 @@ mod tests {
     fn the_server_defaults_are_the_products() {
         let (loaded, config) = assemble_from(None, &env(&[]), &[]).expect("zero-config load");
         assert_eq!(config.server.listen.to_string(), "0.0.0.0:8080");
-        assert_eq!(config.server.body_limit_bytes, 64 * 1024 * 1024);
+        assert_eq!(config.server.body_limit_bytes(), 64 * 1024 * 1024);
         assert_eq!(
-            loaded.provenance().source("server.body_limit_bytes"),
+            loaded.provenance().source("server.body_limit"),
             ferrohealth_config::provenance::Source::Default
         );
     }
@@ -368,22 +401,25 @@ mod tests {
         let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp");
         assert_fs::prelude::FileWriteStr::write_str(
             &file,
-            "[server]\nlisten = \"10.0.0.5:9090\"\nrequest_timeout_ms = 5000\n",
+            "[server]\nlisten = \"10.0.0.5:9090\"\nrequest_timeout = \"5s\"\n",
         )
         .expect("write");
         let (_, config) =
             assemble_from(Some(file.path()), &env(&[]), &[]).expect("a partial table loads");
         assert_eq!(config.server.listen.to_string(), "10.0.0.5:9090");
-        assert_eq!(config.server.request_timeout_ms, 5000);
-        assert_eq!(config.server.body_limit_bytes, 64 * 1024 * 1024);
+        assert_eq!(
+            config.server.request_timeout,
+            ferrohealth_config::units::Duration::from_secs(5)
+        );
+        assert_eq!(config.server.body_limit_bytes(), 64 * 1024 * 1024);
 
         let (_, config) = assemble_from(
             Some(file.path()),
-            &env(&[("FERROEHR__SERVER__BODY_LIMIT_BYTES", "1048576")]),
+            &env(&[("FERROEHR__SERVER__BODY_LIMIT", "1MiB")]),
             &[],
         )
         .expect("an override loads");
-        assert_eq!(config.server.body_limit_bytes, 1_048_576);
+        assert_eq!(config.server.body_limit_bytes(), 1_048_576);
     }
 
     /// An unknown key set from the environment names its full dotted path and

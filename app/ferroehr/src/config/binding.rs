@@ -65,8 +65,7 @@ pub struct PartyBindingConfig {
     /// Retired in v5.7.0: refused at load, naming `provisional_report_after`.
     #[serde(skip_serializing)]
     pub provisional_report_days: ferrohealth_config::removed::Removed,
-    /// The removed `enabled` key, held only so its presence is refused by
-    /// name: binding has no switch.
+    /// Retired in v5.7.0: refused at load, binding has no switch.
     #[serde(skip_serializing)]
     pub enabled: ferrohealth_config::removed::Removed,
 }
@@ -431,21 +430,6 @@ impl crate::config::FerroEhrConfig {
     pub(crate) fn identity_errors(&self) -> Vec<String> {
         let mut errors =
             crate::config::clients::import_errors(&self.authz.import, &self.api.system_id);
-        if self.authz.party_binding.enabled.is_set() {
-            errors.push(
-                "authz.party_binding.enabled is removed: binding has no switch, and every \
-                 persons issuer binds its logins through its [[auth.party]] table; remove the key"
-                    .to_owned(),
-            );
-        }
-        if self.authz.professional.is_set() {
-            errors.push(
-                "authz.professional is removed: the [[auth.issuer]] kind and profile classify \
-                 the caller, and a client acting for a person is one the issuer lists in \
-                 `delegates`; remove the table"
-                    .to_owned(),
-            );
-        }
         let Ok(resolved) = crate::config::auth::resolve(&self.auth.shared) else {
             return errors;
         };
@@ -528,7 +512,7 @@ pub struct BindingPosture {
 /// One trusted issuer of the binding posture.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BoundIssuer {
-    /// The issuer.
+    /// The issuer, its URL `userinfo` masked.
     pub issuer: String,
     /// Its kind, when declared.
     pub kind: Option<IssuerKind>,
@@ -558,7 +542,7 @@ impl BindingPosture {
             .issuers()
             .iter()
             .map(|entry| BoundIssuer {
-                issuer: entry.issuer.clone(),
+                issuer: ferrohealth_smart::config::mask_userinfo(&entry.issuer),
                 kind: entry.kind,
                 identifier_issuer: party
                     .iter()

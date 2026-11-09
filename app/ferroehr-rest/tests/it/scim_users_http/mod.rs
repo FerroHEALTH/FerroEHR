@@ -20,7 +20,7 @@ use ferroehr::config::binding::person::{
 use ferroehr::config::scim::{ScimClient, ScimConfig};
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::party::config::PartySection;
 use ferrohealth_smart::profile::Preset;
@@ -283,7 +283,7 @@ fn config() -> AppConfig {
         ..PartySection::default()
     };
     let mut auth = common::auth(AuthSection {
-        issuer: IssuerKey::List(vec![machines, persons(PERSONS), persons(OTHER_PERSONS)]),
+        issuer: vec![machines, persons(PERSONS), persons(OTHER_PERSONS)],
         party: vec![
             party(PERSONS, LOGIN, GROUPS),
             party(OTHER_PERSONS, OTHER_LOGIN, OTHER_GROUPS),

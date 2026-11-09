@@ -18,8 +18,8 @@
 use ferrohealth_config::units::Duration;
 use serde::{Deserialize, Serialize};
 
+use ferrohealth_config::tls::TlsClientSection;
 use ferrohealth_secret::secret_url::SecretUrl;
-use ferrohealth_server::tls_client::TlsClientSection;
 
 /// The provider that holds the subject-to-EHR cross-reference
 /// (`record.subject_index`).

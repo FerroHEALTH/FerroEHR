@@ -60,7 +60,7 @@ honour **refuses to boot** rather than degrading at the first request:
 | an `issuer` with no `audience` | error: a server with no declared audience cannot reject another server's token (RFC 9068 §4, RFC 8725 §3.9) |
 | an `issuer` not `https` (plain `http` is accepted on a loopback host only), carrying a query or fragment, or a user name or password | error: RFC 8414 §2, §6.2; OpenID Connect Core 1.0 §1.2 |
 | an issuer whose metadata or key set cannot be read | error: the start is refused rather than the first request |
-| `clock_skew_seconds` above `300` | error: leeway may be "no more than a few minutes" (RFC 7519 §4.1.4) |
+| `clock_skew` above `"5min"` | error: leeway may be "no more than a few minutes" (RFC 7519 §4.1.4) |
 | `algorithms` naming an `HS*` algorithm, or empty | error: the server accepts asymmetric algorithms only (RFC 8725 §3.1, §3.2) |
 | a `jwks_file` holding a symmetric key or a private-key member | error: a verifier holds public keys only |
 | a `product_scope` that is neither a full URI nor starts with `__` | error: SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility |
@@ -788,17 +788,17 @@ real web server should send the headers properly instead.
 Four different protections, four different statuses, and an operator should be
 able to tell them apart from the status alone.
 
-**Connection bounds:** `[server] header_read_timeout_ms`. The limit that applies
+**Connection bounds:** `[server] header_read_timeout`. The limit that applies
 *before* a request exists, because a client that opens a socket and trickles
 headers, or sends nothing at all, reaches none of the others: a client that has
 not sent its request head in time, counted from accept, is disconnected, on the
 plain and the TLS listener alike. On a kept-alive connection the bound counts
-from the first byte of each later request head, and `[server] idle_timeout_ms`
-(120 s by default) closes a connection that waits that long for its next request.
+from the first byte of each later request head, and `[server] idle_timeout`
+(two minutes by default) closes a connection that waits that long for its next request.
 Keep it longer than the idle timeout of your clients (90 s for a Go client) and
 of any load balancer in front, so they close an idle connection first.
 
-**Body size:** `[server] body_limit_bytes` and `[api] body_limit_bytes`. Two
+**Body size:** `[server] body_limit` and `[api] body_limit`. Two
 tiers: the routes that accept bulk by design (template upload and
 `/message/import`) take the listener's limit, and the clinical surface the
 narrower `[api]` one when it is set. Over-limit is `413`. The listener's

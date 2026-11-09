@@ -20,7 +20,7 @@ use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::state::AppState;
-use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::party::config::PartySection;
 use ferrohealth_smart::profile::{Marker, Preset, Representation};
 use http::StatusCode;
@@ -56,7 +56,7 @@ fn party(issuer: &str, identifier_issuer: &str) -> PartySection {
 /// Keycloak-shaped issuer, bound on `sub`.
 fn two_issuers() -> AppConfig {
     let mut auth = common::auth(AuthSection {
-        issuer: IssuerKey::List(vec![
+        issuer: vec![
             IssuerEntry {
                 profile: Preset::Entra,
                 person_key: Some("oid".to_owned()),
@@ -75,7 +75,7 @@ fn two_issuers() -> AppConfig {
                 token_types: Some(vec!["at+jwt".to_owned()]),
                 ..common::entry(KEYCLOAK, KEYCLOAK_AUDIENCE)
             },
-        ]),
+        ],
         party: vec![party(ENTRA, ENTRA_LOGIN), party(KEYCLOAK, KEYCLOAK_LOGIN)],
         ..AuthSection::default()
     });
@@ -194,7 +194,7 @@ const REPRESENTS: &str = "represents";
 /// `represents`.
 fn representing() -> AppConfig {
     let mut auth = common::auth(AuthSection {
-        issuer: IssuerKey::List(vec![IssuerEntry {
+        issuer: vec![IssuerEntry {
             jwks_file: common::jwks_file().display().to_string(),
             representation: Some(Representation {
                 claim: REPRESENTS.to_owned(),
@@ -204,7 +204,7 @@ fn representing() -> AppConfig {
                 crate::party_binding_http::ISSUER,
                 crate::party_binding_http::AUDIENCE,
             )
-        }]),
+        }],
         party: vec![party(
             crate::party_binding_http::ISSUER,
             crate::party_binding_http::LOGIN,

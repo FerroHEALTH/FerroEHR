@@ -104,7 +104,7 @@ serviceAccount:
 # `FERROEHR__DATABASE__URL_FILE`, so it never enters the pod's environment (an env value
 # is readable through /proc/<pid>/environ and inherited by every child process).
 # Never the ConfigMap. The non-secret pool bounds live in
-# config.db.{max_connections,min_connections,acquire_timeout_secs}.
+# config.database.{max_connections,min_connections,acquire_timeout}.
 # ─────────────────────────────────────────────────────────────────────────────
 database:
   # -- Reference an existing Secret holding the app-role DSN (STRONGLY preferred
@@ -633,7 +633,7 @@ config:
   # keys in every product (the configuration reference lists them all).
   # The server's own defaults are `listen = "0.0.0.0:8080"`, the port the
   # Service, the probes and the NetworkPolicy name, and a 64 MiB
-  # `body_limit_bytes` for the bulk routes (template upload, the /message
+  # `body_limit` for the bulk routes (template upload, the /message
   # imports); the largest operational template in the vendored CKM corpus is
   # 5.4 MB.
   server:
@@ -658,7 +658,7 @@ config:
     # enabled operation surface, so public discloses it anonymously.
     openapi_ui: private
     # The largest body the clinical surface accepts, below
-    # server.body_limit_bytes, which the bulk routes keep. Raise it if
+    # server.body_limit, which the bulk routes keep. Raise it if
     # compositions embed large DV_MULTIMEDIA data. Over-limit is 413.
     body_limit: 16MiB
     # The ADMIN API group (physical, irreversible delete). Off ⇒ routes 405.
@@ -724,7 +724,7 @@ config:
   # Every route enforces SMART on openEHR scopes: a Basic user's `scopes` and a
   # token's `scope` claim must grant what it calls; a subject listed in
   # `scopeless_subjects` whose token carries no resource scope meets every
-  # SMART on openEHR requirement. `basic.cache_ttl_seconds` (default 300) keeps a
+  # SMART on openEHR requirement. `basic.cache_ttl` (default "5min") keeps a
   # verified Basic credential for that long, so a repeat request skips the
   # Argon2id derivation; 0 checks every request.
   # `mode: introspection` checks opaque tokens at the issuer's RFC 7662
@@ -919,11 +919,10 @@ config:
 # The server's trust in its `[auth]` issuer, beside the image's own roots.
 auth:
   # -- Name of an existing Secret holding a PEM bundle of the certificate
-  # authorities the server trusts for its `[auth]` issuer (the metadata, the
-  # key set and, under introspection, the introspection and token calls),
-  # beside the image's own roots: for an issuer behind a private PKI. The chart
-  # mounts the key as a file and points `[auth] ca_file` at it. Empty trusts the
-  # image's roots alone.
+  # authorities the server trusts for its `[auth]` issuer (the metadata and
+  # the key set), beside the image's own roots: for an issuer behind a private
+  # PKI. The chart mounts the key as a file and points
+  # `[auth.tls] trust_roots_file` at it. Empty trusts the image's roots alone.
   caExistingSecret: ""
   # -- Key within `caExistingSecret` carrying the PEM bundle.
   caExistingSecretKey: ca.crt
@@ -1341,7 +1340,7 @@ viewer:
       # -- Name of an existing Secret holding a PEM bundle of the certificate
       # authorities the viewer trusts for the issuer, beside the image's own
       # roots: for an issuer behind a private PKI. The chart mounts the key as
-      # a file and points `[oidc] ca_file` at it. Empty
+      # a file and points `[oidc.tls] trust_roots_file` at it. Empty
       # trusts the image's roots alone.
       caExistingSecret: ""
       # -- Key within `caExistingSecret` carrying the PEM bundle.
@@ -1773,7 +1772,7 @@ bridge:
     seccompProfile:
       type: RuntimeDefault
   # -- Termination grace period. FerroBRIDGE drains in-flight requests on
-  # SIGTERM for up to its own `server.shutdown_timeout_ms` (10 s by default).
+  # SIGTERM for up to its own `server.shutdown_timeout` (10 s by default).
   terminationGracePeriodSeconds: 20
   # -- Lame-duck pause before SIGTERM, in seconds (0 disables): the same
   # endpoint-propagation race the server's `preStopSleepSeconds` covers.

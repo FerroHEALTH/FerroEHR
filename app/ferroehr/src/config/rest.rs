@@ -71,11 +71,11 @@ pub struct ApiConfig {
     /// manifest — the data-authoring identity is [`Self::system_id`].
     pub options: SystemOptionsConfig,
     /// The largest body the ordinary clinical surface accepts, below the
-    /// listener's `server.body_limit_bytes`.
+    /// listener's `server.body_limit`.
     ///
     /// The payloads differ by more than an order of magnitude: the routes that
     /// accept bulk by design (operational-template upload and EHR-Extract import)
-    /// take up to `server.body_limit_bytes`, and every other route takes up to
+    /// take up to `server.body_limit`, and every other route takes up to
     /// this value. Unset, every route takes the listener's limit.
     /// A request over its limit is refused `413 Payload Too Large`, which the
     /// ITS-REST status table does not list but admits as an additional

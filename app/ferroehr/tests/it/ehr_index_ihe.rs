@@ -31,8 +31,8 @@ use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::linkage::cohort::CohortQueryRequest;
 use ferroehr::service::linkage::cohort::config::CohortConfig;
+use ferrohealth_config::tls::TlsClientSection;
 use ferrohealth_secret::secret_url::SecretUrl;
-use ferrohealth_server::tls_client::TlsClientSection;
 use ihe_iti::pixm::capabilities::CapabilitiesError;
 
 /// The IG's clinical ("blue") domain, the one the stub answers for.

@@ -123,9 +123,9 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
         },
         syslog: Some(SyslogConfig {
             url: format!("tls://127.0.0.1:{port}"),
-            tls: ferrohealth_server::tls_client::TlsClientSection {
+            tls: ferrohealth_config::tls::TlsClientSection {
                 trust_roots_file: Some(socket.ca_file.clone()),
-                ..ferrohealth_server::tls_client::TlsClientSection::default()
+                ..ferrohealth_config::tls::TlsClientSection::default()
             },
             ..SyslogConfig::default()
         }),

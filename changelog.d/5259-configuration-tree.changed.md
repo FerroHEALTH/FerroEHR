@@ -76,5 +76,37 @@
   `http://` url is plain HTTP);
   `[terminology.server]` is `[terminology]` (`fail_on_error` is
   `on_error = "accept" | "refuse"`, `request_timeout_ms` is `timeout`).
-  `[server]`, `[telemetry]`, `[usage_report]` and the family keys of `[auth]`
-  keep their names in this change.
+  The family sections take the same types, from `ferrohealth-server` 0.8,
+  `ferrohealth-telemetry` 0.4, `ferrohealth-smart` 0.15 and
+  `ferrohealth-session` 0.9: `[server]` `request_timeout_ms`,
+  `header_read_timeout_ms`, `idle_timeout_ms`, `drain_delay_ms`,
+  `shutdown_timeout_ms` and `retry_after_s` are `request_timeout`,
+  `header_read_timeout`, `idle_timeout`, `drain_delay`, `shutdown_timeout` and
+  `retry_after`, `body_limit_bytes` and `compression_min_bytes` are
+  `body_limit` and `compression_min_size`, and `[server.tls]
+  reload_interval_s` is `reload_interval`; `[telemetry.otlp]`
+  `trust_roots_file` and `client_identity_file` move into
+  `[telemetry.otlp.tls]`, and an `https://` collector is dialed over it;
+  `[auth] ca_file` is `[auth.tls] trust_roots_file`, an `[[auth.issuer]]`
+  table's `clock_skew_seconds`, `jwks_max_age_seconds`,
+  `jwks_refresh_interval_seconds` and `timeout_ms` are `clock_skew`,
+  `jwks_max_age`, `jwks_refresh_interval` and `timeout`, its introspection
+  `cache_max_age_seconds` is `cache_max_age`, `[auth.basic]
+  cache_ttl_seconds` is `cache_ttl`, `[auth.dpop]` `max_age_seconds` and
+  `clock_skew_seconds` are `max_age` and `clock_skew`, `[auth.idp.entra]`
+  `timeout_ms` and `max_response_bytes` are `timeout` and
+  `max_response_size`, and an `oauth` grant's `ca_file`,
+  `client_certificate_file` and `client_key_file` are its `tls` table's
+  `trust_roots_file` and `client_identity_file` (one PEM), with
+  `refresh_margin_ms`, `timeout_ms` and `previous_key_overlap_ms` as
+  `refresh_margin`, `timeout` and `previous_key_overlap`. The `[auth]` keys
+  v5.6 read for every issuer (`audience`, `algorithms`, `token_profile`,
+  `jwks_file`, `mode`, `introspection`, `role_claims` and the rest) live on
+  each `[[auth.issuer]]` table, and `scopeless_subjects` entries are
+  `{ issuer, sub }` tables. In the viewer, `cdr.request_timeout_secs` is
+  `cdr.timeout`, `[oidc] ca_file` is `[oidc.tls] trust_roots_file`,
+  `[oidc.tls]` `client_certificate` and `client_key` are
+  `client_identity_file`, and `[session]` `idle_timeout_s`,
+  `absolute_timeout_s` and `sign_in_timeout_s` are `idle_timeout`,
+  `absolute_timeout` and `sign_in_timeout`. Each of these is refused in
+  v5.7.0 naming its replacement, in the CDR and the viewer alike.

@@ -204,7 +204,7 @@ fn attribute_errors(binding: &PartyBindingConfig, errors: &mut Vec<String>) {
 
 #[cfg(test)]
 mod tests {
-    use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+    use ferrohealth_smart::config::{AuthSection, IssuerEntry};
     use ferrohealth_smart::party::config::PartySection;
 
     use super::*;
@@ -215,12 +215,12 @@ mod tests {
     fn resolved(guests: bool) -> Resolved {
         let section = AuthSection {
             enabled: true,
-            issuer: IssuerKey::List(vec![IssuerEntry {
+            issuer: vec![IssuerEntry {
                 issuer: ISSUER.to_owned(),
                 kind: Some(IssuerKind::Persons),
                 audience: vec!["ferroehr".to_owned()],
                 ..IssuerEntry::default()
-            }]),
+            }],
             party: vec![PartySection {
                 issuer: ISSUER.to_owned(),
                 identifier_issuer: "urn:login".to_owned(),

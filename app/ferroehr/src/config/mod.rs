@@ -41,6 +41,7 @@ pub mod redact;
 pub mod rest;
 pub mod retention;
 pub mod retired;
+pub mod retired_shared;
 pub mod scim;
 pub mod smart;
 mod validate;
@@ -186,7 +187,7 @@ impl Default for FerroEhrConfig {
             deployment: profile::DeploymentConfig::default(),
             server: ferrohealth_server::section::ServerSection {
                 listen: std::net::SocketAddr::from(([0, 0, 0, 0], 8080)),
-                body_limit_bytes: 64 * 1024 * 1024,
+                body_limit: ferrohealth_config::units::ByteSize::from_mib(64),
                 ..ferrohealth_server::section::ServerSection::default()
             },
             telemetry: ferrohealth_telemetry::section::TelemetrySection::default(),
@@ -569,7 +570,7 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER__0__ISSUER", "https://idp"),
                 ("FERROEHR__AUTH__ISSUER__0__KIND", "persons"),
                 ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr,other"),
-                ("FERROEHR__AUTH__ISSUER__0__TIMEOUT_MS", "1500"),
+                ("FERROEHR__AUTH__ISSUER__0__TIMEOUT", "1500ms"),
                 ("FERROEHR__AUTHZ__ABAC__POLICY__EHR__NAME", "ehr-policy"),
             ]),
             &[],
@@ -592,9 +593,18 @@ mod tests {
         );
         // The key-set client keys: one overridden from the env, the other two at
         // their documented defaults.
-        assert_eq!(issuer.timeout_ms, 1_500);
-        assert_eq!(issuer.jwks_max_age_seconds, 600);
-        assert_eq!(issuer.jwks_refresh_interval_seconds, 60);
+        assert_eq!(
+            issuer.timeout,
+            ferrohealth_config::units::Duration::from_millis(1_500)
+        );
+        assert_eq!(
+            issuer.jwks_max_age,
+            ferrohealth_config::units::Duration::from_mins(10)
+        );
+        assert_eq!(
+            issuer.jwks_refresh_interval,
+            ferrohealth_config::units::Duration::from_mins(1)
+        );
         assert_eq!(
             c.authz
                 .abac
@@ -731,7 +741,7 @@ mod tests {
             &env(&[
                 ("FERROEHR__AUTH__ISSUER__0__ISSUER", "https://idp"),
                 ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr"),
-                ("FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW_SECONDS", "120"),
+                ("FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW", "2min"),
                 ("FERROEHR__AUTH__ISSUER__0__PROFILE", "keycloak"),
                 ("FERROEHR__AUTHZ__ABAC__CHECK_DIRECTORY", "true"),
                 (
@@ -744,7 +754,10 @@ mod tests {
         let [issuer] = c.auth.shared.issuers() else {
             panic!("one issuer table from the env");
         };
-        assert_eq!(issuer.clock_skew_seconds, 120);
+        assert_eq!(
+            issuer.clock_skew,
+            ferrohealth_config::units::Duration::from_mins(2)
+        );
         assert_eq!(issuer.profile, ferrohealth_smart::profile::Preset::Keycloak);
         assert!(c.authz.abac.check_directory);
         assert_eq!(
@@ -759,7 +772,8 @@ mod tests {
         assert!(d.auth.shared.issuers().is_empty());
         let entry = ferrohealth_smart::config::IssuerEntry::default();
         assert_eq!(
-            entry.clock_skew_seconds, 60,
+            entry.clock_skew,
+            ferrohealth_config::units::Duration::from_secs(60),
             "the default leeway is the conventional 60 s"
         );
         assert_eq!(entry.profile, ferrohealth_smart::profile::Preset::Rfc9068);
@@ -869,7 +883,7 @@ mod tests {
     /// (RFC 8996).
     #[test]
     fn the_listener_refuses_a_zero_head_bound_and_a_deprecated_tls_minimum() {
-        let zero = toml_file("[server]\nheader_read_timeout_ms = 0\n");
+        let zero = toml_file("[server]\nheader_read_timeout = \"0s\"\n");
         assert!(assemble(Some(zero.path()), &env(&[]), &[]).is_err());
         let old_tls = toml_file(
             "[server.tls]\ncertificate_file = \"a\"\nkey_file = \"b\"\nmin_version = \"1.1\"\n",
@@ -1438,9 +1452,7 @@ mod tests {
         let sections = [
             (
                 "auth",
-                auth_section::live_fields(
-                    accepted_fields::<ferrohealth_smart::config::AuthSection>("auth"),
-                ),
+                accepted_fields::<ferrohealth_smart::config::AuthSection>("auth"),
             ),
             (
                 "authz.assurance",
@@ -1587,9 +1599,7 @@ mod tests {
             .expect("write");
         let mut c = standalone();
         let mut issuer = auth_section::machines("https://idp.example.test");
-        if let ferrohealth_smart::config::IssuerKey::List(entries) = &mut issuer {
-            entries[0].jwks_file = jwks.path().display().to_string();
-        }
+        issuer[0].jwks_file = jwks.path().display().to_string();
         c.auth.shared.issuer = issuer;
         let err = c.validate().expect_err("an oct key must refuse the tree");
         let text = err.to_string();
@@ -1611,9 +1621,7 @@ mod tests {
         assert!(err.to_string().contains("auth:"), "{err}");
 
         let mut issuer = auth_section::machines("https://idp.example.test");
-        if let ferrohealth_smart::config::IssuerKey::List(entries) = &mut issuer {
-            entries[0].audience = Vec::new();
-        }
+        issuer[0].audience = Vec::new();
         c.auth.shared.issuer = issuer;
         let err = c.validate().expect_err("no audience must refuse");
         assert!(err.to_string().contains("audience"), "{err}");
@@ -1643,7 +1651,7 @@ mod tests {
     #[test]
     fn validate_keeps_the_clinical_body_tier_below_the_listener_limit() {
         let mut c = standalone();
-        c.server.body_limit_bytes = 64;
+        c.server.body_limit = ferrohealth_config::units::ByteSize::from_bytes(64);
         c.api.body_limit = Some(ferrohealth_config::units::ByteSize::from_bytes(64));
         let err = c.validate().expect_err("a tier at the ceiling").to_string();
         assert!(err.contains("api.body_limit"), "{err}");

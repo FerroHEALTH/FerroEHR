@@ -130,6 +130,10 @@ fn of(
                 CallerKind::Guest(inner) => inner.as_ref(),
                 other => other,
             };
+            #[expect(
+                clippy::match_same_arms,
+                reason = "each kind is named, so a kind ferrohealth-smart adds is read here"
+            )]
             match inner {
                 CallerKind::Representative {
                     represented,
@@ -146,6 +150,15 @@ fn of(
                     });
                 }
                 CallerKind::Delegated { .. } => record.actor_chain = actor_chain(caller),
+                CallerKind::Person
+                | CallerKind::Patient
+                | CallerKind::System
+                | CallerKind::PatientRepresentative { .. }
+                | CallerKind::Guest(_)
+                | CallerKind::ExternalPerson(_)
+                | CallerKind::ExternalOrganisation(_) => {}
+                // NOTE: ferrohealth-smart `kind::CallerKind` is `#[non_exhaustive]`;
+                // a kind a later release adds carries no representation or actor here.
                 _ => {}
             }
             Some(record)

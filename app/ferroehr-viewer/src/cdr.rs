@@ -190,7 +190,7 @@ impl CdrClient {
     pub fn new(cfg: &crate::config::CdrConfig) -> Result<Self, CdrClientError> {
         let tls = ferrohealth_server::tls_client::TlsClient::read("cdr.tls", &cfg.tls)?;
         let builder = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(cfg.request_timeout_secs))
+            .timeout(cfg.timeout.get())
             .redirect(reqwest::redirect::Policy::none());
         let http = tls.apply(builder)?.build()?;
         let origin = cfg.base_url.trim_end_matches('/').to_owned();

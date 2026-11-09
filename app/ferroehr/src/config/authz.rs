@@ -58,10 +58,6 @@ pub struct RbacConfig {
     pub enabled: bool,
     /// The role required for Admin-class operations (default `ADMIN`).
     pub admin_role: String,
-    /// The retired `user_role` key, held only so its presence is refused by
-    /// name with a pointer to where a Basic user's roles live now.
-    #[serde(skip_serializing)]
-    pub user_role: ferrohealth_config::removed::Removed,
     /// The role marking a principal as read-only (default `READONLY`): a caller
     /// carrying it is refused on every write operation even when it also holds
     /// granting roles (a restriction overrides a grant). Supports the
@@ -134,7 +130,6 @@ impl Default for RbacConfig {
         Self {
             enabled: true,
             admin_role: "ADMIN".to_owned(),
-            user_role: ferrohealth_config::removed::Removed::default(),
             readonly_role: "READONLY".to_owned(),
             subject_audit_role: None,
             emergency_access_role: None,
@@ -324,8 +319,7 @@ pub struct AuthzConfig {
     /// period and an access rule may name (`[[authz.origin]]`, EHDS Annex II
     /// 3.4).
     pub origin: Vec<crate::origins::RegisteredOrigin>,
-    /// The removed `[authz.professional]` table, held only so its presence is
-    /// refused by name.
+    /// Retired in v5.7.0: the `[authz.professional]` table, refused at load.
     #[serde(skip_serializing)]
     pub professional: ferrohealth_config::removed::Removed,
 }
@@ -364,13 +358,6 @@ pub enum AuthzConfigError {
          enforcement point consults must name a policy, or its requests can only be denied"
     )]
     RemotePolicyMissing(&'static str),
-    /// The retired `user_role` key is set.
-    #[error(
-        "authz.rbac.user_role is retired: a Basic user holds the roles its \
-         [[auth.basic.users]] roles list names, and a token the roles of [auth] role_claims; \
-         remove the key"
-    )]
-    UserRoleRetired,
 }
 
 impl AuthzConfig {
@@ -382,9 +369,6 @@ impl AuthzConfig {
     pub fn validate(&self) -> Result<(), AuthzConfigError> {
         if self.rbac.admin_role.trim().is_empty() {
             return Err(AuthzConfigError::EmptyRole("admin_role"));
-        }
-        if self.rbac.user_role.is_set() {
-            return Err(AuthzConfigError::UserRoleRetired);
         }
         if self.rbac.readonly_role.trim().is_empty() {
             return Err(AuthzConfigError::EmptyRole("readonly_role"));
@@ -410,28 +394,17 @@ mod tests {
         let c = AuthzConfig::default();
         assert!(c.rbac.enabled);
         assert_eq!(c.rbac.admin_role, "ADMIN");
-        assert!(!c.rbac.user_role.is_set());
         assert_eq!(c.rbac.readonly_role, "READONLY");
         assert!(c.validate().is_ok());
     }
 
-    /// The retired `user_role` is refused by name, from a file and from the
-    /// environment, with the place a Basic user's roles live now.
+    /// `user_role`, retired in v5.6 and past its one release, is an unknown
+    /// key.
     #[test]
-    fn the_retired_user_role_is_refused_by_name() {
-        let parsed: AuthzConfig = toml::from_str("[rbac]\nuser_role = \"USER\"\n").expect("parses");
-        let err = parsed.validate().expect_err("retired");
-        assert_eq!(err, AuthzConfigError::UserRoleRetired);
-        let text = err.to_string();
-        assert!(text.contains("authz.rbac.user_role"), "{text}");
-        assert!(text.contains("[[auth.basic.users]] roles"), "{text}");
-        assert!(
-            serde_json::to_value(&parsed)
-                .expect("serializes")
-                .pointer("/rbac/user_role")
-                .is_none(),
-            "the retired key is never rendered"
-        );
+    fn user_role_is_an_unknown_key() {
+        let err = toml::from_str::<AuthzConfig>("[rbac]\nuser_role = \"USER\"\n")
+            .expect_err("an unknown key");
+        assert!(err.to_string().contains("user_role"), "{err}");
     }
 
     #[test]

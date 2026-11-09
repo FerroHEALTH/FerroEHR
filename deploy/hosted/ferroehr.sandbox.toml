@@ -23,7 +23,7 @@ profile = "sandbox"
 # The image's own port; Caddy terminates TLS in front of it.
 listen = "0.0.0.0:8080"
 # Template uploads and the /message imports, up to 64 MiB.
-body_limit_bytes = 67108864
+body_limit = "64MiB"
 
 [api]
 # The public API reference the documentation links to; the default asks for the

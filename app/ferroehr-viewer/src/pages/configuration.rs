@@ -278,9 +278,9 @@ struct Own {
     oidc: Option<String>,
     /// `oidc.client_secret_file` or `client_secret`.
     oidc_secret: OwnSecret,
-    /// `session.idle_timeout_s`, in whole minutes.
+    /// `session.idle_timeout`, in whole minutes.
     idle_minutes: u64,
-    /// `session.absolute_timeout_s`, in whole minutes.
+    /// `session.absolute_timeout`, in whole minutes.
     absolute_minutes: u64,
     /// `session.key_file` or `key`.
     session_secret: OwnSecret,
@@ -302,8 +302,8 @@ fn read_own() -> Option<Own> {
             config.oidc.client_secret_file.as_deref(),
             config.oidc.client_secret.as_ref(),
         ),
-        idle_minutes: config.session.idle_timeout_s.div_euclid(60),
-        absolute_minutes: config.session.absolute_timeout_s.div_euclid(60),
+        idle_minutes: config.session.idle_timeout.as_secs().div_euclid(60),
+        absolute_minutes: config.session.absolute_timeout.as_secs().div_euclid(60),
         session_secret: OwnSecret::of(
             config.session.key_file.as_deref(),
             config.session.key.as_ref(),
@@ -359,7 +359,7 @@ fn viewer_settings(loaded: Option<Own>) -> Vec<Setting> {
         own(
             ConsoleMsg::ConfigIdle,
             ConsoleMsg::ConfigIdleLine,
-            "session.idle_timeout_s",
+            "session.idle_timeout",
             t(crate::locale::tr_with(
                 ConsoleMsg::ConfigMinutes,
                 &[("count", config.idle_minutes.into())],
@@ -368,7 +368,7 @@ fn viewer_settings(loaded: Option<Own>) -> Vec<Setting> {
         own(
             ConsoleMsg::ConfigLifetime,
             ConsoleMsg::ConfigLifetimeLine,
-            "session.absolute_timeout_s",
+            "session.absolute_timeout",
             t(crate::locale::tr_with(
                 ConsoleMsg::ConfigMinutes,
                 &[("count", config.absolute_minutes.into())],

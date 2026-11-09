@@ -216,6 +216,6 @@ the database.
 > [!NOTE]
 > Base64 inflates a blob by about a third on the wire, and the whole request body
 > is still subject to the request-body limit (`api.body_limit` on the
-> clinical surface, `server.body_limit_bytes` everywhere); a
+> clinical surface, `server.body_limit` everywhere); a
 > composition that exceeds it is refused `413` before offload is ever considered.
 > See [`[server]`](../installation/config-server.md#server).

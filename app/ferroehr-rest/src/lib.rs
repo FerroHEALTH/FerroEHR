@@ -238,8 +238,8 @@ pub async fn serve_full(
 /// surface on `management`, until `signal` completes, then drains both.
 ///
 /// Readiness turns `503` at once, the listeners keep accepting for
-/// `server.drain_delay_ms`, then close, and the requests in flight get
-/// `server.shutdown_timeout_ms` to finish; a connection still open then is
+/// `server.drain_delay`, then close, and the requests in flight get
+/// `server.shutdown_timeout` to finish; a connection still open then is
 /// dropped and the result is [`Drained::Cut`]. The main listener speaks the TLS
 /// `[server.tls]` configures; the management listener stays plain HTTP, and
 /// keeping it off a routed network is the deployment's (`production` refuses it
@@ -307,7 +307,7 @@ pub(crate) mod test_support {
     use std::sync::OnceLock;
 
     use ferroehr::config::auth_section::AuthConfig;
-    use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+    use ferrohealth_smart::config::{AuthSection, IssuerEntry};
     use ferrohealth_smart::kind::IssuerKind;
     use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 
@@ -353,7 +353,7 @@ pub(crate) mod test_support {
     pub(crate) fn trusting(entry: IssuerEntry) -> AuthConfig {
         AuthConfig {
             shared: Box::new(AuthSection {
-                issuer: IssuerKey::List(vec![entry]),
+                issuer: vec![entry],
                 ..AuthSection::default()
             }),
             ..AuthConfig::default()

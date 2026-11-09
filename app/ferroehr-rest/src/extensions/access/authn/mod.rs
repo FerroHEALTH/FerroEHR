@@ -453,7 +453,7 @@ impl Authenticator {
     ///
     /// The gate holds a bearer token to the RFC 6750 §2.1 `b64token` syntax and
     /// refuses a blank `sub` (RFC 9068 §2.2), and its Basic store keeps a
-    /// verified credential for `[auth.basic] cache_ttl_seconds`; it logs which
+    /// verified credential for `[auth.basic] cache_ttl`; it logs which
     /// check refused a credential.
     pub(crate) async fn authenticate(&self, parts: &Parts) -> Result<Authenticated, AuthError> {
         let access = self
@@ -786,7 +786,7 @@ mod tests {
                             scopes: vec!["user/composition-*.cruds".to_owned()],
                             roles: Vec::new(),
                         }],
-                        cache_ttl_seconds: cache_ttl,
+                        cache_ttl: ferrohealth_config::units::Duration::from_secs(cache_ttl),
                     }),
                     ..AuthSection::default()
                 }),
@@ -864,6 +864,10 @@ mod tests {
             token_endpoint: format!("{issuer}/token"),
             client_id: "ferroehr".to_owned(),
             client_secret: Some(SecretString::from("synthetic-secret")),
+            tls: ferrohealth_config::tls::TlsClientSection {
+                trust_roots_file: ca_file.clone(),
+                ..ferrohealth_config::tls::TlsClientSection::default()
+            },
             ..ferrohealth_smart::config::credentials::OauthSection::default()
         };
         let (client, bearer) = if bearer {
@@ -881,20 +885,20 @@ mod tests {
             }),
             ..test_support::entry(issuer)
         });
-        auth.shared.ca_file = ca_file;
+        auth.shared.tls.trust_roots_file = ca_file;
         AppConfig {
             auth,
             ..AppConfig::default()
         }
     }
 
-    /// `[auth] ca_file`: an issuer whose TLS certificate a private
+    /// `[auth.tls] trust_roots_file`: an issuer whose TLS certificate a private
     /// certificate authority signed is read at boot trusting that authority
     /// beside the platform roots, under either introspection credential, and
     /// refused without it; a file that holds no certificate refuses the start.
     /// No openEHR spec governs trust configuration: our own design.
     #[tokio::test]
-    async fn an_issuer_behind_a_private_authority_is_read_with_auth_ca_file() {
+    async fn an_issuer_behind_a_private_authority_is_read_with_auth_tls() {
         let issuer = testkit::https::HttpsServer::answering_with("application/json", |base| {
             json!({ "issuer": base }).to_string()
         })
@@ -907,7 +911,7 @@ mod tests {
                 introspecting_through(&issuer.base_url, bearer, Some(issuer.ca_file.clone()));
             Authenticator::new(&config, None, None, memory())
                 .await
-                .unwrap_or_else(|e| panic!("bearer={bearer}: read trusting ca_file: {e}"));
+                .unwrap_or_else(|e| panic!("bearer={bearer}: read trusting the roots file: {e}"));
             let untrusted = introspecting_through(&issuer.base_url, bearer, None);
             let refused = Authenticator::new(&untrusted, None, None, memory())
                 .await
@@ -920,11 +924,8 @@ mod tests {
                 introspecting_through(&issuer.base_url, bearer, Some(empty.clone()));
             let refused = Authenticator::new(&no_certificate, None, None, memory())
                 .await
-                .expect_err("a ca_file without a certificate refuses the start");
-            assert!(
-                refused.contains("auth.ca_file"),
-                "bearer={bearer}: {refused}"
-            );
+                .expect_err("a roots file without a certificate refuses the start");
+            assert!(refused.contains("tls"), "bearer={bearer}: {refused}");
         }
     }
 
@@ -1818,8 +1819,10 @@ mod tests {
             timeout_ms: u64,
         ) -> ferroehr::config::auth_section::AuthConfig {
             test_support::trusting(ferrohealth_smart::config::IssuerEntry {
-                jwks_refresh_interval_seconds: refresh_seconds,
-                timeout_ms,
+                jwks_refresh_interval: ferrohealth_config::units::Duration::from_secs(
+                    refresh_seconds,
+                ),
+                timeout: ferrohealth_config::units::Duration::from_millis(timeout_ms),
                 ..test_support::entry(issuer)
             })
         }

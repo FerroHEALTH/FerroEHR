@@ -1138,8 +1138,8 @@ whose `password` is.
 
 {{/*
 Turn every whole-number float in a values subtree back into an integer, in
-place. Helm decodes values through JSON, so `timeout_ms: 5000` reaches a
-template as float64 and `toToml` writes `5000.0`; FerroEHR and FerroBRIDGE read
+place. Helm decodes values through JSON, so `max_connections: 20` reaches a
+template as float64 and `toToml` writes `20.0`; FerroEHR and FerroBRIDGE read
 their integer keys strictly and refuse a float at boot. A number inside a list
 is left as it is: neither server has a key that takes a list of integers.
 */}}

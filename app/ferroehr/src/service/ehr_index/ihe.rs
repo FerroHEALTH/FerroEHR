@@ -106,7 +106,7 @@ impl IheIdentitySource {
         let mut pixm = PixmClient::new(base, http)?.invoked_by(invocation);
         if let Some(oauth) = &config.oauth {
             let grant = oauth
-                .resolve()
+                .resolve_with_tls(&ferrohealth_smart::config::ServerTls)
                 .map_err(|e| IdentitySourceError::Grant(Box::new(e)))?;
             let source = ferrohealth_smart::client::cache::TokenSource::new(grant)
                 .map_err(|e| IdentitySourceError::Grant(Box::new(e)))?;

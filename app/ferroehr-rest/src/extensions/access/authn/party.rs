@@ -525,9 +525,24 @@ pub(super) fn detail(code: &str, named: Option<&Named>) -> String {
 /// Returns the refusal of a caller its kind does not admit to the request
 /// at all: a system caller holding a `user/` or `patient/` scope, which names
 /// a person the token does not carry (SMART on openEHR `master08-scopes`
-/// §Resource Scopes; RFC 9068 §2.2). No openEHR spec governs what a caller
-/// kind may do: our own design.
+/// §Resource Scopes; RFC 9068 §2.2), and someone acting for a patient on a
+/// `patients` issuer (RFC 8693 §4.1 `act`), whom FerroEHR binds to no party
+/// of its own. No openEHR spec governs what a caller kind may do: our own
+/// design.
 pub(super) fn kind_refusal(caller: &Caller) -> Option<AuthError> {
+    let inner = match caller.kind() {
+        CallerKind::Guest(inner) => inner.as_ref(),
+        kind => kind,
+    };
+    if matches!(inner, CallerKind::PatientRepresentative { .. }) {
+        return Some(AuthError::KindRefused {
+            code: "refused-patient-representative",
+            message: "a token acting for a patient is not admitted: the representative is bound \
+                      to no party of this deployment"
+                .to_owned(),
+            principal: None,
+        });
+    }
     let personal = caller
         .scope()
         .iter()

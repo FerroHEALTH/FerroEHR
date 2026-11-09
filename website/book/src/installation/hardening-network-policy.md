@@ -127,14 +127,14 @@ viewer has its own, smaller bounds under `viewer.resources`.
 **The layering is the point**, and an operator should see it as one story: four
 nested bounds, each catching what the next cannot:
 
-1. **Per request:** `config.server.body_limit_bytes` and
+1. **Per request:** `config.server.body_limit` and
    `config.api.body_limit` (413 on an over-large body),
-   `config.server.request_timeout_ms` (408), `config.record.query.timeout` and `config.record.query.max_result_rows` (a query
+   `config.server.request_timeout` (408), `config.record.query.timeout` and `config.record.query.max_result_rows` (a query
    cannot return an unbounded row set), `config.database.statement_timeout` as the
    backstop the HTTP timeout cannot be, because dropping a handler future does not
    cancel the statement PostgreSQL is running.
-2. **Per connection / per caller:** `config.server.header_read_timeout_ms`
-   bounds a socket before a request exists and `config.server.idle_timeout_ms`
+2. **Per connection / per caller:** `config.server.header_read_timeout`
+   bounds a socket before a request exists and `config.server.idle_timeout`
    a kept-alive one between requests; `config.server.caller_rate` refuses
    `429`; `config.server.max_concurrent_requests` refuses `503` when the server
    is full.

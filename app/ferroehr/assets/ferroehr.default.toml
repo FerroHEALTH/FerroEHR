@@ -68,32 +68,32 @@ listen = "0.0.0.0:8080"
 # The path every route is served under, the health routes included. Empty
 # serves them at the process root; the openEHR API path is [api] base_path.
 base_path = ""
-request_timeout_ms = 30000     # a request still running then is answered 408
+request_timeout = "30s"       # a request still running then is answered 408
 # How long a client may take to send its request head, counted from accept for
 # the first request and from the first byte of each later one; a client still
 # sending then is disconnected.
-header_read_timeout_ms = 30000
+header_read_timeout = "30s"
 # How long a kept-alive connection may wait for its next request before the
 # server closes it. Keep it longer than the idle timeout of your clients (90 s
 # for a Go client) and of any load balancer in front, so they close first.
-idle_timeout_ms = 120000
+idle_timeout = "2min"
 # The largest request body any route reads, refused 413 above it. The bulk
 # routes (template upload, /message/import) take up to this;
 # [api] body_limit narrows the clinical surface below it. 64 MiB; the
 # largest operational template in the vendored CKM corpus is 5.4 MB.
-body_limit_bytes = 67108864
-drain_delay_ms = 0             # on SIGTERM, readiness is 503 this long before the listener closes
-shutdown_timeout_ms = 10000    # then the requests in flight get this long to finish
+body_limit = "64MiB"
+drain_delay = "0s"            # on SIGTERM, readiness is 503 this long before the listener closes
+shutdown_timeout = "10s"      # then the requests in flight get this long to finish
 # The requests served at once; past it a request is answered 503 with
 # Retry-After, and the health routes are never refused. Unset, no bound.
 #? max_concurrent_requests = 256
-retry_after_s = 1              # the Retry-After of a 503 or 429 the listener writes
+retry_after = "1s"            # the Retry-After of a 503 or 429 the listener writes
 # The reverse proxies whose forwarded client address is believed (addresses or
 # CIDR blocks), and the header they name the client in.
 trusted_proxies = []
 forwarded_header = "forwarded" # forwarded | x-forwarded-for
 compression = true             # gzip or Brotli when the client accepts one
-compression_min_bytes = 1024
+compression_min_size = "1KiB"
 
 # [server.caller_rate] — the requests one authenticated caller may send,
 # refused 429 + Retry-After past it, keyed on the authenticated subject.
@@ -108,7 +108,7 @@ compression_min_bytes = 1024
 # on the main listener (the IHE ATNA ITI-19 node-authentication posture). Unset
 # by default: deployments commonly terminate TLS at an ingress. The
 # separate-port management listener stays plain HTTP (internal surface). The
-# files are read again on SIGHUP and every reload_interval_s.
+# files are read again on SIGHUP and every reload_interval.
 #? [server.tls]
 #? certificate_file = "/etc/ferroehr/server.pem"
 #? key_file = "/etc/ferroehr/server.key"
@@ -122,7 +122,7 @@ compression_min_bytes = 1024
 # TLS 1.3 by default; "1.2" admits 1.2 alongside it, and 1.0 and 1.1 are
 # refused at load (RFC 8996).
 #? min_version = "1.3"             # 1.3 | 1.2
-#? reload_interval_s = 60
+#? reload_interval = "1min"
 # The client chain and key, in one PEM, `ferroehr healthcheck` presents to a
 # listener that requires a client certificate.
 #? healthcheck_identity_file = "/etc/ferroehr/healthcheck.pem"
@@ -144,7 +144,7 @@ openapi_ui = "private"       # off | admin_only | private | public — "public" 
 # manifest's display identity.
 system_id = "ferroehr.local"
 # The largest body the clinical surface accepts, below [server]
-# body_limit_bytes, which the bulk routes keep. Unset, every route takes the
+# body_limit, which the bulk routes keep. Unset, every route takes the
 # listener's limit. The largest example composition in the vendored corpus is
 # 526 KB; raise it if your compositions embed large DV_MULTIMEDIA data.
 #? body_limit = "16MiB"
@@ -275,10 +275,14 @@ product_scope = ""
 # of either grammar, meets every SMART on openEHR requirement; only a system
 # (app-only) caller of that issuer is admitted by an entry.
 scopeless_subjects = []      # e.g. [{ issuer = "https://idp.example/realms/staff", sub = "etl-loader" }]
-# A PEM bundle of certificate authorities trusted in addition to the platform
-# roots, for an issuer behind a private PKI: its metadata and key set, and
-# under mode = "introspection" the introspection and token calls too.
-#? ca_file = "/run/secrets/issuer-ca.pem"
+# [auth.tls] — the TLS of the calls to the issuers: a PEM bundle of certificate
+# authorities trusted in addition to the platform roots, for an issuer behind a
+# private PKI (its metadata and key set), a client identity and the minimum
+# version. An introspection grant's calls use the grant's own `tls` table.
+#? [auth.tls]
+#? trust_roots_file = "/run/secrets/issuer-ca.pem"
+#? client_identity_file = "/run/secrets/ferroehr-client.pem"   # one PEM: the chain and its key
+#? min_version = "1.3"             # 1.3 | 1.2
 
 # The trusted issuers, one [[auth.issuer]] table each (the flat `issuer = "…"`
 # form is refused). Every setting of an issuer lives on its own table. `kind`
@@ -305,11 +309,11 @@ scopeless_subjects = []      # e.g. [{ issuer = "https://idp.example/realms/staf
 #? token_types = ["at+jwt", "application/at+jwt"]   # the accepted `typ` (RFC 9068 §4)
 #? required_claims = ["iss", "exp", "aud", "sub", "client_id", "iat", "jti"]
 #? algorithms = ["RS256", "RS384", "PS256", "PS384", "ES256", "ES384"]   # asymmetric only (RFC 8725 §3.1)
-#? clock_skew_seconds = 60         # at most 300 (RFC 9068 §4)
-#? jwks_max_age_seconds = 600      # a key set older than this is read again
-#? jwks_refresh_interval_seconds = 60   # at most one read per interval on an unknown `kid`
+#? clock_skew = "60s"             # at most 5min (RFC 9068 §4)
+#? jwks_max_age = "10min"         # a key set older than this is read again
+#? jwks_refresh_interval = "1min" # at most one read per interval on an unknown `kid`
 #? jwks_file = ""                  # a JWK Set of PUBLIC keys handed over out of band
-#? timeout_ms = 10000              # one call to the authorization server
+#? timeout = "10s"                # one call to the authorization server
 #? mode = "jwt"                    # jwt | introspection (RFC 7662)
 #? role_claims = ["roles", "groups", "entitlements"]   # RFC 9068 §2.2.3.1
 #? sender_constraint = "none"      # none | required: DPoP (RFC 9449) or mTLS (RFC 8705) bound tokens only
@@ -343,20 +347,30 @@ scopeless_subjects = []      # e.g. [{ issuer = "https://idp.example/realms/staf
 #? mapping = "iua"
 #? fields = { "consent.reference" = [{ claim = "consent_ref" }], "correlation_id" = [{ authorization_details = "correlation_id" }] }
 
+# What a persons issuer's tokens state about its own professionals: one
+# [[auth.attributes]] table per persons issuer (the ferrohealth-smart section).
+# `mapping = "iua"` reads the IHE IUA claims (ITI TF-2 §3.71.4.2.2.1.1), and
+# `authorization_details_purposes` adds each RFC 9396 authorization_details
+# entry's purpose_of_use. FerroEHR's access record does not read them yet.
+#? [[auth.attributes]]
+#? issuer = "https://idp.example/realms/staff"
+#? mapping = "iua"
+#? authorization_details_purposes = false
+
 # The DPoP proof check (RFC 9449) of a sender-constrained issuer. Each accepted
 # proof is recorded in the database every replica shares, so a proof is
 # accepted once across all of them (RFC 9449 §11.1).
 #? [auth.dpop]
 #? external_url = "https://ehr.example"   # REQUIRED: the base URL clients address
-#? max_age_seconds = 60
-#? clock_skew_seconds = 10
+#? max_age = "60s"
+#? clock_skew = "10s"
 
 # The Microsoft Graph access of the idp-entra adapter, which an issuer turns on
 # with `adapter = "idp-entra"` to read the groups of an Entra ID groups overage;
 # an issuer naming the adapter without this table refuses the start.
 #? [auth.idp.entra]
 #? base_url = "https://graph.microsoft.com/v1.0"
-#? timeout_ms = 2000
+#? timeout = "2s"
 #? [auth.idp.entra.credentials]
 #? issuer = "https://login.microsoftonline.com/{tenant}/v2.0"
 #? client_id = "ferroehr-graph-reader"
@@ -381,7 +395,7 @@ scopeless_subjects = []      # e.g. [{ issuer = "https://idp.example/realms/staf
 # hash of the credential, never the password, and only a credential that
 # verified is kept; the TTL bounds how long a removed user keeps working.
 #? [auth.basic]
-#? cache_ttl_seconds = 300
+#? cache_ttl = "5min"
 
 # [auth.smart] — SMART on openEHR.
 # The SMART on openEHR scopes are enforced on every route whenever [auth] is on

@@ -486,7 +486,7 @@ mod wire {
             });
         if let Some(oauth) = &cfg.oauth {
             let grant = oauth
-                .resolve()
+                .resolve_with_tls(&ferrohealth_smart::config::ServerTls)
                 .map_err(|e| ServiceError::fault_caused(GRANT_REFUSED, e))?;
             let source = TokenSource::new(grant)
                 .map_err(|e| ServiceError::fault_caused(GRANT_REFUSED, e))?;

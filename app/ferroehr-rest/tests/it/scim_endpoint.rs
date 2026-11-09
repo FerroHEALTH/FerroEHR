@@ -15,7 +15,7 @@ use ferroehr::config::binding::person::{PersonSection, PersonTemplate, RoleSecti
 use ferroehr::config::scim::{ScimClient, ScimConfig};
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_server::section::CallerRate;
-use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::party::config::PartySection;
 use ferrohealth_smart::profile::Preset;
@@ -77,7 +77,7 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
         ..common::entry(PERSONS, AUDIENCE)
     };
     let mut auth = common::auth(AuthSection {
-        issuer: IssuerKey::List(vec![machines, persons]),
+        issuer: vec![machines, persons],
         party: vec![PartySection {
             issuer: PERSONS.to_owned(),
             identifier_issuer: LOGIN.to_owned(),

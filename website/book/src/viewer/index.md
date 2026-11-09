@@ -88,7 +88,7 @@ brings you back to the sign-in card with the refusal under the password.
 The viewer verifies the CDR and the OIDC issuer against the platform trust
 store and the extra certificate authorities its configuration names: a CDR or
 an identity provider whose certificate comes from a private CA is trusted once
-`cdr.tls.trust_roots_file` or `oidc.ca_file` names a PEM bundle holding that
+`cdr.tls.trust_roots_file` or `oidc.tls.trust_roots_file` names a PEM bundle holding that
 CA, on Linux and macOS alike. A file that cannot be read,
 or holds no certificate, refuses the start.
 
@@ -126,8 +126,8 @@ grant it; the CDR remains the enforcer.
 ### When your session ends
 
 A session ends when you sign out, when its idle window
-(`session.idle_timeout_s`, an hour by default) passes with no request from
-your browser, when its lifetime (`session.absolute_timeout_s`, 12 hours after
+(`session.idle_timeout`, an hour by default) passes with no request from
+your browser, when its lifetime (`session.absolute_timeout`, 12 hours after
 you signed in by default) runs out whatever you do, or when the CDR stops
 accepting the credential behind it (an expired or revoked token). The pairing
 of an idle timeout with an absolute one follows the OWASP Session Management
@@ -180,13 +180,13 @@ override, because the viewer's variables share its prefix:
 |---|---|---|
 | `server.listen` | `127.0.0.1:3000` (`0.0.0.0:3000` in the image) | The socket address the viewer listens on. |
 | `server.tls` | unset | The listener's certificate and key, as the CDR's [`[server.tls]`](../installation/config-server.md) table; unset, the viewer speaks plain HTTP behind a terminating proxy. |
-| `server.request_timeout_ms` / `body_limit_bytes` | `60000` / `16777216` | How long one request may take, and the largest body it may post (a template or composition posts whole). |
-| `server.drain_delay_ms` / `shutdown_timeout_ms` | `0` / `10000` | On `SIGTERM` the viewer withdraws readiness, waits the drain delay, then gives the requests in flight the shutdown bound. |
-| `server.*` | as the CDR's | The other keys of the CDR's [`[server]`](../installation/config-server.md) table (`header_read_timeout_ms`, `idle_timeout_ms`, `max_concurrent_requests`, `retry_after_s`, `trusted_proxies`, `forwarded_header`, `compression`, `compression_min_bytes`) apply as they do there. `base_path` and `caller_rate` are refused: the viewer's pages are served at `/`, and it mounts no per-caller limit. |
+| `server.request_timeout` / `body_limit` | `"1min"` / `"16MiB"` | How long one request may take, and the largest body it may post (a template or composition posts whole). |
+| `server.drain_delay` / `shutdown_timeout` | `"0s"` / `"10s"` | On `SIGTERM` the viewer withdraws readiness, waits the drain delay, then gives the requests in flight the shutdown bound. |
+| `server.*` | as the CDR's | The other keys of the CDR's [`[server]`](../installation/config-server.md) table (`header_read_timeout`, `idle_timeout`, `max_concurrent_requests`, `retry_after`, `trusted_proxies`, `forwarded_header`, `compression`, `compression_min_size`) apply as they do there. `base_path` and `caller_rate` are refused: the viewer's pages are served at `/`, and it mounts no per-caller limit. |
 | `telemetry.*` | as the CDR's | The CDR's [`[telemetry]`](../installation/config-server.md#telemetry) section: `format` (`auto`, `json` or `pretty`), `filter` (default `info,hyper=warn,tower=warn,h2=warn`, refused at startup when it does not parse; `RUST_LOG` is a lower-priority fallback, as on the CDR), `logged_query_parameters`, `environment` and the `[telemetry.otlp]` export. A viewer request line has the CDR's fields, and a panic writes the CDR's one fixed line. The `service.name` is `ferroehr-viewer`; the viewer serves no Prometheus surface, so its `http.server.request.duration` histogram leaves only over OTLP with `otlp.metrics`. |
 | `cdr.base_url` | `http://localhost:8080` | The CDR origin (`cdr.base_path` is appended). |
 | `cdr.base_path` | `/ferroehr/rest/openehr/v1` | The CDR's ITS-REST base path. Mirror of the CDR's own `api.base_path`: set the same value here when a deployment [shortens it](../installation/config-server.md#base_path-shortening-the-rest-base-path), or the viewer calls paths the CDR does not serve. The status document, the OpenAPI documents and the SMART discovery document are derived from it by the same rule the CDR uses. |
-| `cdr.request_timeout_secs` | `30` | Per-request timeout toward the CDR. |
+| `cdr.timeout` | `"30s"` | How long one request to the CDR may take. |
 | `cdr.tls.trust_roots_file` | unset | A PEM bundle of certificate authorities trusted for the CDR beside the platform's roots, for a CDR behind a private PKI. |
 | `cdr.tls.client_identity` (`_file`) | unset | The client certificate chain and its private key, in one PEM, presented to a CDR that asks for mutual TLS. |
 | `cdr.tls.min_version` | `"1.3"` | The oldest TLS version the CDR client speaks; `"1.2"` lowers it. |
@@ -195,14 +195,13 @@ override, because the viewer's variables share its prefix:
 | `auth.oidc_enabled` | `false` | Offer the OpenID Connect sign-in (authorization code + PKCE) at the provider `[oidc]` names. |
 | `auth.public_base_url` | — | The viewer's externally visible origin: the origin the same-origin check compares a post with, the base of `oidc.redirect_uri` (`<public_base_url>/auth/callback`) when that is not set, and the base of `oidc.post_logout_redirect_uri` (`<public_base_url>/sign-in?signed-out=1`, the signed-out page) when that is not set. |
 | `oidc.issuer` / `client_id` / `client_secret` (`_file`) / `redirect_uri` / `post_logout_redirect_uri` / `scopes` | — | The viewer's client at its OpenID Provider (`ferrohealth-session`'s `[oidc]`). The provider must allow the redirect URI `<public_base_url>/auth/callback` and the post-logout redirect URI `<public_base_url>/sign-in?signed-out=1` (OpenID Connect RP-Initiated Logout 1.0 §3). With `auth.oidc_enabled`, an issuer that is not `https` off loopback, a missing client id or redirect URI, and `scopes` without `openid` are startup errors, and the provider's metadata is discovered at the start. |
-| `oidc.ca_file` | unset | A PEM bundle of certificate authorities trusted for the provider beside the platform's roots, for a provider behind a private PKI. |
 | `oidc.resolve` | empty | `host=ip:port` entries for split-horizon DNS: the viewer reaches each provider host at its address, while browsers and tokens keep the canonical URL. |
-| `oidc.tls.client_certificate` / `client_key` (`_file`) / `min_version` | unset / unset / `"1.3"` | Mutual TLS to the provider (RFC 8705 §2): the client certificate chain and its private key, set together, and the oldest TLS version of the provider connection (`"1.2"` lowers it). |
+| `oidc.tls.trust_roots_file` / `client_identity` (`_file`) / `min_version` | unset / unset / `"1.3"` | The family's outbound TLS table for the provider: a PEM bundle of certificate authorities trusted beside the platform's roots, for a provider behind a private PKI; the client certificate chain and its private key in one PEM, for mutual TLS (RFC 8705 §2); and the oldest TLS version of the provider connection (`"1.2"` lowers it). |
 | `login.notice` | empty | Informational text on the sign-in card, line breaks preserved. A demo or evaluation deployment states its public credentials and usage expectations here. |
 | `login.links` | empty | Links under the sign-in card, each `{ label, href }` — an API reference, a documentation page. |
 | `session.store` | `memory` | Where sessions are kept (`ferrohealth-session`'s `[session]`): `memory` in the one viewer process, or `sealed` in one AES-256-GCM cookie every replica holding the key opens. |
-| `session.idle_timeout_s` | `3600` | Session idle expiry: the window slides on each page or post the browser asks for and on **Stay signed in**, never on the session watch's own reads. |
-| `session.absolute_timeout_s` | `43200` | The session's lifetime from sign-in, which no activity extends. Zero, or a value below `session.idle_timeout_s`, is a startup error. |
+| `session.idle_timeout` | `"1h"` | Session idle expiry: the window slides on each page or post the browser asks for and on **Stay signed in**, never on the session watch's own reads. |
+| `session.absolute_timeout` | `"12h"` | The session's lifetime from sign-in, which no activity extends. Zero, or a value below `session.idle_timeout`, is a startup error. |
 | `session.secure_cookie` | `true` | The cookies carry `Secure` and with it the `__Host-` prefix; set `false` only for plain-HTTP local development. |
 | `session.key` / `session.key_file` | unset | The sealing key of a `sealed` store: base64 of at least 64 bytes (`openssl rand -base64 64`), the same on every replica. A sealed store without one, or a key beside a `memory` store, is a startup error. |
 | `ui.locale` | `en` | The language a page renders in when the browser's `Accept-Language` names none the viewer ships. English is the one language that ships today. A language is added as a catalog file under `app/ferroehr-viewer/locales/<tag>/` (the viewer's words) beside FerroUI's (the components' words) with no code change; the catalogs are embedded when the viewer is built, so a new one reaches a deployment in a rebuilt image, never at run time. A value that is no BCP 47 language tag is a startup error. |
