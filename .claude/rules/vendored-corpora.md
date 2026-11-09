@@ -40,7 +40,7 @@ commit the result.
 | IHE IUA supplement, Revision 2.5, at the `IHE/ITI.IUA` tag | `scripts/vendor/ihe-iua.sh` | `docs/specs/ihe-iua/` |
 | Nuts RFC021, VP Token Grant Type, at a pinned `nuts-foundation/nuts-specification` commit | `scripts/vendor/nuts-rfc.sh` | `docs/specs/nuts-rfc/` |
 | Mitz Implementatiehandleiding Open en Gesloten Vraag 3.8.2, cache only (no licence stated) | `scripts/vendor/mitz.sh` | record `docs/specs/mitz/`, cache `.vendor-cache/mitz/` |
-| Nictiz zib 2020 package excerpt (the `organization-type` CodeSystem and the `OrganisatieTypeCodelijst` ValueSet; CC0 1.0); the package's `uzi-rolcode` CodeSystem and the UZI-register CPS v11.7 its codes and titles reproduce, cache only (CIBG copyright, no reproduction; `--test-inputs` fetches the CodeSystem for the Wabvpz tests) | `scripts/vendor/nl-role-codes.sh` | `docs/specs/nl-role-codes/`, cache `.vendor-cache/nl-role-codes/` |
+| Nictiz zib 2020 package excerpt (the `organization-type` CodeSystem and the `OrganisatieTypeCodelijst` ValueSet; CC0 1.0); the package tarball as published, the package's `uzi-rolcode` CodeSystem and the UZI-register CPS v11.7 its codes and titles reproduce, cache only (CIBG copyright, no reproduction; `--test-inputs` fetches the CodeSystem for the Wabvpz tests) | `scripts/vendor/nl-role-codes.sh` | `docs/specs/nl-role-codes/`, cache `.vendor-cache/nl-role-codes/` |
 | IHE Basic Audit Log Patterns 1.1.4 (Volume 1, the content profiles, the `AuditEvent` profile sources), at the `IHE/ITI.BasicAudit` tag | `scripts/vendor/ihe-balp.sh` | `docs/specs/ihe-balp/` |
 | FHIR R4 and R5 `AuditEvent` pages (resource, definitions, mappings, licence) | `scripts/vendor/fhir-auditevent.sh` | `docs/specs/fhir-auditevent/` |
 | DICOM PS3.15 2026c Annex A.5, cache only (NEMA copyright, no redistribution grant) | `scripts/vendor/dicom-ps3-15.sh` | record `docs/specs/dicom-ps3-15/`, cache `.vendor-cache/dicom-ps3-15/` |
@@ -54,6 +54,15 @@ into the git-ignored `.vendor-cache/<corpus>/` (`pinned_cache` in
 ``| `file` | `sha256` | cache only |``; a document the owner read under a
 reading grant and may not redistribute is `not redistributed` and copied
 nowhere. `scripts/checks/pinned-docs.sh` refuses either one in the tree.
+
+**A FHIR package is kept as its tarball, never as an extracted manifest.** A
+FHIR package manifest has the npm `package.json` shape, and the FHIR packages
+it names as dependencies (`hl7.fhir.r4.core`) are squatted on npm with
+malicious code (GHSA-qg8x-2hq5-hwf3, #5337). The vendor script keeps the
+published `.tgz`, sha256-pinned, in `.vendor-cache/<corpus>/`, extracts its
+members into a scratch directory, and commits only the resources it takes.
+`scripts/checks/fhir-package-manifests.sh` refuses a committed `package.json`
+that is a FHIR manifest or names a FHIR package.
 
 ## The openEHR CKM REST API — facts, verified 2026-08-01
 
