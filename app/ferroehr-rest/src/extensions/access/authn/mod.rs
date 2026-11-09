@@ -44,6 +44,7 @@ mod gates;
 mod issuer;
 mod party;
 pub(crate) mod record;
+pub(crate) mod refusal;
 mod scope;
 pub(crate) mod trc;
 mod wabvpz;
@@ -52,7 +53,7 @@ use std::sync::Arc;
 
 use axum::extract::{FromRequestParts, MatchedPath, Request, State};
 use axum::middleware::Next;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::refusal::Refusal;
@@ -60,7 +61,7 @@ use ferrohealth_smart::resource::configuration::SmartOptions;
 use ferrohealth_smart::resource::introspection::Introspector;
 use ferrohealth_smart::resource::{Access, Honoured, ResourceServer, Via};
 use http::request::Parts;
-use http::{HeaderValue, StatusCode, header};
+use http::{HeaderValue, StatusCode};
 use openehr_its::rest::runtime::ApiError;
 
 use crate::api::served::ServedMethods;
@@ -555,18 +556,6 @@ pub fn current_principal() -> Option<Principal> {
     REQUEST_PRINCIPAL.try_with(Clone::clone).ok().flatten()
 }
 
-/// Counts one refusal, tagged by the mechanism that produced it and the status
-/// the caller receives.
-fn count_auth_failure(mechanism: &'static str, status: &'static str) {
-    ferroehr::telemetry::metrics::metrics().auth_failures.add(
-        1,
-        &[
-            opentelemetry::KeyValue::new("mechanism", mechanism),
-            opentelemetry::KeyValue::new("status", status),
-        ],
-    );
-}
-
 /// The authentication and RBAC middleware, attached to the API router; the
 /// public endpoints are mounted outside it.
 pub(crate) async fn middleware(
@@ -632,7 +621,7 @@ pub(crate) async fn middleware(
             if let Some(binding) = auth.party.as_deref() {
                 match binding.details(&for_audit).await {
                     Ok(details) => committer.bound = details,
-                    Err(e) => return refusal_response(auth, req.headers(), &e),
+                    Err(e) => return refusal::response(auth, req.headers(), &e),
                 }
             }
             // The roles ride beside the committer identity for the request
@@ -664,56 +653,8 @@ pub(crate) async fn middleware(
             }
             resp
         }
-        Err(e) => refusal_of(auth, req.headers(), &e),
+        Err(e) => refusal::refusal_of(auth, req.headers(), &e),
     }
-}
-
-/// The response refusing a request whose authentication failed with `e`,
-/// naming the caller a login-binding or caller-kind refusal refused.
-pub(crate) fn refusal_of(
-    auth: &Authenticator,
-    headers: &header::HeaderMap,
-    e: &AuthError,
-) -> Response {
-    let principal = match e {
-        AuthError::PartyRefused {
-            principal: Some(principal),
-            ..
-        }
-        | AuthError::KindRefused {
-            principal: Some(principal),
-            ..
-        } => Some(Principal::clone(principal)),
-        _ => None,
-    };
-    refused(auth, headers, e, principal)
-}
-
-/// The response refusing `principal` with `e`, carrying the refused caller
-/// and the binding record of a login-binding refusal for the access log.
-fn refused(
-    auth: &Authenticator,
-    headers: &header::HeaderMap,
-    e: &AuthError,
-    principal: Option<Principal>,
-) -> Response {
-    let mut resp = refusal_response(auth, headers, e);
-    let record = match e {
-        AuthError::PartyRefused {
-            code, party, named, ..
-        } => record::refused(code, party.as_deref(), named.as_ref(), principal.as_ref()),
-        AuthError::KindRefused { code, .. } => {
-            record::refused(code, None, None, principal.as_ref())
-        }
-        _ => None,
-    };
-    if let Some(record) = record {
-        resp.extensions_mut().insert(record);
-    }
-    if let Some(principal) = principal {
-        resp.extensions_mut().insert(principal);
-    }
-    resp
 }
 
 /// The client a request came through, which the `[origins]` register maps to.
@@ -726,56 +667,6 @@ pub fn client_of(principal: &Principal) -> Option<String> {
         AuthMethod::Basic => Some(principal.subject.clone()),
         AuthMethod::Bearer => principal.access.caller()?.client_id().map(str::to_owned),
     }
-}
-
-/// Builds the response for a refused authentication, metered and logged.
-///
-/// A refusal that presented no credential is routine; a presented-and-rejected
-/// one is the operator's signal. Neither record carries the token or a claim
-/// value. ITS-REST §Authentication and authorization makes the
-/// `WWW-Authenticate` challenge a MUST on a `401`, and RFC 6750 §3 carries one
-/// on a bearer `400` and `403` too, where it names what the client did wrong.
-fn refusal_response(auth: &Authenticator, headers: &header::HeaderMap, e: &AuthError) -> Response {
-    let api = e.to_api_error();
-    let status = api.status();
-    let mechanism = scheme_label(headers);
-    count_auth_failure(
-        mechanism,
-        if status == StatusCode::FORBIDDEN {
-            "403"
-        } else {
-            "401"
-        },
-    );
-    let reason = e.label();
-    if matches!(e, AuthError::MissingCredentials) {
-        tracing::debug!(mechanism, reason, "authentication refused");
-    } else {
-        tracing::warn!(
-            mechanism,
-            reason,
-            detail = %ferroehr::error::ErrorChain::new(e),
-            "authentication refused"
-        );
-    }
-    let mut resp = RestError::from(api).into_response();
-    resp.extensions_mut()
-        .insert(crate::system_log::refusals::Reason(reason));
-    if let AuthError::PartyUnavailable {
-        retry_after: Some(after),
-    } = e
-    {
-        resp.headers_mut()
-            .insert(header::RETRY_AFTER, HeaderValue::from(after.as_secs()));
-    }
-    if matches!(
-        status,
-        StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN | StatusCode::BAD_REQUEST
-    ) {
-        resp.headers_mut()
-            .insert(header::WWW_AUTHENTICATE, auth.challenge(Some(e)));
-    }
-    resp
 }
 
 /// The status each refusal outcome answers with.
@@ -818,22 +709,6 @@ fn mechanism_label(method: AuthMethod) -> &'static str {
     match method {
         AuthMethod::Basic => "basic",
         AuthMethod::Bearer => "bearer",
-    }
-}
-
-/// The `mechanism` metric label derived from the request's `Authorization`
-/// scheme (for failures where no principal was established).
-fn scheme_label(headers: &http::HeaderMap) -> &'static str {
-    match headers
-        .get(header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.split_whitespace().next())
-        .map(str::to_ascii_lowercase)
-        .as_deref()
-    {
-        Some("basic") => "basic",
-        Some("bearer") => "bearer",
-        _ => "none",
     }
 }
 
@@ -883,6 +758,7 @@ mod tests {
     use argon2::password_hash::PasswordHasher;
     use argon2::{Argon2, PasswordHash};
     use ferrohealth_smart::config::{AuthSection, BasicSection, BasicUser};
+    use http::header;
     use secrecy::SecretString;
     use serde_json::{Value, json};
 
