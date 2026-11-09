@@ -188,6 +188,50 @@ probes_deployment_posture() {
      second migrated database is a stack change, not a probe."
 }
 
+probes_bootstrap() {
+  bold "bootstrap path (party binding)"
+
+  # #5009: a new deployment has no machine login to start from, so it starts
+  # in one order: the SCIM client is declared, the first person is provisioned
+  # through /scim/v2/ (RFC 7644 §3.3), and only then does a Basic user map, by
+  # that person's binding key. The stack came up from an empty database, and
+  # the far end is the CDR's own answers: the SCIM client's User, and the
+  # committer of a version the Basic user commits.
+  probe "P-BOOTSTRAP-01" "$PROBE_WORKING" "compose" "-" \
+    "from an empty database the Basic user binds the PERSON SCIM provisioned"
+  # The token is asked inside the issuer's network namespace, as the one-shot
+  # asks it: the development issuer names itself by the address it is asked
+  # at, and the CDR trusts http://localhost:8180/quickstart alone.
+  local token scim user_id ehr committer
+  token="$(dc exec -T ferroehr-provision curl -fsS -d grant_type=client_credentials \
+    -d client_id=quickstart-scim -d client_secret=quickstart -d scope=ferroehr/scim \
+    http://localhost:8180/quickstart/token 2>/dev/null \
+    | sed -n 's/.*"access_token" *: *"\([^"]*\)".*//p')"
+  if [[ -z "$token" ]]; then
+    probe_fail "a client credentials token of quickstart-scim" "(none)" \
+      "the declared SCIM client must obtain a token from the development issuer"
+    probe_done
+    return 0
+  fi
+  scim="$(dc exec -T ferroehr-provision curl -sS -H "Authorization: Bearer $token" \
+    'http://localhost:8080/scim/v2/Users?filter=userName%20eq%20%22ferroehr%22' 2>/dev/null)"
+  assert_contains "$scim" '"totalResults":1' \
+    "the quickstart user is a User of the SCIM client: provisioned through /scim/v2/"
+  user_id="$(printf '%s' "$scim" | jq -r '.Resources[0].id // empty' 2>/dev/null)"
+  ehr="$(curl -s -u "$BASIC" -X POST -D - -o /dev/null "$API/ehr" \
+    | grep -i '^location' | tr -d '\r' | awk -F/ '{print $NF}')"
+  if [[ -z "$ehr" ]]; then
+    probe_fail "an EHR the Basic user creates" "(no Location)" \
+      "a Basic user mapped to a provisioned PERSON commits"
+  else
+    committer="$(curl -s -u "$BASIC" "$API/ehr/$ehr/versioned_ehr_status/version" \
+      | jq -r '.commit_audit.committer.external_ref.id.value // empty' 2>/dev/null)"
+    assert_eq "$user_id" "$committer" \
+      "the Basic user's commit names the PERSON the SCIM client provisioned"
+  fi
+  probe_done
+}
+
 probes_multimedia() {
   bold "multimedia (S3 externalization)"
 
