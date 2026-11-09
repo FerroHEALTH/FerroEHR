@@ -458,10 +458,10 @@ mod tests {
             aql,
             format!(
                 "SELECT c FROM EHR e CONTAINS COMPOSITION c \
-                 WHERE c/archetype_details/template_id/value='vitals.v1' \
-                 AND (c/{TEMP_PATH}/magnitude>=36.0 \
-                 AND c/{TEMP_PATH}/magnitude<=38.5 \
-                 AND c/{TEMP_PATH}/units='°C') LIMIT 50"
+                 WHERE c/archetype_details/template_id/value = 'vitals.v1' \
+                 AND (c/{TEMP_PATH}/magnitude >= 36.0 \
+                 AND c/{TEMP_PATH}/magnitude <= 38.5 \
+                 AND c/{TEMP_PATH}/units = '°C') LIMIT 50"
             )
         );
         // And the emitted text does not merely parse — it parses back to the
@@ -505,7 +505,7 @@ mod tests {
         let aql = to_aql(&q).unwrap();
         assert_eq!(
             aql,
-            "SELECT DISTINCT e/ehr_id/value AS ehr_id FROM EHR e CONTAINS COMPOSITION c WHERE c/archetype_details/template_id/value='vitals.v1'"
+            "SELECT DISTINCT e/ehr_id/value AS ehr_id FROM EHR e CONTAINS COMPOSITION c WHERE c/archetype_details/template_id/value = 'vitals.v1'"
         );
         // The printed cohort query must survive the real grammar.
         openehr_query::parser::parse_str(&aql).unwrap();
@@ -540,8 +540,8 @@ mod tests {
             format!(
                 "SELECT COUNT(*) FROM EHR e CONTAINS COMPOSITION c \
                  WHERE c/{TEMP_PATH}/defining_code/code_string MATCHES {{'at0037', 'at0038'}} \
-                 AND c/{TEMP_PATH}/defining_code/terminology_id/value='local' \
-                 AND NOT (c/{TEMP_PATH}/value=true OR EXISTS c/{TEMP_PATH})"
+                 AND c/{TEMP_PATH}/defining_code/terminology_id/value = 'local' \
+                 AND NOT (c/{TEMP_PATH}/value = true OR EXISTS c/{TEMP_PATH})"
             )
         );
         openehr_query::parser::parse_str(&aql).unwrap();

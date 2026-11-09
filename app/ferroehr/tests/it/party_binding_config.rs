@@ -179,6 +179,18 @@ fn a_full_configuration_loads_and_states_its_binding() {
 }
 
 #[test]
+fn a_mapped_basic_user_is_named_while_no_assurance_minimum_is_set() {
+    let config = assemble(&bound(&full())).expect("assembles");
+    assert_eq!(BindingPosture::of(&config).unassured_basic, ["alice"]);
+    let mut assured = config;
+    assured.authz.assurance.minimum = Some(ferrohealth_smart::assurance::AssuranceLevel::High);
+    assert_eq!(
+        BindingPosture::of(&assured).unassured_basic,
+        Vec::<String>::new()
+    );
+}
+
+#[test]
 fn a_persons_issuer_with_no_party_table_is_refused() {
     let text = refusal(&with(
         "[[auth.party]]\nissuer = \"https://idp.example/realms/staff\"\nidentifier_issuer = \"urn:example:staff-login\"\nidentifier_type = \"guid\"\n",

@@ -8,6 +8,9 @@
               (#1694)"
 )]
 
+use fhir_types::codec::{Json, Object, Path};
+use fhir_types::r4::operation_outcome::OperationOutcome;
+
 use super::CdrResponse;
 
 /// The `errors` entries of a problem, one `path: detail` line each.
@@ -55,6 +58,29 @@ pub(super) fn without_lead(message: &str, word: &str) -> String {
     }
 }
 
+/// The `issue[].diagnostics` of a FHIR R4 `OperationOutcome` body, each issue's
+/// `code` where it has none, joined into one line; `None` when the body is no
+/// `OperationOutcome` or names nothing.
+fn outcome_diagnostics(body: &str) -> Option<String> {
+    // NOTE: a refusal body that is no OperationOutcome is legitimately a problem or plain text, which the caller reads next.
+    let object = serde_json::from_str::<Object>(body).ok()?;
+    let outcome = OperationOutcome::from_json(&object, &mut Path::root("OperationOutcome")).ok()?;
+    let joined = outcome
+        .issue
+        .iter()
+        .filter_map(|issue| {
+            issue
+                .diagnostics
+                .as_ref()
+                .and_then(|text| text.value.as_deref())
+                .or(issue.code.value.as_deref())
+                .filter(|text| !text.is_empty())
+        })
+        .collect::<Vec<_>>()
+        .join("; ");
+    (!joined.is_empty()).then_some(joined)
+}
+
 /// Pull the human diagnostic out of a refused body, whatever its vocabulary:
 /// RFC 9457 problem details (`detail`, else `title`, then one line per
 /// entry of `errors`) or a FHIR
@@ -63,33 +89,10 @@ pub(super) fn without_lead(message: &str, word: &str) -> String {
 /// the bare status. ONE reader for both vocabularies, so no screen ever hands
 /// raw JSON to a toast.
 pub(super) fn diagnostic_of(response: &CdrResponse) -> String {
+    if let Some(joined) = outcome_diagnostics(&response.body) {
+        return joined;
+    }
     if let Ok(value) = serde_json::from_str::<serde_json::Value>(&response.body) {
-        if value
-            .get("resourceType")
-            .and_then(serde_json::Value::as_str)
-            == Some("OperationOutcome")
-        {
-            let joined = value
-                .get("issue")
-                .and_then(serde_json::Value::as_array)
-                .map(|issues| {
-                    issues
-                        .iter()
-                        .filter_map(|issue| {
-                            issue
-                                .get("diagnostics")
-                                .or_else(|| issue.get("code"))
-                                .and_then(serde_json::Value::as_str)
-                                .filter(|text| !text.is_empty())
-                        })
-                        .collect::<Vec<_>>()
-                        .join("; ")
-                })
-                .unwrap_or_default();
-            if !joined.is_empty() {
-                return joined;
-            }
-        }
         let details = problem_errors(&value);
         for key in ["detail", "title"] {
             if let Some(text) = value.get(key).and_then(serde_json::Value::as_str) {

@@ -65,6 +65,40 @@ fn where_boolean_shapes_round_trip() {
     }
 }
 
+/// QUERY 1.1.0 `master03-syntax.adoc` §WHERE writes a comparison with one
+/// space on each side of the operator, and §Parameters writes a path
+/// predicate with none (`[ehr_id/value=$ehrUid]`); the printer writes both so.
+#[test]
+fn where_comparisons_print_spaced_as_the_specification_examples_do() {
+    let src = "SELECT o FROM EHR e[ehr_id/value=$ehrUid] CONTAINS COMPOSITION c \
+               CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v1] WHERE \
+               (c/name/value=$nameValue OR c/archetype_details/template_id/value=$templateId) AND \
+               o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/value>=140";
+    let printed =
+        openehr_query::printer::to_aql(&openehr_query::parser::parse_str(src).unwrap(), None);
+    assert!(
+        printed.contains("EHR e[ehr_id/value=$ehrUid]"),
+        "a path predicate stays unspaced: {printed}"
+    );
+    assert!(
+        printed.ends_with(
+            " WHERE (c/name/value = $nameValue OR c/archetype_details/template_id/value = $templateId) \
+             AND o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/value >= 140"
+        ),
+        "the §WHERE example prints as the specification writes it: {printed}"
+    );
+    for op in ["=", "!=", ">", ">=", "<", "<="] {
+        let src = format!("SELECT e/ehr_id/value FROM EHR e WHERE e/time_created/value{op}$t");
+        let printed =
+            openehr_query::printer::to_aql(&openehr_query::parser::parse_str(&src).unwrap(), None);
+        assert!(
+            printed.ends_with(&format!(" WHERE e/time_created/value {op} $t")),
+            "{op} prints with one space on each side: {printed}"
+        );
+        assert_round_trips(&src);
+    }
+}
+
 /// The FROM tree: the same associativity rule, plus the greedy `CONTAINS`
 /// operand.
 #[test]
