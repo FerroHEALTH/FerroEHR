@@ -1826,7 +1826,7 @@ mod tests {
         };
         assert_eq!(children.len(), 3);
         let aql = crate::builder::lower::to_aql(&query).expect("the query lowers");
-        assert!(aql.contains(">=140"), "{aql}");
+        assert!(aql.contains(" >= 140"), "{aql}");
         let lifted = crate::builder::lift::from_aql(&aql).expect("the builder's own AQL lifts");
         let back = draft_of_query(&lifted);
         assert_eq!(back.columns, draft.columns);

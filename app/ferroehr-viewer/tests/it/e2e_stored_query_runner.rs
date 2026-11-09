@@ -56,7 +56,7 @@ const SEEDED_TEMPLATE_ID: &str = "minimal_evaluation.en.v1";
 /// `FROM EHR e CONTAINS COMPOSITION c`, a template restriction, a `LIMIT`), so
 /// the reverse lift must accept it and re-lower it to this same text.
 const LIFTABLE_AQL: &str = "SELECT c FROM EHR e CONTAINS COMPOSITION c \
-     WHERE c/archetype_details/template_id/value='minimal_evaluation.en.v1' LIMIT 50";
+     WHERE c/archetype_details/template_id/value = 'minimal_evaluation.en.v1' LIMIT 50";
 
 /// A query OUTSIDE the builder's envelope: it binds a `$parameter`, which the
 /// point-and-click editor has no field for. It must open with the refusal notice
