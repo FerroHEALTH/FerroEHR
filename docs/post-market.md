@@ -23,13 +23,14 @@ page.
 | Who | What |
 |---|---|
 | Cadasto B.V., the manufacturer | Receives complaints and incident reports at `info@cadasto.com`, decides whether an event is a serious incident or an actively exploited vulnerability, and signs every report to an authority (the FerroHEALTH procedure). |
-| The maintainer, Ruben Talstra | Reads FerroEHR's private vulnerability reports, the reports Cadasto B.V. forwards from `info@cadasto.com`, and the FerroEHR tracker; enters the register rows below, prepares the correcting release, runs `scripts/release/withdraw.sh`, and drafts the advisory and the reports for Cadasto B.V. to send. |
+| The maintainer, Ruben Talstra | Reads FerroEHR's private vulnerability reports, the reports Cadasto B.V. forwards from `security@cadasto.com`, and the FerroEHR tracker; enters the register rows below, prepares the correcting release, runs `scripts/release/withdraw.sh`, and drafts the advisory and the reports for Cadasto B.V. to send. |
 | The deploying organisation | Supplies the facts of its deployment and the JSON document `ferroehr report` writes. |
 
 FerroEHR's channels are GitHub private vulnerability reporting on this
-repository ([`SECURITY.md`](../SECURITY.md)) and `info@cadasto.com` with the
-subject "FerroEHR vulnerability", "FerroEHR incident" or "FerroEHR complaint",
-or a public GitHub issue for a complaint that can be public. An emailed
+repository ([`SECURITY.md`](../SECURITY.md)), `security@cadasto.com` with the
+subject "FerroEHR vulnerability", `info@cadasto.com` with the subject
+"FerroEHR incident" or "FerroEHR complaint", and a public GitHub issue for a
+complaint that can be public. An emailed
 vulnerability report gets a draft security advisory on this repository on
 receipt, exactly as a private GitHub report does, and the clocks run from the
 email's arrival.
@@ -210,7 +211,7 @@ These are open, and nothing in this repository answers them:
    cloud computing service provider).
 5. The list of distributors, importers and known users to whom the
    Art 30(1)(j) and (n) notices go, which is the EHDS Art 35 register.
-6. Whether `info@cadasto.com` should publish an encryption key for
+6. Whether `security@cadasto.com` should publish an encryption key for
    vulnerability reports, and who reads that inbox and forwards a report the
    same day, including outside working hours.
 7. The 30-day ceiling on delaying an advisory's technical details, which
