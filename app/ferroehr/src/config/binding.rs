@@ -505,6 +505,11 @@ pub struct BindingPosture {
     pub namespace: String,
     /// The federation agreements.
     pub agreements: Vec<AgreementPosture>,
+    /// The mapped Basic users, while `[authz.assurance] minimum` is unset: a
+    /// Basic credential carries no assurance level, so nothing refuses them
+    /// on patient data.
+    #[serde(skip)]
+    pub unassured_basic: Vec<String>,
 }
 
 /// One trusted issuer of the binding posture.
@@ -559,16 +564,29 @@ impl BindingPosture {
                 legal_ground: agreement.legal_ground.as_ref().map(ToString::to_string),
             })
             .collect();
+        let unassured_basic = if config.authz.assurance.minimum.is_none() {
+            config
+                .authz
+                .party_binding
+                .basic_user
+                .iter()
+                .map(|mapping| mapping.user.clone())
+                .collect()
+        } else {
+            Vec::new()
+        };
         Self {
             issuers,
             provider: config.authz.party_binding.provider.clone(),
             namespace: config.authz.party_binding.namespace.clone(),
             agreements,
+            unassured_basic,
         }
     }
 
-    /// Logs the posture: one line for the binding, one per agreement, and a
-    /// `warn` for every agreement that runs without a named person.
+    /// Logs the posture: one line for the binding, one per agreement, a
+    /// `warn` for every agreement that runs without a named person, and a
+    /// `warn` while a mapped Basic user exists with no assurance minimum.
     pub fn log(&self) {
         let issuers: Vec<String> = self
             .issuers
@@ -590,6 +608,13 @@ impl BindingPosture {
             namespace = %self.namespace,
             "party binding configured"
         );
+        if !self.unassured_basic.is_empty() {
+            tracing::warn!(
+                users = %self.unassured_basic.join(", "),
+                "mapped Basic users sign in with no assurance level while \
+                 [authz.assurance] minimum is unset"
+            );
+        }
         for agreement in &self.agreements {
             let accessor = agreement
                 .accessor

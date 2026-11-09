@@ -1,0 +1,1 @@
+- At boot, FerroEHR logs a `warn` naming every Basic user mapped in `[[authz.party_binding.basic_user]]` while `[authz.assurance] minimum` is unset: a Basic credential carries no assurance level, so such a person is never refused on patient data.

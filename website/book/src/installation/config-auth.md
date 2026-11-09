@@ -221,6 +221,11 @@ beside a declared table, and a `levels` value that is blank or carries
 whitespace, a quote or a backslash, because the refusal names the accepted
 values in one quoted, space-separated `acr_values` parameter (RFC 9470 §3).
 
+A Basic credential carries no level, so with `minimum` set every Basic user,
+mapped to a person or not, is refused on patient data. While `minimum` is unset
+and a Basic user is mapped in `[[authz.party_binding.basic_user]]`, boot logs a
+`warn` naming those users.
+
 The access record carries the acting mode and the professional the caller
 classification names; see [Audit trail](../audit.md#the-ehds-logging-elements-mapped).
 `[authz.professional]` is refused at boot: the issuer's `kind` and profile
