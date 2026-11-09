@@ -281,9 +281,10 @@ ferrohealth-usage-report = { version = "=0.2.1", features = ["telemetry"] }
 # carrying the upstream status and its `tx-issue-type` coding. The same
 # Licensor's BUSL-1.1 code (deny.toml). Its crate line moves one patch per
 # change, a breaking one included, so it is pinned exactly. Verified on
-# crates.io 2026-11-06 (FerroBRIDGE v0.0.22, on ferrohealth-smart 0.9); `smart`
-# is its ferrohealth-smart token provider.
-ferrobridge-term = { version = "=0.1.147", features = ["smart"] }
+# crates.io 2026-11-09, on ferrohealth-smart 0.13; `smart` is its
+# ferrohealth-smart token provider, and `r4b` the one wire release the
+# terminology client speaks.
+ferrobridge-term = { version = "=0.1.148", default-features = false, features = ["r4b", "smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
