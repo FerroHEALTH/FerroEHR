@@ -322,7 +322,7 @@ async fn only_the_guarded_ehr_columns_name_a_subject_in_the_clinical_domain() {
 async fn the_linkage_domain_is_dropped() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let roles = testkit::roles_lock().await.expect("the roles lock");
+    let roles = testkit::roles::lock().await.expect("the roles lock");
     sqlx::raw_sql(include_str!(
         "../../migrations/audit/0021_drop_linkage_domain.sql"
     ))

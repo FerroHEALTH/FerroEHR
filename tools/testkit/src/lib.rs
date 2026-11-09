@@ -32,6 +32,7 @@
 #![doc(test(attr(deny(warnings))))]
 pub mod https;
 pub mod json_literals;
+pub mod roles;
 pub mod syslog_tls;
 
 use std::time::{Duration, Instant};
@@ -71,10 +72,6 @@ const SQLSTATE_OBJECT_IN_USE: &str = "55006";
 
 /// Environment variable naming an externally provided server (CI, local dev).
 const ENV_URL: &str = "FERROEHR_TEST_PG_URL";
-
-/// Advisory-lock key serializing template builds and every other change to
-/// the cluster-global roles across test processes ([`RolesLock`]).
-const TEMPLATE_LOCK_KEY: i64 = 0x0EB2_7E57_0001;
 
 /// Advisory-lock key electing the single startup sweeper.
 const SWEEP_LOCK_KEY: i64 = 0x0EB2_7E57_0002;
@@ -246,54 +243,6 @@ pub async fn db() -> Result<TestDb, TestkitError> {
 pub async fn empty_db() -> Result<TestDb, TestkitError> {
     let server = server().await?;
     provision(server, None).await
-}
-
-/// Holds the lock that serializes changes to the server's cluster-global
-/// roles, the same lock a template build holds, until it is released or
-/// dropped.
-///
-/// Roles are shared by every database of a cluster (`PostgreSQL` docs
-/// § 22.1 "Database Roles"), and the migrations create a role only when
-/// `pg_roles` lacks it, so two first migrations of fresh databases racing on
-/// one server both see it missing and the second `CREATE ROLE` fails with
-/// `23505`. A test that migrates a database [`empty_db`] returned, or that
-/// drops a role the migrations create, holds this lock around that step,
-/// taken after its databases exist, since [`db()`] may build the template under
-/// the same lock.
-#[derive(Debug)]
-pub struct RolesLock {
-    connection: PgConnection,
-}
-
-impl RolesLock {
-    /// Releases the lock and closes its connection; dropping the guard
-    /// releases it too, when the server ends the session.
-    pub async fn release(mut self) {
-        drop(
-            sqlx::query("SELECT pg_advisory_unlock($1)")
-                .bind(TEMPLATE_LOCK_KEY)
-                .execute(&mut self.connection)
-                .await,
-        );
-        drop(self.connection.close().await);
-    }
-}
-
-/// Takes the [`RolesLock`] on the shared test server, waiting for a holder
-/// in any other test process.
-///
-/// # Errors
-///
-/// Returns [`TestkitError`] when the server cannot be acquired or the lock
-/// cannot be taken.
-pub async fn roles_lock() -> Result<RolesLock, TestkitError> {
-    let server = server().await?;
-    let mut connection = connect_ready(server).await?;
-    sqlx::query("SELECT pg_advisory_lock($1)")
-        .bind(TEMPLATE_LOCK_KEY)
-        .execute(&mut connection)
-        .await?;
-    Ok(RolesLock { connection })
 }
 
 /// Creates a uniquely named database (a clone of `template`, or empty) and
@@ -568,13 +517,13 @@ async fn ensure_template(admin_url: &str) -> Result<String, TestkitError> {
 
     // The lock is session-scoped: hold this connection until the stamp lands.
     sqlx::query("SELECT pg_advisory_lock($1)")
-        .bind(TEMPLATE_LOCK_KEY)
+        .bind(roles::TEMPLATE_LOCK_KEY)
         .execute(&mut admin)
         .await?;
     let outcome = build_template(&mut admin, admin_url, &template, &fingerprint).await;
     drop(
         sqlx::query("SELECT pg_advisory_unlock($1)")
-            .bind(TEMPLATE_LOCK_KEY)
+            .bind(roles::TEMPLATE_LOCK_KEY)
             .execute(&mut admin)
             .await,
     );
@@ -781,12 +730,12 @@ async fn create_clone(
     let start = Instant::now();
     loop {
         sqlx::query("SELECT pg_advisory_lock_shared($1)")
-            .bind(TEMPLATE_LOCK_KEY)
+            .bind(roles::TEMPLATE_LOCK_KEY)
             .execute(&mut *admin)
             .await?;
         let attempt = clone_if_complete(admin, name, template, &fingerprint).await;
         sqlx::query("SELECT pg_advisory_unlock_shared($1)")
-            .bind(TEMPLATE_LOCK_KEY)
+            .bind(roles::TEMPLATE_LOCK_KEY)
             .execute(&mut *admin)
             .await?;
         let expired = start.elapsed() >= DEADLINE;
