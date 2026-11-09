@@ -664,21 +664,29 @@ pub(crate) async fn middleware(
             }
             resp
         }
-        Err(e) => {
-            let principal = match &e {
-                AuthError::PartyRefused {
-                    principal: Some(principal),
-                    ..
-                }
-                | AuthError::KindRefused {
-                    principal: Some(principal),
-                    ..
-                } => Some(Principal::clone(principal)),
-                _ => None,
-            };
-            refused(auth, req.headers(), &e, principal)
-        }
+        Err(e) => refusal_of(auth, req.headers(), &e),
     }
+}
+
+/// The response refusing a request whose authentication failed with `e`,
+/// naming the caller a login-binding or caller-kind refusal refused.
+pub(crate) fn refusal_of(
+    auth: &Authenticator,
+    headers: &header::HeaderMap,
+    e: &AuthError,
+) -> Response {
+    let principal = match e {
+        AuthError::PartyRefused {
+            principal: Some(principal),
+            ..
+        }
+        | AuthError::KindRefused {
+            principal: Some(principal),
+            ..
+        } => Some(Principal::clone(principal)),
+        _ => None,
+    };
+    refused(auth, headers, e, principal)
 }
 
 /// The response refusing `principal` with `e`, carrying the refused caller

@@ -23,8 +23,9 @@
 //! [`openapi`]), but the live [`router`] mounts only the opted-in endpoints, so
 //! a disabled one is absent and answers `404`. The `AccessGuard` layer yields
 //! the documented `401`/`403`: `401` when the level is Private or `AdminOnly`
-//! and the caller is unauthenticated, `403` when the level is `AdminOnly` and
-//! the caller lacks `authz.rbac.admin_role`.
+//! and the caller is unauthenticated, `403` when the login binding refuses the
+//! caller or the level is `AdminOnly` and the caller lacks
+//! `authz.rbac.admin_role`.
 
 #![expect(
     clippy::disallowed_types,
@@ -62,7 +63,7 @@ use serde_json::Value;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use crate::extensions::access::authn::Authenticator;
+use crate::extensions::access::authn::{AuthError, Authenticator, refusal_of};
 use crate::extensions::access::authz::classify::OperationClass;
 use crate::extensions::access::authz::roles::RbacDecision;
 use crate::overview::error::RestError;
@@ -744,17 +745,21 @@ impl AccessGuard {
                 if !self.authenticator.enabled() {
                     return Ok(None);
                 }
-                #[expect(
-                    clippy::map_err_ignore,
-                    reason = "the gate answers one 401 challenge for every \
-                              authentication failure: which part of the credential \
-                              was rejected is never disclosed"
-                )]
-                let authenticated = self
-                    .authenticator
-                    .authenticate(headers)
-                    .await
-                    .map_err(|_| Box::new(unauthorized(&self.authenticator)))?;
+                // NOTE: RFC 9110 §15.5.4, a binding refusal follows a credential
+                // that authenticated, so it answers `403` as every other route does.
+                let authenticated = match self.authenticator.authenticate(headers).await {
+                    Ok(authenticated) => authenticated,
+                    Err(e @ (AuthError::PartyRefused { .. } | AuthError::KindRefused { .. })) => {
+                        return Err(Box::new(refusal_of(
+                            &self.authenticator,
+                            &headers.headers,
+                            &e,
+                        )));
+                    }
+                    // One `401` challenge for every other authentication failure:
+                    // which part of the credential was rejected is never disclosed.
+                    Err(_) => return Err(Box::new(unauthorized(&self.authenticator))),
+                };
                 if self.level == AccessLevel::AdminOnly
                     && let RbacDecision::Deny(reason) =
                         crate::extensions::access::authz::roles::authorize(
