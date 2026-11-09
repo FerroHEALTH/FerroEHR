@@ -1964,7 +1964,7 @@ mod tests {
         for table in [
             "terminology.endpoint.credentials.oauth",
             "audit.fhir_feed.endpoint.credentials.oauth",
-            "authz.abac.remote.oauth",
+            "authz.abac.remote.endpoint.credentials.oauth",
         ] {
             let file = toml_file(&format!(
                 "[{table}]\ntoken_url = \"https://idp.example/token\"\nclient_id = \"c\"\n"

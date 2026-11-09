@@ -1082,7 +1082,11 @@ region = "us-east-1"
 #? url = "http://ferroterm:8080/r4b"   # REQUIRED
 #? timeout = "10s"                     # one call
 #? connect_timeout = "2s"              # unset, only timeout bounds the connection
-#? retry = { max_attempts = 3, initial_backoff = "200ms", max_backoff = "5s" }
+# How a call that got no answer or a 5xx is tried again.
+#? [terminology.endpoint.retry]
+#? max_attempts = 3                    # counts the first try; 1 never retries
+#? initial_backoff = "200ms"           # the wait before the second try, doubling
+#? max_backoff = "5s"                  # the longest wait
 # The TLS of the calls: trust roots beside the platform's, a client identity
 # for mutual TLS (one PEM holding the chain and its key), the minimum version.
 #? [terminology.endpoint.tls]
