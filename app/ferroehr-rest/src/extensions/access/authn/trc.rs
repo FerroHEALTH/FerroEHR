@@ -98,7 +98,7 @@ pub(super) fn patient_context<'a>(
                 principal.represented = represented;
                 None
             }
-            Err(e) => Some(super::refused(
+            Err(e) => Some(super::refusal::refused(
                 &layer.authenticator,
                 &headers,
                 &e,
@@ -149,7 +149,7 @@ async fn confine(
             ),
             principal: None,
         };
-        return Some(super::refused(
+        return Some(super::refusal::refused(
             auth,
             headers,
             &refusal,
@@ -164,7 +164,7 @@ async fn confine(
                 "the EHR of the TRC patient could not be resolved"
             );
             let refusal = AuthError::PartyUnavailable { retry_after: None };
-            return Some(super::refused(
+            return Some(super::refusal::refused(
                 auth,
                 headers,
                 &refusal,
