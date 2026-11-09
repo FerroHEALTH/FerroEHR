@@ -48,6 +48,15 @@ pub enum CheckError {
         /// The key as given.
         key: String,
     },
+    /// Two `PERSON`s carry one selector value, which a fill refuses.
+    #[error(
+        "{}: resolve them first, as `ferroehr party-binding check` reports them",
+        duplicates.iter().map(ToString::to_string).collect::<Vec<_>>().join("; ")
+    )]
+    Duplicate {
+        /// Each value two or more `PERSON`s carry.
+        duplicates: Vec<Duplicate>,
+    },
     /// A stored committer is no canonical `PARTY_PROXY`.
     #[error("the committer of a version of PERSON {party} is no canonical PARTY_PROXY")]
     Committer {
@@ -318,6 +327,76 @@ pub async fn check(
     let report = run(&mut tx, mapping, input).await;
     tx.rollback().await?;
     report
+}
+
+/// A `PERSON` an adoption names, as the pre-flight reads it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Candidate {
+    /// The `PERSON`.
+    pub(crate) party: Uuid,
+    /// Whether it is a live `PERSON` of a mapped template carrying a key.
+    pub(crate) keyed: bool,
+    /// Whether it performs a professional `ROLE` already.
+    pub(crate) professional: bool,
+    /// Whether the committer of each of its keys passes the provenance rule.
+    pub(crate) passes: bool,
+}
+
+/// The named administrators and what the pre-flight reads of each of
+/// `parties`, writing nothing.
+///
+/// # Errors
+/// [`CheckError::Duplicate`] while a selector value two `PERSON`s carry
+/// stands, and the [`check`] refusals.
+pub(crate) async fn candidates(
+    pool: &PgPool,
+    mapping: &BindingMapping,
+    input: &CheckInput,
+    parties: &[Uuid],
+) -> Result<(Vec<NamedAdministrator>, Vec<Candidate>), CheckError> {
+    let mut tx = pool.begin().await?;
+    let read = read_candidates(&mut tx, mapping, input, parties).await;
+    tx.rollback().await?;
+    read
+}
+
+/// [`candidates`] on `tx`, which the caller rolls back.
+async fn read_candidates(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    input: &CheckInput,
+    parties: &[Uuid],
+) -> Result<(Vec<NamedAdministrator>, Vec<Candidate>), CheckError> {
+    let held = store::held_selectors(tx, mapping).await?;
+    let duplicates = fill::duplicates(held.clone());
+    if !duplicates.is_empty() {
+        return Err(CheckError::Duplicate { duplicates });
+    }
+    let keys: Vec<&HeldSelector> = held.iter().filter(|h| h.selector == "key").collect();
+    let administrators = named_administrators(input, &keys)?;
+    let admin_parties: BTreeSet<Uuid> = administrators.iter().map(|a| a.party).collect();
+    store::refill(tx, mapping).await?;
+    let unadopted = side_table(tx, parties, input, &|issuer: &str, key: &str| {
+        canonical(input, issuer, key)
+    })
+    .await?
+    .unadopted;
+    let mut out = Vec::with_capacity(parties.len());
+    for party in parties {
+        let own: Vec<&&HeldSelector> = keys.iter().filter(|k| k.party_id == *party).collect();
+        let mut passes = !own.is_empty();
+        for key in &own {
+            let provenance = provenance_of(tx, mapping, key, input, &admin_parties).await?;
+            passes &= provenance.is_some_and(|p| p.by.is_some());
+        }
+        out.push(Candidate {
+            party: *party,
+            keyed: !own.is_empty(),
+            professional: !own.is_empty() && !unadopted.contains(party),
+            passes,
+        });
+    }
+    Ok((administrators, out))
 }
 
 /// The pre-flight on `tx`, which the caller rolls back.

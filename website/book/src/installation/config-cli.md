@@ -143,6 +143,33 @@ The command exits non-zero, after printing the report, on a duplicate, a
 mapped Basic user or expected login with no `PERSON`, or a key whose committer
 fails the provenance rule.
 
+### `ferroehr party-binding adopt`
+
+```text
+ferroehr party-binding adopt (--admin <PARTY_ID> | --admin-key <ISSUER> <KEY>)...
+                             [--migration <COMMITTER_NAME>]... <PARTY_ID>...
+```
+
+Gives each listed `PERSON` a professional `ROLE`, so a prepared `PERSON` of
+an existing deployment binds: a `ROLE` of the mapping's
+`[authz.party_binding.professional_role]` template with the `PERSON` as
+`performer`, and a new `PERSON` version listing it in `roles`. Every
+adoption of one run is one demographic CONTRIBUTION, committed by the first
+administrator you name (a `PARTY_IDENTIFIED` committer whose `external_ref`
+is that administrator's `PERSON`), and each adopted `PERSON` gets one access
+record through the configured `[audit]` trail. Adopt the existing persons
+before the first SCIM provisioning run: without the `ROLE`, a `userName eq`
+filter finds no User and the identity provider creates a duplicate.
+
+The command applies the provenance rule of `check` with the same
+`--admin`, `--admin-key` and `--migration` operator input, and refuses the
+whole run, naming them, while any listed `PERSON`'s key was introduced by
+another committer. It also refuses a party that is no live key-bearing
+`PERSON` of a mapped template, an inactive or abandoned one, and a store in
+which two `PERSON`s carry one selector value. A `PERSON` that already
+performs the `ROLE` is reported under `already` and left alone. The report
+is a JSON document on stdout with the CONTRIBUTION and each new `ROLE`.
+
 ### `ferroehr healthcheck`
 
 Asks the running server's `GET /health/readiness` and exits 0 on `200`, 1
