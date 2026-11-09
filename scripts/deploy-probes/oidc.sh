@@ -26,10 +26,21 @@ OIDC_LAYER="compose"
 oidc_files=(-f docker-compose.yml -f docker-compose.keycloak.yml)
 
 # Refills the binding side table under the mapping of the compose files given,
-# with the server stopped, as the boot refusal of a changed mapping asks.
+# with the server stopped, as the boot refusal of a changed mapping asks. The
+# refill refuses while a replica's lease is younger than its 60 s TTL (a
+# server stopped without releasing it), so it is tried again for up to 90 s,
+# and a refill that never succeeds prints its last answer.
 binding_refill() {
-  dc "$@" stop ferroehr >/dev/null 2>&1
-  dc "$@" run --rm --no-deps ferroehr party-binding refill >/dev/null 2>&1
+  local out="" attempt
+  dc "$@" stop -t 30 ferroehr >/dev/null 2>&1
+  for attempt in $(seq 1 10); do
+    if out="$(dc "$@" run --rm --no-deps ferroehr party-binding refill 2>&1)"; then
+      return 0
+    fi
+    [[ "$attempt" -lt 10 ]] && sleep 10
+  done
+  red "the binding side table refill failed: $(printf '%s' "$out" | tail -5 | tr '\n' ' ')"
+  return 1
 }
 
 oidc_up() {
@@ -72,7 +83,8 @@ probes_oidc() {
     probe_done
     return 0
   fi
-  wait_http "$CDR/health/readiness" 120 || true
+  wait_http "$CDR/health/readiness" 120 \
+    || red "the CDR log ends: $(dc "${oidc_files[@]}" logs --tail 8 ferroehr 2>&1 | tr '\n' ' ')"
 
   # The documented recipe, verbatim: fetch a token with the password grant.
   local token

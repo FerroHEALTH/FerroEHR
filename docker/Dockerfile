@@ -89,7 +89,7 @@ RUN --mount=type=cache,target=/app/target,sharing=locked \
 
 # ── runtime-base: the SHARED final base (digest-pinned distroless, non-root) ───
 # gcr.io/distroless/cc-debian13:nonroot (glibc + libgcc_s + CA certs; non-root
-# 65532, Helm-aligned), digest-pinned, resolved 2026-10-22 (ca-certificates 20250419+deb13u1, DSA-6572-1). `cc` (not the
+# 65532, Helm-aligned), digest-pinned, resolved 2026-11-08 (zlib1g 1:1.3.dfsg+really1.3.1-1+deb13u1, ca-certificates 20250419+deb13u1). `cc` (not the
 # smaller base-nossl) is REQUIRED: the Rust binary dynamically links
 # libgcc_s.so.1 for stack unwinding, which the base-nossl image does not ship
 # (verified 2026-07-24: base-nossl fails at load with "libgcc_s.so.1: cannot
@@ -97,7 +97,7 @@ RUN --mount=type=cache,target=/app/target,sharing=locked \
 # Both final targets inherit this stage's EXPOSE/HEALTHCHECK/ENTRYPOINT/LABELs,
 # so they are byte-for-byte identical except the one binary-provenance layer
 # (D5 — zero drift).
-FROM gcr.io/distroless/cc-debian13:nonroot@sha256:08476c244888bfb425bae1ae4dd7c17f093e972aab8426883d97f3c6f280f7c1 AS runtime-base
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:cc66d222f0a7ec996b78a99fe76a969bc80b539a5016ad866c14d1949bc6d0ab AS runtime-base
 # The `:nonroot` tag already runs as uid 65532, but a scanner reading the
 # Dockerfile cannot see a base image.s user — and neither can a reader. Stating
 # it makes the posture a property of this file rather than of a tag someone
