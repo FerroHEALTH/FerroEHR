@@ -51,7 +51,7 @@ Single workspace, `members = ["crates/*", "app/*", "tools/*"]`. **Crate naming:*
 
 ## Model orchestration (workflows & subagents)
 
-**When the session runs on Fable 5 (effort `high`), Fable orchestrates; it does not implement bulk work.** It owns the issue loop, architecture, spec-conformance judgement and the hard bespoke logic (AQL IR→SQL, versioning, validation, the node codec) in-context, and fans file-heavy implementation out to subagents (`Agent` with `model: 'opus'`, or a `Workflow`). The win is context isolation and parallelism, not intelligence, so delegate by the nature of the work, never reflexively.
+**When the session runs on Fable 5 (effort `high`), Fable orchestrates; it does not implement bulk work.** It owns the issue loop, architecture, spec-conformance judgement and the hard bespoke logic (AQL IR→SQL, versioning, validation, the node codec) in-context, and fans file-heavy implementation out to subagents (`Agent` with `model: 'opus'`; never a `Workflow`, whose agents cannot be messaged, owner 2026-11-01). The win is context isolation and parallelism, not intelligence, so delegate by the nature of the work, never reflexively.
 
 | model     | cost | intelligence | taste |
 |-----------|------|--------------|-------|
@@ -59,8 +59,8 @@ Single workspace, `members = ["crates/*", "app/*", "tools/*"]`. **Crate naming:*
 | opus-5    | 4    | 8            | 8     |
 
 - Only these two models. Never pass Sonnet or Haiku to `Agent`/`Workflow`.
-- **Opus workers** take bulk implementation on a clear spec (handlers, DTOs, migrations, sea-query building, test scaffolding) and file-heavy investigation. **Max 5 implementation workers at once** (owner cap for the family since 2026-10-19; the owner may raise it on request). Prefer one worker holding a whole subsystem over splitting a coherent task. Tell workers NOT to spawn subagents; drop "double-check your work" scaffolding (Opus self-verifies).
-- **Fable subagents** for delegated work that still needs top intelligence/taste.
+- **Opus workers** take bulk implementation on a clear spec (handlers, DTOs, migrations, sea-query building, test scaffolding) and file-heavy investigation. **Up to 10 implementation workers at once** (owner cap for the family since 2026-11-03, replacing the 5 of 2026-10-19). Prefer one worker holding a whole subsystem over splitting a coherent task. Tell workers NOT to spawn subagents; drop "double-check your work" scaffolding (Opus self-verifies).
+- **Every subagent runs on Opus**, research and review included; never pass `fable` to `Agent` (owner 2026-10-30).
 - **Reviews and research:** `spec-conformance-reviewer` before committing a spec-facing subsystem; `spec-researcher` for spec questions; `implementer` for bounded code; **every red CNF run goes to `cnf-triage`**; regulation work to the compliance agents (`/law-lookup`, `/compliance-audit`). Hand every agent the governing `docs/specs/openehr/...` (or `docs/law/...`) paths.
 - Effort: Fable on `high`; `effort: 'low'` for mechanical worker stages.
 - Subagents obey every hard rule below; delegate with a tight spec and verify the result.
@@ -95,10 +95,10 @@ bash scripts/deploy-probe.sh  # deployment conformance at the far end, each inte
 
 A cold build is expensive and `target/` can grow to hundreds of GB.
 
-- **ONE `./target` for ALL cargo, the IDE included.** No `CARGO_TARGET_DIR` override, no second target dir anywhere (scratchpad, `/tmp`, worktree). Cargo's lock serializes builds; waiting on it is intended. Subagents do not run cargo in parallel; the orchestrator builds once at convergence. Never `pkill -9 rustc`.
+- **ONE `./target` for the main checkout, the IDE included.** No `CARGO_TARGET_DIR` override and no second target dir for it (scratchpad, `/tmp`). A worktree under `.claude/worktrees/` builds into its own `<worktree>/target`, never a shared one: workspace-member outputs carry the same name in every worktree and overwrite each other (owner delegation 2026-11-09); its target goes with the worktree. Cargo's lock serializes builds; waiting on it is intended. Subagents do not run cargo in parallel; the orchestrator builds once at convergence. Never `pkill -9 rustc`.
 - **Iterate scoped, gate wide:** `cargo clippy -p <crate> --all-targets` + `cargo nextest run -p <crate>` while working; the `--workspace` gates once before commit.
 - **Never vary `RUSTFLAGS`, features or profile between runs** — any change rebuilds the world.
-- **Disk hygiene:** `du -sh target` at the start of a heavy session and after rewrite-scale changes; above ~30 GB, check `pgrep -fl 'cargo|rustc'` then `cargo clean`.
+- **Disk hygiene:** `du -sh target` at the start of a heavy session and after rewrite-scale changes; above ~30 GB, or above 200k entries in `target/debug/deps` (the macOS unpacked debuginfo leftovers of #5248), check `pgrep -fl 'cargo|rustc'` then `cargo clean`.
 
 The spec layer and the application both compile and are clippy-clean; keep every crate you touch green (generated crates by fixing the emitter). The CDR is shipped; the conformance baseline lives in `docs/conformance/ferroehr/`; remaining work is on GitHub Issues.
 
@@ -114,6 +114,7 @@ The spec layer and the application both compile and are clippy-clean; keep every
 
 ## IMPORTANT hard rules
 
+- **Family rules carried in `.claude/memory/` (index `MEMORY.md`).** A removal aid (a named refusal of a removed or renamed config key, flag, env variable, route or format) lives exactly one release and the next release deletes it fully; no legacy support is ever kept (owner hard rule 2026-11-09, `no-compat-shims.md`). Build the proper solution even when it breaks an API and moves the minor version (owner 2026-11-08, `no-half-solutions.md`). A production value map goes only through the terminology server, never an embedded copy (owner 2026-11-09, `terminology-via-server.md`). Where the EHDS Regulation conflicts with an openEHR or other standard's text, the Regulation wins, and EHDS work is never reverted to pass a conformance row (owner 2026-11-09, `ehds-above-openehr.md`).
 - **The vendored spec text is the oracle.** Before implementing or reviewing spec-facing behaviour (RM semantics, invariants, REST wire, AQL, canonical JSON/XML, templates, terminology) read the section under `docs/specs/openehr/` (`/spec-lookup`) and cross-check the CNF schedule. Never resolve a spec question from memory or EHRbase behaviour; cite file + section.
 - **CNF red-run triage is spec-adjudicated** (`.claude/rules/cnf-triage.md`, agent `cnf-triage`). Every red row is attributed BEFORE any fix to exactly one of {FerroEHR, the party set, Veredictum (catalogue, judge or runner), a silence of the specification} by comparing spec-required vs catalogue-expected vs server-observed, with the spec citation and the wire exchange as evidence. The spec is never a suspect; **the application is never presumed correct** (it is the most common culprit); never adjust an expectation to match observed behaviour; the SUT response is evidence, NEVER the reference. Spec silence is an `upstream-report` issue. Veredictum fixes land there and arrive here as a pin bump. **The catalogue's job is TOTAL wire coverage** (`.claude/rules/testing.md` §CNF coverage).
 - **Cite ONLY durable references:** the vendored specs (file + section) or official external docs (PostgreSQL docs, Rust book/reference, docs.rs of pinned crates). NEVER an internal markdown as a design authority (a guard naming the `.claude/rules/*.md` it enforces is fine). Where the openEHR specs are SILENT, say so: "no openEHR spec governs this — our own design/extension".
