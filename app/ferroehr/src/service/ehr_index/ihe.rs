@@ -20,6 +20,7 @@ use std::time::Duration;
 use ferrohealth_server::tls_client::{TlsClient, TlsClientError};
 use ihe_atna::user::OnBehalfOf;
 use ihe_iti::authorizer::Authorizable as _;
+use ihe_iti::pixm::capabilities::CapabilitiesError;
 use ihe_iti::pixm::error::{InvalidInput, PixmError};
 use ihe_iti::pixm::identifier::{CrossReference, SourceIdentifier, TargetSystem};
 use ihe_iti::pixm::{Invocation, PixmClient};
@@ -27,10 +28,6 @@ use secrecy::SecretString;
 use url::Url;
 
 use crate::service::ehr_index::config::{EhrIndexConfig, PixmInvocation};
-
-/// The media type a FHIR server answers the capabilities interaction in (FHIR
-/// R4 http.html §Content Types and encodings).
-const FHIR_JSON: &str = "application/fhir+json";
 
 /// Why the identity source could not be built, reached or believed.
 #[derive(Debug, thiserror::Error)]
@@ -62,29 +59,18 @@ pub enum IdentitySourceError {
     /// not be built.
     #[error("the identity source's client-credentials grant is unusable")]
     Grant(#[source] Box<dyn std::error::Error + Send + Sync>),
-    /// The capabilities interaction could not be sent or read.
-    #[error("the identity source could not be reached")]
-    Unreachable(#[source] reqwest::Error),
-    /// The capabilities interaction answered a status other than success.
-    #[error("the identity source answered its capabilities read with {status}")]
-    Refused {
-        /// The status it answered.
-        status: reqwest::StatusCode,
-    },
-    /// The capabilities interaction answered with no `CapabilityStatement`.
-    #[error("the identity source's capabilities read holds no CapabilityStatement")]
-    NotAFhirServer,
+    /// The PIX Manager's capabilities interaction (FHIR R4 http.html
+    /// §capabilities) failed: no answer, a refusal, or no FHIR R4
+    /// `CapabilityStatement`.
+    #[error("the identity source did not answer its capabilities read")]
+    Capabilities(#[from] CapabilitiesError),
 }
 
 /// The PIX Manager of the configured clinical domain.
 #[derive(Debug, Clone)]
 pub struct IheIdentitySource {
-    /// The FHIR base URL, for the capabilities interaction.
-    base: Url,
-    /// The ITI-83 client.
+    /// The ITI-83 client, which also reads the capabilities.
     pixm: PixmClient,
-    /// The HTTP client the capabilities interaction is sent through.
-    http: reqwest::Client,
     /// The assigning authority of the clinical domain.
     domain: TargetSystem,
     /// How long one exchange may take.
@@ -118,7 +104,7 @@ impl IheIdentitySource {
             PixmInvocation::Get => Invocation::Get,
             PixmInvocation::Post => Invocation::Post,
         };
-        let mut pixm = PixmClient::new(base.clone(), http.clone())?.invoked_by(invocation);
+        let mut pixm = PixmClient::new(base, http)?.invoked_by(invocation);
         if let Some(oauth) = &config.oauth {
             let grant = oauth
                 .resolve()
@@ -130,9 +116,7 @@ impl IheIdentitySource {
             ));
         }
         Ok(Self {
-            base,
             pixm,
-            http,
             domain: TargetSystem::new(config.assigning_authority.trim())?,
             timeout,
         })
@@ -145,38 +129,15 @@ impl IheIdentitySource {
     }
 
     /// Reads the PIX Manager's `CapabilityStatement` (FHIR R4 http.html
-    /// §capabilities), the boot check that the configured source is a FHIR
-    /// server that answers.
+    /// §capabilities) through the ITI-83 client, with its transport and its
+    /// authorizer: the boot check that the configured source is a FHIR server
+    /// that answers.
     ///
     /// # Errors
-    /// [`IdentitySourceError::Unreachable`], [`IdentitySourceError::Refused`]
-    /// or [`IdentitySourceError::NotAFhirServer`].
+    /// [`IdentitySourceError::Capabilities`] carrying the client's refusal.
     pub async fn probe(&self) -> Result<(), IdentitySourceError> {
-        let mut url = self.base.clone();
-        let path = format!("{}/metadata", url.path().trim_end_matches('/'));
-        url.set_path(&path);
-        let response = self
-            .http
-            .get(url)
-            .header(reqwest::header::ACCEPT, FHIR_JSON)
-            .send()
-            .await
-            .map_err(IdentitySourceError::Unreachable)?;
-        let status = response.status();
-        if !status.is_success() {
-            return Err(IdentitySourceError::Refused { status });
-        }
-        let body: serde_json::Value = response
-            .json()
-            .await
-            .map_err(IdentitySourceError::Unreachable)?;
-        if body.get("resourceType").and_then(serde_json::Value::as_str)
-            == Some("CapabilityStatement")
-        {
-            Ok(())
-        } else {
-            Err(IdentitySourceError::NotAFhirServer)
-        }
+        self.pixm.capabilities(self.timeout).await?;
+        Ok(())
     }
 
     /// The identifier the clinical domain holds for the patient that `value`

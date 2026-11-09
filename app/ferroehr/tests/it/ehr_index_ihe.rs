@@ -33,6 +33,7 @@ use ferroehr::service::linkage::cohort::CohortQueryRequest;
 use ferroehr::service::linkage::cohort::config::CohortConfig;
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_server::tls_client::TlsClientSection;
+use ihe_iti::pixm::capabilities::CapabilitiesError;
 
 /// The IG's clinical ("blue") domain, the one the stub answers for.
 pub(crate) const CLINICAL: &str = "urn:oid:1.3.6.1.4.1.21367.13.20.3000";
@@ -304,7 +305,10 @@ async fn the_probe_reads_the_capability_statement() {
         .await
         .expect_err("a 500 is no capability statement");
     assert!(
-        matches!(error, IdentitySourceError::Refused { .. }),
+        matches!(
+            error,
+            IdentitySourceError::Capabilities(CapabilitiesError::Refused { .. })
+        ),
         "{error:?}"
     );
 
@@ -319,7 +323,10 @@ async fn the_probe_reads_the_capability_statement() {
         .await
         .expect_err("a Parameters body is no capability statement");
     assert!(
-        matches!(error, IdentitySourceError::NotAFhirServer),
+        matches!(
+            error,
+            IdentitySourceError::Capabilities(CapabilitiesError::NotAFhirServer(_))
+        ),
         "{error:?}"
     );
 }
@@ -354,7 +361,10 @@ async fn a_private_ca_is_trusted_through_the_tls_roots() {
         .await
         .expect_err("the platform roots do not hold the test CA");
     assert!(
-        matches!(error, IdentitySourceError::Unreachable(_)),
+        matches!(
+            error,
+            IdentitySourceError::Capabilities(CapabilitiesError::Transport(_))
+        ),
         "{error:?}"
     );
 

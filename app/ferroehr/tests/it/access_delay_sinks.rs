@@ -58,7 +58,10 @@ async fn service(
             enabled: true,
             host: "localhost".to_owned(),
             port: listener.port,
-            tls_ca_file: Some(listener.ca_file.display().to_string()),
+            tls: ferrohealth_server::tls_client::TlsClientSection {
+                trust_roots_file: Some(listener.ca_file.clone()),
+                ..ferrohealth_server::tls_client::TlsClientSection::default()
+            },
             ..SyslogConfig::default()
         };
     }

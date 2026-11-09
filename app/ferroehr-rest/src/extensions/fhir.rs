@@ -15,11 +15,11 @@
 
 use axum::Json;
 use axum::response::{IntoResponse, Response};
+use fhir_search::token::System as TokenSystem;
 use http::StatusCode;
 use http::header::{CONTENT_TYPE, HeaderValue};
 use ihe_atna::retrieve::Criterion;
 use ihe_atna::retrieve::Query;
-use ihe_atna::retrieve::TokenSystem;
 use ihe_atna::retrieve::Value;
 use ihe_atna::retrieve::bundle::{IssueType, Match, refusal, searchset};
 use ihe_atna::retrieve::date::Bound;
@@ -271,6 +271,9 @@ fn audit_filter(query: Option<&str>) -> Result<Filter, Refused> {
                     store.until = Some(store.until.map_or(until, |held| held.min(until)));
                 }
             }
+            // NOTE: FHIR R4 Search §3.1.1.4.7: a range past the last instant holds no record, so
+            // the lower bound moves past every instant the store can hold.
+            Bound::Empty => store.from = Some(jiff::Timestamp::MAX),
             Bound::Outside { .. } => {
                 return Err(Refused::NotSupported(
                     "the `ne` prefix of `date` is not supported by this repository".to_owned(),
@@ -329,12 +332,12 @@ fn criterion_of(criterion: &Criterion) -> Result<AuditCriterion, Refused> {
             .iter()
             .map(|value| match value {
                 Value::Token(token) => Ok(AuditToken {
-                    system: match &token.system {
+                    system: match token.system() {
                         TokenSystem::Any => AuditTokenSystem::Any,
                         TokenSystem::Absent => AuditTokenSystem::Absent,
-                        TokenSystem::Named(system) => AuditTokenSystem::Named(system.clone()),
+                        TokenSystem::Is(system) => AuditTokenSystem::Named(system.to_owned()),
                     },
-                    code: token.code.clone(),
+                    code: token.code().map(str::to_owned),
                 }),
                 Value::Reference(_) | Value::String(_) | Value::Uri(_) => {
                     Err(Refused::Invalid(format!("`{code}` is not a token")))
@@ -408,8 +411,8 @@ fn sole_patient(query: &Query) -> Option<String> {
     }
     match criterion.any_of() {
         [Value::Reference(text) | Value::String(text) | Value::Uri(text)] => Some(text.clone()),
-        [Value::Token(token)] if !matches!(token.system, TokenSystem::Named(_)) => {
-            token.code.clone()
+        [Value::Token(token)] if !matches!(token.system(), TokenSystem::Is(_)) => {
+            token.code().map(str::to_owned)
         }
         _ => None,
     }
@@ -432,16 +435,16 @@ fn token_code(code: &str, value: &Value, system: &str) -> Result<String, Refused
     let Value::Token(token) = value else {
         return Err(Refused::Invalid(format!("`{code}` is not a token")));
     };
-    let system_ok = match &token.system {
+    let system_ok = match token.system() {
         TokenSystem::Any | TokenSystem::Absent => true,
-        TokenSystem::Named(named) => !system.is_empty() && named == system,
+        TokenSystem::Is(named) => !system.is_empty() && named == system,
     };
     if !system_ok {
         return Err(Refused::NotSupported(format!(
             "`{code}` with a code system is not supported by this repository"
         )));
     }
-    token.code.clone().ok_or_else(|| {
+    token.code().map(str::to_owned).ok_or_else(|| {
         Refused::NotSupported(format!(
             "`{code}` with no code is not supported by this repository"
         ))

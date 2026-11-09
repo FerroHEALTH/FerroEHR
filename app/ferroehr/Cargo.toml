@@ -26,7 +26,7 @@ multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 
 [dependencies]
 ferrohealth-secret = { workspace = true }
-ferrohealth-server = { workspace = true, features = ["reqwest"] }
+ferrohealth-server = { workspace = true, features = ["platform-verifier", "reqwest"] }
 ferrohealth-health = { workspace = true, features = ["registry"] }
 ferroehr-ext = { path = "../ferroehr-ext", optional = true }
 http.workspace = true
@@ -39,9 +39,6 @@ ferrohealth-smart.workspace = true
 # The client of the one FHIR terminology server (`service::terminology::fhir`),
 # behind `fhir`: a slim build refuses a configured server at boot.
 ferrobridge-term = { workspace = true, optional = true }
-# `config::auth` boot validation: the OWASP Argon2id cost floor is judged by
-# parsing each configured PHC string, and `url` judges the issuer's userinfo.
-argon2.workspace = true
 url.workspace = true
 async-trait.workspace = true
 ferrohealth-config.workspace = true

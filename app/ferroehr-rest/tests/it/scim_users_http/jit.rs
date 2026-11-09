@@ -19,6 +19,9 @@ use ferroehr::config::binding::jit::IssuerBinding;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr_rest::config::AppConfig;
+use ferrohealth_smart::config::{IssuerEntry, IssuerKey};
+use ferrohealth_smart::kind::IssuerKind;
+use ferrohealth_smart::profile::Marker;
 use http::StatusCode;
 use serde_json::{Value, json};
 
@@ -401,4 +404,140 @@ async fn scim_completes_a_provisional_person_that_a_later_login_leaves_alone() {
         [],
         "a complete PERSON is no longer provisional"
     );
+}
+
+/// The issuer of the patients' logins.
+const PATIENTS: &str = "https://patients.example";
+
+/// The subject of the service account the persons issuer declares app-only.
+const SERVICE_ACCOUNT: &str = "service-account-lab";
+
+/// [`jit_config`] beside a patients issuer, whose persons issuer marks a
+/// guest by `acct = 1` and its service account app-only, its `[[auth.party]]` table admitting guests,
+/// and its just-in-time table creating guests when `guests_jit`.
+fn callers_config(guests_jit: bool) -> AppConfig {
+    let mut config = jit_config();
+    if let IssuerKey::List(entries) = &mut config.auth.shared.issuer
+        && let Some(persons) = entries.iter_mut().find(|entry| entry.issuer == PERSONS)
+    {
+        persons.guest = Some(vec![Marker::Claim {
+            claim: "acct".to_owned(),
+            value: "1".to_owned(),
+        }]);
+        persons.app_only = Some(vec![Marker::Subjects(vec![SERVICE_ACCOUNT.to_owned()])]);
+    }
+    if let IssuerKey::List(entries) = &mut config.auth.shared.issuer {
+        entries.push(IssuerEntry {
+            issuer: PATIENTS.to_owned(),
+            kind: Some(IssuerKind::Patients),
+            audience: vec![AUDIENCE.to_owned()],
+            jwks_file: common::jwks_file().display().to_string(),
+            ..IssuerEntry::default()
+        });
+    }
+    if let Some(party) = config
+        .auth
+        .shared
+        .party
+        .iter_mut()
+        .find(|party| party.issuer == PERSONS)
+    {
+        party.guests = true;
+    }
+    config.party_binding.issuer[0].guests_jit = guests_jit;
+    config
+}
+
+/// A patient of the patients issuer and an app-only token of the persons
+/// issuer pass the binding as before, the patient's scopes then deciding,
+/// and create no `PERSON`, and a guest is refused and creates none
+/// while `guests_jit` is off.
+#[tokio::test]
+async fn a_patient_a_system_caller_and_a_guest_without_guests_jit_create_nothing() {
+    let (_db, pool, _service, app) = jit_app(callers_config(false)).await;
+    let exp = jiff::Timestamp::now().as_second() + 3600;
+    let patient = common::bearer(&json!({ "iss": PATIENTS, "aud": AUDIENCE, "exp": exp,
+        "sub": "6a1f6c1e-0000-4000-8000-00000000e001", "name": "A. Patient",
+        "scope": "patient/template-*.r" }));
+    let (status, body) = request(&app, &patient).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    assert!(
+        body.contains("the credential does not permit") && !body.contains("refused-"),
+        "a patient is not bound, and its scopes decide: {body}"
+    );
+
+    let mut system = named();
+    system["scope"] = json!("system/template-*.r");
+    let (status, body) = request(&app, &login(SERVICE_ACCOUNT, &system)).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "a system caller is not bound: {body}"
+    );
+
+    let guest_key = "6a1f6c1e-0000-4000-8000-00000000e003";
+    let mut guest = named();
+    guest["acct"] = json!("1");
+    let (status, body) = request(&app, &login(guest_key, &guest)).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    assert!(body.contains("refused-unbound"), "{body}");
+    assert_eq!(
+        person_count(&pool).await,
+        0,
+        "no caller here creates a PERSON"
+    );
+}
+
+/// Under `guests_jit` an admitted guest's first login creates its
+/// provisional `PERSON` and is served bound to it.
+#[tokio::test]
+async fn a_guest_under_guests_jit_is_created() {
+    let (_db, pool, _service, app) = jit_app(callers_config(true)).await;
+    let key = "6a1f6c1e-0000-4000-8000-00000000e004";
+    let mut guest = named();
+    guest["acct"] = json!("1");
+    let (status, body) = request(&app, &login(key, &guest)).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(persons_of(&pool, key).await.len(), 1);
+}
+
+/// The provisional `PERSON` performs a professional `ROLE` from today and
+/// represents nobody, so it binds as a professional: the side table carries
+/// the marker, and a representative login on it is refused.
+#[tokio::test]
+async fn the_provisional_person_carries_the_professional_marker() {
+    let (_db, pool, _service, app) = jit_app(jit_config()).await;
+    let key = "6a1f6c1e-0000-4000-8000-00000000e005";
+    let (status, body) = request(&app, &login(key, &named())).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (professional_today, representative): (bool, bool) = sqlx::query_as(
+        "SELECT professional @> current_date, representative FROM party.binding_identifier \
+         WHERE selector = 'key' AND value = $1 AND retired_at IS NULL",
+    )
+    .bind(key)
+    .fetch_one(&pool)
+    .await
+    .expect("read the side table");
+    assert!(professional_today, "the professional marker");
+    assert!(!representative, "not a representative");
+}
+
+/// A SCIM User whose `userName` a provisional `PERSON` already holds, with
+/// another key, is refused, and the provisional `PERSON` keeps its key.
+#[tokio::test]
+async fn a_scim_user_taking_a_provisional_user_name_with_another_key_is_refused() {
+    let (_db, pool, _service, app) = jit_app(jit_config()).await;
+    let key = "6a1f6c1e-0000-4000-8000-00000000e006";
+    let (status, body) = request(&app, &login(key, &named())).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let squatter = persons_of(&pool, key).await;
+    assert_eq!(squatter.len(), 1);
+
+    let other = "6a1f6c1e-0000-4000-8000-00000000e007";
+    let body = super::create_body(key, "emp-0002", other);
+    let (status, _, body) = call(&app, "POST", "/Users", CLIENT, Some(&body), &[]).await;
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    assert_eq!(body["scimType"], "uniqueness", "RFC 7644 §3.12: {body}");
+    assert_eq!(persons_of(&pool, other).await, NONE);
+    assert_eq!(persons_of(&pool, key).await, squatter);
 }
