@@ -78,7 +78,7 @@ operator rule boot cannot see.
 | `clock_skew_seconds` | int | `60` | Leeway on `exp`, `nbf` and `iat`. At most `300`. |
 | `jwks_max_age_seconds` | int | `600` | A key set older than this is read again. |
 | `jwks_refresh_interval_seconds` | int | `60` | A token naming an unknown `kid` reads the key set again at most once per interval. |
-| `jwks_file` | path | `""` | A JWK Set of public keys handed over out of band, read instead of the issuer's metadata. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error. An issuer read from a file has no metadata, so it serves the SMART discovery document only with [`[auth.smart] issuer_metadata_file`](#smart) set. |
+| `jwks_file` | path | `""` | A JWK Set of public keys handed over out of band, read instead of the issuer's metadata. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error. An issuer read from a file has no metadata, so it serves the SMART discovery document only with [`[auth.smart] issuer_metadata_file`](#authsmart) set. |
 | `timeout_ms` | int | `10000` | One call to the authorization server. |
 | `mode` | `jwt` or `introspection` | `jwt` | How the issuer's tokens are checked: as JWTs against its key set, or posted to its RFC 7662 endpoint (see [Opaque tokens](#opaque-tokens-by-introspection)). |
 | `role_claims` | list of string | `["roles","groups","entitlements"]` | Token claim paths the caller's roles are read from; dotted paths walk nested claims, and a role is matched without regard to case. **`scope` is not a role source**. A `federation` issuer reads no role. Whether a role grants `admin_role` and the other privileged roles is [`[authz.rbac] role_issuers`](#authzrbac). |
@@ -390,7 +390,7 @@ endpoints outside the auth layer answer. The problem names the identifier
 issuer to provision the person under, and the refusal of a token without the
 key claim names the missing claim instead. No setting serves an unbound person
 under a login-only committer, so provision every professional (through
-[SCIM](#scim) or the demographic API) before you add a `persons` issuer, or
+[SCIM](#authscim) or the demographic API) before you add a `persons` issuer, or
 let the issuer create a provisional `PERSON` at the first login
 ([just-in-time creation](#just-in-time-creation)). Each
 refusal writes one `warn` line naming the issuer and the outcome, never the

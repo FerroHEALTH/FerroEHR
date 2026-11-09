@@ -209,4 +209,4 @@ verdict rather than failing. Keep the certificate configured if those
 versions must stay checkable.
 
 Every key in `[record.signing]`, with defaults and environment forms, is in the
-[configuration reference](../installation/config-auth.md#signing).
+[configuration reference](../installation/config-auth.md#recordsigning).

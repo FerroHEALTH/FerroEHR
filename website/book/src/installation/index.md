@@ -53,7 +53,7 @@ separations are missing and names every one of them on the banner, in the log
 and on `GET /management/status`. Set it to `production` and the server
 refuses to start while a separation is open and not accepted by name in
 `deployment.accepts`. Read
-[`deployment.profile`](configuration.md#deployment.profile) before you point a
+[`deployment.profile`](configuration.md#deploymentprofile) before you point a
 deployment at real patient data.
 
 ## Choosing a specification generation
@@ -65,7 +65,7 @@ Reference Model 1.1.0 with BASE 1.2.0). It is a
 single coupled choice, and `stable → development` is always safe while the
 reverse is not, so decide it before you commit clinical data. The full
 semantics, defaults, and the direction contract are in
-[`deployment.spec_profile`](configuration.md#deployment.spec_profile).
+[`deployment.spec_profile`](configuration.md#deploymentspec_profile).
 
 > [!NOTE]
 > A Clinical Data Repository stores PHI. In production the database must be an

@@ -17,7 +17,7 @@ deployment records a queryable audit trail with zero external dependencies.
 > an access under load can go unrecorded. A deployment that must never serve
 > an unrecorded access sets `fail_mode = "closed"`, which answers `503` and
 > `Retry-After` instead. A deployment declaring
-> [`deployment.profile = "production"`](installation/configuration.md#deployment.profile)
+> [`deployment.profile = "production"`](installation/configuration.md#deploymentprofile)
 > refuses to start with auditing off.
 
 <!-- toc -->

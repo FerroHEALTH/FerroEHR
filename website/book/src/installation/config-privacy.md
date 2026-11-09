@@ -70,7 +70,7 @@ What a deployment gets by default, and what declaring a namespace adds:
 | Minting | FerroEHR mints none | FerroEHR mints none: the IHE patient identity source does |
 
 FerroEHR mints no pseudonym. Under the IHE patient identity source
-([`[pixm]`](config-integrations.md#ehr_index)), the source answers the
+([`[pixm]`](config-integrations.md#pixm)), the source answers the
 pseudonym the clinical domain holds for a patient, and the identity source
 mints it on the first ask; that domain's assigning authority is a declared
 namespace. Every value that arrives from elsewhere, a client writing

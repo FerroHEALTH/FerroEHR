@@ -198,7 +198,7 @@ With `enabled = false` the path is not mounted at all (404).
 ## Configuration keys
 
 The keys live in `[auth]` and `[auth.smart]`; see the
-[configuration reference](installation/config-auth.md#smart).
+[configuration reference](installation/config-auth.md#authsmart).
 
 | Key | Default | Meaning |
 |---|---|---|

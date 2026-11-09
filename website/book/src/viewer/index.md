@@ -164,7 +164,7 @@ Its **Details** opens Server's Overview, which names each one. A production
 deployment raises no band. The
 quickstart and the composed stacks run as `sandbox`; a CDR older than the
 profile reports none and the viewer claims nothing. See the
-[deployment profile](../installation/configuration.md#deployment.profile) in
+[deployment profile](../installation/configuration.md#deploymentprofile) in
 the server configuration.
 
 ## Configuration

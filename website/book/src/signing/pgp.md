@@ -60,7 +60,7 @@ shape Docker Secrets and Kubernetes Secrets deliver, and the passphrase then
 never appears in the environment. Setting both of the pair is a boot error.
 The full key table, the Kubernetes `config.files` mount, and the rotation
 walkthrough are in the
-[configuration reference](../installation/config-auth.md#signing).
+[configuration reference](../installation/config-auth.md#recordsigning).
 
 **Boot is fail-closed.** The server loads the key, then signs a fixed test
 string with it. A missing `key_file`, an unparseable file, a wrong

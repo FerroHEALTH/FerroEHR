@@ -1233,11 +1233,11 @@ the server try a connection of its own: when that cannot reach the database,
 the request answers `503` at once, and so does every request after it, until
 a fresh attempt (at most every half second) connects again. A pool that is
 only busy keeps its requests queued up to
-[`[database] acquire_timeout`](installation/config-server.md#db) (30 seconds by
+[`[database] acquire_timeout`](installation/config-server.md#database) (30 seconds by
 default).
 
 A statement the database cancels (SQLSTATE `57014`, by
-[`[database] statement_timeout`](installation/config-server.md#db) or by an
+[`[database] statement_timeout`](installation/config-server.md#database) or by an
 operator's `pg_cancel_backend`) also answers `503` with `Retry-After`: the
 statement rolled back, so the request can be repeated. With the defaults the
 request timeout (30 seconds) answers first, so the statement timeout (60
@@ -1338,7 +1338,7 @@ surface an operator or a user reads:
 | startup banner | `Manufactured by Cadasto B.V. · https://www.cadasto.com/contact/`, then the postal address and `info@cadasto.com` |
 | `ferroehr --version` | the version (a release build prints the release, any other build appends its commit as `+dev.<commit>`, as `server_version` on `GET /ferroehr/rest/status` does), then `Manufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com` and the website |
 | `GET /management/info` | a `manufacturer` object with `name`, `postal_address`, `email` and `website` |
-| `OPTIONS` on the API base path | `vendor` defaults to `Cadasto B.V.` ([`[api.options]`](installation/config-server.md#restidentity)) |
+| `OPTIONS` on the API base path | `vendor` defaults to `Cadasto B.V.` ([`[api.options]`](installation/config-server.md#apioptions)) |
 | viewer | the footer of every screen, and a Manufacturer card on `/system` |
 | container images | the `eu.ferroehr.image.manufacturer` label |
 

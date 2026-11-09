@@ -88,7 +88,7 @@ releases are additive supersets, everything valid under `stable` is valid under
   (the server recomputes it) rather than stored.
 
 Stored content is never silently rewritten to fit another generation. See
-[`deployment.spec_profile`](../installation/configuration.md#deployment.spec_profile) for the direction
+[`deployment.spec_profile`](../installation/configuration.md#deploymentspec_profile) for the direction
 contract and how to change it on an existing deployment.
 
 ## The native service API

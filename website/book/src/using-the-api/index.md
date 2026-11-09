@@ -83,7 +83,7 @@ Two things to know before you build discovery on it:
   the archetype-source routes) declare themselves through the served OpenAPI
   document instead.
 - **The identity fields are configurable** (`[api.options]`, see
-  [Server, database & telemetry](../installation/config-server.md#restidentity));
+  [Server, database & telemetry](../installation/config-server.md#apioptions));
   their defaults are the build's own provenance.
 - **`conformance_profile` is derived from the conformance record.** The build
   reads the committed Veredictum summary (`docs/conformance/ferroehr/summary.md`

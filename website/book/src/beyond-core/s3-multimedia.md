@@ -95,7 +95,7 @@ refuse the expansion. Do not read externalized records with a slim binary.
 
 Offload is off by default. The keys live under `[record.multimedia]`; the full table with
 every default and its meaning is on
-[Integrations](../installation/config-integrations.md#multimedia). The essentials:
+[Integrations](../installation/config-integrations.md#recordmultimedia). The essentials:
 
 | Environment variable | Default | Meaning |
 |---|---|---|

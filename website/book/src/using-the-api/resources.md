@@ -181,7 +181,7 @@ equals the current version's still creates a version, with its own commit
 audit, contribution and id, and stores the content once (the new version
 reads its predecessor's rows); a deployment that prefers Cadasto's answer to
 a repeated send turns on `[record.versioning] record.versioning.idempotent_resend`
-([Authentication & access](../installation/config-auth.md#versioning)), and
+([Authentication & access](../installation/config-auth.md#recordversioning)), and
 the server then answers with the existing version's id and commits nothing. `DELETE` is a *logical*
 delete (the history is retained), returning **204** with the new deleted
 version's `ETag`; deleting something already deleted returns **400**, and a

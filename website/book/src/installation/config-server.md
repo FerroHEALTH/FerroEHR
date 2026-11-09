@@ -37,11 +37,11 @@ compression_min_bytes = 1024
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `listen` | socket address | `0.0.0.0:8080` | The IP address and port the listener binds: every interface at the port the container image exposes. A host name is refused at startup. `PORT` alone gives `0.0.0.0:<PORT>`, and `FERROEHR__SERVER__LISTEN` wins over both. Set `127.0.0.1:8080` to keep a bare binary on the loopback. |
-| `base_path` | string | empty | The path every route is served under, the health routes included. Empty serves them at the process root. The openEHR API path is [`api.base_path`](#rest). |
+| `base_path` | string | empty | The path every route is served under, the health routes included. Empty serves them at the process root. The openEHR API path is [`api.base_path`](#api). |
 | `request_timeout_ms` | int | `30000` | A request still running after this long is answered `408` with the openEHR error body. |
 | `header_read_timeout_ms` | int | `30000` | How long a client may take to send its request head, counted from accept for a connection's first request and from the first byte of each later request on a kept-alive connection; a client that has not sent it by then, one that sent nothing after connecting included, is disconnected. Bounds the slow-header and the silent connection, which no other limit reaches. `0` is refused. |
 | `idle_timeout_ms` | int | `120000` | How long a kept-alive HTTP/1.1 connection may wait for its next request; past it the server closes the connection with a clean end of stream. Keep it longer than the idle timeout of your clients (Go's `http.DefaultTransport` keeps an idle connection 90 s) and of any load balancer, ingress controller or proxy in front, so they close an idle connection first and never send a request into one the server is closing. `0` is refused. |
-| `body_limit_bytes` | int | `67108864` (64 MiB) | The largest request body any route reads, refused `413` above it. The bulk routes (operational-template upload, `/message/import`) take up to this; [`api.body_limit`](#rest) narrows the rest of the clinical surface below it. The largest operational template in the vendored CKM corpus is several megabytes, well below this ceiling. |
+| `body_limit_bytes` | int | `67108864` (64 MiB) | The largest request body any route reads, refused `413` above it. The bulk routes (operational-template upload, `/message/import`) take up to this; [`api.body_limit`](#api) narrows the rest of the clinical surface below it. The largest operational template in the vendored CKM corpus is several megabytes, well below this ceiling. |
 | `drain_delay_ms` | int | `0` | On `SIGTERM` or `SIGINT`, readiness answers `503` this long while the listener still accepts, so an orchestrator stops routing first. |
 | `shutdown_timeout_ms` | int | `10000` | Then the listener closes and the requests in flight get this long to finish; a connection still open after it is dropped. |
 | `max_concurrent_requests` | int | unset | The requests served at once. Past it a request is answered `503` with `Retry-After` and the openEHR error body, never queued, so offered load beyond capacity cannot exhaust memory. The health routes are never refused. Unset, there is no bound. |
@@ -104,7 +104,7 @@ ATNA ITI-19 mutually-authenticated-node posture (see the
 [Audit trail chapter](../audit.md#node-authentication-iti-19-mutual-tls)). The
 separate-port management listener always stays plain HTTP, so under
 `deployment.profile = "production"` setting `management.listen` opens the
-[`plaintext_listener`](configuration.md#deployment.profile) gap.
+[`plaintext_listener`](configuration.md#deploymentprofile) gap.
 
 ```toml
 [server.tls]
@@ -278,7 +278,7 @@ Practical notes:
   `ferroehr.local` is the same on every node that leaves it unset. See
   [FerroEHR as a federation node](../beyond-core/federation-node.md#admission-n42a).
 - **`system_id` is not `[api.options]`.** `system_id` says *which system
-  authored the data*; [`[api.options]`](#restidentity) is the *display*
+  authored the data*; [`[api.options]`](#apioptions) is the *display*
   identity of the `OPTIONS` System-Options manifest. Rebranding changes the
   manifest and nothing in stored data; changing `system_id` changes what new
   data says about its origin and leaves the manifest alone.
@@ -331,7 +331,7 @@ statement_timeout = "1min"
 `statement_timeout` is the backstop for every statement. An AQL query
 (ad hoc or stored) and the composition-count statistics stop sooner when their
 caller goes away: a client that disconnects, or the AQL engine's own
-[`record.query.timeout`](config-integrations.md#query), closes the statement's
+[`record.query.timeout`](config-integrations.md#recordquery), closes the statement's
 connection, its pool slot frees at once, and every pooled session sets
 PostgreSQL's `client_connection_check_interval` to one second, so the backend
 stops the statement within about a second. Other statements run to their end

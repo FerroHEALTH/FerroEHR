@@ -27,7 +27,7 @@ max_result_rows = 10000
 | `max_result_rows` | int | `10000` | The largest page one query execution serves: the page of a query nothing else bounds, and the maximum an explicit `LIMIT` or `fetch` may ask for (a larger page is refused `400`); `0` means unbounded. |
 
 **`timeout` is on by default, and deliberately tighter than
-[`database.statement_timeout`](config-server.md#db).** Keeping this budget the
+[`database.statement_timeout`](config-server.md#database).** Keeping this budget the
 tighter of the two means an overrun surfaces as the engine's own typed `408`
 rather than a driver error. When it fires, or when the client disconnects or
 the HTTP request timeout gives up first, the query's connection is closed
@@ -90,7 +90,7 @@ namespaces keeps the rule in force under `local` too, so every subject
 reference must name a declared namespace and carry a UUID, and no other
 namespace is accepted beside them. A `production` deployment runs the
 subject-id posture by accepting the `open_subject_namespace` gap by name
-([`deployment.profile`](configuration.md#deployment.profile)), which boot and
+([`deployment.profile`](configuration.md#deploymentprofile)), which boot and
 `GET /management/status` then state.
 
 **`subject_index` alone switches the index**, in the file or as

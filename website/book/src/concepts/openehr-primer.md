@@ -30,7 +30,7 @@ FerroEHR carries **two Reference Model generations**, and one configuration key,
 generation). openEHR's minor releases are additive, so data written against
 1.1.0 reads unchanged under 1.2.0; the reverse is not guaranteed, which is why
 the choice is worth making before you commit clinical data. See
-[`spec_profile`](../installation/configuration.md#spec_profile).
+[`spec_profile`](../installation/configuration.md#deploymentspec_profile).
 
 ## Archetypes and templates: the meaning layer
 

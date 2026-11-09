@@ -498,7 +498,7 @@ specification governs it; it is our own design.
 
 FerroEHR ships the software part. Whether the delay applies, to which data and
 for how long is the Member State's rule, and you configure it in
-[`[privacy.access_delay]`](installation/config-auth.md#access_delay). It is off by
+[`[privacy.access_delay]`](installation/config-auth.md#privacyaccess_delay). It is off by
 default, so the person's access stays immediate.
 
 - **What is held.** With the section on, every new COMPOSITION whose category
@@ -1025,7 +1025,7 @@ patient identifier to an EHR without putting it in a FerroEHR URL.
 The separations above are each a configuration key, and a deployment that has
 made none of them is indistinguishable from one that has made all of them
 until something goes wrong. The top-level `deployment.profile` key
-([configuration](installation/configuration.md#deployment.profile)) makes the
+([configuration](installation/configuration.md#deploymentprofile)) makes the
 posture explicit: `production` refuses to start while a separation is missing
 and not accepted by name, and reads the cluster each pool reached from
 `pg_control_system()` rather than trusting the DSN text; `sandbox`, the
@@ -1075,7 +1075,7 @@ pages: [Digest signing](signing/digest.md) (what is signed, when, what the
 stored value proves, and how to reproduce it yourself) and
 [PGP signing](signing/pgp.md) (key configuration and rotation, client-supplied
 signatures, and the signature an import wrapper carries). The `[record.signing]` keys
-are in the [configuration reference](installation/config-auth.md#signing).
+are in the [configuration reference](installation/config-auth.md#recordsigning).
 
 ## ATNA audit trail
 

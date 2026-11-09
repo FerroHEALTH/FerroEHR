@@ -273,7 +273,7 @@ says what it runs:
   one DSN for every domain, an empty `config.privacy.subject_namespaces`, the
   server's `open` defaults for `config.audit.fail_mode` and
   `config.authz.rbac.ehr_access_default`, `config.database.migrations: apply` on the
-  runtime credential, and a plaintext listener behind the ingress; see [`deployment.profile`](configuration.md#deployment.profile).
+  runtime credential, and a plaintext listener behind the ingress; see [`deployment.profile`](configuration.md#deploymentprofile).
   The chart's [production overlay](#the-production-overlay) closes them and
   accepts the plaintext listener by name.
 - **`config.audit.store.retention`:** unset. Set it in place of
@@ -805,7 +805,7 @@ definition already stored with the same text is left alone, so the step runs
 at every pod start, and one stored under its id with other text fails the
 pod. `deploy/helm/ci/basic-auth-values.yaml` loads the professional PERSON
 and ROLE pair of `deploy/definitions/professional/` and provisions its user
-through `/scim/v2/Users` (see [`[auth.scim]`](config-auth.md#scim)).
+through `/scim/v2/Users` (see [`[auth.scim]`](config-auth.md#authscim)).
 
 A `persons` issuer with `sender_constraint: required` runs on any number of
 replicas: each records the DPoP proofs it accepts in the database they all
@@ -933,7 +933,7 @@ CNI enforces the viewer's NetworkPolicy. Its screens are documented in the
 The CDR keeps no patient-to-record cross-reference of its own by default: it
 asks an IHE patient identity source over PIXm (ITI-83) which pseudonym the
 clinical domain holds for a patient
-([`[pixm]`](config-integrations.md#ehr_index)). The chart takes
+([`[pixm]`](config-integrations.md#pixm)). The chart takes
 [FerroPIX](https://github.com/FerroHEALTH/FerroPIX) as the chart dependency
 `ferropix` (`oci://ghcr.io/ferrohealth/charts`, pinned in `Chart.lock`), so
 its Deployment, Service, NetworkPolicy and configuration are its own chart's,

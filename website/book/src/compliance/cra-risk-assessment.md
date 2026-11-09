@@ -320,7 +320,7 @@ systems, and report on possible unauthorised access"
   `app/ferroehr/src/config/deployment.rs`
   (`production_refuses_auth_off_unless_accepted_by_name`,
   `production_refuses_rbac_off_and_a_restricted_default_stays_closed`);
-  [deployment profile](../installation/configuration.md#deployment.profile).
+  [deployment profile](../installation/configuration.md#deploymentprofile).
 - **Status:** met. Reporting is met. `production` refuses
   `auth.enabled = false` at boot unless `auth_off` is accepted by name, and
   `[authz.rbac] enabled = false` unless `rbac_off` is; an accepted gap is

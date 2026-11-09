@@ -54,7 +54,7 @@ ferroehr db verify    # verify, issuing no DDL, that the schema matches this bui
 These exist so a least-privilege deployment can separate the two database
 identities: run `db migrate` once under a DSN that holds DDL rights (a
 Kubernetes Job, an init container, a CI/CD stage), then boot the server with
-[`database.migrations = "verify"`](config-server.md#db) under a DSN with no DDL rights at
+[`database.migrations = "verify"`](config-server.md#database) under a DSN with no DDL rights at
 all. `verify` still reads all five `_sqlx_migrations` bookkeeping tables, which
 no least-privilege role can do, so point `[database] migrate_url` at the credential
 that prepares the schema. See

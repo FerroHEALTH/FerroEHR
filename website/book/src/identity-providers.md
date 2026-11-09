@@ -204,7 +204,7 @@ server). Its person agreement names the service it serves in `ehdsi_service`
   10.0.0 requirement 11.01.02), recorded as `refused-trc-missing`, before
   the EHR index is asked.
 - The patient is resolved to its EHR through the deployment's
-  [EHR index](installation/config-integrations.md#ehr_index), compared on the value and the
+  [EHR index](installation/config-integrations.md#pixm), compared on the value and the
   assigning authority, and the request must name that EHR: the route's
   `{ehr_id}`, or a query's `ehr_id`. The EHR stands in for the launch
   context the token does not carry (eHDSI XCA Profile 8.0.1 §4.2.1).

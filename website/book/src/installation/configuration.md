@@ -321,22 +321,22 @@ rather than inherit from a quickstart. See
 |---|---|---|
 | `[deployment]` | The declared posture, the openEHR specification set and the licence token | This page |
 | `[server]`, `[server.caller_rate]`, `[server.tls]` | The HTTP listener (the family section): timeouts, the body limit, the concurrency bound, the drain, the caller rate, TLS | [Server, database & telemetry](config-server.md) |
-| `[api]`, `[api.options]`, `[api.cors]` | The openEHR REST API: the API base path, the system identifier, the OpenAPI UI, CORS, the clinical body tier, the ADMIN and terminology groups, the deployment's own identity | [Server, database & telemetry](config-server.md#rest) |
+| `[api]`, `[api.options]`, `[api.cors]` | The openEHR REST API: the API base path, the system identifier, the OpenAPI UI, CORS, the clinical body tier, the ADMIN and terminology groups, the deployment's own identity | [Server, database & telemetry](config-server.md#api) |
 | `[database]` | PostgreSQL connection, pool, migrations | [Server, database & telemetry](config-server.md) |
 | `[telemetry]` | The console, the request log and the OpenTelemetry export | [Server, database & telemetry](config-server.md) |
 | `[usage_report]` | The daily installation report to FerroPULSE, on by default; what it sends is on the [Usage report](../usage-report.md) page | [Server, database & telemetry](config-server.md#usage_report) |
 | `[auth]`, `[authz]` | Authentication (Basic, OAuth2/OIDC) and RBAC/ABAC | [Authentication & access](config-auth.md) |
 | `[management]` | The ops-introspection surface | [Authentication & access](config-auth.md) |
 | `[auth.smart]` | SMART App Launch discovery and scope enforcement | [Authentication & access](config-auth.md) |
-| `[privacy.access_delay]` | The EHDS Art. 3(3) delay of the person's own access to new data, off by default | [Authentication & access](config-auth.md#access_delay) |
+| `[privacy.access_delay]` | The EHDS Art. 3(3) delay of the person's own access to new data, off by default | [Authentication & access](config-auth.md#privacyaccess_delay) |
 | `[record.signing]` | VERSION signing and read-time verification | [Authentication & access](config-auth.md) |
-| `[record.versioning]` | The opt-in answer to an update whose content equals the current version's, off by default | [Authentication & access](config-auth.md#versioning) |
+| `[record.versioning]` | The opt-in answer to an update whose content equals the current version's, off by default | [Authentication & access](config-auth.md#recordversioning) |
 | `[record.query]` | AQL execution budgets and result ceilings | [Integrations](config-integrations.md) |
-| `record.subject_index`, `[pixm]`, `[pixm.oauth]`, `[pixm.tls]` | Who holds the patient-to-EHR cross-reference: an IHE patient identity source over PIXm or the in-instance map | [Integrations](config-integrations.md#ehr_index) |
-| `[record.change_feed]` | The commit-event outbox and the readers of its feed | [Integrations](config-integrations.md#outbox) |
+| `record.subject_index`, `[pixm]`, `[pixm.oauth]`, `[pixm.tls]` | Who holds the patient-to-EHR cross-reference: an IHE patient identity source over PIXm or the in-instance map | [Integrations](config-integrations.md#pixm) |
+| `[record.change_feed]` | The commit-event outbox and the readers of its feed | [Integrations](config-integrations.md#recordchange_feed) |
 | `[terminology]`, `[record.multimedia]` | The terminology server, multimedia externalization | [Integrations](config-integrations.md) |
 | `[audit]`, `[audit.store]`, `[audit.syslog]`, `[audit.fhir_feed]` | The IHE ATNA audit trail and its sinks | [Audit](config-audit.md) |
-| `[[authz.origin]]` | The origins of data the deployment recognises, which a retention period and an ABAC rule may name (EHDS Annex II 3.4) | [Audit](config-audit.md#origins-the-origins-a-deployment-recognises) |
+| `[[authz.origin]]` | The origins of data the deployment recognises, which a retention period and an ABAC rule may name (EHDS Annex II 3.4) | [Audit](config-audit.md#authzorigin-the-origins-a-deployment-recognises) |
 | `[privacy]`, `[privacy.identifier_scan]` | What the clinical side refuses to hold: the subject reference, identified parties, the identifier scanner | [Privacy & data minimisation](config-privacy.md) |
 | `[privacy.cohort]`, `[privacy.cohort.predicates]` | Cross-domain cohort queries: the demographic predicate allow-list, the small-cell floor, the cohort ceiling | [Privacy & data minimisation](config-privacy.md) |
 | `[privacy.identifier_protection]` | Sealing national identifiers in the demographic domain, and the key that opens them | [Privacy & data minimisation](config-privacy.md) |

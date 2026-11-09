@@ -379,7 +379,7 @@ bound, and the route answers `404` until then. Five keys are bindable:
 `city`, `postcode_area`, `sex`, `age_band` and `organisation`. Each binding
 names the archetype of the leaf's nearest archetyped ancestor, the leaf's
 at-code, and how a value is matched. See
-[Privacy & data minimisation](installation/config-privacy.md#cohort) for the
+[Privacy & data minimisation](installation/config-privacy.md#privacycohort) for the
 keys and their defaults.
 
 **Naming subjects by identifier.** With `[privacy.cohort] subjects = true` a request
@@ -731,8 +731,8 @@ which one you hit:
 | Bound | Where it comes from | Effect |
 |---|---|---|
 | `LIMIT`/`OFFSET`, or `fetch`/`offset` | your query or request | Exactly the window you asked for. |
-| [`record.query.max_result_rows`](installation/config-integrations.md#query) | server config, default `10000` | The largest page one execution serves: the page of a query nothing else bounds, and the maximum a `LIMIT` or `fetch` may ask for. `0` means unbounded. |
-| [`record.query.timeout`](installation/config-integrations.md#query) | server config, default `30000` | Per-query database execution budget. **On by default**; `0` disables it. |
+| [`record.query.max_result_rows`](installation/config-integrations.md#recordquery) | server config, default `10000` | The largest page one execution serves: the page of a query nothing else bounds, and the maximum a `LIMIT` or `fetch` may ask for. `0` means unbounded. |
+| [`record.query.timeout`](installation/config-integrations.md#recordquery) | server config, default `30000` | Per-query database execution budget. **On by default**; `0` disables it. |
 
 Two bounds on the shape of the query text are fixed in the server. Brackets
 and `CONTAINS` may nest at most 64 levels, and a `WHERE` expression may be at
@@ -845,7 +845,7 @@ silently incorrect answer:
 ### The specification generation is an acceptance boundary
 
 Which Reference Model classes and attributes a query may name depends on the
-deployment's [`deployment.spec_profile`](installation/configuration.md#deployment.spec_profile). On the
+deployment's [`deployment.spec_profile`](installation/configuration.md#deploymentspec_profile). On the
 default `development` profile the query surface is the full RM 1.2.0 model. On
 `stable` (RM 1.1.0), a `FROM` class or a path attribute that only a newer
 generation defines is refused with **400 Bad Request**, and the message names

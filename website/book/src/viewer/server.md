@@ -13,7 +13,7 @@ The CDR's state, its deployment profile and version, and how it was built:
 the version, the git commit, the build date and `rustc`, the PostgreSQL
 target, the audit posture (whether auditing is on, its `fail_mode`, the local
 store and the retention), the active
-[`spec_profile`](../installation/configuration.md#spec_profile) with the
+[`spec_profile`](../installation/configuration.md#deploymentspec_profile) with the
 openEHR specification versions it selects, the manufacturer, and the end month
 of the release's support. The conformance manifest the CDR answers at
 `OPTIONS` on its base path (its product, vendor, conformance profile and the

@@ -220,7 +220,7 @@ evaluation, not for production:
   `GET /management/status`, and the viewer raises a notice saying the
   deployment must not hold real patient data. That is the quickstart telling
   the truth about itself, not a fault. See
-  [`deployment.profile`](configuration.md#deployment.profile).
+  [`deployment.profile`](configuration.md#deploymentprofile).
 
 > [!WARNING]
 > These are development credentials and development defaults. Before exposing
@@ -241,7 +241,7 @@ inline config or your own mounted TOML file.
 FerroEHR keeps no patient-to-record cross-reference of its own by default. It
 asks an IHE patient identity source over PIXm (ITI-83) which pseudonym the
 clinical domain holds for a patient
-([`[pixm]`](config-integrations.md#ehr_index)). The quickstart runs
+([`[pixm]`](config-integrations.md#pixm)). The quickstart runs
 FerroPIX as that source, pinned by tag and image-index digest (CI runs the
 `config check` of every pinned image over its inline configuration), with four
 services beside the server:
@@ -288,7 +288,7 @@ Any conformant PIX Manager can take FerroPIX's place: point `pixm.url`,
 ## The local EHR index
 
 The other supported posture keeps the subject-to-EHR cross-reference in
-FerroEHR ([`[pixm]`](config-integrations.md#ehr_index)): `EHR_STATUS.subject`
+FerroEHR ([`[pixm]`](config-integrations.md#pixm)): `EHR_STATUS.subject`
 names a patient by its own namespace and identifier, and
 `GET /ehr?subject_id=…&subject_namespace=…` finds the EHR by them. One
 variable selects it, with no copy of the configuration to make:
