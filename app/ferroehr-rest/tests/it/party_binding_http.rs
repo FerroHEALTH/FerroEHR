@@ -15,6 +15,7 @@
 use std::sync::Arc;
 
 use axum::Router;
+use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::source::BindingSource;
 use ferroehr::party_binding::{BindingMapping, IdentifierSelector};
@@ -95,6 +96,17 @@ pub(crate) async fn router_with(
     config: AppConfig,
     source: Arc<dyn BindingSource>,
 ) -> Router {
+    router_observed(svc, config, source, Observability::default()).await
+}
+
+/// The router over `svc` under `config` and `observability`, looking every
+/// caller up in `source`.
+async fn router_observed(
+    svc: Arc<FerroEhrService>,
+    config: AppConfig,
+    source: Arc<dyn BindingSource>,
+    observability: Observability,
+) -> Router {
     let authenticator = Authenticator::new(
         &config,
         None,
@@ -103,7 +115,6 @@ pub(crate) async fn router_with(
     )
     .await
     .expect("the binding builds");
-    let observability = Observability::default();
     observability.lifecycle.booted();
     let state = AppState::with_parts(config, svc, None, observability);
     ferroehr_rest::router::router(state, authenticator)
@@ -720,4 +731,56 @@ async fn a_refusal_logs_no_claim_value_and_is_counted_by_issuer_and_outcome() {
             && line.ends_with(" 1")
     });
     assert!(counted, "{exposition}");
+}
+
+/// #5250: the management surface answers a person the login binding refuses
+/// with `403` and the `refused-unbound` refusal and access record every other
+/// route gives (RFC 9110 §15.5.4), and a request with no credential with
+/// `401` and its challenge (§15.5.2).
+#[tokio::test]
+async fn the_management_surface_refuses_an_unbound_person_with_403() {
+    let (db, _audit, svc) = audited_service().await;
+    let source = Arc::new(svc.party_source("demographic"));
+    let observability = Observability {
+        management: ManagementConfig {
+            enabled: true,
+            endpoints: EndpointLevels {
+                info: AccessLevel::Private,
+                ..EndpointLevels::default()
+            },
+            ..ManagementConfig::default()
+        },
+        ..Observability::default()
+    };
+    let app = router_observed(svc, config(None), source, observability).await;
+    let credential = token("1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d", &json!({}));
+    let (status, body) = common::send_body(
+        &app,
+        common::req("GET", "/management/info")
+            .auth(&credential)
+            .accept("application/json")
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    assert!(body.contains("refused-unbound"), "{body}");
+    // DCM 110114 is the failed user authentication; the management surface
+    // records its own 110100 system access beside it (#3244).
+    let rows = refusal_rows(&db.pool(), "refused-unbound", 2).await;
+    let mut codes: Vec<&str> = rows.iter().map(|(code, _)| code.as_str()).collect();
+    codes.sort_unstable();
+    assert_eq!(codes, ["110100", "110114"], "{rows:?}");
+
+    let (status, headers, body) = common::send(
+        &app,
+        common::req("GET", "/management/info")
+            .accept("application/json")
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED, "{body}");
+    assert!(
+        headers.contains_key(http::header::WWW_AUTHENTICATE),
+        "the 401 carries its challenge"
+    );
 }
