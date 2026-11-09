@@ -272,7 +272,7 @@ impl FerroEhrService {
 impl FerroEhrService {
     /// Returns a membership of the `GROUP` `group` held by the `PERSON`
     /// `member`: an inline `PARTY_RELATIONSHIP` of `archetype_id` whose
-    /// `source` is the group and whose `target` is the member, each named
+    /// `source` is the member and whose `target` is the group, each named
     /// under `namespace`.
     ///
     /// RM demographic master02 §Party Relationships: a relationship is stored
@@ -290,8 +290,8 @@ impl FerroEhrService {
         let wt = self.web_template(archetype_id).await?;
         let mut body = new_party(&wt);
         if let Some(object) = body.as_object_mut() {
-            object.insert("source".to_owned(), party_ref(namespace, "GROUP", group));
-            object.insert("target".to_owned(), party_ref(namespace, "PERSON", member));
+            object.insert("source".to_owned(), party_ref(namespace, "PERSON", member));
+            object.insert("target".to_owned(), party_ref(namespace, "GROUP", group));
         }
         Ok(body)
     }

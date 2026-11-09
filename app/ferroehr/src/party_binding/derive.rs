@@ -23,7 +23,6 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use super::{BindingMapping, IdentifierSelector, NameSelector, Step};
-use crate::storage::error::StorageError;
 use crate::templates::identity::canonical_key;
 use crate::versioning::Kind;
 
@@ -85,9 +84,9 @@ pub(crate) struct Facts {
     /// The container of every inline relationship's target, sorted and
     /// distinct: the reverse-relationship index.
     pub(crate) targets: Vec<Uuid>,
-    /// The containers the membership relationships target, sorted and
-    /// distinct, of a `GROUP` of the group template.
-    pub(crate) members: Vec<Uuid>,
+    /// The containers the membership relationships of a `PERSON` target,
+    /// sorted and distinct: the `GROUP`s it is a member of.
+    pub(crate) groups: Vec<Uuid>,
     /// Whether an inline relationship is of the representation archetype.
     pub(crate) represents: bool,
     /// The representation relationships with a container target.
@@ -145,8 +144,7 @@ impl Facts {
         let Some(relationships) = body.get("relationships").and_then(Value::as_array) else {
             return;
         };
-        let group = kind == Kind::Group
-            && mapping.group.as_ref().map(|g| &g.template) == self.template.as_ref();
+        let person = kind == Kind::Person;
         for relationship in relationships {
             let target = relationship
                 .get("target")
@@ -176,12 +174,12 @@ impl Facts {
             }
             if let Some(target) = target {
                 self.targets.push(target);
-                if group && is(mapping.membership.as_ref()) {
-                    self.members.push(target);
+                if person && is(mapping.membership.as_ref()) {
+                    self.groups.push(target);
                 }
             }
         }
-        for set in [&mut self.targets, &mut self.members] {
+        for set in [&mut self.targets, &mut self.groups] {
             set.sort_unstable();
             set.dedup();
         }
@@ -254,54 +252,6 @@ impl Facts {
             .map(|(_, identifier)| (identifier.issuer.clone(), identifier.canonical()))
             .collect()
     }
-}
-
-/// The target ids of the inline relationships the body `after` drops from
-/// the body `before`, both stored texts, when that is all it changes: `None`
-/// when it changes anything else, drops nothing, or drops a relationship
-/// without a target id.
-///
-/// # Errors
-/// [`StorageError::BodyDecode`] when a stored body is no JSON.
-pub(crate) fn removed_relationships(
-    before: &str,
-    after: &str,
-) -> Result<Option<Vec<String>>, StorageError> {
-    let parse = |text: &str| serde_json::from_str::<Value>(text).map_err(StorageError::BodyDecode);
-    let (mut before, mut after) = (parse(before)?, parse(after)?);
-    let relationships = |body: &mut Value| -> Vec<Value> {
-        let Some(object) = body.as_object_mut() else {
-            return Vec::new();
-        };
-        object.shift_remove("uid");
-        match object.shift_remove("relationships") {
-            Some(Value::Array(items)) => items,
-            _ => Vec::new(),
-        }
-    };
-    let (kept, held) = (relationships(&mut after), relationships(&mut before));
-    // Both bodies are the commit serializer's canonical text, so equal
-    // relationships serialize to equal text.
-    let text = |items: &[Value]| -> std::collections::BTreeSet<String> {
-        items.iter().map(Value::to_string).collect()
-    };
-    let (kept_text, held_text) = (text(&kept), text(&held));
-    if before != after || !kept_text.is_subset(&held_text) {
-        return Ok(None);
-    }
-    let removed: Option<Vec<String>> = held
-        .iter()
-        .filter(|relationship| !kept_text.contains(&relationship.to_string()))
-        .map(|relationship| {
-            relationship
-                .get("target")?
-                .get("id")?
-                .get("value")?
-                .as_str()
-                .map(str::to_owned)
-        })
-        .collect();
-    Ok(removed.filter(|removed| !removed.is_empty()))
 }
 
 /// The party container a reference id names: the root of a `HIER_OBJECT_ID`
@@ -489,7 +439,7 @@ mod tests {
     }
 
     #[test]
-    fn a_group_holds_its_members_names_and_external_ids() {
+    fn a_group_holds_its_names_and_external_ids_and_no_membership() {
         let member = "0190a1bc-3a1e-72e4-b7c5-f78a24c01308";
         let other = "0190a1bc-3a1e-72e4-b7c5-f78a24c01309";
         let body = json!({
@@ -509,8 +459,9 @@ mod tests {
         });
         let facts = Facts::of(Kind::Group, &body, &mapping());
         assert_eq!(
-            facts.members,
-            Uuid::parse_str(member).into_iter().collect::<Vec<_>>()
+            facts.groups,
+            Vec::<Uuid>::new(),
+            "a GROUP holds no membership"
         );
         assert_eq!(facts.targets.len(), 2);
         assert_eq!(facts.display_names, vec!["Cardiology".to_owned()]);
@@ -521,18 +472,24 @@ mod tests {
     }
 
     #[test]
-    fn a_group_of_another_template_holds_no_member() {
+    fn a_person_holds_the_groups_its_memberships_target() {
+        let group = "0190a1bc-3a1e-72e4-b7c5-f78a24c01308";
+        let other = "0190a1bc-3a1e-72e4-b7c5-f78a24c01309";
         let body = json!({
-            "_type": "GROUP",
-            "archetype_details": {"template_id": {"value": "other.v1"}},
-            "relationships": [relationship(
-                "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1",
-                "0190a1bc-3a1e-72e4-b7c5-f78a24c01308"
-            )]
+            "_type": "PERSON",
+            "archetype_details": {"template_id": {"value": "professional.v1"}},
+            "relationships": [
+                relationship("openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1", group),
+                relationship("openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1", group),
+                relationship("openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.other.v1", other)
+            ]
         });
-        let facts = Facts::of(Kind::Group, &body, &mapping());
-        assert_eq!(facts.members, Vec::<Uuid>::new());
-        assert_eq!(facts.targets.len(), 1);
+        let facts = Facts::of(Kind::Person, &body, &mapping());
+        assert_eq!(
+            facts.groups,
+            Uuid::parse_str(group).into_iter().collect::<Vec<_>>()
+        );
+        assert_eq!(facts.targets.len(), 2);
     }
 
     #[test]

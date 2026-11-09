@@ -38,7 +38,7 @@ probes_original_state() {
   local hdr="$PROBE_TMP/reset-ehr.h" ehr_id=""
 
   # Data written before the reset is what the reset must remove, so write some.
-  compose_up ferroehr seaweedfs seaweedfs-init
+  compose_up ferroehr seaweedfs seaweedfs-init ferroehr-provision
   if wait_http "$CDR/ferroehr/rest/status" 90; then
     curl -s -u "$BASIC" -X POST -D "$hdr" -o /dev/null "$API/ehr" || true
     ehr_id="$(grep -i '^location' "$hdr" 2>/dev/null | tr -d '\r' | awk -F/ '{print $NF}')"
@@ -68,7 +68,7 @@ probes_original_state() {
   (
     unset FERROEHR__MULTIMEDIA__ENABLED FERROEHR__MULTIMEDIA__ENDPOINT \
       FERROEHR__MULTIMEDIA__BUCKET FERROEHR__MULTIMEDIA__ALLOW_HTTP
-    dc -f docker-compose.yml up -d --wait ferroehr >/dev/null 2>&1
+    dc -f docker-compose.yml up -d --wait ferroehr ferroehr-provision >/dev/null 2>&1
   ) || up_status=$?
 
   probe "P-RESET-BOOT" "$PROBE_WORKING" "compose" "#3637" \
@@ -164,6 +164,8 @@ probes_decommission() {
   dc -f docker-compose.yml run --rm ferroehr-definitions >/dev/null 2>&1 || true
   dc -f docker-compose.yml restart ferroehr >/dev/null 2>&1 || true
   if wait_http "$CDR/health/readiness" 90; then
+    # The erase removed the Basic user's PERSON too, so it is provisioned again.
+    dc -f docker-compose.yml up -d --wait --force-recreate ferroehr-provision >/dev/null 2>&1 || true
     assert_eq "404" "$(http_code -u "$BASIC" "$API/ehr/$ehr_id")" \
       "GET /ehr/$ehr_id must find nothing after the erase"
   else

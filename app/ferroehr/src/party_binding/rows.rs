@@ -361,17 +361,22 @@ pub(crate) async fn write_representations(
     Ok(())
 }
 
-/// Writes the memberships the `GROUP`s `groups` should hold: `rows`, each a
-/// `(group, member)` pair.
+/// Writes the memberships the member `PERSON`s `members` should hold:
+/// `rows`, each a `(group, member)` pair.
+///
+/// A membership kept keeps its row, a removed one is retired and an added one
+/// inserted, and the membership revision of every `GROUP` whose live rows
+/// changed moves in the same statement, so its SCIM version changes with its
+/// members (RFC 7644 §3.14).
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub(crate) async fn write_memberships(
     tx: &mut PgConnection,
-    groups: &[Uuid],
+    members: &[Uuid],
     rows: &[(Uuid, Uuid)],
 ) -> Result<(), StorageError> {
-    if groups.is_empty() {
+    if members.is_empty() {
         return Ok(());
     }
     sqlx::query(
@@ -380,17 +385,24 @@ pub(crate) async fn write_memberships(
              FROM unnest($2::uuid[], $3::uuid[]) AS w(group_id, member_id) \
          ), gone AS ( \
              UPDATE binding_membership m SET retired_at = now() \
-             WHERE m.retired_at IS NULL AND m.group_id = ANY($1) \
+             WHERE m.retired_at IS NULL AND m.member_id = ANY($1) \
                AND NOT EXISTS (SELECT 1 FROM wanted w \
                                WHERE w.group_id = m.group_id AND w.member_id = m.member_id) \
+             RETURNING m.group_id \
+         ), added AS ( \
+             INSERT INTO binding_membership (group_id, member_id) \
+             SELECT w.group_id, w.member_id FROM wanted w \
+             WHERE NOT EXISTS (SELECT 1 FROM binding_membership m \
+                               WHERE m.group_id = w.group_id AND m.member_id = w.member_id \
+                                 AND m.retired_at IS NULL) \
+             RETURNING group_id \
          ) \
-         INSERT INTO binding_membership (group_id, member_id) \
-         SELECT w.group_id, w.member_id FROM wanted w \
-         WHERE NOT EXISTS (SELECT 1 FROM binding_membership m \
-                           WHERE m.group_id = w.group_id AND m.member_id = w.member_id \
-                             AND m.retired_at IS NULL)",
+         INSERT INTO binding_group_revision (group_id, revision) \
+         SELECT group_id, 1 FROM (SELECT group_id FROM gone UNION SELECT group_id FROM added) c \
+         ON CONFLICT (group_id) DO UPDATE \
+             SET revision = binding_group_revision.revision + 1, revised_at = now()",
     )
-    .bind(groups)
+    .bind(members)
     .bind(rows.iter().map(|(group, _)| *group).collect::<Vec<_>>())
     .bind(rows.iter().map(|(_, member)| *member).collect::<Vec<_>>())
     .execute(&mut *tx)

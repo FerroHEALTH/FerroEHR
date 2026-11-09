@@ -245,7 +245,7 @@ pub enum AuthError {
     #[error("credential verification unavailable: {0}")]
     VerificationUnavailable(String),
     /// The login binding refused the caller, under the binding `code`.
-    #[error("{code}: {}", party::detail(code))]
+    #[error("{code}: {}", party::detail(code, named.as_ref()))]
     PartyRefused {
         /// The binding code, such as `refused-ambiguous`.
         code: &'static str,
@@ -255,9 +255,9 @@ pub enum AuthError {
         /// The party the refusal names: the one refused for its state or its
         /// marker.
         party: Option<Box<ferroehr::system_log::binding::PartyTriple>>,
-        /// The key claim the token lacked, for `refused-key-claim-missing`
-        /// on a token of an issuer the binding names.
-        claim: Option<String>,
+        /// What the problem text names beside the code: the key claim the
+        /// token lacked, or the identifier issuer of an unbound login.
+        named: Option<party::Named>,
     },
     /// A caller of a kind the request does not admit, under the binding
     /// `code`: a system caller holding a personal scope, or an external caller
@@ -507,12 +507,12 @@ impl Authenticator {
         };
         match refusal {
             AuthError::PartyRefused {
-                code, party, claim, ..
+                code, party, named, ..
             } => AuthError::PartyRefused {
                 code,
                 principal: principal(),
                 party,
-                claim,
+                named,
             },
             AuthError::KindRefused { code, message, .. } => AuthError::KindRefused {
                 code,
@@ -692,8 +692,8 @@ fn refused(
     let mut resp = refusal_response(auth, headers, e);
     let record = match e {
         AuthError::PartyRefused {
-            code, party, claim, ..
-        } => record::refused(code, party.as_deref(), claim.as_deref(), principal.as_ref()),
+            code, party, named, ..
+        } => record::refused(code, party.as_deref(), named.as_ref(), principal.as_ref()),
         AuthError::KindRefused { code, .. } => {
             record::refused(code, None, None, principal.as_ref())
         }

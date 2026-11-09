@@ -386,9 +386,9 @@ async fn fold(
     Ok(out)
 }
 
-/// Writes the key, `userName`, `externalId` and representation rows of the
-/// `PERSON` heads `heads`, and, when `tombstones` is set, leaves the key of
-/// each deleted one as a tombstone.
+/// Writes the key, `userName`, `externalId`, representation and membership
+/// rows of the `PERSON` heads `heads`, and, when `tombstones` is set, leaves
+/// the key of each deleted one as a tombstone.
 ///
 /// A key row is written for a `PERSON` that performs a professional `ROLE`
 /// (RM demographic `role.adoc`: a `ROLE` listed in `roles`, whose
@@ -403,8 +403,15 @@ async fn write_persons(
     let parties: Vec<Uuid> = heads.iter().map(|h| h.vo_id).collect();
     let mut identifiers = Vec::new();
     let mut representations = Vec::new();
+    let mut memberships = Vec::new();
     let mut listed = Vec::new();
     for head in heads {
+        if mapping.membership.is_some()
+            && head.lifecycle_state != DELETED
+            && let Some(facts) = &head.facts
+        {
+            memberships.extend(facts.groups.iter().map(|group| (*group, head.vo_id)));
+        }
         let Some(facts) = mapping
             .persons
             .keys()
@@ -452,6 +459,7 @@ async fn write_persons(
         &professional,
     )
     .await?;
+    rows::write_memberships(tx, &parties, &memberships).await?;
     if tombstones {
         rows::insert_tombstones(tx, &tombstones_of(mapping, heads)).await?;
     }
@@ -526,11 +534,8 @@ async fn professional(
         .collect())
 }
 
-/// Writes the `externalId`, `displayName` and membership rows of the `GROUP`
-/// heads `heads`.
-///
-/// A membership a version keeps keeps its row; a removed one is retired, and
-/// an added one inserted, so a change writes one row per member it changes.
+/// Writes the `externalId` and `displayName` rows of the `GROUP` heads
+/// `heads`; a `GROUP`'s members hold their memberships themselves.
 async fn write_groups(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
@@ -541,7 +546,6 @@ async fn write_groups(
     };
     let groups: Vec<Uuid> = heads.iter().map(|h| h.vo_id).collect();
     let mut identifiers = Vec::new();
-    let mut members = Vec::new();
     for head in heads {
         let Some(facts) = head.live_of(&group.template) else {
             continue;
@@ -561,9 +565,6 @@ async fn write_groups(
         for name in &facts.display_names {
             identifiers.push(row("group_display_name", "", "", name));
         }
-        if mapping.membership.is_some() {
-            members.extend(facts.members.iter().map(|member| (head.vo_id, *member)));
-        }
     }
     write_identifiers(
         tx,
@@ -572,8 +573,7 @@ async fn write_groups(
         &identifiers,
         &[],
     )
-    .await?;
-    rows::write_memberships(tx, &groups, &members).await
+    .await
 }
 
 /// The head's lifecycle state and trunk head of the party `vo_id`.

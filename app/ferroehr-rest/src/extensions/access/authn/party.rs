@@ -8,8 +8,10 @@
 //! A party that is `inactive` or `abandoned` (RM common
 //! `master06-change_control_package.adoc` §Abandoned and Inactive States), a
 //! login two parties carry, a deprovisioned key, a token without the key
-//! claim, a party without the marker the caller's kind needs and groups that
-//! cannot be read are each refused with `403` and their binding code. A
+//! claim, a party without the marker the caller's kind needs, groups that
+//! cannot be read and a person whose login no party carries are each refused
+//! with `403` and their binding code, with no fallback to a login-only
+//! committer (RM common `AUDIT_DETAILS.committer` names who did it). A
 //! source or an identity provider that cannot answer is the server's failure,
 //! never the person's, and answers `503`. No openEHR spec governs resolving a
 //! login to a party: our own design.
@@ -48,6 +50,30 @@ pub(crate) struct Binding {
     /// Each issuer's `person_key`, the claim a `refused-key-claim-missing`
     /// record names.
     key_claims: BTreeMap<String, String>,
+    /// Each issuer's `identifier_issuer`s, which a `refused-unbound` problem
+    /// names so the operator can provision the person.
+    identifier_issuers: BTreeMap<String, Vec<String>>,
+}
+
+/// What a login-binding refusal's problem text names beside its code.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Named {
+    /// The key claim the token lacked (`refused-key-claim-missing`).
+    Claim(String),
+    /// The identifier issuers under which no demographic party carries the
+    /// login's identifier (`refused-unbound`).
+    IdentifierIssuer(String),
+}
+
+impl Named {
+    /// The key claim, for a [`Named::Claim`].
+    #[must_use]
+    pub fn claim(&self) -> Option<&str> {
+        match self {
+            Self::Claim(claim) => Some(claim),
+            Self::IdentifierIssuer(_) => None,
+        }
+    }
 }
 
 impl std::fmt::Debug for Binding {
@@ -99,6 +125,13 @@ pub(super) fn binding(
         .iter()
         .map(|settings| (settings.issuer.clone(), settings.profile.person_key.clone()))
         .collect();
+    let mut identifier_issuers: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for party in &resolved.party {
+        identifier_issuers
+            .entry(party.issuer.clone())
+            .or_default()
+            .push(party.identifier_issuer.clone());
+    }
     Ok(Some(Arc::new(Binding {
         shared: binding,
         source,
@@ -106,6 +139,7 @@ pub(super) fn binding(
         namespace: config.party_binding.namespace.clone(),
         tenant_claims,
         key_claims,
+        identifier_issuers,
     })))
 }
 
@@ -179,7 +213,7 @@ pub(super) async fn bind(binding: &Binding, access: Access) -> Result<Access, Au
                 code: "refused-guest",
                 principal: None,
                 party: None,
-                claim: None,
+                named: None,
             });
         }
         Ok(None) if matches!(caller.kind(), CallerKind::Representative { .. }) => {
@@ -196,18 +230,34 @@ pub(super) async fn bind(binding: &Binding, access: Access) -> Result<Access, Au
         }
     };
     if let Some(mut refusal) = refusal(&outcome) {
+        let issuer = caller.issuer().unwrap_or("-");
+        // NOTE: GDPR Art. 5(1)(c), the line names the issuer and the outcome, never the claim
+        // value, which the access record of the request carries under its retention.
         tracing::warn!(
-            issuer = caller.issuer().unwrap_or("-"),
+            issuer,
             outcome = outcome.as_str(),
             "the login binding refused the request"
         );
-        if let (AuthError::PartyRefused { claim, .. }, Outcome::KeyClaimMissing) =
-            (&mut refusal, &outcome)
-        {
-            *claim = caller
-                .issuer()
-                .and_then(|issuer| binding.key_claims.get(issuer))
-                .cloned();
+        ferroehr::telemetry::metrics::metrics()
+            .binding_refusals
+            .add(
+                1,
+                &[
+                    opentelemetry::KeyValue::new("issuer", issuer.to_owned()),
+                    opentelemetry::KeyValue::new("outcome", outcome.as_str()),
+                ],
+            );
+        if let AuthError::PartyRefused { named, .. } = &mut refusal {
+            *named = match outcome {
+                Outcome::KeyClaimMissing => {
+                    binding.key_claims.get(issuer).cloned().map(Named::Claim)
+                }
+                Outcome::Unbound => binding
+                    .identifier_issuers
+                    .get(issuer)
+                    .map(|issuers| Named::IdentifierIssuer(issuers.join(", "))),
+                _ => None,
+            };
         }
         return Err(refusal);
     }
@@ -232,7 +282,7 @@ pub(super) const fn unrecorded() -> AuthError {
         code: "refused-representation-unrecorded",
         principal: None,
         party: None,
-        claim: None,
+        named: None,
     }
 }
 
@@ -291,8 +341,7 @@ pub(super) async fn represented_ehr(
 /// proceeds under.
 fn refusal(outcome: &Outcome) -> Option<AuthError> {
     let code = match outcome {
-        // TODO(#5006): refuse an unbound person, once no fallback serves them.
-        Outcome::Party(_) | Outcome::Unbound => return None,
+        Outcome::Party(_) => return None,
         Outcome::Ambiguous { .. } => "refused-ambiguous",
         Outcome::Inactive { .. } => "refused-inactive",
         Outcome::Abandoned { .. } => "refused-abandoned",
@@ -306,8 +355,8 @@ fn refusal(outcome: &Outcome) -> Option<AuthError> {
             "refused-groups-unavailable"
         }
         Outcome::GroupsUnavailable(_) => "refused-groups-unavailable",
-        // NOTE: `Outcome` is non-exhaustive; an outcome added later binds no
-        // party until it is read here.
+        // NOTE: `Outcome::Unbound`, and an outcome added later to the non-exhaustive
+        // `Outcome` binds no party until it is read here, so both are unbound.
         _ => "refused-unbound",
     };
     Some(AuthError::PartyRefused {
@@ -316,7 +365,7 @@ fn refusal(outcome: &Outcome) -> Option<AuthError> {
         party: outcome
             .party()
             .map(|party| Box::new(super::record::triple(party))),
-        claim: None,
+        named: None,
     })
 }
 
@@ -337,14 +386,20 @@ fn upstream(error: &AdapterError) -> Option<Option<Duration>> {
 }
 
 /// The text of the refusal `code`, naming what the operator or the person
-/// can act on and never a claim value.
-pub(super) fn detail(code: &str) -> &'static str {
-    match code {
+/// can act on and never a claim value: the claim the token lacked and the
+/// identifier issuer an unbound login is provisioned under, when `named`.
+pub(super) fn detail(code: &str, named: Option<&Named>) -> String {
+    let text = match code {
         "refused-ambiguous" => "two or more demographic parties carry this login's identifier",
         "refused-inactive" => "the demographic party this login is bound to is inactive",
         "refused-abandoned" => "the demographic party this login is bound to is abandoned",
         "refused-deprovisioned" => "this login's identifier belongs to a deprovisioned party",
-        "refused-key-claim-missing" => "the credential carries no binding key",
+        "refused-key-claim-missing" => {
+            return match named.and_then(Named::claim) {
+                Some(claim) => format!("the credential carries no binding key claim {claim:?}"),
+                None => "the credential carries no binding key".to_owned(),
+            };
+        }
         "refused-wrong-marker" => {
             "the demographic party this login is bound to may not act in this role"
         }
@@ -353,8 +408,17 @@ pub(super) fn detail(code: &str) -> &'static str {
         "refused-representation-unrecorded" => {
             "no live representation of the asserted subject is recorded for this login"
         }
-        _ => "this login is bound to no demographic party",
-    }
+        _ => {
+            return match named {
+                Some(Named::IdentifierIssuer(issuers)) => format!(
+                    "no demographic party carries this login's identifier for the identifier \
+                     issuer {issuers}: provision the person"
+                ),
+                _ => "this login is bound to no demographic party".to_owned(),
+            };
+        }
+    };
+    text.to_owned()
 }
 
 /// Returns the refusal of a caller its kind does not admit to the request
@@ -459,9 +523,22 @@ mod tests {
                 matches!(refusal(&outcome), Some(AuthError::PartyRefused { code: c, .. }) if c == code),
                 "{outcome:?}"
             );
-            assert_ne!(detail(code), detail("refused-unbound"), "{code}");
+            assert_ne!(
+                detail(code, None),
+                detail("refused-unbound", None),
+                "{code}"
+            );
         }
-        assert!(refusal(&Outcome::Unbound).is_none());
+        assert!(
+            matches!(
+                refusal(&Outcome::Unbound),
+                Some(AuthError::PartyRefused {
+                    code: "refused-unbound",
+                    ..
+                })
+            ),
+            "an unbound person is refused"
+        );
     }
 
     #[test]

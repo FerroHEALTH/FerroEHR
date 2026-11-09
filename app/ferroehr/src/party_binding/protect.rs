@@ -216,8 +216,8 @@ pub(crate) async fn check(
 /// A `PERSON` is owned when it carries a binding key and each of its keys,
 /// before and after the write, is of `issuer`. A professional `ROLE` is owned
 /// when every `PERSON` it names as `performer` is. A `GROUP` is owned when
-/// the client created it, and a version of any other `GROUP` is admitted
-/// when all it does is drop memberships of `PERSON`s the client owns.
+/// the client created it; its members hold their memberships, so no other
+/// client's write touches it.
 async fn owned(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
@@ -243,23 +243,9 @@ async fn owned(
             }
             Ok(true)
         }
-        Kind::Group => {
-            if crate::party_binding::provisioned::owns_group(tx, issuer, vo_id).await? {
-                return Ok(true);
-            }
-            let [Some(current), Some(previous)] = held else {
-                return Ok(false);
-            };
-            let Some(removed) = removed_members(tx, vo_id, (current, previous)).await? else {
-                return Ok(false);
-            };
-            for named in removed {
-                if !person_of(tx, mapping, &named, issuer).await? {
-                    return Ok(false);
-                }
-            }
-            Ok(true)
-        }
+        Kind::Group => crate::party_binding::provisioned::owns_group(tx, issuer, vo_id)
+            .await
+            .map_err(ServiceError::from),
         _ => Ok(false),
     }
 }
@@ -284,28 +270,6 @@ async fn person_of(
         None => BTreeSet::new(),
     };
     Ok(!keys.is_empty() && keys.iter().all(|(of, _)| of == issuer))
-}
-
-/// The targets of the inline relationships the version `current` of the
-/// `GROUP` `vo_id` drops from `previous`, when that is all it changes;
-/// `None` when it changes anything else.
-///
-/// A SCIM client deleting one of its Users removes the User's memberships
-/// from every `GROUP` in the same CONTRIBUTION, an administrator's included.
-async fn removed_members(
-    tx: &mut PgConnection,
-    vo_id: VoId,
-    (current, previous): (i32, i32),
-) -> Result<Option<Vec<String>>, ServiceError> {
-    let (Some(after), Some(before)) = (
-        body(tx, vo_id, current).await?,
-        body(tx, vo_id, previous).await?,
-    ) else {
-        return Ok(None);
-    };
-    Ok(crate::party_binding::derive::removed_relationships(
-        &before, &after,
-    )?)
 }
 
 /// The `PARTY_REF.id` values the versions `held` of the `ROLE` `vo_id` name
