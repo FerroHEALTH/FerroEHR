@@ -155,10 +155,10 @@ thing asked about is unknown.
 ### Authenticating to the server
 
 A server behind an authorization server takes an OAuth2 client-credentials
-grant under `[terminology.oauth]`; the token is cached and renewed shortly
+grant under `[terminology.endpoint.credentials.oauth]`; the token is cached and renewed shortly
 before it expires. The client secret should come from a mounted file rather than
 an inline value, `client_secret_file`. The keys are on
-[Integrations](../installation/config-integrations.md#authenticating-to-the-terminology-server).
+[Integrations](../installation/config-integrations.md#the-endpoint-table).
 
 There is no option to disable certificate verification. Server-certificate and
 hostname verification are always on against the platform's trust store.

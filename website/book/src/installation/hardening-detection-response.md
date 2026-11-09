@@ -75,7 +75,7 @@ them from a secret manager:
   the route that removes the standing password (the DSN then carries a short-lived
   token), and `serviceAccount.annotations` exists for the IRSA or Workload
   Identity binding that needs.
-- **`config.audit.fhir_feed.url`** is the only credential-bearing key with no
+- **`config.audit.fhir_feed.endpoint.url`** is the only credential-bearing key with no
   `*_file` sibling, so it is the one value still passed as an environment
   variable.
 

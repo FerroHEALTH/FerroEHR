@@ -204,7 +204,7 @@ audit message names a patient (ITI TF-2 §3.20.4.1.2.1.1).
 | `retry.max_backoff` | duration | `"1min"` | The longest wait between two delivery attempts after a failure. |
 
 `[audit.syslog.tls]` is the outbound TLS table every FerroHEALTH product
-takes, as `[pixm.tls]` is. Concatenate the certificate chain and the private
+takes, as `[pixm.endpoint.tls]` is. Concatenate the certificate chain and the private
 key into the one PEM `client_identity_file` names.
 
 The drain stores each frame in `ihe-atna`'s spool, and the crate's forwarder
@@ -219,9 +219,8 @@ outbox. `delivered_syslog_at` is no longer written.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `url` | secret URL | `http://localhost:8080/fhir` | The repository's FHIR base; records go to `{url}/AuditEvent`. The table's presence turns the feed on. Credentials embedded in the URL are redacted from every rendering. |
+| `endpoint` | [endpoint table](config-integrations.md#the-endpoint-table) | required | The repository: `url`, its FHIR base (records go to `{url}/AuditEvent`; credentials embedded in it are masked in every rendering), `timeout` for one `POST`, the `retry` of a delivery (`retry.max_backoff` defaults to `"1min"` here), the TLS and the credential. The table's presence turns the feed on. |
 | `poll_interval` | duration | `"2s"` | How long the forwarder waits for a new record before it reads the store again. |
-| `retry.max_backoff` | duration | `"1min"` | The longest wait between two delivery attempts after a failure. |
 
 `ihe-atna`'s forwarder delivers the feed. With the local store on, it
 delivers from the store, oldest record first: a record not yet delivered has
@@ -230,36 +229,18 @@ record is stamped once the repository accepts it. A record the repository
 refuses (a `4xx` other than `401`, `408` or `429`) is set aside until the next
 start. It is reported on `GET /management/health` as `audit_delivery`, and
 the records behind it keep flowing. With the store off, the feed delivers
-from an in-memory spool. `batch_size` and `max_retries` are gone and stop
-startup by name: the forwarder retries until the repository answers.
+from an in-memory spool. The forwarder retries until the repository answers.
 
-#### `[audit.fhir_feed.oauth]`: authenticating with OAuth 2.0 client credentials
+#### Authenticating the feed
 
-The feed authenticates with HTTP Basic through the credentials in `url`, or,
-with this table, as an OAuth 2.0 client (the IHE IUA authorized-client model):
-FerroEHR obtains a token with the client credentials grant, sends it as a
-bearer token, renews it before it expires, and when the repository refuses the
-held token with `401` fetches a new one and sends the record once more. Set
-one of the two, never both: a `url` with credentials beside this table stops
-startup.
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `token_endpoint` | URL | unset | The token endpoint. Set this or `issuer`. |
-| `issuer` | URL | unset | The issuer whose metadata (`/.well-known/oauth-authorization-server`) names the token endpoint. |
-| `client_id` | string | unset | The client identifier. Required. |
-| `client_secret` / `client_secret_file` | secret | unset | The client secret, inline or read from a file. One is required. |
-| `client_auth` | enum{client_secret_basic,client_secret_post,private_key_jwt,tls_client_auth,self_signed_tls_client_auth} | `client_secret_basic` | How the client authenticates to the token endpoint. |
-| `scope` | string | unset | The `scope` of the token request. |
-| `audience` | string | unset | The `audience` parameter, for an authorization server that reads it. |
-| `resource` | URL | unset | The `resource` indicator (RFC 8707) naming the repository. |
-| `private_key_file` | path | unset | The PEM private key that signs the client assertion under `private_key_jwt` (RFC 7523). |
-| `kid` | string | the RFC 7638 thumbprint | The `kid` the client assertion names. |
-| `assertion_alg` | string | by key type | The algorithm the client assertion is signed with. |
-| `assertion_audience` | enum{token_endpoint,issuer} | `token_endpoint` | The `aud` of the client assertion; `issuer` needs `issuer` set. |
-| `tls` | table | platform roots | The family's outbound TLS table: `trust_roots_file`, PEM trust roots added to the platform's for a token endpoint behind a private certificate authority; `client_identity_file`, one PEM holding the client certificate chain and its key presented over mutual TLS (RFC 8705); and `min_version`. |
-| `refresh_margin` | duration | `"30s"` | How long before the token expires a new one is fetched. |
-| `timeout` | duration | `"10s"` | How long one call to the authorization server may take. |
+The feed authenticates with the credential of `[audit.fhir_feed.endpoint]`:
+HTTP Basic, or the OAuth 2.0 client credentials grant
+`[audit.fhir_feed.endpoint.credentials.oauth]` (the IHE IUA authorized-client
+model), with the [grant's keys](config-integrations.md#the-endpoint-table).
+Under the grant FerroEHR sends the token as a bearer token, renews it before
+it expires, and when the repository refuses the held token with `401` fetches
+a new one and sends the record once more. Credentials in `url` beside a
+credential stop startup.
 
 With the local store on, the feed delivers from the store and loses nothing
 across a repository outage. With the store off it delivers from an in-memory

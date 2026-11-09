@@ -332,7 +332,7 @@ rather than inherit from a quickstart. See
 | `[record.signing]` | VERSION signing and read-time verification | [Authentication & access](config-auth.md) |
 | `[record.versioning]` | The opt-in answer to an update whose content equals the current version's, off by default | [Authentication & access](config-auth.md#recordversioning) |
 | `[record.query]` | AQL execution budgets and result ceilings | [Integrations](config-integrations.md) |
-| `record.subject_index`, `[pixm]`, `[pixm.oauth]`, `[pixm.tls]` | Who holds the patient-to-EHR cross-reference: an IHE patient identity source over PIXm or the in-instance map | [Integrations](config-integrations.md#pixm) |
+| `record.subject_index`, `[pixm]`, `[pixm.endpoint]` | Who holds the patient-to-EHR cross-reference: an IHE patient identity source over PIXm or the in-instance map | [Integrations](config-integrations.md#pixm) |
 | `[record.change_feed]` | The commit-event outbox and the readers of its feed | [Integrations](config-integrations.md#recordchange_feed) |
 | `[terminology]`, `[record.multimedia]` | The terminology server, multimedia externalization | [Integrations](config-integrations.md) |
 | `[audit]`, `[audit.store]`, `[audit.syslog]`, `[audit.fhir_feed]` | The IHE ATNA audit trail and its sinks | [Audit](config-audit.md) |
