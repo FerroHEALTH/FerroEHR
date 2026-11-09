@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/distroless-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-11-05T00:00:00Z",
-  "version": 5,
+  "timestamp": "2026-11-08T00:00:00Z",
+  "version": 6,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -493,55 +493,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2026-27171"
-      },
-      "products": [
-        {
-          "@id": "pkg:oci/ferroehr",
-          "subcomponents": [
-            {
-              "@id": "pkg:deb/debian/zlib1g"
-            }
-          ]
-        },
-        {
-          "@id": "pkg:oci/ferroehr-viewer",
-          "subcomponents": [
-            {
-              "@id": "pkg:deb/debian/zlib1g"
-            }
-          ]
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer. That program is the only ELF executable in each image (no shell, no ldd, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports no dlopen. Every libc function it calls, its statically linked C code included, is an undefined dynamic symbol; the one name it resolves at run time through dlsym is __pthread_get_minstack (Rust std). The import table is therefore the complete list of glibc entry points it reaches. libz.so.1 is not in either DT_NEEDED list and neither binary imports dlopen, so no process in the image ever maps the Debian zlib; it is present only because the distroless cc base ships it. Compression in both programs is Rust code (zlib-rs and miniz_oxide in Cargo.lock), and neither binary contains the zlib C library (no zlib version or copyright string). crc32_combine64 and crc32_combine_gen64 are never called.",
-      "ferroehr:linkage": {
-        "binaries": [
-          "ferroehr",
-          "ferroehr-viewer"
-        ],
-        "needed": [
-          "libc.so.6",
-          "libgcc_s.so.1",
-          "libm.so.6"
-        ],
-        "loader": {
-          "amd64": "ld-linux-x86-64.so.2",
-          "arm64": "ld-linux-aarch64.so.1"
-        },
-        "rpath": false,
-        "forbidden_imports": [
-          "dlmopen",
-          "dlopen"
-        ],
-        "forbidden_strings": [
-          "Jean-loup Gailly"
-        ]
-      }
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2026-5435"
       },
       "products": [
@@ -909,104 +860,6 @@
           "newlocale",
           "setlocale",
           "uselocale"
-        ]
-      }
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-85091"
-      },
-      "products": [
-        {
-          "@id": "pkg:oci/ferroehr",
-          "subcomponents": [
-            {
-              "@id": "pkg:deb/debian/zlib1g"
-            }
-          ]
-        },
-        {
-          "@id": "pkg:oci/ferroehr-viewer",
-          "subcomponents": [
-            {
-              "@id": "pkg:deb/debian/zlib1g"
-            }
-          ]
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer. That program is the only ELF executable in each image (no shell, no ldd, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports no dlopen. Every libc function it calls, its statically linked C code included, is an undefined dynamic symbol; the one name it resolves at run time through dlsym is __pthread_get_minstack (Rust std). The import table is therefore the complete list of glibc entry points it reaches. libz.so.1 is not in either DT_NEEDED list and neither binary imports dlopen, so no process in the image ever maps the Debian zlib; it is present only because the distroless cc base ships it. Compression in both programs is Rust code (zlib-rs and miniz_oxide in Cargo.lock), and neither binary contains the zlib C library. gz_vacate, gzwrite, gzprintf and gzvprintf are never called.",
-      "ferroehr:linkage": {
-        "binaries": [
-          "ferroehr",
-          "ferroehr-viewer"
-        ],
-        "needed": [
-          "libc.so.6",
-          "libgcc_s.so.1",
-          "libm.so.6"
-        ],
-        "loader": {
-          "amd64": "ld-linux-x86-64.so.2",
-          "arm64": "ld-linux-aarch64.so.1"
-        },
-        "rpath": false,
-        "forbidden_imports": [
-          "dlmopen",
-          "dlopen"
-        ],
-        "forbidden_strings": [
-          "Jean-loup Gailly"
-        ]
-      }
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-76844"
-      },
-      "products": [
-        {
-          "@id": "pkg:oci/ferroehr",
-          "subcomponents": [
-            {
-              "@id": "pkg:deb/debian/zlib1g"
-            }
-          ]
-        },
-        {
-          "@id": "pkg:oci/ferroehr-viewer",
-          "subcomponents": [
-            {
-              "@id": "pkg:deb/debian/zlib1g"
-            }
-          ]
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer. That program is the only ELF executable in each image (no shell, no ldd, no setuid or setgid file). On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports no dlopen. Every libc function it calls, its statically linked C code included, is an undefined dynamic symbol; the one name it resolves at run time through dlsym is __pthread_get_minstack (Rust std). The import table is therefore the complete list of glibc entry points it reaches. libz.so.1 is not in either DT_NEEDED list and neither binary imports dlopen, so no process in the image ever maps the Debian zlib; it is present only because the distroless cc base ships it. Compression in both programs is Rust code (zlib-rs and miniz_oxide in Cargo.lock), and neither binary contains the zlib C library. gz_write and every gz* write function that reaches it (gzwrite, gzfwrite, gzputc, gzputs, gzprintf) are never called, nor is gzclearerr.",
-      "ferroehr:linkage": {
-        "binaries": [
-          "ferroehr",
-          "ferroehr-viewer"
-        ],
-        "needed": [
-          "libc.so.6",
-          "libgcc_s.so.1",
-          "libm.so.6"
-        ],
-        "loader": {
-          "amd64": "ld-linux-x86-64.so.2",
-          "arm64": "ld-linux-aarch64.so.1"
-        },
-        "rpath": false,
-        "forbidden_imports": [
-          "dlmopen",
-          "dlopen"
-        ],
-        "forbidden_strings": [
-          "Jean-loup Gailly"
         ]
       }
     },
@@ -1500,6 +1353,77 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-115455: a stack buffer overflow when an application extracts data into a std::bitset from a wide-character stream, because the temporary buffer is sized in bytes, not in characters (trixie: no DSA, minor issue). The GCC fix, commit 5d419c69ce2e (PR libstdc++/124370), changes only include/std/bitset: operator>> for bitset is a header template compiled into the program that uses it. libstdc++.so.6 does not contain it: it exports no bitset symbol (nm -D on the rc8 images). Both images are gcr.io/distroless/cc-debian13:nonroot plus one program, /usr/local/bin/ferroehr in ferroehr and /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image. That program is Rust: on amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH; it imports no C++ symbol (no _Z name, no GLIBCXX or CXXABI version) and no dlopen, so it contains no libstdc++ template code and can never map libstdc++.so.6. No copy of the defective code exists in either image. gcc-14-base, libgcc-s1 and libgomp1 are reported only because they come from the same gcc-14 source package; libgcc_s.so.1, the one of them the program loads, holds the unwinder.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen"
+        ],
+        "forbidden_import_prefixes": [
+          "_Z"
+        ],
+        "forbidden_version_prefixes": [
+          "CXXABI_",
+          "GLIBCXX_"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-115456"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libgomp1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc%2B%2B6"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libgomp1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc%2B%2B6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-115456: an out-of-bounds read in std::from_chars when the string it is passed is not null-terminated (trixie: gcc-14 14.2.0-19 unfixed; Red Hat bug 2563044 names no upstream commit). The integer overloads of std::from_chars are header templates compiled into the program that calls them; the floating-point overloads are exported by libstdc++.so.6 (nm -D on the cc-debian13 base of 2026-11-08 lists std::from_chars for float, double, long double and _Float128). Both images are gcr.io/distroless/cc-debian13:nonroot plus one program, /usr/local/bin/ferroehr in ferroehr and /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image. That program is Rust: on amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH; it imports no C++ symbol (no _Z name, no GLIBCXX or CXXABI version) and no dlopen, so it contains no libstdc++ template code and never maps libstdc++.so.6. No process in either image reaches std::from_chars in any form. gcc-14-base, libgcc-s1 and libgomp1 are reported only because they come from the same gcc-14 source package; libgcc_s.so.1, the one of them the program loads, holds the unwinder.",
       "ferroehr:linkage": {
         "binaries": [
           "ferroehr",

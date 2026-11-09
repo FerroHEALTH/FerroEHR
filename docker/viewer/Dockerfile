@@ -68,11 +68,11 @@ RUN --mount=type=cache,target=/app/target,sharing=locked \
     && cp /app/target/release/ferroehr-viewer /out/
 
 # ── runtime-base: the SHARED final base (digest-pinned distroless, non-root) ───
-# gcr.io/distroless/cc-debian13:nonroot, digest-pinned, resolved 2026-10-22 —
+# gcr.io/distroless/cc-debian13:nonroot, digest-pinned, resolved 2026-11-08 —
 # same base + `cc`-not-base-nossl rationale (libgcc_s.so.1) as docker/Dockerfile.
 # The HEALTHCHECK the previous split baked ONLY into the CI image (F8) is baked
 # here once, so both targets carry it identically.
-FROM gcr.io/distroless/cc-debian13:nonroot@sha256:08476c244888bfb425bae1ae4dd7c17f093e972aab8426883d97f3c6f280f7c1 AS runtime-base
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:cc66d222f0a7ec996b78a99fe76a969bc80b539a5016ad866c14d1949bc6d0ab AS runtime-base
 # The `:nonroot` tag already runs as uid 65532, but a scanner reading the
 # Dockerfile cannot see a base image.s user — and neither can a reader. Stating
 # it makes the posture a property of this file rather than of a tag someone
