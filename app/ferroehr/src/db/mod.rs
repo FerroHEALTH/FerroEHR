@@ -7,7 +7,7 @@
 //! No openEHR spec governs the persistence mechanism; the storage substrate is
 //! our own PG18-native design. This module is the single place the rest of the
 //! crate obtains a database handle. [`DbConfig`] (the `[database]` config section)
-//! carries the shared DSN and the pool tuning; [`domain::StorageConfig`] (the
+//! carries the shared DSN and the pool tuning; [`domain::DomainDsn`] (each
 //! `[database.<domain>]` section) carries one DSN per storage domain, each defaulting to
 //! the shared one. [`connect_domains`] opens the three pools
 //! ([`domain::DomainPools`]) and [`prepare`] brings each database they reach to

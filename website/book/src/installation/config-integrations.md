@@ -16,17 +16,17 @@ AQL execution bounds.
 ```toml
 [record.query]
 plan_cache_capacity = 256
-timeout = "30000ms"
+timeout = "30s"
 max_result_rows = 10000
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `plan_cache_capacity` | int | `256` | Maximum distinct cached query plans; `0` disables the cache and every lookup runs the full parse-and-lower path. Cache activity is reported by the `aql_plan_cache_events` counter. |
-| `timeout_ms` | int | `30000` | Per-query database execution budget; `0` disables it. Overrun is refused `408`. |
+| `timeout` | duration | `"30s"` | Per-query database execution budget; `"0s"` disables it. Overrun is refused `408`. |
 | `max_result_rows` | int | `10000` | The largest page one query execution serves: the page of a query nothing else bounds, and the maximum an explicit `LIMIT` or `fetch` may ask for (a larger page is refused `400`); `0` means unbounded. |
 
-**`timeout_ms` is on by default, and deliberately tighter than
+**`timeout` is on by default, and deliberately tighter than
 [`database.statement_timeout`](config-server.md#db).** Keeping this budget the
 tighter of the two means an overrun surfaces as the engine's own typed `408`
 rather than a driver error. When it fires, or when the client disconnects or

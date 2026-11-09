@@ -1027,7 +1027,7 @@ loggers = "off"
 flamegraph = "off"
 
 [management.profiling]
-max_seconds = 30
+max_duration = "30s"
 max_frequency = 999
 ```
 

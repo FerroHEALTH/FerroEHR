@@ -116,13 +116,13 @@ server refuses to start on any error:
 
 ### Durations, sizes and periods
 
-Every duration is one string with its unit and no space: `"500ms"`, `"30s"`,
-`"10min"`, `"12h"`, `"7d"`. The unit symbols are the UCUM codes (`ms`, `s`,
+Every duration is one string with its unit and no space: `"30s"`, `"10min"`,
+`"12h"`, `"7d"`, or milliseconds with `ms`. The unit symbols are the UCUM codes (`ms`, `s`,
 `min`, `h`, `d`), the unit system FHIR `Quantity` and openEHR `DV_QUANTITY`
 use, so `"10m"` is refused (`m` is the metre) and a bare number is refused,
 never read as seconds or milliseconds. Every size is one string with an
-IEC 80000-13 binary unit: `"512B"`, `"256KiB"`, `"64MiB"`, `"1GiB"`; decimal
-units such as `"64MB"` are refused. A retention is an ISO 8601 calendar period
+IEC 80000-13 binary unit: `"512B"`, `"256KiB"`, `"64MiB"`, or `GiB`; a decimal
+unit such as `MB` is refused. A retention is an ISO 8601 calendar period
 of whole years or days, `"P5Y"` or `"P1830D"`; unset keeps forever. The
 environment carries the same strings: `FERROEHR__RECORD__QUERY__TIMEOUT=45s`.
 `[server]` and `[auth]` are family sections that keep their own key shapes
