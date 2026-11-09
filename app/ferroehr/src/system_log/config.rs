@@ -16,6 +16,7 @@
 use serde::{Deserialize, Serialize};
 
 use ferrohealth_secret::secret_url::SecretUrl;
+use ferrohealth_server::tls_client::TlsClientSection;
 
 /// Behaviour when an audit record cannot be enqueued/delivered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -154,15 +155,20 @@ pub struct SyslogConfig {
     /// ARR port (`FERROEHR__AUDIT__SYSLOG__PORT`), the RFC 5425 §4.1 port
     /// 6514 by default.
     pub port: u16,
-    /// PEM file with the ARR CA to trust for TLS
-    /// (`FERROEHR__AUDIT__SYSLOG__TLS_CA_FILE`).
-    pub tls_ca_file: Option<String>,
-    /// Client-certificate PEM file for mutual TLS
-    /// (`FERROEHR__AUDIT__SYSLOG__TLS_IDENTITY_CERT_FILE`).
-    pub tls_identity_cert_file: Option<String>,
-    /// Client-key PEM file for mutual TLS
-    /// (`FERROEHR__AUDIT__SYSLOG__TLS_IDENTITY_KEY_FILE`).
-    pub tls_identity_key_file: Option<String>,
+    /// The TLS material of the connection to the ARR
+    /// (`[audit.syslog.tls]`): the family's outbound TLS keys, the client
+    /// identity for mutual TLS and the trust roots beside the platform's.
+    pub tls: TlsClientSection,
+    /// The retired `tls_ca_file` key, held only so its presence is refused
+    /// by name with a pointer to `[audit.syslog.tls] trust_roots_file`.
+    #[serde(default, skip_serializing)]
+    pub tls_ca_file: Option<serde::de::IgnoredAny>,
+    /// The retired `tls_identity_cert_file` key, refused by name.
+    #[serde(default, skip_serializing)]
+    pub tls_identity_cert_file: Option<serde::de::IgnoredAny>,
+    /// The retired `tls_identity_key_file` key, refused by name.
+    #[serde(default, skip_serializing)]
+    pub tls_identity_key_file: Option<serde::de::IgnoredAny>,
     /// The directory of the `ihe-atna` spool every record is stored in before
     /// it is sent (`FERROEHR__AUDIT__SYSLOG__SPOOL_DIR`), owner-only; unset,
     /// the spool is held in memory and a restart loses what it holds.
@@ -182,6 +188,7 @@ impl Default for SyslogConfig {
             enabled: false,
             host: "localhost".to_owned(),
             port: ihe_atna::atna::syslog::TLS_PORT,
+            tls: TlsClientSection::default(),
             tls_ca_file: None,
             tls_identity_cert_file: None,
             tls_identity_key_file: None,
@@ -190,6 +197,37 @@ impl Default for SyslogConfig {
             spool_max_bytes: 256 * 1024 * 1024,
             retry_max_ms: 60_000,
         }
+    }
+}
+
+impl SyslogConfig {
+    /// The retired TLS keys this table sets, each with the refusal that names
+    /// the `[audit.syslog.tls]` key replacing it.
+    #[must_use]
+    pub fn retired_tls_keys(&self) -> Vec<String> {
+        let identity = "put the client certificate chain and its private key in one PEM \
+                        named by [audit.syslog.tls] client_identity_file";
+        [
+            (
+                "tls_ca_file",
+                self.tls_ca_file.is_some(),
+                "name the trust roots file as [audit.syslog.tls] trust_roots_file",
+            ),
+            (
+                "tls_identity_cert_file",
+                self.tls_identity_cert_file.is_some(),
+                identity,
+            ),
+            (
+                "tls_identity_key_file",
+                self.tls_identity_key_file.is_some(),
+                identity,
+            ),
+        ]
+        .into_iter()
+        .filter(|(_, set, _)| *set)
+        .map(|(key, _, replacement)| format!("audit.syslog.{key} is retired: {replacement}"))
+        .collect()
     }
 }
 
@@ -220,7 +258,7 @@ pub struct FhirFeedConfig {
     /// The OAuth 2.0 client-credentials grant the feed authenticates with
     /// (`[audit.fhir_feed.oauth]`), the IHE IUA authorized client; absent, the
     /// feed sends the Basic credentials of `url`, if any.
-    pub oauth: Option<ferrohealth_smart::config::OauthSection>,
+    pub oauth: Option<ferrohealth_smart::config::credentials::OauthSection>,
 }
 
 impl Default for FhirFeedConfig {

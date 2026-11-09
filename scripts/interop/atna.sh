@@ -122,7 +122,8 @@ services:
       FERROEHR__AUDIT__SYSLOG__ENABLED: "true"
       FERROEHR__AUDIT__SYSLOG__HOST: atna-syslog
       FERROEHR__AUDIT__SYSLOG__PORT: "6514"
-      FERROEHR__AUDIT__SYSLOG__TLS_CA_FILE: /etc/atna/ca.pem
+      FERROEHR__AUDIT__SYSLOG__TLS__TRUST_ROOTS_FILE: /etc/atna/ca.pem
+      FERROEHR__AUDIT__SYSLOG__TLS__MIN_VERSION: "1.2"
     volumes:
       - $out/tls/ca.pem:/etc/atna/ca.pem:ro
   atna-hapi:

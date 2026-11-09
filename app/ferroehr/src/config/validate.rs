@@ -25,6 +25,7 @@ impl FerroEhrConfig {
         self.validate_key_sources(&mut errors);
         self.validate_privacy(&mut errors);
         self.validate_audit(&mut errors);
+        self.validate_audit_syslog(&mut errors);
         self.validate_outbound_clients(&mut errors);
         errors.extend(self.origins.errors().into_iter().map(ConfigError::semantic));
         let categories = &self.audit.categories;
@@ -236,6 +237,24 @@ impl FerroEhrConfig {
                     ceiling.source
                 )));
             }
+        }
+    }
+
+    /// `[audit.syslog]` sets none of its retired TLS keys, and its
+    /// `[audit.syslog.tls]` material reads when the sink is on (#5217).
+    fn validate_audit_syslog(&self, errors: &mut Vec<ConfigError>) {
+        let syslog = &self.audit.syslog;
+        errors.extend(
+            syslog
+                .retired_tls_keys()
+                .into_iter()
+                .map(ConfigError::semantic),
+        );
+        if syslog.enabled
+            && let Err(e) =
+                ferrohealth_server::tls_client::TlsClient::read("audit.syslog.tls", &syslog.tls)
+        {
+            errors.push(ConfigError::semantic(e.to_string()));
         }
     }
 

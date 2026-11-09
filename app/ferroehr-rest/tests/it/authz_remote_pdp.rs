@@ -270,8 +270,8 @@ fn deny_for_patient(who: &'static str) -> impl Fn(&Request) -> bool {
 // ── the client-credentials grant (#3829) ──────────────────────────────────────
 
 /// A client-credentials grant at `as_uri`'s token endpoint.
-fn grant(as_uri: &str) -> ferrohealth_smart::config::OauthSection {
-    ferrohealth_smart::config::OauthSection {
+fn grant(as_uri: &str) -> ferrohealth_smart::config::credentials::OauthSection {
+    ferrohealth_smart::config::credentials::OauthSection {
         token_endpoint: format!("{as_uri}/token"),
         client_id: "ferroehr-pep".to_owned(),
         client_secret: Some(secrecy::SecretString::from("s3cret")),

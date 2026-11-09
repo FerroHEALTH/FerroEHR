@@ -126,7 +126,10 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
             enabled: true,
             host: "127.0.0.1".to_owned(),
             port,
-            tls_ca_file: Some(socket.ca_file.display().to_string()),
+            tls: ferrohealth_server::tls_client::TlsClientSection {
+                trust_roots_file: Some(socket.ca_file.clone()),
+                ..ferrohealth_server::tls_client::TlsClientSection::default()
+            },
             ..SyslogConfig::default()
         },
         suppress_login_events: true,
@@ -615,9 +618,9 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
     let mut cfg = ferroehr::config::FerroEhrConfig::default();
     cfg.db.url = leaky(1);
     cfg.terminology.server.url = leaky(2);
-    cfg.terminology.server.oauth = Some(ferrohealth_smart::config::OauthSection {
+    cfg.terminology.server.oauth = Some(ferrohealth_smart::config::credentials::OauthSection {
         token_endpoint: "https://u3:URL_PW_SENTINEL_3@h3/p".to_owned(),
-        ..ferrohealth_smart::config::OauthSection::default()
+        ..ferrohealth_smart::config::credentials::OauthSection::default()
     });
     // URL 4 was the usage report endpoint, whose type now refuses userinfo.
     cfg.authz.abac.remote.server = Some(leaky(5));

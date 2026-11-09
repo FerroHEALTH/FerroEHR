@@ -302,198 +302,9 @@ pub fn load_with_provenance(
 }
 
 #[cfg(test)]
+mod audit_tests;
+#[cfg(test)]
 mod tests {
-    /// A retention below a jurisdiction's floor is a boot error naming both
-    /// numbers (#3242); `0` keeps forever and passes; a jurisdiction with no
-    /// registered floor imposes none.
-    #[test]
-    fn a_retention_below_the_jurisdiction_floor_is_refused() {
-        let mut config = standalone();
-        config.audit.store.retention_days = 30;
-        config.privacy.identifier_scan.rules = vec!["nl-bsn".to_owned()];
-        let errors = config
-            .validate()
-            .expect_err("30 days is below the NL floor");
-        let text = errors.to_string();
-        assert!(
-            text.contains("retention_days = 30") && text.contains("1830"),
-            "{text}"
-        );
-
-        config.audit.store.retention_days = 1830;
-        config.validate().expect("the floor itself passes");
-        config.audit.store.retention_days = 0;
-        config.validate().expect("keep forever passes");
-
-        config.audit.store.retention_days = 30;
-        config.privacy.identifier_scan.rules = vec!["no-fodselsnummer".to_owned()];
-        config
-            .validate()
-            .expect("a jurisdiction with no registered floor imposes none");
-    }
-
-    /// Every EU Member State carries the EHDS floor of three years and the
-    /// refusal names EHDS Art. 9(2); the Dutch five years win over it; the Swiss
-    /// year stands, Switzerland being outside the Union (#3625).
-    #[test]
-    fn the_ehds_floor_holds_in_every_member_state_and_a_longer_national_floor_wins() {
-        for rule in ["de-kvnr", "fi-hetu", "se-personnummer"] {
-            let mut config = standalone();
-            config.privacy.identifier_scan.rules = vec![rule.to_owned()];
-            config.audit.store.retention_days = 1095;
-            let text = config
-                .validate()
-                .expect_err("1095 days is below the EHDS floor")
-                .to_string();
-            assert!(
-                text.contains("floor of 1096 days") && text.contains("EHDS Art. 9(2)"),
-                "{rule}: {text}"
-            );
-            config.audit.store.retention_days = 1096;
-            config.validate().expect("the EHDS floor itself passes");
-        }
-
-        let mut nl = standalone();
-        nl.privacy.identifier_scan.rules = vec!["nl-bsn".to_owned()];
-        nl.audit.store.retention_days = 1096;
-        let text = nl
-            .validate()
-            .expect_err("the Dutch floor outlasts the EHDS floor")
-            .to_string();
-        assert!(text.contains("floor of 1830 days"), "{text}");
-
-        let mut ch = standalone();
-        ch.privacy.identifier_scan.rules = vec!["ch-ahvn13".to_owned()];
-        ch.audit.store.retention_days = 366;
-        ch.validate()
-            .expect("Switzerland keeps its one-year floor; EHDS does not reach it");
-    }
-
-    /// The German ceiling reaches a deployment only once it declares itself one
-    /// of the SGB V § 307 controllers, and then caps the horizon — including
-    /// "keep forever", which is the case the floor rule could never produce
-    /// (#3346).
-    #[test]
-    fn the_sgb_v_ceiling_applies_only_to_a_declared_controller() {
-        let mut config = standalone();
-        config.privacy.identifier_scan.rules = vec!["de-kvnr".to_owned()];
-        config.audit.store.retention_days = 0;
-        config
-            .validate()
-            .expect("an undeclared deployment carries no ceiling");
-
-        config.audit.store.sgb_v_309_controller = true;
-        let errors = config
-            .validate()
-            .expect_err("keep forever outlasts the three-year period");
-        let text = errors.to_string();
-        assert!(
-            text.contains("keep forever") && text.contains("1095"),
-            "{text}"
-        );
-
-        config.audit.store.retention_days = 1096;
-        let errors = config
-            .validate()
-            .expect_err("1096 days is above the ceiling");
-        assert!(errors.to_string().contains("1095"), "{errors}");
-
-        // Germany also carries the EHDS floor of three years (#3625): 1095 days
-        // can fall short of three calendar years, so no day count passes both,
-        // and the refusal names the horizon in years that does.
-        config.audit.store.retention_days = 1095;
-        let errors = config
-            .validate()
-            .expect_err("1095 days can fall short of the three-year EHDS floor");
-        assert!(
-            errors.to_string().contains("set retention_years = 3"),
-            "{errors}"
-        );
-        config.audit.store.retention_days = 0;
-        config.audit.store.retention_years = Some(3);
-        config
-            .validate()
-            .expect("three calendar years meet the floor and the ceiling exactly");
-    }
-
-    /// A horizon in calendar years is compared exactly against floors in years:
-    /// the Dutch five years and the Swiss one year (#3625).
-    #[test]
-    fn retention_years_meets_a_floor_in_years_exactly() {
-        let mut nl = standalone();
-        nl.privacy.identifier_scan.rules = vec!["nl-bsn".to_owned()];
-        nl.audit.store.retention_years = Some(4);
-        let text = nl
-            .validate()
-            .expect_err("four years are below the Dutch floor")
-            .to_string();
-        assert!(
-            text.contains("retention_years = 4") && text.contains("floor of 5 years"),
-            "{text}"
-        );
-        nl.audit.store.retention_years = Some(5);
-        nl.validate().expect("five years meet the Dutch floor");
-
-        let mut ch = standalone();
-        ch.privacy.identifier_scan.rules = vec!["ch-ahvn13".to_owned()];
-        ch.audit.store.retention_years = Some(1);
-        ch.validate().expect("one year meets the Swiss floor");
-
-        let mut de = standalone();
-        de.privacy.identifier_scan.rules = vec!["de-kvnr".to_owned()];
-        de.audit.store.sgb_v_309_controller = true;
-        de.audit.store.retention_years = Some(4);
-        let text = de
-            .validate()
-            .expect_err("four years outlast the SGB V period")
-            .to_string();
-        assert!(text.contains("ceiling of 3 years"), "{text}");
-    }
-
-    /// The horizon is stated once: days and years together, or zero years, is a
-    /// boot error naming the keys.
-    #[test]
-    fn retention_days_and_retention_years_are_mutually_exclusive() {
-        let mut config = standalone();
-        config.audit.store.retention_days = 1096;
-        config.audit.store.retention_years = Some(3);
-        let text = config
-            .validate()
-            .expect_err("two horizons are refused")
-            .to_string();
-        assert!(
-            text.contains("retention_days = 1096") && text.contains("retention_years = 3"),
-            "{text}"
-        );
-
-        config.audit.store.retention_days = 0;
-        config.audit.store.retention_years = Some(0);
-        let text = config
-            .validate()
-            .expect_err("zero years keeps nothing")
-            .to_string();
-        assert!(text.contains("retention_years = 0"), "{text}");
-    }
-
-    /// A ceiling below a floor is a contradiction no horizon resolves, so it is
-    /// refused at boot rather than silently resolved in favour of one of them
-    /// (#3346).
-    #[test]
-    fn a_ceiling_below_a_floor_is_refused() {
-        let mut config = standalone();
-        config.audit.store.sgb_v_309_controller = true;
-        config.privacy.identifier_scan.rules = vec!["de-kvnr".to_owned(), "nl-bsn".to_owned()];
-        config.audit.store.retention_days = 1095;
-        let errors = config
-            .validate()
-            .expect_err("the DE ceiling is below the NL floor");
-        let text = errors.to_string();
-        assert!(
-            text.contains("ceiling of 1095") && text.contains("floor of 1830"),
-            "{text}"
-        );
-    }
-
     use assert_fs::prelude::*;
 
     use std::path::PathBuf;
@@ -507,7 +318,7 @@ mod tests {
     /// The shipped defaults of a FerroEHR run on its own: the explicit
     /// `[ehr_index] provider = "local"` opt-in, without which the default IHE
     /// provider refuses for want of an endpoint.
-    fn standalone() -> FerroEhrConfig {
+    pub(super) fn standalone() -> FerroEhrConfig {
         FerroEhrConfig {
             ehr_index: EhrIndexConfig::local(),
             ..FerroEhrConfig::default()
@@ -536,7 +347,7 @@ mod tests {
     }
 
     /// Build an injected env map from `(key, value)` pairs.
-    fn env(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+    pub(super) fn env(pairs: &[(&str, &str)]) -> HashMap<String, String> {
         pairs
             .iter()
             .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
@@ -544,7 +355,7 @@ mod tests {
     }
 
     /// A temp file carrying `content`, for the file-source cases.
-    fn toml_file(content: &str) -> assert_fs::NamedTempFile {
+    pub(super) fn toml_file(content: &str) -> assert_fs::NamedTempFile {
         let f = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp");
         f.write_str(content).expect("write");
         f
@@ -1270,7 +1081,7 @@ mod tests {
     /// keeps its host and path with the userinfo masked.
     #[test]
     fn url_userinfo_reaches_no_rendering() {
-        use ferrohealth_smart::config::OauthSection;
+        use ferrohealth_smart::config::credentials::OauthSection;
 
         let leaky =
             |n: u32| SecretUrl::new(format!("https://u{n}:URL_PW_SENTINEL_{n}@h{n}:1/p{n}"));
@@ -2052,7 +1863,10 @@ mod tests {
         c.auth.shared.issuer = issuer;
         let err = c.validate().expect_err("an oct key must refuse the tree");
         let text = err.to_string();
-        assert!(text.contains("auth.jwks_file"), "{text}");
+        assert!(
+            text.contains("jwks_file") && text.contains("symmetric key"),
+            "{text}"
+        );
         assert!(!text.contains(secret_k), "{text}");
     }
 
@@ -2241,7 +2055,7 @@ mod tests {
     /// keys, never a silently unauthenticated terminology request.
     #[test]
     fn validate_terminology_server_oauth_shape() {
-        use ferrohealth_smart::config::OauthSection;
+        use ferrohealth_smart::config::credentials::OauthSection;
 
         let mut c = standalone();
         c.terminology.server.enabled = true;

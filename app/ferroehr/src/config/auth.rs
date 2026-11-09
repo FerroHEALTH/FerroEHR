@@ -9,23 +9,15 @@
 //! the accepted algorithms (asymmetric only, RFC 8725 §3.1 and §3.2), the
 //! audiences (RFC 9068 §4), the Basic users of `[[auth.basic.users]]` with
 //! the scopes each holds, and the product scope. The crate checks tokens and
-//! never issues them. This module holds what FerroEHR adds on top: the
-//! Argon2id cost floor, the issuer `userinfo` rule, the refusal of private or
-//! symmetric key material in a `jwks_file`, and the patient-data assurance
-//! type of `[authz.assurance]`. No openEHR spec governs authentication mechanics,
-//! ITS-REST leaving the scheme open — our own design, with the IETF OAuth and
-//! JOSE RFCs as the authority for every rule enforced here.
+//! never issues them, and it refuses at resolution a Basic hash below the
+//! Argon2id floor, an issuer with `userinfo` and private or symmetric key
+//! material in a `jwks_file`. This module holds what FerroEHR adds on top:
+//! the patient-data assurance type of `[authz.assurance]`. No openEHR spec
+//! governs authentication mechanics, ITS-REST leaving the scheme open — our
+//! own design, with the IETF OAuth and JOSE RFCs as the authority for every
+//! rule enforced here.
 
-use std::path::Path;
-
-use argon2::{Algorithm, Params, PasswordHash};
 use ferrohealth_smart::config::{AuthSection, ConfigError, IssuerKey, Resolved};
-use secrecy::ExposeSecret;
-use serde::Deserialize;
-use serde::de::IgnoredAny;
-use url::Url;
-
-use ferrohealth_secret::secret_url::RedactedUrl;
 
 /// The protection space every challenge names when `[auth] realm` is empty
 /// (RFC 6750 §3, RFC 7617 §2).
@@ -37,14 +29,6 @@ pub const DEFAULT_REALM: &str = "ferroehr";
 /// SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility gives an
 /// extension scope the form "any string starting with `__`".
 pub const DEFAULT_PRODUCT_SCOPE: &str = "__ferroehr.platform";
-
-/// The minimum Argon2 memory cost, in KiB (OWASP Password Storage Cheat Sheet
-/// §Argon2id).
-pub const MIN_ARGON2_M_COST: u32 = 19 * 1024;
-/// The minimum Argon2 iteration count.
-pub const MIN_ARGON2_T_COST: u32 = 2;
-/// The minimum Argon2 parallelism.
-pub const MIN_ARGON2_P_COST: u32 = 1;
 
 /// Returns whether `[auth]` names at least one token issuer, in the table
 /// form or the removed flat form the crate refuses.
@@ -118,24 +102,11 @@ pub fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
         .map_err(|source| AuthConfigError::Section { source })
 }
 
-/// Validates `[auth]` at boot: the rules FerroEHR adds, then the crate's.
+/// Validates `[auth]` at boot through the crate's resolution.
 ///
 /// # Errors
-/// The [`AuthConfigError`] naming the first rule the section breaks.
+/// [`AuthConfigError::Section`] naming the rule the crate reports broken.
 pub fn validate(section: &AuthSection) -> Result<(), AuthConfigError> {
-    for entry in section.issuers() {
-        check_issuer_userinfo(&entry.issuer)?;
-        if !entry.jwks_file.is_empty() {
-            check_jwks_file(Path::new(&entry.jwks_file))?;
-        }
-    }
-    if let Some(basic) = &section.basic {
-        for user in &basic.users {
-            if let Some(hash) = &user.password_hash {
-                check_password_hash(&user.user, hash.expose_secret())?;
-            }
-        }
-    }
     // NOTE: RFC 9110 §11.6.1, a section with no mechanism is refused by
     // `require_mechanism`, whose message names the keys that fix it.
     if require_mechanism(section).is_err() {
@@ -175,245 +146,6 @@ pub enum AuthConfigError {
         #[source]
         source: ConfigError,
     },
-    /// The issuer carries `userinfo`; the value is shown masked.
-    #[error(
-        "auth.issuer {0:?} must carry no userinfo: an issuer identifier holds only \
-         scheme, host, port and path components (OpenID Connect Core 1.0 §1.2)"
-    )]
-    IssuerHasUserinfo(String),
-    /// The `jwks_file` is not a JWK Set.
-    #[error(
-        "auth.jwks_file is not a JWK Set (RFC 7517 §5): {category:?} error at line {line}, \
-         column {column}"
-    )]
-    JwksUnparsable {
-        /// The JSON error class.
-        category: serde_json::error::Category,
-        /// The line the parse stopped at.
-        line: usize,
-        /// The column the parse stopped at.
-        column: usize,
-    },
-    /// The `jwks_file` holds a symmetric key.
-    #[error(
-        "auth.jwks_file key #{index} (kid {kid:?}) is a symmetric key (kty \"oct\", \
-         RFC 7517 §4.1, RFC 7518 §6.4): a key set handed to a resource server holds public \
-         keys only, and the server accepts asymmetric algorithms only (RFC 8725 §3.1)"
-    )]
-    JwksSymmetricKey {
-        /// The key's position in the set.
-        index: usize,
-        /// The key's `kid`, when it has one.
-        kid: Option<String>,
-    },
-    /// The `jwks_file` holds private key material.
-    #[error(
-        "auth.jwks_file key #{index} (kid {kid:?}) carries the private-key member \
-         {member:?} (RFC 7518 §6.2.2, §6.3.2, RFC 8037 §2): a verifier needs the public key \
-         only, so private material is never configured here"
-    )]
-    JwksPrivateKeyMaterial {
-        /// The key's position in the set.
-        index: usize,
-        /// The key's `kid`, when it has one.
-        kid: Option<String>,
-        /// The private member it carries.
-        member: &'static str,
-    },
-    /// A Basic user's hash is no PHC string.
-    #[error("auth.basic.users[{username:?}].password_hash is not a PHC hash string: {reason}")]
-    PasswordHashUnparsable {
-        /// The user.
-        username: String,
-        /// What the PHC parser reported.
-        reason: String,
-    },
-    /// A Basic user's hash is of another algorithm.
-    #[error(
-        "auth.basic.users[{username:?}].password_hash uses {algorithm:?}; only argon2id is \
-         accepted (OWASP Password Storage Cheat Sheet §Argon2id)"
-    )]
-    PasswordHashNotArgon2id {
-        /// The user.
-        username: String,
-        /// The algorithm the hash names.
-        algorithm: String,
-    },
-    /// A Basic user's hash is cheaper than the floor.
-    #[error(
-        "auth.basic.users[{username:?}].password_hash has m={m},t={t},p={p}, below the minimum \
-         m={min_m},t={min_t},p={min_p} (OWASP Password Storage Cheat Sheet §Argon2id)"
-    )]
-    PasswordHashTooWeak {
-        /// The user.
-        username: String,
-        /// The memory cost.
-        m: u32,
-        /// The iteration count.
-        t: u32,
-        /// The parallelism.
-        p: u32,
-        /// The memory floor.
-        min_m: u32,
-        /// The iteration floor.
-        min_t: u32,
-        /// The parallelism floor.
-        min_p: u32,
-    },
-}
-
-/// Refuses an issuer that carries `userinfo`, before the crate's own refusal
-/// could quote it.
-fn check_issuer_userinfo(issuer: &str) -> Result<(), AuthConfigError> {
-    // NOTE: OpenID Connect Core 1.0 §1.2, an issuer identifier holds scheme,
-    // host, port and path only; a value that is no URL is the crate's to refuse.
-    let Ok(url) = Url::parse(issuer.trim()) else {
-        return Ok(());
-    };
-    if !url.username().is_empty() || url.password().is_some() {
-        return Err(AuthConfigError::IssuerHasUserinfo(
-            RedactedUrl(issuer.trim()).to_string(),
-        ));
-    }
-    Ok(())
-}
-
-/// The shape of a JWK Set, read only to refuse what a verifier must never
-/// hold.
-#[derive(Deserialize)]
-struct JwkSetShape {
-    /// The keys.
-    keys: Vec<JwkShape>,
-}
-
-/// One JWK, by the members that make it secret.
-#[derive(Deserialize)]
-struct JwkShape {
-    /// The key type.
-    kty: String,
-    /// The key id.
-    #[serde(default)]
-    kid: Option<String>,
-    /// The RSA or EC private exponent.
-    #[serde(default)]
-    d: Option<IgnoredAny>,
-    /// An RSA prime.
-    #[serde(default)]
-    p: Option<IgnoredAny>,
-    /// An RSA prime.
-    #[serde(default)]
-    q: Option<IgnoredAny>,
-    /// An RSA CRT exponent.
-    #[serde(default)]
-    dp: Option<IgnoredAny>,
-    /// An RSA CRT exponent.
-    #[serde(default)]
-    dq: Option<IgnoredAny>,
-    /// The RSA CRT coefficient.
-    #[serde(default)]
-    qi: Option<IgnoredAny>,
-    /// Further RSA primes.
-    #[serde(default)]
-    oth: Option<IgnoredAny>,
-    /// A symmetric key value.
-    #[serde(default)]
-    k: Option<IgnoredAny>,
-}
-
-impl JwkShape {
-    /// The first private member the key carries.
-    fn private_member(&self) -> Option<&'static str> {
-        [
-            ("d", self.d.is_some()),
-            ("p", self.p.is_some()),
-            ("q", self.q.is_some()),
-            ("dp", self.dp.is_some()),
-            ("dq", self.dq.is_some()),
-            ("qi", self.qi.is_some()),
-            ("oth", self.oth.is_some()),
-            ("k", self.k.is_some()),
-        ]
-        .into_iter()
-        .find_map(|(name, present)| present.then_some(name))
-    }
-}
-
-/// Refuses a `jwks_file` holding a symmetric key or private key material.
-///
-/// A file that cannot be read is left to the crate, which refuses the start
-/// when it reads the key set.
-fn check_jwks_file(path: &Path) -> Result<(), AuthConfigError> {
-    let Ok(text) = std::fs::read_to_string(path) else {
-        return Ok(());
-    };
-    check_jwks(&text)
-}
-
-/// Refuses a JWK Set holding a symmetric key or private key material, never
-/// quoting the input.
-fn check_jwks(text: &str) -> Result<(), AuthConfigError> {
-    let set: JwkSetShape =
-        serde_json::from_str(text).map_err(|e| AuthConfigError::JwksUnparsable {
-            category: e.classify(),
-            line: e.line(),
-            column: e.column(),
-        })?;
-    for (index, key) in set.keys.into_iter().enumerate() {
-        if key.kty == "oct" {
-            return Err(AuthConfigError::JwksSymmetricKey {
-                index,
-                kid: key.kid,
-            });
-        }
-        if let Some(member) = key.private_member() {
-            return Err(AuthConfigError::JwksPrivateKeyMaterial {
-                index,
-                kid: key.kid,
-                member,
-            });
-        }
-    }
-    Ok(())
-}
-
-/// Holds a Basic user's PHC string to Argon2id at the OWASP floor.
-///
-/// The verifier reads its cost parameters from the stored string, so a
-/// cheaper hash would verify; the crate checks the algorithm, and the floor
-/// is FerroEHR's.
-fn check_password_hash(username: &str, phc: &str) -> Result<(), AuthConfigError> {
-    let hash = PasswordHash::new(phc).map_err(|e| AuthConfigError::PasswordHashUnparsable {
-        username: username.to_owned(),
-        reason: e.to_string(),
-    })?;
-    if !matches!(
-        Algorithm::try_from(hash.algorithm.as_str()),
-        Ok(Algorithm::Argon2id)
-    ) {
-        return Err(AuthConfigError::PasswordHashNotArgon2id {
-            username: username.to_owned(),
-            algorithm: hash.algorithm.as_str().to_owned(),
-        });
-    }
-    let params = Params::try_from(&hash).map_err(|e| AuthConfigError::PasswordHashUnparsable {
-        username: username.to_owned(),
-        reason: e.to_string(),
-    })?;
-    if params.m_cost() < MIN_ARGON2_M_COST
-        || params.t_cost() < MIN_ARGON2_T_COST
-        || params.p_cost() < MIN_ARGON2_P_COST
-    {
-        return Err(AuthConfigError::PasswordHashTooWeak {
-            username: username.to_owned(),
-            m: params.m_cost(),
-            t: params.t_cost(),
-            p: params.p_cost(),
-            min_m: MIN_ARGON2_M_COST,
-            min_t: MIN_ARGON2_T_COST,
-            min_p: MIN_ARGON2_P_COST,
-        });
-    }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -458,6 +190,33 @@ mod tests {
     /// Parses an `[auth]` table body.
     fn parse(body: &str) -> Result<AuthSection, toml::de::Error> {
         toml::from_str(body)
+    }
+
+    /// The OWASP Password Storage Cheat Sheet §Argon2id floor the crate holds
+    /// a Basic hash to: m=19456 KiB, t=2, p=1.
+    const FLOOR: (u32, u32, u32) = (19 * 1024, 2, 1);
+
+    /// `err` with every source in its chain, as an operator reads it.
+    fn chain(err: &AuthConfigError) -> String {
+        let mut text = err.to_string();
+        let mut source = std::error::Error::source(err);
+        while let Some(cause) = source {
+            text.push_str(": ");
+            text.push_str(&cause.to_string());
+            source = cause.source();
+        }
+        text
+    }
+
+    /// A section [`valid`] built whose issuer's `jwks_file` holds `text`.
+    fn with_jwks(name: &str, text: &str) -> AuthSection {
+        let dir = std::env::temp_dir().join(format!("ferroehr-jwks-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join(name);
+        std::fs::write(&path, text).expect("write");
+        let mut cfg = valid();
+        entry(&mut cfg).jwks_file = path.display().to_string();
+        cfg
     }
 
     /// RFC 7662: `mode = "introspection"` is served, and an
@@ -515,35 +274,15 @@ mod tests {
     #[test]
     fn a_symmetric_key_in_the_jwks_file_is_refused_at_boot() {
         let secret_k = "c3VwZXItc2VjcmV0LXN5bW1ldHJpYy1rZXktbWF0ZXJpYWw";
-        let err = check_jwks(&format!(
-            r#"{{"keys":[{{"kty":"oct","kid":"shared","k":"{secret_k}"}}]}}"#
-        ))
-        .expect_err("an oct key must be refused");
-        assert!(matches!(
-            err,
-            AuthConfigError::JwksSymmetricKey { index: 0, .. }
-        ));
-        assert!(
-            !err.to_string().contains(secret_k),
-            "the refusal must not quote the key"
+        let cfg = with_jwks(
+            "oct.json",
+            &format!(r#"{{"keys":[{{"kty":"oct","kid":"shared","k":"{secret_k}"}}]}}"#),
         );
-
-        let dir = std::env::temp_dir().join(format!("ferroehr-jwks-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).expect("temp dir");
-        let path = dir.join("oct.json");
-        std::fs::write(
-            &path,
-            format!(r#"{{"keys":[{{"kty":"oct","kid":"shared","k":"{secret_k}"}}]}}"#),
-        )
-        .expect("write");
-        let mut cfg = valid();
-        entry(&mut cfg).jwks_file = path.display().to_string();
+        let err = validate(&cfg).expect_err("an oct key must be refused");
+        assert!(matches!(err, AuthConfigError::Section { .. }), "{err}");
         assert!(
-            matches!(
-                validate(&cfg),
-                Err(AuthConfigError::JwksSymmetricKey { .. })
-            ),
-            "the [auth] section refuses it too"
+            !chain(&err).contains(secret_k),
+            "the refusal must not quote the key"
         );
     }
 
@@ -551,30 +290,45 @@ mod tests {
     /// a verifier never needs; a public key set passes.
     #[test]
     fn private_key_material_in_the_jwks_file_is_refused_and_public_keys_pass() {
-        let err = check_jwks(
+        let cfg = with_jwks(
+            "private.json",
             r#"{"keys":[{"kty":"RSA","kid":"k1","n":"AQAB","e":"AQAB","d":"cHJpdmF0ZQ"}]}"#,
-        )
-        .expect_err("a private member must be refused");
-        assert!(matches!(
-            err,
-            AuthConfigError::JwksPrivateKeyMaterial { member: "d", .. }
-        ));
+        );
+        let err = validate(&cfg).expect_err("a private member must be refused");
+        assert!(matches!(err, AuthConfigError::Section { .. }), "{err}");
         assert!(
-            !err.to_string().contains("cHJpdmF0ZQ"),
+            !chain(&err).contains("cHJpdmF0ZQ"),
             "the refusal must not quote the private member"
         );
-        assert!(check_jwks(r#"{"keys":[{"kty":"RSA","kid":"k1","n":"AQAB","e":"AQAB"}]}"#).is_ok());
-        assert!(matches!(
-            check_jwks("not json"),
-            Err(AuthConfigError::JwksUnparsable { .. })
-        ));
-        // A parse failure never quotes the value it choked on.
-        let err =
-            check_jwks(r#"{"keys":"c2VjcmV0LWtleS1tYXRlcmlhbA"}"#).expect_err("not a JWK Set");
-        assert!(
-            !err.to_string().contains("c2VjcmV0"),
-            "the refusal must not quote the input"
+        let public = with_jwks(
+            "public.json",
+            r#"{"keys":[{"kty":"RSA","kid":"k1","n":"AQAB","e":"AQAB"}]}"#,
         );
+        assert!(validate(&public).is_ok(), "{:?}", validate(&public));
+    }
+
+    /// RFC 7517 §5: a `jwks_file` that is no JWK Set refuses the start, where
+    /// the crate reads the key set once, and the refusal never quotes the
+    /// value it choked on.
+    #[tokio::test]
+    async fn a_jwks_file_that_is_no_jwk_set_refuses_the_start() {
+        for (name, text) in [
+            ("garbage.json", "not json"),
+            ("shape.json", r#"{"keys":"c2VjcmV0LWtleS1tYXRlcmlhbA"}"#),
+        ] {
+            let resolved = resolve(&with_jwks(name, text)).expect("the section resolves");
+            let settings = resolved.issuers.into_iter().next().expect("one issuer");
+            let err = ferrohealth_smart::resource::ResourceServer::discover(settings)
+                .await
+                .expect_err("not a JWK Set");
+            let mut shown = err.to_string();
+            let mut source = std::error::Error::source(&err);
+            while let Some(cause) = source {
+                shown.push_str(&cause.to_string());
+                source = cause.source();
+            }
+            assert!(!shown.contains("c2VjcmV0"), "{name}: {shown}");
+        }
     }
 
     /// RFC 8725 §3.2 / RFC 9068 §4 step 5: an unsigned token proves nothing, and
@@ -617,7 +371,7 @@ mod tests {
     /// rather than passing as a usable credential.
     #[test]
     fn a_partial_basic_user_is_a_boot_error() {
-        let floor = phc(MIN_ARGON2_M_COST, MIN_ARGON2_T_COST, MIN_ARGON2_P_COST);
+        let floor = phc(FLOOR.0, FLOOR.1, FLOOR.2);
         let mut no_user = basic(&floor);
         if let Some(section) = no_user.basic.as_mut() {
             section.users.iter_mut().for_each(|user| user.user.clear());
@@ -721,11 +475,8 @@ mod tests {
             "https://idp:hunter2@idp.example/r?tenant=a",
         ] {
             let err = validate(&section(issuer)).expect_err("userinfo in an issuer is refused");
-            assert!(
-                matches!(err, AuthConfigError::IssuerHasUserinfo(_)),
-                "{err}"
-            );
-            let shown = err.to_string();
+            assert!(matches!(err, AuthConfigError::Section { .. }), "{err}");
+            let shown = chain(&err);
             assert!(!shown.contains("hunter2"), "{shown}");
             assert!(!shown.contains("idp@"), "{shown}");
         }
@@ -755,11 +506,11 @@ mod tests {
     /// parameters from the stored PHC string, so a cheaper hash would verify.
     #[test]
     fn weak_argon2_params_are_a_boot_error() {
-        for (m, t, p) in [(4_096, 2, 1), (16 * 1024, 2, 1), (MIN_ARGON2_M_COST, 1, 1)] {
+        for (m, t, p) in [(4_096, 2, 1), (16 * 1024, 2, 1), (FLOOR.0, 1, 1)] {
             assert!(
                 matches!(
                     validate(&basic(&phc(m, t, p))),
-                    Err(AuthConfigError::PasswordHashTooWeak { .. })
+                    Err(AuthConfigError::Section { .. })
                 ),
                 "m={m},t={t},p={p} is below the OWASP floor and must be refused"
             );
@@ -767,13 +518,10 @@ mod tests {
         // `p=0` is not even a representable Argon2 parameter set, so it is
         // refused one step earlier, by the PHC parse itself.
         assert!(matches!(
-            validate(&basic(&phc(MIN_ARGON2_M_COST, MIN_ARGON2_T_COST, 0))),
-            Err(AuthConfigError::PasswordHashUnparsable { .. })
+            validate(&basic(&phc(FLOOR.0, FLOOR.1, 0))),
+            Err(AuthConfigError::Section { .. })
         ));
-        for (m, t, p) in [
-            (MIN_ARGON2_M_COST, MIN_ARGON2_T_COST, MIN_ARGON2_P_COST),
-            (65_536, 3, 4),
-        ] {
+        for (m, t, p) in [FLOOR, (65_536, 3, 4)] {
             assert!(
                 validate(&basic(&phc(m, t, p))).is_ok(),
                 "m={m},t={t},p={p} meets the floor"
@@ -787,11 +535,11 @@ mod tests {
             validate(&basic(
                 "$argon2i$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaGhhc2hoYQ"
             )),
-            Err(AuthConfigError::PasswordHashNotArgon2id { .. })
+            Err(AuthConfigError::Section { .. })
         ));
         assert!(matches!(
             validate(&basic("not-a-phc-string")),
-            Err(AuthConfigError::PasswordHashUnparsable { .. })
+            Err(AuthConfigError::Section { .. })
         ));
     }
 
@@ -805,7 +553,7 @@ mod tests {
             require_mechanism(&cfg),
             Err(AuthConfigError::NoMechanism)
         ));
-        let floor = phc(MIN_ARGON2_M_COST, MIN_ARGON2_T_COST, MIN_ARGON2_P_COST);
+        let floor = phc(FLOOR.0, FLOOR.1, FLOOR.2);
         assert!(require_mechanism(&basic(&floor)).is_ok());
         let disabled = AuthSection {
             enabled: false,
@@ -835,7 +583,7 @@ mod tests {
     /// Basic-only surface, and one that admits no credential is refused.
     #[test]
     fn a_basic_only_section_resolves_enabled_and_an_empty_one_is_refused() {
-        let floor = phc(MIN_ARGON2_M_COST, MIN_ARGON2_T_COST, MIN_ARGON2_P_COST);
+        let floor = phc(FLOOR.0, FLOOR.1, FLOOR.2);
         let resolved = resolve(&basic(&floor)).expect("a Basic-only section resolves");
         assert!(resolved.enabled);
         assert_eq!(

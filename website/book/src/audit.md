@@ -856,8 +856,8 @@ ITI-81 searches answered the same records on both repositories
 Auditing defaults to on with the local store only; see the
 [configuration reference](installation/config-audit.md#audit) for every
 `[audit]` key and its `FERROEHR__AUDIT__*` environment form. The syslog sink's
-own keys are `host` / `port` / `tls_ca_file` /
-`tls_identity_cert_file` / `tls_identity_key_file` under `[audit.syslog]`; the
+own keys are `host` and `port` under `[audit.syslog]`, with its TLS material
+under `[audit.syslog.tls]`; the
 switches shared by every sink stay directly under `[audit]`.
 
 > [!NOTE]

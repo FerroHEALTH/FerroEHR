@@ -837,9 +837,6 @@ national = []                # e.g. ["urn:oid:2.16.840.1.113883.2.4.3.11.60.1|be
 enabled = false
 host = "localhost"
 port = 6514
-#? tls_ca_file = "/etc/ferroehr/arr-ca.pem"
-#? tls_identity_cert_file = "/etc/ferroehr/client.pem"
-#? tls_identity_key_file = "/etc/ferroehr/client.key"
 # Every frame is stored in ihe-atna's spool and delivered from it, retried with
 # backoff until the repository takes it. The local store keeps no syslog
 # frame, so the spool is syslog's outbox: set spool_dir (owner-only) for one
@@ -848,6 +845,15 @@ port = 6514
 spool_max_messages = 100000
 spool_max_bytes = 268435456
 retry_max_ms = 60000         # the longest wait between two attempts
+
+# The TLS material of the connection to the repository: the trust roots beside
+# the platform's, and the client certificate chain with its private key in one
+# PEM for mutual TLS. ITI TF-2 §3.20.4.1.2.1.1 recommends TLS 1.2; the client
+# speaks 1.3 unless min_version lowers it.
+#? [audit.syslog.tls]
+#? trust_roots_file = "/etc/ferroehr/arr-ca.pem"
+#? client_identity_file = "/run/secrets/arr-client.pem"
+#? min_version = "1.2"
 
 # RESTful ATNA feed: FHIR R4 AuditEvent POSTs (IHE ITI-20 ATX:FHIR Feed).
 [audit.fhir_feed]
