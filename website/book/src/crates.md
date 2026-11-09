@@ -160,7 +160,7 @@ of the information Annex II lists for FerroEHR is on
 the manufacturer and the reporting channels there apply to the crates too.
 
 - **Reporting a vulnerability in a crate:** to Cadasto B.V., through GitHub
-  private vulnerability reporting or [info@cadasto.com](mailto:info@cadasto.com),
+  private vulnerability reporting or [security@cadasto.com](mailto:security@cadasto.com),
   as
   [`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#reporting-a-vulnerability)
   describes.

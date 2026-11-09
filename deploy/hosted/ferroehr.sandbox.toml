@@ -94,6 +94,29 @@ path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identit
 [authz.party_binding.professional_role]
 template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
 
+# The SCIM endpoint the demo PERSON is provisioned through (RFC 7644 §3.3), as
+# an identity provider provisions people: the ferroehr-provision service of the
+# box's compose file holds the `sandbox-scim` client's client credentials
+# token (RFC 6749 §4.4) from the development issuer, trusted here as a machines
+# issuer for that one client, and creates the User whose binding key
+# `ferroehr` the Basic user above is mapped by. The issuer publishes no port,
+# so only the containers on the box obtain its tokens.
+[[auth.issuer]]
+issuer = "http://localhost:8180/sandbox"
+kind = "machines"
+audience = ["ferroehr-scim"]
+token_types = ["JWT"]
+
+[scim]
+enabled = true
+public_base_url = "https://sandbox.ferroehr.eu"
+
+[[scim.client]]
+issuer = "http://localhost:8180/sandbox"
+client_id = "sandbox-scim"
+scope = "ferroehr/scim"
+binding_issuer = "urn:ferroehr:basic-user"
+
 # Authentication only, no role gate — the one demo user deliberately reaches
 # every enabled surface, the admin group included (#2965).
 [authz.rbac]

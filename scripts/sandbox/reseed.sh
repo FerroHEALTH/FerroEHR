@@ -179,9 +179,35 @@ render() {
   done
 }
 
+# ── 0. the demo PERSON ───────────────────────────────────────────────────────
+
+# The Basic user is a person bound by its key (#5009): every request is
+# refused `refused-unbound` until a PERSON carries it. The box's
+# ferroehr-provision service creates that PERSON through /scim/v2/ as the
+# `sandbox-scim` client after the wipe (deploy/hosted/docker-compose.yml), so
+# the seed waits for the login to bind before it commits anything.
+echo "==> seeding $BASE"
+bound=""
+for attempt in $(seq 1 "$ATTEMPTS"); do
+  code=$(request "binding probe" GET "$BASE/definition/template/adl1.4")
+  if [[ "$code" == 200 ]]; then
+    bound=1
+    break
+  fi
+  if [[ "$code" == 403 ]] && grep -q 'refused-unbound' "$BODY"; then
+    echo "  the demo login binds no PERSON yet (attempt $attempt/$ATTEMPTS); waiting for its SCIM provisioning" >&2
+    sleep "$RETRY_DELAY"
+    continue
+  fi
+  expect "binding probe" "$code" 200
+done
+[[ -n "$bound" ]] || {
+  echo "::error::the demo login never bound a PERSON: read the box's ferroehr-provision log" >&2
+  exit 1
+}
+
 # ── 1. completion marker ─────────────────────────────────────────────────────
 
-echo "==> seeding $BASE"
 MARKER_SUBJECT="$(mf '.marker.subject')"
 MARKER_ID="$(subject_id "$MARKER_SUBJECT")"
 code=$(request "marker lookup" GET \
@@ -598,5 +624,21 @@ render "$SEED_DIR/$(mf '.marker.status')" "$WORK/marker.json" \
 code=$(request "marker create" POST "$BASE/ehr" \
   -H "$CT_JSON" --data-binary @"$WORK/marker.json")
 expect "marker create" "$code" 201 409
+
+# Every version the seed committed names the demo PERSON: the binding
+# attributes each commit of the bound login to it. The marker's EHR_STATUS
+# version is read back to show the committer references a PERSON.
+code=$(request "marker read" GET \
+  "$BASE/ehr?subject_id=$MARKER_ID&subject_namespace=$SUBJECT_NS")
+expect "marker read" "$code" 200
+marker_ehr="$(jq -r '.ehr_id.value' "$BODY")"
+code=$(request "marker status version" GET "$BASE/ehr/$marker_ehr/versioned_ehr_status/version")
+expect "marker status version" "$code" 200
+committer_class="$(jq -r '.commit_audit.committer.external_ref.type // empty' "$BODY")"
+[[ "$committer_class" == PERSON ]] || {
+  echo "::error::the marker's EHR_STATUS version names no PERSON as its committer" >&2
+  jq -c '.commit_audit.committer' "$BODY" >&2
+  exit 1
+}
 
 echo "==> seeded ${#ehrs[@]} EHRs, $compositions compositions (+$extra versions), $directories directories, ${#persons[@]} persons, $queries stored queries"

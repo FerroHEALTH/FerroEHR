@@ -873,9 +873,6 @@ fn every_scim_client_refusal_is_named() {
          binding_issuer = \"urn:example:staff-login\"\n",
     ));
     assert!(shared.contains("shares binding_issuer"), "{shared}");
-    let unknown = refusal(&format!(
-        "{}\n[auth.scim]\nmax_deactivation = 3\n",
-        full()
-    ));
+    let unknown = refusal(&format!("{}\n[auth.scim]\nmax_deactivation = 3\n", full()));
     assert!(unknown.contains("max_deactivation"), "{unknown}");
 }

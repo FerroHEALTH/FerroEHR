@@ -117,6 +117,7 @@ run_family() {
 
 run_family shipped_config && probes_shipped_config_boots
 run_family deployment_posture && probes_deployment_posture
+run_family bootstrap && probes_bootstrap
 run_family multimedia && probes_multimedia
 run_family management && probes_management
 run_family management_separate_listener && probes_management_separate_listener

@@ -95,9 +95,11 @@ async fn a_party_domain_in_its_own_database_is_prepared_and_verified() {
         ..DbConfig::new(db.url())
     };
 
+    let roles = testkit::roles::lock().await.expect("the roles lock");
     ferroehr::db::apply_schema(&with_party(&applying, &storage))
         .await
         .expect("`apply` prepares the party domain in its own database");
+    roles.release().await;
     let relocated = second.pool();
     assert!(exists(&relocated, "party._sqlx_migrations").await);
     assert!(exists(&relocated, "party.version").await);
@@ -171,9 +173,11 @@ async fn a_relocated_domain_without_its_migrator_names_the_remedy() {
         migrations: MigrationMode::Apply,
         ..DbConfig::new(db.url())
     };
+    let roles = testkit::roles::lock().await.expect("the roles lock");
     ferroehr::db::apply_schema(&with_party(&settings, &prepared))
         .await
         .expect("prepare the second database");
+    roles.release().await;
 
     let mut runtime_only = prepared;
     runtime_only.migrate_url = None;
@@ -245,9 +249,11 @@ async fn prepared_relocated_party(
         migrations: MigrationMode::Apply,
         ..DbConfig::new(db.url())
     };
+    let roles = testkit::roles::lock().await.expect("the roles lock");
     ferroehr::db::apply_schema(&with_party(&settings, &storage))
         .await
         .expect("prepare both databases");
+    roles.release().await;
     (settings, storage, second)
 }
 

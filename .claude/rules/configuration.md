@@ -67,10 +67,10 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
    under two names: no alias layer, no remapping table. A renamed or removed
    key keeps a `ferrohealth_config::removed::Removed` field that
    `config::retired::removals` refuses at load naming its replacement, for ONE
-   release only (owner rule 2026-11-09): the refusal records the release that
-   introduced it, ships in that release with the upgrade step in the
-   changelog fragment, and the next release deletes it so
-   `deny_unknown_fields` takes over.
+   release only (owner hard rule 2026-11-09, `.claude/memory/no-compat-shims.md`):
+   the refusal records the release that introduced it, ships in that release
+   with the upgrade step in the changelog fragment, and the next release
+   deletes it so `deny_unknown_fields` takes over.
 3. If the change is user-visible, update
    `website/book/src/installation/configuration.md`, the Helm `values.yaml`
    `config:` block + golden renders (`deploy/helm/validate.sh --update`), and

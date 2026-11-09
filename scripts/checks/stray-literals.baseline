@@ -16,8 +16,8 @@
 1 app/ferroehr-viewer/src/bff/ehrs.rs
 1 app/ferroehr-viewer/src/bff/system.rs
 8 app/ferroehr-viewer/src/builder/lift.rs
-3 app/ferroehr-viewer/src/cdr.rs
-4 app/ferroehr-viewer/src/cdr/diagnostic.rs
+2 app/ferroehr-viewer/src/cdr.rs
+3 app/ferroehr-viewer/src/cdr/diagnostic.rs
 1 app/ferroehr-viewer/src/clinical.rs
 1 app/ferroehr-viewer/src/pages/find.rs
 2 app/ferroehr-viewer/src/pages/parties.rs

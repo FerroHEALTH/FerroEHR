@@ -266,10 +266,8 @@ async fn run_usage_report(
     let config = ferroehr::config::load(config_path, overrides)?;
     config.validate()?;
     let licence = load_licence(&config)?;
-    let identity = usage_product::identity(
-        &BuildInfo::for_profile(config.deployment.spec_profile),
-        &licence,
-    );
+    let build = BuildInfo::for_profile(config.deployment.spec_profile);
+    let identity = usage_product::identity(&build, &licence);
     let pools = db::connect_domains(&config.database)
         .await
         .context("connecting to PostgreSQL")?;
@@ -457,13 +455,10 @@ fn assemble_service(
     // key that cannot be parsed is a boot error: a server that believes it
     // seals national identifiers and does not is the failure this refuses to
     // start into.
+    let protection = config.privacy.identifier_protection.as_ref();
     let identifiers = ferroehr::identifier_protection::engine::IdentifierProtection::from_config(
-        config.privacy.identifier_protection.as_ref(),
-        config
-            .privacy
-            .identifier_protection
-            .as_ref()
-            .and_then(|protection| protection.key.as_ref()),
+        protection,
+        protection.and_then(|protection| protection.key.as_ref()),
         pools.party.clone(),
     )
     .context("building the [privacy.identifier_protection] engine")?;
