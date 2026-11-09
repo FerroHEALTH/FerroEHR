@@ -13,6 +13,13 @@
 # cache only: written into the git-ignored .vendor-cache/nl-role-codes/ and
 # never committed (.claude/rules/vendored-corpora.md).
 #
+# The published tarball is kept as fetched in that cache, since it carries the
+# `uzi-rolcode` CodeSystem, and its members are extracted only into a scratch
+# directory. Its manifest, package.json, is never committed: a FHIR package
+# manifest has the npm shape, and its `hl7.fhir.r4.core` dependency names a
+# malicious npm package (GHSA-qg8x-2hq5-hwf3, #5337). The script reads the
+# manifest's `license` instead, and refuses the run unless it is CC0-1.0.
+#
 # Usage:
 #   scripts/vendor/nl-role-codes.sh               the tree and the cache
 #   scripts/vendor/nl-role-codes.sh --test-inputs only the cached CodeSystem
@@ -38,9 +45,14 @@ CPS_BASE="https://www.uziregister.nl/site/binaries/site-content/collections/docu
 DEST="$ROOT/docs/specs/nl-role-codes"
 RETRIEVED="2026-11-08"
 
+# The package tarball as published, kept in the cache.
+TARBALL="${PACKAGE}-${VERSION}.tgz"
+# The manifest, read for its licence and never copied.
+MANIFEST_SHA256="b57d7f94a7400c07365959e5b245483acd5c4f2e8bd444e30de9e17e8a18e116"
+LICENSE="CC0-1.0"
+
 # `path sha256` per file taken from the package, by its path under package/.
 PINS=(
-  "package.json b57d7f94a7400c07365959e5b245483acd5c4f2e8bd444e30de9e17e8a18e116"
   "CodeSystem-RoleCodeNLZorgaanbiederType-organization-type.json f6b21a531b28dc7feccfb5b1381ab877c831dc4f9bd42dec5154c140b7c0fa1e"
   "ValueSet-OrganisatieTypeCodelijst-2.16.840.1.113883.2.4.3.11.60.40.2.17.2.3--20200901000000.json 838a64beb99897854ffab8882b9fe9d9d204f80ea36320bf907e4e55030b0786"
 )
@@ -57,25 +69,27 @@ CACHED=(
 )
 CACHE="$ROOT/.vendor-cache/nl-role-codes"
 
-pinned_require curl shasum tar
+pinned_require curl shasum tar jq
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/tree"
 
-pinned_fetch "$PACKAGE_URL" "$work/package.tgz" "$PACKAGE_SHA256"
-members=()
+pinned_cache "$PACKAGE_URL" nl-role-codes "$TARBALL" "$PACKAGE_SHA256"
+members=(package/package.json)
 for pin in "${PINS[@]}" "${CACHED_PINS[@]}"; do
   members+=("package/${pin% *}")
 done
-tar -xzf "$work/package.tgz" -C "$work" "${members[@]}"
+tar -xzf "$CACHE/$TARBALL" -C "$work" "${members[@]}"
 # Refuses the run unless package/$1 hashes to $2.
 check_member() {
   local got
   got="$(pinned_sha256 "$work/package/$1")"
   [[ "$got" == "$2" ]] || die "package/$1 hashes to $got, the pin records $2"
 }
-mkdir -p "$CACHE"
+check_member package.json "$MANIFEST_SHA256"
+got_license="$(jq -r '.license' "$work/package/package.json")"
+[[ "$got_license" == "$LICENSE" ]] || die "package/package.json names the licence $got_license, the script records $LICENSE"
 for pin in "${CACHED_PINS[@]}"; do
   path="${pin% *}"
   check_member "$path" "${pin##* }"
@@ -109,10 +123,17 @@ these lists (\`app/ferroehr-rest/src/extensions/access/authn/wabvpz.rs\`).
   the newest on ${RETRIEVED}
 - Pin: version \`${VERSION}\`, tarball sha256 \`${PACKAGE_SHA256}\`, each file
   below pinned by its own sha256
-- Upstream licence: CC0 1.0 (\`CC0-1.0\`, the \`license\` of the package
-  manifest, \`package.json\`, vendored here;
+- Upstream licence: CC0 1.0 (\`${LICENSE}\`, the \`license\` of the package
+  manifest \`package/package.json\`, sha256 \`${MANIFEST_SHA256}\`, which
+  the script checks on every run;
   <https://creativecommons.org/publicdomain/zero/1.0/>). The package ships no
   licence file of its own.
+- The tarball (\`${TARBALL}\`) is kept as published in the git-ignored
+  \`.vendor-cache/nl-role-codes/\`, because it carries the cache-only
+  CodeSystem below, and the script extracts its members into a scratch
+  directory only. The manifest is not committed: a FHIR package manifest has
+  the npm \`package.json\` shape, and its dependency \`hl7.fhir.r4.core\`
+  names a malicious npm package (GHSA-qg8x-2hq5-hwf3).
 - What is taken: the \`organization-type\` CodeSystem
   (\`http://nictiz.nl/fhir/NamingSystem/organization-type\`, OID
   2.16.840.1.113883.2.4.15.1060) and the \`OrganisatieTypeCodelijst\` ValueSet
@@ -151,8 +172,8 @@ $(pinned_rows "${PINS[@]}")
 
 | File | sha256 | Status |
 |---|---|---|
-$(pinned_status_rows "cache only" "${CACHED_PINS[@]}" "${CACHED[@]}")
+$(pinned_status_rows "cache only" "$TARBALL $PACKAGE_SHA256" "${CACHED_PINS[@]}" "${CACHED[@]}")
 EOF
 
 pinned_install "$work/tree" "$DEST"
-say "${#PINS[@]} files vendored in docs/specs/nl-role-codes/, and $((${#CACHED_PINS[@]} + ${#CACHED[@]})) cache only in .vendor-cache/nl-role-codes/"
+say "${#PINS[@]} files vendored in docs/specs/nl-role-codes/, and $((${#CACHED_PINS[@]} + ${#CACHED[@]} + 1)) cache only in .vendor-cache/nl-role-codes/"

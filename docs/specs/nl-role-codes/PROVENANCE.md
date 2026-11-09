@@ -11,9 +11,16 @@ these lists (`app/ferroehr-rest/src/extensions/access/authn/wabvpz.rs`).
 - Pin: version `0.12.1-beta.1`, tarball sha256 `c4fc5561cd592c8dc7760a5674c2c7998334f6197821096155ce357d2e7a0a8a`, each file
   below pinned by its own sha256
 - Upstream licence: CC0 1.0 (`CC0-1.0`, the `license` of the package
-  manifest, `package.json`, vendored here;
+  manifest `package/package.json`, sha256 `b57d7f94a7400c07365959e5b245483acd5c4f2e8bd444e30de9e17e8a18e116`, which
+  the script checks on every run;
   <https://creativecommons.org/publicdomain/zero/1.0/>). The package ships no
   licence file of its own.
+- The tarball (`nictiz.fhir.nl.r4.zib2020-0.12.1-beta.1.tgz`) is kept as published in the git-ignored
+  `.vendor-cache/nl-role-codes/`, because it carries the cache-only
+  CodeSystem below, and the script extracts its members into a scratch
+  directory only. The manifest is not committed: a FHIR package manifest has
+  the npm `package.json` shape, and its dependency `hl7.fhir.r4.core`
+  names a malicious npm package (GHSA-qg8x-2hq5-hwf3).
 - What is taken: the `organization-type` CodeSystem
   (`http://nictiz.nl/fhir/NamingSystem/organization-type`, OID
   2.16.840.1.113883.2.4.15.1060) and the `OrganisatieTypeCodelijst` ValueSet
@@ -48,11 +55,11 @@ these lists (`app/ferroehr-rest/src/extensions/access/authn/wabvpz.rs`).
 
 | File | sha256 |
 |---|---|
-| `package.json` | `b57d7f94a7400c07365959e5b245483acd5c4f2e8bd444e30de9e17e8a18e116` |
 | `CodeSystem-RoleCodeNLZorgaanbiederType-organization-type.json` | `f6b21a531b28dc7feccfb5b1381ab877c831dc4f9bd42dec5154c140b7c0fa1e` |
 | `ValueSet-OrganisatieTypeCodelijst-2.16.840.1.113883.2.4.3.11.60.40.2.17.2.3--20200901000000.json` | `838a64beb99897854ffab8882b9fe9d9d204f80ea36320bf907e4e55030b0786` |
 
 | File | sha256 | Status |
 |---|---|---|
+| `nictiz.fhir.nl.r4.zib2020-0.12.1-beta.1.tgz` | `c4fc5561cd592c8dc7760a5674c2c7998334f6197821096155ce357d2e7a0a8a` | cache only |
 | `CodeSystem-RoleCodeNLZorgverlenertypen-uzi-rolcode.json` | `676b3edb095f375a35f12a65f828cd74903f71fe4dfb4e7a1aebe9b58901805e` | cache only |
 | `29-01-24+RK1+CPS+UZI-register+V11.7.pdf` | `dc9889a3d592a14409850d53bda9ddf1c61398e6873d40d78cfa0de47086d4a1` | cache only |

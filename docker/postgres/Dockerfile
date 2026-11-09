@@ -11,14 +11,14 @@
 # superuser. Schema CONTENT is owned by the app's sqlx migrators at boot; this
 # image bakes NO migration state (see README.md).
 #
-# Digest-pinned (resolved 2026-11-02, the upstream same-version respin the
-# base-image watcher reported on #4836): a mutable tag can be re-pointed, a
+# Digest-pinned (resolved 2026-11-09, the upstream same-version respin the
+# base-image watcher reported on #5332): a mutable tag can be re-pointed, a
 # digest cannot (docs.docker.com/build/building/best-practices — "pinning to
 # a digest guarantees the same image version"). 18.6 is the latest PG 18
 # patch (docs/VERSIONS.md; 18.5 was never released upstream); bump the tag
 # AND the digest together — the full pin-site checklist is
 # .claude/rules/image-security.md.
-FROM postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
+FROM postgres:18.6@sha256:e3d24f6906d0760bf4da0dae872415391ededefad23fd471c47dc53b0ddf3c42
 
 # Debian security updates, applied at OUR build time (issue #2408). The
 # upstream image rebuilds on its own cadence, so a fix already published in
