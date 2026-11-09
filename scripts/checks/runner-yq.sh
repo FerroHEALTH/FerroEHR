@@ -34,7 +34,7 @@ if [[ -z "$have" ]]; then
   exit 1
 fi
 
-oldest="$(printf '%s\n%s\n' "$min" "$have" | sort -V | head -n1)"
+oldest="$(printf '%s\n%s\n' "$min" "$have" | sort -V | sed -n 1p)"
 if [[ "$oldest" != "$min" ]]; then
   echo "::error::the runner's yq is ${have}; this job needs ${min} or newer"
   exit 1
