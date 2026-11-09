@@ -45,6 +45,9 @@ scaleseed="${SCALESEED_BIN:-$ROOT_DIR/target/release/scaleseed}"
 }
 
 export COMPOSE_PROJECT_NAME="$PROJECT"
+# The quickstart compose file this run starts carries the server too; any
+# FerroEHR it starts sends no usage report from a throwaway runner.
+export FERROEHR__USAGE_REPORT__ENABLED=false
 export FERROEHR_POSTGRES_IMAGE="$pg_image"
 export FERROEHR_DB_PORT="$db_port"
 readonly DATABASE_URL="postgres://postgres:postgres@127.0.0.1:${db_port}/ferroehr"
