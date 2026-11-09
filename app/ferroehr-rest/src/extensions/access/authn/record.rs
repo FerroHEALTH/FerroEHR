@@ -36,18 +36,18 @@ where
     resp
 }
 
-/// The binding record of the refusal `code`, naming `party`, the key `claim`
-/// a token lacked and, for a representative, the subject `principal`
+/// The binding record of the refusal `code`, naming `party`, the key claim
+/// a token lacked when `named` is one and, for a representative, the subject `principal`
 /// asserted; `None` for a code no binding value spells.
 pub(super) fn refused(
     code: &str,
     party: Option<&PartyTriple>,
-    claim: Option<&str>,
+    named: Option<&super::party::Named>,
     principal: Option<&super::Principal>,
 ) -> Option<BindingRecord> {
     let code = ferroehr::system_log::binding::BindingCode::parse(code)?;
     let mut detail = BTreeMap::new();
-    if let Some(claim) = claim {
+    if let Some(claim) = named.and_then(super::party::Named::claim) {
         detail.insert("claim".to_owned(), vec![claim.to_owned()]);
     }
     let kind = principal
