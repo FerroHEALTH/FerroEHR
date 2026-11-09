@@ -9,6 +9,7 @@
 - [Max 5 concurrent workers](max-five-concurrent-workers.md): family cap since 2026-10-19, at most 5 implementation subagents at once; the owner may raise it on request
 - [One worker per phase, hard fences](one-worker-per-phase-hard-fences.md) — one worker per refactor phase with file fences; reverts orchestrator-only
 - [Concurrent sessions share this tree](concurrent-sessions-shared-tree.md) — explicit-pathspec commits, scoped gates, one `./target`, `cargo clean` above ~30 GB
+- [CI under 20 minutes](ci-under-20-minutes.md): owner 2026-11-09, every pull-request and merge-group run under 20 minutes, queue included; perf and the browser lanes skip the merge queue and run on the pull request and on every push to main
 - [Session workflow gotchas](session-workflow-gotchas.md) — CI/PR/background-task/release-leg traps; read before pushing or running long jobs
 - [En-route findings always filed](en-route-findings-always-filed.md) — file out-of-scope findings and fix tractable ones in the same branch
 - [Foundation-first sequencing](foundation-first-sequencing.md) — a systemic defect class gets a full-repo sweep before the next audit unit
