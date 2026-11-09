@@ -2457,7 +2457,6 @@ dependencies = [
 name = "ferroehr-viewer"
 version = "5.6.3"
 dependencies = [
- "anyhow",
  "axum",
  "base64 0.23.1",
  "clap",

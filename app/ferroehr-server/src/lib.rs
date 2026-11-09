@@ -9,7 +9,7 @@
 //! `PostgreSQL` pool, runs migrations, boots the ATNA audit sender, and serves.
 //! On shutdown the audit queue is drained before exit.
 //!
-//! `main.rs` is a thin shell over [`run`] so the whole boot path is reachable
+//! `main.rs` is a thin shell over [`process::main`] so the whole boot path is reachable
 //! from tests — "you can't test the `main` function directly"
 //! (<https://doc.rust-lang.org/book/ch12-03-improving-error-handling-and-modularity.html>).
 //! `anyhow` is fine here: this lib target IS the binary's own logic half,
@@ -67,6 +67,7 @@ use ferrohealth_telemetry::request_log::RequestLog;
 pub mod db_cmd;
 pub mod definitions;
 pub mod party_binding;
+pub mod process;
 
 /// How long to wait for the audit queue to flush on shutdown.
 const AUDIT_DRAIN_TIMEOUT: Duration = Duration::from_secs(5);
@@ -163,13 +164,12 @@ pub enum ReportEvent {
 /// itself instead of being killed.
 pub const HEALTHCHECK_TIMEOUT: Duration = Duration::from_secs(3);
 
-/// Dispatch a parsed [`Cli`] — the whole binary behind one testable seam.
+/// Dispatches a parsed [`Cli`] to its subcommand.
 ///
 /// # Errors
 ///
-/// Returns any boot, configuration, probe, or serve failure of the selected
-/// subcommand; the process exit code follows from `main` returning it.
-pub async fn run(cli: Cli) -> anyhow::Result<()> {
+/// Returns any boot, configuration, probe, or serve failure of the subcommand.
+pub(crate) async fn dispatch(cli: Cli) -> anyhow::Result<()> {
     let config = cli.config.config.as_deref();
     let set = cli.config.sets.as_slice();
     match cli.command {
