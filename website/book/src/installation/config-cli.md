@@ -103,7 +103,6 @@ two parties carry one selector value, naming both.
 ferroehr party-binding check [--admin <PARTY_ID>]... [--admin-key <ISSUER> <KEY>]...
                              [--migration <COMMITTER_NAME>]...
                              [--expected <FILE> [--expected-issuer <ISSUER>]]
-                             [--horizon-days <DAYS>]
 ```
 
 The pre-flight of a migration to party binding. It reads the party versions
@@ -118,9 +117,13 @@ The report is a JSON document on stdout:
 - `issuers`: per `identifier_issuer`, the `PERSON`s that carry a binding key;
 - `duplicates`: every binding key, `userName` or `externalId` two `PERSON`s
   carry, which a fill refuses;
-- `inactive`, `abandoned` and `provisional`: the key-bearing `PERSON`s whose
-  head is `800|inactive|`, `801|abandoned|`, or `553|incomplete|` with a first
-  version older than `--horizon-days` (30 by default);
+- `inactive` and `abandoned`: the key-bearing `PERSON`s whose head is
+  `800|inactive|` or `801|abandoned|`;
+- `side_table.provisional`: the provisional `PERSON`s that
+  [just-in-time creation](config-auth.md#just-in-time-creation) created more
+  than `[authz.party_binding] provisional_report_days` days ago (default 30)
+  and that SCIM or an administrator has not completed, by container id and
+  creation time, oldest first, with no name or other personal data;
 - `side_table.unadopted`: the key-bearing `PERSON`s that perform no
   professional `ROLE`, which `adopt` has not reached;
 - `side_table.basic_users`: every `[[authz.party_binding.basic_user]]` with
@@ -132,7 +135,10 @@ The report is a JSON document on stdout:
 
 A key passes the provenance rule when the version that introduced it was
 committed by a `[[scim.client]]` (its client identifier under its token
-issuer), by an administrator, or by a declared migration. A stored version
+issuer), by an administrator, by a declared migration, or by just-in-time
+creation at a first login of an `[[authz.party_binding.issuer]]` with
+`jit = true` (a `249|creation|` version carrying its description, committed
+by the new `PERSON` itself). A stored version
 records no role its committer held, so you name the administrators: by the
 id of their `PERSON` with `--admin`, or by the `identifier_issuer` and value
 of a key their `PERSON` carries with `--admin-key`. `--migration` declares a

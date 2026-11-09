@@ -47,7 +47,7 @@ const INTRINSIC: [&str; 6] = ["id", "schemas", "meta", "active", "userName", "ex
 /// The claims and attributes a binding key is never fed by: a mutable or
 /// reassignable value (OpenID Connect Core 1.0 §5.7; Entra `upn` and
 /// `unique_name`).
-const NEVER_A_KEY: [&str; 7] = [
+pub(crate) const NEVER_A_KEY: [&str; 7] = [
     "email",
     "phone_number",
     "preferred_username",

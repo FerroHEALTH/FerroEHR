@@ -143,6 +143,33 @@ impl FerroEhrService {
         role_template: &str,
         user: NewUser,
     ) -> Result<ProvisionedUser, ServiceError> {
+        let (person, parties) = self.person_with_role(role_template, user, None).await?;
+        Box::pin(crate::party_binding::protect::provisioning(
+            binding_issuer.to_owned(),
+            self.create_parties(parties, "SCIM provisioning: create User", None),
+        ))
+        .await?;
+        self.provisioned_user(binding_issuer, person)
+            .await?
+            .ok_or_else(|| {
+                ServiceError::exception(format!(
+                    "the User {person} the SCIM client created is not found among its Users"
+                ))
+            })
+    }
+
+    /// The `PERSON` of `user` and a new professional `ROLE` of
+    /// `role_template` it performs, each naming the other, ready for one
+    /// CONTRIBUTION: the `PERSON`'s container and the two parties.
+    ///
+    /// The `PERSON` commits in `person_state`, or as [`Self::first_state`]
+    /// judges it when `None`; the `ROLE` always as that judges it.
+    pub(super) async fn person_with_role(
+        &self,
+        role_template: &str,
+        user: NewUser,
+        person_state: Option<&str>,
+    ) -> Result<(VoId, Vec<NewParty>), ServiceError> {
         let (person_id, role_id) = (self.allocate_party_id(), self.allocate_party_id());
         let person = person_id.id();
         let mut body = self
@@ -157,11 +184,15 @@ impl FerroEhrService {
         let role = self
             .professional_role_body(role_template, person, &user.namespace)
             .await?;
+        let person_state = match person_state {
+            Some(state) => state.to_owned(),
+            None => self.first_state(&body, &user.template_id).await?,
+        };
         let parties = vec![
             NewParty {
                 id: person_id,
                 kind: PartyKind::Person,
-                lifecycle_state: Some(self.first_state(&body, &user.template_id).await?),
+                lifecycle_state: Some(person_state),
                 body,
             },
             NewParty {
@@ -171,18 +202,7 @@ impl FerroEhrService {
                 body: role,
             },
         ];
-        crate::party_binding::protect::provisioning(
-            binding_issuer.to_owned(),
-            self.create_parties(parties, "SCIM provisioning: create User"),
-        )
-        .await?;
-        self.provisioned_user(binding_issuer, person)
-            .await?
-            .ok_or_else(|| {
-                ServiceError::exception(format!(
-                    "the User {person} the SCIM client created is not found among its Users"
-                ))
-            })
+        Ok((person, parties))
     }
 
     /// The lifecycle state the first version of `body` commits in:

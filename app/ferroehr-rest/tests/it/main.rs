@@ -58,6 +58,7 @@ mod authz_cedar_engine;
 mod authz_remote_pdp;
 mod authz_route_matrix;
 mod base_path_http;
+mod basic_binding_http;
 mod binding_commits_http;
 mod binding_issuers_http;
 mod caller_kinds_http;

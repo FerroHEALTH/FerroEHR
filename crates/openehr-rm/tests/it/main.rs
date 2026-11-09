@@ -19,6 +19,7 @@
 mod canonical_form_rfc8785;
 mod enforcement_reach;
 mod nonempty_rules;
+mod release;
 mod rm_model;
 mod type_dispatch;
 mod version_canonical_form;

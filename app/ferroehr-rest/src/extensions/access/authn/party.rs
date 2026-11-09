@@ -22,9 +22,11 @@ use std::time::Duration;
 
 use ferroehr::config::binding::Providers;
 use ferroehr::config::clients::SystemClient;
+use ferroehr::error::ServiceError;
 use ferroehr::party_binding::source::BindingSource;
 use ferroehr::versioning::committer::bound::BoundDetails;
 
+use ferrohealth_smart::assurance::AssuranceSection;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::adapter::AdapterError;
 use ferrohealth_smart::party::binding::PartyBinding;
@@ -32,6 +34,8 @@ use ferrohealth_smart::party::{GroupsCause, Outcome, PartyRef, Represented};
 use ferrohealth_smart::resource::{Access, Caller};
 
 use super::{AuthError, RepresentedEhr};
+
+mod jit;
 
 /// The party binding of the deployment, with what the committer of a bound
 /// caller carries beside it: the provider, the namespace and the source of
@@ -53,6 +57,10 @@ pub(crate) struct Binding {
     /// Each issuer's `identifier_issuer`s, which a `refused-unbound` problem
     /// names so the operator can provision the person.
     identifier_issuers: BTreeMap<String, Vec<String>>,
+    /// The just-in-time creation of each issuer that sets `jit = true`.
+    jit: BTreeMap<String, jit::Jit>,
+    /// `[authz.assurance]`, which an `admit_assurance` condition reads.
+    assurance: AssuranceSection,
 }
 
 /// What a login-binding refusal's problem text names beside its code.
@@ -140,6 +148,8 @@ pub(super) fn binding(
         tenant_claims,
         key_claims,
         identifier_issuers,
+        jit: jit::tables(&config.party_binding, resolved),
+        assurance: config.assurance.clone(),
     })))
 }
 
@@ -171,37 +181,121 @@ impl Binding {
                 );
                 AuthError::PartyUnavailable { retry_after: None }
             })?;
-        let provider = match &self.provider {
-            None => None,
-            Some(Providers::One(one)) => Some((one.issuer.clone(), one.id.clone())),
-            Some(Providers::ByTenant(tables)) => {
+        Ok(Some(BoundDetails {
+            name,
+            provider: self.provider_of(caller),
+            namespace: self.namespace.clone(),
+        }))
+    }
+
+    /// The healthcare provider `caller` acts for, as `(issuer, id)`: the one
+    /// provider, or the table of the tenant its token names.
+    fn provider_of(&self, caller: &Caller) -> Option<(String, String)> {
+        match self.provider.as_ref()? {
+            Providers::One(one) => Some((one.issuer.clone(), one.id.clone())),
+            Providers::ByTenant(tables) => {
                 let tenant = caller
                     .issuer()
                     .and_then(|issuer| self.tenant_claims.get(issuer))
-                    .and_then(|claim| principal.claims.get(claim))
+                    .and_then(|claim| caller.claim(claim))
                     .and_then(serde_json::Value::as_str);
                 tables
                     .iter()
                     .find(|table| Some(table.tenant.as_str()) == tenant)
                     .map(|table| (table.issuer.clone(), table.id.clone()))
             }
+        }
+    }
+
+    /// The outcome of the unbound `caller`, holding `roles`, after
+    /// just-in-time creation, read again from the source once a provisional
+    /// `PERSON` is committed; `None` when the issuer creates no party for
+    /// the caller.
+    ///
+    /// A commit that loses the key race to a concurrent first request, or
+    /// whose `userName` another party holds, is a conflict: the source is
+    /// read again, and binds the winner's `PERSON` or still nothing.
+    ///
+    /// # Errors
+    /// [`AuthError::PartyUnavailable`] when the commit or the source fails
+    /// for the server's own reason.
+    async fn just_in_time(
+        &self,
+        caller: &Caller,
+        roles: &[String],
+    ) -> Result<Option<Outcome>, AuthError> {
+        let issuer = caller.issuer().unwrap_or("-");
+        let Some(jit) = self.jit.get(issuer).filter(|jit| jit.creates(caller)) else {
+            return Ok(None);
         };
-        Ok(Some(BoundDetails {
-            name,
-            provider,
-            namespace: self.namespace.clone(),
-        }))
+        let person = match jit.person(
+            caller,
+            roles,
+            &self.assurance,
+            (&self.namespace, self.provider_of(caller)),
+        ) {
+            Ok(person) => person,
+            Err(reason) => {
+                tracing::info!(
+                    issuer,
+                    reason = reason.as_str(),
+                    "just-in-time creation does not admit the login"
+                );
+                return Ok(None);
+            }
+        };
+        match self.source.create_provisional(person).await {
+            Ok(_) | Err(ServiceError::Conflict(_)) => {}
+            Err(
+                error @ (ServiceError::BadRequest(_)
+                | ServiceError::Unprocessable { .. }
+                | ServiceError::ValidationFailed(_)
+                | ServiceError::Forbidden(_)
+                | ServiceError::NotFound(_)),
+            ) => {
+                tracing::warn!(
+                    issuer,
+                    error = %ferroehr::error::ErrorChain::new(&error),
+                    "just-in-time creation refused the login's PERSON"
+                );
+                return Ok(None);
+            }
+            Err(error) => {
+                tracing::warn!(
+                    issuer,
+                    error = %ferroehr::error::ErrorChain::new(&error),
+                    "just-in-time creation could not commit the login's PERSON"
+                );
+                return Err(AuthError::PartyUnavailable { retry_after: None });
+            }
+        }
+        self.shared.resolve(caller).await.map_err(|error| {
+            tracing::warn!(
+                error = %ferroehr::error::ErrorChain::new(&error),
+                "the party source could not answer"
+            );
+            AuthError::PartyUnavailable { retry_after: None }
+        })
     }
 }
 
-/// Looks the caller of `access` up in `binding`, returning the access whose
-/// caller carries the outcome ([`Caller::party`]).
+/// Looks the caller of `access` up in `binding`, with the roles
+/// `role_issuers` honours for it,
+/// returning the access whose caller carries the outcome
+/// ([`Caller::party`]).
+///
+/// A caller no party carries gets a provisional `PERSON` where its issuer
+/// creates one at a first login, and is bound to it.
 ///
 /// # Errors
 /// [`AuthError::PartyRefused`] for an outcome the request is refused for,
 /// and [`AuthError::PartyUnavailable`] when the source or the identity
 /// provider could not answer.
-pub(super) async fn bind(binding: &Binding, access: Access) -> Result<Access, AuthError> {
+pub(super) async fn bind(
+    binding: &Binding,
+    access: Access,
+    role_issuers: &super::build::RoleIssuers,
+) -> Result<Access, AuthError> {
     let Some(caller) = access.caller() else {
         return Ok(access);
     };
@@ -228,6 +322,13 @@ pub(super) async fn bind(binding: &Binding, access: Access) -> Result<Access, Au
             );
             return Err(AuthError::PartyUnavailable { retry_after: None });
         }
+    };
+    let outcome = match outcome {
+        Outcome::Unbound => binding
+            .just_in_time(caller, &role_issuers.roles(caller))
+            .await?
+            .unwrap_or(Outcome::Unbound),
+        outcome => outcome,
     };
     if let Some(mut refusal) = refusal(&outcome) {
         let issuer = caller.issuer().unwrap_or("-");

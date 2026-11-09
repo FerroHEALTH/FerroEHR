@@ -65,6 +65,7 @@ pub mod adopt;
 pub mod group_provision;
 pub mod group_write;
 pub mod identifier;
+pub mod jit;
 pub mod mapped_write;
 pub mod mapping;
 pub mod party_set;
