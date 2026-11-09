@@ -1962,8 +1962,8 @@ mod tests {
     #[test]
     fn the_old_token_url_key_is_refused_in_every_grant() {
         for table in [
-            "terminology.oauth",
-            "audit.fhir_feed.oauth",
+            "terminology.endpoint.credentials.oauth",
+            "audit.fhir_feed.endpoint.credentials.oauth",
             "authz.abac.remote.oauth",
         ] {
             let file = toml_file(&format!(

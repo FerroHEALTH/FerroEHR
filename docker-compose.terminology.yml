@@ -150,7 +150,7 @@ services:
       # The /terminology/* extension API the header describes; without it every
       # route answers 404 "terminology API is disabled".
       FERROEHR__API__TERMINOLOGY: "true"
-      FERROEHR__TERMINOLOGY__URL: http://ferroterm:8080/r4b
+      FERROEHR__TERMINOLOGY__ENDPOINT__URL: http://ferroterm:8080/r4b
       FERROEHR__TERMINOLOGY__ON_ERROR: ${FERROEHR__TERMINOLOGY__ON_ERROR:-accept}
     depends_on:
       # The CDR starts once FerroTERM reports healthy, so the first binding a
