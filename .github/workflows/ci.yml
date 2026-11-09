@@ -382,21 +382,106 @@ jobs:
           cache: false
       - run: cargo fmt --all --check
 
-  # ── Always required: no AI/Claude attribution in commit messages ────────────
-  no-attribution:
-    name: no attribution in commits
+  # The workflow linters and the guards a queue-verified push skips, in one
+  # job: each check is a step that runs whatever the step before it
+  # concluded, so one run reports every finding, and the job takes one
+  # runner where it took twelve (#5286). No specification governs this: our
+  # own design.
+  lint:
+    name: lint
     needs: changes
     if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # no-attribution reads the commits of the change.
           fetch-depth: 0
-      - name: Scan commit messages for attribution
+
+      # ---- zizmor ------------------------------------------------------
+      # ── Always required: the workflows audit themselves ─────────────────────────
+      # zizmor (docs.zizmor.sh) is static analysis for GitHub Actions, named by the
+      # OWASP GitHub Actions Security Cheat Sheet as the defence-in-depth tool for
+      # this layer. It is the machine check behind three hard properties here: every
+      # `uses:` hash-pinned (unpinned-uses, blanket policy by default), no checkout
+      # persisting credentials without a recorded exception (artipacked), and no
+      # context value spliced into a shell (template-injection).
+      #
+      # Ungated on the `changes` filter's paths on purpose: that filter excludes
+      # `.github/`, so a workflow-only pull request would otherwise skip the one
+      # check that reads workflows. It needs `changes` for the verified push alone.
+      - name: zizmor
+        if: ${{ !cancelled() }}
+        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        with:
+          tool: zizmor@1.31.1
+      - name: zizmor / Audit .github/workflows + .github/actions
+        if: ${{ !cancelled() }}
+        # GH_TOKEN enables the ONLINE audits, which is the point of running this
+        # beside SHA pinning: impostor-commit verifies that a pinned commit
+        # really belongs to the repository named in front of it, and it cannot
+        # do that offline. --min-severity=low gates on every actionable tier
+        # (artipacked is Low) and leaves the informational tier advisory; zizmor
+        # exits non-zero when anything at or above the floor is found.
+        #
+        # The composite actions are audited too (#2775): they carry `uses:` of
+        # their own, so a pin only they declare would otherwise be the one
+        # `uses:` in the estate nothing checks.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: zizmor --min-severity=low .github/workflows/ .github/actions/
+
+      # ---- actionlint --------------------------------------------------
+      # actionlint (github.com/rhysd/actionlint) is the CORRECTNESS half of the pair
+      # above: zizmor audits security posture, actionlint checks that the workflow
+      # is well-formed at all — `${{ }}` expressions that cannot evaluate, `needs:`
+      # naming a job that does not exist, unknown runner labels, and shellcheck over
+      # every embedded `run:` block. A committed `.github/actionlint.yaml` (the
+      # runner-label roster) existed here long before this job did, so the tool was
+      # being run by hand and never gated.
+      #
+      # Ungated on the `changes` filter for the same reason zizmor is: that filter
+      # excludes `.github/`.
+      - name: actionlint / Lint .github/workflows
+        if: ${{ !cancelled() }}
+        # The OFFICIAL image, digest-pinned. actionlint is a Go binary, so
+        # `taiki-e/install-action` does not carry it and its cargo-binstall
+        # fallback cannot ("actionlint is not found" — it is not a crate). The
+        # upstream alternative is `curl | bash` off `main`, which is exactly the
+        # unpinned fetch this repository's pinning rule exists to forbid. The
+        # image is also the only distribution that BUNDLES shellcheck, which
+        # half of actionlint's value depends on: "The image contains actionlint
+        # executable and all dependencies (shellcheck and pyflakes)"
+        # (https://github.com/rhysd/actionlint/blob/main/docs/usage.md).
+        #
+        # SC2016 ("expressions don't expand in single quotes") is excluded, and
+        # only it: every occurrence in this repo is a `printf` format string or a
+        # `jq` filter, where single quotes are the CORRECT idiom precisely
+        # because the shell must not expand `%s` or `$`. Nothing else is
+        # suppressed — the run is clean at actionlint's own default severity.
+        run: |
+          docker run --rm \
+            -v "$PWD:/repo" --workdir /repo \
+            -e SHELLCHECK_OPTS='-e SC2016' \
+            rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
+            -color
+
+      # actionlint validates each job in isolation and cannot know that this
+      # repository routes branch protection through a single `conclusion` check,
+      # which makes a job missing from its `needs` list run without gating
+      # anything.
+      - name: actionlint / Every CI job gates the merge
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/ci-conclusion-complete.sh
+
+      # ---- no attribution in commits -----------------------------------
+      # ── Always required: no AI/Claude attribution in commit messages ────────────
+      - name: no attribution in commits / Scan commit messages for attribution
+        if: ${{ !cancelled() }}
         shell: bash
         # Context reaches the shell through env, never `${{ }}`-inline: the
         # expression is substituted into the script BEFORE bash parses it, so an
@@ -443,422 +528,433 @@ jobs:
           fi
           echo "OK: no attribution found."
 
-  # ── Always required: the workflows audit themselves ─────────────────────────
-  # zizmor (docs.zizmor.sh) is static analysis for GitHub Actions, named by the
-  # OWASP GitHub Actions Security Cheat Sheet as the defence-in-depth tool for
-  # this layer. It is the machine check behind three hard properties here: every
-  # `uses:` hash-pinned (unpinned-uses, blanket policy by default), no checkout
-  # persisting credentials without a recorded exception (artipacked), and no
-  # context value spliced into a shell (template-injection).
-  #
-  # Ungated on the `changes` filter's paths on purpose: that filter excludes
-  # `.github/`, so a workflow-only pull request would otherwise skip the one
-  # check that reads workflows. It needs `changes` for the verified push alone.
-  workflow-audit:
-    name: zizmor
-    needs: changes
-    if: needs.changes.outputs.queue_verified != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
-        with:
-          tool: zizmor@1.31.1
-      - name: Audit .github/workflows + .github/actions
-        # GH_TOKEN enables the ONLINE audits, which is the point of running this
-        # beside SHA pinning: impostor-commit verifies that a pinned commit
-        # really belongs to the repository named in front of it, and it cannot
-        # do that offline. --min-severity=low gates on every actionable tier
-        # (artipacked is Low) and leaves the informational tier advisory; zizmor
-        # exits non-zero when anything at or above the floor is found.
-        #
-        # The composite actions are audited too (#2775): they carry `uses:` of
-        # their own, so a pin only they declare would otherwise be the one
-        # `uses:` in the estate nothing checks.
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: zizmor --min-severity=low .github/workflows/ .github/actions/
-
-  # actionlint (github.com/rhysd/actionlint) is the CORRECTNESS half of the pair
-  # above: zizmor audits security posture, actionlint checks that the workflow
-  # is well-formed at all — `${{ }}` expressions that cannot evaluate, `needs:`
-  # naming a job that does not exist, unknown runner labels, and shellcheck over
-  # every embedded `run:` block. A committed `.github/actionlint.yaml` (the
-  # runner-label roster) existed here long before this job did, so the tool was
-  # being run by hand and never gated.
-  #
-  # Ungated on the `changes` filter for the same reason zizmor is: that filter
-  # excludes `.github/`.
-  workflow-lint:
-    name: actionlint
-    needs: changes
-    if: needs.changes.outputs.queue_verified != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Lint .github/workflows
-        # The OFFICIAL image, digest-pinned. actionlint is a Go binary, so
-        # `taiki-e/install-action` does not carry it and its cargo-binstall
-        # fallback cannot ("actionlint is not found" — it is not a crate). The
-        # upstream alternative is `curl | bash` off `main`, which is exactly the
-        # unpinned fetch this repository's pinning rule exists to forbid. The
-        # image is also the only distribution that BUNDLES shellcheck, which
-        # half of actionlint's value depends on: "The image contains actionlint
-        # executable and all dependencies (shellcheck and pyflakes)"
-        # (https://github.com/rhysd/actionlint/blob/main/docs/usage.md).
-        #
-        # SC2016 ("expressions don't expand in single quotes") is excluded, and
-        # only it: every occurrence in this repo is a `printf` format string or a
-        # `jq` filter, where single quotes are the CORRECT idiom precisely
-        # because the shell must not expand `%s` or `$`. Nothing else is
-        # suppressed — the run is clean at actionlint's own default severity.
-        run: |
-          docker run --rm \
-            -v "$PWD:/repo" --workdir /repo \
-            -e SHELLCHECK_OPTS='-e SC2016' \
-            rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
-            -color
-
-      # actionlint validates each job in isolation and cannot know that this
-      # repository routes branch protection through a single `conclusion` check,
-      # which makes a job missing from its `needs` list run without gating
-      # anything.
-      - name: Every CI job gates the merge
-        run: bash scripts/checks/ci-conclusion-complete.sh
-
-  # The other half of the pair above. actionlint shellchecks the `run:` blocks
-  # EMBEDDED in workflows; the scripts those blocks call — every CI guard, every
-  # vendor fetcher, every deploy probe, the release machinery, the git hooks —
-  # had no static check at all until #2785. `--severity=style` is ShellCheck's
-  # lowest floor, so everything gates: a finding is fixed, or carries a per-line
-  # `# shellcheck disable=SCnnnn` directive with its reason. There is no
-  # .shellcheckrc, deliberately — nothing may turn a code off tree-wide.
-  #
-  # The lane is a committed script so local and CI run the identical check.
-  shellcheck:
-    name: shellcheck
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # The upstream RELEASE binary, pinned by version — not the runner's distro
-      # package, which is whatever Ubuntu froze for that image and moves under us
-      # at every runner-image refresh. Every disable directive in this repository
-      # was adjudicated against 0.11.0's diagnostics, so the analyzer version is
-      # part of what the gate means. Fetched by the same SHA-pinned installer the
-      # zizmor job uses, which resolves
-      # github.com/koalaman/shellcheck/releases and verifies the checksum.
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
-        with:
-          tool: shellcheck@0.11.0
-      - name: Every shell program is clean at severity=style
-        run: bash scripts/checks/shellcheck-lane.sh
-      - name: The guards' changed-path helper reads a branch's own change from the merge base
-        run: bash scripts/lib/changed-paths.sh --self-test
-      - name: The conformance image check compares an image's inputs with the tree's, and its lists match containers.yml
-        run: bash scripts/lib/image-inputs.sh --self-test
-      - name: The base image of each Dockerfile is read from its runtime stage's digest-pinned FROM
-        run: bash scripts/lib/base-image.sh --self-test
-      - name: The early-reader check refuses head and grep -q, -m or -l on a pipe, and allows the here-string forms
-        run: bash scripts/checks/pipe-early-exit.sh --self-test
-      - name: No workflow or shell program feeds a reader that stops early from a pipe
-        run: bash scripts/checks/pipe-early-exit.sh
-      - name: The GitHub API retry rides out a 5xx burst, blames the API when it gives up and refuses a 4xx at once
-        run: bash scripts/lib/gh-retry.sh --self-test
-      - name: The dangerous-command hook refuses and allows the shapes it documents
-        run: bash .claude/hooks/block_dangerous_test.sh
-      - name: The crate-version hook refuses a hand edit of the lockstep crate version
-        run: bash .claude/hooks/crate_version_bump_guard_test.sh
-      - name: The GHCR prune deletes nothing on a dry run and keeps young and retagged manifests
-        run: bash scripts/watch/ghcr-prune-orphans.sh --self-test
-      - run: bash scripts/watch/spec-update.sh --self-test
-      - run: bash scripts/watch/spec-release.sh --self-test
-      - name: The CI budget watcher's lane patterns match every form of their job names
-        run: bash scripts/watch/ci-budget.sh --self-test
-      - name: The release withdrawal refuses unregistered versions and moves only the floating tags
-        run: bash scripts/release/withdraw.sh --self-test
-      - name: The release-notes check refuses notes without the CRA user information, the support period or the pinned EHDS system documents
-        run: bash scripts/checks/release-notes.sh --self-test
-      - name: The EHDS system documents' pin reads, and a page at another revision is refused
-        run: bash scripts/release/system-documents.sh --self-test
-      - name: The attached information sheet and instructions for use carry the stamp, the frozen links and the release's facts
-        run: bash scripts/release/accompanying-documents.sh --self-test
-      - name: The release milestone check refuses open items and closes only after every leg
-        run: bash scripts/release/milestone.sh --self-test
-      - name: The release rewrite of the quickstart passes its check
-        run: bash scripts/release/quickstart-compose.sh --self-test
-      - name: The crate stamp writes one version into the nine manifests, their internal requirements and both locks, with or without git, and refuses an unknown crate set
-        run: bash scripts/release/publish-crates.sh --self-test
-      - name: The release plan orders tags by version and counts the support period as GNU date does
-        run: bash scripts/release/plan.sh --self-test
-      - name: The chart comparison matches a repackaged chart and refuses a changed, added or removed file
-        run: bash scripts/release/chart-published.sh --self-test
-      - name: The performance guard refuses a throughput or a p95 latency outside its budget
-        run: bash scripts/perf/compare.sh --self-test
-      - name: The storage sizing driver reports bytes per create, update, delete and read in the shape the book's sizing section cites
-        run: bash scripts/perf/storage-sizing.sh --self-test
-      - name: The storage-bench verdict judges latency between two builds on one runner and refuses a rise the rounds separate
-        run: bash scripts/render/storage-bench-compare.sh --self-test
-
-  # The tracker helpers set the native issue type and the Priority and Effort
-  # fields, and declare the label taxonomy (.claude/rules/issue-workflow.md).
-  # Each carries a --self-test against a stub gh, so a change to the mapping
-  # or to the GraphQL it speaks is caught without touching the live tracker.
-  tracker-helpers:
-    name: tracker-helpers
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: fields.sh files and sets type, priority and effort
-        run: bash scripts/gh/fields.sh --self-test
-      - name: migrate-fields.sh maps the retired labels
-        run: bash scripts/gh/migrate-fields.sh --self-test
-      - name: labels.sh declares the taxonomy and retires the old labels
-        run: bash scripts/gh/labels.sh --self-test
-
-  # The FerroTERM the sandbox pins must read the terminology index the box
-  # carries (#3520): the v4.3.2 release's sandbox leg failed on a pin bump that
-  # moved the artifact layout. The check reads LAYOUT_VERSION at the pinned
-  # FerroTERM tag and compares it with deploy/hosted/ferroterm-index.env.
-  ferroterm-index-layout:
-    name: ferroterm-index-layout
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: The check refuses a differing and an unreadable layout
-        run: bash scripts/checks/ferroterm-index-layout.sh --self-test
-      - name: The pinned FerroTERM reads the box's index layout
-        run: bash scripts/checks/ferroterm-index-layout.sh
-
-  # The hosted box's deploy script lives inside deploy/hosted/cloud-init.yaml
-  # as a write_files block, where no other gate reads shell (#2974); this
-  # extracts and shellchecks it, and checks that docker/Dockerfile bakes every
-  # posture path the script reads out of the image.
-  hosted-deploy-script:
-    name: hosted-deploy-script
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
-        with:
-          tool: shellcheck@0.11.0
-      - name: The embedded deploy script is clean and its posture paths are baked
-        run: bash scripts/checks/hosted-deploy-script.sh
-      - name: The embedded deploy script's verb contract refuses a caller of a verb it lacks
-        run: bash scripts/checks/hosted-deploy-script.sh --self-test
-      - name: The FerroPIX rollout's --check pulls no image onto the app box, and it runs only at the release the sandbox serves
-        run: bash deploy/hosted/sandbox-ferropix-rollout.sh --self-test
-      - name: The verb reader reads both deploy script generations and refuses a verb the box lacks
-        run: bash .github/actions/deploy-verbs/verbs.sh --self-test
-
-  # Comment-style guard (.claude/rules/comments.md, RFC 505/1574): block
-  # comments, TODO(#N) form, NOTE/essay line budgets — over the WHOLE tree
-  # hand-written .rs files (the legacy essay sweep #1870 closed; the step runs
-  # --all).
-  comment-style:
-    name: comment-style
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - name: Comment style on changed Rust files
-        run: bash scripts/checks/comment-style.sh --all
-
-  # No viewer string a reader sees outside its catalog under
-  # app/ferroehr-viewer/locales/, beyond the per-file baseline the remaining
-  # strings hold while they move (#300). A fall passes, and
-  # ratchet-tighten.yml lowers the baseline on main.
-  stray-literals:
-    name: stray-literals
-    needs: changes
-    if: needs.changes.outputs.queue_verified != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Stray-literal ratchet self-test
+      # ---- stray-literals ----------------------------------------------
+      # No viewer string a reader sees outside its catalog under
+      # app/ferroehr-viewer/locales/, beyond the per-file baseline the remaining
+      # strings hold while they move (#300). A fall passes, and
+      # ratchet-tighten.yml lowers the baseline on main.
+      - name: stray-literals / Stray-literal ratchet self-test
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/stray-literals.sh --self-test
-      - name: Stray literals in the viewer
+      - name: stray-literals / Stray literals in the viewer
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/stray-literals.sh app/ferroehr-viewer/src
 
-  spec-citations:
-    name: spec-citations
+      # ---- duplication -------------------------------------------------
+      # Code is written once (.claude/rules/rust-style.md, #4454): the duplicated
+      # lines jscpd measures in app/*/src, crates/*/src and tools/*/src may fall
+      # and never rise. jscpd runs from its official image, pinned by digest in
+      # docs/VERSIONS.md, and the count and the key of every counted block are
+      # committed beside the guard. A rise fails and names the new blocks by both
+      # places; a fall passes, and ratchet-tighten.yml lowers the count on main.
+      - name: duplication / Duplication ratchet self-test
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/duplication.sh --self-test
+      - name: duplication / The duplicated lines have not risen
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/duplication.sh
+
+      # ---- file-size ---------------------------------------------------
+      # A hand-written source file carries at most 800 lines, its inline tests
+      # included (#4454). A file over it on the day the guard landed stands in
+      # scripts/checks/file-size.list with its length and may shrink and never
+      # grow; a shrink passes, and ratchet-tighten.yml lowers the entry on main.
+      - name: file-size / File-size ratchet self-test
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/file-size.sh --self-test
+      - name: file-size / No file over the budget or past its entry
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/file-size.sh
+
+      # ---- forwarders --------------------------------------------------
+      # No function only forwards to another (.claude/rules/rust-style.md,
+      # #4663): the forwarders tools/forwarders finds in app/*/src, crates/*/src
+      # and tools/*/src may fall and never rise. The count and the key of every
+      # counted forwarder are committed beside the guard. A rise fails and names
+      # each new forwarder with its target; a fall passes, and
+      # ratchet-tighten.yml lowers the count on main. No rust-cache: the tool
+      # builds proc-macro2, quote and syn alone.
+      - name: forwarders
+        if: ${{ !cancelled() }}
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - name: forwarders / Forwarder ratchet self-test
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/forwarders.sh --self-test
+      - name: forwarders / The forwarders have not risen
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/forwarders.sh
+
+      # ---- chart-appversion-guard --------------------------------------
+      # appVersion guard (issue #2108, narrowed by #2779). It used to hold
+      # `appVersion` and the `artifacthub.io/images` tags equal to the WORKSPACE
+      # version, which made both of them per-release facts a human had to hand-edit
+      # at every cut. They are injected now: `build-chart.yml` packages with
+      # `helm package --app-version <released version>` and rewrites the annotation's
+      # tags in the same step, so the published chart is right by construction and a
+      # cut edits neither.
+      #
+      # What is left in the tree is a DEFAULT — for a chart-only dispatch between
+      # releases, and for anyone running `helm template`/`helm install` against this
+      # directory — and the properties that default still has to have are in
+      # scripts/checks/chart-appversion.sh, which `plan` runs against the tagged
+      # commit too. One script rather than two copies of one check.
+      #
+      # What no version guard catches, stated because it was measured rather than
+      # imagined: an appVersion naming a real release does not mean that release's
+      # image ACCEPTS the chart's current `config` defaults. Values track development
+      # between releases, so the rendered default configuration carries
+      # `server.limits` and `db.statement_timeout_ms`, which 3.17.3 does not know — its
+      # own `config check` refuses the file, and a plain `helm install` crash-loops.
+      # Only an image can answer that: the `chart-boot` job below replays it against
+      # the tree-built image, and build-chart.yml refuses to publish a chart that
+      # cannot deploy the image it selects.
+      - name: chart-appversion-guard / The chart release-facts guard refuses its own mutations
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/chart-appversion.sh --self-test
+      - name: chart-appversion-guard / The committed chart release facts are coherent
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/chart-appversion.sh
+
+      # ---- citation-guard ----------------------------------------------
+      # Citation guard: CITATION.cff must stay CFF-1.2.0-schema-valid and
+      # version-consistent with the workspace — a malformed file silently breaks
+      # GitHub's "Cite this repository" button, and a stale version misquotes the
+      # release in research citations. The release cut bumps version +
+      # date-released (.claude/rules/changelog.md §Cutting a release).
+      - name: citation-guard / The runner's yq is 4.53.3 or newer
+        if: ${{ !cancelled() }}
+        env:
+          YQ_MIN_VERSION: 4.53.3
+        run: bash scripts/checks/runner-yq.sh
+      - name: citation-guard / Install the pinned jsonschema-cli
+        if: ${{ !cancelled() }}
+        env:
+          JSONSCHEMA_CLI_VERSION: 0.52.0
+        run: |
+          set -euo pipefail
+          cargo install jsonschema-cli --version "${JSONSCHEMA_CLI_VERSION}" --locked
+      - name: citation-guard / Validate CITATION.cff (CFF 1.2.0 schema)
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          yq -o=json CITATION.cff > "${RUNNER_TEMP}/citation.json"
+          jsonschema-cli validate .github/cff-schema/schema.json -i "${RUNNER_TEMP}/citation.json"
+      # The ferroehr party statement is the published conformance claim for
+      # THE product this repo ships; its product version sat at 3.6.0 while
+      # the record reached 3.20.0 with nothing failing (#2576). Same
+      # version-agreement family as the CITATION check below.
+      - name: citation-guard / The ferroehr party statement's product version matches the workspace
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/statement-version.sh
+      - name: citation-guard / CITATION.cff version matches the workspace version
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          cff_ver=$(sed -nE 's/^version:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/p' CITATION.cff)
+          ws_ver=$(sed -nE 's/^version = "(.*)"$/\1/p' Cargo.toml | sed -n 1p)
+          if [ -z "$cff_ver" ] || [ -z "$ws_ver" ]; then
+            echo "::error::could not extract versions (CITATION.cff: '$cff_ver', Cargo.toml: '$ws_ver')." >&2
+            exit 1
+          fi
+          if [ "$cff_ver" != "$ws_ver" ]; then
+            echo "::error::CITATION.cff version ($cff_ver) != workspace version ($ws_ver) — the release cut bumps CITATION.cff version/date-released (.claude/rules/changelog.md)." >&2
+            exit 1
+          fi
+          echo "CITATION.cff version $cff_ver matches the workspace version."
+      # `.zenodo.json` is GENERATED from CITATION.cff, because Zenodo ignores
+      # CITATION.cff entirely whenever a .zenodo.json is present
+      # (https://help.zenodo.org/docs/github/describe-software/zenodo-json/).
+      # A hand-edited copy would therefore silently override the file this job
+      # guards, and the disagreement would be archived under a DOI that cannot
+      # be edited afterwards.
+      - name: citation-guard / .zenodo.json is in sync with CITATION.cff
+        if: ${{ !cancelled() }}
+        run: bash scripts/render/zenodo-json.sh --check
+
+      # ---- compose-version-guard ---------------------------------------
+      # Compose version guard: the standalone quickstart docker-compose.yml pins
+      # the published images by tag, so a release cut that forgets those defaults
+      # ships a quickstart running the PREVIOUS release. The release cut bumps them
+      # with the workspace version (.claude/rules/changelog.md §Cutting a release).
+      - name: compose-version-guard / compose image-tag guard self-test
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/compose-image-tags.sh --self-test
+      - name: compose-version-guard / compose image tags match the workspace version
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/compose-image-tags.sh
+
+      # ---- ferropix-pins -----------------------------------------------
+      # FerroPIX pin guard (#4392): the quickstart, the Helm chart and the hosted
+      # sandbox pin one FerroPIX release by digest, and the sandbox's
+      # configuration and each chart golden's ferropix.toml read under it. The
+      # Dependabot entry for the quickstart pin then moves all three together.
+      - name: ferropix-pins / FerroPIX pin guard self-test
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/ferropix-pins.sh --self-test
+      - name: ferropix-pins / Every FerroPIX pin is one release, and its configurations read under it
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/ferropix-pins.sh
+
+      # ---- veredictum-action -------------------------------------------
+      - name: veredictum-action / Veredictum pin guard self-test
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/veredictum-action.sh --self-test
+      - name: veredictum-action / The Action SHA, its version comment, the image digest and VEREDICTUM_VERSION agree
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/veredictum-action.sh
+
+  # The whole-tree guards in one job: each guard is a step that runs
+  # whatever the step before it concluded, so one run reports every
+  # finding, and the job takes one runner where it took twenty-three
+  # (#5286). No specification governs this: our own design.
+  guards:
+    name: guards
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     permissions:
       contents: read
+      issues: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Every cited openEHR spec file exists
+          # comment-style, control-matrix, tracker-status and error-hygiene read
+          # history.
+          fetch-depth: 0
+
+      # ---- shellcheck --------------------------------------------------
+      # The other half of the pair above. actionlint shellchecks the `run:` blocks
+      # EMBEDDED in workflows; the scripts those blocks call — every CI guard, every
+      # vendor fetcher, every deploy probe, the release machinery, the git hooks —
+      # had no static check at all until #2785. `--severity=style` is ShellCheck's
+      # lowest floor, so everything gates: a finding is fixed, or carries a per-line
+      # `# shellcheck disable=SCnnnn` directive with its reason. There is no
+      # .shellcheckrc, deliberately — nothing may turn a code off tree-wide.
+      #
+      # The lane is a committed script so local and CI run the identical check.
+      - name: shellcheck
+        if: ${{ !cancelled() }}
+        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        with:
+          tool: shellcheck@0.11.0
+      - name: shellcheck / Every shell program is clean at severity=style
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/shellcheck-lane.sh
+      - name: shellcheck / The guards' changed-path helper reads a branch's own change from the merge base
+        if: ${{ !cancelled() }}
+        run: bash scripts/lib/changed-paths.sh --self-test
+      - name: shellcheck / The conformance image check compares an image's inputs with the tree's, and its lists match containers.yml
+        if: ${{ !cancelled() }}
+        run: bash scripts/lib/image-inputs.sh --self-test
+      - name: shellcheck / The base image of each Dockerfile is read from its runtime stage's digest-pinned FROM
+        if: ${{ !cancelled() }}
+        run: bash scripts/lib/base-image.sh --self-test
+      - name: shellcheck / The early-reader check refuses head and grep -q, -m or -l on a pipe, and allows the here-string forms
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/pipe-early-exit.sh --self-test
+      - name: shellcheck / No workflow or shell program feeds a reader that stops early from a pipe
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/pipe-early-exit.sh
+      - name: shellcheck / The GitHub API retry rides out a 5xx burst, blames the API when it gives up and refuses a 4xx at once
+        if: ${{ !cancelled() }}
+        run: bash scripts/lib/gh-retry.sh --self-test
+      - name: shellcheck / The dangerous-command hook refuses and allows the shapes it documents
+        if: ${{ !cancelled() }}
+        run: bash .claude/hooks/block_dangerous_test.sh
+      - name: shellcheck / The crate-version hook refuses a hand edit of the lockstep crate version
+        if: ${{ !cancelled() }}
+        run: bash .claude/hooks/crate_version_bump_guard_test.sh
+      - name: shellcheck / The GHCR prune deletes nothing on a dry run and keeps young and retagged manifests
+        if: ${{ !cancelled() }}
+        run: bash scripts/watch/ghcr-prune-orphans.sh --self-test
+      - name: shellcheck
+        if: ${{ !cancelled() }}
+        run: bash scripts/watch/spec-update.sh --self-test
+      - name: shellcheck
+        if: ${{ !cancelled() }}
+        run: bash scripts/watch/spec-release.sh --self-test
+      - name: shellcheck / The CI budget watcher's lane patterns match every form of their job names
+        if: ${{ !cancelled() }}
+        run: bash scripts/watch/ci-budget.sh --self-test
+      - name: shellcheck / The release withdrawal refuses unregistered versions and moves only the floating tags
+        if: ${{ !cancelled() }}
+        run: bash scripts/release/withdraw.sh --self-test
+      - name: shellcheck / The release-notes check refuses notes without the CRA user information, the support period or the pinned EHDS system documents
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/release-notes.sh --self-test
+      - name: shellcheck / The EHDS system documents' pin reads, and a page at another revision is refused
+        if: ${{ !cancelled() }}
+        run: bash scripts/release/system-documents.sh --self-test
+      - name: shellcheck / The attached information sheet and instructions for use carry the stamp, the frozen links and the release's facts
+        if: ${{ !cancelled() }}
+        run: bash scripts/release/accompanying-documents.sh --self-test
+      - name: shellcheck / The release milestone check refuses open items and closes only after every leg
+        if: ${{ !cancelled() }}
+        run: bash scripts/release/milestone.sh --self-test
+      - name: shellcheck / The release rewrite of the quickstart passes its check
+        if: ${{ !cancelled() }}
+        run: bash scripts/release/quickstart-compose.sh --self-test
+      - name: shellcheck / The crate stamp writes one version into the nine manifests, their internal requirements and both locks, with or without git, and refuses an unknown crate set
+        if: ${{ !cancelled() }}
+        run: bash scripts/release/publish-crates.sh --self-test
+      - name: shellcheck / The release plan orders tags by version and counts the support period as GNU date does
+        if: ${{ !cancelled() }}
+        run: bash scripts/release/plan.sh --self-test
+      - name: shellcheck / The chart comparison matches a repackaged chart and refuses a changed, added or removed file
+        if: ${{ !cancelled() }}
+        run: bash scripts/release/chart-published.sh --self-test
+      - name: shellcheck / The performance guard refuses a throughput or a p95 latency outside its budget
+        if: ${{ !cancelled() }}
+        run: bash scripts/perf/compare.sh --self-test
+      - name: shellcheck / The storage sizing driver reports bytes per create, update, delete and read in the shape the book's sizing section cites
+        if: ${{ !cancelled() }}
+        run: bash scripts/perf/storage-sizing.sh --self-test
+      - name: shellcheck / The storage-bench verdict judges latency between two builds on one runner and refuses a rise the rounds separate
+        if: ${{ !cancelled() }}
+        run: bash scripts/render/storage-bench-compare.sh --self-test
+
+      # ---- tracker-helpers ---------------------------------------------
+      # The tracker helpers set the native issue type and the Priority and Effort
+      # fields, and declare the label taxonomy (.claude/rules/issue-workflow.md).
+      # Each carries a --self-test against a stub gh, so a change to the mapping
+      # or to the GraphQL it speaks is caught without touching the live tracker.
+      - name: tracker-helpers / fields.sh files and sets type, priority and effort
+        if: ${{ !cancelled() }}
+        run: bash scripts/gh/fields.sh --self-test
+      - name: tracker-helpers / migrate-fields.sh maps the retired labels
+        if: ${{ !cancelled() }}
+        run: bash scripts/gh/migrate-fields.sh --self-test
+      - name: tracker-helpers / labels.sh declares the taxonomy and retires the old labels
+        if: ${{ !cancelled() }}
+        run: bash scripts/gh/labels.sh --self-test
+
+      # ---- ferroterm-index-layout --------------------------------------
+      # The FerroTERM the sandbox pins must read the terminology index the box
+      # carries (#3520): the v4.3.2 release's sandbox leg failed on a pin bump that
+      # moved the artifact layout. The check reads LAYOUT_VERSION at the pinned
+      # FerroTERM tag and compares it with deploy/hosted/ferroterm-index.env.
+      - name: ferroterm-index-layout / The check refuses a differing and an unreadable layout
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/ferroterm-index-layout.sh --self-test
+      - name: ferroterm-index-layout / The pinned FerroTERM reads the box's index layout
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/ferroterm-index-layout.sh
+
+      # ---- hosted-deploy-script ----------------------------------------
+      # The hosted box's deploy script lives inside deploy/hosted/cloud-init.yaml
+      # as a write_files block, where no other gate reads shell (#2974); this
+      # extracts and shellchecks it, and checks that docker/Dockerfile bakes every
+      # posture path the script reads out of the image.
+      - name: hosted-deploy-script
+        if: ${{ !cancelled() }}
+        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        with:
+          tool: shellcheck@0.11.0
+      - name: hosted-deploy-script / The embedded deploy script is clean and its posture paths are baked
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/hosted-deploy-script.sh
+      - name: hosted-deploy-script / The embedded deploy script's verb contract refuses a caller of a verb it lacks
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/hosted-deploy-script.sh --self-test
+      - name: hosted-deploy-script / The FerroPIX rollout's --check pulls no image onto the app box, and it runs only at the release the sandbox serves
+        if: ${{ !cancelled() }}
+        run: bash deploy/hosted/sandbox-ferropix-rollout.sh --self-test
+      - name: hosted-deploy-script / The verb reader reads both deploy script generations and refuses a verb the box lacks
+        if: ${{ !cancelled() }}
+        run: bash .github/actions/deploy-verbs/verbs.sh --self-test
+
+      # ---- comment-style -----------------------------------------------
+      # Comment-style guard (.claude/rules/comments.md, RFC 505/1574): block
+      # comments, TODO(#N) form, NOTE/essay line budgets — over the WHOLE tree
+      # hand-written .rs files (the legacy essay sweep #1870 closed; the step runs
+      # --all).
+      - name: comment-style / Comment style on changed Rust files
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/comment-style.sh --all
+
+      # ---- spec-citations ----------------------------------------------
+      - name: spec-citations / Every cited openEHR spec file exists
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/spec-citations.sh --all
-      - name: The migration-citation detector catches what it claims to
+      - name: spec-citations / The migration-citation detector catches what it claims to
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/migration-citations.sh --self-test
-      - name: Every cited migration file exists
+      - name: spec-citations / Every cited migration file exists
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/migration-citations.sh --all
-      - name: The application-path detector catches what it claims to
+      - name: spec-citations / The application-path detector catches what it claims to
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/crate-tests-read-no-app.sh --self-test
-      - name: No test in a published crate reads the application tree
+      - name: spec-citations / No test in a published crate reads the application tree
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/crate-tests-read-no-app.sh
-      - name: The server-SQL detector catches what it claims to
+      - name: spec-citations / The server-SQL detector catches what it claims to
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/server-holds-no-sql.sh --self-test
-      - name: The wiring binary runs no SQL of its own
+      - name: spec-citations / The wiring binary runs no SQL of its own
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/server-holds-no-sql.sh
 
-  # No Python anywhere (.claude/rules/rust-style.md §No Python): the tooling
-  # languages are bash and Rust. Embedded Python is the worst case — a heredoc
-  # inside a command substitution makes bash scan the Python for quote pairs,
-  # so one apostrophe in a comment breaks the script.
-  no-python:
-    name: no-python
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: No Python invocations or sources
+      # ---- no-python ---------------------------------------------------
+      # No Python anywhere (.claude/rules/rust-style.md §No Python): the tooling
+      # languages are bash and Rust. Embedded Python is the worst case — a heredoc
+      # inside a command substitution makes bash scan the Python for quote pairs,
+      # so one apostrophe in a comment breaks the script.
+      - name: no-python / No Python invocations or sources
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/no-python.sh
 
-  # This project's own code is BUSL-1.1, so a GPL-family or SSPL grant inside a file
-  # we wrote is a licence conflict.
-  # LICENSE, REUSE.toml and the codegen header constant must agree on the
-  # copyright holder. They did not, and nothing compared them (#2325).
-  # Shell, SQL and YAML carry their licence in the file too, so a copied
-  # migration or script travels with it (#2326).
-  spdx-headers-text:
-    name: spdx-headers-text
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Shell, SQL and YAML state their licensing
+      # ---- spdx-headers-text -------------------------------------------
+      # This project's own code is BUSL-1.1, so a GPL-family or SSPL grant inside a file
+      # we wrote is a licence conflict.
+      # LICENSE, REUSE.toml and the codegen header constant must agree on the
+      # copyright holder. They did not, and nothing compared them (#2325).
+      # Shell, SQL and YAML carry their licence in the file too, so a copied
+      # migration or script travels with it (#2326).
+      - name: spdx-headers-text / Shell, SQL and YAML state their licensing
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/spdx-headers-text.sh
 
-  # The vendored legal texts are only worth carrying while their recorded
-  # digests are true: docs/law/ exists so a compliance claim resolves to a
-  # fixed referent instead of to whatever a publisher's page says today, and a
-  # hand edit or a partial re-fetch is otherwise invisible.
-  law-corpus:
-    name: law-corpus
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Vendored legal texts match their recorded digests
+      # ---- law-corpus --------------------------------------------------
+      # The vendored legal texts are only worth carrying while their recorded
+      # digests are true: docs/law/ exists so a compliance claim resolves to a
+      # fixed referent instead of to whatever a publisher's page says today, and a
+      # hand edit or a partial re-fetch is otherwise invisible.
+      - name: law-corpus / Vendored legal texts match their recorded digests
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/law-corpus.sh
       # The identity and provisioning documents under docs/specs/ are pinned by
       # sha256 per file in the same way, so the same job holds them to it.
-      - name: Vendored identity documents match their recorded digests
+      - name: law-corpus / Vendored identity documents match their recorded digests
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/pinned-docs.sh
 
-  copyright-holder:
-    name: copyright-holder
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: One copyright holder, stated identically everywhere
+      # ---- copyright-holder --------------------------------------------
+      - name: copyright-holder / One copyright holder, stated identically everywhere
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/copyright-holder.sh
 
-  license-text:
-    name: license-text
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: No copyleft licence text in first-party source
+      # ---- license-text ------------------------------------------------
+      - name: license-text / No copyleft licence text in first-party source
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/first-party-license-text.sh
 
-  # REUSE 3.3 compliance: every file in the tree has machine-readable licensing
-  # that SURVIVES the file being copied out of it — which is the expected case
-  # for a repository whose premise is that people build on it and ship it, and
-  # which redistributes material under six distinct licences.
-  #
-  # The per-tree `PROVENANCE.md` arrangement is accurate but travels with the
-  # tree, not with the file. `REUSE.toml` closes that gap by glob, touching no
-  # vendored file — which matters, because hand-editing vendored material is
-  # forbidden here.
-  licensing:
-    name: licensing
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: reuse lint
+      # ---- licensing ---------------------------------------------------
+      # REUSE 3.3 compliance: every file in the tree has machine-readable licensing
+      # that SURVIVES the file being copied out of it — which is the expected case
+      # for a repository whose premise is that people build on it and ship it, and
+      # which redistributes material under six distinct licences.
+      #
+      # The per-tree `PROVENANCE.md` arrangement is accurate but travels with the
+      # tree, not with the file. `REUSE.toml` closes that gap by glob, touching no
+      # vendored file — which matters, because hand-editing vendored material is
+      # forbidden here.
+      - name: licensing / reuse lint
+        if: ${{ !cancelled() }}
         # The OFFICIAL image, digest-pinned — the same construction the
         # actionlint job uses and for the same reasons: `reuse` is distributed
         # as a Python package, which this repository does not install, and the
@@ -874,260 +970,145 @@ jobs:
       # what a procurement reviewer actually reads and what drifts.
       # The runner image's yq, held to the oldest version the scripts are
       # verified on; no per-run download (#5256).
-      - name: The runner's yq is 4.53.3 or newer
+      - name: licensing / The runner's yq is 4.53.3 or newer
+        if: ${{ !cancelled() }}
         env:
           YQ_MIN_VERSION: 4.53.3
         run: bash scripts/checks/runner-yq.sh
-      - name: The declarations, the texts and the chapter agree
+      - name: licensing / The declarations, the texts and the chapter agree
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/licensing-declarations.sh
       # The six Apache-2.0 crates publish so any project can take them; a
       # normal or build dependency on one of the three BUSL-1.1 crates would
       # make every consumer compile BUSL code. The self-test runs first, so a
       # detector that stopped matching fails here instead of passing vacuously.
-      - name: The licence-boundary detector refuses every crossing
+      - name: licensing / The licence-boundary detector refuses every crossing
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/licence-boundary.sh --self-test
-      - name: No Apache-2.0 crate depends on a BUSL-1.1 crate
+      - name: licensing / No Apache-2.0 crate depends on a BUSL-1.1 crate
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/licence-boundary.sh
       # `reuse lint` is satisfied by the glob declaration alone, so it cannot
       # see a first-party file losing the header that makes its licensing
       # travel. This is the check that can.
-      - name: First-party Rust source carries its SPDX header
+      - name: licensing / First-party Rust source carries its SPDX header
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/spdx-headers.sh
       # A vendored tree's PROVENANCE.md is the repository's record and does not
       # travel with the package built from it. This is the check that the
       # attribution INSIDE a published crate still names the revision the
       # repository vendors.
-      - name: Packaged third-party bytes carry a pinned attribution
+      - name: licensing / Packaged third-party bytes carry a pinned attribution
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/packaged-attribution.sh
       # `cargo package --list` needs the pinned toolchain; the two packaging
       # guards are the only cargo consumers in this job. No rust-cache: its
       # entries are keyed by job and only main may save one, and this job never
       # runs on main, so there is no entry to restore (#4601).
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
-        with:
-          cache: false
-      # A packaged src file embedding a path its own package does not carry
-      # compiles in this repository and breaks inside the published .crate.
-      - name: Packaged sources embed only packaged files
+      - name: licensing / Packaged sources embed only packaged files
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/packaged-includes.sh
 
-  # The compose hardening properties (cap_drop ALL, no-new-privileges, no
-  # privileged, no seccomp=unconfined, loopback-only publishing). This gate
-  # existed and ran nowhere, while `docker-compose.yml` and the operations
-  # chapter both told readers it "enforces that on every compose artifact" — a
-  # documented guard that does not fire is worse than none, because the docs and
-  # the reviewer both believe it did.
-  compose-hardening:
-    name: compose-hardening
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Compose artifacts stay hardened
+      # ---- compose-hardening -------------------------------------------
+      # The compose hardening properties (cap_drop ALL, no-new-privileges, no
+      # privileged, no seccomp=unconfined, loopback-only publishing). This gate
+      # existed and ran nowhere, while `docker-compose.yml` and the operations
+      # chapter both told readers it "enforces that on every compose artifact" — a
+      # documented guard that does not fire is worse than none, because the docs and
+      # the reviewer both believe it did.
+      - name: compose-hardening / Compose artifacts stay hardened
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/compose-hardening.sh
-      - name: Compose drops no !reset key the guard depends on, and the check refuses a merged model that holds one
+      - name: compose-hardening / Compose drops no !reset key the guard depends on, and the check refuses a merged model that holds one
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/compose-reset.sh --self-test
-      - name: Every key a compose overlay resets is absent from the stack its launcher merges
+      - name: compose-hardening / Every key a compose overlay resets is absent from the stack its launcher merges
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/compose-reset.sh
-      - name: The overlay's inline dashboard matches the chart's canonical copy
+      - name: compose-hardening / The overlay's inline dashboard matches the chart's canonical copy
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/dashboard-drift.sh
       # The shipped default sends a usage report; a test instance must not.
-      - name: The launcher detector catches an unswitched launcher
+      - name: compose-hardening / The launcher detector catches an unswitched launcher
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/usage-report-off.sh --self-test
-      - name: Every test launcher switches the usage report off
+      - name: compose-hardening / Every test launcher switches the usage report off
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/usage-report-off.sh
-      - name: The EUR-Lex watcher's detector reports a new act and fails on a silent source
+      - name: compose-hardening / The EUR-Lex watcher's detector reports a new act and fails on a silent source
+        if: ${{ !cancelled() }}
         run: bash scripts/watch/eu-acts.sh --self-test
-      - name: The watcher issue engine dedups by whole key and files the rest
+      - name: compose-hardening / The watcher issue engine dedups by whole key and files the rest
+        if: ${{ !cancelled() }}
         run: bash .github/actions/file-watcher-issue/file-issue.sh self-test
 
-  # The shaped terminology seed has one canonical directory and one copy inside
-  # the Helm chart (a chart's `.Files` reaches only what is packaged with it),
-  # so the two are held byte-identical the way the dashboard's two copies are.
-  terminology-seed-drift:
-    name: terminology-seed-drift
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: The chart's terminology seed matches the canonical one
+      # ---- terminology-seed-drift --------------------------------------
+      # The shaped terminology seed has one canonical directory and one copy inside
+      # the Helm chart (a chart's `.Files` reaches only what is packaged with it),
+      # so the two are held byte-identical the way the dashboard's two copies are.
+      - name: terminology-seed-drift / The chart's terminology seed matches the canonical one
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/terminology-seed-drift.sh
 
-  # RFC 0201: an error carries its cause, and prints it once. No clippy lint
-  # covers either, so the gate is a per-tree ratchet on flattened causes (the
-  # counts may only fall) and a hard zero on variants that print their source
-  # in their own message (that detector proves itself with a self-test first).
-  error-source-chain:
-    name: error-source-chain
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Error cause chains have not regressed
+      # ---- error-source-chain ------------------------------------------
+      # RFC 0201: an error carries its cause, and prints it once. No clippy lint
+      # covers either, so the gate is a per-tree ratchet on flattened causes (the
+      # counts may only fall) and a hard zero on variants that print their source
+      # in their own message (that detector proves itself with a self-test first).
+      - name: error-source-chain / Error cause chains have not regressed
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/error-source-chain.sh
 
-  # Code is written once (.claude/rules/rust-style.md, #4454): the duplicated
-  # lines jscpd measures in app/*/src, crates/*/src and tools/*/src may fall
-  # and never rise. jscpd runs from its official image, pinned by digest in
-  # docs/VERSIONS.md, and the count and the key of every counted block are
-  # committed beside the guard. A rise fails and names the new blocks by both
-  # places; a fall passes, and ratchet-tighten.yml lowers the count on main.
-  duplication:
-    name: duplication
-    needs: changes
-    if: needs.changes.outputs.queue_verified != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Duplication ratchet self-test
-        run: bash scripts/checks/duplication.sh --self-test
-      - name: The duplicated lines have not risen
-        run: bash scripts/checks/duplication.sh
-
-  # A hand-written source file carries at most 800 lines, its inline tests
-  # included (#4454). A file over it on the day the guard landed stands in
-  # scripts/checks/file-size.list with its length and may shrink and never
-  # grow; a shrink passes, and ratchet-tighten.yml lowers the entry on main.
-  file-size:
-    name: file-size
-    needs: changes
-    if: needs.changes.outputs.queue_verified != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: File-size ratchet self-test
-        run: bash scripts/checks/file-size.sh --self-test
-      - name: No file over the budget or past its entry
-        run: bash scripts/checks/file-size.sh
-
-  # No function only forwards to another (.claude/rules/rust-style.md,
-  # #4663): the forwarders tools/forwarders finds in app/*/src, crates/*/src
-  # and tools/*/src may fall and never rise. The count and the key of every
-  # counted forwarder are committed beside the guard. A rise fails and names
-  # each new forwarder with its target; a fall passes, and
-  # ratchet-tighten.yml lowers the count on main. No rust-cache: the tool
-  # builds proc-macro2, quote and syn alone.
-  forwarders:
-    name: forwarders
-    needs: changes
-    if: needs.changes.outputs.queue_verified != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
-        with:
-          cache: false
-      - name: Forwarder ratchet self-test
-        run: bash scripts/checks/forwarders.sh --self-test
-      - name: The forwarders have not risen
-        run: bash scripts/checks/forwarders.sh
-
-  # Default-value style (.claude/rules/rust-style.md §Default values): a field's
-  # default lives inline in its struct's `Default` impl — the RFC 3681 shape,
-  # hand-written because that syntax is nightly-only.
-  #
-  # CHANGED-FILES mode until the pre-existing set is swept (#2033): the rule
-  # arrived after the tree, so a `--all` gate would fail every PR for violations
-  # it did not introduce. This blocks NEW ones from the moment it lands, and the
-  # sweep issue flips the argument to `--all` (which additionally enables the
-  # single-reader `const` check — that one counts readers tree-wide).
-  default-style:
-    name: default-style
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # `--all` since #2033 swept the pre-existing sites: the tree is clean, so
-      # the guard covers the whole of it rather than only the changed files.
-      - name: Default values live in the struct's Default impl
+      # ---- default-style -----------------------------------------------
+      # Default-value style (.claude/rules/rust-style.md §Default values): a field's
+      # default lives inline in its struct's `Default` impl — the RFC 3681 shape,
+      # hand-written because that syntax is nightly-only.
+      #
+      # CHANGED-FILES mode until the pre-existing set is swept (#2033): the rule
+      # arrived after the tree, so a `--all` gate would fail every PR for violations
+      # it did not introduce. This blocks NEW ones from the moment it lands, and the
+      # sweep issue flips the argument to `--all` (which additionally enables the
+      # single-reader `const` check — that one counts readers tree-wide).
+      - name: default-style / Default values live in the struct's Default impl
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/default-style.sh --all
       # Typed-status guard: an HTTP status is compared as a `StatusCode`, never
       # as a number. `--all` from the start — the tree has no violations.
-      - name: HTTP statuses are compared as types
+      - name: default-style / HTTP statuses are compared as types
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/typed-status.sh --all
       # Access-layer provenance (#1963): every rationale in the authn/authz layer
       # cites an RFC, a standards publication, or the vendored openEHR text —
       # never another product, a plan-phase marker, or internal markdown.
-      - name: Access-layer rationale cites durable sources
+      - name: default-style / Access-layer rationale cites durable sources
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/access-provenance.sh
 
-  # E2E wait guard (#3296): a browser journey holds the bounded
-  # `common::Element`, never a raw `WebElement`/`SelectElement`, and waits on a
-  # condition rather than on a timer. The guard's scope is fixed (every journey
-  # file, always) — the migration that landed it swept all 26, so the tree is
-  # clean. The detector is mutation-proven by its own `--self-test`, which runs
-  # first, so a pattern that silently matched nothing would fail the job rather
-  # than report OK.
-  e2e-waits:
-    name: e2e-waits
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: The detector catches what it claims to catch
+      # ---- e2e-waits ---------------------------------------------------
+      # E2E wait guard (#3296): a browser journey holds the bounded
+      # `common::Element`, never a raw `WebElement`/`SelectElement`, and waits on a
+      # condition rather than on a timer. The guard's scope is fixed (every journey
+      # file, always) — the migration that landed it swept all 26, so the tree is
+      # clean. The detector is mutation-proven by its own `--self-test`, which runs
+      # first, so a pattern that silently matched nothing would fail the job rather
+      # than report OK.
+      - name: e2e-waits / The detector catches what it claims to catch
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/e2e-waits.sh --self-test
-      - name: E2E journeys wait on conditions through the bounded harness
+      - name: e2e-waits / E2E journeys wait on conditions through the bounded harness
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/e2e-waits.sh
 
-  # Docs-claim guard (#1984): a documented KEY must exist in the thing it
-  # documents. `mdbook-lint` checks style and `lychee` checks links; both pass on
-  # a page whose every technical claim is false, which is how a fabricated Helm
-  # values table reached the published site. `--all` from the start: the three
-  # defects this found on its first run are fixed in the same change, so the
-  # corpus is clean. What it deliberately does NOT check is recorded in the
-  # script's header and in `.claude/rules/docs-website.md`.
-  docs-claims:
-    name: docs-claims
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Documented keys resolve in their source
+      # ---- docs-claims -------------------------------------------------
+      # Docs-claim guard (#1984): a documented KEY must exist in the thing it
+      # documents. `mdbook-lint` checks style and `lychee` checks links; both pass on
+      # a page whose every technical claim is false, which is how a fabricated Helm
+      # values table reached the published site. `--all` from the start: the three
+      # defects this found on its first run are fixed in the same change, so the
+      # corpus is clean. What it deliberately does NOT check is recorded in the
+      # script's header and in `.claude/rules/docs-website.md`.
+      - name: docs-claims / Documented keys resolve in their source
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/docs-claims.sh --all
       # Image metadata (#2146): the OCI keys are declared in two places — the
       # Dockerfile, so a direct build is labelled correctly, and the publishing
@@ -1137,45 +1118,35 @@ jobs:
       # from the runtime stage's FROM pin (#4953), and checks that annotations
       # reach the INDEX (the only place GHCR reads a
       # package description from).
-      - name: Image metadata is declared once and agrees
+      - name: docs-claims / Image metadata is declared once and agrees
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/image-labels.sh
 
-  # The published compliance control matrix is GENERATED from the tracker
-  # (scripts/render/control-matrix.sh), the same way the conformance pages
-  # regenerate from the committed artifacts: a control's status lives on its
-  # issue, never in the page.
-  #
-  # The job judges the change under check alone (#4130). The tracker moves
-  # without a commit, so a full re-render would fail every open pull request
-  # on rows none of them caused. `--base HEAD^1` renders the page from one
-  # tracker read without and with the pull request and holds the change from
-  # the first parent to the rows it owns: the issues it closes, and any line
-  # it adds or removes. The first parent of the checked-out commit is main
-  # for a pull request (its merge ref) and the queue entry ahead of it in a
-  # merge group, so fetch-depth 2 reaches it. Main's drift reaches the site
-  # through the docs deploy, which renders the page from the tracker.
-  #
-  # The page reads nothing but the tracker: open controls render as Planned
-  # and the roadmap board is linked for the live column, so the repository
-  # token is enough to render and to check it (#3236). A board read would need
-  # a Projects (v2) scope, which only a standing personal access token carries.
-  control-matrix:
-    name: control-matrix
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      issues: read
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 2
-      - name: The delta rules hold on their fixtures
+      # ---- control-matrix ----------------------------------------------
+      # The published compliance control matrix is GENERATED from the tracker
+      # (scripts/render/control-matrix.sh), the same way the conformance pages
+      # regenerate from the committed artifacts: a control's status lives on its
+      # issue, never in the page.
+      #
+      # The job judges the change under check alone (#4130). The tracker moves
+      # without a commit, so a full re-render would fail every open pull request
+      # on rows none of them caused. `--base HEAD^1` renders the page from one
+      # tracker read without and with the pull request and holds the change from
+      # the first parent to the rows it owns: the issues it closes, and any line
+      # it adds or removes. The first parent of the checked-out commit is main
+      # for a pull request (its merge ref) and the queue entry ahead of it in a
+      # merge group, so fetch-depth 2 reaches it. Main's drift reaches the site
+      # through the docs deploy, which renders the page from the tracker.
+      #
+      # The page reads nothing but the tracker: open controls render as Planned
+      # and the roadmap board is linked for the live column, so the repository
+      # token is enough to render and to check it (#3236). A board read would need
+      # a Projects (v2) scope, which only a standing personal access token carries.
+      - name: control-matrix / The delta rules hold on their fixtures
+        if: ${{ !cancelled() }}
         run: bash scripts/render/control-matrix.sh --self-test
-      - name: The control matrix carries this change's own rows
+      - name: control-matrix / The control matrix carries this change's own rows
+        if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ github.token }}
           # The pull request under check: the issues it closes render as
@@ -1196,29 +1167,15 @@ jobs:
           fi
           bash scripts/render/control-matrix.sh --check --closing "$pr" --base HEAD^1
 
-  # The prose AROUND the generated pages can go stale where the pages cannot:
-  # after the v4.2.0 cut the compliance overview still said "guidance planned,
-  # #3161" about pages that release had published (#3289). This job reads every
-  # issue reference on the book's pages and in the EHDS status source, fetches
-  # the states in one call, and fails when a status word beside a reference
-  # contradicts the tracker. Same token footprint as control-matrix.
-  tracker-status:
-    name: tracker-status
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      issues: read
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          # A merge group reads its pull requests from the commits between
-          # main and its head.
-          fetch-depth: 0
-      - name: No book page says planned about a closed issue, or shipped about an open one
+      # ---- tracker-status ----------------------------------------------
+      # The prose AROUND the generated pages can go stale where the pages cannot:
+      # after the v4.2.0 cut the compliance overview still said "guidance planned,
+      # #3161" about pages that release had published (#3289). This job reads every
+      # issue reference on the book's pages and in the EHDS status source, fetches
+      # the states in one call, and fails when a status word beside a reference
+      # contradicts the tracker. Same token footprint as control-matrix.
+      - name: tracker-status / No book page says planned about a closed issue, or shipped about an open one
+        if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -1250,42 +1207,55 @@ jobs:
             bash scripts/checks/tracker-status.sh
           fi
 
-  # String-built-SQL guard: the AQL engine composes SQL from attacker-supplied
-  # query text, so a `format!`/`push_str`-assembled clause in `app/ferroehr/src/
-  # aql/` or `app/ferroehr/src/storage/` is refused — the OWASP SQL Injection
-  # Prevention Cheat Sheet's "validated data is not necessarily safe to insert
-  # into SQL queries via string building". `--all` from the start: the tree is
-  # clean, and the one legitimate site is a named exemption in the script.
-  sql-string-building:
-    name: sql-string-building
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: The exemption list honours a needle with spaces
+      # ---- sql-string-building -----------------------------------------
+      # String-built-SQL guard: the AQL engine composes SQL from attacker-supplied
+      # query text, so a `format!`/`push_str`-assembled clause in `app/ferroehr/src/
+      # aql/` or `app/ferroehr/src/storage/` is refused — the OWASP SQL Injection
+      # Prevention Cheat Sheet's "validated data is not necessarily safe to insert
+      # into SQL queries via string building". `--all` from the start: the tree is
+      # clean, and the one legitimate site is a named exemption in the script.
+      - name: sql-string-building / The exemption list honours a needle with spaces
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/sql-string-building.sh --self-test
-      - name: No string-built SQL in the query engine
+      - name: sql-string-building / No string-built SQL in the query engine
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/sql-string-building.sh --all
 
-  error-hygiene:
-    name: error-hygiene
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - name: No internal detail in a 5xx body or a health detail
+      # ---- error-hygiene -----------------------------------------------
+      - name: error-hygiene / No internal detail in a 5xx body or a health detail
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/error-hygiene.sh
+
+      # ---- vex ---------------------------------------------------------
+      # The published VEX document must be exactly what `deny.toml` plus the prose
+      # file generate. Every advisory the gate ACCEPTS carries a machine-readable
+      # justification a downstream scanner can ingest — otherwise the argument
+      # exists only in a TOML comment nobody downstream reads, and a hospital's
+      # scanner sees unexplained findings on a clinical artifact.
+      #
+      # Ungated on `changes.code`: `deny.toml` is in the code allowlist, but the
+      # prose file and the generator are not, and a prose-only edit must still be
+      # checked.
+      - name: vex / The runner's yq is 4.53.3 or newer
+        if: ${{ !cancelled() }}
+        env:
+          YQ_MIN_VERSION: 4.53.3
+        run: bash scripts/checks/runner-yq.sh
+      - name: vex / Every accepted advisory has a published VEX justification
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/vex-advisories.sh
+      # The release pipeline's exploitability-record gate, proven on synthetic
+      # input here so a broken detector is caught before a release depends on it.
+      - name: vex / The exploitability-record detector refuses what it claims to
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/vex-coverage.sh --self-test
+      - name: vex / OS VEX linkage detector self-test
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/vex-linkage.sh --self-test
+      # The check that trivy applies each judgement (#5153), on a planted statement.
+      - name: vex / The applied-judgement detector names a judgement trivy left in place
+        if: ${{ !cancelled() }}
+        run: bash scripts/security/vex-applied.sh --self-test
 
   # ── Always required: supply-chain policy ────────────────────────────────────
   # cargo-deny alone: `cargo deny check` reads the SAME RustSec advisory DB as
@@ -1329,47 +1299,6 @@ jobs:
       # reader, reading the generated document the `vex` job pins to the prose.
       - name: Every VEX statement names the real dependency path
         run: bash scripts/checks/vex-reachability.sh
-
-  # The published VEX document must be exactly what `deny.toml` plus the prose
-  # file generate. Every advisory the gate ACCEPTS carries a machine-readable
-  # justification a downstream scanner can ingest — otherwise the argument
-  # exists only in a TOML comment nobody downstream reads, and a hospital's
-  # scanner sees unexplained findings on a clinical artifact.
-  #
-  # Ungated on `changes.code`: `deny.toml` is in the code allowlist, but the
-  # prose file and the generator are not, and a prose-only edit must still be
-  # checked.
-  vex:
-    name: vex
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # `deny.toml` and the prose file are TOML, which jq cannot read. Pinned by
-      # version and verified by checksum, like the chart lane's copy: this
-      # binary decides whether the gate passes.
-      # The runner image's yq, held to the oldest version the scripts are
-      # verified on; no per-run download (#5256).
-      - name: The runner's yq is 4.53.3 or newer
-        env:
-          YQ_MIN_VERSION: 4.53.3
-        run: bash scripts/checks/runner-yq.sh
-      - name: Every accepted advisory has a published VEX justification
-        run: bash scripts/checks/vex-advisories.sh
-      # The release pipeline's exploitability-record gate, proven on synthetic
-      # input here so a broken detector is caught before a release depends on it.
-      - name: The exploitability-record detector refuses what it claims to
-        run: bash scripts/checks/vex-coverage.sh --self-test
-      - name: OS VEX linkage detector self-test
-        run: bash scripts/checks/vex-linkage.sh --self-test
-      # The check that trivy applies each judgement (#5153), on a planted statement.
-      - name: The applied-judgement detector names a judgement trivy left in place
-        run: bash scripts/security/vex-applied.sh --self-test
 
   clippy:
     name: clippy
@@ -2719,46 +2648,6 @@ jobs:
           fi
           echo "Chart version bumped $old -> $new — OK."
 
-  # appVersion guard (issue #2108, narrowed by #2779). It used to hold
-  # `appVersion` and the `artifacthub.io/images` tags equal to the WORKSPACE
-  # version, which made both of them per-release facts a human had to hand-edit
-  # at every cut. They are injected now: `build-chart.yml` packages with
-  # `helm package --app-version <released version>` and rewrites the annotation's
-  # tags in the same step, so the published chart is right by construction and a
-  # cut edits neither.
-  #
-  # What is left in the tree is a DEFAULT — for a chart-only dispatch between
-  # releases, and for anyone running `helm template`/`helm install` against this
-  # directory — and the properties that default still has to have are in
-  # scripts/checks/chart-appversion.sh, which `plan` runs against the tagged
-  # commit too. One script rather than two copies of one check.
-  #
-  # What no version guard catches, stated because it was measured rather than
-  # imagined: an appVersion naming a real release does not mean that release's
-  # image ACCEPTS the chart's current `config` defaults. Values track development
-  # between releases, so the rendered default configuration carries
-  # `server.limits` and `db.statement_timeout_ms`, which 3.17.3 does not know — its
-  # own `config check` refuses the file, and a plain `helm install` crash-loops.
-  # Only an image can answer that: the `chart-boot` job below replays it against
-  # the tree-built image, and build-chart.yml refuses to publish a chart that
-  # cannot deploy the image it selects.
-  chart-appversion:
-    name: chart-appversion-guard
-    needs: changes
-    if: needs.changes.outputs.queue_verified != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: The chart release-facts guard refuses its own mutations
-        run: bash scripts/checks/chart-appversion.sh --self-test
-      - name: The committed chart release facts are coherent
-        run: bash scripts/checks/chart-appversion.sh
-
   migration-immutability:
     name: migration-immutability
     if: github.event_name == 'pull_request'
@@ -2927,96 +2816,6 @@ jobs:
           fi
           bash scripts/checks/changelog-guard.sh "$BASE" "$HEAD"
 
-  # Citation guard: CITATION.cff must stay CFF-1.2.0-schema-valid and
-  # version-consistent with the workspace — a malformed file silently breaks
-  # GitHub's "Cite this repository" button, and a stale version misquotes the
-  # release in research citations. The release cut bumps version +
-  # date-released (.claude/rules/changelog.md §Cutting a release).
-  citation:
-    name: citation-guard
-    needs: changes
-    if: needs.changes.outputs.queue_verified != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # No Python (#2791): this step replaced `pipx run cffconvert --validate`,
-      # which contradicted the no-Python hard rule (rust-style.md §No Python —
-      # the no-python guard now catches pipx/pip too). Same contract, different
-      # validator: cffconvert validates against the SAME schema file, vendored
-      # at .github/cff-schema/ (scripts/vendor/cff-schema.sh), and the pinned
-      # Rust jsonschema-cli validates the yq-converted document against it.
-      # yq is the runner image's, held to a version floor as in the helm-golden
-      # job (#5256).
-      - name: The runner's yq is 4.53.3 or newer
-        env:
-          YQ_MIN_VERSION: 4.53.3
-        run: bash scripts/checks/runner-yq.sh
-      - name: Install the pinned jsonschema-cli
-        env:
-          JSONSCHEMA_CLI_VERSION: 0.52.0
-        run: |
-          set -euo pipefail
-          cargo install jsonschema-cli --version "${JSONSCHEMA_CLI_VERSION}" --locked
-      - name: Validate CITATION.cff (CFF 1.2.0 schema)
-        run: |
-          set -euo pipefail
-          yq -o=json CITATION.cff > "${RUNNER_TEMP}/citation.json"
-          jsonschema-cli validate .github/cff-schema/schema.json -i "${RUNNER_TEMP}/citation.json"
-      # The ferroehr party statement is the published conformance claim for
-      # THE product this repo ships; its product version sat at 3.6.0 while
-      # the record reached 3.20.0 with nothing failing (#2576). Same
-      # version-agreement family as the CITATION check below.
-      - name: The ferroehr party statement's product version matches the workspace
-        run: bash scripts/checks/statement-version.sh
-      - name: CITATION.cff version matches the workspace version
-        run: |
-          set -euo pipefail
-          cff_ver=$(sed -nE 's/^version:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/p' CITATION.cff)
-          ws_ver=$(sed -nE 's/^version = "(.*)"$/\1/p' Cargo.toml | sed -n 1p)
-          if [ -z "$cff_ver" ] || [ -z "$ws_ver" ]; then
-            echo "::error::could not extract versions (CITATION.cff: '$cff_ver', Cargo.toml: '$ws_ver')." >&2
-            exit 1
-          fi
-          if [ "$cff_ver" != "$ws_ver" ]; then
-            echo "::error::CITATION.cff version ($cff_ver) != workspace version ($ws_ver) — the release cut bumps CITATION.cff version/date-released (.claude/rules/changelog.md)." >&2
-            exit 1
-          fi
-          echo "CITATION.cff version $cff_ver matches the workspace version."
-      # `.zenodo.json` is GENERATED from CITATION.cff, because Zenodo ignores
-      # CITATION.cff entirely whenever a .zenodo.json is present
-      # (https://help.zenodo.org/docs/github/describe-software/zenodo-json/).
-      # A hand-edited copy would therefore silently override the file this job
-      # guards, and the disagreement would be archived under a DOI that cannot
-      # be edited afterwards.
-      - name: .zenodo.json is in sync with CITATION.cff
-        run: bash scripts/render/zenodo-json.sh --check
-
-  # Compose version guard: the standalone quickstart docker-compose.yml pins
-  # the published images by tag, so a release cut that forgets those defaults
-  # ships a quickstart running the PREVIOUS release. The release cut bumps them
-  # with the workspace version (.claude/rules/changelog.md §Cutting a release).
-  compose-version-guard:
-    name: compose-version-guard
-    needs: changes
-    if: needs.changes.outputs.queue_verified != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: compose image-tag guard self-test
-        run: bash scripts/checks/compose-image-tags.sh --self-test
-      - name: compose image tags match the workspace version
-        run: bash scripts/checks/compose-image-tags.sh
-
   # Quickstart config guard (#4380, #5003): the inline configurations of
   # docker-compose.yml must be readable by the server that runs them, or a
   # downloader gets a server that refuses its own configuration. On main the
@@ -3058,27 +2857,6 @@ jobs:
           FERROEHR_CONFIG_IMAGE: ferroehr:quickstart-config
         run: bash scripts/checks/quickstart-config-image.sh
 
-  # FerroPIX pin guard (#4392): the quickstart, the Helm chart and the hosted
-  # sandbox pin one FerroPIX release by digest, and the sandbox's
-  # configuration and each chart golden's ferropix.toml read under it. The
-  # Dependabot entry for the quickstart pin then moves all three together.
-  ferropix-pins:
-    name: ferropix-pins
-    needs: changes
-    if: needs.changes.outputs.queue_verified != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: FerroPIX pin guard self-test
-        run: bash scripts/checks/ferropix-pins.sh --self-test
-      - name: Every FerroPIX pin is one release, and its configurations read under it
-        run: bash scripts/checks/ferropix-pins.sh
-
   # Veredictum pin guard (#4449): the conformance workflow runs the Veredictum
   # Action at the commit of the tag VEREDICTUM_VERSION names, on the image
   # digest VEREDICTUM_IMAGE names, both in scripts/lib/veredictum.sh. The tag
@@ -3116,23 +2894,6 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/fuzz.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
-
-  veredictum-action:
-    name: veredictum-action
-    needs: changes
-    if: needs.changes.outputs.queue_verified != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Veredictum pin guard self-test
-        run: bash scripts/checks/veredictum-action.sh --self-test
-      - name: The Action SHA, its version comment, the image digest and VEREDICTUM_VERSION agree
-        run: bash scripts/checks/veredictum-action.sh
 
   # The release's vulnerability record, before the tag (#4795). release.yml
   # refuses a finding without an OpenVEX judgement only after the tag, and a
@@ -3221,37 +2982,9 @@ jobs:
     needs:
       - changes
       - fmt
-      - no-attribution
-      - workflow-audit
-      - workflow-lint
-      - shellcheck
-      - tracker-helpers
-      - ferroterm-index-layout
-      - hosted-deploy-script
-      - comment-style
-      - stray-literals
-      - default-style
-      - e2e-waits
-      - docs-claims
-      - control-matrix
-      - tracker-status
-      - sql-string-building
-      - error-hygiene
-      - error-source-chain
-      - duplication
-      - file-size
-      - forwarders
-      - no-python
-      - license-text
-      - copyright-holder
-      - spdx-headers-text
-      - law-corpus
-      - licensing
-      - spec-citations
-      - compose-hardening
-      - terminology-seed-drift
+      - lint
+      - guards
       - deny
-      - vex
       - clippy
       - feature-combos
       - its-wasm
@@ -3278,17 +3011,12 @@ jobs:
       - migration-immutability
       - changelog
       - release-fragments
-      - citation
-      - compose-version-guard
       - quickstart-config
-      - ferropix-pins
-      - veredictum-action
       - harnesses
       - vulnerability-record
       - conformance
       - crate-version
       - chart-version
-      - chart-appversion
       - chart-boot
       - conflict-markers
     runs-on: ubuntu-latest
