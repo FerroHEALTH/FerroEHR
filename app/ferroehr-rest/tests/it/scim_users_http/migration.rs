@@ -107,7 +107,7 @@ async fn migrated(svc: &FerroEhrService, professional: bool) -> VoId {
             lifecycle_state: None,
         },
     );
-    svc.create_parties(parties, "a migration from an earlier system")
+    svc.create_parties(parties, "a migration from an earlier system", None)
         .await
         .expect("the migration commits");
     id

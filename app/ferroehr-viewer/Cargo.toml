@@ -39,6 +39,9 @@ ferrohealth-session = { workspace = true, features = ["axum"] }
 # Formats (`openehr_sdt::flat`, the query-builder path catalog).
 openehr-its = { path = "../../crates/openehr-its", default-features = false, features = ["full"] }
 openehr-sdt = { path = "../../crates/openehr-sdt", default-features = false, features = ["full"] }
+# The FHIR R4 `Bundle`, `AuditEvent` and `OperationOutcome` of the audit
+# screen and of a refusal body.
+fhir-types.workspace = true
 # The `OBJECT_VERSION_ID` parse and its verbatim parts, which every version id
 # the viewer reduces or rebuilds goes through.
 openehr-base = { path = "../../crates/openehr-base" }

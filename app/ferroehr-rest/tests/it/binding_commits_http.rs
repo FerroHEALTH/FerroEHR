@@ -166,7 +166,7 @@ fn contribution(composition: &Value, committer: &Value, attested: bool) -> Value
 
 /// A `method` request for `path` under the API base as `credential`, asking
 /// for the representation.
-fn request(method: &str, path: &str, credential: &str) -> common::Req {
+pub(crate) fn request(method: &str, path: &str, credential: &str) -> common::Req {
     common::req(method, format!("{BASE}{path}"))
         .auth(credential)
         .accept("application/json")
@@ -174,13 +174,13 @@ fn request(method: &str, path: &str, credential: &str) -> common::Req {
 }
 
 /// A `method` request for `path` as `credential` carrying `body`.
-fn with_body(method: &str, path: &str, credential: &str, body: &Value) -> common::Req {
+pub(crate) fn with_body(method: &str, path: &str, credential: &str, body: &Value) -> common::Req {
     request(method, path, credential).json(body.to_string())
 }
 
 /// Sends `request` and asserts the answer is `expected`, naming `case`;
 /// returns the answer's headers and body.
-async fn answered(
+pub(crate) async fn answered(
     app: &Router,
     request: common::Req,
     expected: StatusCode,
@@ -192,7 +192,7 @@ async fn answered(
 }
 
 /// Creates an EHR as `credential`, returning its id.
-async fn ehr(app: &Router, credential: &str) -> String {
+pub(crate) async fn ehr(app: &Router, credential: &str) -> String {
     let (headers, _) = answered(
         app,
         request("POST", "/ehr", credential),

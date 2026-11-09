@@ -29,6 +29,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::config::auth_section::AuthConfig;
 
+pub mod jit;
 pub mod person;
 
 /// The `[authz.party_binding]` table.
@@ -55,6 +56,12 @@ pub struct PartyBindingConfig {
     pub membership: Option<person::MembershipSection>,
     /// The representation `PARTY_RELATIONSHIP` archetype.
     pub representation: Option<person::RepresentationSection>,
+    /// What FerroEHR does for each `persons` issuer beyond the lookup
+    /// (`[[authz.party_binding.issuer]]`): just-in-time creation.
+    pub issuer: Vec<jit::IssuerBinding>,
+    /// The age in days past which `ferroehr party-binding check` reports a
+    /// provisional `PERSON`.
+    pub provisional_report_days: u32,
     /// The removed `enabled` key, held only so its presence is refused by
     /// name: binding has no switch.
     #[serde(default, skip_serializing)]
@@ -88,6 +95,8 @@ impl Default for PartyBindingConfig {
             group: None,
             membership: None,
             representation: None,
+            issuer: Vec::new(),
+            provisional_report_days: 30,
             enabled: None,
         }
     }
@@ -273,6 +282,7 @@ pub fn errors(
     key_types(binding, resolved, &mut errors);
     shared_audiences(resolved, &mut errors);
     providers(binding, resolved, &mut errors);
+    errors.extend(jit::errors(binding, resolved, &authz.assurance));
     if let Err(e) = resolved.check_role_issuers("authz.rbac.role_issuers", &authz.rbac.role_issuers)
     {
         errors.push(e.to_string());
@@ -505,6 +515,11 @@ pub struct BindingPosture {
     pub namespace: String,
     /// The federation agreements.
     pub agreements: Vec<AgreementPosture>,
+    /// The mapped Basic users, while `[authz.assurance] minimum` is unset: a
+    /// Basic credential carries no assurance level, so nothing refuses them
+    /// on patient data.
+    #[serde(skip)]
+    pub unassured_basic: Vec<String>,
 }
 
 /// One trusted issuer of the binding posture.
@@ -559,16 +574,29 @@ impl BindingPosture {
                 legal_ground: agreement.legal_ground.as_ref().map(ToString::to_string),
             })
             .collect();
+        let unassured_basic = if config.authz.assurance.minimum.is_none() {
+            config
+                .authz
+                .party_binding
+                .basic_user
+                .iter()
+                .map(|mapping| mapping.user.clone())
+                .collect()
+        } else {
+            Vec::new()
+        };
         Self {
             issuers,
             provider: config.authz.party_binding.provider.clone(),
             namespace: config.authz.party_binding.namespace.clone(),
             agreements,
+            unassured_basic,
         }
     }
 
-    /// Logs the posture: one line for the binding, one per agreement, and a
-    /// `warn` for every agreement that runs without a named person.
+    /// Logs the posture: one line for the binding, one per agreement, a
+    /// `warn` for every agreement that runs without a named person, and a
+    /// `warn` while a mapped Basic user exists with no assurance minimum.
     pub fn log(&self) {
         let issuers: Vec<String> = self
             .issuers
@@ -590,6 +618,13 @@ impl BindingPosture {
             namespace = %self.namespace,
             "party binding configured"
         );
+        if !self.unassured_basic.is_empty() {
+            tracing::warn!(
+                users = %self.unassured_basic.join(", "),
+                "mapped Basic users sign in with no assurance level while \
+                 [authz.assurance] minimum is unset"
+            );
+        }
         for agreement in &self.agreements {
             let accessor = agreement
                 .accessor
@@ -643,6 +678,10 @@ mod tests {
                 "urn:ura",
             ),
             ("FERROEHR__AUTHZ__PARTY_BINDING__PROVIDER__ID", "1234"),
+            (
+                "FERROEHR__AUTHZ__PARTY_BINDING__PROVISIONAL_REPORT_DAYS",
+                "14",
+            ),
             ("FERROEHR__AUTHZ__RBAC__IMPORT_ROLE", "IMPORTER"),
             ("FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS", "https://a,https://b"),
             ("FERROEHR__AUTHZ__IMPORT__TRUSTED_SYSTEMS", "sys-a"),
@@ -653,6 +692,7 @@ mod tests {
             Some(ferrohealth_smart::assurance::AssuranceLevel::High)
         );
         assert_eq!(c.authz.party_binding.namespace, "hr");
+        assert_eq!(c.authz.party_binding.provisional_report_days, 14);
         assert_eq!(
             c.authz.party_binding.provider,
             Some(Providers::One(ProviderId {

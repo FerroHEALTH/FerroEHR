@@ -453,3 +453,35 @@ pub async fn mark_contacts_erased(tx: &mut PgConnection, party: VoId) -> Result<
         .await?;
     Ok(())
 }
+
+/// The provisional `PERSON`s whose first version was committed before
+/// `before`, with that instant, oldest first: each `PERSON` with a live key
+/// row whose head is `553|incomplete|`.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn provisional_before(
+    conn: &mut PgConnection,
+    before: jiff::Timestamp,
+) -> Result<Vec<(VoId, jiff::Timestamp)>, StorageError> {
+    let rows = sqlx::query(
+        "SELECT p.party_id, min(a.time_committed) AS created \
+         FROM (SELECT DISTINCT k.party_id FROM binding_identifier k \
+               WHERE k.selector = 'key' AND k.retired_at IS NULL \
+                 AND k.lifecycle_state = '553') p \
+         JOIN version v ON v.vo_id = p.party_id \
+         JOIN commit_audit a ON a.id = v.commit_audit_id \
+         GROUP BY p.party_id \
+         HAVING min(a.time_committed) < $1 \
+         ORDER BY created, p.party_id",
+    )
+    .bind(jiff_sqlx::Timestamp::from(before))
+    .fetch_all(&mut *conn)
+    .await?;
+    let mut out = Vec::with_capacity(rows.len());
+    for row in rows {
+        let created: jiff_sqlx::Timestamp = row.try_get("created")?;
+        out.push((VoId(row.try_get("party_id")?), created.to_jiff()));
+    }
+    Ok(out)
+}
