@@ -45,34 +45,33 @@ async fn service(
         enabled: true,
         store: StoreConfig {
             enabled: true,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
         ..AuditConfig::default()
     };
     if let Some(listener) = syslog {
-        audit.syslog = SyslogConfig {
-            enabled: true,
-            host: "localhost".to_owned(),
-            port: listener.port,
+        audit.syslog = Some(SyslogConfig {
+            url: format!("tls://localhost:{}", listener.port),
             tls: ferrohealth_server::tls_client::TlsClientSection {
                 trust_roots_file: Some(listener.ca_file.clone()),
                 ..ferrohealth_server::tls_client::TlsClientSection::default()
             },
             ..SyslogConfig::default()
-        };
+        });
     }
     if let Some(url) = feed {
-        audit.fhir_feed = FhirFeedConfig {
-            enabled: true,
+        audit.fhir_feed = Some(FhirFeedConfig {
             url: ferrohealth_secret::secret_url::SecretUrl::new(url),
-            poll_interval_ms: 100,
-            retry_max_ms: 500,
-            oauth: None,
-        };
+            poll_interval: ferrohealth_config::units::Duration::from_millis(100),
+            retry: ferroehr::system_log::config::SinkRetry {
+                max_backoff: ferrohealth_config::units::Duration::from_millis(500),
+            },
+            ..FhirFeedConfig::default()
+        });
     }
     let (sender, handle) = start(audit, None, Some(pool.clone()))
         .await
@@ -81,9 +80,8 @@ async fn service(
         .compile()
         .expect("the shipped map compiles");
     let section = AccessDelayConfig {
-        enabled: true,
         categories: vec!["Patient-Summaries".to_owned()],
-        hours: 72,
+        max_delay: Some(ferrohealth_config::units::Duration::from_hours(72)),
     };
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
         .with_audit(sender.clone())

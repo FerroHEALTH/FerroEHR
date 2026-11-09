@@ -238,7 +238,7 @@ commit-message wording. Late labels: since #2777 applying a label raises a fresh
     host port, so for a locally built server use a throwaway
     `docker run -p 5433:5432 -e POSTGRES_PASSWORD=postgres -e PG_INIT_USER=…
     -e PG_INIT_PASSWORD=… -e PG_INIT_DB=… ghcr.io/rubentalstra/ferroehr-postgres:<tag>`
-    plus `FERROEHR__DB__URL` and `--config deploy/hosted/ferroehr.sandbox.toml`
+    plus `FERROEHR__DATABASE__URL` and `--config deploy/hosted/ferroehr.sandbox.toml`
     (basic user ferroehr/ferroehr, admin on). A debug build of the seed takes
     ~120 s versus 39–45 s on the release image.
 

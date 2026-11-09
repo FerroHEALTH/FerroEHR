@@ -283,10 +283,10 @@ Helm waits on so a failed migration fails the release (it takes its own
 different credential from the runtime one, and rendering fails without it):
 
 ```shell
-FERROEHR__DB__URL='postgres://ferroehr_migrator:***@pg:5432/ferroehr' \
+FERROEHR__DATABASE__URL='postgres://ferroehr_migrator:***@pg:5432/ferroehr' \
   ferroehr db migrate     # applies; exits when done
-FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg:5432/ferroehr' \
-FERROEHR__DB__MIGRATE_URL='postgres://ferroehr_migrator:***@pg:5432/ferroehr' \
+FERROEHR__DATABASE__URL='postgres://ferroehr_clinical:***@pg:5432/ferroehr' \
+FERROEHR__DATABASE__MIGRATE_URL='postgres://ferroehr_migrator:***@pg:5432/ferroehr' \
   ferroehr db verify      # read-only check; exit 0 iff the schema is current
 ```
 

@@ -18,7 +18,7 @@
 
 use axum::Router;
 use ferroehr::config::FerroEhrConfig;
-use ferroehr::service::ehr_index::config::EhrIndexConfig;
+use ferroehr::service::ehr_index::config::SubjectIndex;
 use ferroehr_rest::config::AppConfig;
 use http::{StatusCode, header};
 use serde_json::Value;
@@ -39,10 +39,9 @@ async fn short_base_router() -> (testkit::TestDb, Router) {
     // and the Swagger surface differ from it here.
     let config = AppConfig {
         server: common::server(),
-        rest: ferroehr::config::rest::RestConfig {
+        api: ferroehr::config::rest::ApiConfig {
             base_path: SHORT_BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Public,
-            cors_permissive: false,
+            openapi_ui: ferroehr::config::management::AccessLevel::Public,
             ..Default::default()
         },
         ..common::api_config(false)
@@ -55,13 +54,11 @@ async fn short_base_router() -> (testkit::TestDb, Router) {
 /// behaviour below only matters for a configuration a server would start on.
 #[test]
 fn the_shortened_base_path_passes_boot_validation() {
-    let mut cfg = FerroEhrConfig {
-        ehr_index: EhrIndexConfig::local(),
-        ..FerroEhrConfig::default()
-    };
-    cfg.rest.base_path = SHORT_BASE.to_owned();
+    let mut cfg = FerroEhrConfig::default();
+    cfg.record.subject_index = Some(SubjectIndex::Local);
+    cfg.api.base_path = SHORT_BASE.to_owned();
     assert!(cfg.validate().is_ok());
-    assert_eq!(cfg.rest.rest_root(), SHORT_ROOT);
+    assert_eq!(cfg.api.rest_root(), SHORT_ROOT);
 }
 
 /// The API answers under the configured base path, the `Location` it returns

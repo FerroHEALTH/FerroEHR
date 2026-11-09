@@ -1,14 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[multimedia]` section — `DV_MULTIMEDIA` externalization.
+//! The `[record.multimedia]` section — `DV_MULTIMEDIA` externalization.
 //!
 //! **No openEHR spec governs this — our own design/extension.** A field of the
 //! one config tree ([`crate::config::FerroEhrConfig`]); no loader of its own.
 //!
-//! **Off by default** (`enabled = false`): with externalization disabled the
-//! commit/read paths are byte-identical to today's inline behaviour and no
-//! object store is ever contacted. The secret access key is a shared
+//! **Off by default** (`enabled = false`): with externalization disabled and
+//! no `url` the commit/read paths are byte-identical to today's inline
+//! behaviour and no object store is ever contacted. The section keeps
+//! `enabled` where other optional features use the table's presence, because
+//! `url` applies while it is off: the blobs already offloaded are read back. The secret access key is a shared
 //! [`ferrohealth_secret::secret::Secret`] (never rendered) with a `*_file` sibling.
 
 #![expect(
@@ -19,6 +21,7 @@
 
 use std::path::PathBuf;
 
+use ferrohealth_config::units::ByteSize;
 use ferrohealth_secret::secret::Secret;
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::mask_userinfo;
@@ -32,14 +35,15 @@ pub struct MultimediaConfig {
     /// Master switch. `false` (default) = today's inline behaviour, byte for
     /// byte; no object store is built or contacted.
     pub enabled: bool,
-    /// A decoded `DV_MULTIMEDIA.data` strictly larger than this many bytes is
-    /// offloaded to the object store; at or below it stays inline. Default
-    /// 256 `KiB`.
-    pub threshold_bytes: usize,
+    /// A decoded `DV_MULTIMEDIA.data` strictly larger than this is offloaded
+    /// to the object store; at or below it stays inline. Default `"256KiB"`.
+    pub threshold: ByteSize,
     /// S3-compatible endpoint URL (e.g. a SeaweedFS S3 gateway in dev/test, or
     /// an AWS/MinIO endpoint in prod). `None` uses the object_store default AWS
     /// endpoint resolution. Any `userinfo` in it is masked in every rendering.
-    pub endpoint: Option<SecretUrl>,
+    /// An `http://` URL is plain HTTP, which a dev SeaweedFS speaks; a
+    /// `production` deployment names it as a gap.
+    pub url: Option<SecretUrl>,
     /// Target bucket for content-addressed blobs.
     pub bucket: String,
     /// AWS region (S3 requires one even for non-AWS endpoints).
@@ -53,28 +57,28 @@ pub struct MultimediaConfig {
     /// secrets). Exactly one of the pair may be set; the loader reads and trims
     /// the file.
     pub secret_access_key_file: Option<PathBuf>,
-    /// Allow plain-HTTP endpoints (dev/test only — a SeaweedFS container speaks
-    /// HTTP). Production S3 is HTTPS, so this stays `false` there.
-    pub allow_http: bool,
+    /// Retired: refused at load, naming the `url` scheme in its place.
+    #[serde(skip_serializing)]
+    pub allow_http: ferrohealth_config::removed::Removed,
 }
 
 impl Default for MultimediaConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            threshold_bytes: 256 * 1024,
-            endpoint: None,
+            threshold: ByteSize::from_kib(256),
+            url: None,
             bucket: "openehr-multimedia".to_owned(),
             region: "us-east-1".to_owned(),
             access_key_id: None,
             secret_access_key: None,
             secret_access_key_file: None,
-            allow_http: false,
+            allow_http: ferrohealth_config::removed::Removed::default(),
         }
     }
 }
 
-/// Why [`MultimediaConfig::endpoint_url`] refused `multimedia.endpoint`.
+/// Why [`MultimediaConfig::endpoint_url`] refused `record.multimedia.url`.
 ///
 /// Every message quotes the endpoint only through [`mask_userinfo`], so no
 /// refusal carries a credential.
@@ -82,13 +86,13 @@ impl Default for MultimediaConfig {
 pub enum EndpointError {
     /// The key is set to a blank string.
     #[error(
-        "multimedia.endpoint is set but empty — give an absolute URL \
+        "record.multimedia.url is set but empty — give an absolute URL \
          (e.g. http://seaweedfs:8333) or remove the key to use default \
          AWS endpoint resolution"
     )]
     Empty,
     /// The value does not parse as an absolute URL.
-    #[error("multimedia.endpoint {shown:?} is not an absolute URL: {reason}")]
+    #[error("record.multimedia.url {shown:?} is not an absolute URL: {reason}")]
     NotAbsolute {
         /// The endpoint, `userinfo` masked.
         shown: String,
@@ -97,7 +101,7 @@ pub enum EndpointError {
     },
     /// The value parses, but its scheme is neither `http` nor `https`.
     #[error(
-        "multimedia.endpoint {shown:?} has scheme {scheme:?} — an S3 endpoint \
+        "record.multimedia.url {shown:?} has scheme {scheme:?} — an S3 endpoint \
          must be http or https (did you mean \"http://{shown}\"?)"
     )]
     NotHttp {
@@ -109,13 +113,22 @@ pub enum EndpointError {
 }
 
 impl MultimediaConfig {
+    /// Whether the store is reached over plain HTTP: an `http://` `url`, which
+    /// a dev SeaweedFS speaks.
+    #[must_use]
+    pub fn allows_http(&self) -> bool {
+        self.url
+            .as_ref()
+            .is_some_and(|url| url.expose().trim_start().starts_with("http://"))
+    }
+
     /// Whether the client should run unsigned/anonymous (no credentials given).
     #[must_use]
     pub fn is_anonymous(&self) -> bool {
         self.access_key_id.is_none() && self.secret_access_key.is_none()
     }
 
-    /// Parses [`Self::endpoint`] into the absolute `http`/`https` URL the S3
+    /// Parses [`Self::url`] into the absolute `http`/`https` URL the S3
     /// client connects to; `None` when the key is absent.
     ///
     /// The one validation of the key: boot validation and the object-store
@@ -126,7 +139,7 @@ impl MultimediaConfig {
     /// [`EndpointError`] for a blank value, a value that is not an absolute
     /// URL, or a scheme other than `http`/`https`.
     pub fn endpoint_url(&self) -> Result<Option<Url>, EndpointError> {
-        let Some(endpoint) = &self.endpoint else {
+        let Some(endpoint) = &self.url else {
             return Ok(None);
         };
         let trimmed = endpoint.expose().trim();
@@ -156,7 +169,7 @@ mod tests {
     #[test]
     fn endpoint_refusals_never_quote_userinfo() {
         let with = |endpoint: &str| MultimediaConfig {
-            endpoint: Some(SecretUrl::new(endpoint)),
+            url: Some(SecretUrl::new(endpoint)),
             ..MultimediaConfig::default()
         };
         for bad in ["", "   ", "seaweedfs:8333", "/bucket"] {
@@ -186,9 +199,9 @@ mod tests {
     fn default_is_disabled_with_256kib_threshold() {
         let c = MultimediaConfig::default();
         assert!(!c.enabled);
-        assert_eq!(c.threshold_bytes, 256 * 1024);
+        assert_eq!(c.threshold, ByteSize::from_kib(256));
         assert_eq!(c.bucket, "openehr-multimedia");
         assert!(c.is_anonymous());
-        assert!(!c.allow_http);
+        assert!(!c.allow_http.is_set());
     }
 }

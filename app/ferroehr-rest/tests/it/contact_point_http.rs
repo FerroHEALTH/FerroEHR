@@ -71,7 +71,7 @@ fn eprescription(hours: u32) -> Agreement {
         reads: vec![SCOPE.to_owned()],
         writes: vec![DISPENSATION.to_owned()],
         discard: true,
-        discard_window_hours: hours,
+        discard_window: ferrohealth_config::units::Duration::from_hours(u64::from(hours)),
         ehdsi_service: Some(EhdsiService::Eprescription),
         caller_rate: Some(CallerRate {
             requests_per_second: std::num::NonZeroU32::MIN.saturating_add(99),
@@ -134,7 +134,7 @@ async fn serve(agreement: Agreement) -> (testkit::TestDb, Arc<FerroEhrService>, 
         agreements: vec![agreement],
         ..common::api_config(true)
     };
-    config.smart.patient_issuers = vec![CONTACT_POINT.to_owned()];
+    config.auth.smart.patient_issuers = vec![CONTACT_POINT.to_owned()];
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
         .await
         .expect("build app");

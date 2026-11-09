@@ -20,8 +20,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::config::rest::AdminConfig;
-use ferroehr::config::rest::RestConfig;
+use ferroehr::config::rest::ApiConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, start};
@@ -46,17 +45,17 @@ const EHR_ID: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 // ── config + app assembly ─────────────────────────────────────────────────────
 
 fn rest_config() -> AppConfig {
-    let mut config = AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
+    let mut config = {
+        let mut c = AppConfig {
+            server: common::server(),
+            api: ApiConfig {
+                openapi_ui: ferroehr::config::management::AccessLevel::Off,
+                ..Default::default()
+            },
             ..Default::default()
-        },
-        // The admin group must be reachable so the RBAC gate is what decides
-        // access (the admin tests assert 403 for USER vs a cleared gate for
-        // ADMIN at the dispatcher, not the config gate's 404).
-        admin: AdminConfig { enabled: true },
-        ..Default::default()
+        };
+        c.api.admin = true;
+        c
     };
     common::with_basic_users(
         &mut config,
@@ -78,7 +77,7 @@ fn authz(enabled: bool) -> Option<Arc<AuthzHandle>> {
         content_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
         content: Arc::default(),
     };
-    AuthzHandle::build(&cfg, &rest_config().rest.base_path, None, resolvers).map(Arc::new)
+    AuthzHandle::build(&cfg, &rest_config().api.base_path, None, resolvers).map(Arc::new)
 }
 
 /// A real service over a fresh DB, optionally wired with an ATNA audit sender.
@@ -116,22 +115,20 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
         enabled: true,
         store: StoreConfig {
             enabled: false,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
-        syslog: SyslogConfig {
-            enabled: true,
-            host: "127.0.0.1".to_owned(),
-            port,
+        syslog: Some(SyslogConfig {
+            url: format!("tls://127.0.0.1:{port}"),
             tls: ferrohealth_server::tls_client::TlsClientSection {
                 trust_roots_file: Some(socket.ca_file.clone()),
                 ..ferrohealth_server::tls_client::TlsClientSection::default()
             },
             ..SyslogConfig::default()
-        },
+        }),
         suppress_login_events: true,
         fail_mode: FailMode::Open,
         queue_capacity: 64,
@@ -578,7 +575,7 @@ async fn admin_config_admin_gets_redacted_snapshot() {
     // DB DSN carries a credential; the admin caller receives the tree with the
     // credential masked (structural `SecretUrl` redaction), never the secret.
     let mut cfg = ferroehr::config::FerroEhrConfig::default();
-    cfg.db.url = ferrohealth_secret::secret_url::SecretUrl::new(
+    cfg.database.url = ferrohealth_secret::secret_url::SecretUrl::new(
         "postgres://dbuser:TOP_SECRET_PW@db.internal:5432/ferroehr",
     );
     let snapshot = cfg.to_redacted_json().expect("redacted json");
@@ -616,19 +613,24 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
 
     let leaky = |n: u32| SecretUrl::new(format!("https://u{n}:URL_PW_SENTINEL_{n}@h{n}/p"));
     let mut cfg = ferroehr::config::FerroEhrConfig::default();
-    cfg.db.url = leaky(1);
-    cfg.terminology.server.url = leaky(2);
-    cfg.terminology.server.oauth = Some(ferrohealth_smart::config::credentials::OauthSection {
-        token_endpoint: "https://u3:URL_PW_SENTINEL_3@h3/p".to_owned(),
-        ..ferrohealth_smart::config::credentials::OauthSection::default()
-    });
+    cfg.database.url = leaky(1);
+    cfg.terminology = Some(
+        ferroehr::service::terminology::config::TerminologyServerConfig {
+            url: leaky(2),
+            oauth: Some(ferrohealth_smart::config::credentials::OauthSection {
+                token_endpoint: "https://u3:URL_PW_SENTINEL_3@h3/p".to_owned(),
+                ..ferrohealth_smart::config::credentials::OauthSection::default()
+            }),
+            ..ferroehr::service::terminology::config::TerminologyServerConfig::default()
+        },
+    );
     // URL 4 was the usage report endpoint, whose type now refuses userinfo.
-    cfg.authz.abac.remote.server = Some(leaky(5));
+    cfg.authz.abac.remote.url = Some(leaky(5));
     cfg.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
         endpoint: leaky(6),
         ..ferrohealth_telemetry::section::OtlpSection::default()
     });
-    cfg.multimedia.endpoint = Some(leaky(7));
+    cfg.record.multimedia.url = Some(leaky(7));
     let snapshot = cfg.to_redacted_json().expect("redacted json");
 
     let (_pg, svc) = service(None).await;

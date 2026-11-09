@@ -188,7 +188,7 @@ impl FerroEhrService {
     /// (`docs/law/eu/ehds/text.html`); `category` and `origin` are those
     /// dimensions. A category is named as `[audit.categories]` names one and
     /// stored as its `<system>|<code>` token; an origin is the id of a
-    /// registered origin (`[origins]`). `None` keys the period on every object
+    /// registered origin (`[[authz.origin]]`). `None` keys the period on every object
     /// of the kind, or of every origin. The register is where those answers
     /// come from.
     ///
@@ -205,7 +205,7 @@ impl FerroEhrService {
         {
             return Err(ServiceError::precondition(format!(
                 "{origin:?} is not a registered origin: a retention period is keyed only on an \
-                 origin [[origins.registered]] declares, by its id"
+                 origin [[authz.origin]] declares, by its id"
             )));
         }
         let category = period

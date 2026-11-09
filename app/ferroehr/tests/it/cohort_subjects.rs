@@ -281,7 +281,7 @@ async fn a_failing_resolution_fails_the_cohort() {
     );
 }
 
-/// `[cohort] subjects = true` turns the surface on without a bound predicate.
+/// `[privacy.cohort] subjects = true` turns the surface on without a bound predicate.
 #[test]
 fn subject_cohorts_turn_the_surface_on() {
     assert!(!CohortConfig::default().is_enabled());

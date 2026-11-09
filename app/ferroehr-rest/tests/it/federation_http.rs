@@ -182,7 +182,7 @@ async fn serve_also(
         agreements,
         ..common::api_config(true)
     };
-    config.smart.patient_issuers = vec![FEDERATION.to_owned()];
+    config.auth.smart.patient_issuers = vec![FEDERATION.to_owned()];
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
         .await
         .expect("build app");
@@ -542,7 +542,7 @@ const CORRELATION: &str = "5f0c6a1e-correlation-1";
 fn chained() -> Agreement {
     Agreement {
         access_class: Some(AccessClass::Chained),
-        chained_log_retention_years: Some(30),
+        chained_log_retention: Some(ferroehr::config::retention::RetentionPeriod::Years(30)),
         ..agreement(Accessor::Organisation)
     }
 }

@@ -115,7 +115,7 @@ pub struct Principal {
     pub access: Access,
     /// What FerroEHR honours for the caller beyond a `user/` grant: whether it
     /// is a listed backend client and whether its issuer's `patient/` grants
-    /// count (`[smart] backend_clients`, `[smart] patient_issuers`).
+    /// count (`[auth.smart] backend_clients`, `[auth.smart] patient_issuers`).
     pub honoured: Honoured,
     /// The EHR a bound representative is confined to, `None` for every other
     /// caller (#5086).
@@ -657,7 +657,7 @@ pub(crate) async fn middleware(
     }
 }
 
-/// The client a request came through, which the `[origins]` register maps to.
+/// The client a request came through, which the `[[authz.origin]]` register maps to.
 ///
 /// The Basic user, or the client the token's issuer profile reads from
 /// `client_claims`, never another client claim the token carries (#5194).
@@ -1599,7 +1599,7 @@ mod tests {
             authz: None,
             patient_data: None,
             smart: Arc::new(SmartRoutes::new(
-                &crate::api::Namespaces::of(&ferroehr::config::rest::RestConfig::default()),
+                &crate::api::Namespaces::of(&ferroehr::config::rest::ApiConfig::default()),
                 "__ferroehr.platform",
                 Vec::new(),
             )),
@@ -1689,13 +1689,13 @@ mod tests {
         }
     }
 
-    /// A `jwks_file` issuer authenticator reading `[smart] issuer_metadata_file`.
+    /// A `jwks_file` issuer authenticator reading `[auth.smart] issuer_metadata_file`.
     async fn with_metadata_file(file: Option<&MetadataFile>) -> Result<Arc<Authenticator>, String> {
         let mut config = AppConfig {
             auth: test_support::bearer_auth(),
             ..AppConfig::default()
         };
-        config.smart.issuer_metadata_file = file.map(|file| file.0.display().to_string());
+        config.auth.smart.issuer_metadata_file = file.map(|file| file.0.display().to_string());
         Authenticator::new(&config, None, None, memory()).await
     }
 

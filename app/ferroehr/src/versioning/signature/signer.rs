@@ -41,8 +41,11 @@ pub(crate) const DIGEST_PREFIX: &str = "sha256:";
 /// A failure constructing a [`Signer`] at boot.
 #[derive(Debug, thiserror::Error)]
 pub enum SigningError {
-    /// `pgp` mode was selected but no `key_path` was configured.
-    #[error("signing mode is `pgp` but no key_path is configured (FERROEHR_SIGNING_KEY_PATH)")]
+    /// `pgp` mode was selected but no `key_file` was configured.
+    #[error(
+        "signing mode is `pgp` but no record.signing.key_file is configured \
+         (FERROEHR__RECORD__SIGNING__KEY_FILE)"
+    )]
     MissingKeyPath,
     /// The configured `OpenPGP` key could not be loaded or used.
     #[error("loading the OpenPGP signing key")]
@@ -104,7 +107,7 @@ impl Signer {
             Mode::Digest => SignerMode::Digest,
             Mode::Pgp => {
                 let path = config
-                    .key_path
+                    .key_file
                     .as_ref()
                     .ok_or(SigningError::MissingKeyPath)?;
                 // Passed as the wrapper, not as `&str`: the plaintext is
@@ -113,7 +116,7 @@ impl Signer {
                 SignerMode::Pgp(Box::new(PgpKey::load(
                     path,
                     config.key_passphrase.as_ref(),
-                    &config.retired_key_paths,
+                    &config.retired_key_files,
                 )?))
             }
         };

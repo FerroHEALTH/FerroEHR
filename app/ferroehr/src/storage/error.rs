@@ -231,7 +231,7 @@ pub(crate) const CODEC_MESSAGE: &str = "the server encountered an internal stora
 /// - `57014` `query_canceled` → overloaded (`503`
 ///   plus `Retry-After`): the cancelled statement rolled back, so repeating the
 ///   request is safe. By default the `[server]` request timeout (30 s)
-///   answers a request before the `[db]` `statement_timeout` backstop (60 s)
+///   answers a request before the `[database]` `statement_timeout` backstop (60 s)
 ///   fires, so on a request path an operator's cancel or a forward step of the
 ///   database host's wall clock, which `PostgreSQL` measures its timeouts
 ///   against, raises it.

@@ -1171,16 +1171,16 @@ async fn the_lookup_runs_on_the_party_role_only() {
         url: SecretUrl::new(crate::fixtures::dsn_as(&db, "bclin", "ferroehr_clinical").await),
         ..DbConfig::default()
     };
-    let storage = ferroehr::db::domain::StorageConfig {
+    let storage = DbConfig {
         party: ferroehr::db::domain::DomainDsn {
             url: Some(SecretUrl::new(
                 crate::fixtures::dsn_as(&db, "bdemo", "ferroehr_party").await,
             )),
-            url_file: None,
+            ..Default::default()
         },
-        ..ferroehr::db::domain::StorageConfig::default()
+        ..settings.clone()
     };
-    let pools = ferroehr::db::connect_domains(&settings, &storage)
+    let pools = ferroehr::db::connect_domains(&storage)
         .await
         .expect("each pool connects on its own credential");
     let svc = FerroEhrService::new(&pools).with_binding_mapping(mapping());

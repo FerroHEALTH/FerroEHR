@@ -36,6 +36,38 @@ use crate::config::FerroEhrConfig;
 use crate::config::rest::binds_loopback;
 use crate::db::MigrationMode;
 
+/// The `[deployment]` table: what this deployment is.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct DeploymentConfig {
+    /// `profile` — the declared posture (`sandbox` | `production`; default
+    /// `sandbox`). `production` refuses to start while a separation it
+    /// asserts is missing and not accepted by name (#3226).
+    pub profile: DeploymentProfile,
+    /// `accepts` — the [`DeploymentGap`]s a `production` deployment runs
+    /// without, each stated on every boot and on `/management/status`.
+    /// Ignored under `sandbox`, which accepts everything.
+    pub accepts: Vec<DeploymentGap>,
+    /// `spec_profile` — the openEHR specification generation set the server
+    /// runs (`development` | `stable`; default `development`).
+    pub spec_profile: crate::config::profile::SpecProfile,
+    /// `licence_file` — the commercial licence token file the licensor
+    /// issued. Optional in every respect: an unset, missing, malformed or
+    /// expired token is logged once at boot and the server runs unlicensed,
+    /// identically in every other way.
+    pub licence_file: Option<std::path::PathBuf>,
+}
+
+impl DeploymentConfig {
+    /// The licence configuration `licence_file` names.
+    #[must_use]
+    pub fn licence(&self) -> crate::licence::config::LicenceConfig {
+        crate::licence::config::LicenceConfig {
+            file: self.licence_file.clone(),
+        }
+    }
+}
+
 /// How rigorously this deployment is held to the separations.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -148,9 +180,9 @@ pub enum DeploymentGap {
     /// and defines no default, so which one to ship is ours to choose.
     OpenEhrAccessDefault,
     /// Schema preparation runs on a credential that also serves requests —
-    /// `db.migrate = "apply"` with no `db.migrate_url`, or a relocated domain
+    /// `database.migrations = "apply"` with no `database.migrate_url`, or a relocated domain
     /// whose database is prepared on the domain's own runtime DSN because no
-    /// `[storage.migrate.<domain>]` credential is named for it.
+    /// `[database.<domain>] migrate_url` credential is named for it.
     MigrateOnRuntimeCredential,
     /// `auth.enabled` is `false`, so every request is served unauthenticated.
     ///
@@ -190,7 +222,7 @@ pub enum DeploymentGap {
     /// patient and the professional, so they are relevant data in transit.
     PlaintextAuditFeed,
     /// The enabled multimedia store accepts a plain-HTTP S3 endpoint
-    /// (`[multimedia] allow_http = true`), so the externalised blobs cross the
+    /// (`[record.multimedia] allow_http = true`), so the externalised blobs cross the
     /// network unencrypted (`docs/law/eu/cra/text.html Annex I Part I(2)(e)`).
     PlaintextObjectStore,
 }
@@ -256,9 +288,9 @@ impl DeploymentGap {
                  settings per EHR"
             }
             Self::MigrateOnRuntimeCredential => {
-                "[db] migrate is `apply` on a credential that also serves requests; set [db] \
+                "[database] migrate is `apply` on a credential that also serves requests; set [database] \
                  migrate_url to the credential that prepares the schema, give a relocated domain \
-                 its database's migrator in [storage.migrate.<domain>] url, or run migrate = \
+                 its database's migrator in [database.<domain>] migrate_url, or run migrate = \
                  \"verify\""
             }
             Self::AuthOff => {
@@ -285,10 +317,10 @@ impl DeploymentGap {
                  the repository is reached on a trusted segment"
             }
             Self::PlaintextObjectStore => {
-                "the enabled multimedia store allows a plain-HTTP S3 endpoint ([multimedia] \
-                 allow_http = true), so the externalised clinical blobs cross the network \
-                 unencrypted; use an https:// endpoint and unset allow_http, or accept \
-                 plaintext_object_store by name where the store is reached on a trusted segment"
+                "the enabled multimedia store is a plain-HTTP S3 endpoint (an http:// \
+                 record.multimedia.url), so the externalised clinical blobs cross the network \
+                 unencrypted; use an https:// url, or accept plaintext_object_store by name \
+                 where the store is reached on a trusted segment"
             }
         }
     }
@@ -347,7 +379,7 @@ pub struct DatabaseFacts {
     pub clusters: ClusterIdentities,
     /// The domains whose database is prepared on a runtime credential, as the
     /// preparation plan resolved it — a relocated domain prepares its own
-    /// database, because `[db].migrate_url` names one database and the domain
+    /// database, because `[database] migrate_url` names one database and the domain
     /// is not in it.
     pub prepared_on_runtime_credential: Vec<crate::db::domain::Domain>,
 }
@@ -371,10 +403,7 @@ impl DeploymentPosture {
     pub fn evaluate(config: &FerroEhrConfig, databases: &DatabaseFacts) -> Self {
         let clusters = &databases.clusters;
         let mut gaps = Vec::new();
-        if !config
-            .storage
-            .pseudonymisation_domains_are_separated(&config.db)
-        {
+        if !config.database.pseudonymisation_domains_are_separated() {
             gaps.push(DeploymentGap::SharedCredential);
         }
         if clusters.any_shared() {
@@ -385,7 +414,7 @@ impl DeploymentPosture {
         }
         let audit = &config.audit;
         if !audit.enabled
-            || !(audit.store.enabled || audit.syslog.enabled || audit.fhir_feed.enabled)
+            || !(audit.store.enabled || audit.syslog.is_some() || audit.fhir_feed.is_some())
         {
             gaps.push(DeploymentGap::AuditOff);
         } else if audit.fail_mode == crate::system_log::config::FailMode::Open {
@@ -403,8 +432,8 @@ impl DeploymentPosture {
         if config.authz.rbac.ehr_access_default == crate::config::authz::EhrAccessDefault::Open {
             gaps.push(DeploymentGap::OpenEhrAccessDefault);
         }
-        if config.db.migrate == MigrationMode::Apply
-            && (!config.db.migrator_is_separated()
+        if config.database.migrations == MigrationMode::Apply
+            && (!config.database.migrator_is_separated()
                 || !databases.prepared_on_runtime_credential.is_empty())
         {
             gaps.push(DeploymentGap::MigrateOnRuntimeCredential);
@@ -415,26 +444,29 @@ impl DeploymentPosture {
             gaps.push(DeploymentGap::RbacOff);
         }
         let plaintext_main = config.server.tls.is_none() && !binds_loopback(config.server.listen);
-        let plaintext_management = config.management.enabled && config.management.port.is_some();
+        let plaintext_management = config.management.enabled && config.management.listen.is_some();
         if plaintext_main || plaintext_management {
             gaps.push(DeploymentGap::PlaintextListener);
         }
         if config.audit.enabled
-            && config.audit.fhir_feed.enabled
-            && is_plaintext_http(config.audit.fhir_feed.url.expose())
+            && config
+                .audit
+                .fhir_feed
+                .as_ref()
+                .is_some_and(|feed| is_plaintext_http(feed.url.expose()))
         {
             gaps.push(DeploymentGap::PlaintextAuditFeed);
         }
-        if config.multimedia.enabled && config.multimedia.allow_http {
+        if config.record.multimedia.enabled && config.record.multimedia.allows_http() {
             gaps.push(DeploymentGap::PlaintextObjectStore);
         }
         let accepted = gaps
             .iter()
             .copied()
-            .filter(|gap| config.deployment_accepts.contains(gap))
+            .filter(|gap| config.deployment.accepts.contains(gap))
             .collect();
         Self {
-            profile: config.deployment_profile,
+            profile: config.deployment.profile,
             gaps,
             accepted,
         }
@@ -488,53 +520,54 @@ mod tests {
     use ferrohealth_secret::secret_url::SecretUrl;
 
     fn separated() -> FerroEhrConfig {
-        FerroEhrConfig {
-            db: crate::db::DbConfig {
+        {
+            let mut c = FerroEhrConfig {
+                privacy: crate::privacy::config::PrivacyConfig {
+                    subject_namespaces: vec!["urn:example:pseudonym".to_owned()],
+                    ..crate::privacy::config::PrivacyConfig::default()
+                },
+                audit: crate::system_log::config::AuditConfig {
+                    fail_mode: crate::system_log::config::FailMode::Closed,
+                    ..crate::system_log::config::AuditConfig::default()
+                },
+                authz: crate::config::authz::AuthzConfig {
+                    rbac: crate::config::authz::RbacConfig {
+                        ehr_access_default: crate::config::authz::EhrAccessDefault::Restricted,
+                        ..crate::config::authz::RbacConfig::default()
+                    },
+                    ..crate::config::authz::AuthzConfig::default()
+                },
+                server: ferrohealth_server::section::ServerSection {
+                    listen: "0.0.0.0:8443".parse().expect("an address"),
+                    tls: Some(ferrohealth_server::section::TlsSection::new(
+                        "server.pem".into(),
+                        "server.key".into(),
+                    )),
+                    ..ferrohealth_server::section::ServerSection::default()
+                },
+                ..FerroEhrConfig::default()
+            };
+            c.database = crate::db::DbConfig {
                 migrate_url: Some(SecretUrl::new("postgres://m@h/x")),
-                ..crate::db::DbConfig::default()
-            },
-            storage: crate::db::domain::StorageConfig {
                 clinical: crate::db::domain::DomainDsn {
                     url: Some(SecretUrl::new("postgres://c@h/x")),
-                    url_file: None,
+                    ..Default::default()
                 },
                 party: crate::db::domain::DomainDsn {
                     url: Some(SecretUrl::new("postgres://d@h/x")),
-                    url_file: None,
+                    ..Default::default()
                 },
-                ..crate::db::domain::StorageConfig::default()
-            },
-            privacy: crate::privacy::config::PrivacyConfig {
-                subject_namespaces: vec!["urn:example:pseudonym".to_owned()],
-                ..crate::privacy::config::PrivacyConfig::default()
-            },
-            audit: crate::system_log::config::AuditConfig {
-                fail_mode: crate::system_log::config::FailMode::Closed,
-                ..crate::system_log::config::AuditConfig::default()
-            },
-            authz: crate::config::authz::AuthzConfig {
-                rbac: crate::config::authz::RbacConfig {
-                    ehr_access_default: crate::config::authz::EhrAccessDefault::Restricted,
-                    ..crate::config::authz::RbacConfig::default()
-                },
-                ..crate::config::authz::AuthzConfig::default()
-            },
-            server: ferrohealth_server::section::ServerSection {
-                listen: "0.0.0.0:8443".parse().expect("an address"),
-                tls: Some(ferrohealth_server::section::TlsSection::new(
-                    "server.pem".into(),
-                    "server.key".into(),
-                )),
-                ..ferrohealth_server::section::ServerSection::default()
-            },
-            ..FerroEhrConfig::default()
+                ..crate::db::DbConfig::default()
+            };
+            c
         }
     }
 
     fn production(base: FerroEhrConfig) -> FerroEhrConfig {
-        FerroEhrConfig {
-            deployment_profile: DeploymentProfile::Production,
-            ..base
+        {
+            let mut c = base;
+            c.deployment.profile = DeploymentProfile::Production;
+            c
         }
     }
 
@@ -566,7 +599,7 @@ mod tests {
     fn the_default_is_sandbox_and_a_stock_deployment_names_its_gaps() {
         let config = FerroEhrConfig::default();
         assert_eq!(config.server.listen.to_string(), "0.0.0.0:8080");
-        assert_eq!(config.deployment_profile, DeploymentProfile::Sandbox);
+        assert_eq!(config.deployment.profile, DeploymentProfile::Sandbox);
         let clusters = ClusterIdentities {
             clinical: Some("1".to_owned()),
             party: Some("1".to_owned()),
@@ -663,9 +696,10 @@ mod tests {
         assert_eq!(posture.gaps, [DeploymentGap::SharedCluster]);
         assert!(!posture.permits_boot());
 
-        let config = FerroEhrConfig {
-            deployment_accepts: vec![DeploymentGap::SharedCluster],
-            ..config
+        let config = {
+            let mut c = config;
+            c.deployment.accepts = vec![DeploymentGap::SharedCluster];
+            c
         };
         let accepted = DeploymentPosture::evaluate(&config, &same_cluster);
         assert!(accepted.permits_boot());
@@ -792,12 +826,13 @@ mod tests {
 
         // Accepted by name: the deployment boots and both stay listed.
         let accepted = DeploymentPosture::evaluate(
-            &FerroEhrConfig {
-                deployment_accepts: vec![
+            &{
+                let mut c = config;
+                c.deployment.accepts = vec![
                     DeploymentGap::AuditFailsOpen,
                     DeploymentGap::OpenEhrAccessDefault,
-                ],
-                ..config
+                ];
+                c
             },
             &distinct_clusters(),
         );
@@ -859,7 +894,7 @@ mod tests {
     }
 
     /// A domain whose database schema preparation reaches on its own runtime
-    /// DSN opens `MigrateOnRuntimeCredential`, even with `[db].migrate_url`
+    /// DSN opens `MigrateOnRuntimeCredential`, even with `[database] migrate_url`
     /// set.
     #[test]
     fn a_relocated_domain_prepared_on_its_runtime_credential_is_a_gap() {
@@ -867,7 +902,7 @@ mod tests {
         let separated_migrator = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert!(
             separated_migrator.gaps.is_empty(),
-            "[db].migrate_url alone closes it while nothing is relocated: {separated_migrator:?}"
+            "[database] migrate_url alone closes it while nothing is relocated: {separated_migrator:?}"
         );
 
         let relocated = DatabaseFacts {
@@ -895,7 +930,7 @@ mod tests {
             "{message}"
         );
 
-        config.deployment_accepts = vec![DeploymentGap::AuthOff];
+        config.deployment.accepts = vec![DeploymentGap::AuthOff];
         let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert!(accepted.permits_boot());
         assert_eq!(accepted.accepted, [DeploymentGap::AuthOff]);
@@ -905,7 +940,7 @@ mod tests {
             "accepting hides nothing"
         );
 
-        config.deployment_accepts = vec![DeploymentGap::PlaintextListener];
+        config.deployment.accepts = vec![DeploymentGap::PlaintextListener];
         let other_name = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert!(
             !other_name.permits_boot(),
@@ -935,11 +970,11 @@ mod tests {
             "{message}"
         );
 
-        config.deployment_accepts = vec![DeploymentGap::RbacOff];
+        config.deployment.accepts = vec![DeploymentGap::RbacOff];
         assert!(DeploymentPosture::evaluate(&config, &distinct_clusters()).permits_boot());
 
         config.auth.shared.enabled = false;
-        config.deployment_accepts = Vec::new();
+        config.deployment.accepts = Vec::new();
         assert_eq!(
             DeploymentPosture::evaluate(&config, &distinct_clusters()).gaps,
             [DeploymentGap::AuthOff],
@@ -969,7 +1004,7 @@ mod tests {
         }
 
         config.server.listen = "0.0.0.0:8080".parse().expect("an address");
-        config.deployment_accepts = vec![DeploymentGap::PlaintextListener];
+        config.deployment.accepts = vec![DeploymentGap::PlaintextListener];
         let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert!(accepted.permits_boot());
         assert_eq!(accepted.accepted, [DeploymentGap::PlaintextListener]);
@@ -983,7 +1018,7 @@ mod tests {
     fn production_refuses_a_plain_management_listener_on_its_own_port() {
         let mut config = production(separated());
         config.management.enabled = true;
-        config.management.port = Some(9090);
+        config.management.listen = Some(std::net::SocketAddr::from(([0, 0, 0, 0], 9090)));
         let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert_eq!(posture.gaps, [DeploymentGap::PlaintextListener]);
         assert!(!posture.permits_boot());
@@ -993,14 +1028,14 @@ mod tests {
             posture.refusal_message()
         );
 
-        config.management.port = None;
+        config.management.listen = None;
         let shared = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert!(
             shared.gaps.is_empty(),
             "shares the TLS listener: {shared:?}"
         );
 
-        config.management.port = Some(9090);
+        config.management.listen = Some(std::net::SocketAddr::from(([0, 0, 0, 0], 9090)));
         config.management.enabled = false;
         let off = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert!(
@@ -1009,22 +1044,24 @@ mod tests {
         );
 
         config.management.enabled = true;
-        config.deployment_accepts = vec![DeploymentGap::PlaintextListener];
+        config.deployment.accepts = vec![DeploymentGap::PlaintextListener];
         let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert!(accepted.permits_boot());
         assert_eq!(accepted.accepted, [DeploymentGap::PlaintextListener]);
     }
 
     /// `production` refuses an enabled audit FHIR feed on a plain `http://` URL and
-    /// an enabled multimedia store with `allow_http`, passes `https://` and a
+    /// an enabled multimedia store on an `http://` URL, passes `https://` and a
     /// disabled section, and boots once each gap is accepted by name (CRA Annex I
     /// Part I(2)(e)).
     #[test]
     fn production_refuses_a_plaintext_audit_feed_and_object_store_unless_accepted() {
         let feed = |enabled: bool, url: &str| {
             let mut config = production(separated());
-            config.audit.fhir_feed.enabled = enabled;
-            config.audit.fhir_feed.url = SecretUrl::new(url);
+            config.audit.fhir_feed = enabled.then(|| crate::system_log::config::FhirFeedConfig {
+                url: SecretUrl::new(url),
+                ..crate::system_log::config::FhirFeedConfig::default()
+            });
             config
         };
         for url in ["http://arr.internal/fhir", "HTTP://arr.internal/fhir"] {
@@ -1049,16 +1086,21 @@ mod tests {
             off.gaps.is_empty(),
             "a disabled feed sends nothing: {off:?}"
         );
-        let accepted = FerroEhrConfig {
-            deployment_accepts: vec![DeploymentGap::PlaintextAuditFeed],
-            ..feed(true, "http://arr.internal/fhir")
+        let accepted = {
+            let mut c = feed(true, "http://arr.internal/fhir");
+            c.deployment.accepts = vec![DeploymentGap::PlaintextAuditFeed];
+            c
         };
         assert!(DeploymentPosture::evaluate(&accepted, &distinct_clusters()).permits_boot());
 
         let store = |enabled: bool, allow_http: bool| {
             let mut config = production(separated());
-            config.multimedia.enabled = enabled;
-            config.multimedia.allow_http = allow_http;
+            config.record.multimedia.enabled = enabled;
+            config.record.multimedia.url = Some(SecretUrl::new(if allow_http {
+                "http://seaweedfs:8333"
+            } else {
+                "https://s3.example"
+            }));
             config
         };
         let posture = DeploymentPosture::evaluate(&store(true, true), &distinct_clusters());
@@ -1077,9 +1119,10 @@ mod tests {
             DeploymentPosture::evaluate(&store(false, true), &distinct_clusters()).gaps,
             Vec::<DeploymentGap>::new()
         );
-        let accepted = FerroEhrConfig {
-            deployment_accepts: vec![DeploymentGap::PlaintextObjectStore],
-            ..store(true, true)
+        let accepted = {
+            let mut c = store(true, true);
+            c.deployment.accepts = vec![DeploymentGap::PlaintextObjectStore];
+            c
         };
         assert!(DeploymentPosture::evaluate(&accepted, &distinct_clusters()).permits_boot());
     }
@@ -1115,9 +1158,10 @@ mod tests {
             DeploymentPosture::evaluate(&declared, &distinct_clusters()).gaps,
             Vec::<DeploymentGap>::new()
         );
-        let accepted = FerroEhrConfig {
-            deployment_accepts: vec![DeploymentGap::NoCategoryMap],
-            ..unmapped()
+        let accepted = {
+            let mut c = unmapped();
+            c.deployment.accepts = vec![DeploymentGap::NoCategoryMap];
+            c
         };
         assert!(DeploymentPosture::evaluate(&accepted, &distinct_clusters()).permits_boot());
     }

@@ -71,7 +71,7 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
     let product = routes(state.clone(), &authenticator);
     // Only when enabled and not bound to a separate port (which the binary
     // serves on its own listener).
-    let product = if observability.management.enabled && observability.management.port.is_none() {
+    let product = if observability.management.enabled && observability.management.listen.is_none() {
         product.merge(audited_management(state, authenticator))
     } else {
         product
@@ -86,7 +86,7 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
         &cfg.server,
         stack_policy(
             observability.request_log.clone(),
-            FhirBase::of(&cfg.rest.rest_root()),
+            FhirBase::of(&cfg.api.rest_root()),
         ),
     );
     normalized(app)
@@ -125,8 +125,8 @@ fn audited_management(state: AppState, authenticator: Arc<Authenticator>) -> Rou
 /// Options manifest.
 pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
     let cfg = state.config().clone();
-    let rest_root = cfg.rest.rest_root();
-    let namespaces = crate::api::Namespaces::of(&cfg.rest);
+    let rest_root = cfg.api.rest_root();
+    let namespaces = crate::api::Namespaces::of(&cfg.api);
 
     // A known path called with a method it does not serve renders `405` as
     // problem details (overview §HTTP Methods); axum supplies the mandatory `Allow`
@@ -163,7 +163,7 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
             smart: Arc::new(smart::routes::SmartRoutes::new(
                 &namespaces,
                 ferroehr::config::auth::product_scope(&cfg.auth.shared),
-                cfg.smart.demographic_clients.clone(),
+                cfg.auth.smart.demographic_clients.clone(),
             )),
             served: Arc::new(crate::api::served::ServedMethods::new(&namespaces)),
             service: state.backend_handle(),
@@ -196,11 +196,7 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
             problem::finish,
         ));
 
-    let cors = if cfg.rest.cors_permissive {
-        CorsLayer::very_permissive()
-    } else {
-        CorsLayer::new()
-    };
+    let cors = cors_layer(cfg.api.cors.as_ref());
     let inner: Router = inner
         .layer(
             ServiceBuilder::new()
@@ -223,11 +219,11 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
         "/query".to_owned(),
         "/demographic".to_owned(),
     ];
-    if cfg.admin.enabled {
+    if cfg.api.admin {
         endpoints.push("/admin".to_owned());
     }
     let manifest = Arc::new(system::options::SystemManifest::new(
-        cfg.rest.identity.clone(),
+        cfg.api.options.clone(),
         endpoints,
     ));
 
@@ -235,7 +231,54 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
     // (`system.openapi.yaml`: servers `{baseUrl}/v1`, path `/`). The route is
     // merged beside the CORS-wrapped surface so `OPTIONS` is not eaten as a
     // preflight.
-    inner.merge(Router::new().route(&cfg.rest.base_path, system::options::route(manifest)))
+    inner.merge(Router::new().route(&cfg.api.base_path, system::options::route(manifest)))
+}
+
+/// The CORS layer `[api.cors]` describes (Fetch Standard §3.2.3); absent, a
+/// layer that sends no CORS header.
+fn cors_layer(config: Option<&ferroehr::config::rest::CorsConfig>) -> CorsLayer {
+    use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, ExposeHeaders};
+    let Some(config) = config else {
+        return CorsLayer::new();
+    };
+    // NOTE: `CorsConfig::errors` refuses at boot every value these parses would drop.
+    let origins = config
+        .allow_origins
+        .iter()
+        .filter_map(|origin| http::HeaderValue::try_from(origin.as_str()).ok());
+    let names = |values: &[String]| -> Vec<http::HeaderName> {
+        values
+            .iter()
+            .filter_map(|value| http::HeaderName::try_from(value.as_str()).ok())
+            .collect()
+    };
+    let methods: Vec<http::Method> = config
+        .allow_methods
+        .iter()
+        .filter_map(|method| http::Method::try_from(method.as_str()).ok())
+        .collect();
+    let mut layer = CorsLayer::new()
+        .allow_origin(if config.any_origin() {
+            AllowOrigin::any()
+        } else {
+            AllowOrigin::list(origins)
+        })
+        .allow_methods(if methods.is_empty() {
+            AllowMethods::mirror_request()
+        } else {
+            AllowMethods::list(methods)
+        })
+        .allow_headers(if config.allow_headers.is_empty() {
+            AllowHeaders::mirror_request()
+        } else {
+            AllowHeaders::list(names(&config.allow_headers))
+        })
+        .expose_headers(ExposeHeaders::list(names(&config.expose_headers)))
+        .allow_credentials(config.allow_credentials);
+    if let Some(max_age) = config.max_age {
+        layer = layer.max_age(max_age.get());
+    }
+    layer
 }
 
 /// Puts the authenticated subject on the request as the caller the
@@ -312,7 +355,7 @@ fn normalized(app: Router) -> Router {
 /// status surface, the config-gated SMART `/.well-known/smart-configuration`
 /// document (SMART master04 §Service Discovery; an empty router when SMART is
 /// disabled), and the Swagger UI plus `OpenAPI` documents at the access level
-/// `rest.swagger_ui` names — `public` is open, `private`/`admin_only` sit
+/// `api.openapi_ui` names — `public` is open, `private`/`admin_only` sit
 /// behind the same access guard the management endpoints use, `off` is not
 /// mounted.
 ///
@@ -344,7 +387,7 @@ fn mount_public_surface(
         );
     }
 
-    match cfg.rest.swagger_ui {
+    match cfg.api.openapi_ui {
         AccessLevel::Off => {}
         AccessLevel::Public => inner = inner.merge(openapi::swagger_router(cfg)),
         level @ (AccessLevel::Private | AccessLevel::AdminOnly) => {

@@ -51,7 +51,7 @@ Some conventional names sit *below* their `FERROEHR_` forms within layer 3:
   (`PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGPORT`, `PGSSLMODE`),
   which managed-Postgres integrations such as Neon inject: when `PGHOST` is
   set and no URL form is, the server assembles the DSN from them. An
-  explicit `DATABASE_URL` beats the assembled form, and `FERROEHR__DB__URL`
+  explicit `DATABASE_URL` beats the assembled form, and `FERROEHR__DATABASE__URL`
   beats both.
 
 Nothing else has a non-`FERROEHR_` name.
@@ -65,10 +65,10 @@ including after the `FERROEHR` prefix.** A single underscore only ever appears
 
 | TOML | Environment variable |
 |---|---|
-| `[db] max_connections = 20` | `FERROEHR__DB__MAX_CONNECTIONS=20` |
+| `[db] max_connections = 20` | `FERROEHR__DATABASE__MAX_CONNECTIONS=20` |
 | `[authz.rbac] admin_role = "…"` | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE=…` |
 | `[management.endpoints] env = "off"` | `FERROEHR__MANAGEMENT__ENDPOINTS__ENV=off` |
-| `[terminology.server] url = "…"` | `FERROEHR__TERMINOLOGY__SERVER__URL=…` |
+| `[terminology.server] url = "…"` | `FERROEHR__TERMINOLOGY__URL=…` |
 
 Scalars are typed automatically (bool / int / float, else string).
 **List-typed keys take comma-separated values**
@@ -130,7 +130,7 @@ running server serves.
 | `development` *(default)* | 1.2.0 | 1.3.0 | You want the generations this build is developed against. This is the default for every deployment that does not set the key. |
 | `stable` | 1.1.0 | 1.2.0 | Your governance requires running on released openEHR specifications only. |
 
-Environment form: `FERROEHR__SPEC_PROFILE=stable`. The key is a top-level
+Environment form: `FERROEHR__DEPLOYMENT__SPEC_PROFILE=stable`. The key is a top-level
 scalar, not a section; there is no `[spec_profile]` table.
 
 ### Why it is one key and not two
@@ -267,8 +267,8 @@ ticked by being present:
 | `plaintext_object_store` | `[multimedia] allow_http = false` on an enabled multimedia store, so the externalised clinical blobs travel over an `https://` endpoint (CRA Annex I Part I(2)(e)). A deployment whose object store is reached on a segment it trusts accepts `plaintext_object_store` by name |
 
 An accepted gap is stated on every boot and on `/management/status`; it can be run,
-not hidden. Environment form: `FERROEHR__DEPLOYMENT_PROFILE=production`,
-`FERROEHR__DEPLOYMENT_ACCEPTS=shared_cluster`. There is no `research` value:
+not hidden. Environment form: `FERROEHR__DEPLOYMENT__PROFILE=production`,
+`FERROEHR__DEPLOYMENT__ACCEPTS=shared_cluster`. There is no `research` value:
 the key controls rigour, not purpose, and a secondary-use platform under an
 EHDS data permit runs on real patient data at production rigour whatever it is
 for.

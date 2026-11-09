@@ -97,7 +97,7 @@ else
   CDR_URL="http://127.0.0.1:$CDR_PORT"
   # The dev configuration's key sets, at the paths the containers mount them.
   SERVER_ENV=(FERROEHR_CONFIG=docker/ferroehr.dev.toml
-    FERROEHR__DB__URL="postgres://$PG_ROLE:$PG_SECRET@127.0.0.1:$PG_PORT/$PG_ROLE"
+    FERROEHR__DATABASE__URL="postgres://$PG_ROLE:$PG_SECRET@127.0.0.1:$PG_PORT/$PG_ROLE"
     FERROEHR__SERVER__LISTEN="127.0.0.1:$CDR_PORT"
     FERROEHR__AUTHZ__RBAC__ENABLED=false
     FERROEHR__USAGE_REPORT__ENABLED=false

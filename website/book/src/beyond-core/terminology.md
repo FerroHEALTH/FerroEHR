@@ -25,7 +25,7 @@ terminology server.
 You can also expose these lookups over a small read-only REST surface. It is a
 FerroEHR extension (no openEHR REST contract defines a terminology API) and it
 is **off by default**; while disabled, every route answers `404` as if it were
-not mounted. Turn it on with `FERROEHR__TERMINOLOGY__API_ENABLED=true` and it
+not mounted. Turn it on with `FERROEHR__API__TERMINOLOGY=true` and it
 serves:
 
 | Method | Path | Purpose |

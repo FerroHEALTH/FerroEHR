@@ -24,7 +24,7 @@ operationally:
 
 | Group | Switch | Authorization class | While switched off |
 |---|---|---|---|
-| `{base}/admin/…` and `{ext}/admin/…` | `admin.enabled` (`FERROEHR__ADMIN__ENABLED`), default `false` | admin: the configured `authz.rbac.admin_role` (`ADMIN` by default) | every route answers **405 Method Not Allowed** with an **empty** `Allow` header: the resource exists but currently serves no method |
+| `{base}/admin/…` and `{ext}/admin/…` | `admin.enabled` (`FERROEHR__API__ADMIN`), default `false` | admin: the configured `authz.rbac.admin_role` (`ADMIN` by default) | every route answers **405 Method Not Allowed** with an **empty** `Allow` header: the resource exists but currently serves no method |
 | `{ext}/message/…` | none (always mounted) | ordinary clinical, exactly like the composition API | n/a |
 
 Two consequences worth planning around:

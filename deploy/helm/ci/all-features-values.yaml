@@ -3,7 +3,7 @@
 # as the "all-features" golden render and to exercise every template branch.
 database:
   existingSecret: ferroehr-db
-  existingSecretKey: FERROEHR__DB__URL
+  existingSecretKey: FERROEHR__DATABASE__URL
   # One credential per storage domain (#3343): the party pool, and the party
   # backup CronJob, read a secret the clinical side never mounts; the audit
   # domain is the one a deployment most often moves
@@ -11,15 +11,15 @@ database:
   # is a branch no golden and no boot check ever sees.
   party:
     existingSecret: ferroehr-db-party
-    existingSecretKey: FERROEHR__STORAGE__PARTY__URL
+    existingSecretKey: FERROEHR__DATABASE__PARTY__URL
   audit:
     existingSecret: ferroehr-db-audit
-    existingSecretKey: FERROEHR__STORAGE__AUDIT__URL
+    existingSecretKey: FERROEHR__DATABASE__AUDIT__URL
   # Schema preparation spans every schema of a database, so a pod whose runtime
   # DSNs are domain-scoped roles cannot perform it on any of them. Same reason
   # as above — an unrendered branch is an unchecked one.
   migrateExistingSecret: ferroehr-db-migrate
-  migrateExistingSecretKey: FERROEHR__DB__MIGRATE_URL
+  migrateExistingSecretKey: FERROEHR__DATABASE__MIGRATE_URL
 
 secrets:
   # 40 bytes of obvious filler. RFC 8725 §3.5 puts a 32-byte floor under a

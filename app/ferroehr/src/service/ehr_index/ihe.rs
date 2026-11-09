@@ -27,19 +27,19 @@ use ihe_iti::pixm::{Invocation, PixmClient};
 use secrecy::SecretString;
 use url::Url;
 
-use crate::service::ehr_index::config::{EhrIndexConfig, PixmInvocation};
+use crate::service::ehr_index::config::{PixmConfig, PixmInvocation};
 
 /// Why the identity source could not be built, reached or believed.
 #[derive(Debug, thiserror::Error)]
 pub enum IdentitySourceError {
-    /// The `[ehr_index.tls]` trust roots or client identity are unusable.
+    /// The `[pixm.tls]` trust roots or client identity are unusable.
     #[error("the identity source's TLS material is unusable")]
     Tls(#[from] TlsClientError),
     /// The HTTP client could not be built.
     #[error("the identity source's HTTP client could not be built")]
     Client(#[source] reqwest::Error),
     /// The PIXm base URL does not parse.
-    #[error("ehr_index.pixm_url is not a URL")]
+    #[error("pixm.url is not a URL")]
     BaseUrl(#[source] url::ParseError),
     /// The base URL, the assigning authority or a subject is no valid ITI-83
     /// input.
@@ -55,7 +55,7 @@ pub enum IdentitySourceError {
         /// How many identifiers it answered.
         count: usize,
     },
-    /// The `[ehr_index.oauth]` grant is incomplete or its token client could
+    /// The `[pixm.oauth]` grant is incomplete or its token client could
     /// not be built.
     #[error("the identity source's client-credentials grant is unusable")]
     Grant(#[source] Box<dyn std::error::Error + Send + Sync>),
@@ -82,25 +82,24 @@ impl IheIdentitySource {
     ///
     /// The HTTP client follows no redirect, because the request carries a
     /// patient identifier (the `PixmClient::new` contract), and trusts the
-    /// `[ehr_index.tls]` roots beside the platform's. With `[ehr_index.oauth]`
+    /// `[pixm.tls]` roots beside the platform's. With `[pixm.oauth]`
     /// every ITI-83 request carries that grant's access token (IUA ITI-72
     /// §3.72.4.2), renewed once after a `401`.
     ///
     /// # Errors
     /// [`IdentitySourceError`] when the trust roots, the client, the base URL
     /// or the assigning authority are unusable.
-    pub fn new(config: &EhrIndexConfig) -> Result<Self, IdentitySourceError> {
-        let timeout = Duration::from_millis(config.request_timeout_ms);
+    pub fn new(config: &PixmConfig) -> Result<Self, IdentitySourceError> {
+        let timeout = config.timeout.get();
         let builder = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
             .timeout(timeout);
-        let http = TlsClient::read("ehr_index.tls", &config.tls)?
+        let http = TlsClient::read("pixm.tls", &config.tls)?
             .apply(builder)?
             .build()
             .map_err(IdentitySourceError::Client)?;
-        let base =
-            Url::parse(config.pixm_url.expose().trim()).map_err(IdentitySourceError::BaseUrl)?;
-        let invocation = match config.invocation {
+        let base = Url::parse(config.url.expose().trim()).map_err(IdentitySourceError::BaseUrl)?;
+        let invocation = match config.method {
             PixmInvocation::Get => Invocation::Get,
             PixmInvocation::Post => Invocation::Post,
         };

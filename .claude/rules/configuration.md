@@ -40,7 +40,7 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
   `LazyLock` env reads).
 - **One env grammar (P-4).** `FERROEHR` + the TOML path, `__` between *every*
   segment boundary — including after the `FERROEHR` prefix
-  (`FERROEHR__DB__MAX_CONNECTIONS`, `FERROEHR__AUTH__OIDC__ISSUER`) — with single
+  (`FERROEHR__DATABASE__MAX_CONNECTIONS`, `FERROEHR__AUTH__OIDC__ISSUER`) — with single
   `_` only inside a key word. This is mechanical and reversible; never add a
   bespoke env mapping. List-typed keys are comma-separated and registered
   in `alias::LIST_KEYS`. `DATABASE_URL`/`RUST_LOG` are the only non-`FERROEHR_`

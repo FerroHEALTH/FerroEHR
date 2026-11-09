@@ -17,7 +17,6 @@ use std::time::{Duration, Instant};
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::config::rest::AdminConfig;
 use ferroehr::identifier_protection::config::IdentifierProtectionConfig;
 use ferroehr::identifier_protection::engine::IdentifierProtection;
 use ferroehr::service::FerroEhrService;
@@ -49,12 +48,15 @@ const TEST_ROOT_KEY: &str = "000102030405060708090a0b0c0d0e0f1011121314151617181
 /// Bearer authentication, the admin group mounted, the identifier reader role
 /// configured.
 fn config() -> AppConfig {
-    let mut config = AppConfig {
-        server: common::server(),
-        auth: common::issuer_auth(ISSUER, AUDIENCE),
-        rbac: common::rbac_trusting(ISSUER),
-        admin: AdminConfig { enabled: true },
-        ..Default::default()
+    let mut config = {
+        let mut c = AppConfig {
+            server: common::server(),
+            auth: common::issuer_auth(ISSUER, AUDIENCE),
+            rbac: common::rbac_trusting(ISSUER),
+            ..Default::default()
+        };
+        c.api.admin = true;
+        c
     };
     config.rbac.identifier_reader_role = Some(READER_ROLE.to_owned());
     config
@@ -70,12 +72,11 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         .expect("the audit sender");
     let key = ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY);
     let engine = IdentifierProtection::from_config(
-        &IdentifierProtectionConfig {
-            enabled: true,
+        Some(&IdentifierProtectionConfig {
             schemes: vec!["nl-bsn".to_owned()],
             key: Some(ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
             key_file: None,
-        },
+        }),
         Some(&key),
         ferroehr::db::domain_pool_from(&pool, ferroehr::db::domain::Domain::Party),
     )
@@ -87,7 +88,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         .with_audit_store(AuditStore::new(pool.clone()));
     let authz = AuthzHandle::build(
         &AuthzConfig::default(),
-        &config().rest.base_path,
+        &config().api.base_path,
         None,
         common::null_resolvers(),
     )

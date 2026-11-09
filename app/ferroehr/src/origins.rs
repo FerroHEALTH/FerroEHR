@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[origins]` register: the origins of data this deployment recognises.
+//! The `[[authz.origin]]` register: the origins of data this deployment recognises.
 //!
 //! Regulation (EU) 2025/327 Annex II 3.4 asks the storing components to
 //! "support different retention periods and access rights that take into
@@ -22,11 +22,11 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-/// The `[origins]` section.
+/// The registered origins, read from `[[authz.origin]]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct OriginsConfig {
-    /// The recognised origins (`[[origins.registered]]`). Empty by default:
+    /// The recognised origins (`[[authz.origin]]`). Empty by default:
     /// no retention period or access rule can then name an origin.
     pub registered: Vec<RegisteredOrigin>,
 }
@@ -60,27 +60,24 @@ impl OriginsConfig {
         for origin in &self.registered {
             if origin.id.is_empty() || origin.id.chars().any(char::is_whitespace) {
                 errors.push(format!(
-                    "origins.registered id {:?} is blank or carries whitespace",
+                    "authz.origin id {:?} is blank or carries whitespace",
                     origin.id
                 ));
             }
             if !ids.insert(origin.id.as_str()) {
-                errors.push(format!(
-                    "origins.registered names the id {:?} twice",
-                    origin.id
-                ));
+                errors.push(format!("authz.origin names the id {:?} twice", origin.id));
             }
             for client in &origin.clients {
                 if client.trim().is_empty() {
                     errors.push(format!(
-                        "origins.registered id {:?} lists a blank client",
+                        "authz.origin id {:?} lists a blank client",
                         origin.id
                     ));
                 } else if let Some(other) = clients.insert(client.as_str(), origin.id.as_str())
                     && other != origin.id
                 {
                     errors.push(format!(
-                        "origins.registered client {client:?} belongs to both {other:?} and {:?}; \
+                        "authz.origin client {client:?} belongs to both {other:?} and {:?}; \
                          a client's direct commits come from one origin",
                         origin.id
                     ));

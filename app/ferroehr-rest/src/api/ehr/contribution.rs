@@ -45,7 +45,7 @@ const CONTRIBUTION_FORMATS: &[WireFormat] = &[
 pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let created = StatusCode::CREATED;
-    let base = state.config().rest.base_path.clone();
+    let base = state.config().api.base_path.clone();
     let p = parts.decode(
         ContributionCreateParams::from_request,
         ContributionCreateParams::PARAMS,

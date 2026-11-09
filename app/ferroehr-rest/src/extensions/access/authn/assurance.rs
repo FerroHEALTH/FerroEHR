@@ -233,7 +233,7 @@ mod tests {
         PatientDataGate::new(
             true,
             &assurance,
-            crate::api::Namespaces::of(&ferroehr::config::rest::RestConfig::default()),
+            crate::api::Namespaces::of(&ferroehr::config::rest::ApiConfig::default()),
             "ferroehr",
         )
         .expect("gate")

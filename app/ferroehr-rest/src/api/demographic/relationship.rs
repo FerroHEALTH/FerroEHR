@@ -678,7 +678,7 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
     let h = &parts.headers;
     // NOTE: our own design (#4330): PARTY_RELATIONSHIP is an extension, served beside the
     // openEHR base path, so its `Location` names the extensions root.
-    let base = state.config().rest.extensions_path();
+    let base = state.config().api.extensions_path();
     // PARTY_RELATIONSHIP is not templated → no Simplified-Formats mapping;
     // reject a simplified Content-Type/Accept uniformly.
     crate::formats::dispatch::guard_non_templated(h)?;
@@ -726,7 +726,7 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
     let h = &parts.headers;
     // NOTE: our own design (#4330): PARTY_RELATIONSHIP is an extension, served beside the
     // openEHR base path, so its `Location` names the extensions root.
-    let base = state.config().rest.extensions_path();
+    let base = state.config().api.extensions_path();
     // PARTY_RELATIONSHIP is not templated → no Simplified-Formats mapping;
     // reject a simplified Content-Type/Accept uniformly.
     crate::formats::dispatch::guard_non_templated(h)?;

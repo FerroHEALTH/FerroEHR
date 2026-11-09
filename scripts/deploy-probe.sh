@@ -82,10 +82,10 @@ echo
 # The documented recipe, used as documented: the multimedia keys are EXPORTED,
 # not written into a file. #2169 was exactly this path silently doing nothing,
 # so the harness must take it rather than a shortcut the book never mentions.
-export FERROEHR__MULTIMEDIA__ENABLED=true
-export FERROEHR__MULTIMEDIA__ENDPOINT=http://seaweedfs:8333
-export FERROEHR__MULTIMEDIA__BUCKET=openehr-multimedia
-export FERROEHR__MULTIMEDIA__ALLOW_HTTP=true
+export FERROEHR__RECORD__MULTIMEDIA__ENABLED=true
+export FERROEHR__RECORD__MULTIMEDIA__URL=http://seaweedfs:8333
+export FERROEHR__RECORD__MULTIMEDIA__BUCKET=openehr-multimedia
+export FERROEHR__RECORD__MULTIMEDIA__ALLOW_HTTP=true
 # A probe instance sends no usage report; every family's stack reads this.
 export FERROEHR__USAGE_REPORT__ENABLED=false
 

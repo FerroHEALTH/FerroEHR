@@ -300,7 +300,7 @@ async fn an_unconfigured_deployment_answers_not_found() {
 }
 
 /// A body that names `subjects` instead of predicates is served under
-/// `[cohort] subjects = true` and the local provider, each subject resolved
+/// `[privacy.cohort] subjects = true` and the local provider, each subject resolved
 /// through the `EHR_STATUS.subject` the EHR was created with over the wire,
 /// and no identifier value reaches the wire.
 #[tokio::test]

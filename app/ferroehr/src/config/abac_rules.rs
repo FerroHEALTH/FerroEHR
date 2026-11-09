@@ -71,7 +71,7 @@ impl AbacConfig {
     fn validate_remote_engine(&self) -> Result<(), AuthzConfigError> {
         let server = self
             .remote
-            .server
+            .url
             .as_ref()
             .map(SecretUrl::expose)
             .filter(|s| !s.trim().is_empty())

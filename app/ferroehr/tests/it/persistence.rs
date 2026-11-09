@@ -1326,7 +1326,7 @@ async fn a_pooled_connection_applies_the_configured_statement_timeout() {
     let db = testkit::db().await.expect("testkit database");
     let settings = db::DbConfig {
         url: ferrohealth_secret::secret_url::SecretUrl::new(db.url()),
-        statement_timeout_ms: 12_345,
+        statement_timeout: ferrohealth_config::units::Duration::from_millis(12_345),
         max_connections: 2,
         min_connections: 0,
         ..db::DbConfig::default()

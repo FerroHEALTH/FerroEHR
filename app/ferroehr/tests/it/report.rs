@@ -42,13 +42,13 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
         .expect("write the licence token");
 
     let mut config = FerroEhrConfig::default();
-    config.db.url = SecretUrl::new(format!(
+    config.database.url = SecretUrl::new(format!(
         "postgres://reportuser:{DB_PW}@127.0.0.1:1/ferroehr"
     ));
-    config.db.migrate_url = Some(SecretUrl::new(format!(
+    config.database.migrate_url = Some(SecretUrl::new(format!(
         "postgres://migrator:{MIGRATE_PW}@127.0.0.1:1/ferroehr"
     )));
-    config.storage.party.url = Some(SecretUrl::new(format!(
+    config.database.party.url = Some(SecretUrl::new(format!(
         "postgres://partyuser:{PARTY_PW}@127.0.0.1:1/ferroehr"
     )));
     config.auth.shared.issuer = ferrohealth_smart::config::IssuerKey::Flat(format!(
@@ -64,17 +64,27 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
         }],
         cache_ttl_seconds: 0,
     });
-    config.terminology.server.oauth = Some(ferrohealth_smart::config::credentials::OauthSection {
-        token_endpoint: "https://idp.example/token".to_owned(),
-        client_id: "ferroehr".to_owned(),
-        client_secret: Some(secrecy::SecretString::from(CLIENT_SECRET)),
-        ..ferrohealth_smart::config::credentials::OauthSection::default()
-    });
-    config.signing.key_path = Some(key.path().to_path_buf());
-    config.signing.key_passphrase = Some(Secret::new(PASSPHRASE));
-    config.licence.file = Some(token.path().to_path_buf());
-    config.demographic.identifier_protection.key = Some(Secret::new(IDENTIFIER_KEY));
-    config.multimedia.secret_access_key = Some(Secret::new(S3_SECRET));
+    config.terminology = Some(
+        ferroehr::service::terminology::config::TerminologyServerConfig {
+            oauth: Some(ferrohealth_smart::config::credentials::OauthSection {
+                token_endpoint: "https://idp.example/token".to_owned(),
+                client_id: "ferroehr".to_owned(),
+                client_secret: Some(secrecy::SecretString::from(CLIENT_SECRET)),
+                ..ferrohealth_smart::config::credentials::OauthSection::default()
+            }),
+            ..ferroehr::service::terminology::config::TerminologyServerConfig::default()
+        },
+    );
+    config.record.signing.key_file = Some(key.path().to_path_buf());
+    config.record.signing.key_passphrase = Some(Secret::new(PASSPHRASE));
+    config.deployment.licence_file = Some(token.path().to_path_buf());
+    config.privacy.identifier_protection = Some(
+        ferroehr::identifier_protection::config::IdentifierProtectionConfig {
+            key: Some(Secret::new(IDENTIFIER_KEY)),
+            ..ferroehr::identifier_protection::config::IdentifierProtectionConfig::default()
+        },
+    );
+    config.record.multimedia.secret_access_key = Some(Secret::new(S3_SECRET));
     config
 }
 
@@ -231,7 +241,7 @@ async fn a_reachable_database_gives_levels_and_no_patient_identifier() {
         .expect("create_ehr");
 
     let mut config = FerroEhrConfig::default();
-    config.db.url = SecretUrl::new(db.url());
+    config.database.url = SecretUrl::new(db.url());
     let report = Report::gather(&config).await;
     let written = serde_json::to_string(&report).expect("the report serializes");
 

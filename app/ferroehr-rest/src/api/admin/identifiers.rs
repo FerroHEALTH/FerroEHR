@@ -6,7 +6,7 @@
 //! No openEHR ITS-REST operation governs this route. The
 //! RM models an identifier as a plain `DV_IDENTIFIER` (RM `data_types`
 //! `UML/classes/org.openehr.rm.data_types.dv_identifier.adoc`) and says nothing
-//! about protecting its value; `[demographic.identifier_protection]` seals the
+//! about protecting its value; `[privacy.identifier_protection]` seals the
 //! national identifiers of the configured schemes, and this route is the one
 //! supported way to see one again (#3776).
 //!

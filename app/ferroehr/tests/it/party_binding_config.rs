@@ -21,7 +21,7 @@ const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoa
 fn full() -> String {
     format!(
         r#"
-[ehr_index]
+[pixm]
 provider = "local"
 
 [[auth.issuer]]
@@ -760,7 +760,7 @@ fn two_equal_selectors_are_refused() {
 #[test]
 fn a_key_of_a_protected_scheme_is_refused() {
     let toml = format!(
-        "{}\n[demographic.identifier_protection]\nenabled = true\nschemes = [\"guid\"]\nkey = \"{}\"\n",
+        "{}\n[privacy.identifier_protection]\nenabled = true\nschemes = [\"guid\"]\nkey = \"{}\"\n",
         mapped("", ""),
         "00".repeat(32)
     );
@@ -826,8 +826,8 @@ fn a_relationship_code_outside_subject_relationship_is_refused() {
 /// `binding_issuer`, followed by `extra`.
 fn scim(issuer: &str, binding_issuer: &str, extra: &str) -> String {
     format!(
-        "{}\n[scim]\nenabled = true\npublic_base_url = \"https://cdr.example.com\"\n\n\
-         [[scim.client]]\nissuer = \"{issuer}\"\nclient_id = \"entra\"\nscope = \"ferroehr/scim\"\n\
+        "{}\n[auth.scim]\nenabled = true\npublic_base_url = \"https://cdr.example.com\"\n\n\
+         [[auth.scim.client]]\nissuer = \"{issuer}\"\nclient_id = \"entra\"\nscope = \"ferroehr/scim\"\n\
          binding_issuer = \"{binding_issuer}\"\n{extra}",
         full()
     )
@@ -842,8 +842,7 @@ fn a_scim_client_of_the_machines_issuer_binding_a_party_issuer_loads() {
     )))
     .expect("assembles");
     config.validate().expect("validates");
-    assert!(config.scim.enabled);
-    assert_eq!(config.scim.client.len(), 1);
+    assert_eq!(config.auth.scim.expect("the scim table").client.len(), 1);
 }
 
 #[test]
@@ -869,13 +868,13 @@ fn every_scim_client_refusal_is_named() {
     let shared = refusal(&scim(
         "https://idp.example/realms/machines",
         "urn:example:staff-login",
-        "\n[[scim.client]]\nissuer = \"https://idp.example/realms/machines\"\n\
+        "\n[[auth.scim.client]]\nissuer = \"https://idp.example/realms/machines\"\n\
          client_id = \"okta\"\nscope = \"ferroehr/scim\"\n\
          binding_issuer = \"urn:example:staff-login\"\n",
     ));
     assert!(shared.contains("shares binding_issuer"), "{shared}");
     let unknown = refusal(&format!(
-        "{}\n[scim]\nenabled = true\nmax_deactivation = 3\n",
+        "{}\n[auth.scim]\nenabled = true\nmax_deactivation = 3\n",
         full()
     ));
     assert!(unknown.contains("max_deactivation"), "{unknown}");

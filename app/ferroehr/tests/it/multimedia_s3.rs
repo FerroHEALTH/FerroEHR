@@ -85,8 +85,8 @@ impl Seaweed {
     fn config(&self) -> MultimediaConfig {
         MultimediaConfig {
             enabled: true,
-            threshold_bytes: 256,
-            endpoint: Some(ferrohealth_secret::secret_url::SecretUrl::new(
+            threshold: ferrohealth_config::units::ByteSize::from_bytes(256),
+            url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
                 self.endpoint.clone(),
             )),
             bucket: BUCKET.to_owned(),
@@ -94,7 +94,7 @@ impl Seaweed {
             access_key_id: None,
             secret_access_key: None,
             secret_access_key_file: None,
-            allow_http: true,
+            ..MultimediaConfig::default()
         }
     }
 

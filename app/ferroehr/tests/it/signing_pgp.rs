@@ -67,10 +67,10 @@ fn pgp_signer(armored_key: &str, passphrase: Option<&str>) -> Result<Signer, Sig
     let config = SigningConfig {
         enabled: true,
         mode: Mode::Pgp,
-        key_path: Some(temp_file(armored_key)),
+        key_file: Some(temp_file(armored_key)),
         key_passphrase: passphrase.map(ferrohealth_secret::secret::Secret::new),
         key_passphrase_file: None,
-        retired_key_paths: Vec::new(),
+        retired_key_files: Vec::new(),
         verify_on_read: Some(VerifyOnRead::Strict),
     };
     Signer::from_config(&config)
@@ -127,10 +127,10 @@ fn boot_fails_when_key_path_missing() {
     let config = SigningConfig {
         enabled: true,
         mode: Mode::Pgp,
-        key_path: None,
+        key_file: None,
         key_passphrase: None,
         key_passphrase_file: None,
-        retired_key_paths: Vec::new(),
+        retired_key_files: Vec::new(),
         verify_on_read: Some(VerifyOnRead::Off),
     };
     assert!(matches!(
@@ -166,10 +166,10 @@ fn boot_fails_on_missing_key_file() {
     let config = SigningConfig {
         enabled: true,
         mode: Mode::Pgp,
-        key_path: Some(PathBuf::from("/nonexistent/ferroehr-signing/key.asc")),
+        key_file: Some(PathBuf::from("/nonexistent/ferroehr-signing/key.asc")),
         key_passphrase: None,
         key_passphrase_file: None,
-        retired_key_paths: Vec::new(),
+        retired_key_files: Vec::new(),
         verify_on_read: Some(VerifyOnRead::Off),
     };
     assert!(matches!(
@@ -184,10 +184,10 @@ fn digest_mode_verify_matches_and_mismatches() {
     let config = SigningConfig {
         enabled: true,
         mode: Mode::Digest,
-        key_path: None,
+        key_file: None,
         key_passphrase: None,
         key_passphrase_file: None,
-        retired_key_paths: Vec::new(),
+        retired_key_files: Vec::new(),
         verify_on_read: Some(VerifyOnRead::Strict),
     };
     let signer = Signer::from_config(&config).expect("digest signer");
@@ -231,10 +231,10 @@ fn signer_with_retired(active: &str, retired: &[&str]) -> Signer {
     let config = SigningConfig {
         enabled: true,
         mode: Mode::Pgp,
-        key_path: Some(temp_file(active)),
+        key_file: Some(temp_file(active)),
         key_passphrase: None,
         key_passphrase_file: None,
-        retired_key_paths: retired.iter().map(|cert| temp_file(cert)).collect(),
+        retired_key_files: retired.iter().map(|cert| temp_file(cert)).collect(),
         verify_on_read: Some(VerifyOnRead::Strict),
     };
     Signer::from_config(&config).expect("build signer")
@@ -473,7 +473,7 @@ fn an_rsa_signing_key_boots_with_a_prominent_advisory() {
         "the warning names the recommended replacement: {message}"
     );
     assert!(
-        message.contains("retired_key_paths"),
+        message.contains("retired_key_files"),
         "the warning points at the rotation mechanism that keeps history verifying: {message}"
     );
 }
@@ -538,7 +538,7 @@ fn an_ecdsa_or_ed448_signing_key_is_refused_at_boot() {
             algorithm: *algorithm,
         }
         .to_string();
-        for needle in ["RUSTSEC-2026-0387", "Ed25519", "retired_key_paths"] {
+        for needle in ["RUSTSEC-2026-0387", "Ed25519", "retired_key_files"] {
             assert!(message.contains(needle), "{key_type:?}: {message}");
         }
     }

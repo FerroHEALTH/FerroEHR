@@ -51,7 +51,7 @@
 # posture the hosted sandbox runs (deploy/hosted/docker-compose.yml).
 #
 # Posture: the CDR keeps its shipped fail-OPEN default (a binding the server
-# cannot resolve is accepted); FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR=true
+# cannot resolve is accepted); FERROEHR__TERMINOLOGY__ON_ERROR=refuse
 # turns an unreachable server into a 422 refusal. No openEHR spec governs the
 # choice between the two: our own design.
 
@@ -147,11 +147,11 @@ services:
 
   ferroehr:
     environment:
-      FERROEHR__TERMINOLOGY__SERVER__ENABLED: "true"
       # The /terminology/* extension API the header describes; without it every
       # route answers 404 "terminology API is disabled".
-      FERROEHR__TERMINOLOGY__API_ENABLED: "true"
-      FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR: ${FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR:-false}
+      FERROEHR__API__TERMINOLOGY: "true"
+      FERROEHR__TERMINOLOGY__URL: http://ferroterm:8080/r4b
+      FERROEHR__TERMINOLOGY__ON_ERROR: ${FERROEHR__TERMINOLOGY__ON_ERROR:-accept}
     depends_on:
       # The CDR starts once FerroTERM reports healthy, so the first binding a
       # composition carries finds a serving terminology server; the fail posture

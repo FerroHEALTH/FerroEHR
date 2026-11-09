@@ -20,7 +20,7 @@ use serde_json::Value;
 use tower::ServiceExt;
 
 use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
-use ferroehr::config::rest::{AdminConfig, RestConfig};
+use ferroehr::config::rest::ApiConfig;
 use ferroehr::config::smart::SmartConfig;
 use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr_rest::config::AppConfig;
@@ -123,7 +123,7 @@ fn a_non_default_base_path_moves_the_documented_paths() {
     const ROOT: &str = "/gateway/v1";
 
     let mut cfg = app_config();
-    cfg.rest.base_path = BASE.to_owned();
+    cfg.api.base_path = BASE.to_owned();
     let doc = serde_json::to_value(extensions_document(&cfg)).expect("serialise doc");
     let paths = doc["paths"].as_object().expect("paths object");
 
@@ -537,27 +537,30 @@ async fn first_metric_name(app: &Router) -> String {
 /// is built from an issuer's metadata, and every surface enabled, so every
 /// documented path is mounted.
 fn app_config() -> AppConfig {
-    AppConfig {
-        server: ferrohealth_server::section::ServerSection::default(),
-        rest: RestConfig {
-            swagger_ui: AccessLevel::Public,
-            ..Default::default()
-        },
-        auth: common::issuer_auth(ISSUER, "ferroehr"),
-        admin: AdminConfig { enabled: true },
-        smart: SmartConfig {
-            enabled: true,
+    {
+        let mut c = AppConfig {
+            server: ferrohealth_server::section::ServerSection::default(),
+            api: ApiConfig {
+                openapi_ui: AccessLevel::Public,
+                ..Default::default()
+            },
+            auth: common::issuer_auth(ISSUER, "ferroehr"),
+            audit_organization_claim: None,
+            rbac: ferroehr::config::authz::RbacConfig::default(),
+            assurance: ferrohealth_smart::assurance::AssuranceSection::default(),
+            spec_profile: ferroehr::config::profile::SpecProfile::default(),
+            party_binding: ferroehr::config::binding::PartyBindingConfig::default(),
+            system_clients: Vec::new(),
+            agreements: Vec::new(),
+        };
+        c.api.admin = true;
+        c.auth.smart = SmartConfig {
+            discovery: true,
             ..SmartConfig::default()
-        },
-        terminology_api_enabled: true,
-        audit_organization_claim: None,
-        rbac: ferroehr::config::authz::RbacConfig::default(),
-        assurance: ferrohealth_smart::assurance::AssuranceSection::default(),
-        spec_profile: ferroehr::config::profile::SpecProfile::default(),
-        party_binding: ferroehr::config::binding::PartyBindingConfig::default(),
-        system_clients: Vec::new(),
-        agreements: Vec::new(),
-        scim: ferroehr::config::scim::ScimConfig::default(),
+        };
+        c.api.terminology = true;
+        c.auth.scim = Some(ferroehr::config::scim::ScimConfig::default());
+        c
     }
 }
 
@@ -590,7 +593,7 @@ async fn full_app() -> Router {
             // parameters; cap the sample window at 1 s so the flamegraph op
             // answers quickly (the default window shrinks to the cap).
             profiling: ferroehr::config::management::ProfilingConfig {
-                max_seconds: 1,
+                max_duration: ferrohealth_config::units::Duration::from_secs(1),
                 ..ferroehr::config::management::ProfilingConfig::default()
             },
             ..ManagementConfig::default()

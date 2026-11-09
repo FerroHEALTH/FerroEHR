@@ -83,7 +83,7 @@ pub enum ServeError {
     /// The authentication configuration was invalid.
     #[error("authentication configuration error: {0}")]
     Auth(String),
-    /// The `[scim]` endpoint cannot be served: a mapped attribute is no
+    /// The `[auth.scim]` endpoint cannot be served: a mapped attribute is no
     /// attribute of its SCIM schema, or the party mapping lacks what a User
     /// is written with.
     #[error("scim configuration error")]
@@ -154,7 +154,7 @@ pub async fn build_full(
 /// reads whether or not an authorization gate is wired. A served SMART discovery document needs the issuer's
 /// metadata to name a `token_endpoint`, which the document requires (SMART App
 /// Launch 2.2.0, Conformance, §Metadata), so a `jwks_file` issuer refuses it
-/// unless `[smart] issuer_metadata_file` supplies that metadata.
+/// unless `[auth.smart] issuer_metadata_file` supplies that metadata.
 ///
 /// # Errors
 /// [`ServeError::Auth`] if `[auth]` is refused or an issuer cannot be read.
@@ -170,17 +170,18 @@ async fn build_authenticator(
     let authenticator = Authenticator::new(config, claim, source, replay)
         .await
         .map_err(ServeError::Auth)?;
-    if config.smart.enabled
+    if config.auth.smart.discovery
         && config.auth.shared.enabled
         && authenticator
             .smart_configuration(&smart::discovery::options(config))
             .is_none_or(|document| document.get("token_endpoint").is_none())
     {
         return Err(ServeError::Auth(
-            "smart.enabled = true needs an [auth] issuer whose metadata names a \
+            "auth.smart.discovery = true needs an [auth] issuer whose metadata names a \
              token_endpoint (SMART App Launch 2.2.0, Conformance, §Metadata); an issuer \
-             read from a jwks_file carries none unless smart.issuer_metadata_file supplies it"
-                .to_owned(),
+             read from a jwks_file carries none unless auth.smart.issuer_metadata_file supplies \
+             it"
+            .to_owned(),
         ));
     }
     scim::endpoint::check(config).map_err(ServeError::Scim)?;
@@ -217,10 +218,8 @@ pub async fn serve_full(
     observability: Observability,
 ) -> Result<Drained, ServeError> {
     let listener = TcpListener::bind(config.server.listen).await?;
-    let management = match observability.management.port {
-        Some(port) if observability.management.enabled => {
-            Some(TcpListener::bind(std::net::SocketAddr::from(([0, 0, 0, 0], port))).await?)
-        }
+    let management = match observability.management.listen {
+        Some(listen) if observability.management.enabled => Some(TcpListener::bind(listen).await?),
         _ => None,
     };
     serve_on(

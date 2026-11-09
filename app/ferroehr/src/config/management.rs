@@ -103,18 +103,36 @@ pub struct EndpointLevels {
 /// silently clamped.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
+#[expect(
+    clippy::struct_field_names,
+    reason = "each key is a ceiling a request is held to, and the `max_` names are the keys \
+              an operator writes"
+)]
 pub struct ProfilingConfig {
-    /// The longest sample window a single request may ask for, in seconds.
-    pub max_seconds: u16,
+    /// The longest sample window a single request may ask for, in whole
+    /// seconds.
+    pub max_duration: ferrohealth_config::units::Duration,
     /// The highest sampling frequency a request may ask for, in Hz.
     pub max_frequency: i32,
+    /// Retired: refused at load, naming `max_duration`.
+    #[serde(skip_serializing)]
+    pub max_seconds: ferrohealth_config::removed::Removed,
+}
+
+impl ProfilingConfig {
+    /// The longest sample window in whole seconds, as a request names one.
+    #[must_use]
+    pub fn max_seconds(&self) -> u16 {
+        u16::try_from(self.max_duration.as_secs()).unwrap_or(u16::MAX)
+    }
 }
 
 impl Default for ProfilingConfig {
     fn default() -> Self {
         Self {
-            max_seconds: 30,
+            max_duration: ferrohealth_config::units::Duration::from_secs(30),
             max_frequency: 999,
+            max_seconds: ferrohealth_config::removed::Removed::default(),
         }
     }
 }
@@ -129,10 +147,10 @@ pub struct ManagementConfig {
     /// The base path the management endpoints hang off.
     pub base_path: String,
     /// When set, the management surface is served from its **own** listener on
-    /// this port (a separate axum server task in the binary) instead of the main
-    /// API listener — so production can keep it off the public listener entirely.
-    #[serde(default)]
-    pub port: Option<u16>,
+    /// this socket address (a separate axum server task in the binary) instead
+    /// of the main API listener — so production can keep it off the public
+    /// listener entirely. The same form as `server.listen`.
+    pub listen: Option<std::net::SocketAddr>,
     /// Per-endpoint access levels — the SINGLE authority for this surface.
     ///
     /// NOTE: there is deliberately no global default beside this. An endpoint
@@ -147,6 +165,9 @@ pub struct ManagementConfig {
     /// file, for `inferno-flamegraph` to render offline. Unset, nothing is
     /// captured.
     pub flame_file: Option<std::path::PathBuf>,
+    /// Retired: refused at load, naming `listen`.
+    #[serde(skip_serializing)]
+    pub port: ferrohealth_config::removed::Removed,
 }
 
 impl Default for ManagementConfig {
@@ -154,10 +175,11 @@ impl Default for ManagementConfig {
         Self {
             enabled: false,
             base_path: "/management".to_owned(),
-            port: None,
+            listen: None,
             endpoints: EndpointLevels::default(),
             profiling: ProfilingConfig::default(),
             flame_file: None,
+            port: ferrohealth_config::removed::Removed::default(),
         }
     }
 }
@@ -171,11 +193,11 @@ mod tests {
         let c = ManagementConfig::default();
         assert!(!c.enabled);
         assert_eq!(c.base_path, "/management");
-        assert!(c.port.is_none());
+        assert!(c.listen.is_none());
         assert_eq!(c.endpoints.prometheus, AccessLevel::Off);
         assert_eq!(c.endpoints.info, AccessLevel::Off);
         assert_eq!(c.endpoints.flamegraph, AccessLevel::Off);
-        assert_eq!(c.profiling.max_seconds, 30);
+        assert_eq!(c.profiling.max_seconds(), 30);
         assert_eq!(c.profiling.max_frequency, 999);
     }
 

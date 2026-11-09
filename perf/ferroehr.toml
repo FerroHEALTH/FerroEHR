@@ -7,7 +7,8 @@
 # kept local, so the gate measures FerroEHR and no FerroPIX. The background
 # workers run as the defaults start them.
 
-deployment_profile = "sandbox"
+[deployment]
+profile = "sandbox"
 
 [auth]
 enabled = true
@@ -73,15 +74,14 @@ path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identit
 template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
 
 # The SCIM endpoint the gate provisions the Basic user through.
-[scim]
-enabled = true
+[auth.scim]
 public_base_url = "http://127.0.0.1:58080"
 
-[[scim.client]]
+[[auth.scim.client]]
 issuer = "https://scim.ferroehr.invalid"
 client_id = "basic-users"
 scope = "ferroehr/scim"
 binding_issuer = "urn:ferroehr:basic-user"
 
-[ehr_index]
-provider = "local"
+[record]
+subject_index = "local"

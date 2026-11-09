@@ -177,7 +177,7 @@ impl FerroEhrService {
         };
 
         let exec_start = Instant::now();
-        // `[query].timeout_ms` bounds the DB execution so an over-long query is
+        // `[record.query] timeout` bounds the DB execution so an over-long query is
         // `408` rather than hanging to the global request timeout. The ABAC
         // scope collection stays a separate statement — the main query is paged,
         // so folding the sets in would scope only the served page — but runs

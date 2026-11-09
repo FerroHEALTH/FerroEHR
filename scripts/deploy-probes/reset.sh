@@ -66,8 +66,8 @@ probes_original_state() {
   # probe run sends no report, and that one deviation is declared below.
   local up_status=0
   (
-    unset FERROEHR__MULTIMEDIA__ENABLED FERROEHR__MULTIMEDIA__ENDPOINT \
-      FERROEHR__MULTIMEDIA__BUCKET FERROEHR__MULTIMEDIA__ALLOW_HTTP
+    unset FERROEHR__RECORD__MULTIMEDIA__ENABLED FERROEHR__RECORD__MULTIMEDIA__URL \
+      FERROEHR__RECORD__MULTIMEDIA__BUCKET FERROEHR__RECORD__MULTIMEDIA__ALLOW_HTTP
     dc -f docker-compose.yml up -d --wait ferroehr ferroehr-provision >/dev/null 2>&1
   ) || up_status=$?
 

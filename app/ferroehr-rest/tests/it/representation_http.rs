@@ -69,7 +69,7 @@ fn config() -> AppConfig {
         auth,
         ..AppConfig::default()
     };
-    config.smart.patient_issuers = vec![ISSUER.to_owned()];
+    config.auth.smart.patient_issuers = vec![ISSUER.to_owned()];
     config
 }
 

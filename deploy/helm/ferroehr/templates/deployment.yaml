@@ -277,7 +277,7 @@ spec:
             defaultMode: 0440
             sources:
               {{- if .Values.database.existingSecret }}
-              # The operator's Secret, projected as the file FERROEHR__DB__URL_FILE
+              # The operator's Secret, projected as the file FERROEHR__DATABASE__URL_FILE
               # points at. Its key name is theirs (database.existingSecretKey);
               # only the mounted PATH is fixed.
               - secret:

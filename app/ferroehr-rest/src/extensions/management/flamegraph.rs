@@ -63,11 +63,11 @@ struct SamplePlan {
 /// `400` naming the cap — never silently clamped (the caller must know what
 /// was actually sampled).
 fn plan(params: &FlamegraphParams, limits: ProfilingConfig) -> Result<SamplePlan, ApiError> {
-    let seconds = params.seconds.unwrap_or_else(|| 10.min(limits.max_seconds));
-    if seconds == 0 || seconds > limits.max_seconds {
+    let max_seconds = limits.max_seconds();
+    let seconds = params.seconds.unwrap_or_else(|| 10.min(max_seconds));
+    if seconds == 0 || seconds > max_seconds {
         return Err(ApiError::BadRequest(format!(
-            "seconds must be between 1 and {} (management.profiling.max_seconds)",
-            limits.max_seconds
+            "seconds must be between 1 and {max_seconds} (management.profiling.max_duration)"
         )));
     }
     let frequency = params
@@ -205,8 +205,9 @@ mod tests {
     #[test]
     fn defaults_shrink_to_a_tighter_cap() {
         let tight = ProfilingConfig {
-            max_seconds: 5,
+            max_duration: ferrohealth_config::units::Duration::from_secs(5),
             max_frequency: 50,
+            ..ProfilingConfig::default()
         };
         let p = plan(&FlamegraphParams::default(), tight).expect("defaults must plan");
         assert_eq!(p.seconds, 5);

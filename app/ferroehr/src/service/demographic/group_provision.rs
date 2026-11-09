@@ -99,7 +99,7 @@ pub struct GroupWriter<'a> {
     pub client: GroupClient<'a>,
     /// The `PARTY_REF.namespace` the `GROUP` and its members are named in.
     pub namespace: &'a str,
-    /// The most members a Group holds (`[scim] max_group_members`).
+    /// The most members a Group holds (`[auth.scim] max_group_members`).
     pub max_members: usize,
 }
 
@@ -465,7 +465,7 @@ pub(super) fn distinct(members: &[VoId]) -> Vec<VoId> {
 pub(super) fn too_many(max: usize) -> ServiceError {
     ServiceError::content_invalid(
         Violation::new(format!(
-            "a Group holds at most {max} members ([scim] max_group_members)"
+            "a Group holds at most {max} members ([auth.scim] max_group_members)"
         ))
         .with_path("members"),
     )

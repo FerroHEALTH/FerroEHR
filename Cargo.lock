@@ -2376,6 +2376,7 @@ dependencies = [
  "ehds-logging",
  "ferroehr",
  "ferrohealth-authz",
+ "ferrohealth-config",
  "ferrohealth-health",
  "ferrohealth-secret",
  "ferrohealth-server",
@@ -2516,9 +2517,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-config"
-version = "0.2.10"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b43a5b1b1feb60993918bccfc6146c9e8555ee8c0191808404a75a761f8bcc4f"
+checksum = "52ce40e3df59b02d2c702b4f236f8ff3a345c459b100a9ca245606120e5578da"
 dependencies = [
  "ferrohealth-secret",
  "percent-encoding",
@@ -6200,6 +6201,7 @@ dependencies = [
  "anyhow",
  "clap",
  "ferroehr",
+ "ferrohealth-config",
  "ferrohealth-smart",
  "futures",
  "jiff",

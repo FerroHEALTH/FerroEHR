@@ -30,11 +30,11 @@ const SNOMED: &str = "http://snomed.info/sct";
 /// An enabled server at `base`, authenticated by `oauth` when given.
 fn server_cfg(base: &str, oauth: Option<OauthSection>) -> TerminologyServerConfig {
     TerminologyServerConfig {
-        enabled: true,
         url: SecretUrl::new(base),
-        fail_on_error: false,
-        request_timeout_ms: 800,
+        on_error: ferroehr::service::terminology::config::OnError::Accept,
+        timeout: ferrohealth_config::units::Duration::from_millis(800),
         oauth,
+        ..TerminologyServerConfig::default()
     }
 }
 
@@ -54,7 +54,9 @@ async fn service_with(cfg: TerminologyServerConfig) -> FerroEhrService {
 async fn the_disabled_default_calls_nothing() {
     let unreachable = MockServer::start().await;
     assert!(
-        !TerminologyServerConfig::default().enabled,
+        ferroehr::config::FerroEhrConfig::default()
+            .terminology
+            .is_none(),
         "the terminology server is off by default"
     );
 

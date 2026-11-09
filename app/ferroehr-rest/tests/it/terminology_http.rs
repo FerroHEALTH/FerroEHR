@@ -32,9 +32,12 @@ const UNKNOWN: &str = "no-such-terminology";
 const OPENEHR_TERM_URI: &str = "https://github.com/openEHR/terminology";
 
 fn config(terminology_enabled: bool) -> AppConfig {
-    AppConfig {
-        terminology_api_enabled: terminology_enabled,
-        ..common::api_config(false)
+    {
+        let mut c = AppConfig {
+            ..common::api_config(false)
+        };
+        c.api.terminology = terminology_enabled;
+        c
     }
 }
 
@@ -262,9 +265,8 @@ async fn enabled_terminology_group_serves_real_bundle() {
 /// The router over a service whose terminology server is the mock at `base`.
 async fn app_with_server(base: &str) -> (testkit::TestDb, Router) {
     let cfg = ferroehr::service::terminology::config::TerminologyServerConfig {
-        enabled: true,
         url: ferrohealth_secret::secret_url::SecretUrl::new(base),
-        request_timeout_ms: 800,
+        timeout: ferrohealth_config::units::Duration::from_millis(800),
         ..Default::default()
     };
     let provider = ferroehr::service::terminology::fhir::FhirTerminologyProvider::new(&cfg)

@@ -21,7 +21,7 @@
 #
 # The env-mapping grammar for overrides is FERROEHR_ + the TOML path upper-cased
 # with `__` between segments (e.g. config.db.max_connections ⇔
-# FERROEHR__DB__MAX_CONNECTIONS). app/ferroehr/assets/ferroehr.default.toml is the
+# FERROEHR__DATABASE__MAX_CONNECTIONS). app/ferroehr/assets/ferroehr.default.toml is the
 # complete TOML schema with every key and its default.
 #
 # The database role architecture, the pgaudit/TLS/PITR posture, and the
@@ -101,7 +101,7 @@ serviceAccount:
 # docs, "Database Roles": https://www.postgresql.org/docs/18/user-manag.html).
 # The DSN is a SECRET, and the credential that reaches patient data: it is MOUNTED
 # from a Secret as /etc/ferroehr-secrets/db.url and reached through
-# `FERROEHR__DB__URL_FILE`, so it never enters the pod's environment (an env value
+# `FERROEHR__DATABASE__URL_FILE`, so it never enters the pod's environment (an env value
 # is readable through /proc/<pid>/environ and inherited by every child process).
 # Never the ConfigMap. The non-secret pool bounds live in
 # config.db.{max_connections,min_connections,acquire_timeout_secs}.
@@ -114,10 +114,10 @@ database:
   existingSecret: ""
   # -- Key WITHIN existingSecret that holds the DSN. This is a Secret key name,
   # not an environment variable name: the chart mounts that key as a file and
-  # passes only its PATH as `FERROEHR__DB__URL_FILE`, so the DSN never enters the
+  # passes only its PATH as `FERROEHR__DATABASE__URL_FILE`, so the DSN never enters the
   # pod's environment. The default spelling is kept for compatibility with
   # existing Secrets created for the older env-borne arrangement.
-  existingSecretKey: FERROEHR__DB__URL
+  existingSecretKey: FERROEHR__DATABASE__URL
   # -- Inline DSN (DEV/TEST ONLY — lands in a chart-managed Secret). Leave empty
   # and use existingSecret in production. Ignored when existingSecret is set.
   url: ""
@@ -177,7 +177,7 @@ database:
     existingSecret: ""
     # -- Key WITHIN it holding that DSN. Mounted as a file; only its PATH
     # reaches the pod's environment.
-    existingSecretKey: FERROEHR__STORAGE__CLINICAL__URL
+    existingSecretKey: FERROEHR__DATABASE__CLINICAL__URL
     # -- Inline clinical DSN (DEV/TEST ONLY — lands in a chart-managed Secret).
     # Ignored when `clinical.existingSecret` is set.
     url: ""
@@ -190,7 +190,7 @@ database:
     # DML-only role cannot do.
     migrateExistingSecret: ""
     # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file.
-    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__CLINICAL__URL
+    migrateExistingSecretKey: FERROEHR__DATABASE__CLINICAL__MIGRATE_URL
 
   party:
     # -- Reference an existing Secret holding the PARTY-role DSN
@@ -198,7 +198,7 @@ database:
     # credential from `database.existingSecret`.
     existingSecret: ""
     # -- Key WITHIN it holding that DSN. Mounted as a file.
-    existingSecretKey: FERROEHR__STORAGE__PARTY__URL
+    existingSecretKey: FERROEHR__DATABASE__PARTY__URL
     # -- Inline party DSN (DEV/TEST ONLY). Ignored when
     # `party.existingSecret` is set.
     url: ""
@@ -211,7 +211,7 @@ database:
     # DML-only role cannot do.
     migrateExistingSecret: ""
     # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file.
-    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__PARTY__URL
+    migrateExistingSecretKey: FERROEHR__DATABASE__PARTY__MIGRATE_URL
 
   audit:
     # -- Reference an existing Secret holding the DSN the audit repository is
@@ -221,7 +221,7 @@ database:
     # server, which DSV Art. 4 Abs. 5 asks for.
     existingSecret: ""
     # -- Key WITHIN it holding that DSN. Mounted as a file.
-    existingSecretKey: FERROEHR__STORAGE__AUDIT__URL
+    existingSecretKey: FERROEHR__DATABASE__AUDIT__URL
     # -- Inline audit DSN (DEV/TEST ONLY). Ignored when
     # `audit.existingSecret` is set.
     url: ""
@@ -234,7 +234,7 @@ database:
     # DML-only role cannot do.
     migrateExistingSecret: ""
     # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file.
-    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__AUDIT__URL
+    migrateExistingSecretKey: FERROEHR__DATABASE__AUDIT__MIGRATE_URL
 
   # ── the credential that prepares the schema ────────────────────────────────
   # No domain DSN above can do it. Preparing spans every schema of a database —
@@ -262,7 +262,7 @@ database:
   migrateExistingSecret: ""
   # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file;
   # only its PATH reaches the pod's environment.
-  migrateExistingSecretKey: FERROEHR__DB__MIGRATE_URL
+  migrateExistingSecretKey: FERROEHR__DATABASE__MIGRATE_URL
   # -- Inline schema-preparation DSN (DEV/TEST ONLY — lands in a chart-managed
   # Secret). Ignored when migrateExistingSecret is set.
   migrateUrl: ""
@@ -301,7 +301,7 @@ migrations:
     existingSecret: ""
     # -- Key WITHIN existingSecret holding the migrator DSN. Mounted as a file;
     # only its PATH reaches the pod's environment.
-    existingSecretKey: FERROEHR__DB__URL
+    existingSecretKey: FERROEHR__DATABASE__URL
     # -- Retries before the Job (and therefore the release) is declared failed.
     backoffLimit: 3
     # -- How long the finished Job's pod is kept for its logs.
@@ -429,7 +429,7 @@ backup:
     # it would be silently partial.
     existingSecret: ""
     # -- Key within `existingSecret` carrying that DSN.
-    existingSecretKey: FERROEHR__DB__URL
+    existingSecretKey: FERROEHR__DATABASE__URL
     # -- REQUIRED when enabled: the name of an EXISTING PersistentVolumeClaim the
     # clinical dumps are written to, mounted at /backup. The chart creates no
     # claim — its storage class, size, retention and who may read it are yours.
@@ -445,7 +445,7 @@ backup:
     # accordingly.
     existingSecret: ""
     # -- Key within `existingSecret` carrying that DSN.
-    existingSecretKey: FERROEHR__STORAGE__PARTY__URL
+    existingSecretKey: FERROEHR__DATABASE__PARTY__URL
     # -- REQUIRED when enabled: an EXISTING PersistentVolumeClaim for the
     # party dumps, and a DIFFERENT one from every other domain's claim
     # (two domains sharing a claim is refused at render). This is the volume
@@ -463,7 +463,7 @@ backup:
     # names the clinical database, which is not where this trail lives.
     existingSecret: ""
     # -- Key within `existingSecret` carrying that DSN.
-    existingSecretKey: FERROEHR__STORAGE__AUDIT__URL
+    existingSecretKey: FERROEHR__DATABASE__AUDIT__URL
     # -- REQUIRED when the audit domain has its own DSN: an EXISTING
     # PersistentVolumeClaim for the audit dumps, and a DIFFERENT one from every
     # other domain's. The trail names patients and principals; it is the record
@@ -522,7 +522,7 @@ secrets:
   # itself (token_endpoint or issuer, client_id, scope) under
   # config.ehr_index.oauth; a secret with no such declaration is a render error.
   ehrIndexClientSecret: ""
-  # -- S3 access key id for [multimedia] → FERROEHR__MULTIMEDIA__ACCESS_KEY_ID
+  # -- S3 access key id for [multimedia] → FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID
   # env. Not a secret in the server's own model (it is reported unredacted by
   # /management/env); prefer IRSA/Workload-Identity (leave empty) on cloud.
   multimediaAccessKeyId: ""
@@ -660,7 +660,7 @@ config:
     # compositions embed large DV_MULTIMEDIA data. Over-limit is 413.
     body_limit_bytes: 16777216
 
-  # [db] — pool bounds (the DSN itself is the FERROEHR__DB__URL secret, above).
+  # [db] — pool bounds (the DSN itself is the FERROEHR__DATABASE__URL secret, above).
   db:
     # apply | verify — whether the server runs its embedded migrations at boot.
     # `verify` issues no DDL and refuses to boot against a database that has not

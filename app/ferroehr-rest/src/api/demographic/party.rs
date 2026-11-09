@@ -41,7 +41,7 @@ pub(crate) async fn create(
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let base = state.config().rest.base_path.clone();
+    let base = state.config().api.base_path.clone();
     // Demographic PARTY types are not templated → no Simplified-Formats
     // mapping; reject a simplified Content-Type/Accept uniformly.
     crate::formats::dispatch::guard_non_templated(h)?;
@@ -83,7 +83,7 @@ pub(crate) async fn update(
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let base = state.config().rest.base_path.clone();
+    let base = state.config().api.base_path.clone();
     // Demographic PARTY types are not templated → no Simplified-Formats
     // mapping; reject a simplified Content-Type/Accept uniformly.
     crate::formats::dispatch::guard_non_templated(h)?;

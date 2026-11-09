@@ -491,7 +491,7 @@ spec:
             # none, so the mounted ferroehr.toml is named here.
             - name: FERROEHR_CONFIG
               value: /etc/ferroehr/ferroehr.toml
-            - name: FERROEHR__DB__URL_FILE
+            - name: FERROEHR__DATABASE__URL_FILE
               value: "/etc/ferroehr-secrets/db.url"
           livenessProbe:
             httpGet:
@@ -577,13 +577,13 @@ spec:
             # (https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
             defaultMode: 0440
             sources:
-              # The operator's Secret, projected as the file FERROEHR__DB__URL_FILE
+              # The operator's Secret, projected as the file FERROEHR__DATABASE__URL_FILE
               # points at. Its key name is theirs (database.existingSecretKey);
               # only the mounted PATH is fixed.
               - secret:
                   name: ferroehr-db
                   items:
-                    - key: FERROEHR__DB__URL
+                    - key: FERROEHR__DATABASE__URL
                       path: db.url
               - secret:
                   name: ferroehr-env

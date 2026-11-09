@@ -116,7 +116,7 @@ services:
       - /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls
     environment:
       FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
-      FERROEHR__DB__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
+      FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
       FERROEHR__USAGE_REPORT__ENABLED: "false"
     volumes:
       - ./docker/ferroehr.dev.toml:/etc/ferroehr/ferroehr.toml:ro
@@ -151,14 +151,14 @@ services:
     environment:
       # The server reads the file this names and searches for none.
       FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
-      FERROEHR__DB__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
+      FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
       # Connection-pool ceiling; measured comparison runs raise it in lockstep
       # with the upstream stack's HikariCP pool (config parity — the dominant
       # tunable must match across compared SUTs).
-      FERROEHR__DB__MAX_CONNECTIONS: ${FERROEHR__DB__MAX_CONNECTIONS:-10}
+      FERROEHR__DATABASE__MAX_CONNECTIONS: ${FERROEHR__DATABASE__MAX_CONNECTIONS:-10}
       # The openEHR generation set (development | stable) — see the
       # configuration book page for the profile-change contract.
-      FERROEHR__SPEC_PROFILE: ${FERROEHR__SPEC_PROFILE:-development}
+      FERROEHR__DEPLOYMENT__SPEC_PROFILE: ${FERROEHR__DEPLOYMENT__SPEC_PROFILE:-development}
       # Concurrent-request bound (503 load shed past it). The
       # comparison runs raise it so overload manifests as queueing latency —
       # the same failure mode as upstream's Tomcat admission window — instead
@@ -176,7 +176,7 @@ services:
       FERROEHR__SERVER__CALLER_RATE__BURST: ${FERROEHR__SERVER__CALLER_RATE__BURST:-2048}
       # Version-signing toggle pass-through (measured comparison runs disable
       # it for throughput parity — upstream has no signing.)
-      FERROEHR__SIGNING__ENABLED: ${FERROEHR__SIGNING__ENABLED:-true}
+      FERROEHR__RECORD__SIGNING__ENABLED: ${FERROEHR__RECORD__SIGNING__ENABLED:-true}
       FERROEHR__TELEMETRY__FORMAT: ${FERROEHR__TELEMETRY__FORMAT:-pretty}
       # Measurement parity (logging equal and minimal on both SUTs):
       # measured comparison runs set warn on BOTH SUTs; default stays info.

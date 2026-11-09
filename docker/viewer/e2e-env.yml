@@ -30,7 +30,7 @@ services:
       keycloak:
         condition: service_healthy
     environment:
-      FERROEHR__TERMINOLOGY__API_ENABLED: "true"
+      FERROEHR__API__TERMINOLOGY: "true"
       # The realm is the third [[auth.issuer]] table (index 2), after the issuer
       # the Basic users of docker/ferroehr.dev.toml bind under and its SCIM
       # client's issuer.
@@ -48,15 +48,15 @@ services:
       # The SCIM client that provisions the realm's users by the ids the realm
       # export fixes (docs/conformance/party/scim/README.md): a second client,
       # since no two clients share a binding_issuer.
-      FERROEHR__SCIM__CLIENT__1__ISSUER: https://scim.ferroehr.invalid
-      FERROEHR__SCIM__CLIENT__1__CLIENT_ID: keycloak-dev
-      FERROEHR__SCIM__CLIENT__1__SCOPE: ferroehr/scim
-      FERROEHR__SCIM__CLIENT__1__BINDING_ISSUER: urn:ferroehr:keycloak-dev-login
+      FERROEHR__AUTH__SCIM__CLIENT__1__ISSUER: https://scim.ferroehr.invalid
+      FERROEHR__AUTH__SCIM__CLIENT__1__CLIENT_ID: keycloak-dev
+      FERROEHR__AUTH__SCIM__CLIENT__1__SCOPE: ferroehr/scim
+      FERROEHR__AUTH__SCIM__CLIENT__1__BINDING_ISSUER: urn:ferroehr:keycloak-dev-login
       FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: https://keycloak:8443/auth/realms/ferroehr
       FERROEHR__AUTH__CA_FILE: /run/ferroehr-dev-tls/ca/ca.crt
       # The realm's service client, whose system/aql-* grant counts only when
       # it is named here (SMART on openEHR §Resource Scopes).
-      FERROEHR__SMART__BACKEND_CLIENTS: ferroehr-service
+      FERROEHR__AUTH__SMART__BACKEND_CLIENTS: ferroehr-service
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 

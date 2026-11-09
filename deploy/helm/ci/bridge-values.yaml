@@ -10,7 +10,7 @@
 # Secret NAME: the chart never takes the credential as a value.
 database:
   existingSecret: ferroehr-db
-  existingSecretKey: FERROEHR__DB__URL
+  existingSecretKey: FERROEHR__DATABASE__URL
 
 secrets:
   basicUserPasswordHashes:

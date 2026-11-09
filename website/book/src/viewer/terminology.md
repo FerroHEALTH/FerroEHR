@@ -26,7 +26,7 @@ one card instead of pretending to work:
 api_enabled = true
 ```
 
-or, as an environment override, `FERROEHR__TERMINOLOGY__API_ENABLED=true`.
+or, as an environment override, `FERROEHR__API__TERMINOLOGY=true`.
 
 Turning it on exposes only lookups over terminologies the server already holds:
 the bundled openEHR terminology plus the external code sets beside it. Wiring

@@ -271,7 +271,7 @@ downloadable Compose quickstart boots because it ships a user.
 
 For production, set at least:
 
-- **`db.url`:** the real DSN, via `FERROEHR__DB__URL` from a secret or a
+- **`db.url`:** the real DSN, via `FERROEHR__DATABASE__URL` from a secret or a
   `url_file`-mounted value, never inline in a world-readable file. Leaving the
   development default in place is warned about loudly at every boot.
 - **`db.migrate = "verify"`** with the schema applied out of band, so the

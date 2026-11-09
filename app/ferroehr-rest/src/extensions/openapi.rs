@@ -157,7 +157,7 @@ const SECURITY_SCHEME: &str = "openehr_auth";
         (name = "admin-report", description = "The activity-report calls (contribution/version statistics per platform service). OUR OWN EXTENSION: the released Admin API is the two EHR deletes alone, so no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "admin-archive", description = "Move selected EHRs / parties to archival storage, and restore them from it. OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "admin-integrity", description = "The storage-parity sweep: every stored version is re-derived from its decomposed node rows and compared with its materialized body, so tampering or corruption of either copy is reported. OUR OWN EXTENSION: no ITS-REST operation governs this route, and no openEHR spec governs storage mechanics (same admin gate + RBAC Admin class)."),
-        (name = "admin-identifiers", description = "The audited read of a party's protected national identifiers: a party version with the identifiers `[demographic.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and `authz.rbac.identifier_reader_role`, and every read is an access record naming the reader, the party and the scheme, never the value."),
+        (name = "admin-identifiers", description = "The audited read of a party's protected national identifiers: a party version with the identifiers `[privacy.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and `authz.rbac.identifier_reader_role`, and every read is an access record naming the reader, the party and the scheme, never the value."),
         (name = "admin-marks", description = "The legal marks storage carries beside the clinical content: the GDPR Art. 18 restriction register, the Art. 21(6) research objection, and the Art. 5(1)(e) / Art. 30(1)(f) retention register with its due list. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and nothing here deletes anything (same admin gate + RBAC Admin class)."),
         (name = "admin-dump-load", description = "Export every EHR to a file-system archive, and populate the repository from one. OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "message", description = "EHR-Extract export and import. OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no message/extract API at all, so no released operation governs any route here; they carry the ordinary clinical authentication class, not the admin gate."),
@@ -189,18 +189,18 @@ pub fn extensions_document(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
     // Public (no lock). The health family is the family stack's route set,
     // served under `server.base_path`.
     doc.merge(health::openapi(&cfg.server.base_path));
-    let rest_root = cfg.rest.rest_root();
+    let rest_root = cfg.api.rest_root();
     doc.merge(status::openapi(&rest_root));
     doc.merge(crate::smart::discovery::openapi(cfg, &rest_root));
     // The System API's OPTIONS operation is a closure route mounted outside
     // `OpenApiRouter` (above CORS), documented via its twin.
-    doc.merge(crate::api::system::options::openapi(&cfg.rest.base_path));
+    doc.merge(crate::api::system::options::openapi(&cfg.api.base_path));
     doc.merge(meta_openapi(cfg));
 
     // Authenticated: the management surface plus the entire API surface, nested
     // under the configured base path so the paths read as full server paths.
     let mut protected = management::openapi();
-    protected.merge(crate::api::api_doc(&crate::api::Namespaces::of(&cfg.rest)));
+    protected.merge(crate::api::api_doc(&crate::api::Namespaces::of(&cfg.api)));
 
     let scheme = advertised_scheme(&cfg.auth.shared);
     if scheme.is_some() {
@@ -410,7 +410,7 @@ async fn openapi_json(State(state): State<AppState>) -> Response {
         which is where the UI's relative asset URLs resolve."))
 )]
 async fn swagger_ui_index(State(state): State<AppState>) -> Response {
-    redirect_to_index(&state.config().rest.swagger_ui_path())
+    redirect_to_index(&state.config().api.swagger_ui_path())
 }
 
 /// Redirects to `index.html` under the mount.
@@ -471,7 +471,7 @@ fn meta_openapi(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
     // These paths exist only when the Swagger surface is mounted, and the
     // generator's documented property is that every path it lists is one the
     // live router mounts.
-    if !cfg.rest.swagger_ui.is_mounted() {
+    if !cfg.api.openapi_ui.is_mounted() {
         return utoipa::openapi::OpenApiBuilder::new().build();
     }
 
@@ -481,7 +481,7 @@ fn meta_openapi(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
         .into_openapi();
     doc.merge(FamilyDocs::openapi());
 
-    let json_path = cfg.rest.openapi_json_path();
+    let json_path = cfg.api.openapi_json_path();
     let docs_root = api_docs_root(&json_path);
     rehome_path(&mut doc, "/ferroehr/rest/api-docs/openapi.json", &json_path);
     rehome_path(
@@ -492,7 +492,7 @@ fn meta_openapi(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
     rehome_path(
         &mut doc,
         "/ferroehr/rest/swagger-ui",
-        &cfg.rest.swagger_ui_path(),
+        &cfg.api.swagger_ui_path(),
     );
     doc
 }
@@ -793,20 +793,10 @@ fn prebuild_docs(cfg: &AppConfig) -> PrebuiltDocs {
                     include,
                     exclude,
                     also_tagged,
-                } => filter_by_path(
-                    &full_doc,
-                    &cfg.rest.base_path,
-                    include,
-                    exclude,
-                    also_tagged,
-                ),
-                Members::Extension { include, exclude } => filter_by_path(
-                    &full_doc,
-                    &cfg.rest.extensions_path(),
-                    include,
-                    exclude,
-                    &[],
-                ),
+                } => filter_by_path(&full_doc, &cfg.api.base_path, include, exclude, also_tagged),
+                Members::Extension { include, exclude } => {
+                    filter_by_path(&full_doc, &cfg.api.extensions_path(), include, exclude, &[])
+                }
                 Members::Tags(tags) => filter_by_tags(&full_doc, tags),
             };
             doc.info.title = (*name).to_string();
@@ -835,8 +825,8 @@ fn json_document_response(body: Bytes) -> Response {
 /// filtered JSON document per API family, all server-generated. Config paths come
 /// from [`AppConfig`].
 pub(crate) fn swagger_router(cfg: &AppConfig) -> Router<AppState> {
-    let ui_path = cfg.rest.swagger_ui_path();
-    let json_path = cfg.rest.openapi_json_path();
+    let ui_path = cfg.api.swagger_ui_path();
+    let json_path = cfg.api.openapi_json_path();
     let api_docs_root = api_docs_root(&json_path);
 
     // Built once — they are pure functions of static configuration — so a
@@ -921,7 +911,7 @@ fn api_docs_root(json_path: &str) -> String {
 /// URLs must outlive the server, so the derived paths are leaked once at
 /// construction (the UI config requires `'static`).
 fn swagger_config(cfg: &AppConfig) -> Arc<Config<'static>> {
-    let json_path = cfg.rest.openapi_json_path();
+    let json_path = cfg.api.openapi_json_path();
     let root = api_docs_root(&json_path);
 
     let mut urls: Vec<Url<'static>> = Vec::new();
@@ -956,9 +946,9 @@ mod tests {
     #[test]
     fn every_error_answer_declares_problem_details() {
         let mut cfg = AppConfig::default();
-        cfg.rest.swagger_ui = ferroehr::config::management::AccessLevel::Public;
+        cfg.api.openapi_ui = ferroehr::config::management::AccessLevel::Public;
         let doc = extensions_document(&cfg);
-        let fhir_base = format!("{}{}", cfg.rest.rest_root(), crate::api::FHIR_PREFIX);
+        let fhir_base = format!("{}{}", cfg.api.rest_root(), crate::api::FHIR_PREFIX);
         let mut checked = 0_usize;
         for (path, item) in &doc.paths.paths {
             if path.starts_with(&fhir_base) || path.contains("/health") {
@@ -1017,7 +1007,7 @@ mod tests {
     #[test]
     fn the_family_parameter_names_every_served_slug() {
         let mut cfg = AppConfig::default();
-        cfg.rest.swagger_ui = ferroehr::config::management::AccessLevel::Public;
+        cfg.api.openapi_ui = ferroehr::config::management::AccessLevel::Public;
         let doc = meta_openapi(&cfg);
         let description = doc
             .paths

@@ -13,7 +13,7 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
-use ferroehr::config::rest::RestConfig;
+use ferroehr::config::rest::ApiConfig;
 use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
@@ -43,8 +43,8 @@ fn admin_config(roles: &[&str]) -> AppConfig {
 fn base_config(auth: ferroehr::config::auth_section::AuthConfig) -> AppConfig {
     AppConfig {
         server: common::server(),
-        rest: RestConfig {
-            swagger_ui: AccessLevel::Off,
+        api: ApiConfig {
+            openapi_ui: AccessLevel::Off,
             ..Default::default()
         },
         auth,
@@ -59,7 +59,7 @@ fn authz_for(config: &AppConfig, rbac_enabled: bool) -> Option<Arc<AuthzHandle>>
     authz_cfg.rbac.enabled = rbac_enabled;
     AuthzHandle::build(
         &authz_cfg,
-        &config.rest.base_path,
+        &config.api.base_path,
         None,
         common::null_resolvers(),
     )
@@ -598,12 +598,12 @@ fn looks_like_id(value: &str) -> bool {
 
 #[tokio::test]
 async fn separate_port_mode_keeps_management_off_the_main_app() {
-    // With `management.port` set, the main app must NOT mount /management…
+    // With `management.listen` set, the main app must NOT mount /management…
     let config = base_config(common::auth_off());
     let observability = Observability {
         management: ManagementConfig {
             enabled: true,
-            port: Some(9099),
+            listen: Some(std::net::SocketAddr::from(([0, 0, 0, 0], 9099))),
             endpoints: EndpointLevels {
                 info: AccessLevel::Public,
                 ..EndpointLevels::default()

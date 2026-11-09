@@ -86,7 +86,7 @@ fn deployment() -> AppConfig {
         }],
         ..SystemClient::default()
     }];
-    config.smart.patient_issuers = vec![PATIENTS.to_owned()];
+    config.auth.smart.patient_issuers = vec![PATIENTS.to_owned()];
     config
 }
 

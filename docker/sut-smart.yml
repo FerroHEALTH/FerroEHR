@@ -35,11 +35,11 @@ services:
       # Authorization Server runs here), so the committed metadata document
       # supplies the token endpoint SMART App Launch 2.2.0 (Conformance,
       # §Metadata) requires.
-      FERROEHR__SMART__ENABLED: "true"
-      FERROEHR__SMART__ISSUER_METADATA_FILE: /etc/ferroehr/cnf-smart-issuer-metadata.json
+      FERROEHR__AUTH__SMART__DISCOVERY: "true"
+      FERROEHR__AUTH__SMART__ISSUER_METADATA_FILE: /etc/ferroehr/cnf-smart-issuer-metadata.json
       # master04 §Services: every services.*.baseUrl is an "Absolute URL to the
       # root of the API (required)", so the server needs its external origin.
-      FERROEHR__SMART__PUBLIC_BASE_URL: "http://localhost:8080"
+      FERROEHR__AUTH__SMART__PUBLIC_BASE_URL: "http://localhost:8080"
       # ── trust the committed CNF test issuer ───────────────────────────────
       # The lane validates the runner-minted tokens against a STATIC key set, so
       # no Authorization Server has to be running for the scope cases to
@@ -65,10 +65,10 @@ services:
       # (docs/conformance/party/ferroehr/ixit.json `scoped_tokens.mint`) under
       # this issuer's identifier issuer: a second client, since no two clients
       # share a binding_issuer (docs/conformance/party/scim/README.md).
-      FERROEHR__SCIM__CLIENT__1__ISSUER: "https://scim.ferroehr.invalid"
-      FERROEHR__SCIM__CLIENT__1__CLIENT_ID: "cnf-smart"
-      FERROEHR__SCIM__CLIENT__1__SCOPE: "ferroehr/scim"
-      FERROEHR__SCIM__CLIENT__1__BINDING_ISSUER: "urn:ferroehr:cnf-smart-login"
+      FERROEHR__AUTH__SCIM__CLIENT__1__ISSUER: "https://scim.ferroehr.invalid"
+      FERROEHR__AUTH__SCIM__CLIENT__1__CLIENT_ID: "cnf-smart"
+      FERROEHR__AUTH__SCIM__CLIENT__1__SCOPE: "ferroehr/scim"
+      FERROEHR__AUTH__SCIM__CLIENT__1__BINDING_ISSUER: "urn:ferroehr:cnf-smart-login"
     volumes:
       - ./docs/conformance/party/smart/jwks.json:/etc/ferroehr/cnf-smart-jwks.json:ro
       - ./docs/conformance/party/smart/issuer-metadata.json:/etc/ferroehr/cnf-smart-issuer-metadata.json:ro

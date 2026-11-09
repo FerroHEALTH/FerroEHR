@@ -6,9 +6,9 @@
 //!
 //! No openEHR spec governs the persistence mechanism; the storage substrate is
 //! our own PG18-native design. This module is the single place the rest of the
-//! crate obtains a database handle. [`DbConfig`] (the `[db]` config section)
+//! crate obtains a database handle. [`DbConfig`] (the `[database]` config section)
 //! carries the shared DSN and the pool tuning; [`domain::StorageConfig`] (the
-//! `[storage]` section) carries one DSN per storage domain, each defaulting to
+//! `[database.<domain>]` section) carries one DSN per storage domain, each defaulting to
 //! the shared one. [`connect_domains`] opens the three pools
 //! ([`domain::DomainPools`]) and [`prepare`] brings each database they reach to
 //! the state this build requires — on the migration DSN
@@ -30,7 +30,6 @@ pub mod iden;
 pub mod parent_statistics;
 
 use std::path::PathBuf;
-use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use sqlx::migrate::Migrator;
@@ -39,10 +38,11 @@ use sqlx::{Connection, PgConnection, PgPool};
 
 use crate::config::deployment::DeploymentProfile;
 use crate::db::acquire::acquire;
-use crate::db::domain::{Domain, DomainLayout, DomainPools, StorageConfig};
+use crate::db::domain::{Domain, DomainDsn, DomainLayout, DomainPools};
+use ferrohealth_config::units;
 use ferrohealth_secret::secret_url::SecretUrl;
 
-// ── Settings — the `[db]` config section ─────────────────────────────────────
+// ── Settings — the `[database]` config section ─────────────────────────────────────
 
 /// The zero-config dev DSN (matches the compose dev stack). Production MUST
 /// override it; the boot path warns prominently when
@@ -71,7 +71,7 @@ pub enum MigrationMode {
     Verify,
 }
 
-/// Connection settings for the application `PostgreSQL` database — the `[db]`
+/// Connection settings for the application `PostgreSQL` database — the `[database]`
 /// section of the one config tree ([`crate::config::FerroEhrConfig`]), with no
 /// loader of its own.
 ///
@@ -94,7 +94,7 @@ pub struct DbConfig {
     /// DSN that schema preparation ([`prepare`]) authenticates as; unset (the
     /// default) reuses [`Self::url`].
     ///
-    /// Preparing the schema spans EVERY schema, whatever [`Self::migrate`]
+    /// Preparing the schema spans EVERY schema, whatever [`Self::migrations`]
     /// says: `apply` issues the DDL of all five migration sets, and `verify`
     /// reads all five `_sqlx_migrations` bookkeeping tables. A runtime
     /// credential that holds one pseudonymisation domain can do neither, so
@@ -113,10 +113,10 @@ pub struct DbConfig {
     /// Connections the pool keeps open when idle (avoids cold reopen +
     /// `SET search_path` churn under variable load).
     pub min_connections: u32,
-    /// Seconds to wait for a free connection before failing.
-    pub acquire_timeout_secs: u64,
-    /// `statement_timeout` applied to every pooled connection, in
-    /// milliseconds; `0` leaves the server default (usually unlimited).
+    /// How long to wait for a free connection before failing.
+    pub acquire_timeout: units::Duration,
+    /// `statement_timeout` applied to every pooled connection; `"0s"` leaves
+    /// the server default (usually unlimited).
     ///
     /// This is the backstop the request timeout cannot be. A request over the
     /// HTTP timeout is answered `408` by dropping the handler future, which does
@@ -126,10 +126,10 @@ pub struct DbConfig {
     /// connection while their clients have already been given up on.
     ///
     /// Set ABOVE the AQL engine's own budget
-    /// ([`crate::service::query::config::QueryConfig::timeout_ms`]) so the
+    /// ([`crate::service::query::config::QueryConfig::timeout`]) so the
     /// engine's typed refusal fires first and this only catches what the engine
     /// does not govern. No openEHR spec governs it — our own design.
-    pub statement_timeout_ms: u64,
+    pub statement_timeout: units::Duration,
     /// Whether the server applies its embedded migrations at boot
     /// ([`MigrationMode`]).
     ///
@@ -138,7 +138,16 @@ pub struct DbConfig {
     /// production posture: the DSN may then authenticate as a role with no DDL
     /// rights, and the server refuses to boot against a database that is not
     /// already migrated to exactly this build.
-    pub migrate: MigrationMode,
+    pub migrations: MigrationMode,
+    /// `[database.clinical]`: the clinical record's own DSN and the
+    /// credential that prepares its database.
+    pub clinical: DomainDsn,
+    /// `[database.party]`: the identities' own DSN and the credential that
+    /// prepares their database.
+    pub party: DomainDsn,
+    /// `[database.audit]`: the audit repository's own DSN and the credential
+    /// that prepares its database.
+    pub audit: DomainDsn,
 }
 
 impl Default for DbConfig {
@@ -152,11 +161,14 @@ impl Default for DbConfig {
             // concurrency ×2), 2 min (no cold reopen churn at idle).
             max_connections: 20,
             min_connections: 2,
-            acquire_timeout_secs: 30,
+            acquire_timeout: units::Duration::from_secs(30),
             // Twice the engine's own 30 s budget, so the engine refuses first
             // and this remains a backstop rather than the primary control.
-            statement_timeout_ms: 60_000,
-            migrate: MigrationMode::Apply,
+            statement_timeout: units::Duration::from_mins(1),
+            migrations: MigrationMode::Apply,
+            clinical: DomainDsn::default(),
+            party: DomainDsn::default(),
+            audit: DomainDsn::default(),
         }
     }
 }
@@ -220,7 +232,7 @@ pub enum DbError {
     /// the source.
     #[error(
         "the database is not migrated to this build. \
-         [db].migrate is `verify`, so this server will not issue DDL: apply the \
+         [database] migrations is `verify`, so this server will not issue DDL: apply the \
          migrations out of band with the migrator role, then start it again"
     )]
     SchemaNotReady(#[source] SchemaMismatch),
@@ -232,10 +244,10 @@ pub enum DbError {
         "database role `{role}` cannot read the migration state of schema `{schema}`: \
          preparing the schema reads every schema's `_sqlx_migrations` bookkeeping table, and \
          this credential holds no privilege on `{schema}`. Under the separated-domain posture \
-         no runtime credential ever can, because each holds one domain: point `[db] \
+         no runtime credential ever can, because each holds one domain: point `[database] \
          migrate_url` (or `migrate_url_file`) at the credential that prepares the schema — \
-         unset, it falls back to `[db] url` — and, for a domain in a database of its own, \
-         `[storage.migrate.<domain>] url` at that database's migration credential"
+         unset, it falls back to `[database] url` — and, for a domain in a database of its own, \
+         `[database.<domain>] migrate_url` at that database's migration credential"
     )]
     SchemaUnreadable {
         /// The schema whose migration bookkeeping could not be read.
@@ -320,7 +332,7 @@ pub enum DbError {
     /// A runtime role can write a migration bookkeeping table.
     #[error(
         "database role `{role}` can write the migration bookkeeping table `{relation}`, which \
-         `[db] migrate = \"verify\"` compares against this build's migrations: a runtime \
+         `[database] migrations = \"verify\"` compares against this build's migrations: a runtime \
          credential able to rewrite it can make an unmigrated or altered database pass that \
          check. Remedy: `REVOKE ALL ON {relation} FROM {role}; GRANT SELECT ON {relation} TO \
          {role}` (no openEHR spec governs database roles — our own design)"
@@ -332,10 +344,10 @@ pub enum DbError {
         relation: String,
     },
 
-    /// A domain's `[storage.migrate.<domain>]` credential reaches a different
+    /// A domain's `[database.<domain>] migrate_url` credential reaches a different
     /// database from the one the domain is served from.
     #[error(
-        "`[storage.migrate.{domain}] url` reaches a different database from `[storage.{domain}] \
+        "`[database.{domain}] migrate_url` reaches a different database from `[database.{domain}] \
          url`: the migration credential prepares the database the {domain} domain lives in, so it \
          must reach the same one. Point both at that database"
     )]
@@ -450,13 +462,17 @@ fn pool_options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
     // Rendered once here rather than per connection. The value is an integer
     // from our own configuration, never client input, and it is bound as a
     // literal because PostgreSQL's `SET` takes no parameter placeholder.
-    let statement_timeout = (settings.statement_timeout_ms > 0)
-        .then(|| format!("SET statement_timeout = {}", settings.statement_timeout_ms));
+    let statement_timeout = (!settings.statement_timeout.is_zero()).then(|| {
+        format!(
+            "SET statement_timeout = {}",
+            settings.statement_timeout.as_millis()
+        )
+    });
     let search_path = domain.search_path();
     PgPoolOptions::new()
         .max_connections(settings.max_connections)
         .min_connections(settings.min_connections)
-        .acquire_timeout(Duration::from_secs(settings.acquire_timeout_secs))
+        .acquire_timeout(settings.acquire_timeout.get())
         // No liveness ping per checkout: `test_before_acquire` (default true)
         // pings each connection before handing it out, one round trip per
         // acquisition (https://docs.rs/sqlx/0.9.0/sqlx/pool/struct.PoolOptions.html#method.test_before_acquire).
@@ -481,8 +497,8 @@ fn pool_options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
 /// schema expects, and with no other domain's schema on it — a query issued
 /// here against another domain's relation fails to resolve rather than quietly
 /// crossing the pseudonymisation boundary. The DSN is
-/// `[storage.<domain>].url` when the deployment gives the domain one, and
-/// `[db].url` otherwise: the schema separation is unconditional, the credential
+/// `[database.<domain>] url` when the deployment gives the domain one, and
+/// `[database] url` otherwise: the schema separation is unconditional, the credential
 /// separation is the deployment's choice.
 ///
 /// # Errors
@@ -491,30 +507,26 @@ fn pool_options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
 /// URL, the initial connection fails (unreachable host, refused
 /// authentication, unknown database), or the session-setup statements fail on
 /// that first connection.
-pub async fn connect_domain(
-    settings: &DbConfig,
-    storage: &StorageConfig,
-    domain: Domain,
-) -> Result<PgPool, DbError> {
+pub async fn connect_domain(settings: &DbConfig, domain: Domain) -> Result<PgPool, DbError> {
     let pool = pool_options(settings, domain)
-        .connect(storage.dsn(domain, settings))
+        .connect(settings.dsn(domain))
         .await?;
     Ok(pool)
 }
 
-/// Create the clinical pool on the shared `[db].url`, for a caller that holds
+/// Create the clinical pool on the shared `[database] url`, for a caller that holds
 /// only a [`DbConfig`].
 ///
 /// [`connect_domain`] over a default [`StorageConfig`] — the co-located
 /// deployment's clinical pool. The test harness and the operator checks use it;
 /// the serving path uses [`connect_domains`], which honours every
-/// `[storage.<domain>]` DSN.
+/// `[database.<domain>]` DSN.
 ///
 /// # Errors
 ///
 /// Whatever [`connect_domain`] returns.
 pub async fn connect(settings: &DbConfig) -> Result<PgPool, DbError> {
-    connect_domain(settings, &StorageConfig::default(), Domain::Clinical).await
+    connect_domain(settings, Domain::Clinical).await
 }
 
 /// Create all three domain pools.
@@ -526,14 +538,11 @@ pub async fn connect(settings: &DbConfig) -> Result<PgPool, DbError> {
 ///
 /// Whatever [`connect_domain`] returns, for the first domain that cannot
 /// connect.
-pub async fn connect_domains(
-    settings: &DbConfig,
-    storage: &StorageConfig,
-) -> Result<DomainPools, DbError> {
+pub async fn connect_domains(settings: &DbConfig) -> Result<DomainPools, DbError> {
     Ok(DomainPools {
-        clinical: connect_domain(settings, storage, Domain::Clinical).await?,
-        party: connect_domain(settings, storage, Domain::Party).await?,
-        audit: connect_domain(settings, storage, Domain::Audit).await?,
+        clinical: connect_domain(settings, Domain::Clinical).await?,
+        party: connect_domain(settings, Domain::Party).await?,
+        audit: connect_domain(settings, Domain::Audit).await?,
     })
 }
 
@@ -546,7 +555,7 @@ pub async fn connect_domains(
 /// from, and `PgPoolOptions::connect_lazy_with` builds a pool from them with no
 /// I/O at all.
 ///
-/// It carries the pool defaults rather than the deployment's `[db]` tuning,
+/// It carries the pool defaults rather than the deployment's `[database]` tuning,
 /// which it cannot see, and it opens no connection until one is asked for
 /// (`min_connections(0)`, so constructing a service costs nothing). A
 /// deployment that tunes the pool or separates the runtime roles supplies its
@@ -780,14 +789,14 @@ async fn migration_connection(dsn: &str) -> Result<PgConnection, DbError> {
 /// The credential one database is prepared on, best first.
 ///
 /// The order is the preference when several domains of one database name
-/// different credentials: the migration DSN of `[db]`, then a migration
-/// credential named for the database in `[storage.migrate.<domain>]`, and a
+/// different credentials: the migration DSN of `[database]`, then a migration
+/// credential named for the database in `[database.<domain>] migrate_url`, and a
 /// runtime DSN only when the deployment named neither.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum PreparationCredential {
     /// [`DbConfig::migrate_dsn`], for the database it reaches.
     Migrator,
-    /// `[storage.migrate.<domain>].url`, for the database that domain lives in.
+    /// `[database.<domain>] migrate_url`, for the database that domain lives in.
     DomainMigrator,
     /// A relocated domain's own runtime DSN.
     Runtime,
@@ -840,7 +849,7 @@ async fn database_of(
 
 /// Which credential prepares which domains, one group per database.
 ///
-/// A domain's candidate credential is `[storage.migrate.<domain>].url` when the
+/// A domain's candidate credential is `[database.<domain>] migrate_url` when the
 /// deployment names one, its own runtime DSN when it is relocated without one,
 /// and the migration DSN ([`DbConfig::migrate_dsn`]) otherwise. Candidates are
 /// then grouped by the DATABASE they reach, never by DSN text, and each
@@ -857,22 +866,15 @@ async fn database_of(
 /// [`DbError::DomainMigratorElsewhere`] when a domain's migration credential
 /// and its runtime DSN reach different databases, and [`DbError::Sqlx`] when a
 /// connection or an identity read fails.
-async fn preparation_plan(
-    settings: &DbConfig,
-    storage: &StorageConfig,
-) -> Result<Vec<PreparationGroup>, DbError> {
+async fn preparation_plan(settings: &DbConfig) -> Result<Vec<PreparationGroup>, DbError> {
     let migration_dsn = settings.migrate_dsn();
     let candidates: Vec<(Domain, &str, PreparationCredential)> = Domain::ALL
         .into_iter()
         .map(|domain| {
-            if let Some(dsn) = storage.migrate_dsn(domain) {
+            if let Some(dsn) = settings.domain_migrate_dsn(domain) {
                 (domain, dsn, PreparationCredential::DomainMigrator)
-            } else if storage.is_separated(domain) {
-                (
-                    domain,
-                    storage.dsn(domain, settings),
-                    PreparationCredential::Runtime,
-                )
+            } else if settings.is_separated(domain) {
+                (domain, settings.dsn(domain), PreparationCredential::Runtime)
             } else {
                 (domain, migration_dsn, PreparationCredential::Migrator)
             }
@@ -894,8 +896,8 @@ async fn preparation_plan(
     let mut plan: Vec<((String, String), PreparationGroup)> = Vec::new();
     for (domain, candidate, kind) in candidates {
         let database = database_of(candidate, &mut seen).await?;
-        if kind == PreparationCredential::DomainMigrator && storage.is_separated(domain) {
-            let served = database_of(storage.dsn(domain, settings), &mut seen).await?;
+        if kind == PreparationCredential::DomainMigrator && settings.is_separated(domain) {
+            let served = database_of(settings.dsn(domain), &mut seen).await?;
             if served != database {
                 return Err(DbError::DomainMigratorElsewhere { domain });
             }
@@ -933,7 +935,7 @@ async fn preparation_plan(
 /// The `ext` set is applied in every such database, then each resident
 /// domain's set, on the credential the plan chose for that
 /// database: the migration DSN where it reaches it, a domain's
-/// `[storage.migrate.<domain>]` credential elsewhere, and a relocated domain's
+/// `[database.<domain>] migrate_url` credential elsewhere, and a relocated domain's
 /// runtime DSN when neither is named.
 ///
 /// # Errors
@@ -944,8 +946,8 @@ async fn preparation_plan(
 /// credential without `CREATE` on the database or on a schema), and
 /// [`DbError::Migrate`] when a migration fails to apply or an already-applied
 /// one fails checksum validation.
-pub async fn apply_schema(settings: &DbConfig, storage: &StorageConfig) -> Result<(), DbError> {
-    for group in preparation_plan(settings, storage).await? {
+pub async fn apply_schema(settings: &DbConfig) -> Result<(), DbError> {
+    for group in preparation_plan(settings).await? {
         let mut conn = migration_connection(&group.dsn).await?;
         let outcome = apply_migrations(&mut conn, &group.domains).await;
         close_quietly(conn).await;
@@ -969,8 +971,8 @@ pub async fn apply_schema(settings: &DbConfig, storage: &StorageConfig) -> Resul
 /// bookkeeping at all, [`DbError::DomainMigratorElsewhere`] when a domain's
 /// migration credential and its runtime DSN reach different databases, or
 /// [`DbError::Sqlx`] when a connection or the read fails for any other reason.
-pub async fn verify_schema(settings: &DbConfig, storage: &StorageConfig) -> Result<(), DbError> {
-    for group in preparation_plan(settings, storage).await? {
+pub async fn verify_schema(settings: &DbConfig) -> Result<(), DbError> {
+    for group in preparation_plan(settings).await? {
         let mut conn = migration_connection(&group.dsn).await?;
         let outcome = verify_recorded_state(&mut conn, &group.domains).await;
         close_quietly(conn).await;
@@ -1008,7 +1010,7 @@ pub struct DatabaseLevels {
 ///
 /// The read [`verify_schema`] does, summarized rather than judged: it connects
 /// on the same credential per database as [`apply_schema`] (the migration DSN
-/// in the database it reaches, a `[storage.migrate.<domain>]` credential or a
+/// in the database it reaches, a `[database.<domain>] migrate_url` credential or a
 /// relocated domain's own DSN elsewhere), so the credentials it names need read
 /// access to the bookkeeping and nothing more.
 ///
@@ -1018,12 +1020,9 @@ pub struct DatabaseLevels {
 /// bookkeeping, [`DbError::DomainMigratorElsewhere`] when a domain's migration
 /// credential and its runtime DSN reach different databases, or
 /// [`DbError::Sqlx`] when a connection or a read fails for any other reason.
-pub async fn schema_levels(
-    settings: &DbConfig,
-    storage: &StorageConfig,
-) -> Result<Vec<DatabaseLevels>, DbError> {
+pub async fn schema_levels(settings: &DbConfig) -> Result<Vec<DatabaseLevels>, DbError> {
     let mut databases = Vec::new();
-    for group in preparation_plan(settings, storage).await? {
+    for group in preparation_plan(settings).await? {
         let mut conn = migration_connection(&group.dsn).await?;
         let outcome = recorded_levels(&mut conn, &group.domains).await;
         close_quietly(conn).await;
@@ -1103,7 +1102,6 @@ async fn set_level(
 /// [`domains_prepared_on_a_runtime_credential`] returns.
 pub async fn database_facts(
     settings: &DbConfig,
-    storage: &StorageConfig,
     pools: &DomainPools,
 ) -> Result<crate::config::deployment::DatabaseFacts, DbError> {
     let clusters = crate::config::deployment::ClusterIdentities {
@@ -1113,8 +1111,7 @@ pub async fn database_facts(
     };
     Ok(crate::config::deployment::DatabaseFacts {
         clusters,
-        prepared_on_runtime_credential: domains_prepared_on_a_runtime_credential(settings, storage)
-            .await?,
+        prepared_on_runtime_credential: domains_prepared_on_a_runtime_credential(settings).await?,
     })
 }
 
@@ -1128,7 +1125,7 @@ async fn close_quietly(conn: PgConnection) {
 }
 
 /// Brings every database the domains reach to the state this build requires, as
-/// [`DbConfig::migrate`] directs, and then proves the pseudonymisation
+/// [`DbConfig::migrations`] directs, and then proves the pseudonymisation
 /// boundary holds.
 ///
 /// The boot-path entry point — call it rather than the halves it composes
@@ -1161,21 +1158,20 @@ async fn close_quietly(conn: PgConnection) {
 /// [`verify_domain_isolation`] returns.
 pub async fn prepare(
     settings: &DbConfig,
-    storage: &StorageConfig,
     pools: &DomainPools,
     profile: DeploymentProfile,
 ) -> Result<(), DbError> {
-    match settings.migrate {
-        MigrationMode::Apply => apply_schema(settings, storage).await?,
+    match settings.migrations {
+        MigrationMode::Apply => apply_schema(settings).await?,
         MigrationMode::Verify => {
             tracing::info!(
-                "[db].migrate is `verify`: this server issues no DDL and requires an \
+                "[database] migrations is `verify`: this server issues no DDL and requires an \
                  already-migrated database"
             );
-            verify_schema(settings, storage).await?;
+            verify_schema(settings).await?;
         }
     }
-    verify_domain_isolation(pools, &storage.layout(settings), profile).await
+    verify_domain_isolation(pools, &settings.layout(), profile).await
 }
 
 /// Verifies, without issuing any DDL, that the database carries exactly the
@@ -1829,15 +1825,12 @@ async fn stored_instance_id(conn: &mut PgConnection) -> Result<Option<uuid::Uuid
 /// [`DbError::DomainMigratorElsewhere`] when a domain's migration credential
 /// and its runtime DSN reach different databases, and [`DbError::Sqlx`] when a
 /// connection or a catalog read fails.
-pub async fn erase_inventory(
-    settings: &DbConfig,
-    storage: &StorageConfig,
-) -> Result<EraseReport, DbError> {
+pub async fn erase_inventory(settings: &DbConfig) -> Result<EraseReport, DbError> {
     let mut report = EraseReport {
         databases: Vec::new(),
         instance_id: None,
     };
-    for group in preparation_plan(settings, storage).await? {
+    for group in preparation_plan(settings).await? {
         let mut conn = migration_connection(&group.dsn).await?;
         let outcome = async {
             let database: String = sqlx::query_scalar("SELECT current_database()::text")
@@ -1891,15 +1884,12 @@ pub async fn erase_inventory(
 /// the credential does not own a schema, or a lock is not granted within 30
 /// seconds (a server still connected). A database already erased stays
 /// erased; the failing one is rolled back.
-pub async fn erase_schema(
-    settings: &DbConfig,
-    storage: &StorageConfig,
-) -> Result<EraseReport, DbError> {
+pub async fn erase_schema(settings: &DbConfig) -> Result<EraseReport, DbError> {
     let mut report = EraseReport {
         databases: Vec::new(),
         instance_id: None,
     };
-    for group in preparation_plan(settings, storage).await? {
+    for group in preparation_plan(settings).await? {
         let mut conn = migration_connection(&group.dsn).await?;
         let outcome = drop_owned_schemas(&mut conn, &group.domains).await;
         close_quietly(conn).await;
@@ -1971,7 +1961,7 @@ pub async fn cluster_identity(pool: &PgPool) -> Result<String, DbError> {
 /// credential that also serves requests.
 ///
 /// The migration DSN names ONE database, so a domain living in another one is
-/// prepared on that database's `[storage.migrate.<domain>]` credential when the
+/// prepared on that database's `[database.<domain>] migrate_url` credential when the
 /// deployment names one, and on the domain's own runtime DSN otherwise. The
 /// answer comes from the preparation plan itself (the same private plan
 /// [`prepare`] runs), which resolves database identity rather than DSN text, so
@@ -1990,12 +1980,11 @@ pub async fn cluster_identity(pool: &PgPool) -> Result<String, DbError> {
 /// databases.
 pub async fn domains_prepared_on_a_runtime_credential(
     settings: &DbConfig,
-    storage: &StorageConfig,
 ) -> Result<Vec<Domain>, DbError> {
-    if settings.migrate != MigrationMode::Apply {
+    if settings.migrations != MigrationMode::Apply {
         return Ok(Vec::new());
     }
-    let mut on_runtime: Vec<Domain> = preparation_plan(settings, storage)
+    let mut on_runtime: Vec<Domain> = preparation_plan(settings)
         .await?
         .into_iter()
         .filter(|group| group.credential == PreparationCredential::Runtime)
@@ -2077,12 +2066,12 @@ mod tests {
     }
 
     /// With no domain relocated and no domain migrator named, the plan is the
-    /// one database `[db]` prepares, and it opens no connection to find that
+    /// one database `[database]` prepares, and it opens no connection to find that
     /// out (the DSN here reaches nothing).
     #[tokio::test]
     async fn a_co_located_layout_plans_one_database_without_connecting() {
         let settings = DbConfig::new("postgres://nobody@unreachable.invalid:1/none");
-        let plan = preparation_plan(&settings, &StorageConfig::default())
+        let plan = preparation_plan(&settings)
             .await
             .expect("no connection is needed");
         assert_eq!(plan.len(), 1);
@@ -2097,7 +2086,7 @@ mod tests {
         assert_eq!(s.url.expose(), "postgres://localhost/ferroehr");
         assert_eq!(s.max_connections, 20);
         assert_eq!(s.min_connections, 2);
-        assert_eq!(s.acquire_timeout_secs, 30);
+        assert_eq!(s.acquire_timeout, units::Duration::from_secs(30));
         assert!(!s.is_dev_default());
     }
 

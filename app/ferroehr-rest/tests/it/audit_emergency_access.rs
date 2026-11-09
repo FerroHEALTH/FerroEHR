@@ -94,7 +94,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
     authz.rbac.subject_audit_role = Some("PORTAL".to_owned());
     let authz = AuthzHandle::build(
         &authz,
-        &config.rest.base_path,
+        &config.api.base_path,
         None,
         common::null_resolvers(),
     )

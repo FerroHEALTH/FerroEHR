@@ -743,10 +743,10 @@ async fn a_signed_import_signs_the_wrapper_and_the_read_verifies_it() {
     let config = SigningConfig {
         enabled: true,
         mode: Mode::Digest,
-        key_path: None,
+        key_file: None,
         key_passphrase: None,
         key_passphrase_file: None,
-        retired_key_paths: Vec::new(),
+        retired_key_files: Vec::new(),
         verify_on_read: Some(VerifyOnRead::Strict),
     };
     let signer = Signer::from_config(&config).expect("digest signer");

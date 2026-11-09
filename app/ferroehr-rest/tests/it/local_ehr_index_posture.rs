@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The subject-id posture, switched on by `[ehr_index] provider = "local"` from
+//! The subject-id posture, switched on by `[pixm] provider = "local"` from
 //! the environment over a configuration written for an IHE patient identity
 //! source, end to end over the router (#4379).
 //!
@@ -27,12 +27,12 @@ use crate::common::{self, BASE};
 /// A configuration written for an IHE patient identity source: the source and
 /// its client credentials grant, with no pseudonym namespace declared.
 const IHE_CONFIG: &str = r#"
-[ehr_index]
+[pixm]
 provider = "ihe"
 pixm_url = "http://localhost:8090/fhir"
 assigning_authority = "urn:oid:2.999.7.1"
 
-[ehr_index.oauth]
+[pixm.oauth]
 token_endpoint = "http://localhost:8180/quickstart/token"
 client_id = "ferroehr"
 client_secret = "quickstart"
@@ -46,7 +46,7 @@ scope = "system/Patient.rs"
 async fn the_local_posture_creates_and_finds_an_ehr_by_its_subject() {
     let file = tempfile_with(IHE_CONFIG);
     let env = HashMap::from([(
-        "FERROEHR__EHR_INDEX__PROVIDER".to_owned(),
+        "FERROEHR__RECORD__SUBJECT_INDEX".to_owned(),
         "local".to_owned(),
     )]);
     let config = ferroehr::config::assemble(Some(file.path()), &env, &[])
@@ -67,7 +67,8 @@ async fn the_local_posture_creates_and_finds_an_ehr_by_its_subject() {
         .expect("stamp the subject posture");
     let policy = ferroehr::privacy::PrivacyPolicy::compile(&privacy).expect("the policy compiles");
     let ehr_index =
-        EhrIndexProvider::from_config(&config.ehr_index).expect("the local provider builds");
+        EhrIndexProvider::from_config(config.record.subject_index, config.pixm.as_ref())
+            .expect("the local provider builds");
     let service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
         .with_privacy(Arc::new(policy))
         .with_ehr_index(ehr_index);

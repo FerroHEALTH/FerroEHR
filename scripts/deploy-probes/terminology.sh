@@ -227,9 +227,9 @@ probes_terminology_ferroterm() {
     "FerroTERM stopped, fail-closed: the same commit is refused"
   # Exported, not a prefix assignment: `dc` is a shell function, and only an
   # exported variable reliably reaches the compose interpolation it runs.
-  export FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR=true
+  export FERROEHR__TERMINOLOGY__ON_ERROR=true
   dc -f docker-compose.yml -f "$TERM_FT_OVERLAY" --profile s3 up -d --no-deps --wait ferroehr >/dev/null 2>&1
-  unset FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR
+  unset FERROEHR__TERMINOLOGY__ON_ERROR
   wait_http "$CDR/health/readiness" 90 >/dev/null || true
   assert_not_contains "$(dc -f docker-compose.yml -f "$TERM_FT_OVERLAY" ps -a --format '{{.Service}} {{.State}}')" "ferroterm running" \
     "the terminology server must still be down under fail-closed"
@@ -356,9 +356,9 @@ probes_terminology() {
     "with the terminology server stopped and fail_on_error set, a bound commit fails CLOSED"
   term_ft_template || true
   dc -f docker-compose.yml -f "$TERM_FT_OVERLAY" stop ferroterm >/dev/null 2>&1
-  export FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR=true
+  export FERROEHR__TERMINOLOGY__ON_ERROR=true
   dc -f docker-compose.yml -f "$TERM_FT_OVERLAY" --profile s3 up -d --no-deps --wait ferroehr >/dev/null 2>&1
-  unset FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR
+  unset FERROEHR__TERMINOLOGY__ON_ERROR
   wait_http "$CDR/health/readiness" 90 >/dev/null || true
   assert_not_contains "$(dc -f docker-compose.yml -f "$TERM_FT_OVERLAY" ps -a --format '{{.Service}} {{.State}}')" "ferroterm running" \
     "the terminology server must be down for this state to mean anything"

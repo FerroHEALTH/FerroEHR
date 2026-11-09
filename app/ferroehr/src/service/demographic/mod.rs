@@ -14,7 +14,7 @@
 //! in `search_path`, so the same storage functions read and write the
 //! `demographic` schema here and the clinical one everywhere else. Parties are
 //! physically separated from clinical content and, when the deployment
-//! configures `[db].demographic_url`, reachable only by their own database role
+//! configures `[database].demographic_url`, reachable only by their own database role
 //! (GDPR Art. 4(5) and Art. 32(1)(a)). No openEHR spec governs storage layout
 //! or database roles — our own design/extension; the wire contract and the
 //! change-control semantics are unchanged.

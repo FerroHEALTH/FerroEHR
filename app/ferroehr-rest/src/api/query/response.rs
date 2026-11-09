@@ -574,5 +574,5 @@ mod tests {
 // `404` for a well-formed-but-absent EHR id, while a malformed UUID stays a
 // `400` (`Request.md` §About the ehr_id parameter).
 // NOTE: a query-execution timeout is `408` (`responses/408_Query.yaml`),
-// bounded by the `FERROEHR__QUERY__TIMEOUT_MS` budget; unset, only the blunt
+// bounded by the `FERROEHR__RECORD__QUERY__TIMEOUT` budget; unset, only the blunt
 // global `TimeoutLayer` applies.

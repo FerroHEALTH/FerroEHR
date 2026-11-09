@@ -35,7 +35,7 @@ deploys. Create a Secret holding the app-role connection string, then install:
 ```shell
 kubectl create namespace ferroehr
 kubectl -n ferroehr create secret generic ferroehr-db \
-  --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
+  --from-literal=FERROEHR__DATABASE__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
   --version 23.3.1 -n ferroehr \
@@ -186,7 +186,7 @@ image, and FerroTERM.
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
 >   -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml \
->   -e FERROEHR__DB__URL=postgres://u:p@db:5432/ferroehr \
+>   -e FERROEHR__DATABASE__URL=postgres://u:p@db:5432/ferroehr \
 >   --entrypoint /usr/local/bin/ferroehr ghcr.io/ferrohealth/ferroehr:<tag> config check
 > ```
 >
@@ -482,7 +482,7 @@ it the pod runs under the `non-commercial` grant every build embeds (see
 `multimediaAccessKeyId`, `multimediaSecretAccessKey`,
 `terminologyClientSecret`, and the database DSN comes from
 `database.existingSecret` (key `database.existingSecretKey`, default
-`FERROEHR__DB__URL`). None of these ever reach the ConfigMap, and all but two are
+`FERROEHR__DATABASE__URL`). None of these ever reach the ConfigMap, and all but two are
 delivered as mounted files rather than environment values.
 
 How a secret reaches the process differs by whether the configuration key has a
@@ -494,7 +494,7 @@ asks for a read-only volume instead.
 
 | Secret | How the chart delivers it |
 |---|---|
-| the database DSN | mounted at `/etc/ferroehr-secrets/db.url`, reached through `FERROEHR__DB__URL_FILE`, projected from `database.existingSecret` when you supply one, so **the credential that reaches patient data never enters the pod's environment** |
+| the database DSN | mounted at `/etc/ferroehr-secrets/db.url`, reached through `FERROEHR__DATABASE__URL_FILE`, projected from `database.existingSecret` when you supply one, so **the credential that reaches patient data never enters the pod's environment** |
 | `secrets.signingKeyPassphrase` | mounted at `/etc/ferroehr-secrets/signing.key_passphrase` |
 | `secrets.multimediaSecretAccessKey` | mounted at `/etc/ferroehr-secrets/multimedia.secret_access_key` |
 | `secrets.basicUserPasswordHashes` (per user-id) | mounted at `/etc/ferroehr-secrets/auth.basic.users.<user>.password_hash`; the chart injects the matching `password_hash_file` |

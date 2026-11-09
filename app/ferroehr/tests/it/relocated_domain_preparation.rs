@@ -3,7 +3,7 @@
 
 //! Schema preparation for a storage domain in a database of its own: the
 //! party domain prepared and verified in a second database, on that
-//! database's `[storage.migrate.party]` credential.
+//! database's `[database.party] migrate_url` credential.
 //!
 //! The second database comes from `testkit::empty_db()`, because preparing an
 //! empty database IS the behaviour under test; the first is an ordinary
@@ -14,7 +14,7 @@
 
 use crate::fixtures::{throwaway_password, with_role};
 use ferroehr::config::deployment::DeploymentProfile;
-use ferroehr::db::domain::{Domain, DomainDsn, StorageConfig};
+use ferroehr::db::domain::{Domain, DomainDsn};
 use ferroehr::db::{DbConfig, DbError, MigrationMode};
 use ferrohealth_secret::secret_url::SecretUrl;
 
@@ -39,16 +39,20 @@ async fn login(db: &testkit::TestDb, suffix: &str, domain_role: &str) -> (String
 /// The first database's DSN for every domain but party, and the second
 /// database for party: on its runtime login, and on the harness credential
 /// as that database's migrator.
-fn relocated_party(runtime: &str, migrator: &str) -> StorageConfig {
-    let mut storage = StorageConfig {
-        party: DomainDsn {
-            url: Some(SecretUrl::new(runtime)),
-            url_file: None,
-        },
-        ..StorageConfig::default()
-    };
-    storage.migrate.party.url = Some(SecretUrl::new(migrator));
-    storage
+fn relocated_party(runtime: &str, migrator: &str) -> DomainDsn {
+    DomainDsn {
+        url: Some(SecretUrl::new(runtime)),
+        migrate_url: Some(SecretUrl::new(migrator)),
+        ..Default::default()
+    }
+}
+
+/// `settings` with the party domain placed as `party` says.
+fn with_party(settings: &DbConfig, party: &DomainDsn) -> DbConfig {
+    DbConfig {
+        party: party.clone(),
+        ..settings.clone()
+    }
 }
 
 /// Whether `relation` exists in the database `pool` reaches.
@@ -87,11 +91,11 @@ async fn a_party_domain_in_its_own_database_is_prepared_and_verified() {
         second.url(),
     );
     let applying = DbConfig {
-        migrate: MigrationMode::Apply,
+        migrations: MigrationMode::Apply,
         ..DbConfig::new(db.url())
     };
 
-    ferroehr::db::apply_schema(&applying, &storage)
+    ferroehr::db::apply_schema(&with_party(&applying, &storage))
         .await
         .expect("`apply` prepares the party domain in its own database");
     let relocated = second.pool();
@@ -109,21 +113,25 @@ async fn a_party_domain_in_its_own_database_is_prepared_and_verified() {
     );
 
     let verifying = DbConfig {
-        migrate: MigrationMode::Verify,
+        migrations: MigrationMode::Verify,
         ..applying.clone()
     };
-    ferroehr::db::verify_schema(&verifying, &storage)
+    ferroehr::db::verify_schema(&with_party(&verifying, &storage))
         .await
         .expect("`verify` accepts the party domain in its own database");
 
     // The binary's own boot sequence, in both modes.
-    let pools = ferroehr::db::connect_domains(&verifying, &storage)
+    let pools = ferroehr::db::connect_domains(&with_party(&verifying, &storage))
         .await
         .expect("the domain pools connect");
     for settings in [&verifying, &applying] {
-        ferroehr::db::prepare(settings, &storage, &pools, DeploymentProfile::Sandbox)
-            .await
-            .expect("the relocated layout boots");
+        ferroehr::db::prepare(
+            &with_party(settings, &storage),
+            &pools,
+            DeploymentProfile::Sandbox,
+        )
+        .await
+        .expect("the relocated layout boots");
     }
     let applied: i64 = sqlx::query_scalar("SELECT count(*) FROM _sqlx_migrations")
         .fetch_one(&pools.party)
@@ -132,7 +140,7 @@ async fn a_party_domain_in_its_own_database_is_prepared_and_verified() {
     assert_eq!(applied, 32, "the party set is applied whole");
     pools.close().await;
 
-    let inventory = ferroehr::db::erase_inventory(&applying, &storage)
+    let inventory = ferroehr::db::erase_inventory(&with_party(&applying, &storage))
         .await
         .expect("the erasure inventory reaches both databases");
     let party_database = inventory
@@ -160,22 +168,22 @@ async fn a_relocated_domain_without_its_migrator_names_the_remedy() {
         second.url(),
     );
     let settings = DbConfig {
-        migrate: MigrationMode::Apply,
+        migrations: MigrationMode::Apply,
         ..DbConfig::new(db.url())
     };
-    ferroehr::db::apply_schema(&settings, &prepared)
+    ferroehr::db::apply_schema(&with_party(&settings, &prepared))
         .await
         .expect("prepare the second database");
 
     let mut runtime_only = prepared;
-    runtime_only.migrate.party.url = None;
-    let error = ferroehr::db::verify_schema(
+    runtime_only.migrate_url = None;
+    let error = ferroehr::db::verify_schema(&with_party(
         &DbConfig {
-            migrate: MigrationMode::Verify,
+            migrations: MigrationMode::Verify,
             ..settings
         },
         &runtime_only,
-    )
+    ))
     .await
     .expect_err("a party runtime role cannot read the ext bookkeeping");
     let rendered = error.to_string();
@@ -185,7 +193,7 @@ async fn a_relocated_domain_without_its_migrator_names_the_remedy() {
     assert_eq!(schema, "ext");
     assert_eq!(role, party_login);
     assert!(
-        rendered.contains("[storage.migrate.<domain>] url"),
+        rendered.contains("[database.<domain>] migrate_url"),
         "the refusal names the relocated domain's migrator: {rendered}"
     );
 }
@@ -202,7 +210,7 @@ async fn a_migrator_reaching_another_database_is_refused() {
         second.url(),
     );
 
-    let error = ferroehr::db::apply_schema(&DbConfig::new(db.url()), &storage)
+    let error = ferroehr::db::apply_schema(&with_party(&DbConfig::new(db.url()), &storage))
         .await
         .expect_err("the two party credentials reach two databases");
     assert!(
@@ -226,7 +234,7 @@ async fn a_migrator_reaching_another_database_is_refused() {
 async fn prepared_relocated_party(
     db: &testkit::TestDb,
     suffix: &str,
-) -> (DbConfig, StorageConfig, testkit::TestDb) {
+) -> (DbConfig, DomainDsn, testkit::TestDb) {
     let second = testkit::empty_db().await.expect("a second, empty database");
     let (party_login, password) = login(db, suffix, "ferroehr_party").await;
     let storage = relocated_party(
@@ -234,10 +242,10 @@ async fn prepared_relocated_party(
         second.url(),
     );
     let settings = DbConfig {
-        migrate: MigrationMode::Apply,
+        migrations: MigrationMode::Apply,
         ..DbConfig::new(db.url())
     };
-    ferroehr::db::apply_schema(&settings, &storage)
+    ferroehr::db::apply_schema(&with_party(&settings, &storage))
         .await
         .expect("prepare both databases");
     (settings, storage, second)
@@ -250,12 +258,12 @@ async fn prepared_relocated_party(
 async fn the_grant_sweep_reaches_a_relocated_database() {
     let db = testkit::db().await.expect("testkit database");
     let (settings, storage, second) = prepared_relocated_party(&db, "relsweep").await;
-    let pools = ferroehr::db::connect_domains(&settings, &storage)
+    let pools = ferroehr::db::connect_domains(&with_party(&settings, &storage))
         .await
         .expect("the domain pools connect");
     ferroehr::db::verify_domain_isolation(
         &pools,
-        &storage.layout(&settings),
+        &with_party(&settings, &storage).layout(),
         DeploymentProfile::Sandbox,
     )
     .await
@@ -267,7 +275,7 @@ async fn the_grant_sweep_reaches_a_relocated_database() {
         .expect("breach the boundary in the second database only");
     let error = ferroehr::db::verify_domain_isolation(
         &pools,
-        &storage.layout(&settings),
+        &with_party(&settings, &storage).layout(),
         DeploymentProfile::Sandbox,
     )
     .await
@@ -290,7 +298,7 @@ async fn the_grant_sweep_reaches_a_relocated_database() {
 async fn an_erasure_empties_the_relocated_database() {
     let db = testkit::db().await.expect("testkit database");
     let (settings, storage, second) = prepared_relocated_party(&db, "relerase").await;
-    ferroehr::db::erase_schema(&settings, &storage)
+    ferroehr::db::erase_schema(&with_party(&settings, &storage))
         .await
         .expect("the erasure runs");
     assert_eq!(
@@ -356,13 +364,9 @@ async fn the_boot_gate_refuses_a_writable_bookkeeping_table() {
     let db = testkit::db().await.expect("testkit database");
     let settings = DbConfig::new(db.url());
     let pools = ferroehr::db::domain::DomainPools::from_shared(&db.pool());
-    ferroehr::db::verify_domain_isolation(
-        &pools,
-        &StorageConfig::default().layout(&settings),
-        DeploymentProfile::Sandbox,
-    )
-    .await
-    .expect("the migrated database passes");
+    ferroehr::db::verify_domain_isolation(&pools, &settings.layout(), DeploymentProfile::Sandbox)
+        .await
+        .expect("the migrated database passes");
 
     sqlx::query("GRANT INSERT ON clinical._sqlx_migrations TO ferroehr_clinical")
         .execute(&db.pool())
@@ -370,7 +374,7 @@ async fn the_boot_gate_refuses_a_writable_bookkeeping_table() {
         .expect("reopen the write");
     let error = ferroehr::db::verify_domain_isolation(
         &pools,
-        &StorageConfig::default().layout(&settings),
+        &settings.layout(),
         DeploymentProfile::Sandbox,
     )
     .await

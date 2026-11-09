@@ -769,7 +769,7 @@ impl FerroEhrService {
                 return Err(ServiceError::exception(
                     "expand a multimedia reference: this record references externalized \
                      multimedia but no object store is configured, so the content cannot be \
-                     re-inlined (configure multimedia.endpoint, or re-enable multimedia, to \
+                     re-inlined (configure record.multimedia.url, or re-enable multimedia, to \
                      serve it)",
                 ));
             }

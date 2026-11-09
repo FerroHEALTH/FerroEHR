@@ -8,8 +8,8 @@
 //! `FerroEhrService::new` derives the demographic pool from the clinical pool's
 //! own connect options and swaps only the `search_path`. That proves the
 //! routing, and nothing about the posture the book recommends and the chart
-//! configures: `[storage.party] url` pointing at a role that is a member of
-//! `ferroehr_party` while `[db] url` authenticates as `ferroehr_clinical`.
+//! configures: `[database.party] url` pointing at a role that is a member of
+//! `ferroehr_party` while `[database] url` authenticates as `ferroehr_clinical`.
 //!
 //! So these tests take the path the binary takes — two [`DbConfig`] DSNs,
 //! [`ferroehr::db::connect_domains`], whose four
@@ -27,7 +27,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use ferroehr::db::DbConfig;
-use ferroehr::db::domain::{Domain, DomainDsn, StorageConfig};
+use ferroehr::db::domain::{Domain, DomainDsn};
 use ferroehr::service::FerroEhrService;
 use ferrohealth_secret::secret_url::SecretUrl;
 use http::StatusCode;
@@ -113,9 +113,9 @@ struct Deployment {
     router: Router,
 }
 
-/// Build the two pools and the router `settings` and `storage` describe.
-async fn deployment(settings: &DbConfig, storage: &StorageConfig) -> Deployment {
-    let pools = ferroehr::db::connect_domains(settings, storage)
+/// Build the two pools and the router `settings` describes.
+async fn deployment(settings: &DbConfig) -> Deployment {
+    let pools = ferroehr::db::connect_domains(settings)
         .await
         .expect("the domain pools connect");
     let clinical = pools.clinical.clone();
@@ -199,26 +199,26 @@ async fn two_credentials_serve_both_domains_and_reach_neither_across() {
         url: SecretUrl::new(dsn_as(&db, "credclin", "ferroehr_clinical").await),
         ..DbConfig::default()
     };
-    let storage = StorageConfig {
+    let storage = DbConfig {
         party: DomainDsn {
             url: Some(SecretUrl::new(
                 dsn_as(&db, "creddemo", "ferroehr_party").await,
             )),
-            url_file: None,
+            ..Default::default()
         },
-        ..StorageConfig::default()
+        ..settings.clone()
     };
     assert!(
         storage.is_separated(Domain::Party),
         "the fixture must actually configure two DSNs, else this passes vacuously"
     );
     assert_ne!(
-        storage.dsn(Domain::Party, &settings),
+        storage.dsn(Domain::Party),
         settings.url.expose(),
         "and they must be different credentials"
     );
 
-    let deployment = deployment(&settings, &storage).await;
+    let deployment = deployment(&storage).await;
 
     the_clinical_domain_serves(&deployment.router).await;
     the_demographic_domain_serves(&deployment.router).await;
@@ -239,18 +239,18 @@ async fn one_credential_still_serves_both_domains() {
     let db = common::test_db().await;
     let settings =
         DbConfig::new(dsn_as(&db, "credboth", "ferroehr_clinical, ferroehr_party").await);
-    let storage = StorageConfig::default();
+    let storage = settings.clone();
     assert!(
         !storage.is_separated(Domain::Party),
-        "the fallback posture leaves `[storage.party] url` unset"
+        "the fallback posture leaves `[database.party] url` unset"
     );
     assert_eq!(
-        storage.dsn(Domain::Party, &settings),
+        storage.dsn(Domain::Party),
         settings.url.expose(),
         "and the party pool falls back to the shared DSN"
     );
 
-    let deployment = deployment(&settings, &storage).await;
+    let deployment = deployment(&storage).await;
 
     the_clinical_domain_serves(&deployment.router).await;
     the_demographic_domain_serves(&deployment.router).await;

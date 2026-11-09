@@ -144,7 +144,7 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let mut config = ferroehr::db::DbConfig::new(cli.database_url.clone());
     config.max_connections = 16;
-    config.statement_timeout_ms = 0;
+    config.statement_timeout = ferrohealth_config::units::Duration::ZERO;
     let pool = ferroehr::db::connect(&config)
         .await
         .context("connect to the database")?;

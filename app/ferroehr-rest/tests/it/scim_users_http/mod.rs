@@ -297,17 +297,19 @@ fn config() -> AppConfig {
         scope: SCOPE.to_owned(),
         binding_issuer: binding_issuer.to_owned(),
     };
-    AppConfig {
-        server: common::server(),
-        auth,
-        party_binding: binding(),
-        scim: ScimConfig {
-            enabled: true,
+    {
+        let mut c = AppConfig {
+            server: common::server(),
+            auth,
+            party_binding: binding(),
+            ..AppConfig::default()
+        };
+        c.auth.scim = Some(ScimConfig {
             public_base_url: Some("https://cdr.example.com".to_owned()),
             client: vec![client(CLIENT, LOGIN), client(OTHER, OTHER_LOGIN)],
             ..ScimConfig::default()
-        },
-        ..AppConfig::default()
+        });
+        c
     }
 }
 
@@ -327,7 +329,9 @@ async fn app_with_service() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
 /// [`app`] whose clients deactivate or delete at most `max` Users an hour.
 async fn app_limited(max: u32) -> (testkit::TestDb, Router) {
     let mut config = config();
-    config.scim.max_deactivations = max;
+    if let Some(scim) = config.auth.scim.as_mut() {
+        scim.max_deactivations = max;
+    }
     let (db, _pool, _service, app) = app_of(config, false).await;
     (db, app)
 }

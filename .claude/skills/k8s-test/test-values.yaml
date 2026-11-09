@@ -19,8 +19,8 @@ replicaCount: 2
 database:
   existingSecret: ferroehr-db
   # The key inside that Secret. The chart PROJECTS it as a file and passes only
-  # FERROEHR__DB__URL_FILE, so the DSN never enters the pod's environment.
-  existingSecretKey: FERROEHR__DB__URL
+  # FERROEHR__DATABASE__URL_FILE, so the DSN never enters the pod's environment.
+  existingSecretKey: FERROEHR__DATABASE__URL
 
 secrets:
   basicUserPasswordHashes:

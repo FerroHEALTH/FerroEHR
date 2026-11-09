@@ -144,7 +144,7 @@ pub(crate) async fn ehr_delete_all(
 /// empty field value: §10.2.1's case for a resource "temporarily disabled by
 /// configuration".
 pub(super) fn admin_group_gate(state: &AppState) -> Option<Response> {
-    (!state.config().admin.enabled).then(|| {
+    (!state.config().api.admin).then(|| {
         crate::overview::error::method_not_allowed_response(
             "",
             "the admin API is disabled on this server",

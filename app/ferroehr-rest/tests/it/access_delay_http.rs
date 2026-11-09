@@ -54,22 +54,25 @@ async fn app(delayed: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrService>, R
         .compile()
         .expect("the shipped map compiles");
     let section = AccessDelayConfig {
-        enabled: delayed,
         categories: vec!["Patient-Summaries".to_owned()],
-        hours: 72,
+        max_delay: Some(ferrohealth_config::units::Duration::from_hours(72)),
     };
     let svc = Arc::new(
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender)
             .with_audit_store(AuditStore::new(pool.clone()))
-            .with_access_delay(AccessDelayPolicy::compile(&section, &classifier)),
+            .with_access_delay(
+                delayed
+                    .then(|| AccessDelayPolicy::compile(&section, &classifier))
+                    .flatten(),
+            ),
     );
     svc.mirror_category_map(&classifier)
         .await
         .expect("mirror the category map");
     let mut config = common::api_config(true);
     config.auth = common::persons_and_patients(ISSUER, PATIENTS, AUDIENCE);
-    config.smart.patient_issuers = vec![ISSUER.to_owned(), PATIENTS.to_owned()];
+    config.auth.smart.patient_issuers = vec![ISSUER.to_owned(), PATIENTS.to_owned()];
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
         .await
         .expect("build app");
@@ -424,7 +427,7 @@ async fn the_treating_professional_releases_from_a_clinical_route() {
     );
 }
 
-/// Without `[access_delay]` the person reads new data immediately (Art. 3(1))
+/// Without `[privacy.access_delay]` the person reads new data immediately (Art. 3(1))
 /// and no hold may be placed.
 #[tokio::test]
 async fn a_deployment_without_the_delay_withholds_nothing() {

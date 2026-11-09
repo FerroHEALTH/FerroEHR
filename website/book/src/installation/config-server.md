@@ -167,7 +167,7 @@ system_id = "ferroehr.local"
 | `base_path` | string | `/ferroehr/rest/openehr/v1` | ITS-REST base path all API routes hang off. Shortening it is supported; see [below](#base_path-shortening-the-rest-base-path). The served OpenAPI document describes whatever paths this setting produces, never the defaults. |
 | `swagger_ui` | enum{off,admin_only,private,public} | `private` | Who may read the Swagger UI and the OpenAPI documents under the REST root: `off` does not mount them, `admin_only` needs the admin role, `private` needs any authenticated principal (unauthenticated is `401` with the server's `WWW-Authenticate` challenge, so a browser prompts for the Basic credential), `public` needs nothing. The documents list the whole enabled operation surface, admin and message groups included, so `public` discloses it to anyone who can reach the port; the [hosted sandbox](https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui) sets it deliberately. With authentication off the guard admits everyone, as the management endpoints do. |
 | `cors_permissive` | bool | `false` | Permissive (development) CORS. Left on, any origin may read API responses, so the server warns loudly at boot. Production configures explicit origins at the edge. |
-| `system_id` | string | `ferroehr.local` | **This deployment's own openEHR system identifier**; see [below](#system_id-the-data-authoring-identity). Set a stable, deployment-unique name in production (`FERROEHR__REST__SYSTEM_ID`). |
+| `system_id` | string | `ferroehr.local` | **This deployment's own openEHR system identifier**; see [below](#system_id-the-data-authoring-identity). Set a stable, deployment-unique name in production (`FERROEHR__API__SYSTEM_ID`). |
 | `body_limit_bytes` | int | unset | The largest body the ordinary clinical surface accepts, below [`server.body_limit_bytes`](#server), which the bulk routes keep. Unset, every route takes the listener's limit. A value at or above the listener's is refused at startup. The largest example composition in the vendored corpus is 526 KB; raise it if your compositions embed large `DV_MULTIMEDIA` data. |
 
 ### `base_path`: shortening the REST base path
@@ -204,7 +204,7 @@ process root: `/health`, `/health/liveness`, `/health/readiness`.
 Set it from the environment with:
 
 ```bash
-FERROEHR__REST__BASE_PATH=/ferroehr/v1
+FERROEHR__API__BASE_PATH=/ferroehr/v1
 ```
 
 > [!NOTE]
@@ -227,7 +227,7 @@ path it serves (nginx `proxy_pass http://cdr:8080/;` with the trailing slash,
 Caddy `handle_path`, Traefik `StripPrefix`). Or shorten the base path:
 
 ```bash
-FERROEHR__REST__BASE_PATH=/ferroehr/v1
+FERROEHR__API__BASE_PATH=/ferroehr/v1
 ```
 
 which gives `https://cdr.example.org/cdr/ferroehr/v1/definition/template/adl1.4`.

@@ -10,7 +10,7 @@
 # this deployment answers to are the whole configuration.
 database:
   existingSecret: ferroehr-db
-  existingSecretKey: FERROEHR__DB__URL
+  existingSecretKey: FERROEHR__DATABASE__URL
 
 config:
   # The chart has no default posture and refuses to render without one.

@@ -646,10 +646,10 @@ without it.
 | `FERROEHR__AUTHZ__ABAC__PATIENT_CLAIM` | `patient_id` | JWT claim for the patient attribute (enables the subject gate) |
 | `FERROEHR__AUTHZ__ABAC__CHECK_DIRECTORY` | `false` | also submit DIRECTORY (FOLDER) operations to the policy engine |
 | `FERROEHR__AUTHZ__ABAC__CEDAR__POLICY_DIR` | — (required for `cedar`) | directory of `*.cedar` policy files |
-| `FERROEHR__AUTHZ__ABAC__CEDAR__RELOAD_SECS` | off | optional policy hot-reload interval |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__SERVER` | — (required for `remote`) | PDP base URL (must end with `/`) |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__CONNECT_TIMEOUT_MS` | `2000` | PDP connect timeout |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__REQUEST_TIMEOUT_MS` | `5000` | PDP request timeout |
+| `FERROEHR__AUTHZ__ABAC__CEDAR__RELOAD_INTERVAL` | off | optional policy hot-reload interval |
+| `FERROEHR__AUTHZ__ABAC__REMOTE__URL` | — (required for `remote`) | PDP base URL (must end with `/`) |
+| `FERROEHR__AUTHZ__ABAC__REMOTE__CONNECT_TIMEOUT` | `2000` | PDP connect timeout |
+| `FERROEHR__AUTHZ__ABAC__REMOTE__TIMEOUT` | `5000` | PDP request timeout |
 
 Two engines sit behind one interface. **Cedar** is the embedded default:
 policies live in `*.cedar` files, are schema-validated at boot against a
@@ -881,7 +881,7 @@ services:
   ferroehr:
     environment:
       # Point the key at the mount path; the VALUE never appears anywhere.
-      FERROEHR__SIGNING__KEY_PASSPHRASE_FILE: /run/secrets/signing_passphrase
+      FERROEHR__RECORD__SIGNING__KEY_PASSPHRASE_FILE: /run/secrets/signing_passphrase
     secrets:
       - signing_passphrase
 

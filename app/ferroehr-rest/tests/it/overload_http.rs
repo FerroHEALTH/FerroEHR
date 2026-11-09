@@ -35,7 +35,7 @@ use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
 
-use ferroehr::config::rest::RestConfig;
+use ferroehr::config::rest::ApiConfig;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_server::section::ServerSection;
 
@@ -52,9 +52,9 @@ fn config(max_in_flight: usize) -> AppConfig {
             max_concurrent_requests: std::num::NonZeroUsize::new(max_in_flight),
             ..ServerSection::default()
         },
-        rest: RestConfig {
+        api: ApiConfig {
             base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
+            openapi_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
         auth: common::auth_off(),

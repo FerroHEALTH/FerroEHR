@@ -13,6 +13,7 @@ categories.workspace = true
 publish = false
 
 [dependencies]
+ferrohealth-config.workspace = true
 ferrohealth-secret = { workspace = true }
 ferrohealth-health = { workspace = true, features = ["registry"] }
 ferrohealth-telemetry.workspace = true

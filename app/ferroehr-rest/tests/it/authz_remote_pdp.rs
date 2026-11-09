@@ -34,10 +34,10 @@ fn config(server: &str, name: &str, parameters: Vec<AbacParam>) -> AbacConfig {
         enabled: true,
         engine: AbacEngineKind::Remote,
         remote: RemoteConfig {
-            server: Some(ferrohealth_secret::secret_url::SecretUrl::new(server)),
-            connect_timeout_ms: 500,
-            request_timeout_ms: 1000,
-            oauth: None,
+            url: Some(ferrohealth_secret::secret_url::SecretUrl::new(server)),
+            connect_timeout: ferrohealth_config::units::Duration::from_millis(500),
+            timeout: ferrohealth_config::units::Duration::from_millis(1000),
+            ..RemoteConfig::default()
         },
         policy,
         ..AbacConfig::default()

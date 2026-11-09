@@ -975,8 +975,8 @@ hours = 168
 ```
 
 The environment forms are `FERROEHR__ACCESS_DELAY__ENABLED`,
-`FERROEHR__ACCESS_DELAY__CATEGORIES` (comma-separated) and
-`FERROEHR__ACCESS_DELAY__HOURS`.
+`FERROEHR__PRIVACY__ACCESS_DELAY__CATEGORIES` (comma-separated) and
+`FERROEHR__PRIVACY__ACCESS_DELAY__MAX_DELAY`.
 
 ## `[smart]`
 
@@ -1102,7 +1102,7 @@ identifier and is an immutable committed fact that cannot be re-issued;
 keeping the retired public key is the only way history stays verifiable across
 a rotation, and a public key can verify but never sign. Its environment form
 takes a comma-separated list
-(`FERROEHR__SIGNING__RETIRED_KEY_PATHS=/keys/a.pub.asc,/keys/b.pub.asc`).
+(`FERROEHR__RECORD__SIGNING__RETIRED_KEY_FILES=/keys/a.pub.asc,/keys/b.pub.asc`).
 
 > [!NOTE]
 > **`verify_on_read` resolves to `strict` when signing is enabled.** On every

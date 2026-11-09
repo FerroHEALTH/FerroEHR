@@ -94,9 +94,9 @@ subject-id posture by accepting the `open_subject_namespace` gap by name
 `GET /management/status` then state.
 
 **`provider` alone switches the index**, in the file or as
-`FERROEHR__EHR_INDEX__PROVIDER`. The keys of the provider not chosen are kept
+`FERROEHR__RECORD__SUBJECT_INDEX`. The keys of the provider not chosen are kept
 and not used, and boot names them, so a configuration written for the IHE
-source runs locally with `FERROEHR__EHR_INDEX__PROVIDER=local` and no
+source runs locally with `FERROEHR__RECORD__SUBJECT_INDEX=local` and no
 other change; its declared pseudonym namespaces stay in force. The compose
 quickstart selects its local configuration with one variable
 ([The local EHR index](compose.md#the-local-ehr-index)).
@@ -193,9 +193,9 @@ API.
 
 Every key is a scalar, so the whole section is reachable through the
 environment: `FERROEHR__TERMINOLOGY__SERVER__ENABLED`,
-`FERROEHR__TERMINOLOGY__SERVER__URL`,
-`FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR`,
-`FERROEHR__TERMINOLOGY__SERVER__REQUEST_TIMEOUT_MS`.
+`FERROEHR__TERMINOLOGY__URL`,
+`FERROEHR__TERMINOLOGY__ON_ERROR`,
+`FERROEHR__TERMINOLOGY__TIMEOUT`.
 
 ```toml
 [terminology.server]

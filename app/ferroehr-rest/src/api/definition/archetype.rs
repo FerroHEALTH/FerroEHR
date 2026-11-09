@@ -446,7 +446,7 @@ pub(crate) async fn archetype_adl14_upload(
     let archetype_id = state.backend().upload_archetype(adl).await?;
     let location = format!(
         "{}/definition/archetype/adl1.4/{}",
-        state.config().rest.extensions_path(),
+        state.config().api.extensions_path(),
         urlencoding::encode(&archetype_id)
     );
     let mut resp = negotiate::body::respond(h, StatusCode::CREATED, &archetype_id);

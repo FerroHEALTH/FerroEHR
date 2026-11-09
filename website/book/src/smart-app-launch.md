@@ -136,9 +136,9 @@ export FERROEHR__AUTH__ISSUER__0__ISSUER=https://as.example/realms/ferroehr
 export FERROEHR__AUTH__ISSUER__0__KIND=persons
 export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
 export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=my-smart-app
-export FERROEHR__SMART__ENABLED=true
+export FERROEHR__AUTH__SMART__DISCOVERY=true
 # The external origin absolute service URLs are built from; required.
-export FERROEHR__SMART__PUBLIC_BASE_URL=https://cdr.example.com
+export FERROEHR__AUTH__SMART__PUBLIC_BASE_URL=https://cdr.example.com
 ```
 
 A document looks like:
@@ -201,14 +201,14 @@ The keys live in `[auth]` and `[smart]`; see the
 
 | Key | Default | Meaning |
 |---|---|---|
-| `FERROEHR__SMART__ENABLED` | `false` | Serve the discovery document. |
-| `FERROEHR__SMART__PUBLIC_BASE_URL` | unset (**required when enabled**) | The external origin absolute `services.*.baseUrl` values are built from, e.g. `https://cdr.example.com`. |
-| `FERROEHR__SMART__PLATFORM_BASE_URL` | unset | Base the discovery document hangs off. Unset = the REST root (`/ferroehr/rest`). A leading path is honoured (`/gateway/v1` → `/gateway/v1/.well-known/smart-configuration`). |
-| `FERROEHR__SMART__BACKEND_CLIENTS` | `[]` | The `client_id`s a `system/aql-*` grant counts for. |
-| `FERROEHR__SMART__PATIENT_ISSUERS` | `[]` | The issuers whose `patient/` grants count. |
-| `FERROEHR__SMART__DEMOGRAPHIC_CLIENTS` | `[]` | The `client_id`s that reach the DEMOGRAPHIC API. |
-| `FERROEHR__SMART__LAUNCH_BASE64_JSON` | `false` | Advertise the base64 JSON launch-parameter capability (experimental; consumed by the app, not the CDR). |
-| `FERROEHR__SMART__EPISODE__ENABLED` | `false` | Advertise and accept episode launch context (experimental; advisory only, no episode filtering). |
+| `FERROEHR__AUTH__SMART__DISCOVERY` | `false` | Serve the discovery document. |
+| `FERROEHR__AUTH__SMART__PUBLIC_BASE_URL` | unset (**required when enabled**) | The external origin absolute `services.*.baseUrl` values are built from, e.g. `https://cdr.example.com`. |
+| `FERROEHR__AUTH__SMART__PLATFORM_BASE_URL` | unset | Base the discovery document hangs off. Unset = the REST root (`/ferroehr/rest`). A leading path is honoured (`/gateway/v1` → `/gateway/v1/.well-known/smart-configuration`). |
+| `FERROEHR__AUTH__SMART__BACKEND_CLIENTS` | `[]` | The `client_id`s a `system/aql-*` grant counts for. |
+| `FERROEHR__AUTH__SMART__PATIENT_ISSUERS` | `[]` | The issuers whose `patient/` grants count. |
+| `FERROEHR__AUTH__SMART__DEMOGRAPHIC_CLIENTS` | `[]` | The `client_id`s that reach the DEMOGRAPHIC API. |
+| `FERROEHR__AUTH__SMART__LAUNCH_BASE64_JSON` | `false` | Advertise the base64 JSON launch-parameter capability (experimental; consumed by the app, not the CDR). |
+| `FERROEHR__AUTH__SMART__EPISODE_LAUNCH` | `false` | Advertise and accept episode launch context (experimental; advisory only, no episode filtering). |
 | `FERROEHR__AUTH__PRODUCT_SCOPE` | `__ferroehr.platform` | The scope that admits the ADMIN API and the DEMOGRAPHIC API. |
 | `FERROEHR__AUTH__CAPABILITIES` | `[]` | Capabilities the discovery document adds. |
 | `FERROEHR__AUTH__SCOPES_SUPPORTED` | `[]` | The scopes the discovery document lists. |

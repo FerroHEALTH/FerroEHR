@@ -249,7 +249,7 @@ ferrohealth-secret = "=0.2.0"
 # environment, the fallbacks and `--set`, strict with did-you-mean, and the
 # `config check` rendering, and the built-in defaults under the file
 # (`Loader::defaults`). Verified on crates.io 2026-10-27 (0.2.6).
-ferrohealth-config = "=0.2.10"
+ferrohealth-config = "=0.3.0"
 # The family's health document, indicator registry and process lifecycle
 # (FerroSYS): `/health/readiness` and `/management/health` serve its
 # `Readiness`, and the viewer reads the same document. The default build is the

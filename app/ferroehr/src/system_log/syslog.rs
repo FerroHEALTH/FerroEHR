@@ -69,8 +69,9 @@ impl SyslogRoute {
         let hostname = if hostname.is_empty() { "-" } else { hostname };
         let sender = Sender::new(hostname, app_name, PROCID)
             .map_err(|e| AuditError::Transport(Box::new(e)))?;
-        let address = url::Url::parse(&format!("tls://{}:{}", config.host, config.port))
-            .map_err(|e| AuditError::Transport(Box::new(e)))?;
+        let address = config
+            .address()
+            .map_err(|e| AuditError::Transport(e.into()))?;
         let section = config.tls.clone();
         let tls = tokio::task::spawn_blocking(move || {
             TlsClient::read("audit.syslog.tls", &section)
@@ -82,8 +83,8 @@ impl SyslogRoute {
         let repository = Repository::tls(&address, Arc::new(tls), TIMEOUTS)
             .map_err(|e| AuditError::Transport(Box::new(e)))?;
         let bounds = Bounds {
-            max_messages: config.spool_max_messages,
-            max_bytes: config.spool_max_bytes,
+            max_messages: config.spool_max_events,
+            max_bytes: config.spool_max_size.bytes(),
             write_timeout: SPOOL_WRITE_TIMEOUT,
         };
         let spool = if let Some(directory) = &config.spool_dir {
@@ -95,11 +96,7 @@ impl SyslogRoute {
             );
             Spool::in_memory(bounds)
         };
-        let forwarder = Forwarder::new(
-            spool,
-            repository,
-            Duration::from_millis(config.retry_max_ms),
-        );
+        let forwarder = Forwarder::new(spool, repository, config.retry.max_backoff.get());
         Ok(Self { sender, forwarder })
     }
 

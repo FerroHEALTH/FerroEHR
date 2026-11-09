@@ -19,22 +19,20 @@
 
 # The openEHR specification generation set (matches the built-in default;
 # explicit here so the dev lanes state the posture they test).
+[deployment]
 spec_profile = "development"
 
 # The declared posture (matches the built-in default; explicit for the same
 # reason): a sandbox must not hold real patient data.
-deployment_profile = "sandbox"
+profile = "sandbox"
 
-[rest]
-# Permissive CORS — dev only. Production configures explicit origins.
-cors_permissive = true
-
+[api]
 # Dev-only: expose the admin API (`DELETE /admin/...`) so the conformance
 # suite's AdminApi cases run against the compose stack (they authenticate as
 # the ADMIN-role user below). Production deployments keep this off unless
 # operationally needed.
-[admin]
-enabled = true
+admin = true
+terminology = true
 
 [auth]
 enabled = true
@@ -104,21 +102,18 @@ status = "admin_only"
 # openEHR vocabulary bundle) is ON in the dev stack so the viewer's
 # terminology browser and code picker work out of the box. Off by default in
 # a bare deployment; this flag only mounts reads, never a provider.
-[terminology]
-api_enabled = true
 
-# The terminology server for the `terminology` compose profile — DISABLED here
-# and switched on only by an overlay (docker/sut-terminology.yml), so the plain
+# The terminology server for the `terminology` compose profile — absent here
+# and added only by an overlay (docker/sut-terminology.yml), so the plain
 # quickstart is byte-identical to a deployment without any of this. One server
 # answers every terminology the bundled openEHR terminology does not carry:
 # BASE docs/architecture_overview/master12-terminology.adoc §"Binding
 # Terminology Value-sets to Archetypes" puts the query behind an archetype
 # constraint binding in a "terminology query server", and the CDR is its
 # client. No openEHR spec governs the client's configuration — our own design.
-[terminology.server]
-enabled = false
-url = "http://terminology:8080/r4b"
-fail_on_error = false
+# [terminology] — present to turn the server on:
+# url = "http://terminology:8080/r4b"
+# on_error = "accept"
 
 [[auth.basic.users]]
 user = "ferroehr"
@@ -204,11 +199,10 @@ template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
 # The SCIM endpoint the lanes provision their persons through. The client
 # below provisions the three Basic users; an overlay that adds a persons
 # issuer adds its own client (index 1), since no two share a binding_issuer.
-[scim]
-enabled = true
+[auth.scim]
 public_base_url = "http://localhost:8080"
 
-[[scim.client]]
+[[auth.scim.client]]
 issuer = "https://scim.ferroehr.invalid"
 client_id = "basic-users"
 scope = "ferroehr/scim"
@@ -217,5 +211,9 @@ binding_issuer = "urn:ferroehr:basic-user"
 # The in-instance subject-to-EHR map, the explicit opt-in of a FerroEHR run
 # on its own: development, the UI journeys and the conformance lanes ask no
 # identity source. Without it the server refuses to start.
-[ehr_index]
-provider = "local"
+[record]
+subject_index = "local"
+
+# Any origin may read responses: development and the demo only.
+[api.cors]
+allow_origins = ["*"]

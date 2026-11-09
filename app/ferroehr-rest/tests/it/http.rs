@@ -847,7 +847,7 @@ async fn every_response_carries_the_security_headers() {
 /// these two tests are about the page it serves.
 async fn app_with_swagger() -> (testkit::TestDb, Router) {
     let mut cfg = config(false);
-    cfg.rest.swagger_ui = ferroehr::config::management::AccessLevel::Public;
+    cfg.api.openapi_ui = ferroehr::config::management::AccessLevel::Public;
     common::app(cfg).await
 }
 
@@ -1091,7 +1091,7 @@ async fn the_bulk_tier_accepts_what_the_clinical_tier_refuses() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
     cfg.server.body_limit_bytes = 65536;
-    cfg.rest.body_limit_bytes = Some(512);
+    cfg.api.body_limit = Some(ferrohealth_config::units::ByteSize::from_bytes(512));
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
@@ -1209,8 +1209,8 @@ async fn subject_lookup_by_query_parameter_still_answers() {
 async fn the_served_document_omits_paths_whose_features_are_off() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.rest.swagger_ui = ferroehr::config::management::AccessLevel::Off;
-    cfg.smart.enabled = false;
+    cfg.api.openapi_ui = ferroehr::config::management::AccessLevel::Off;
+    cfg.auth.smart.discovery = false;
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 

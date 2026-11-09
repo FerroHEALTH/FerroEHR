@@ -87,7 +87,7 @@ async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
     authz.rbac.enabled = true;
     let authz = AuthzHandle::build(
         &authz,
-        &config.rest.base_path,
+        &config.api.base_path,
         None,
         common::null_resolvers(),
     )

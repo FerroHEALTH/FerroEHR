@@ -36,7 +36,7 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::management::AccessLevel;
-use ferroehr::config::rest::{AdminConfig, RestConfig};
+use ferroehr::config::rest::ApiConfig;
 use ferroehr::config::smart::SmartConfig;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
@@ -120,17 +120,17 @@ const PUBLIC: &[(&str, &str, &str)] = &[
     (
         "GET",
         "/ferroehr/rest/api-docs/openapi.json",
-        "only when server.swagger_ui = public; the default is private",
+        "only when server.openapi_ui = public; the default is private",
     ),
     (
         "GET",
         "/ferroehr/rest/api-docs/ferroehr-{family}.openapi.json",
-        "only when server.swagger_ui = public; the default is private",
+        "only when server.openapi_ui = public; the default is private",
     ),
     (
         "GET",
         "/ferroehr/rest/swagger-ui",
-        "only when server.swagger_ui = public; the default is private",
+        "only when server.openapi_ui = public; the default is private",
     ),
     (
         "OPTIONS",
@@ -208,7 +208,7 @@ const CLINICAL_READ: &[(&str, &str)] = &[
     ("POST", "/query/{qualified_query_name}/{version}"),
     // The cohort extension: AQL over a demographically-selected population.
     // A read like every other query execution, and its own authorization
-    // beyond the class is the deployment's `[cohort.predicates]` allow-list.
+    // beyond the class is the deployment's `[privacy.cohort.predicates]` allow-list.
     ("POST", "/query/cohort"),
     ("GET", "/definition/query"),
     ("GET", "/definition/query/{qualified_query_name}"),
@@ -518,25 +518,26 @@ fn mounted(cfg: &AppConfig) -> Vec<(String, String)> {
 /// cheaper than an Argon2 verification, and this suite issues hundreds of
 /// requests), the admin group reachable so the RBAC gate is what decides.
 fn matrix_config() -> AppConfig {
-    AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            // ON: the PUBLIC table declares the OAS/Swagger routes, and they are
-            // mounted only when this is set — with it off the coverage assertion
-            // reports them as declared-but-unmounted.
-            swagger_ui: AccessLevel::Public,
+    {
+        let mut c = AppConfig {
+            server: common::server(),
+            api: ApiConfig {
+                // ON: the PUBLIC table declares the OAS/Swagger routes, and they are
+                // mounted only when this is set — with it off the coverage assertion
+                // reports them as declared-but-unmounted.
+                openapi_ui: AccessLevel::Public,
+                ..Default::default()
+            },
+            auth: common::issuer_auth(ISSUER, AUDIENCE),
+            rbac: common::rbac_trusting(ISSUER),
             ..Default::default()
-        },
-        auth: common::issuer_auth(ISSUER, AUDIENCE),
-        rbac: common::rbac_trusting(ISSUER),
-        admin: AdminConfig { enabled: true },
-        // ON for the same reason as the Swagger pair: the PUBLIC table declares
-        // the discovery document, and it is mounted only when SMART is enabled.
-        smart: SmartConfig {
-            enabled: true,
+        };
+        c.api.admin = true;
+        c.auth.smart = SmartConfig {
+            discovery: true,
             ..SmartConfig::default()
-        },
-        ..Default::default()
+        };
+        c
     }
 }
 
@@ -544,7 +545,7 @@ fn matrix_config() -> AppConfig {
 fn authz() -> Option<Arc<AuthzHandle>> {
     AuthzHandle::build(
         &AuthzConfig::default(),
-        &matrix_config().rest.base_path,
+        &matrix_config().api.base_path,
         None,
         common::null_resolvers(),
     )
@@ -907,17 +908,17 @@ async fn the_swagger_surface_honours_its_access_level() {
     async fn app_with(level: AccessLevel, smart: bool) -> (testkit::TestDb, Router) {
         let (pg, pool) = common::migrated_pool().await;
         let base = served_config().await;
-        let cfg = AppConfig {
-            server: common::server(),
-            rest: RestConfig {
-                swagger_ui: level,
-                ..Default::default()
-            },
-            smart: SmartConfig {
-                enabled: smart,
-                ..base.smart.clone()
-            },
-            ..base
+        let cfg = {
+            let mut c = AppConfig {
+                server: common::server(),
+                api: ApiConfig {
+                    openapi_ui: level,
+                    ..Default::default()
+                },
+                ..base
+            };
+            c.auth.smart.discovery = smart;
+            c
         };
         let app = ferroehr_rest::build_full(
             cfg,

@@ -37,7 +37,7 @@ const REGISTER: &str = "access-delay";
 const EXPIRY: &str = "access-delay-expiry";
 
 impl FerroEhrService {
-    /// Install the `[access_delay]` policy; `None`, the default, leaves the
+    /// Install the `[privacy.access_delay]` policy; `None`, the default, leaves the
     /// person's access immediate (EHDS Art. 3(1)).
     #[must_use]
     pub fn with_access_delay(mut self, policy: Option<AccessDelayPolicy>) -> Self {
@@ -69,11 +69,11 @@ impl FerroEhrService {
         until: Option<&str>,
         note: Option<&str>,
     ) -> Result<(), ServiceError> {
-        // NOTE: EHDS Art. 3(3) is a Member State option; with `[access_delay]` off,
+        // NOTE: EHDS Art. 3(3) is a Member State option; with no `[privacy.access_delay]`,
         // Art. 3(1) immediate access holds and no hold may be placed.
         let Some(policy) = self.access_delay.as_deref() else {
             return Err(ServiceError::precondition(
-                "access_delay is not enabled on this server: EHDS Art. 3(3) delays the \
+                "privacy.access_delay is not configured on this server: EHDS Art. 3(3) delays the \
                  person's access only where a Member State rule provides for it",
             ));
         };
@@ -95,7 +95,7 @@ impl FerroEhrService {
         if held.is_none() {
             return Err(ServiceError::precondition(format!(
                 "nothing was held: {vo_id} is not a COMPOSITION, or `until` is not after now \
-                 and within access_delay.hours ({}) of now (EHDS Art. 3(3): a limited period)",
+                 and within privacy.access_delay.max_delay ({}h) of now (EHDS Art. 3(3): a limited period)",
                 policy.hours()
             )));
         }

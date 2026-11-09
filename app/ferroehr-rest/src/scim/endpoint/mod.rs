@@ -7,7 +7,7 @@
 //! `/ServiceProviderConfig` is readable without a token, so a client can learn
 //! the authentication scheme before it holds one (RFC 7644 §4,
 //! `authenticationSchemes`). Every other path needs a bearer token of a
-//! `[[scim.client]]`: a caller acting for nobody (a `System` caller), whose
+//! `[[auth.scim.client]]`: a caller acting for nobody (a `System` caller), whose
 //! issuer and client the table names, holding the table's `scope`. A person's
 //! token is refused, since provisioning is a client's act. The client's
 //! requests count against `[server.caller_rate]` like any other caller's. No
@@ -98,15 +98,15 @@ pub enum EndpointError {
 /// The [`EndpointError`] of a mapped attribute the schemas do not define, or
 /// of a party mapping that lacks what a User is written with.
 pub fn check(config: &AppConfig) -> Result<(), EndpointError> {
-    if config.scim.enabled {
-        schemas::discovery(&config.scim, &config.party_binding)?;
+    if let Some(scim) = &config.auth.scim {
+        schemas::discovery(scim, &config.party_binding)?;
         user_map::UserMap::new(&config.party_binding).map_err(EndpointError::Mapping)?;
-        group_map::GroupMap::new(config).map_err(EndpointError::Mapping)?;
+        group_map::GroupMap::new(config, scim).map_err(EndpointError::Mapping)?;
     }
     Ok(())
 }
 
-/// The endpoint's routes under [`BASE_PATH`], or `None` when `[scim]` is off.
+/// The endpoint's routes under [`BASE_PATH`], or `None` when `[auth.scim]` is absent.
 ///
 /// [`check`] has accepted the configuration at boot; a configuration it
 /// would refuse mounts nothing and says so in the log.
@@ -115,10 +115,8 @@ pub(crate) fn router(
     authenticator: &Arc<Authenticator>,
     service: Arc<FerroEhrService>,
 ) -> Option<Router<AppState>> {
-    if !config.scim.enabled {
-        return None;
-    }
-    let discovery = match schemas::discovery(&config.scim, &config.party_binding) {
+    let scim = config.auth.scim.as_ref()?;
+    let discovery = match schemas::discovery(scim, &config.party_binding) {
         Ok(discovery) => Arc::new(discovery),
         Err(error) => {
             tracing::error!(%error, "the SCIM endpoint is not mounted: its schemas do not build");
@@ -128,11 +126,11 @@ pub(crate) fn router(
     // NOTE: GDPR Art. 5(1)(e), a deleted User's contacts are kept no longer than necessary;
     // the sweep runs while the endpoint that deletes Users is served.
     service.spawn_contact_erasure(
-        config.scim.binding_issuers(),
-        config.scim.contact_erasure_minutes,
+        scim.binding_issuers(),
+        scim.erasure_minutes(),
         Duration::from_secs(60),
     );
-    let resources = match resources(config, &discovery, service) {
+    let resources = match resources(config, scim, &discovery, service) {
         Ok(resources) => resources,
         Err(error) => {
             tracing::error!(%error, "the SCIM endpoint is not mounted: its resource mapping does not build");
@@ -141,7 +139,7 @@ pub(crate) fn router(
     };
     let gate = Gate {
         authenticator: Arc::clone(authenticator),
-        clients: config.scim.client.iter().cloned().map(Arc::new).collect(),
+        clients: scim.client.iter().cloned().map(Arc::new).collect(),
     };
     let gated: Router<AppState> = Router::new()
         .route("/ResourceTypes", get(resource_types))
@@ -181,6 +179,7 @@ pub(crate) fn router(
 /// The refusal naming what the User or the Group mapping lacks.
 fn resources(
     config: &AppConfig,
+    scim: &ferroehr::config::scim::ScimConfig,
     discovery: &Discovery,
     service: Arc<FerroEhrService>,
 ) -> Result<Router<AppState>, String> {
@@ -194,7 +193,7 @@ fn resources(
         Arc::clone(&service),
         user_map::UserMap::new(&config.party_binding)?,
         schema("User")?,
-        &config.scim,
+        scim,
     )?;
     let routes = Router::new()
         .route("/Users", get(users::list).post(users::create))
@@ -206,10 +205,10 @@ fn resources(
                 .delete(users::delete),
         )
         .with_state(users);
-    let Some(map) = group_map::GroupMap::new(config)? else {
+    let Some(map) = group_map::GroupMap::new(config, scim)? else {
         return Ok(routes);
     };
-    let groups = groups::Groups::new(service, map, schema("Group")?, &config.scim)?;
+    let groups = groups::Groups::new(service, map, schema("Group")?, scim)?;
     Ok(routes.merge(
         Router::new()
             .route("/Groups", get(groups::list).post(groups::create))
@@ -247,13 +246,13 @@ async fn admit(State(gate): State<Gate>, request: Request, next: Next) -> Respon
     }) else {
         return refusal(&ScimError::new(
             StatusCode::FORBIDDEN,
-            "the token's client is no [[scim.client]] of this deployment",
+            "the token's client is no [[auth.scim.client]] of this deployment",
         ));
     };
     if !principal.scopes.iter().any(|scope| *scope == client.scope) {
         let mut response = refusal(&ScimError::new(
             StatusCode::FORBIDDEN,
-            "the token does not hold the scope its [[scim.client]] table names",
+            "the token does not hold the scope its [[auth.scim.client]] table names",
         ));
         response.headers_mut().insert(
             header::WWW_AUTHENTICATE,

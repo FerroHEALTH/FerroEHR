@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 use axum::Router;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::management::AccessLevel;
-use ferroehr::config::rest::{AdminConfig, RestConfig};
+use ferroehr::config::rest::ApiConfig;
 use ferroehr::config::smart::SmartConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::sender::start;
@@ -207,20 +207,23 @@ fn mounted(cfg: &AppConfig) -> BTreeMap<(String, String), Option<String>> {
 /// mounted, and every optional surface the exempt table names switched on so
 /// the table is checked against what is served.
 fn config() -> AppConfig {
-    AppConfig {
-        server: common::server(),
-        rest: RestConfig {
-            swagger_ui: AccessLevel::Public,
+    {
+        let mut c = AppConfig {
+            server: common::server(),
+            api: ApiConfig {
+                openapi_ui: AccessLevel::Public,
+                ..Default::default()
+            },
+            auth: common::issuer_auth(ISSUER, AUDIENCE),
+            rbac: common::rbac_trusting(ISSUER),
             ..Default::default()
-        },
-        auth: common::issuer_auth(ISSUER, AUDIENCE),
-        rbac: common::rbac_trusting(ISSUER),
-        admin: AdminConfig { enabled: true },
-        smart: SmartConfig {
-            enabled: true,
+        };
+        c.api.admin = true;
+        c.auth.smart = SmartConfig {
+            discovery: true,
             ..SmartConfig::default()
-        },
-        ..Default::default()
+        };
+        c
     }
 }
 
@@ -236,7 +239,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         .with_audit_store(AuditStore::new(pool.clone()));
     let authz = AuthzHandle::build(
         &AuthzConfig::default(),
-        &config().rest.base_path,
+        &config().api.base_path,
         None,
         common::null_resolvers(),
     )

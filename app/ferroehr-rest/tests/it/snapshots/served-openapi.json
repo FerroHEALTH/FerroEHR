@@ -6272,7 +6272,7 @@
             }
           },
           "408": {
-            "description": "The inner AQL execution overran the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`).",
+            "description": "The inner AQL execution overran the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6292,7 +6292,7 @@
             }
           },
           "422": {
-            "description": "The predicate matched, or the request named, more parties than `FERROEHR__COHORT__MAX_COHORT_SIZE` allows. Refused rather than truncated: a silently shortened cohort is a wrong denominator with nothing on the wire to say so.",
+            "description": "The predicate matched, or the request named, more parties than `FERROEHR__PRIVACY__COHORT__MAX_COHORT_SIZE` allows. Refused rather than truncated: a silently shortened cohort is a wrong denominator with nothing on the wire to say so.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -23777,7 +23777,7 @@
             }
           },
           "408": {
-            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`). The maximum here is the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`); with no budget configured only the global request timeout applies.",
+            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`). The maximum here is the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`); with no budget configured only the global request timeout applies.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -23969,7 +23969,7 @@
             }
           },
           "408": {
-            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`).",
+            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -24156,7 +24156,7 @@
             }
           },
           "408": {
-            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`).",
+            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -24349,7 +24349,7 @@
             }
           },
           "408": {
-            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`).",
+            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -24546,7 +24546,7 @@
             }
           },
           "408": {
-            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`).",
+            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -24749,7 +24749,7 @@
             }
           },
           "408": {
-            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`).",
+            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`).",
             "content": {
               "application/problem+json": {
                 "schema": {

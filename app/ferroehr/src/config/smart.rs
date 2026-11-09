@@ -13,9 +13,12 @@
 //! clients count as backend clients, which issuers' `patient/` grants count,
 //! and which clients reach the DEMOGRAPHIC API.
 //!
-//! This is the `[smart]` section of the one server configuration tree; it
-//! carries no loader of its own.
+//! This is the `[auth.smart]` table of the one server configuration tree; it
+//! carries no loader of its own. Its lists apply whether or not the discovery
+//! document is served, so the table is always read and `discovery` alone
+//! turns the document on.
 
+use ferrohealth_config::removed::Removed;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -27,11 +30,12 @@ use url::Url;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct SmartConfig {
-    /// Serve the `/.well-known/smart-configuration` document (default
-    /// `false`). The document is built from one `[auth]` issuer's metadata:
-    /// the issuer [`Self::issuer_metadata_file`] names, else the first whose
-    /// metadata is read from it, else the first.
-    pub enabled: bool,
+    /// Serve the `/.well-known/smart-configuration` discovery document
+    /// (SMART App Launch 2.x §Conformance; default `false`). The document is
+    /// built from one `[auth]` issuer's metadata: the issuer
+    /// [`Self::issuer_metadata_file`] names, else the first whose metadata is
+    /// read from it, else the first.
+    pub discovery: bool,
 
     /// The RFC 8414 §2 authorization-server metadata of the `[auth]` issuer
     /// it names, whose key set is a `jwks_file` and carries none: a JSON
@@ -50,20 +54,15 @@ pub struct SmartConfig {
     /// `https://cdr.example.com`. master04 §Services makes every `services.*`
     /// entry's `baseUrl` an "Absolute URL to the root of the API (required)",
     /// so the document prefixes this origin onto the served base paths.
-    /// Required when [`Self::enabled`] is set.
+    /// Required when [`Self::discovery`] is set.
     pub public_base_url: Option<String>,
 
     /// Episode context (master09 §Experimental: Episode Context), advertised
-    /// only: `episode.enabled = true` adds `context-openehr-episode` to the
+    /// only: `episode_launch = true` adds `context-openehr-episode` to the
     /// document's capabilities and applies no episode filtering (openEHR has
     /// no first-class Episode resource; master09 calls the semantics
     /// "currently implementation-defined").
-    pub episode: EpisodeConfig,
-
-    /// Advertise `launch-base64-json` (master09 §Launch Parameter as a Token).
-    /// The base64 JSON `launch` object is the application's to consume; the
-    /// CDR only advertises the capability. Default off.
-    pub launch_base64_json: bool,
+    pub episode_launch: bool,
 
     /// The `client_id`s of the backend clients a `system/aql-*` grant counts
     /// for: master08 §Resource Scopes says such a grant "would grant access to
@@ -82,14 +81,17 @@ pub struct SmartConfig {
     /// `[auth] product_scope`, reaches it (no openEHR spec governs this: our
     /// own design).
     pub demographic_clients: Vec<String>,
-}
 
-/// Episode-context sub-config (master09 §Experimental: Episode Context).
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct EpisodeConfig {
-    /// Advertise episode context. Advisory only (no filtering).
-    pub enabled: bool,
+    /// Retired: refused at load, naming `discovery`.
+    #[serde(skip_serializing)]
+    pub enabled: Removed,
+    /// Retired: refused at load, naming `episode_launch`.
+    #[serde(skip_serializing)]
+    pub episode: Removed,
+    /// Retired: refused at load, naming `launch-base64-json` in
+    /// `auth.capabilities`.
+    #[serde(skip_serializing)]
+    pub launch_base64_json: Removed,
 }
 
 impl SmartConfig {
@@ -104,8 +106,11 @@ impl SmartConfig {
     /// A message naming the offending key; it never quotes a credential.
     pub fn validate(&self) -> Result<(), String> {
         for (key, value) in [
-            ("smart.platform_base_url", self.platform_base_url.as_ref()),
-            ("smart.public_base_url", self.public_base_url.as_ref()),
+            (
+                "auth.smart.platform_base_url",
+                self.platform_base_url.as_ref(),
+            ),
+            ("auth.smart.public_base_url", self.public_base_url.as_ref()),
         ] {
             let Some(raw) = value else { continue };
             // NOTE: no openEHR spec governs this — our own design; a value that
@@ -120,15 +125,17 @@ impl SmartConfig {
                 ));
             }
         }
-        if self.enabled {
+        if self.discovery {
             let origin = self.public_base_url.as_deref().unwrap_or("");
             let absolute = Url::parse(origin.trim())
                 .is_ok_and(|url| matches!(url.scheme(), "http" | "https") && url.has_host());
             if !absolute {
-                return Err("smart.public_base_url (an absolute http(s) origin, e.g. \
-                     'https://cdr.example.com') is required when smart.enabled = true — \
+                return Err(
+                    "auth.smart.public_base_url (an absolute http(s) origin, e.g. \
+                     'https://cdr.example.com') is required when auth.smart.discovery = true — \
                      master04 §Services makes every services.*.baseUrl an absolute URL"
-                    .to_owned());
+                        .to_owned(),
+                );
             }
         }
         Ok(())
@@ -142,11 +149,10 @@ mod tests {
     #[test]
     fn defaults_are_off_and_list_nobody() {
         let c = SmartConfig::default();
-        assert!(!c.enabled);
+        assert!(!c.discovery);
         assert!(c.platform_base_url.is_none());
         assert!(c.public_base_url.is_none());
-        assert!(!c.episode.enabled);
-        assert!(!c.launch_base64_json);
+        assert!(!c.episode_launch);
         assert_eq!(c.backend_clients, Vec::<String>::new());
         assert_eq!(c.patient_issuers, Vec::<String>::new());
         assert_eq!(c.demographic_clients, Vec::<String>::new());
@@ -182,7 +188,7 @@ mod tests {
     #[test]
     fn a_served_document_requires_an_absolute_origin() {
         let mut c = SmartConfig {
-            enabled: true,
+            discovery: true,
             ..SmartConfig::default()
         };
         assert!(c.validate().is_err());

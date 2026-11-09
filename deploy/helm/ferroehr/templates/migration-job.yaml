@@ -124,19 +124,19 @@ spec:
             # The migrator DSN, as a mounted file rather than an environment
             # value (readable through /proc/<pid>/environ and inherited by every
             # child process — OWASP Kubernetes Security Cheat Sheet).
-            - name: FERROEHR__DB__URL_FILE
+            - name: FERROEHR__DATABASE__URL_FILE
               value: {{ printf "%s/db.url" (include "ferroehr.secretMountPath" .) | quote }}
             {{- range $domain := list "clinical" "party" "audit" }}
             {{- $dsn := index $.Values.database $domain }}
             {{- if $dsn.migrateExistingSecret }}
             # The migrator of the database this domain lives in: the Job applies
             # the schema in every database the configuration places a domain in.
-            - name: FERROEHR__STORAGE__MIGRATE__{{ upper $domain }}__URL_FILE
+            - name: FERROEHR__DATABASE__MIGRATE__{{ upper $domain }}__URL_FILE
               value: {{ printf "%s/storage.migrate.%s.url" (include "ferroehr.secretMountPath" $) $domain | quote }}
             {{- end }}
             {{- end }}
             # This pod's job IS the DDL, whatever the server's posture is.
-            - name: FERROEHR__DB__MIGRATE
+            - name: FERROEHR__DATABASE__MIGRATIONS
               value: apply
           volumeMounts:
             - name: tmp

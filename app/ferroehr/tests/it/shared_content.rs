@@ -513,7 +513,7 @@ async fn resend_records(pool: &PgPool, expected: usize) -> Vec<(String, String)>
     }
 }
 
-/// With `[versioning] skip_identical_resend` on, an update whose content
+/// With `[record.versioning] skip_identical_resend` on, an update whose content
 /// equals the current version's commits nothing and answers with that version;
 /// the access log keeps exactly one `resend` record naming the version matched
 /// and its content digest (the entry Cadasto writes for a skipped send,
@@ -528,11 +528,11 @@ async fn the_opt_in_rule_answers_a_resend_with_the_existing_version() {
         enabled: true,
         store: StoreConfig {
             enabled: true,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
         ..AuditConfig::default()
     };

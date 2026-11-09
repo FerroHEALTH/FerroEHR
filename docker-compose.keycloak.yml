@@ -116,10 +116,10 @@ services:
       # the realm's four users are provisioned through SCIM under that
       # identifier issuer by the ferroehr-provision-keycloak one-shot below,
       # with a second client of the development issuer.
-      FERROEHR__SCIM__CLIENT__1__ISSUER: http://localhost:8180/quickstart
-      FERROEHR__SCIM__CLIENT__1__CLIENT_ID: quickstart-scim-keycloak
-      FERROEHR__SCIM__CLIENT__1__SCOPE: ferroehr/scim
-      FERROEHR__SCIM__CLIENT__1__BINDING_ISSUER: urn:ferroehr:keycloak-quickstart-login
+      FERROEHR__AUTH__SCIM__CLIENT__1__ISSUER: http://localhost:8180/quickstart
+      FERROEHR__AUTH__SCIM__CLIENT__1__CLIENT_ID: quickstart-scim-keycloak
+      FERROEHR__AUTH__SCIM__CLIENT__1__SCOPE: ferroehr/scim
+      FERROEHR__AUTH__SCIM__CLIENT__1__BINDING_ISSUER: urn:ferroehr:keycloak-quickstart-login
       # The development CA, trusted for the issuer's metadata and key set
       # beside the platform roots (`[auth] ca_file`) on every platform. It
       # needs a 5.5.0 or later image: 5.4.2 refuses the key.
@@ -133,7 +133,7 @@ services:
       FERROEHR__AUTHZ__RBAC__ENABLED: "true"
       # The realm's service client, whose system/aql-* grant counts only when
       # it is named here (SMART on openEHR §Resource Scopes).
-      FERROEHR__SMART__BACKEND_CLIENTS: ferroehr-service
+      FERROEHR__AUTH__SMART__BACKEND_CLIENTS: ferroehr-service
       # The service client is declared as a system client, the only way a
       # caller acting for no person commits into an EHR. It writes no
       # COMPOSITION here (no `writes`), so it creates EHRs and reads; the

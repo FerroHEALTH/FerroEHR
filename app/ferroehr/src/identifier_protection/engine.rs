@@ -44,7 +44,7 @@ pub struct IdentifierProtection {
 pub enum EngineError {
     /// The root key is missing while protection is enabled.
     #[error(
-        "[demographic.identifier_protection] is enabled but no `key` or `key_file` is set; \
+        "[privacy.identifier_protection] is configured but no `key` or `key_file` is set; \
          protection cannot run without one"
     )]
     MissingKey,
@@ -53,8 +53,8 @@ pub enum EngineError {
     Key(#[from] CryptoError),
     /// No scheme is configured, so protection would silently do nothing.
     #[error(
-        "[demographic.identifier_protection] is enabled but `schemes` is empty, so nothing \
-         would be protected; name the schemes or turn the section off"
+        "[privacy.identifier_protection] is configured but `schemes` is empty, so nothing \
+         would be protected; name the schemes or remove the table"
     )]
     NoSchemes,
 }
@@ -62,8 +62,9 @@ pub enum EngineError {
 impl IdentifierProtection {
     /// Build the engine from the configured section and the demographic pool.
     ///
-    /// Returns `None` when protection is off, which is the default: the write
-    /// path then stores identifiers exactly as written.
+    /// Returns `None` when protection is off (no
+    /// `[privacy.identifier_protection]` table), which is the default: the
+    /// write path then stores identifiers exactly as written.
     ///
     /// # Errors
     /// [`EngineError`] when protection is on but unusable — a missing or
@@ -71,13 +72,13 @@ impl IdentifierProtection {
     /// deployment that believes it protects identifiers and does not is the
     /// failure this refuses to ship.
     pub fn from_config(
-        config: &IdentifierProtectionConfig,
+        config: Option<&IdentifierProtectionConfig>,
         key_material: Option<&ferrohealth_secret::secret::Secret>,
         pool: sqlx::PgPool,
     ) -> Result<Option<Self>, EngineError> {
-        if !config.enabled {
+        let Some(config) = config else {
             return Ok(None);
-        }
+        };
         if config.schemes.is_empty() {
             return Err(EngineError::NoSchemes);
         }
@@ -324,9 +325,8 @@ mod tests {
 
     #[tokio::test]
     async fn protection_is_off_by_default_and_builds_nothing() {
-        let engine =
-            IdentifierProtection::from_config(&IdentifierProtectionConfig::default(), None, pool())
-                .expect("the default configuration builds");
+        let engine = IdentifierProtection::from_config(None, None, pool())
+            .expect("the default configuration builds");
         assert!(
             engine.is_none(),
             "off by default: the write path stores identifiers as written"
@@ -335,13 +335,10 @@ mod tests {
 
     #[tokio::test]
     async fn enabled_without_a_key_is_a_boot_error() {
-        let config = IdentifierProtectionConfig {
-            enabled: true,
-            ..IdentifierProtectionConfig::default()
-        };
+        let config = IdentifierProtectionConfig::default();
         assert!(
             matches!(
-                IdentifierProtection::from_config(&config, None, pool()),
+                IdentifierProtection::from_config(Some(&config), None, pool()),
                 Err(EngineError::MissingKey)
             ),
             "a deployment that believes it protects identifiers and cannot must not boot"
@@ -351,7 +348,6 @@ mod tests {
     #[tokio::test]
     async fn enabled_with_no_schemes_is_a_boot_error() {
         let config = IdentifierProtectionConfig {
-            enabled: true,
             schemes: Vec::new(),
             ..IdentifierProtectionConfig::default()
         };
@@ -360,7 +356,7 @@ mod tests {
         );
         assert!(
             matches!(
-                IdentifierProtection::from_config(&config, Some(&key), pool()),
+                IdentifierProtection::from_config(Some(&config), Some(&key), pool()),
                 Err(EngineError::NoSchemes)
             ),
             "protection that would protect nothing is a configuration mistake, not a posture"

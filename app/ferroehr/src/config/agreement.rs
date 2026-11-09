@@ -68,11 +68,11 @@ pub struct Agreement {
     /// The template ids an external person may commit; none by default.
     pub writes: Vec<String>,
     /// Whether an external person may discard a dispensation of the same
-    /// point of care within `discard_window_hours`.
+    /// point of care within `discard_window`.
     pub discard: bool,
-    /// The window of a discard, in hours (MyHealth@EU Requirements Catalogue
-    /// 10.0.0, requirement 07.04, sets 24).
-    pub discard_window_hours: u32,
+    /// The window of a discard, a whole number of hours (MyHealth@EU
+    /// Requirements Catalogue 10.0.0, requirement 07.04, sets `"24h"`).
+    pub discard_window: ferrohealth_config::units::Duration,
     /// The MyHealth@EU service a contact point's person agreement serves,
     /// which names the `*_NOT_FOUND` code of a request outside the TRC
     /// patient; required on a `contact_point` issuer and refused elsewhere.
@@ -86,8 +86,27 @@ pub struct Agreement {
     /// For an organisation: whether no natural person views the data, or the
     /// requester logs the person.
     pub access_class: Option<AccessClass>,
-    /// For a `chained` access: how many years the requester keeps its log.
-    pub chained_log_retention_years: Option<u32>,
+    /// For a `chained` access: how long the requester keeps its log, a
+    /// calendar period (`"P5Y"`).
+    pub chained_log_retention: Option<crate::config::retention::RetentionPeriod>,
+    /// Retired: refused at load, naming `discard_window`.
+    #[serde(skip_serializing)]
+    pub discard_window_hours: ferrohealth_config::removed::Removed,
+    /// Retired: refused at load, naming `chained_log_retention`.
+    #[serde(skip_serializing)]
+    pub chained_log_retention_years: ferrohealth_config::removed::Removed,
+}
+
+impl Agreement {
+    /// The discard window in whole hours, when it is one.
+    #[must_use]
+    pub fn discard_window_hours(&self) -> Option<u32> {
+        let millis = self.discard_window.as_millis();
+        if millis.checked_rem(3_600_000) != Some(0) {
+            return None;
+        }
+        u32::try_from(millis.checked_div(3_600_000)?).ok()
+    }
 }
 
 impl Default for Agreement {
@@ -105,12 +124,14 @@ impl Default for Agreement {
             reads: Vec::new(),
             writes: Vec::new(),
             discard: false,
-            discard_window_hours: 24,
+            discard_window: ferrohealth_config::units::Duration::from_hours(24),
             ehdsi_service: None,
             caller_rate: None,
             opt_out_override: false,
             access_class: None,
-            chained_log_retention_years: None,
+            chained_log_retention: None,
+            discard_window_hours: ferrohealth_config::removed::Removed::default(),
+            chained_log_retention_years: ferrohealth_config::removed::Removed::default(),
         }
     }
 }
@@ -305,6 +326,16 @@ pub fn errors(
 
 /// The rules every agreement is held to.
 fn common(agreement: &Agreement, auth: &AuthSection, name: &str, errors: &mut Vec<String>) {
+    if agreement.discard
+        && agreement
+            .discard_window_hours()
+            .is_none_or(|hours| hours == 0)
+    {
+        errors.push(format!(
+            "{name} sets discard_window = \"{}\", which is no whole number of hours, such as \"24h\"",
+            agreement.discard_window
+        ));
+    }
     if agreement.caller_rate.is_none() {
         errors.push(format!("{name} needs caller_rate"));
     }
@@ -404,20 +435,25 @@ pub fn is_contact_point(resolved: &Resolved, issuer: &str) -> bool {
 /// A `chained` agreement declares a requester log retention at least the
 /// holder's.
 fn chained(agreement: &Agreement, holder: Retention, name: &str, errors: &mut Vec<String>) {
-    let Some(years) = agreement.chained_log_retention_years else {
-        errors.push(format!(
-            "{name} is chained and needs chained_log_retention_years"
-        ));
+    use crate::config::retention::RetentionPeriod;
+    let Some(period) = agreement.chained_log_retention else {
+        errors.push(format!("{name} is chained and needs chained_log_retention"));
         return;
     };
-    let covers = match holder {
-        Retention::Forever => false,
-        Retention::Years(kept) => years >= kept,
-        Retention::Days(kept) => u64::from(years) * 365 >= u64::from(kept),
+    let covers = match (period, holder) {
+        (_, Retention::Forever) => false,
+        (RetentionPeriod::Years(years), Retention::Years(kept)) => years >= kept,
+        (RetentionPeriod::Years(years), Retention::Days(kept)) => {
+            u64::from(years) * 365 >= u64::from(kept)
+        }
+        (RetentionPeriod::Days(days), Retention::Years(kept)) => {
+            u64::from(days) >= u64::from(kept) * 366
+        }
+        (RetentionPeriod::Days(days), Retention::Days(kept)) => days >= kept,
     };
     if !covers {
         errors.push(format!(
-            "{name} keeps the requester's log {years} years, shorter than this node's \
+            "{name} keeps the requester's log for \"{period}\", shorter than this node's \
              audit.store {}",
             holder.describe()
         ));

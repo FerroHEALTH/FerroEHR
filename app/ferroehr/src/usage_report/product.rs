@@ -190,8 +190,8 @@ pub fn grouping(base_path: &str, route: Option<&str>) -> Option<Key> {
 pub fn api_mounts(config: &FerroEhrConfig) -> Vec<String> {
     let server = config.server.base_path.as_str();
     vec![
-        format!("{server}{}", config.rest.base_path),
-        format!("{server}{}", config.rest.extensions_path()),
+        format!("{server}{}", config.api.base_path),
+        format!("{server}{}", config.api.extensions_path()),
     ]
 }
 
@@ -425,7 +425,7 @@ mod tests {
         );
         config.server.base_path =
             ferrohealth_server::section::BasePath::new("/edge").expect("a base path");
-        config.rest.base_path = "/ferroehr/ehr/v1".to_owned();
+        config.api.base_path = "/ferroehr/ehr/v1".to_owned();
         assert_eq!(
             api_mounts(&config),
             [

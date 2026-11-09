@@ -624,19 +624,19 @@ spec:
             # none, so the mounted ferroehr.toml is named here.
             - name: FERROEHR_CONFIG
               value: /etc/ferroehr/ferroehr.toml
-            - name: FERROEHR__DB__URL_FILE
+            - name: FERROEHR__DATABASE__URL_FILE
               value: "/etc/ferroehr-secrets/db.url"
-            - name: FERROEHR__STORAGE__PARTY__URL_FILE
+            - name: FERROEHR__DATABASE__PARTY__URL_FILE
               value: "/etc/ferroehr-secrets/storage.party.url"
-            - name: FERROEHR__STORAGE__MIGRATE__PARTY__URL_FILE
+            - name: FERROEHR__DATABASE__PARTY__MIGRATE_URL_FILE
               value: "/etc/ferroehr-secrets/storage.migrate.party.url"
-            - name: FERROEHR__STORAGE__AUDIT__URL_FILE
+            - name: FERROEHR__DATABASE__AUDIT__URL_FILE
               value: "/etc/ferroehr-secrets/storage.audit.url"
-            - name: FERROEHR__STORAGE__MIGRATE__AUDIT__URL_FILE
+            - name: FERROEHR__DATABASE__AUDIT__MIGRATE_URL_FILE
               value: "/etc/ferroehr-secrets/storage.migrate.audit.url"
-            - name: FERROEHR__DB__MIGRATE_URL_FILE
+            - name: FERROEHR__DATABASE__MIGRATE_URL_FILE
               value: "/etc/ferroehr-secrets/db.migrate_url"
-            - name: FERROEHR__EHR_INDEX__OAUTH__CLIENT_SECRET
+            - name: FERROEHR__PIXM__OAUTH__CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   key: client-secret
@@ -728,39 +728,39 @@ spec:
             # (https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
             defaultMode: 0440
             sources:
-              # The operator's Secret, projected as the file FERROEHR__DB__URL_FILE
+              # The operator's Secret, projected as the file FERROEHR__DATABASE__URL_FILE
               # points at. Its key name is theirs (database.existingSecretKey);
               # only the mounted PATH is fixed.
               - secret:
                   name: ferroehr-db-clinical
                   items:
-                    - key: FERROEHR__DB__URL
+                    - key: FERROEHR__DATABASE__URL
                       path: db.url
               # One storage domain's own Secret, a different credential from the
               # shared DSN above and projected as its own file.
               - secret:
                   name: ferroehr-db-party
                   items:
-                    - key: FERROEHR__STORAGE__PARTY__URL
+                    - key: FERROEHR__DATABASE__PARTY__URL
                       path: storage.party.url
               # The migration credential of the database this domain lives in.
               - secret:
                   name: ferroehr-db-party-migrate
                   items:
-                    - key: FERROEHR__STORAGE__MIGRATE__PARTY__URL
+                    - key: FERROEHR__DATABASE__PARTY__MIGRATE_URL
                       path: storage.migrate.party.url
               # One storage domain's own Secret, a different credential from the
               # shared DSN above and projected as its own file.
               - secret:
                   name: ferroehr-db-audit
                   items:
-                    - key: FERROEHR__STORAGE__AUDIT__URL
+                    - key: FERROEHR__DATABASE__AUDIT__URL
                       path: storage.audit.url
               # The migration credential of the database this domain lives in.
               - secret:
                   name: ferroehr-db-audit-migrate
                   items:
-                    - key: FERROEHR__STORAGE__MIGRATE__AUDIT__URL
+                    - key: FERROEHR__DATABASE__AUDIT__MIGRATE_URL
                       path: storage.migrate.audit.url
               # The schema-preparation Secret — usually the same credential the
               # migration Job carries, which is why it is a third source rather
@@ -768,7 +768,7 @@ spec:
               - secret:
                   name: ferroehr-db-migrate
                   items:
-                    - key: FERROEHR__DB__MIGRATE_URL
+                    - key: FERROEHR__DATABASE__MIGRATE_URL
                       path: db.migrate_url
         - name: db-ca
           configMap:
@@ -943,18 +943,18 @@ spec:
             # The migrator DSN, as a mounted file rather than an environment
             # value (readable through /proc/<pid>/environ and inherited by every
             # child process — OWASP Kubernetes Security Cheat Sheet).
-            - name: FERROEHR__DB__URL_FILE
+            - name: FERROEHR__DATABASE__URL_FILE
               value: "/etc/ferroehr-secrets/db.url"
             # The migrator of the database this domain lives in: the Job applies
             # the schema in every database the configuration places a domain in.
-            - name: FERROEHR__STORAGE__MIGRATE__PARTY__URL_FILE
+            - name: FERROEHR__DATABASE__PARTY__MIGRATE_URL_FILE
               value: "/etc/ferroehr-secrets/storage.migrate.party.url"
             # The migrator of the database this domain lives in: the Job applies
             # the schema in every database the configuration places a domain in.
-            - name: FERROEHR__STORAGE__MIGRATE__AUDIT__URL_FILE
+            - name: FERROEHR__DATABASE__AUDIT__MIGRATE_URL_FILE
               value: "/etc/ferroehr-secrets/storage.migrate.audit.url"
             # This pod's job IS the DDL, whatever the server's posture is.
-            - name: FERROEHR__DB__MIGRATE
+            - name: FERROEHR__DATABASE__MIGRATIONS
               value: apply
           volumeMounts:
             - name: tmp
@@ -977,17 +977,17 @@ spec:
               - secret:
                   name: ferroehr-db-migrate
                   items:
-                    - key: FERROEHR__DB__MIGRATE_URL
+                    - key: FERROEHR__DATABASE__MIGRATE_URL
                       path: db.url
               - secret:
                   name: ferroehr-db-party-migrate
                   items:
-                    - key: FERROEHR__STORAGE__MIGRATE__PARTY__URL
+                    - key: FERROEHR__DATABASE__PARTY__MIGRATE_URL
                       path: storage.migrate.party.url
               - secret:
                   name: ferroehr-db-audit-migrate
                   items:
-                    - key: FERROEHR__STORAGE__MIGRATE__AUDIT__URL
+                    - key: FERROEHR__DATABASE__AUDIT__MIGRATE_URL
                       path: storage.migrate.audit.url
         - name: db-ca
           configMap:

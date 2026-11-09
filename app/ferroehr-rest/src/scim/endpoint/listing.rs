@@ -88,7 +88,7 @@ impl Listing {
         Ok(Self {
             schema,
             base_url: scim.base_url().unwrap_or_default(),
-            max_results: scim.max_results,
+            max_results: scim.filter_max_results,
             filter: FilterSupport::equality_conjunction(urn, attributes)
                 .map_err(|error| error.to_string())?,
         })

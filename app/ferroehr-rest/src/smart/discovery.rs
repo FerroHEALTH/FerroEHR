@@ -52,7 +52,8 @@ const CONTEXT_OPENEHR_EHR: &str = "context-openehr-ehr";
 const OPENEHR_PERMISSION_V1: &str = "openehr-permission-v1";
 
 /// The capability of the base64 JSON launch parameter (master09 §Launch
-/// Parameter as a Token).
+/// Parameter as a Token), which a deployment adds through `auth.capabilities`.
+#[cfg(test)]
 const LAUNCH_BASE64_JSON: &str = "launch-base64-json";
 
 /// What FerroEHR adds to the document the crate builds from the issuer's
@@ -67,19 +68,17 @@ const LAUNCH_BASE64_JSON: &str = "launch-base64-json";
 /// because a `user/` grant counts, and `permission-patient` only when an issuer
 /// is bound so a `patient/` grant counts (SMART App Launch 2.2.0, Conformance,
 /// §Capabilities: a capability is one "that the server supports"). The
-/// experimental pair rides its flags, and `[auth] capabilities` are added.
+/// episode capability rides its flag, and `[auth] capabilities` are added
+/// (`launch-base64-json` among them when a deployment advertises it).
 #[must_use]
 pub fn options(cfg: &AppConfig) -> SmartOptions {
-    let smart = &cfg.smart;
+    let smart = &cfg.auth.smart;
     let mut capabilities = vec![
         CONTEXT_OPENEHR_EHR.to_owned(),
         OPENEHR_PERMISSION_V1.to_owned(),
     ];
-    if smart.episode.enabled {
+    if smart.episode_launch {
         capabilities.push(OPENEHR_EPISODE_CAPABILITY.to_owned());
-    }
-    if smart.launch_base64_json {
-        capabilities.push(LAUNCH_BASE64_JSON.to_owned());
     }
     for added in &cfg.auth.shared.capabilities {
         if !capabilities.contains(added) {
@@ -94,7 +93,7 @@ pub fn options(cfg: &AppConfig) -> SmartOptions {
     services.insert(
         OPENEHR_REST_SERVICE.to_owned(),
         serde_json::json!({
-            "baseUrl": absolute_base(smart, &cfg.rest.base_path),
+            "baseUrl": absolute_base(smart, &cfg.api.base_path),
             "description": "The openEHR REST API baseUrl",
         }),
     );
@@ -144,7 +143,7 @@ fn scopes_supported(cfg: &AppConfig) -> Vec<String> {
     .iter()
     .map(|scope| (*scope).to_owned())
     .collect();
-    if !cfg.smart.patient_issuers.is_empty() {
+    if !cfg.auth.smart.patient_issuers.is_empty() {
         scopes.extend(
             [
                 "launch/patient",
@@ -155,7 +154,7 @@ fn scopes_supported(cfg: &AppConfig) -> Vec<String> {
             .map(|scope| (*scope).to_owned()),
         );
     }
-    if cfg.smart.episode.enabled {
+    if cfg.auth.smart.episode_launch {
         scopes.push("launch/episode".to_owned());
     }
     scopes
@@ -177,10 +176,10 @@ pub fn discovery_path(cfg: &SmartConfig, rest_root: &str) -> String {
     format!("{base}/.well-known/smart-configuration")
 }
 
-/// Whether the document is served: `smart.enabled` with authentication on and
+/// Whether the document is served: `auth.smart.discovery` with authentication on and
 /// an `[auth]` issuer whose metadata the server reads at boot.
 fn served(cfg: &AppConfig) -> bool {
-    cfg.smart.enabled
+    cfg.auth.smart.discovery
         && cfg.auth.shared.enabled
         && ferroehr::config::auth::has_bearer(&cfg.auth.shared)
 }
@@ -209,7 +208,7 @@ pub fn router(cfg: &AppConfig, rest_root: &str, authenticator: &Authenticator) -
     let body = Bytes::from(document.to_string());
     Router::new()
         .route(
-            &discovery_path(&cfg.smart, rest_root),
+            &discovery_path(&cfg.auth.smart, rest_root),
             get(smart_configuration),
         )
         .layer(Extension(Document(Arc::new(body))))
@@ -303,7 +302,7 @@ pub(crate) fn openapi(cfg: &AppConfig, rest_root: &str) -> utoipa::openapi::Open
     crate::extensions::openapi::rehome_path(
         &mut doc,
         "/ferroehr/rest/.well-known/smart-configuration",
-        &discovery_path(&cfg.smart, rest_root),
+        &discovery_path(&cfg.auth.smart, rest_root),
     );
     doc
 }
@@ -313,14 +312,13 @@ mod tests {
     use super::*;
 
     fn enabled_cfg() -> AppConfig {
-        AppConfig {
-            smart: SmartConfig {
-                enabled: true,
-                public_base_url: Some("https://cdr.example.com".to_owned()),
-                ..SmartConfig::default()
-            },
-            ..AppConfig::default()
-        }
+        let mut cfg = AppConfig::default();
+        cfg.auth.smart = SmartConfig {
+            discovery: true,
+            public_base_url: Some("https://cdr.example.com".to_owned()),
+            ..SmartConfig::default()
+        };
+        cfg
     }
 
     #[test]
@@ -373,7 +371,7 @@ mod tests {
     #[test]
     fn a_bound_issuer_declares_the_patient_capability_and_scopes() {
         let mut cfg = enabled_cfg();
-        cfg.smart.patient_issuers = vec!["https://as.example".to_owned()];
+        cfg.auth.smart.patient_issuers = vec!["https://as.example".to_owned()];
         let options = options(&cfg);
         assert!(options.permissions.contains(&PermissionCapability::Patient));
         assert!(
@@ -386,8 +384,8 @@ mod tests {
     #[test]
     fn experimental_capabilities_gated_on_flags() {
         let mut cfg = enabled_cfg();
-        cfg.smart.episode.enabled = true;
-        cfg.smart.launch_base64_json = true;
+        cfg.auth.smart.episode_launch = true;
+        cfg.auth.shared.capabilities = vec![LAUNCH_BASE64_JSON.to_owned()];
         let options = options(&cfg);
         assert!(
             options

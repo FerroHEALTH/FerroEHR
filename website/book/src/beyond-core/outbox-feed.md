@@ -58,9 +58,9 @@ The feed is off until you name a reader. The keys live under `[outbox]`:
 
 | Key | Environment variable | Default | Meaning |
 |---|---|---|---|
-| `readers` | `FERROEHR__OUTBOX__READERS` | `[]` | the readers of the feed, each matching `^[a-z][a-z0-9-]{0,62}$` |
-| `retention_days` | `FERROEHR__OUTBOX__RETENTION_DAYS` | `7` | how long an acknowledged row is kept after its commit |
-| `prune_interval_secs` | `FERROEHR__OUTBOX__PRUNE_INTERVAL_SECS` | `3600` | how often the prune runs |
+| `readers` | `FERROEHR__RECORD__CHANGE_FEED__READERS` | `[]` | the readers of the feed, each matching `^[a-z][a-z0-9-]{0,62}$` |
+| `retention_days` | `FERROEHR__RECORD__CHANGE_FEED__RETENTION` | `7` | how long an acknowledged row is kept after its commit |
+| `prune_interval_secs` | `FERROEHR__RECORD__CHANGE_FEED__PRUNE_INTERVAL` | `3600` | how often the prune runs |
 
 With no reader named, no commit writes an outbox row. At every boot the server
 registers each named reader and marks every reader the list no longer names

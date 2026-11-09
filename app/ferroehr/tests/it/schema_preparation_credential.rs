@@ -20,7 +20,7 @@
 
 use crate::fixtures::{throwaway_password, with_role};
 use ferroehr::config::deployment::DeploymentProfile;
-use ferroehr::db::domain::{Domain, DomainDsn, StorageConfig};
+use ferroehr::db::domain::{Domain, DomainDsn};
 use ferroehr::db::{DbConfig, DbError, MigrationMode};
 use ferrohealth_secret::secret_url::SecretUrl;
 
@@ -69,7 +69,7 @@ async fn migrator_dsn(db: &testkit::TestDb) -> String {
 /// domain plus the one that prepares the schema.
 ///
 /// This is what the book recommends and the chart configures, and until
-/// `[db] migrate_url` existed it could not get past boot at all: `verify`
+/// `[database] migrate_url` existed it could not get past boot at all: `verify`
 /// failed on the FIRST migration set, because a role that is a member of
 /// `ferroehr_clinical` and nothing else cannot read `ext._sqlx_migrations`.
 #[tokio::test]
@@ -78,17 +78,17 @@ async fn the_boot_sequence_prepares_the_schema_on_separated_credentials() {
     let settings = DbConfig {
         url: SecretUrl::new(login_role(&db, "prepclin", "ferroehr_clinical").await.1),
         migrate_url: Some(SecretUrl::new(migrator_dsn(&db).await)),
-        migrate: MigrationMode::Verify,
+        migrations: MigrationMode::Verify,
         ..DbConfig::default()
     };
-    let storage = StorageConfig {
+    let storage = DbConfig {
         party: DomainDsn {
             url: Some(SecretUrl::new(
                 login_role(&db, "prepdemo", "ferroehr_party").await.1,
             )),
-            url_file: None,
+            ..Default::default()
         },
-        ..StorageConfig::default()
+        ..settings.clone()
     };
     assert!(
         storage.is_separated(Domain::Party) && settings.migrator_is_separated(),
@@ -101,15 +101,15 @@ async fn the_boot_sequence_prepares_the_schema_on_separated_credentials() {
     );
     assert_ne!(
         settings.migrate_dsn(),
-        storage.dsn(Domain::Party, &settings),
+        storage.dsn(Domain::Party),
         "nor as the party one"
     );
 
     // The binary's own sequence: every runtime pool, then preparation.
-    let pools = ferroehr::db::connect_domains(&settings, &storage)
+    let pools = ferroehr::db::connect_domains(&storage)
         .await
         .expect("the domain pools connect");
-    ferroehr::db::prepare(&settings, &storage, &pools, DeploymentProfile::Sandbox)
+    ferroehr::db::prepare(&storage, &pools, DeploymentProfile::Sandbox)
         .await
         .expect("`verify` prepares the schema on the migration credential");
 
@@ -117,10 +117,10 @@ async fn the_boot_sequence_prepares_the_schema_on_separated_credentials() {
     // is the bootstrap statements plus five no-op migrator runs, all of which
     // the migration credential may issue and neither runtime one may.
     let applying = DbConfig {
-        migrate: MigrationMode::Apply,
-        ..settings
+        migrations: MigrationMode::Apply,
+        ..storage.clone()
     };
-    ferroehr::db::prepare(&applying, &storage, &pools, DeploymentProfile::Sandbox)
+    ferroehr::db::prepare(&applying, &pools, DeploymentProfile::Sandbox)
         .await
         .expect("`apply` prepares the schema on the migration credential");
 
@@ -146,7 +146,7 @@ async fn the_boot_sequence_prepares_the_schema_on_separated_credentials() {
 async fn a_single_dsn_deployment_prepares_the_schema_as_before() {
     let db = testkit::db().await.expect("testkit database");
     let settings = DbConfig {
-        migrate: MigrationMode::Verify,
+        migrations: MigrationMode::Verify,
         ..DbConfig::new(db.url())
     };
     assert!(
@@ -159,30 +159,20 @@ async fn a_single_dsn_deployment_prepares_the_schema_as_before() {
         "and preparation then runs on the clinical DSN"
     );
 
-    let pools = ferroehr::db::connect_domains(&settings, &StorageConfig::default())
+    let pools = ferroehr::db::connect_domains(&settings)
         .await
         .expect("the pools connect");
-    ferroehr::db::prepare(
-        &settings,
-        &StorageConfig::default(),
-        &pools,
-        DeploymentProfile::Sandbox,
-    )
-    .await
-    .expect("`verify` prepares the schema on the one DSN");
+    ferroehr::db::prepare(&settings, &pools, DeploymentProfile::Sandbox)
+        .await
+        .expect("`verify` prepares the schema on the one DSN");
 
     let applying = DbConfig {
-        migrate: MigrationMode::Apply,
+        migrations: MigrationMode::Apply,
         ..settings
     };
-    ferroehr::db::prepare(
-        &applying,
-        &StorageConfig::default(),
-        &pools,
-        DeploymentProfile::Sandbox,
-    )
-    .await
-    .expect("`apply` prepares the schema on the one DSN");
+    ferroehr::db::prepare(&applying, &pools, DeploymentProfile::Sandbox)
+        .await
+        .expect("`apply` prepares the schema on the one DSN");
 }
 
 /// A credential that cannot read a migration set is told which schema and
@@ -197,11 +187,11 @@ async fn a_refused_bookkeeping_table_names_the_schema_and_the_role() {
     let (role, dsn) = login_role(&db, "prepnoext", "ferroehr_clinical").await;
     let settings = DbConfig {
         migrate_url: Some(SecretUrl::new(dsn.clone())),
-        migrate: MigrationMode::Verify,
+        migrations: MigrationMode::Verify,
         ..DbConfig::new(dsn)
     };
 
-    let error = ferroehr::db::verify_schema(&settings, &StorageConfig::default())
+    let error = ferroehr::db::verify_schema(&settings)
         .await
         .expect_err("a clinical credential cannot read every migration set");
 
@@ -253,11 +243,11 @@ async fn a_refused_schema_names_the_schema_and_the_role() {
     .expect("grant the two sets this credential is allowed to see");
     let settings = DbConfig {
         migrate_url: Some(SecretUrl::new(dsn.clone())),
-        migrate: MigrationMode::Verify,
+        migrations: MigrationMode::Verify,
         ..DbConfig::new(dsn)
     };
 
-    let error = ferroehr::db::verify_schema(&settings, &StorageConfig::default())
+    let error = ferroehr::db::verify_schema(&settings)
         .await
         .expect_err("a clinical credential cannot enter the party schema");
 

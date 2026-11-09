@@ -137,7 +137,7 @@ pub const TEMPLATE: &str = "template";
 /// `unclassified` (EHDS Annex II 3.4).
 pub const CATEGORY: &str = "category";
 /// The resource attribute naming an origin of the data, as `version.origins`
-/// records it (EHDS Annex II 3.4, `[origins]`).
+/// records it (EHDS Annex II 3.4, `[[authz.origin]]`).
 pub const ORIGIN: &str = "origin";
 /// The context attribute naming the generated operation.
 pub const OPERATION_ID: &str = "operation_id";

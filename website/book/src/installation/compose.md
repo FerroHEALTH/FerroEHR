@@ -402,7 +402,7 @@ overlay binds each of the four before you sign in. The realm import gives
 every user a fixed `id`, which Keycloak puts in `sub`, and the one-shot
 `ferroehr-provision-keycloak` creates a SCIM User for each with that id as its
 login key, through a second `[[scim.client]]` of the development issuer
-(`FERROEHR__SCIM__CLIENT__1__*`) whose `binding_issuer` is the realm's
+(`FERROEHR__AUTH__SCIM__CLIENT__1__*`) whose `binding_issuer` is the realm's
 identifier issuer, `urn:ferroehr:keycloak-quickstart-login`. The service
 account acts for nobody, so it binds to no party.
 
@@ -430,7 +430,7 @@ A service with no user behind it takes the client-credentials grant with
 `ferroehr-service`. Its service account holds `USER`, so the token reaches the
 clinical API and the admin routes refuse it with `403`. Its `system/aql-*`
 grant counts because the overlay names the client in `[smart] backend_clients`
-(`FERROEHR__SMART__BACKEND_CLIENTS`). It creates EHRs because the overlay
+(`FERROEHR__AUTH__SMART__BACKEND_CLIENTS`). It creates EHRs because the overlay
 declares it as an `[[authz.system_client]]` (`FERROEHR__AUTHZ__SYSTEM_CLIENT__0__*`),
 the only way a caller acting for no person commits; it lists no `writes`, so it
 commits no COMPOSITION:
@@ -457,7 +457,7 @@ JVM, no database, one distroless image. The overlay
 `docker-compose.terminology.yml` starts it beside the CDR and switches the CDR's
 terminology server on, so archetype value-set bindings resolve at commit and
 AQL `TERMINOLOGY()` expands through it. It also switches on the read-only
-`/terminology/*` extension API (`FERROEHR__TERMINOLOGY__API_ENABLED`, off by
+`/terminology/*` extension API (`FERROEHR__API__TERMINOLOGY`, off by
 default): a term, subsumption or value-set call there for a terminology the
 bundled openEHR terminology does not carry is answered by FerroTERM, while
 listing and describing terminologies stays with the bundle:
@@ -511,7 +511,7 @@ Three things the operator owns:
   commercial licence. Its README says which is which.
 
 The CDR keeps its shipped fail-open posture: a binding the server cannot resolve
-is accepted. `FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR=true` turns an
+is accepted. `FERROEHR__TERMINOLOGY__ON_ERROR=true` turns an
 unreachable server into a `422` refusal instead; the
 [terminology page](../beyond-core/terminology.md#when-the-terminology-server-cannot-answer)
 explains both. A code the server resolves as outside its value set is refused
@@ -538,15 +538,15 @@ you ask for them:
   server at it and bring the profile up:
 
   ```shell
-  export FERROEHR__MULTIMEDIA__ENABLED=true
-  export FERROEHR__MULTIMEDIA__ENDPOINT=http://seaweedfs:8333
-  export FERROEHR__MULTIMEDIA__BUCKET=openehr-multimedia
-  export FERROEHR__MULTIMEDIA__ALLOW_HTTP=true    # dev only; production S3 is HTTPS
+  export FERROEHR__RECORD__MULTIMEDIA__ENABLED=true
+  export FERROEHR__RECORD__MULTIMEDIA__URL=http://seaweedfs:8333
+  export FERROEHR__RECORD__MULTIMEDIA__BUCKET=openehr-multimedia
+  export FERROEHR__RECORD__MULTIMEDIA__ALLOW_HTTP=true    # dev only; production S3 is HTTPS
 
   docker compose --profile s3 up -d --wait ferroehr seaweedfs
   ```
 
-  The compose file passes the whole `FERROEHR__MULTIMEDIA__*` set through from
+  The compose file passes the whole `FERROEHR__RECORD__MULTIMEDIA__*` set through from
   your shell, so there is no file to edit, and `seaweedfs-init` creates the
   bucket by issuing an idempotent `CreateBucket` against the gateway, which
   ships with none, and answers an S3 write into a missing bucket with
@@ -555,7 +555,7 @@ you ask for them:
   drift.
 
   To turn it off again, `unset` those variables (or set
-  `FERROEHR__MULTIMEDIA__ENABLED=false`) and re-up: an unset variable is
+  `FERROEHR__RECORD__MULTIMEDIA__ENABLED=false`) and re-up: an unset variable is
   *removed* from the container's environment rather than passed as empty, so
   the server falls back to its own default of `enabled = false`.
 
@@ -680,23 +680,23 @@ Set these in your shell (or an `.env` file) to retune without editing anything:
 | `POSTGRES_PASSWORD` | `postgres` | Bootstrap superuser password (init only). |
 | `FERROEHR__TELEMETRY__FORMAT` | `pretty` | Log rendering for `docker compose logs`. Set `json` for log collectors. |
 | `FERROEHR__TELEMETRY__FILTER` | `info` | Log level filter. |
-| `FERROEHR__DB__MAX_CONNECTIONS` | `10` | Server connection-pool ceiling. |
+| `FERROEHR__DATABASE__MAX_CONNECTIONS` | `10` | Server connection-pool ceiling. |
 | `FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS` | `256` | Concurrent-request bound (`503` with `Retry-After` past it). |
-| `FERROEHR__SIGNING__ENABLED` | `true` | Version signing. |
+| `FERROEHR__RECORD__SIGNING__ENABLED` | `true` | Version signing. |
 
 A commercial licence token is not a passthrough variable: mount the signed
 token file into the server container read-only and name its path with
-`FERROEHR__LICENCE__FILE` (the compose file carries a commented example beside
-`FERROEHR__SIGNING__ENABLED`). Unset, the server runs under the embedded
+`FERROEHR__DEPLOYMENT__LICENCE_FILE` (the compose file carries a commented example beside
+`FERROEHR__RECORD__SIGNING__ENABLED`). Unset, the server runs under the embedded
 non-commercial grant and reports which on `GET /management/status`.
 
 The Keycloak overlay adds `KEYCLOAK_PORT` (default `8081`),
 `KEYCLOAK_HOSTNAME`, `KEYCLOAK_ADMIN_USER` and `KEYCLOAK_ADMIN_PASSWORD` (both
 `admin`); the observability overlay adds `GRAFANA_PORT` (default `3000`). The
-`FERROEHR__MULTIMEDIA__*` set is declared with no defaults on purpose, so an
+`FERROEHR__RECORD__MULTIMEDIA__*` set is declared with no defaults on purpose, so an
 unset key reaches the server as absent rather than as an empty string.
 
-The server container is passed `FERROEHR__DB__URL` (assembled from the database
+The server container is passed `FERROEHR__DATABASE__URL` (assembled from the database
 variables), and its configuration file is the inline quickstart config,
 delivered to `/etc/ferroehr/ferroehr.toml`, which `FERROEHR_CONFIG` names.
 Any other setting from the [configuration reference](configuration.md) can be

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[signing]` section — VERSION signing configuration.
+//! The `[record.signing]` section — VERSION signing configuration.
 //!
 //! No openEHR spec governs the configuration surface — our own design. This is
 //! a field of the one config tree ([`crate::config::FerroEhrConfig`]); no loader of its own. The modes it
@@ -37,7 +37,7 @@ pub enum Mode {
 /// signatures only (a client-supplied signature is stored verbatim and never
 /// re-verified; RM common master06 §Digital Signature).
 ///
-/// Left unset in `[signing]`, the effective policy is resolved by
+/// Left unset in `[record.signing]`, the effective policy is resolved by
 /// [`SigningConfig::effective_verify_on_read`]: **`strict` when signing is
 /// enabled** and `off` when signing is disabled. No openEHR spec governs
 /// read-time (re-)verification timing — master06 frames verification as the
@@ -71,7 +71,7 @@ pub struct SigningConfig {
     pub mode: Mode,
     /// Armored RFC 4880 secret key; **required for `pgp` mode** (validated at
     /// boot, fail-closed).
-    pub key_path: Option<PathBuf>,
+    pub key_file: Option<PathBuf>,
     /// Key passphrase, kept in [`ferrohealth_secret::secret::Secret`] and redacted from any
     /// config snapshot.
     pub key_passphrase: Option<Secret>,
@@ -86,7 +86,7 @@ pub struct SigningConfig {
     /// that cannot be re-issued — so keeping the retired key is the only way
     /// history stays verifiable across a rotation. These are public keys: a
     /// retired key can verify and can never sign again.
-    pub retired_key_paths: Vec<PathBuf>,
+    pub retired_key_files: Vec<PathBuf>,
     /// Read-time verification policy: `off` | `warn` | `strict`. **Unset**
     /// (the default) resolves via [`Self::effective_verify_on_read`] to `strict`
     /// when signing is enabled — the explicit "sign but never check" state is
@@ -99,10 +99,10 @@ impl Default for SigningConfig {
         Self {
             enabled: true,
             mode: Mode::default(),
-            key_path: None,
+            key_file: None,
             key_passphrase: None,
             key_passphrase_file: None,
-            retired_key_paths: Vec::new(),
+            retired_key_files: Vec::new(),
             verify_on_read: None,
         }
     }
@@ -145,7 +145,7 @@ mod tests {
         // strict for a signing-enabled server (#273 — our-own-design hardening).
         assert_eq!(c.verify_on_read, None);
         assert_eq!(c.effective_verify_on_read(), VerifyOnRead::Strict);
-        assert!(c.key_path.is_none());
+        assert!(c.key_file.is_none());
     }
 
     #[test]

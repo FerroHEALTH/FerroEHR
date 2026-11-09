@@ -26,7 +26,7 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::aql::subject::EhrSubject;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::config::rest::RestConfig;
+use ferroehr::config::rest::ApiConfig;
 use ferroehr::error::ServiceError;
 use ferroehr::service::FerroEhrService;
 use ferroehr::storage::version_repo::meta::VersionContent;
@@ -133,8 +133,8 @@ impl PolicyEngine for PermitAll {
 fn rest_config() -> AppConfig {
     AppConfig {
         server: common::server(),
-        rest: RestConfig {
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
+        api: ApiConfig {
+            openapi_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
         auth: common::issuer_auth(ISSUER, AUDIENCE),
@@ -213,7 +213,7 @@ fn authz(abac_enabled: bool) -> Option<Arc<AuthzHandle>> {
     cfg.abac.enabled = abac_enabled;
     let engine: Option<Arc<dyn PolicyEngine>> =
         abac_enabled.then(|| -> Arc<dyn PolicyEngine> { Arc::new(PermitAll) });
-    AuthzHandle::build(&cfg, &rest_config().rest.base_path, engine, resolvers()).map(Arc::new)
+    AuthzHandle::build(&cfg, &rest_config().api.base_path, engine, resolvers()).map(Arc::new)
 }
 
 /// An ABAC handle with a caller-chosen PDP engine and resolvers.
@@ -223,7 +223,7 @@ fn authz_with(
 ) -> Option<Arc<AuthzHandle>> {
     let mut cfg = AuthzConfig::default();
     cfg.abac.enabled = true;
-    AuthzHandle::build(&cfg, &rest_config().rest.base_path, Some(engine), resolvers).map(Arc::new)
+    AuthzHandle::build(&cfg, &rest_config().api.base_path, Some(engine), resolvers).map(Arc::new)
 }
 
 /// A real service over a fresh DB, optionally wired with an ATNA audit sender.
@@ -291,22 +291,20 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
         enabled: true,
         store: StoreConfig {
             enabled: false,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
-        syslog: SyslogConfig {
-            enabled: true,
-            host: "127.0.0.1".to_owned(),
-            port,
+        syslog: Some(SyslogConfig {
+            url: format!("tls://127.0.0.1:{port}"),
             tls: ferrohealth_server::tls_client::TlsClientSection {
                 trust_roots_file: Some(socket.ca_file.clone()),
                 ..ferrohealth_server::tls_client::TlsClientSection::default()
             },
             ..SyslogConfig::default()
-        },
+        }),
         suppress_login_events: true,
         fail_mode: FailMode::Open,
         queue_capacity: 64,
@@ -579,11 +577,11 @@ async fn the_accessing_organisation_reaches_the_stored_record() {
         enabled: true,
         store: StoreConfig {
             enabled: true,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
         suppress_login_events: true,
         fail_mode: FailMode::Open,
@@ -655,11 +653,11 @@ async fn the_accessing_organisation_is_recorded_with_the_abac_gate_off() {
         enabled: true,
         store: StoreConfig {
             enabled: true,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
         suppress_login_events: true,
         fail_mode: FailMode::Open,
@@ -1187,7 +1185,7 @@ async fn db_resolved_apps(patient_namespace: Option<&str>) -> (testkit::TestDb, 
     cfg.abac.patient_namespace = patient_namespace.map(str::to_owned);
     let handle = AuthzHandle::build(
         &cfg,
-        &rest_config().rest.base_path,
+        &rest_config().api.base_path,
         Some(Arc::new(PermitAll)),
         resolvers,
     )
@@ -1275,7 +1273,7 @@ async fn a_patient_keyed_rule_applies_to_the_touched_subjects_without_a_claim() 
     cfg.abac.patient_claim = String::new();
     let handle = AuthzHandle::build(
         &cfg,
-        &rest_config().rest.base_path,
+        &rest_config().api.base_path,
         Some(Arc::new(DenyOwnPatientQueries)),
         resolvers(),
     )

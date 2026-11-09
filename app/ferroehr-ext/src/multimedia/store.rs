@@ -87,7 +87,7 @@ impl BlobStore {
             // refusal names the scheme alone, so it can never quote `userinfo`.
             if !matches!(endpoint.scheme(), "http" | "https") {
                 return Err(MultimediaError::Config(format!(
-                    "multimedia.endpoint has scheme {:?} — an S3 endpoint must be http or https",
+                    "record.multimedia.url has scheme {:?} — an S3 endpoint must be http or https",
                     endpoint.scheme()
                 )));
             }

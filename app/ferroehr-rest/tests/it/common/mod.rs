@@ -18,7 +18,7 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::auth_section::AuthConfig;
-use ferroehr::config::rest::{AdminConfig, RestConfig};
+use ferroehr::config::rest::ApiConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
@@ -191,19 +191,19 @@ pub(crate) fn server() -> ferrohealth_server::section::ServerSection {
 /// base path, no Swagger UI, no permissive CORS, and the ADMIN group gated by
 /// `admin_enabled`.
 pub(crate) fn api_config(admin_enabled: bool) -> AppConfig {
-    AppConfig {
-        server: server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
+    {
+        let mut c = AppConfig {
+            server: server(),
+            api: ApiConfig {
+                base_path: BASE.to_owned(),
+                openapi_ui: ferroehr::config::management::AccessLevel::Off,
+                ..Default::default()
+            },
+            auth: auth_off(),
             ..Default::default()
-        },
-        auth: auth_off(),
-        admin: AdminConfig {
-            enabled: admin_enabled,
-        },
-        ..Default::default()
+        };
+        c.api.admin = admin_enabled;
+        c
     }
 }
 
@@ -520,11 +520,11 @@ pub(crate) fn local_audit() -> ferroehr::system_log::config::AuditConfig {
         enabled: true,
         store: ferroehr::system_log::config::StoreConfig {
             enabled: true,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            ..ferroehr::system_log::config::StoreConfig::default()
         },
         ..ferroehr::system_log::config::AuditConfig::default()
     }

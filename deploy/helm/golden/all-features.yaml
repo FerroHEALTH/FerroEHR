@@ -474,7 +474,7 @@ stringData:
   terminology.server.oauth.client_secret: "tx-client-secret"
   ehr_index.oauth.client_secret: "pix-client-secret"
   FERROEHR__AUDIT__FHIR_FEED__URL: "https://arr:arr-password@arr.example.com/fhir"
-  FERROEHR__MULTIMEDIA__ACCESS_KEY_ID: "AKIAEXAMPLE"
+  FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID: "AKIAEXAMPLE"
 ---
 # Source: ferroehr/templates/secret.yaml
 # Mounted config files (TOML/PEM) at /etc/ferroehr — file-shaped material an
@@ -1683,27 +1683,27 @@ spec:
             # none, so the mounted ferroehr.toml is named here.
             - name: FERROEHR_CONFIG
               value: /etc/ferroehr/ferroehr.toml
-            - name: FERROEHR__DB__URL_FILE
+            - name: FERROEHR__DATABASE__URL_FILE
               value: "/etc/ferroehr-secrets/db.url"
-            - name: FERROEHR__STORAGE__PARTY__URL_FILE
+            - name: FERROEHR__DATABASE__PARTY__URL_FILE
               value: "/etc/ferroehr-secrets/storage.party.url"
-            - name: FERROEHR__STORAGE__AUDIT__URL_FILE
+            - name: FERROEHR__DATABASE__AUDIT__URL_FILE
               value: "/etc/ferroehr-secrets/storage.audit.url"
-            - name: FERROEHR__DB__MIGRATE_URL_FILE
+            - name: FERROEHR__DATABASE__MIGRATE_URL_FILE
               value: "/etc/ferroehr-secrets/db.migrate_url"
-            - name: FERROEHR__SIGNING__KEY_PASSPHRASE_FILE
+            - name: FERROEHR__RECORD__SIGNING__KEY_PASSPHRASE_FILE
               value: "/etc/ferroehr-secrets/signing.key_passphrase"
             - name: FERROEHR__AUDIT__FHIR_FEED__URL
               valueFrom:
                 secretKeyRef:
                   name: ferroehr-env
                   key: FERROEHR__AUDIT__FHIR_FEED__URL
-            - name: FERROEHR__MULTIMEDIA__ACCESS_KEY_ID
+            - name: FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
                   name: ferroehr-env
-                  key: FERROEHR__MULTIMEDIA__ACCESS_KEY_ID
-            - name: FERROEHR__MULTIMEDIA__SECRET_ACCESS_KEY_FILE
+                  key: FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID
+            - name: FERROEHR__RECORD__MULTIMEDIA__SECRET_ACCESS_KEY_FILE
               value: "/etc/ferroehr-secrets/multimedia.secret_access_key"
           livenessProbe:
             httpGet:
@@ -1794,27 +1794,27 @@ spec:
             # (https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
             defaultMode: 0440
             sources:
-              # The operator's Secret, projected as the file FERROEHR__DB__URL_FILE
+              # The operator's Secret, projected as the file FERROEHR__DATABASE__URL_FILE
               # points at. Its key name is theirs (database.existingSecretKey);
               # only the mounted PATH is fixed.
               - secret:
                   name: ferroehr-db
                   items:
-                    - key: FERROEHR__DB__URL
+                    - key: FERROEHR__DATABASE__URL
                       path: db.url
               # One storage domain's own Secret, a different credential from the
               # shared DSN above and projected as its own file.
               - secret:
                   name: ferroehr-db-party
                   items:
-                    - key: FERROEHR__STORAGE__PARTY__URL
+                    - key: FERROEHR__DATABASE__PARTY__URL
                       path: storage.party.url
               # One storage domain's own Secret, a different credential from the
               # shared DSN above and projected as its own file.
               - secret:
                   name: ferroehr-db-audit
                   items:
-                    - key: FERROEHR__STORAGE__AUDIT__URL
+                    - key: FERROEHR__DATABASE__AUDIT__URL
                       path: storage.audit.url
               # The schema-preparation Secret — usually the same credential the
               # migration Job carries, which is why it is a third source rather
@@ -1822,7 +1822,7 @@ spec:
               - secret:
                   name: ferroehr-db-migrate
                   items:
-                    - key: FERROEHR__DB__MIGRATE_URL
+                    - key: FERROEHR__DATABASE__MIGRATE_URL
                       path: db.migrate_url
               - secret:
                   name: ferroehr-env
@@ -2120,7 +2120,7 @@ spec:
                 secretName: ferroehr-backup-clinical-dsn
                 defaultMode: 0440
                 items:
-                  - key: FERROEHR__DB__URL
+                  - key: FERROEHR__DATABASE__URL
                     path: db.url
             - name: backup
               persistentVolumeClaim:
@@ -2223,7 +2223,7 @@ spec:
                 secretName: ferroehr-backup-party-dsn
                 defaultMode: 0440
                 items:
-                  - key: FERROEHR__STORAGE__PARTY__URL
+                  - key: FERROEHR__DATABASE__PARTY__URL
                     path: db.url
             - name: backup
               persistentVolumeClaim:
@@ -2326,7 +2326,7 @@ spec:
                 secretName: ferroehr-backup-audit-dsn
                 defaultMode: 0440
                 items:
-                  - key: FERROEHR__STORAGE__AUDIT__URL
+                  - key: FERROEHR__DATABASE__AUDIT__URL
                     path: db.url
             - name: backup
               persistentVolumeClaim:
@@ -2533,10 +2533,10 @@ spec:
             # The migrator DSN, as a mounted file rather than an environment
             # value (readable through /proc/<pid>/environ and inherited by every
             # child process — OWASP Kubernetes Security Cheat Sheet).
-            - name: FERROEHR__DB__URL_FILE
+            - name: FERROEHR__DATABASE__URL_FILE
               value: "/etc/ferroehr-secrets/db.url"
             # This pod's job IS the DDL, whatever the server's posture is.
-            - name: FERROEHR__DB__MIGRATE
+            - name: FERROEHR__DATABASE__MIGRATIONS
               value: apply
           volumeMounts:
             - name: tmp
@@ -2556,6 +2556,6 @@ spec:
               - secret:
                   name: ferroehr-migrator-dsn
                   items:
-                    - key: FERROEHR__DB__URL
+                    - key: FERROEHR__DATABASE__URL
                       path: db.url
 

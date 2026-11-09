@@ -56,7 +56,6 @@ use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::time::Duration;
 
 use http::Method;
 
@@ -116,16 +115,16 @@ pub type ContentOfVersionFn =
 /// The deployment's rules for the category and origin attributes (EHDS
 /// Annex II 3.4).
 ///
-/// The category map every access is classified through, the `[origins]`
+/// The category map every access is classified through, the `[[authz.origin]]`
 /// register, and the `system_id` a direct commit by an unregistered client is
 /// stamped with.
 #[derive(Debug, Clone)]
 pub struct ContentRules {
     /// The compiled `[audit.categories]` map.
     pub categories: Classifier,
-    /// The `[origins]` register.
+    /// The `[[authz.origin]]` register.
     pub origins: OriginsConfig,
-    /// The effective openEHR `system_id` (`[rest] system_id`).
+    /// The effective openEHR `system_id` (`[api] system_id`).
     pub system_id: String,
 }
 
@@ -177,7 +176,10 @@ pub fn build_engine(config: &AbacConfig) -> Result<Option<Arc<dyn PolicyEngine>>
                 .policy_dir
                 .as_deref()
                 .ok_or_else(|| AuthzError::Load("abac.cedar.policy_dir is not set".into()))?;
-            let reload = config.cedar.reload_secs.map(Duration::from_secs);
+            let reload = config
+                .cedar
+                .reload_interval
+                .map(ferrohealth_config::units::Duration::get);
             Arc::new(CedarEngine::from_directory(request::model(), dir, reload)?)
         }
         AbacEngineKind::Remote => Arc::new(remote_pdp(config)?),
@@ -196,10 +198,10 @@ pub fn build_engine(config: &AbacConfig) -> Result<Option<Arc<dyn PolicyEngine>>
 pub fn remote_pdp(config: &AbacConfig) -> Result<RemotePdp, AuthzError> {
     let server = config
         .remote
-        .server
+        .url
         .as_ref()
         .filter(|s| !s.expose().trim().is_empty())
-        .ok_or_else(|| AuthzError::Load("abac.remote.server is not set".into()))?;
+        .ok_or_else(|| AuthzError::Load("authz.abac.remote.url is not set".into()))?;
     let server = url::Url::parse(server.expose()).map_err(|e| AuthzError::Load(Box::new(e)))?;
     let mut bindings = std::collections::BTreeMap::new();
     for (key, rule) in &config.policy {
@@ -232,8 +234,8 @@ pub fn remote_pdp(config: &AbacConfig) -> Result<RemotePdp, AuthzError> {
         RemoteSettings {
             server,
             bindings,
-            connect_timeout: Duration::from_millis(config.remote.connect_timeout_ms),
-            request_timeout: Duration::from_millis(config.remote.request_timeout_ms),
+            connect_timeout: config.remote.connect_timeout.get(),
+            request_timeout: config.remote.timeout.get(),
         },
         token,
     )

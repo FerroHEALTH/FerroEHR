@@ -42,7 +42,10 @@ impl GroupMap {
     /// # Errors
     /// The refusal naming what a mapped group lacks: the group template's
     /// `display_name`, the membership archetype, or a client's group issuer.
-    pub(crate) fn new(config: &AppConfig) -> Result<Option<Self>, String> {
+    pub(crate) fn new(
+        config: &AppConfig,
+        scim: &ferroehr::config::scim::ScimConfig,
+    ) -> Result<Option<Self>, String> {
         let binding = &config.party_binding;
         if !schemas::groups_mapped(binding) {
             return Ok(None);
@@ -66,7 +69,7 @@ impl GroupMap {
             );
         }
         let mut group_issuers = BTreeMap::new();
-        for client in &config.scim.client {
+        for client in &scim.client {
             let issuer = config
                 .auth
                 .shared
@@ -77,7 +80,7 @@ impl GroupMap {
                 .filter(|issuer| !issuer.is_empty())
                 .ok_or_else(|| {
                     format!(
-                        "the [[scim.client]] {:?} writes each Group's externalId under the \
+                        "the [[auth.scim.client]] {:?} writes each Group's externalId under the \
                          group_identifier_issuer of the [[auth.party]] table whose \
                          identifier_issuer is its binding_issuer {:?}, and that table sets none",
                         client.client_id, client.binding_issuer
@@ -88,7 +91,7 @@ impl GroupMap {
         Ok(Some(Self {
             namespace: binding.namespace.clone(),
             group_issuers,
-            max_members: usize::try_from(config.scim.max_group_members).unwrap_or(usize::MAX),
+            max_members: usize::try_from(scim.max_group_members).unwrap_or(usize::MAX),
         }))
     }
 

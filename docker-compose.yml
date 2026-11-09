@@ -29,7 +29,7 @@
 # signs any client credentials request, so FerroEHR's client `ferroehr` gets a
 # token whose scope lets it ask, and FerroPIX mints the pseudonym in the domain
 # urn:oid:2.999.7.1 on the first ask. Any conformant PIX Manager can take
-# FerroPIX's place: [ehr_index] below names an endpoint, never a product.
+# FerroPIX's place: [pixm] below names an endpoint, never a product.
 #
 # The issuer, FerroPIX and FerroEHR share ONE network namespace, the issuer's.
 # A server accepts a plain-http issuer only on loopback (RFC 8414 §2), and the
@@ -48,7 +48,7 @@
 # finds it. One variable selects it, with no copy of the config to make:
 #   FERROEHR_EHR_INDEX=local docker compose up
 # It runs the `ferroehr-config-local` block below, which differs from
-# `ferroehr-config` in [ehr_index] and [privacy] alone: no pseudonym namespace,
+# `ferroehr-config` in the subject index and [privacy] alone: no pseudonym namespace,
 # so a subject reference is stored as the client sends it. The identity
 # services still start; nothing asks them.
 #
@@ -324,7 +324,7 @@ services:
   # FerroPIX and FerroEHR join (the header says why). It signs any client
   # credentials request: the client as `sub` and `client_id`, FerroPIX's FHIR
   # base as the audience, and the scope asked for. NOT for anything real: name
-  # your own https issuer in [ehr_index.oauth] and in FerroPIX's [[auth.issuer]].
+  # your own https issuer in [pixm.oauth] and in FerroPIX's [[auth.issuer]].
   identity-issuer:
     image: ghcr.io/navikt/mock-oauth2-server:6.1.3@sha256:2a813381bf282da46ff36ff386059e7903e25865056af8149f4fb3f1441916b8
     networks:
@@ -474,11 +474,11 @@ services:
       # quickstart config (env beats file).
       # The server reads the file this names and searches for none.
       FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
-      FERROEHR__DB__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
+      FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
       # Connection-pool ceiling; measured comparison runs raise it in lockstep
       # with the upstream stack's HikariCP pool (config parity — the dominant
       # tunable must match across compared SUTs).
-      FERROEHR__DB__MAX_CONNECTIONS: ${FERROEHR__DB__MAX_CONNECTIONS:-10}
+      FERROEHR__DATABASE__MAX_CONNECTIONS: ${FERROEHR__DATABASE__MAX_CONNECTIONS:-10}
       # Concurrent-request bound (503 load shed past it). The comparison runs
       # raise it so overload manifests as queueing latency — the same failure
       # mode as upstream's Tomcat admission window — instead of shed errors
@@ -486,12 +486,12 @@ services:
       FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS: ${FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS:-256}
       # Version-signing toggle pass-through (measured comparison runs disable it
       # for throughput parity — upstream has no signing.)
-      FERROEHR__SIGNING__ENABLED: ${FERROEHR__SIGNING__ENABLED:-true}
+      FERROEHR__RECORD__SIGNING__ENABLED: ${FERROEHR__RECORD__SIGNING__ENABLED:-true}
       # A commercial licence token (BUSL-1.1 production use in the course of a
       # business). Mount the signed token file read-only and name its path;
       # unset, the server runs under the embedded non-commercial grant and
       # reports which on GET /ferroehr/rest/status.
-      #   FERROEHR__LICENCE__FILE: /etc/ferroehr/licence.asc
+      #   FERROEHR__DEPLOYMENT__LICENCE_FILE: /etc/ferroehr/licence.asc
       # Quickstart: human-readable colored logs in `docker compose logs`.
       # Production/collector deployments override to `json` (or unset — the
       # `auto` default picks json when stdout is not a TTY).
@@ -511,14 +511,14 @@ services:
       # string — which matters here, because an empty `endpoint` is a boot
       # refusal, not a synonym for "unset". A `${VAR:-}` default would inject
       # exactly that empty string into every quickstart.
-      FERROEHR__MULTIMEDIA__ENABLED:
-      FERROEHR__MULTIMEDIA__ENDPOINT:
-      FERROEHR__MULTIMEDIA__BUCKET:
-      FERROEHR__MULTIMEDIA__REGION:
-      FERROEHR__MULTIMEDIA__ALLOW_HTTP:
-      FERROEHR__MULTIMEDIA__THRESHOLD_BYTES:
-      FERROEHR__MULTIMEDIA__ACCESS_KEY_ID:
-      FERROEHR__MULTIMEDIA__SECRET_ACCESS_KEY:
+      FERROEHR__RECORD__MULTIMEDIA__ENABLED:
+      FERROEHR__RECORD__MULTIMEDIA__URL:
+      FERROEHR__RECORD__MULTIMEDIA__BUCKET:
+      FERROEHR__RECORD__MULTIMEDIA__REGION:
+      FERROEHR__RECORD__MULTIMEDIA__ALLOW_HTTP:
+      FERROEHR__RECORD__MULTIMEDIA__THRESHOLD:
+      FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID:
+      FERROEHR__RECORD__MULTIMEDIA__SECRET_ACCESS_KEY:
     configs:
       # Named by FERROEHR_CONFIG above.
       # The inline quickstart posture — see the `configs:` block at the bottom.
@@ -587,7 +587,7 @@ services:
       - /etc/ferroehr/definitions/role.adls
     environment:
       FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
-      FERROEHR__DB__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
+      FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
       FERROEHR__USAGE_REPORT__ENABLED: "false"
     configs:
       - source: ferroehr-config${FERROEHR_EHR_INDEX:+-${FERROEHR_EHR_INDEX}}
@@ -692,18 +692,18 @@ services:
   # behind the `s3` profile (off by default; externalization is OFF by default,
   # so the app does NOT depend on this). To try it — three steps, none skippable:
   #   1. export these FOUR variables — the `ferroehr` service passes
-  #      the whole FERROEHR__MULTIMEDIA__* set through from your shell:
-  #        export FERROEHR__MULTIMEDIA__ENABLED=true
-  #        export FERROEHR__MULTIMEDIA__ENDPOINT=http://seaweedfs:8333
-  #        export FERROEHR__MULTIMEDIA__BUCKET=openehr-multimedia
-  #        export FERROEHR__MULTIMEDIA__ALLOW_HTTP=true   # dev only; prod S3 is HTTPS
+  #      the whole FERROEHR__RECORD__MULTIMEDIA__* set through from your shell:
+  #        export FERROEHR__RECORD__MULTIMEDIA__ENABLED=true
+  #        export FERROEHR__RECORD__MULTIMEDIA__URL=http://seaweedfs:8333
+  #        export FERROEHR__RECORD__MULTIMEDIA__BUCKET=openehr-multimedia
+  #        export FERROEHR__RECORD__MULTIMEDIA__ALLOW_HTTP=true   # dev only; prod S3 is HTTPS
   #   2. docker compose --profile s3 up -d --wait ferroehr seaweedfs
   #      `seaweedfs-init` creates the bucket; the gateway ships with none, and an
   #      S3 PUT into a missing bucket answers 403 AccessDenied, which reads as a
   #      credentials problem and is not one.
   #      Verify with `curl -s -u ferroehr:ferroehr localhost:8080/management/env`.
   # With no AWS keys the gateway runs in unauthenticated "allow-all" mode
-  # (dev/test only). In production point FERROEHR__MULTIMEDIA__* at a real,
+  # (dev/test only). In production point FERROEHR__RECORD__MULTIMEDIA__* at a real,
   # credentialed, HTTPS S3 endpoint (AWS S3 / MinIO / etc.) instead of this.
   # Creates the bucket the gateway does not create for itself.
   #
@@ -719,7 +719,7 @@ services:
   # the gateway runs unauthenticated here, so every re-`up` is a no-op.
   #
   # It reads the SAME bucket variable the server does, so the two cannot drift:
-  # override `FERROEHR__MULTIMEDIA__BUCKET` and this creates the bucket you
+  # override `FERROEHR__RECORD__MULTIMEDIA__BUCKET` and this creates the bucket you
   # actually configured.
   seaweedfs-init:
     profiles: [s3]
@@ -743,7 +743,7 @@ services:
     entrypoint: ["sh", "-c"]
     command:
       - >-
-        bucket="http://seaweedfs:8333/${FERROEHR__MULTIMEDIA__BUCKET:-openehr-multimedia}";
+        bucket="http://seaweedfs:8333/${FERROEHR__RECORD__MULTIMEDIA__BUCKET:-openehr-multimedia}";
         i=0; while [ "$$i" -lt 30 ]; do
         curl -sS -X PUT "$$bucket" >/dev/null;
         if curl -sSf -o /dev/null "$$bucket/?max-keys=0"; then exit 0; fi;
@@ -817,16 +817,18 @@ configs:
       # The declared posture, explicit because this file is the quickstart: a
       # sandbox must not hold real patient data, names the separations it lacks
       # on the boot banner, and reports its profile on GET /ferroehr/rest/status.
-      deployment_profile = "sandbox"
+      [deployment]
+      profile = "sandbox"
 
       # Per authenticated caller, refused 429 + Retry-After past it.
       [server.caller_rate]
       requests_per_second = 1024
       burst = 2048
 
-      [rest]
-      # Permissive CORS — quickstart only. Production configures explicit origins.
-      cors_permissive = true
+      # Any origin may read responses — quickstart only. Production lists its
+      # origins.
+      [api.cors]
+      allow_origins = ["*"]
 
       [auth]
       enabled = true
@@ -909,11 +911,10 @@ configs:
       audience = ["ferroehr-scim"]
       token_types = ["JWT"]
 
-      [scim]
-      enabled = true
+      [auth.scim]
       public_base_url = "http://localhost:8080"
 
-      [[scim.client]]
+      [[auth.scim.client]]
       issuer = "http://localhost:8180/quickstart"
       client_id = "quickstart-scim"
       scope = "ferroehr/scim"
@@ -927,8 +928,8 @@ configs:
       # The admin API (DELETE /admin/...) — on for the quickstart so the
       # optional viewer's panels work; keep off in production unless
       # operationally needed.
-      [admin]
-      enabled = true
+      [api]
+      admin = true
 
       # Ops introspection (/management/...) on the main listener, for the
       # optional viewer and for curl-based poking. The health probes
@@ -957,44 +958,39 @@ configs:
       # development issuer. The client id is the one FerroPIX's
       # [[pseudonym_domain]] names, and system/Patient.rs is the scope its
       # PIXm Manager takes from a Consumer.
-      [ehr_index]
-      provider = "ihe"
-      pixm_url = "http://localhost:8090/fhir"
+      [record]
+      subject_index = "pixm"
+
+      [pixm]
+      url = "http://localhost:8090/fhir"
       assigning_authority = "urn:oid:2.999.7.1"
 
-      [ehr_index.oauth]
+      [pixm.oauth]
       token_endpoint = "http://localhost:8180/quickstart/token"
       client_id = "ferroehr"
       client_secret = "quickstart"
       scope = "system/Patient.rs"
 
-      # The terminology server FerroTERM, declared here and switched on by
-      # docker-compose.terminology.yml (the overlay only flips the switch, so
-      # the two files never disagree about where the server is). Off, the CDR
-      # resolves nothing externally and this block is inert.
-      [terminology.server]
-      enabled = false
-      url = "http://ferroterm:8080/r4b"
-      fail_on_error = false
-
   # The same quickstart configuration on the local EHR index, selected by
-  # FERROEHR_EHR_INDEX=local; it differs from `ferroehr-config` in [ehr_index]
-  # and [privacy] alone, which a test of the configuration loader holds.
+  # FERROEHR_EHR_INDEX=local; it differs from `ferroehr-config` in the subject
+  # index, [pixm] and [privacy] alone, which a test of the configuration loader holds.
   ferroehr-config-local:
     content: |
       # The declared posture, explicit because this file is the quickstart: a
       # sandbox must not hold real patient data, names the separations it lacks
       # on the boot banner, and reports its profile on GET /ferroehr/rest/status.
-      deployment_profile = "sandbox"
+      [deployment]
+      profile = "sandbox"
 
       # Per authenticated caller, refused 429 + Retry-After past it.
       [server.caller_rate]
       requests_per_second = 1024
       burst = 2048
 
-      [rest]
-      # Permissive CORS — quickstart only. Production configures explicit origins.
-      cors_permissive = true
+      # Any origin may read responses — quickstart only. Production lists its
+      # origins.
+      [api.cors]
+      allow_origins = ["*"]
 
       [auth]
       enabled = true
@@ -1077,11 +1073,10 @@ configs:
       audience = ["ferroehr-scim"]
       token_types = ["JWT"]
 
-      [scim]
-      enabled = true
+      [auth.scim]
       public_base_url = "http://localhost:8080"
 
-      [[scim.client]]
+      [[auth.scim.client]]
       issuer = "http://localhost:8180/quickstart"
       client_id = "quickstart-scim"
       scope = "ferroehr/scim"
@@ -1095,8 +1090,8 @@ configs:
       # The admin API (DELETE /admin/...) — on for the quickstart so the
       # optional viewer's panels work; keep off in production unless
       # operationally needed.
-      [admin]
-      enabled = true
+      [api]
+      admin = true
 
       # Ops introspection (/management/...) on the main listener, for the
       # optional viewer and for curl-based poking. The health probes
@@ -1119,17 +1114,8 @@ configs:
       # and EHR_STATUS.subject names a patient by its own namespace and
       # identifier. No [privacy] subject_namespaces, so no pseudonym namespace
       # is in force and a subject reference is stored as the client sends it.
-      [ehr_index]
-      provider = "local"
-
-      # The terminology server FerroTERM, declared here and switched on by
-      # docker-compose.terminology.yml (the overlay only flips the switch, so
-      # the two files never disagree about where the server is). Off, the CDR
-      # resolves nothing externally and this block is inert.
-      [terminology.server]
-      enabled = false
-      url = "http://ferroterm:8080/r4b"
-      fail_on_error = false
+      [record]
+      subject_index = "local"
 
   # FerroPIX's configuration (https://ferropix.eu/docs/operate/configuration.html):
   # the loopback base, the development issuer, one synthetic identifier domain

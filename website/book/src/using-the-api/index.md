@@ -35,7 +35,7 @@ interfaces sit beside it, under the same REST root:
 Every path in these chapters is relative to the openEHR base unless the page
 says otherwise. So "`POST /ehr`" means
 `POST http://your-host:8080/ferroehr/rest/openehr/v1/ehr`. The base path is set
-with `FERROEHR__REST__BASE_PATH`, and it may be shortened as far as
+with `FERROEHR__API__BASE_PATH`, and it may be shortened as far as
 `/ferroehr/v1` (see
 [Shortening the REST base path](../installation/config-server.md#base_path-shortening-the-rest-base-path)).
 

@@ -10,7 +10,7 @@
 //! inside a transaction that is then rolled back, so the check writes
 //! nothing. For each binding key a live `PERSON` carries it reports the
 //! committer of the version that introduced the key and judges it: a SCIM
-//! client of `[[scim.client]]`, an administrator the operator names, a
+//! client of `[[auth.scim.client]]`, an administrator the operator names, a
 //! migration the operator declares, or just-in-time creation on an issuer
 //! with `jit = true`. A stored version records no role its
 //! committer held, so the administrators are operator input, named in the
@@ -58,7 +58,7 @@ pub enum CheckError {
         duplicates: Vec<Duplicate>,
     },
     /// The provisional cut-off is out of the time range.
-    #[error("provisional_report_days puts the report cut-off out of range")]
+    #[error("provisional_report_after puts the report cut-off out of range")]
     Horizon(#[source] jiff::Error),
     /// A stored committer is no canonical `PARTY_PROXY`.
     #[error("the committer of a version of PERSON {party} is no canonical PARTY_PROXY")]
@@ -122,7 +122,7 @@ pub struct CheckInput {
     pub key_types: BTreeMap<String, String>,
     /// The mapped Basic users.
     pub basic_users: Vec<BasicUser>,
-    /// Each `[[scim.client]]` as its token `issuer` and `client_id`.
+    /// Each `[[auth.scim.client]]` as its token `issuer` and `client_id`.
     pub scim_clients: Vec<(String, String)>,
     /// The administrators the operator names.
     pub administrators: Vec<Administrator>,
@@ -130,9 +130,9 @@ pub struct CheckInput {
     pub migrations: Vec<String>,
     /// The logins the identity provider assigns, when given.
     pub expected: Option<Expected>,
-    /// `[authz.party_binding] provisional_report_days`: the age in days past
-    /// which a provisional `PERSON` is reported.
-    pub provisional_report_days: u32,
+    /// `[authz.party_binding] provisional_report_after`: the age past which a
+    /// provisional `PERSON` is reported.
+    pub provisional_report_after: ferrohealth_config::units::Duration,
     /// The `[[authz.party_binding.issuer]]`s with `jit = true`.
     pub jit_issuers: Vec<String>,
     /// The date a professional `ROLE` is judged on (`YYYY-MM-DD`).
@@ -146,8 +146,8 @@ pub struct Report {
     pub administrators: Vec<NamedAdministrator>,
     /// The committer names of the declared migrations.
     pub migrations: Vec<String>,
-    /// The age in days past which a provisional `PERSON` is reported.
-    pub provisional_report_days: u32,
+    /// The age past which a provisional `PERSON` is reported.
+    pub provisional_report_after: ferrohealth_config::units::Duration,
     /// Each selector value two or more live `PERSON`s carry.
     pub duplicates: Vec<DuplicateValue>,
     /// The `PERSON`s carrying a binding key, per key issuer.
@@ -263,7 +263,7 @@ pub struct Committer {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Origin {
-    /// A `[[scim.client]]`.
+    /// A `[[auth.scim.client]]`.
     Scim,
     /// An administrator the operator named.
     Administrator,
@@ -481,7 +481,7 @@ async fn run(
     Ok(Report {
         administrators,
         migrations: input.migrations.clone(),
-        provisional_report_days: input.provisional_report_days,
+        provisional_report_after: input.provisional_report_after,
         duplicates,
         issuers: by_issuer
             .into_iter()
@@ -595,9 +595,10 @@ async fn side_table(
         });
     }
     let before = jiff::Timestamp::now()
-        .saturating_sub(jiff::SignedDuration::from_hours(
-            i64::from(input.provisional_report_days) * 24,
-        ))
+        .saturating_sub(
+            jiff::SignedDuration::try_from(input.provisional_report_after.get())
+                .map_err(CheckError::Horizon)?,
+        )
         .map_err(CheckError::Horizon)?;
     let provisional = provisioned::provisional_before(tx, before)
         .await?

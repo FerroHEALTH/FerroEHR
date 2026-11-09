@@ -1178,8 +1178,8 @@ migration_job_gate() {
   [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.serviceAccountName' <<<"$rendered")" == "${RELEASE_NAME}-migrate" ]] \
     || { red "  with serviceAccount.create the Job does not run under the hook account"; missing=1; }
   for domain in PARTY AUDIT; do
-    [[ "$(yq -r "select(.kind == \"Job\") | .spec.template.spec.containers[0].env[] | select(.name == \"FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE\") | .name" <<<"$rendered")" == "FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE" ]] \
-      || { red "  the Job lacks FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE: it cannot prepare that domain's cluster"; missing=1; }
+    [[ "$(yq -r "select(.kind == \"Job\") | .spec.template.spec.containers[0].env[] | select(.name == \"FERROEHR__DATABASE__MIGRATE__${domain}__URL_FILE\") | .name" <<<"$rendered")" == "FERROEHR__DATABASE__MIGRATE__${domain}__URL_FILE" ]] \
+      || { red "  the Job lacks FERROEHR__DATABASE__MIGRATE__${domain}__URL_FILE: it cannot prepare that domain's cluster"; missing=1; }
   done
   [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.volumes[] | select(.name == "migrator-secret") | .projected.sources | length' <<<"$rendered")" -eq 3 ]] \
     || { red "  the Job's migrator volume does not project three Secrets (the shared migrator and two domain migrators)"; missing=1; }

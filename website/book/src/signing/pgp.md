@@ -49,10 +49,10 @@ retired_key_paths = ["/etc/ferroehr/signing-2025.pub.asc"]
 The same settings as environment variables:
 
 ```shell
-FERROEHR__SIGNING__MODE=pgp
-FERROEHR__SIGNING__KEY_PATH=/etc/ferroehr/signing.asc
-FERROEHR__SIGNING__KEY_PASSPHRASE_FILE=/run/secrets/pgp-pass
-FERROEHR__SIGNING__RETIRED_KEY_PATHS=/etc/ferroehr/signing-2025.pub.asc
+FERROEHR__RECORD__SIGNING__MODE=pgp
+FERROEHR__RECORD__SIGNING__KEY_FILE=/etc/ferroehr/signing.asc
+FERROEHR__RECORD__SIGNING__KEY_PASSPHRASE_FILE=/run/secrets/pgp-pass
+FERROEHR__RECORD__SIGNING__RETIRED_KEY_FILES=/etc/ferroehr/signing-2025.pub.asc
 ```
 
 Prefer `key_passphrase_file` over the inline `key_passphrase`: it is the

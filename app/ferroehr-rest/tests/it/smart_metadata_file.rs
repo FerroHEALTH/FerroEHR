@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `[smart] issuer_metadata_file` beside more than one `[auth]` issuer: the
+//! `[auth.smart] issuer_metadata_file` beside more than one `[auth]` issuer: the
 //! metadata belongs to the issuer it names (RFC 8414 §3.3), wherever that
 //! issuer stands in the list, and the SMART discovery document describes it
 //! (SMART App Launch 2.2.0, Conformance, §Metadata).
@@ -55,9 +55,9 @@ fn config(entries: Vec<IssuerEntry>) -> AppConfig {
         auth: common::trusting(entries),
         ..common::api_config(false)
     };
-    cfg.smart.enabled = true;
-    cfg.smart.issuer_metadata_file = Some(metadata_file());
-    cfg.smart.public_base_url = Some("https://cdr.example.com".to_owned());
+    cfg.auth.smart.discovery = true;
+    cfg.auth.smart.issuer_metadata_file = Some(metadata_file());
+    cfg.auth.smart.public_base_url = Some("https://cdr.example.com".to_owned());
     cfg
 }
 

@@ -42,11 +42,11 @@ async fn rejecting_sender() -> (ferroehr::system_log::sender::AuditSender, Audit
         fail_mode: FailMode::Closed,
         store: StoreConfig {
             enabled: true,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
         ..AuditConfig::default()
     };

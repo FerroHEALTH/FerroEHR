@@ -236,7 +236,7 @@ process re-read it:
 
 ```shell
 kubectl -n ferroehr create secret generic ferroehr-db \
-  --from-literal=FERROEHR__DB__URL='postgres://…new…' --dry-run=client -o yaml \
+  --from-literal=FERROEHR__DATABASE__URL='postgres://…new…' --dry-run=client -o yaml \
   | kubectl apply -f -
 kubectl -n ferroehr rollout restart deploy/ferroehr
 ```

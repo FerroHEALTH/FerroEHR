@@ -266,8 +266,11 @@ async fn run_usage_report(
     let config = ferroehr::config::load(config_path, overrides)?;
     config.validate()?;
     let licence = load_licence(&config)?;
-    let identity = usage_product::identity(&BuildInfo::for_profile(config.spec_profile), &licence);
-    let pools = db::connect_domains(&config.db, &config.storage)
+    let identity = usage_product::identity(
+        &BuildInfo::for_profile(config.deployment.spec_profile),
+        &licence,
+    );
+    let pools = db::connect_domains(&config.database)
         .await
         .context("connecting to PostgreSQL")?;
     let kind = match event {
@@ -315,7 +318,7 @@ fn load_licence(
 ) -> anyhow::Result<ferroehr::licence::state::LicenceState> {
     let anchors = ferroehr::licence::anchors().context("parsing the embedded licence anchors")?;
     Ok(ferroehr::licence::state::LicenceState::load_now(
-        &config.licence,
+        &config.deployment.licence(),
         ferroehr::licence::EMBEDDED_TOKEN,
         &anchors,
     ))
@@ -337,19 +340,16 @@ fn load_licence(
 pub(crate) async fn verify_schema_and_isolation(
     config: &ferroehr::config::FerroEhrConfig,
 ) -> anyhow::Result<()> {
-    db::verify_schema(&config.db, &config.storage)
+    db::verify_schema(&config.database)
         .await
         .map_err(|error| anyhow::Error::new(error).context("verifying the schema"))?;
-    let pools = db::connect_domains(&config.db, &config.storage)
+    let pools = db::connect_domains(&config.database)
         .await
         .context("connecting to PostgreSQL")?;
-    let outcome = db::verify_domain_isolation(
-        &pools,
-        &config.storage.layout(&config.db),
-        config.deployment_profile,
-    )
-    .await
-    .context("verifying the pseudonymisation domain isolation");
+    let outcome =
+        db::verify_domain_isolation(&pools, &config.database.layout(), config.deployment.profile)
+            .await
+            .context("verifying the pseudonymisation domain isolation");
     pools.close().await;
     outcome
 }
@@ -371,10 +371,10 @@ fn run_config_check(config: Option<&Path>, set: &[(String, String)]) -> anyhow::
     print!("{rendered}");
     // The resolved placement of the four storage domains, so an operator can see whether the
     // deployment they configured is the one the server would run. It names no DSN.
-    println!("{}", cfg.storage.layout(&cfg.db).describe());
-    if cfg.db.is_dev_default() {
+    println!("{}", cfg.database.layout().describe());
+    if cfg.database.is_dev_default() {
         eprintln!(
-            "note: [db].url is the built-in DEVELOPMENT DEFAULT; set it for any \
+            "note: [database] url is the built-in DEVELOPMENT DEFAULT; set it for any \
              non-dev deployment."
         );
     }
@@ -458,11 +458,15 @@ fn assemble_service(
     // seals national identifiers and does not is the failure this refuses to
     // start into.
     let identifiers = ferroehr::identifier_protection::engine::IdentifierProtection::from_config(
-        &config.demographic.identifier_protection,
-        config.demographic.identifier_protection.key.as_ref(),
+        config.privacy.identifier_protection.as_ref(),
+        config
+            .privacy
+            .identifier_protection
+            .as_ref()
+            .and_then(|protection| protection.key.as_ref()),
         pools.party.clone(),
     )
-    .context("building the [demographic.identifier_protection] engine")?;
+    .context("building the [privacy.identifier_protection] engine")?;
 
     // The licence in force: the configured token, else the one the build
     // embeds. Never a boot failure; the outcome is logged once, served on
@@ -471,18 +475,18 @@ fn assemble_service(
     tracing::info!(licence = %licence, "licence");
 
     let mut service = FerroEhrService::new(pools)
-        .with_spec_profile(config.spec_profile)
-        .with_system_id(config.rest.system_id.clone())
+        .with_spec_profile(config.deployment.spec_profile)
+        .with_system_id(config.api.system_id.clone())
         .with_signer(signer)
         .with_licence(licence)
         .with_deployment(deployment)
         .with_outbox_enabled(outbox_enabled)
-        .with_skip_identical_resend(config.versioning.skip_identical_resend)
+        .with_skip_identical_resend(config.record.versioning.idempotent_resend)
         .with_privacy(Arc::new(privacy))
-        .with_cohort(config.cohort.clone())
-        .with_origins(config.origins.clone())
+        .with_cohort(config.privacy.cohort.clone())
+        .with_origins(config.origins())
         .with_identifier_protection_opt(identifiers.map(Arc::new))
-        .with_query_config(&config.query)
+        .with_query_config(&config.record.query)
         .with_access_delay(
             AccessDelayPolicy::from_config(config)
                 .map_err(ferroehr::system_log::AuditError::CategoryMap)?,
@@ -528,12 +532,12 @@ fn wire_authz(
             .compile()
             .map_err(ferroehr::system_log::AuditError::CategoryMap)
             .context("compiling the [audit.categories] map for the ABAC category attribute")?,
-        origins: config.origins.clone(),
-        system_id: config.rest.system_id.clone(),
+        origins: config.origins(),
+        system_id: config.api.system_id.clone(),
     };
     let authz = build_authz(
         &config.authz,
-        &config.rest.base_path,
+        &config.api.base_path,
         authz_resolvers(pool.clone(), Arc::clone(service), content),
     )?;
     if let Some(handle) = &authz {
@@ -577,13 +581,12 @@ fn log_resolved_posture(
     if audit_enabled {
         tracing::info!(
             local_repository = audit.store.enabled,
-            syslog = audit.syslog.enabled,
-            fhir_feed = audit.fhir_feed.enabled,
+            syslog = audit.syslog.is_some(),
+            fhir_feed = audit.fhir_feed.is_some(),
             queue_capacity = audit.queue_capacity,
             fail_mode = ?audit.fail_mode,
             resolve_subject = audit.resolve_subject,
-            retention_days = audit.store.retention_days,
-            retention_years = ?audit.store.retention_years,
+            retention = %audit.store.horizon().describe(),
             category_map = AuditPosture::of(audit)
                 .category_map
                 .map_or_else(|| "invalid".to_owned(), |digest| digest.to_string()),
@@ -600,8 +603,8 @@ fn log_resolved_posture(
     if management.enabled {
         tracing::info!(
             base_path = %management.base_path,
-            listener = match management.port {
-                Some(port) => format!("own port {port}"),
+            listener = match management.listen {
+                Some(listen) => format!("own listener {listen}"),
                 None => "shared with the API".to_owned(),
             },
             mounted = %mounted_management_endpoints(management.endpoints),
@@ -616,7 +619,7 @@ fn log_resolved_posture(
     );
     tracing::info!(
         listen = %app_config.server.listen,
-        base_path = %app_config.rest.base_path,
+        base_path = %app_config.api.base_path,
         tls = app_config.server.tls.is_some(),
         "starting ferroehr"
     );
@@ -633,12 +636,10 @@ async fn evaluate_deployment(
     config: &ferroehr::config::FerroEhrConfig,
     pools: &DomainPools,
 ) -> anyhow::Result<DeploymentPosture> {
-    let databases = db::database_facts(&config.db, &config.storage, pools)
-        .await
-        .context(
-            "reading each pool's cluster identity and which databases schema preparation \
+    let databases = db::database_facts(&config.database, pools).await.context(
+        "reading each pool's cluster identity and which databases schema preparation \
              reaches on a runtime credential",
-        )?;
+    )?;
     let posture = DeploymentPosture::evaluate(config, &databases);
     if !posture.permits_boot() {
         anyhow::bail!("{}", posture.refusal_message());
@@ -705,20 +706,25 @@ async fn stamp_subject_posture(
 
 fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
     ferroehr::config::binding::BindingPosture::of(config).log();
-    if config.db.is_dev_default() {
+    if config.database.is_dev_default() {
         tracing::warn!(
             url = db::DEFAULT_URL,
-            "[db].url is the built-in DEVELOPMENT DEFAULT ({}); no file/env/CLI value was \
-             supplied. Set db.url (FERROEHR__DB__URL / DATABASE_URL) for any non-dev deployment — \
+            "[database] url is the built-in DEVELOPMENT DEFAULT ({}); no file/env/CLI value was \
+             supplied. Set db.url (FERROEHR__DATABASE__URL / DATABASE_URL) for any non-dev deployment — \
              production MUST override it.",
             db::DEFAULT_URL,
         );
     }
-    if config.rest.cors_permissive {
+    if config
+        .api
+        .cors
+        .as_ref()
+        .is_some_and(|cors| cors.any_origin())
+    {
         tracing::warn!(
-            "[rest].cors_permissive is ON: any origin may read API responses. This is a \
-             DEVELOPMENT setting — configure explicit origins for any deployment reachable by \
-             a browser."
+            "api.cors.allow_origins is [\"*\"]: any origin may read API responses. This is a \
+             DEVELOPMENT setting — list explicit origins for any deployment reachable by a \
+             browser."
         );
     }
     if config.privacy.allow_identified_parties_in_ehr {
@@ -769,12 +775,14 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
              namespace"
         );
     }
-    let unused = config.ehr_index.unused_keys();
+    let unused = ferroehr::service::ehr_index::config::unused_keys(
+        config.record.subject_index,
+        config.pixm.as_ref(),
+    );
     if !unused.is_empty() {
         tracing::warn!(
             keys = %unused.join(", "),
-            "[ehr_index] provider is \"local\": the IHE patient identity source keys are set \
-             and not used"
+            "record.subject_index is \"local\": the [pixm] keys are set and not used"
         );
     }
 }
@@ -782,14 +790,14 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
 /// Connects the four domain pools and prepares every database they reach.
 ///
 /// Each pool carries its own domain's `search_path`, and a domain a deployment
-/// gave `[storage.<domain>].url` carries its own credential — which is what
+/// gave `[database.<domain>] url` carries its own credential — which is what
 /// makes the pseudonymisation boundary a role boundary rather than only a
 /// schema one. The domain split is our own deployment extension; no openEHR
 /// spec governs it.
 ///
 /// Schema preparation is [`ferroehr::db::prepare`], which spans every schema of
-/// each database on that database's migration DSN (`[db].migrate_url` for every
-/// domain reaching the database it reaches, `[storage.migrate.<domain>].url`
+/// each database on that database's migration DSN (`[database] migrate_url` for every
+/// domain reaching the database it reaches, `[database.<domain>] migrate_url`
 /// for a database of its own, the domain's own DSN when that is unset) and then
 /// measures the runtime pools' own reach with
 /// [`ferroehr::db::verify_domain_isolation`], refusing to boot a database whose
@@ -799,19 +807,14 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
 /// A connection, migration or domain-isolation failure, contextualized for the
 /// operator.
 async fn connect_pool(config: &ferroehr::config::FerroEhrConfig) -> anyhow::Result<DomainPools> {
-    let pools = db::connect_domains(&config.db, &config.storage)
+    let pools = db::connect_domains(&config.database)
         .await
         .context("connecting to PostgreSQL")?;
-    db::prepare(
-        &config.db,
-        &config.storage,
-        &pools,
-        config.deployment_profile,
-    )
-    .await
-    .context("preparing the database schema")?;
+    db::prepare(&config.database, &pools, config.deployment.profile)
+        .await
+        .context("preparing the database schema")?;
     for domain in Domain::ALL {
-        if config.storage.is_separated(domain) {
+        if config.database.is_separated(domain) {
             tracing::info!(
                 %domain,
                 "the domain connects on its own DSN: its credential is a database role of its own"
@@ -821,7 +824,7 @@ async fn connect_pool(config: &ferroehr::config::FerroEhrConfig) -> anyhow::Resu
     Ok(pools)
 }
 
-/// Wires the opt-in FHIR terminology server (`[terminology.server]`), the
+/// Wires the opt-in FHIR terminology server (`[terminology]`), the
 /// "terminology query server" BASE
 /// `architecture_overview/master12-terminology.adoc` §Binding Terminology
 /// Value-sets to Archetypes places the resolver of a constraint binding in.
@@ -833,15 +836,14 @@ pub(crate) fn attach_terminology(
     service: FerroEhrService,
     config: &ferroehr::config::FerroEhrConfig,
 ) -> anyhow::Result<FerroEhrService> {
-    let server = &config.terminology.server;
-    if !server.enabled {
+    let Some(server) = &config.terminology else {
         return Ok(service);
-    }
+    };
     let client = ferroehr::service::terminology::fhir::FhirTerminologyProvider::new(server)
         .context("initialising the terminology server client")?;
     tracing::info!(
         server = %server.url,
-        fail_on_error = server.fail_on_error,
+        on_error = ?server.on_error,
         authenticated = server.oauth.is_some(),
         "FHIR terminology server configured"
     );
@@ -864,36 +866,36 @@ fn attach_multimedia(
 ) -> anyhow::Result<FerroEhrService> {
     #[cfg(feature = "multimedia")]
     {
-        let engine = match ferroehr::extensions::multimedia::engine_from_config(&config.multimedia)
-        {
-            Ok(engine) => engine,
-            Err(e) if !config.multimedia.enabled => {
-                tracing::warn!(
-                    error = %e,
-                    "multimedia is disabled and its object store could not be built: \
-                     already-externalized content cannot be re-inlined, and a read that \
-                     asks for it will be refused rather than answered with the reference"
-                );
-                None
-            }
-            Err(e) => {
-                return Err(
-                    anyhow::Error::new(e).context("initialising the multimedia object store")
-                );
-            }
-        };
+        let engine =
+            match ferroehr::extensions::multimedia::engine_from_config(&config.record.multimedia) {
+                Ok(engine) => engine,
+                Err(e) if !config.record.multimedia.enabled => {
+                    tracing::warn!(
+                        error = %e,
+                        "multimedia is disabled and its object store could not be built: \
+                         already-externalized content cannot be re-inlined, and a read that \
+                         asks for it will be refused rather than answered with the reference"
+                    );
+                    None
+                }
+                Err(e) => {
+                    return Err(
+                        anyhow::Error::new(e).context("initialising the multimedia object store")
+                    );
+                }
+            };
         let Some(engine) = engine else {
             return Ok(service);
         };
         if engine.offload_enabled() {
             tracing::info!(
-                bucket = %config.multimedia.bucket,
-                threshold_bytes = config.multimedia.threshold_bytes,
+                bucket = %config.record.multimedia.bucket,
+                threshold = %config.record.multimedia.threshold,
                 "DV_MULTIMEDIA externalization enabled"
             );
         } else {
             tracing::info!(
-                bucket = %config.multimedia.bucket,
+                bucket = %config.record.multimedia.bucket,
                 "DV_MULTIMEDIA externalization disabled; the configured store stays \
                  readable so already-externalized content can still be served"
             );
@@ -902,7 +904,7 @@ fn attach_multimedia(
     }
     #[cfg(not(feature = "multimedia"))]
     {
-        ferroehr::extensions::multimedia::require_disabled(&config.multimedia)
+        ferroehr::extensions::multimedia::require_disabled(&config.record.multimedia)
             .map_err(|e| anyhow::anyhow!(e))?;
         Ok(service)
     }
@@ -928,7 +930,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     let declared = DeploymentPosture::evaluate(&config, &DatabaseFacts::default());
     ferroehr::banner::print(
         &telemetry::build_info::build(),
-        config.spec_profile,
+        config.deployment.spec_profile,
         &declared,
         config
             .telemetry
@@ -972,14 +974,14 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // The commit-event outbox: a commit writes its row only while a reader is
     // named, and every reader the configuration no longer names is marked
     // inactive, so it holds the prune back no longer.
-    let outbox_enabled = config.outbox.enabled();
-    outbox::reconcile_domains(&pools, &config.outbox.readers)
+    let outbox_enabled = config.record.change_feed.enabled();
+    outbox::reconcile_domains(&pools, &config.record.change_feed.readers)
         .await
-        .context("reconciling the outbox readers with [outbox] readers")?;
+        .context("reconciling the outbox readers with [record.change_feed] readers")?;
     let outbox_prune = tokio::spawn(outbox::scheduled_prune(
         pools.clone(),
-        config.outbox.retention_days,
-        Duration::from_secs(config.outbox.prune_interval_secs),
+        config.record.change_feed.retention.get(),
+        config.record.change_feed.prune_interval.get(),
     ));
 
     // Health indicators.
@@ -1016,8 +1018,9 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     );
 
     // Version signing (fail-closed at boot for `pgp` without a usable key).
-    let signer =
-        Arc::new(Signer::from_config(&config.signing).context("initialising the version signer")?);
+    let signer = Arc::new(
+        Signer::from_config(&config.record.signing).context("initialising the version signer")?,
+    );
     tracing::info!(
         signing = signer.enabled(),
         verify_on_read = ?signer.verify_on_read(),
@@ -1027,16 +1030,17 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // `[server] system_id` is stamped into `EHR.system_id`,
     // `AUDIT_DETAILS.system_id` and `OBJECT_VERSION_ID.creating_system_id`;
     // logged so an operator can see the key took.
-    tracing::info!(system_id = %config.rest.system_id, "openEHR system identifier");
+    tracing::info!(system_id = %config.api.system_id, "openEHR system identifier");
 
     // An IHE patient identity source answers its capabilities read here, so an
     // unreachable one refuses boot rather than the first request (#3380).
-    let ehr_index = EhrIndexProvider::from_config(&config.ehr_index)
-        .context("building the [ehr_index] identity source")?;
+    let ehr_index =
+        EhrIndexProvider::from_config(config.record.subject_index, config.pixm.as_ref())
+            .context("building the [pixm] identity source")?;
     ehr_index
         .ready()
         .await
-        .context("the [ehr_index] identity source did not answer its capabilities read")?;
+        .context("the [pixm] identity source did not answer its capabilities read")?;
     tracing::info!(provider = ehr_index.name(), "EHR index provider");
 
     let audit_enabled = audit_sender.is_some();
@@ -1054,7 +1058,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // registry does not hold is refused here, not at its first party commit.
     if let Some(engine) = service.identifier_protection() {
         engine.verify_registered().await.context(
-            "[demographic.identifier_protection].schemes names a scheme the identifier_scheme \
+            "[privacy.identifier_protection].schemes names a scheme the identifier_scheme \
              registry does not hold",
         )?;
     }

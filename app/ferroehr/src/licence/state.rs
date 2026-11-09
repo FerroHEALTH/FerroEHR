@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The boot-time outcome of the `[licence]` section: which licence is in
+//! The boot-time outcome of the `[deployment] licence_file` section: which licence is in
 //! force, and where it came from.
 //!
 //! Two licence classes exist ([`crate::licence::document::Use`]): the
 //! `non-commercial` grant every build embeds, and a `commercial` grant a
-//! licensee installs through `[licence] file`. A configured token that
+//! licensee installs through `[deployment] licence_file file`. A configured token that
 //! verifies is in force; one that does not is recorded as refused and the
 //! embedded grant stays in force, so an operator sees at once that their
 //! token is not doing anything. The only way to run with no licence at all is
@@ -79,7 +79,7 @@ fn write_chain(f: &mut fmt::Formatter<'_>, err: &dyn std::error::Error) -> fmt::
 /// Where the licence in force came from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Source {
-    /// The configured `[licence] file`.
+    /// The configured `[deployment] licence_file file`.
     Configured,
     /// The token every build embeds.
     Embedded,
@@ -102,7 +102,7 @@ pub enum LicenceState {
     NoLicence(Reason),
 }
 
-/// What the configured `[licence] file` contributed, as the status reports it.
+/// What the configured `[deployment] licence_file file` contributed, as the status reports it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ConfiguredToken {

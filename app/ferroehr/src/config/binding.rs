@@ -59,13 +59,16 @@ pub struct PartyBindingConfig {
     /// What FerroEHR does for each `persons` issuer beyond the lookup
     /// (`[[authz.party_binding.issuer]]`): just-in-time creation.
     pub issuer: Vec<jit::IssuerBinding>,
-    /// The age in days past which `ferroehr party-binding check` reports a
+    /// The age past which `ferroehr party-binding check` reports a
     /// provisional `PERSON`.
-    pub provisional_report_days: u32,
+    pub provisional_report_after: ferrohealth_config::units::Duration,
+    /// Retired: refused at load, naming `provisional_report_after`.
+    #[serde(skip_serializing)]
+    pub provisional_report_days: ferrohealth_config::removed::Removed,
     /// The removed `enabled` key, held only so its presence is refused by
     /// name: binding has no switch.
-    #[serde(default, skip_serializing)]
-    pub enabled: Option<serde::de::IgnoredAny>,
+    #[serde(skip_serializing)]
+    pub enabled: ferrohealth_config::removed::Removed,
 }
 
 impl PartyBindingConfig {
@@ -96,8 +99,9 @@ impl Default for PartyBindingConfig {
             membership: None,
             representation: None,
             issuer: Vec::new(),
-            provisional_report_days: 30,
-            enabled: None,
+            provisional_report_after: ferrohealth_config::units::Duration::from_days(30),
+            provisional_report_days: ferrohealth_config::removed::Removed::default(),
+            enabled: ferrohealth_config::removed::Removed::default(),
         }
     }
 }
@@ -426,15 +430,15 @@ impl crate::config::FerroEhrConfig {
     /// `[auth]` itself are [`crate::config::auth::validate`]'s.
     pub(crate) fn identity_errors(&self) -> Vec<String> {
         let mut errors =
-            crate::config::clients::import_errors(&self.authz.import, &self.rest.system_id);
-        if self.authz.party_binding.enabled.is_some() {
+            crate::config::clients::import_errors(&self.authz.import, &self.api.system_id);
+        if self.authz.party_binding.enabled.is_set() {
             errors.push(
                 "authz.party_binding.enabled is removed: binding has no switch, and every \
                  persons issuer binds its logins through its [[auth.party]] table; remove the key"
                     .to_owned(),
             );
         }
-        if self.authz.professional.is_some() {
+        if self.authz.professional.is_set() {
             errors.push(
                 "authz.professional is removed: the [[auth.issuer]] kind and profile classify \
                  the caller, and a client acting for a person is one the issuer lists in \
@@ -449,12 +453,11 @@ impl crate::config::FerroEhrConfig {
             return errors;
         }
         errors.extend(self::errors(&self.auth, &self.authz, &resolved));
-        let protection = &self.demographic.identifier_protection;
-        let protected: &[String] = if protection.enabled {
-            &protection.schemes
-        } else {
-            &[]
-        };
+        let protected: &[String] = self
+            .privacy
+            .identifier_protection
+            .as_ref()
+            .map_or(&[], |protection| protection.schemes.as_slice());
         errors.extend(
             self.authz
                 .party_binding
@@ -469,7 +472,7 @@ impl crate::config::FerroEhrConfig {
             &self.authz.federation.agreement,
             &self.auth.shared,
             &resolved,
-            self.audit.store.retention(),
+            self.audit.store.horizon(),
         ));
         errors
     }
@@ -679,8 +682,8 @@ mod tests {
             ),
             ("FERROEHR__AUTHZ__PARTY_BINDING__PROVIDER__ID", "1234"),
             (
-                "FERROEHR__AUTHZ__PARTY_BINDING__PROVISIONAL_REPORT_DAYS",
-                "14",
+                "FERROEHR__AUTHZ__PARTY_BINDING__PROVISIONAL_REPORT_AFTER",
+                "14d",
             ),
             ("FERROEHR__AUTHZ__RBAC__IMPORT_ROLE", "IMPORTER"),
             ("FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS", "https://a,https://b"),
@@ -692,7 +695,10 @@ mod tests {
             Some(ferrohealth_smart::assurance::AssuranceLevel::High)
         );
         assert_eq!(c.authz.party_binding.namespace, "hr");
-        assert_eq!(c.authz.party_binding.provisional_report_days, 14);
+        assert_eq!(
+            c.authz.party_binding.provisional_report_after,
+            ferrohealth_config::units::Duration::from_days(14)
+        );
         assert_eq!(
             c.authz.party_binding.provider,
             Some(Providers::One(ProviderId {
