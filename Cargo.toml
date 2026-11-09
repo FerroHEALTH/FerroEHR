@@ -225,8 +225,10 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # Entra ID groups overage adapter (`idp-entra`); 0.9.1 refuses a `system/`
 # scope on a Basic user (GHSA-jhg2-jwjp-hq74), 0.9.3 reads a federation
 # token's consent decision reference and correlation id, and 0.9.4 a contact
-# point's IdA NameID with its format. Verified on crates.io 2026-11-08.
-ferrohealth-smart = { version = "=0.13.0", default-features = false, features = ["fetch", "idp-entra"] }
+# point's IdA NameID with its format; 0.13.1 keeps a refused key set,
+# introspection or metadata body out of the error (GHSA-5qm7-v4fw-p2v9).
+# Verified on crates.io 2026-11-09.
+ferrohealth-smart = { version = "=0.13.1", default-features = false, features = ["fetch", "idp-entra"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroAUTH, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
