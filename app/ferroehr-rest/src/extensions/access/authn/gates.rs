@@ -21,7 +21,8 @@ use crate::smart::routes::Need;
 use ferroehr::system_log::event::ActorAuthentication;
 
 use super::assurance::{PatientDataGate, PatientDataRefusal};
-use super::{AuthError, AuthLayer, AuthMethod, Principal, count_auth_failure, mechanism_label};
+use super::refusal::count_auth_failure;
+use super::{AuthError, AuthLayer, AuthMethod, Principal, mechanism_label};
 
 /// Runs the RBAC gate over an authenticated caller: the matched operation's
 /// class against the caller's roles, then the read-only restriction.

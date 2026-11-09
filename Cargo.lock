@@ -2471,6 +2471,7 @@ dependencies = [
  "ferrohealth-smart",
  "ferrohealth-telemetry",
  "ferrohealth-ui",
+ "fhir-types",
  "fluent-templates",
  "futures",
  "http",

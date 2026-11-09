@@ -541,7 +541,10 @@ binding_issuer = "urn:example:login"
 "#;
     let (ok, text) = config_check(scim);
     assert!(!ok, "a SCIM endpoint with no person template: {text}");
-    assert!(text.contains("default = true"), "{text}");
+    assert!(
+        text.contains("no [[authz.party_binding.person.template]] is declared"),
+        "{text}"
+    );
 
     let mapped = format!(
         r#"{scim}

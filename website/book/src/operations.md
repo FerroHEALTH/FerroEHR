@@ -1285,6 +1285,12 @@ moves with it. The `metrics` name covers both metric routes, and the
 machinery present; without it they are simply not mounted, which is the same
 `404` as leaving them `off`.
 
+A `private` or `admin_only` endpoint answers `401` with a challenge when the
+request carries no valid credential. When the credential holds and the login
+binding refuses the caller, it answers `403` with the binding code, such as
+`refused-unbound`, as every other route does, and an `admin_only` endpoint
+answers `403` to a caller without `authz.rbac.admin_role`.
+
 > [!WARNING]
 > `/management/env` and `/management/loggers` expose and change server
 > internals; keep them `admin_only`, and prefer binding the surface to an

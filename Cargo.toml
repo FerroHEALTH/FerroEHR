@@ -298,6 +298,10 @@ ferrobridge-term = { version = "=0.1.148", default-features = false, features = 
 # crates.io 2026-11-08 (FerroAUDIT v0.5.2).
 ihe-atna = { version = "=0.8.0", default-features = false }
 ehds-logging = { version = "=0.8.0", default-features = false }
+# The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
+# the viewer reads the ITI-81 searchset, each BALP `AuditEvent` and a refusal's
+# `OperationOutcome` through it. Verified on crates.io 2026-11-08.
+fhir-types = { version = "=0.1.128", default-features = false, features = ["r4", "resources"] }
 # FerroBRIDGE's FHIR R4 search value grammar (the same Licensor's BUSL-1.1
 # code), whose token `ihe-atna` hands the ITI-81 route. Its crate line moves
 # one patch per change, so it is pinned exactly at the version `ihe-atna` and

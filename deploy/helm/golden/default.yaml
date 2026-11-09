@@ -46,7 +46,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), but from EVERY source — this policy narrows ports, NOT sources (networkPolicy.ingressAllowAll=true). Set networkPolicy.ingressFrom for a PHI workload.
   labels:
-    helm.sh/chart: ferroehr-23.3.0
+    helm.sh/chart: ferroehr-23.3.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -95,7 +95,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-23.3.0
+    helm.sh/chart: ferroehr-23.3.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -130,7 +130,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-23.3.0
+    helm.sh/chart: ferroehr-23.3.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -159,7 +159,7 @@ kind: Secret
 metadata:
   name: ferroehr-env
   labels:
-    helm.sh/chart: ferroehr-23.3.0
+    helm.sh/chart: ferroehr-23.3.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -234,7 +234,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-23.3.0
+    helm.sh/chart: ferroehr-23.3.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -289,6 +289,22 @@ data:
         agreement = []
       [authz.party_binding]
         namespace = "demographic"
+        [authz.party_binding.person]
+    
+          [[authz.party_binding.person.template]]
+            default = true
+            template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
+            [authz.party_binding.person.template.external_id]
+              path = "/details[id2]/items[id3]"
+              type = "scim_external_id"
+            [authz.party_binding.person.template.key]
+              path = "/details[id2]/items[id3]"
+              type = "uuid"
+            [authz.party_binding.person.template.user_name]
+              path = "/details[id2]/items[id3]"
+              type = "scim_user_name"
+        [authz.party_binding.professional_role]
+          template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
         [authz.party_binding.provider]
           id = "default"
           issuer = "urn:oid:2.999.7.9"
@@ -396,7 +412,7 @@ kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-23.3.0
+    helm.sh/chart: ferroehr-23.3.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -549,7 +565,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-23.3.0
+    helm.sh/chart: ferroehr-23.3.1
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -574,7 +590,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 2195f5903ffb11a4e05c658f4faf5cb429ac33a192bb64e32beff8891160ca02
+        checksum/config: c7ac093a44418f9a472c500a2171ae9e3bd07d9fd3b8e892443931cf7e622f06
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

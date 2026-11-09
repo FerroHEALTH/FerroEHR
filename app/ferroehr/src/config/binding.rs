@@ -270,6 +270,7 @@ pub fn errors(
         ));
     }
     unbound_persons(resolved, &mut errors);
+    key_types(binding, resolved, &mut errors);
     shared_audiences(resolved, &mut errors);
     providers(binding, resolved, &mut errors);
     if let Err(e) = resolved.check_role_issuers("authz.rbac.role_issuers", &authz.rbac.role_issuers)
@@ -290,6 +291,37 @@ fn unbound_persons(resolved: &Resolved, errors: &mut Vec<String>) {
                  binds its logins to a party"
             ));
         }
+    }
+}
+
+/// Refuses an `[[auth.party]]` table whose `identifier_type` no person
+/// template's `key` selector writes: the lookup matches the type exactly
+/// (`party_binding::lookup::LOOKUP`), and SCIM, just-in-time creation and the
+/// refill write the key under the template's type, so no login of the issuer
+/// would ever match a party.
+fn key_types(binding: &PartyBindingConfig, resolved: &Resolved, errors: &mut Vec<String>) {
+    let written: BTreeSet<&str> = binding
+        .person
+        .template
+        .iter()
+        .map(|template| template.key.identifier_type.as_str())
+        .collect();
+    for table in &resolved.party {
+        if written.contains(table.identifier_type.as_str()) {
+            continue;
+        }
+        let writes = if written.is_empty() {
+            "no [[authz.party_binding.person.template]] is declared, so no key is written"
+                .to_owned()
+        } else {
+            format!("the person templates' keys are of the types {written:?}")
+        };
+        errors.push(format!(
+            "the [[auth.party]] table of {:?} looks logins up under identifier_type {:?}, \
+             which no person template's key carries: {writes}, so no login of the issuer \
+             matches a party",
+            table.issuer, table.identifier_type
+        ));
     }
 }
 
@@ -473,6 +505,11 @@ pub struct BindingPosture {
     pub namespace: String,
     /// The federation agreements.
     pub agreements: Vec<AgreementPosture>,
+    /// The mapped Basic users, while `[authz.assurance] minimum` is unset: a
+    /// Basic credential carries no assurance level, so nothing refuses them
+    /// on patient data.
+    #[serde(skip)]
+    pub unassured_basic: Vec<String>,
 }
 
 /// One trusted issuer of the binding posture.
@@ -527,16 +564,29 @@ impl BindingPosture {
                 legal_ground: agreement.legal_ground.as_ref().map(ToString::to_string),
             })
             .collect();
+        let unassured_basic = if config.authz.assurance.minimum.is_none() {
+            config
+                .authz
+                .party_binding
+                .basic_user
+                .iter()
+                .map(|mapping| mapping.user.clone())
+                .collect()
+        } else {
+            Vec::new()
+        };
         Self {
             issuers,
             provider: config.authz.party_binding.provider.clone(),
             namespace: config.authz.party_binding.namespace.clone(),
             agreements,
+            unassured_basic,
         }
     }
 
-    /// Logs the posture: one line for the binding, one per agreement, and a
-    /// `warn` for every agreement that runs without a named person.
+    /// Logs the posture: one line for the binding, one per agreement, a
+    /// `warn` for every agreement that runs without a named person, and a
+    /// `warn` while a mapped Basic user exists with no assurance minimum.
     pub fn log(&self) {
         let issuers: Vec<String> = self
             .issuers
@@ -558,6 +608,13 @@ impl BindingPosture {
             namespace = %self.namespace,
             "party binding configured"
         );
+        if !self.unassured_basic.is_empty() {
+            tracing::warn!(
+                users = %self.unassured_basic.join(", "),
+                "mapped Basic users sign in with no assurance level while \
+                 [authz.assurance] minimum is unset"
+            );
+        }
         for agreement in &self.agreements {
             let accessor = agreement
                 .accessor

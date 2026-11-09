@@ -94,7 +94,7 @@ operator rule boot cannot see.
 
 | Table | Description |
 |---|---|
-| `[[auth.party]]` | One per `persons` issuer, keyed by `issuer`: where its logins are looked up. `identifier_issuer` and `identifier_type` (`guid` and `uuid` compare in lower case) name the identifiers the issuer profile's `person_key` is matched against; `group_claim` with `group_identifier_issuer` reads the groups a token asserts; `guests` looks a guest up. **Boot refuses a `persons` issuer without one**, a table that sets `claim` (the profile's `person_key` is the key), and two tables sharing an issuer or an `identifier_issuer`. |
+| `[[auth.party]]` | One per `persons` issuer, keyed by `issuer`: where its logins are looked up. `identifier_issuer` and `identifier_type` (`guid` and `uuid` compare in lower case) name the identifiers the issuer profile's `person_key` is matched against; `group_claim` with `group_identifier_issuer` reads the groups a token asserts; `guests` looks a guest up. **Boot refuses a `persons` issuer without one**, a table that sets `claim` (the profile's `person_key` is the key), two tables sharing an issuer or an `identifier_issuer`, and a table whose `identifier_type` is the `type` of no [`[[authz.party_binding.person.template]]`](#authzparty_binding) `key`: SCIM and just-in-time creation write the key under that type and the lookup compares the type exactly, so no login of the issuer would bind. |
 | `[[auth.federation]]` | One per `federation` issuer: how its tokens' claims map to the fields of another party's professional or organisation (`mapping = "iua"`, `"ehdsi"` or per field), the countries, issuing authorities and provider prefixes that bound them, and `contact_point` for a MyHealth@EU contact point. `fields` maps a field to its claim (`{ claim = "..." }`) or `authorization_details` member, among them `consent.reference`, the consent decision reference of a consent-conditioned read, and `correlation_id`, the requester's id a `chained` organisation request carries. |
 | `[auth.dpop]` | The DPoP proof check of a sender-constrained issuer: `external_url` (required, the base URL clients address; a proof's `htu` is it plus the request path), `max_age_seconds` (`60`), `clock_skew_seconds` (`10`) and `algorithms`. Each accepted proof is recorded in the database every replica shares until its window ends, so a proof is accepted once across all of them (RFC 9449 §11.1), and a database that cannot record it refuses the request with `503`. |
 | `[auth.idp.entra]` | The Microsoft Graph access of the `idp-entra` adapter, which an issuer turns on with `adapter = "idp-entra"` to read the groups of an Entra ID groups overage: `base_url` (`https://graph.microsoft.com/v1.0`), `timeout_ms` (`2000`), `max_response_bytes`, `security_enabled_only` and the client credentials of `[auth.idp.entra.credentials]`. An issuer naming the adapter without this table refuses the start. |
@@ -220,6 +220,11 @@ or above it (every patient-data request would be refused), a blank `claim`
 beside a declared table, and a `levels` value that is blank or carries
 whitespace, a quote or a backslash, because the refusal names the accepted
 values in one quoted, space-separated `acr_values` parameter (RFC 9470 §3).
+
+A Basic credential carries no level, so with `minimum` set every Basic user,
+mapped to a person or not, is refused on patient data. While `minimum` is unset
+and a Basic user is mapped in `[[authz.party_binding.basic_user]]`, boot logs a
+`warn` naming those users.
 
 The access record carries the acting mode and the professional the caller
 classification names; see [Audit trail](../audit.md#the-ehds-logging-elements-mapped).
