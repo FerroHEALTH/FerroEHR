@@ -312,10 +312,9 @@ usageReport:
 ferropix:
   enabled: false
 config:
-  ehr_index:
-    provider: local
-    assigning_authority: null
-    oauth: null
+  record:
+    subject_index: local
+  pixm: null
   auth:
     jwks_file: /etc/ferroehr/probe-jwks.json
   files:
@@ -508,9 +507,9 @@ render_check() {
     exit 1
   fi
   for want in \
-    'deployment_profile = "production"' \
-    'deployment_accepts = ["plaintext_listener"]' \
-    'migrate = "verify"' \
+    'profile = "production"' \
+    'accepts = ["plaintext_listener"]' \
+    'migrations = "verify"' \
     "name: probe-db-migrate" \
     "name: probe-db-clinical" \
     "name: probe-db-party" \
@@ -528,7 +527,7 @@ render_check() {
     'jwks_file = "/etc/ferroehr/probe-jwks.json"'; do
     grep -qF -- "$want" <<<"$rendered" || { red "  the production install render lacks: ${want}"; failed=1; }
   done
-  grep -qF 'provider = "local"' <<<"$rendered" || { red "  the production install render does not run the in-instance EHR index"; failed=1; }
+  grep -qF 'subject_index = "local"' <<<"$rendered" || { red "  the production install render does not run the in-instance EHR index"; failed=1; }
   if grep -qE 'name: [a-z0-9-]*ferropix' <<<"$rendered"; then
     red "  the production install render still deploys FerroPIX, which no probe Secret backs"
     failed=1
