@@ -223,7 +223,9 @@ pub fn remote_pdp(config: &AbacConfig) -> Result<RemotePdp, AuthzError> {
         .oauth
         .as_ref()
         .map(|oauth| {
-            let grant = oauth.resolve().map_err(|e| AuthzError::Load(Box::new(e)))?;
+            let grant = oauth
+                .resolve_with_tls(&ferrohealth_smart::config::ServerTls)
+                .map_err(|e| AuthzError::Load(Box::new(e)))?;
             ferrohealth_smart::client::cache::TokenSource::new(grant)
                 .map_err(|e| AuthzError::Load(Box::new(e)))
         })
