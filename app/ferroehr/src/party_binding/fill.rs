@@ -283,7 +283,7 @@ async fn fill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(), Fil
 }
 
 /// The values of `held` that two or more parties carry.
-fn duplicates(held: Vec<HeldSelector>) -> Vec<Duplicate> {
+pub(crate) fn duplicates(held: Vec<HeldSelector>) -> Vec<Duplicate> {
     let mut by_value: BTreeMap<(&'static str, String, String), Vec<Uuid>> = BTreeMap::new();
     for row in held {
         by_value

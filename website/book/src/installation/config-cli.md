@@ -97,6 +97,52 @@ mapping's digest. Run it with every replica stopped after a mapping change:
 it refuses while a replica holds a live lease, and refuses a store in which
 two parties carry one selector value, naming both.
 
+### `ferroehr party-binding check`
+
+```text
+ferroehr party-binding check [--admin <PARTY_ID>]... [--admin-key <ISSUER> <KEY>]...
+                             [--migration <COMMITTER_NAME>]...
+                             [--expected <FILE> [--expected-issuer <ISSUER>]]
+                             [--horizon-days <DAYS>]
+```
+
+The pre-flight of a migration to party binding. It reads the party versions
+under the configured [party mapping](config-auth.md#the-party-mapping) and
+writes nothing: the side-table categories are read from a refill inside a
+transaction that is rolled back, so it runs before any boot fill and beside a
+running server. It connects with the configured database credentials and
+runs no migration.
+
+The report is a JSON document on stdout:
+
+- `issuers`: per `identifier_issuer`, the `PERSON`s that carry a binding key;
+- `duplicates`: every binding key, `userName` or `externalId` two `PERSON`s
+  carry, which a fill refuses;
+- `inactive`, `abandoned` and `provisional`: the key-bearing `PERSON`s whose
+  head is `800|inactive|`, `801|abandoned|`, or `553|incomplete|` with a first
+  version older than `--horizon-days` (30 by default);
+- `side_table.unadopted`: the key-bearing `PERSON`s that perform no
+  professional `ROLE`, which `adopt` has not reached;
+- `side_table.basic_users`: every `[[authz.party_binding.basic_user]]` with
+  the `PERSON` it binds today, or none;
+- `provenance`: for each key, the committer of the version that introduced
+  it and who that committer is under the provenance rule;
+- `expected`: with `--expected`, every login of the file (one per line) that
+  no live `PERSON` carries.
+
+A key passes the provenance rule when the version that introduced it was
+committed by a `[[scim.client]]` (its client identifier under its token
+issuer), by an administrator, or by a declared migration. A stored version
+records no role its committer held, so you name the administrators: by the
+id of their `PERSON` with `--admin`, or by the `identifier_issuer` and value
+of a key their `PERSON` carries with `--admin-key`. `--migration` declares a
+migration by the committer name its versions carry. The report repeats what
+you named.
+
+The command exits non-zero, after printing the report, on a duplicate, a
+mapped Basic user or expected login with no `PERSON`, or a key whose committer
+fails the provenance rule.
+
 ### `ferroehr healthcheck`
 
 Asks the running server's `GET /health/readiness` and exits 0 on `200`, 1
