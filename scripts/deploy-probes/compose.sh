@@ -16,6 +16,8 @@
 COMPOSE_PROJECT="ferroehr-probe"
 export FERROEHR_PORT="${PROBE_CDR_PORT:-18080}"
 export FERROEHR_S3_PORT="${PROBE_S3_PORT:-18333}"
+export FERROEHR_PIX_PORT="${PROBE_PIX_PORT:-18091}"
+export FERROEHR_ISSUER_PORT="${PROBE_ISSUER_PORT:-18180}"
 # Inert against the base file since #2879 (the quickstart publishes no DB
 # port); kept for runs that add the db-publish overlay so a probe stack still
 # coexists with a developer's own.
@@ -202,11 +204,16 @@ probes_bootstrap() {
   # The token is asked inside the issuer's network namespace, as the one-shot
   # asks it: the development issuer names itself by the address it is asked
   # at, and the CDR trusts http://localhost:8180/quickstart alone.
-  local token scim user_id ehr committer
-  token="$(dc exec -T ferroehr-provision curl -fsS -d grant_type=client_credentials \
-    -d client_id=quickstart-scim -d client_secret=quickstart -d scope=ferroehr/scim \
-    http://localhost:8180/quickstart/token 2>/dev/null \
-    | sed -n 's/.*"access_token" *: *"\([^"]*\)".*//p')"
+  # An engine whose `up --wait` returns before the one-shot runs gets a minute.
+  local token="" scim user_id ehr committer
+  for _ in $(seq 1 30); do
+    token="$(dc exec -T ferroehr-provision curl -fsS -d grant_type=client_credentials \
+      -d client_id=quickstart-scim -d client_secret=quickstart -d scope=ferroehr/scim \
+      http://localhost:8180/quickstart/token 2>/dev/null \
+      | sed -n 's/.*"access_token" *: *"\([^"]*\)".*/\1/p')"
+    [[ -n "$token" ]] && break
+    sleep 2
+  done
   if [[ -z "$token" ]]; then
     probe_fail "a client credentials token of quickstart-scim" "(none)" \
       "the declared SCIM client must obtain a token from the development issuer"
