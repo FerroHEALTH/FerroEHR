@@ -905,50 +905,58 @@ async fn admin_bound_to(svc: &FerroEhrService, value: &str) -> CommitterIdentity
     }
 }
 
+/// A member holds its membership (#5220), so one membership change at a
+/// 5 000-member Group versions one PERSON, writes one row and leaves the
+/// GROUP's version and every other member's row as they were, while the
+/// Group's membership revision moves.
 #[tokio::test]
 async fn a_membership_change_on_a_five_thousand_member_group_writes_one_row() {
     let (db, svc) = service().await;
-    let body = group("ward-5000", "Ward 5000");
-    let (vo, uid) = create(&svc, PartyKind::Group, &body).await;
-    let with = |members: &[VoId]| {
-        let mut b = body.clone();
-        b["relationships"] = members
-            .iter()
-            .map(|member| {
-                json!({
-                    "_type": "PARTY_RELATIONSHIP", "archetype_node_id": MEMBERSHIP,
-                    "name": text("member"),
-                    "source": party_ref("GROUP", vo),
-                    "target": party_ref("PERSON", *member)
-                })
-            })
-            .collect();
-        b
-    };
-    let mut members: Vec<VoId> = (0..5000).map(|_| VoId(uuid::Uuid::now_v7())).collect();
-    let uid = as_caller(
-        caller("admin"),
-        &[ADMIN],
-        try_update(&svc, PartyKind::Group, vo, &uid, &with(&members)),
+    let pool = db.pool();
+    let (vo, _) = create(&svc, PartyKind::Group, &group("ward-5000", "Ward 5000")).await;
+    let others: Vec<uuid::Uuid> = (0..5000).map(|_| uuid::Uuid::now_v7()).collect();
+    sqlx::query(
+        "INSERT INTO party.binding_membership (group_id, member_id, written_at) \
+         SELECT $1, m, now() - interval '1 day' FROM unnest($2::uuid[]) AS m",
     )
+    .bind(vo)
+    .bind(&others)
+    .execute(&pool)
     .await
     .expect("five thousand members");
-    members.push(VoId(uuid::Uuid::now_v7()));
-    as_caller(
-        caller("admin"),
-        &[ADMIN],
-        try_update(&svc, PartyKind::Group, vo, &uid, &with(&members)),
-    )
-    .await
-    .expect("one more member");
+    let body = person(&[]);
+    let (member, uid) = create(&svc, PartyKind::Person, &body).await;
+    let mut joined = body;
+    joined["relationships"] = json!([{
+        "_type": "PARTY_RELATIONSHIP", "archetype_node_id": MEMBERSHIP,
+        "name": text("member"),
+        "source": party_ref("PERSON", member),
+        "target": party_ref("GROUP", vo)
+    }]);
+    try_update(&svc, PartyKind::Person, member, &uid, &joined)
+        .await
+        .expect("the member joins");
     let (rows, newest): (i64, i64) = sqlx::query_as(
         "SELECT count(*), count(*) FILTER (WHERE written_at = \
                 (SELECT max(written_at) FROM party.binding_membership WHERE group_id = $1)) \
          FROM party.binding_membership WHERE group_id = $1 AND retired_at IS NULL",
     )
     .bind(vo)
-    .fetch_one(&db.pool())
+    .fetch_one(&pool)
     .await
     .expect("the rows");
     assert_eq!((rows, newest), (5001, 1));
+    let revision: i64 =
+        sqlx::query_scalar("SELECT revision FROM party.binding_group_revision WHERE group_id = $1")
+            .bind(vo)
+            .fetch_one(&pool)
+            .await
+            .expect("the revision");
+    assert_eq!(revision, 1, "the Group's membership revision moves");
+    let versions: i64 = sqlx::query_scalar("SELECT count(*) FROM party.version WHERE vo_id = $1")
+        .bind(vo)
+        .fetch_one(&pool)
+        .await
+        .expect("the GROUP's versions");
+    assert_eq!(versions, 1, "the GROUP keeps its one version");
 }

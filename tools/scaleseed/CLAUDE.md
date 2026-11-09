@@ -29,6 +29,16 @@ commit path writes, checks it, and measures it (#5090). It is never shipped.
   and times nothing; `scripts/perf/party-lookup.sh` uses it on a quickstart
   store. A store already holding the seed is reused, one of another size is
   refused.
+- **`groups` weighs a SCIM Group at its cap (#5015).** It provisions the
+  Users and builds one Group to `--members` (5 000, `[scim]
+  max_group_members`) one member per change, through `provision_user` and
+  `update_group`, the SCIM service the endpoint calls, then removes and adds
+  members at the cap. A change, one version of the member's `PERSON` since
+  the member holds its membership (#5220), is judged against 200 ms at p99 and
+  2 MiB stored, the build against 12 GiB of database growth, and a change must
+  write one side-table row; a miss fails the run. It refuses a store that
+  already holds its Users. `scripts/perf/scim-groups.sh` runs it on a fresh
+  quickstart database.
 - **Keep each step's database removable.** Seed into a database of its own,
   and drop it when its numbers are recorded.
 - **Gates:** `cargo clippy -p scaleseed --all-targets -- -D warnings`,
