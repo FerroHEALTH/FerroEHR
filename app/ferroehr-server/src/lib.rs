@@ -1124,9 +1124,14 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         &config.audit,
         &observability.management,
     );
-    let drained = ferroehr_rest::serve_full(app_config, service, authz, observability)
-        .await
-        .context("serving ferroehr-rest")?;
+    let drained = Box::pin(ferroehr_rest::serve_full(
+        app_config,
+        service,
+        authz,
+        observability,
+    ))
+    .await
+    .context("serving ferroehr-rest")?;
     tracing::info!(?drained, "the listeners drained");
 
     if let Some(held) = binding_lease {
