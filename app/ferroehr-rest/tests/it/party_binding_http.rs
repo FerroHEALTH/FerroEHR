@@ -664,6 +664,23 @@ async fn an_unbound_person_is_refused_on_every_kind_of_request() {
     assert_eq!(rows.len(), 4, "one access record per refused request");
 }
 
+/// #5008: a `persons` token is looked up whatever its scopes, so one with
+/// `user/` and `patient/` scopes and one with `patient/` scopes alone are
+/// each refused when no party carries the login.
+#[tokio::test]
+async fn an_unbound_person_is_refused_under_patient_scopes() {
+    let (_db, svc) = service().await;
+    let app = router(svc, None).await;
+    let subject = "1a2b3c4d-5e6f-4a7b-9c8d-9e0f1a2b3c4d";
+    for scope in [
+        "user/composition-*.cruds patient/composition-*.r",
+        "patient/composition-*.r",
+    ] {
+        let claims = json!({ "scope": scope, "patient": "9e0f1a2b-3c4d-4e5f-8a6b-7c8d9e0f1a2b" });
+        refused(&app, &token(subject, &claims), "refused-unbound").await;
+    }
+}
+
 /// #5006: the refusal of a token without the key claim names the claim the
 /// issuer's binding reads, which "provision this person" would misdiagnose.
 #[tokio::test]
