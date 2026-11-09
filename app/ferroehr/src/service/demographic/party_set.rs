@@ -18,6 +18,7 @@
               fragment the seam produced once; stored-content serving"
 )]
 
+use openehr_rm::prelude::PartyProxy;
 use serde_json::Value;
 use sqlx::Connection as _;
 
@@ -54,8 +55,8 @@ impl FerroEhrService {
     }
 
     /// Commits the first version of each of `parties` in one demographic
-    /// CONTRIBUTION, under the caller's committer and the audit
-    /// `description`.
+    /// CONTRIBUTION, under the audit `description` and the committer
+    /// `audited_by`, the caller's when `None`.
     ///
     /// Each body passes the gates of a member of a demographic CONTRIBUTION
     /// over ITS-REST: the typed decode, the RM invariants and the mapped
@@ -69,8 +70,12 @@ impl FerroEhrService {
         &self,
         parties: Vec<NewParty>,
         description: &str,
+        audited_by: Option<PartyProxy>,
     ) -> Result<CommittedContribution, ServiceError> {
-        let audit = self.audit(change_type::CREATION, description);
+        let mut audit = self.audit(change_type::CREATION, description);
+        if let Some(party) = audited_by {
+            audit.committer = party;
+        }
         let mut changes = Vec::with_capacity(parties.len());
         for (index, party) in parties.into_iter().enumerate() {
             let kind = support::kind_of(party.kind);
