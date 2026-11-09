@@ -1121,7 +1121,8 @@ region = "us-east-1"
 #? [pixm.endpoint.credentials.oauth]
 #? token_endpoint = "https://idp.example.org/realms/pix/protocol/openid-connect/token"
 #? client_id = "ferroehr-cdr"
-#? client_secret_file = "/run/secrets/pix-client"
+#? client_secret = "..."
+#? client_secret_file = "/run/secrets/pix-client"   # instead of client_secret, a mounted file
 #? scope = "system/Patient.rs"
 
 # ── [usage_report] — the installation report to FerroPULSE ────────────────────

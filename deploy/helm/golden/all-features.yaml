@@ -182,7 +182,7 @@ spec:
           protocol: TCP
     # The in-cluster FerroPIX, by pod selector, for the reason FerroTERM's rule
     # above gives: the chart chose this destination when it wired
-    # config.pixm.url. Omitted, the server refuses to boot, because it
+    # config.pixm.endpoint.url. Omitted, the server refuses to boot, because it
     # reads the identity source's capabilities at start. 8080 is FerroPIX's
     # container port; its token endpoint is the operator's `rules`.
     - to:
@@ -453,7 +453,7 @@ automountServiceAccountToken: false
 # and inherited by every child process
 # (https://cheatsheetseries.owasp.org/cheatsheets/Kubernetes_Security_Cheat_Sheet.html).
 # A key spelled `FERROEHR__…` is injected as an environment VALUE. Only two are
-# left in that form — `audit.fhir_feed.url` and `record.multimedia.access_key_id`, the
+# left in that form — `audit.fhir_feed.endpoint.url` and `record.multimedia.access_key_id`, the
 # remaining config keys with no `*_file` sibling. The DSN moved to a file once
 # the server gained `database.url_file`.
 apiVersion: v1
@@ -473,7 +473,7 @@ stringData:
   multimedia.secret_access_key: "s3-secret"
   terminology.server.oauth.client_secret: "tx-client-secret"
   ehr_index.oauth.client_secret: "pix-client-secret"
-  FERROEHR__AUDIT__FHIR_FEED__URL: "https://arr:arr-password@arr.example.com/fhir"
+  FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL: "https://arr:arr-password@arr.example.com/fhir"
   FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID: "AKIAEXAMPLE"
 ---
 # Source: ferroehr/templates/secret.yaml
@@ -755,12 +755,14 @@ data:
     
     [pixm]
       assigning_authority = "urn:oid:2.999.7.1"
-      url = "http://ferroehr-ferropix.ferroehr.svc:8080/fhir"
-      [pixm.oauth]
-        client_id = "ferroehr"
-        client_secret_file = "/etc/ferroehr-secrets/ehr_index.oauth.client_secret"
-        scope = "system/Patient.rs"
-        token_endpoint = "https://idp.example.com/realms/pix/protocol/openid-connect/token"
+      [pixm.endpoint]
+        url = "http://ferroehr-ferropix.ferroehr.svc:8080/fhir"
+        [pixm.endpoint.credentials]
+          [pixm.endpoint.credentials.oauth]
+            client_id = "ferroehr"
+            client_secret_file = "/etc/ferroehr-secrets/ehr_index.oauth.client_secret"
+            scope = "system/Patient.rs"
+            token_endpoint = "https://idp.example.com/realms/pix/protocol/openid-connect/token"
     
     [privacy]
       subject_namespaces = ["urn:oid:2.999.7.1"]
@@ -802,12 +804,14 @@ data:
     
     [terminology]
       on_error = "accept"
-      url = "http://ferroehr-terminology:8080/r4b"
-      [terminology.oauth]
-        client_id = "ferroehr"
-        client_secret_file = "/etc/ferroehr-secrets/terminology.server.oauth.client_secret"
-        scope = "tx.read"
-        token_endpoint = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
+      [terminology.endpoint]
+        url = "http://ferroehr-terminology:8080/r4b"
+        [terminology.endpoint.credentials]
+          [terminology.endpoint.credentials.oauth]
+            client_id = "ferroehr"
+            client_secret_file = "/etc/ferroehr-secrets/terminology.server.oauth.client_secret"
+            scope = "tx.read"
+            token_endpoint = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
     
     [usage_report]
       deployment = "helm"
@@ -1609,7 +1613,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 7acd6cb3be3a3f3de38f99527df9196640ea3aa767c58c2b31d92df3a5e48ce4
+        checksum/config: e665050352a343a5fc11867d7d42c43f199a7a28b330265e9eefdaff5a146a20
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
         prometheus.io/path: "/management/prometheus"
@@ -1680,11 +1684,11 @@ spec:
               value: "/etc/ferroehr-secrets/db.migrate_url"
             - name: FERROEHR__RECORD__SIGNING__KEY_PASSPHRASE_FILE
               value: "/etc/ferroehr-secrets/signing.key_passphrase"
-            - name: FERROEHR__AUDIT__FHIR_FEED__URL
+            - name: FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL
               valueFrom:
                 secretKeyRef:
                   name: ferroehr-env
-                  key: FERROEHR__AUDIT__FHIR_FEED__URL
+                  key: FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL
             - name: FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:

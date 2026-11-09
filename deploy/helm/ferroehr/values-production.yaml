@@ -164,10 +164,12 @@ config:
       enabled: true
   pixm:
     assigning_authority: urn:oid:2.999.7.1
-    oauth:
-      token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token
-      client_id: ferroehr
-      scope: system/Patient.rs
+    endpoint:
+      credentials:
+        oauth:
+          token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token
+          client_id: ferroehr
+          scope: system/Patient.rs
   database:
     migrations: verify
 
@@ -238,7 +240,7 @@ ferropix:
 # The client secret of the EHR index's grant, from a Secret you own, as the
 # database URLs above are.
 extraEnv:
-  - name: FERROEHR__PIXM__OAUTH__CLIENT_SECRET
+  - name: FERROEHR__PIXM__ENDPOINT__CREDENTIALS__OAUTH__CLIENT_SECRET
     valueFrom:
       secretKeyRef:
         name: ferroehr-pix-client

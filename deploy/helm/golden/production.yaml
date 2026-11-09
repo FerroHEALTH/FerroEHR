@@ -317,11 +317,13 @@ data:
     
     [pixm]
       assigning_authority = "urn:oid:2.999.7.1"
-      url = "http://ferroehr-ferropix.ferroehr.svc:8080/fhir"
-      [pixm.oauth]
-        client_id = "ferroehr"
-        scope = "system/Patient.rs"
-        token_endpoint = "https://idp.example.com/realms/pix/protocol/openid-connect/token"
+      [pixm.endpoint]
+        url = "http://ferroehr-ferropix.ferroehr.svc:8080/fhir"
+        [pixm.endpoint.credentials]
+          [pixm.endpoint.credentials.oauth]
+            client_id = "ferroehr"
+            scope = "system/Patient.rs"
+            token_endpoint = "https://idp.example.com/realms/pix/protocol/openid-connect/token"
     
     [privacy]
       subject_namespaces = ["urn:oid:2.999.7.1"]
@@ -560,7 +562,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 26fc6319aa37ea3b9f8fa978f0bf4e12e1ed0e056f6841cb509cb14cf1c8c0b2
+        checksum/config: cbf372e827170a706f3d41cfa838c8bf86cb8c59887c3a8606e952a0ba8e6065
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr
@@ -627,7 +629,7 @@ spec:
               value: "/etc/ferroehr-secrets/storage.migrate.audit.url"
             - name: FERROEHR__DATABASE__MIGRATE_URL_FILE
               value: "/etc/ferroehr-secrets/db.migrate_url"
-            - name: FERROEHR__PIXM__OAUTH__CLIENT_SECRET
+            - name: FERROEHR__PIXM__ENDPOINT__CREDENTIALS__OAUTH__CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   key: client-secret

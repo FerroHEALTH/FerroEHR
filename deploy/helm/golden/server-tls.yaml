@@ -243,7 +243,7 @@ automountServiceAccountToken: false
 # and inherited by every child process
 # (https://cheatsheetseries.owasp.org/cheatsheets/Kubernetes_Security_Cheat_Sheet.html).
 # A key spelled `FERROEHR__…` is injected as an environment VALUE. Only two are
-# left in that form — `audit.fhir_feed.url` and `record.multimedia.access_key_id`, the
+# left in that form — `audit.fhir_feed.endpoint.url` and `record.multimedia.access_key_id`, the
 # remaining config keys with no `*_file` sibling. The DSN moved to a file once
 # the server gained `database.url_file`.
 apiVersion: v1

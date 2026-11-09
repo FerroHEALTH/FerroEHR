@@ -61,11 +61,11 @@ the same configuration (`ferroehr definitions load`).
   value: {{ printf "%s/signing.key_passphrase" (include "ferroehr.secretMountPath" .) | quote }}
 {{- end }}
 {{- if .Values.secrets.auditFhirFeedUrl }}
-- name: FERROEHR__AUDIT__FHIR_FEED__URL
+- name: FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL
   valueFrom:
     secretKeyRef:
       name: {{ include "ferroehr.secretName" . }}
-      key: FERROEHR__AUDIT__FHIR_FEED__URL
+      key: FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL
 {{- end }}
 {{- if .Values.secrets.multimediaAccessKeyId }}
 - name: FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID
