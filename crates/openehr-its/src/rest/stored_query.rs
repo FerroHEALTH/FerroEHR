@@ -131,10 +131,7 @@ impl FromStr for QualifiedQueryName {
 
 impl fmt::Display for QualifiedQueryName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.namespace {
-            Some(namespace) => write!(f, "{namespace}{NAMESPACE_SEPARATOR}{}", self.name),
-            None => f.write_str(&self.name),
-        }
+        write_qualified(f, self.namespace.as_deref(), &self.name)
     }
 }
 
@@ -216,10 +213,15 @@ impl FromStr for QueryNamePattern {
 
 impl fmt::Display for QueryNamePattern {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.namespace {
-            Some(namespace) => write!(f, "{namespace}{NAMESPACE_SEPARATOR}{}", self.name),
-            None => f.write_str(&self.name),
-        }
+        write_qualified(f, self.namespace.as_deref(), &self.name)
+    }
+}
+
+/// Writes `[{namespace}::]{name}`, the form both a name and a pattern take.
+fn write_qualified(f: &mut fmt::Formatter<'_>, namespace: Option<&str>, name: &str) -> fmt::Result {
+    match namespace {
+        Some(namespace) => write!(f, "{namespace}{NAMESPACE_SEPARATOR}{name}"),
+        None => f.write_str(name),
     }
 }
 
