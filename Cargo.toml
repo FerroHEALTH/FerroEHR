@@ -308,14 +308,13 @@ fhir-types = { version = "=0.1.130", default-features = false, features = ["r4",
 # code), whose token `ihe-atna` hands the ITI-81 route. Its crate line moves
 # one patch per change, so it is pinned exactly at the version `ihe-atna` and
 # `ihe-iti` require. Verified on crates.io 2026-11-09.
-fhir-search = { version = "=0.1.129", default-features = false }
+fhir-search = { version = "=0.1.130", default-features = false }
 
 # ── Patient identity (the shared IHE ITI client library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly. `pixm` is the
 # PIXm Patient Identifier Cross-reference Consumer (ITI-83) the IHE patient
 # identity source of the EHR index is asked through (`[ehr_index]`); `smart` is
-# its ferrohealth-smart token authorizer. Verified on crates.io 2026-11-08
-# (ihe-iti 0.0.77, which takes ihe-atna 0.5).
+# its ferrohealth-smart token authorizer. Verified on crates.io 2026-11-10.
 ihe-iti = { version = "=0.0.84", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
