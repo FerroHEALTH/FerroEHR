@@ -42,7 +42,7 @@ pub struct SyslogTlsListener {
     /// The port it listens on.
     pub port: u16,
     /// A file holding the minted CA certificate, PEM, for
-    /// `[audit.syslog] tls_ca_file`.
+    /// `[audit.syslog.tls] trust_roots_file`.
     pub ca_file: PathBuf,
     frames: mpsc::UnboundedReceiver<Vec<u8>>,
     endings: mpsc::UnboundedReceiver<Ending>,

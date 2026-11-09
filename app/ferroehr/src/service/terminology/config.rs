@@ -55,7 +55,7 @@ pub struct TerminologyServerConfig {
     pub request_timeout_ms: u64,
     /// The OAuth 2.0 client credentials grant whose bearer token every request
     /// carries (`[terminology.server.oauth]`). Unset = unauthenticated.
-    pub oauth: Option<ferrohealth_smart::config::OauthSection>,
+    pub oauth: Option<ferrohealth_smart::config::credentials::OauthSection>,
 }
 
 impl Default for TerminologyServerConfig {
