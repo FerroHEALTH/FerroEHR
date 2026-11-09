@@ -937,6 +937,14 @@ jobs:
       - name: law-corpus / Vendored identity documents match their recorded digests
         if: ${{ !cancelled() }}
         run: bash scripts/checks/pinned-docs.sh
+      # A FHIR package manifest has the npm package.json shape, and the FHIR
+      # packages it depends on are squatted on npm (GHSA-qg8x-2hq5-hwf3,
+      # #5337), so no committed package.json may be one or name one.
+      - name: law-corpus / No committed package.json names a FHIR package
+        if: ${{ !cancelled() }}
+        run: |
+          bash scripts/checks/fhir-package-manifests.sh --self-test
+          bash scripts/checks/fhir-package-manifests.sh
 
       # ---- copyright-holder --------------------------------------------
       - name: copyright-holder / One copyright holder, stated identically everywhere
