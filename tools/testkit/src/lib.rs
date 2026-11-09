@@ -32,6 +32,7 @@
 #![doc(test(attr(deny(warnings))))]
 pub mod https;
 pub mod json_literals;
+pub mod roles;
 pub mod syslog_tls;
 
 use std::time::{Duration, Instant};
@@ -71,9 +72,6 @@ const SQLSTATE_OBJECT_IN_USE: &str = "55006";
 
 /// Environment variable naming an externally provided server (CI, local dev).
 const ENV_URL: &str = "FERROEHR_TEST_PG_URL";
-
-/// Advisory-lock key serializing template builds across test processes.
-const TEMPLATE_LOCK_KEY: i64 = 0x0EB2_7E57_0001;
 
 /// Advisory-lock key electing the single startup sweeper.
 const SWEEP_LOCK_KEY: i64 = 0x0EB2_7E57_0002;
@@ -519,13 +517,13 @@ async fn ensure_template(admin_url: &str) -> Result<String, TestkitError> {
 
     // The lock is session-scoped: hold this connection until the stamp lands.
     sqlx::query("SELECT pg_advisory_lock($1)")
-        .bind(TEMPLATE_LOCK_KEY)
+        .bind(roles::TEMPLATE_LOCK_KEY)
         .execute(&mut admin)
         .await?;
     let outcome = build_template(&mut admin, admin_url, &template, &fingerprint).await;
     drop(
         sqlx::query("SELECT pg_advisory_unlock($1)")
-            .bind(TEMPLATE_LOCK_KEY)
+            .bind(roles::TEMPLATE_LOCK_KEY)
             .execute(&mut admin)
             .await,
     );
@@ -732,12 +730,12 @@ async fn create_clone(
     let start = Instant::now();
     loop {
         sqlx::query("SELECT pg_advisory_lock_shared($1)")
-            .bind(TEMPLATE_LOCK_KEY)
+            .bind(roles::TEMPLATE_LOCK_KEY)
             .execute(&mut *admin)
             .await?;
         let attempt = clone_if_complete(admin, name, template, &fingerprint).await;
         sqlx::query("SELECT pg_advisory_unlock_shared($1)")
-            .bind(TEMPLATE_LOCK_KEY)
+            .bind(roles::TEMPLATE_LOCK_KEY)
             .execute(&mut *admin)
             .await?;
         let expired = start.elapsed() >= DEADLINE;
