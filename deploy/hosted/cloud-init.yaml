@@ -259,11 +259,11 @@ write_files:
       done
 
       docker compose pull -q
-      # The CDR and FerroPIX run in the development issuer's network
-      # namespace, and a namespace owner with members cannot be replaced, so
-      # both go first: `up -d` then recreates the issuer when its definition
-      # moved and starts them in the namespace that is current.
-      docker compose rm --stop --force ferroehr ferropix
+      # The CDR, FerroPIX and the SCIM provisioner run in the development
+      # issuer's network namespace, and a namespace owner with members cannot
+      # be replaced, so they go first: `up -d` then recreates the issuer when
+      # its definition moved and starts them in the namespace that is current.
+      docker compose rm --stop --force ferroehr ferropix ferroehr-provision
       docker compose up -d --remove-orphans
 
       # A bind-mounted file's CONTENTS changing is not a configuration change,

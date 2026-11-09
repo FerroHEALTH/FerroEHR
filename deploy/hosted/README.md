@@ -190,6 +190,24 @@ the corpus it loads and the manifest's pins are the deployed version's. A
 change to the walker or the dataset on `main` reaches the sandbox with the
 next release, and a version with no tag fails the run by name.
 
+### The demo PERSON
+
+The demo login `ferroehr` is a Basic user, and a Basic user is a person: it
+binds the `PERSON` that carries its binding key `ferroehr` under
+`urn:ferroehr:basic-user` (`[[authz.party_binding.basic_user]]`), and every
+request is refused `refused-unbound` while none does. The nightly wipe deletes
+every `PERSON`, so the compose file's `ferroehr-provision` service provisions
+it again the way an identity provider provisions people: as the
+`sandbox-scim` client (`[[scim.client]]`), with a client credentials token for
+the scope `ferroehr/scim` from the development issuer, it asks
+`/scim/v2/Users` for `userName eq "ferroehr"` every 30 seconds and creates the
+User when it is missing (RFC 7644 §3.3). FerroEHR creates the `PERSON` and its
+professional `ROLE` and issues the `PERSON`'s id, so no party id is fixed
+anywhere, and no Basic machine user or administrator role seeds it.
+`reseed.sh` waits for the login to bind before it commits anything, so every
+seeded version names the demo `PERSON`, and it reads the marker's
+`EHR_STATUS` version back to check that its committer references a `PERSON`.
+
 ### The patients and FerroPIX
 
 The CDR resolves patients through FerroPIX (`[ehr_index] provider = "ihe"`),
