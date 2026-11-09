@@ -44,7 +44,7 @@ services:
       FERROEHR__AUTH__ISSUER__2__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
       FERROEHR__AUTH__PARTY__1__ISSUER: https://keycloak:8443/auth/realms/ferroehr
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:ferroehr:keycloak-dev-login
-      FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: uuid
+      FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: login
       # The SCIM client that provisions the realm's users by the ids the realm
       # export fixes (docs/conformance/party/scim/README.md): a second client,
       # since no two clients share a binding_issuer.

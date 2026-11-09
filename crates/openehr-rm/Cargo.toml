@@ -21,8 +21,9 @@ openehr-term = { path = "../openehr-term", version = "0.0.128" }
 # Canonical-JSON (de)serialization is EMITTED manual `serde` impls on the spec
 # types (`openehr-codegen -- emit-json`, into `src/json_serde.rs`) — never a
 # derive. `serde_json` also backs the untyped `Value` RM representation used by
-# the hand-written path/validation helpers; `serde_jcs` canonicalises the
-# already-assembled `Value` for `VERSION.canonical_form()`.
+# the hand-written path/validation helpers and the RFC 8785 canonical form of
+# an already-assembled `Value` for `VERSION.canonical_form()`, whose numbers
+# `ryu-js` writes in the ECMAScript form.
 serde.workspace = true
 serde_json.workspace = true
 # EXACT arithmetic for the RM numeric functions (DV_COUNT.multiply today; the
@@ -33,7 +34,7 @@ serde_json.workspace = true
 # directly, and CLAUDE.md already names it this project's BigDecimal
 # replacement for RM numerics.
 rust_decimal.workspace = true
-serde_jcs.workspace = true
+ryu-js.workspace = true
 # The typed-dispatch tier (`validate::typed_dispatch`) re-reads a failing node
 # with the path tracker so a refusal names the offending JSON node, exactly as
 # the canonical-JSON entry points do.
@@ -49,6 +50,9 @@ uuid.workspace = true
 openehr-its = { path = "../openehr-its" }
 insta.workspace = true
 jsonschema.workspace = true
+proptest.workspace = true
+# The test oracle the RFC 8785 canonical form is held byte-equal to.
+serde_jcs.workspace = true
 
 [lints]
 workspace = true

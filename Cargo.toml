@@ -355,7 +355,9 @@ jiff-sqlx = { version = "0.2.0", features = ["postgres"] }   # official jiff<->s
 
 # ── Serialization & data formats ─────────────────────────────────────────────
 serde = { version = "1", features = ["derive", "rc"] }
-serde_json = { version = "1", features = ["preserve_order"] }
+# float_roundtrip: a parsed decimal is the exact nearest double, which the
+# RFC 8785 number form of a signed VERSION is computed from.
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 # Number formatters for the openehr-its native canonical-JSON codec
 # (`json_codec`): integers via itoa (byte-identical to serde_json), reals via
 # ryu (the chosen canonical REAL lexeme — spec-silent, our own design; see
@@ -378,8 +380,11 @@ zip = { version = "9.0.5", default-features = false, features = ["deflate-flate2
 # nor allow (bzip2-1.0.6 license); 7z's native LZMA2 rides `compress` alone.
 sevenz-rust2 = { version = "0.24", default-features = false, features = ["compress"] }
 rust_decimal = { version = "1", features = ["serde-with-str"] }   # BigDecimal replacement (DV_QUANTITY)
-# canonical JSON (RFC 8785 JCS) for hashing/audit — small, pick one or hand-roll:
-serde_jcs = "0.2.0"                  # verify; otherwise implement ~150 LoC
+# canonical JSON (RFC 8785 JCS): openehr-rm writes it itself for
+# VERSION.canonical_form() (#5220); serde_jcs stays as its test oracle, and
+# ryu-js is the ECMAScript number form both use (RFC 8785 §3.2.2.3).
+serde_jcs = "0.2.0"
+ryu-js = { version = "0.2.2", default-features = false }
 
 # ── Parsing (native ADL / cADL / ODIN / AQL) ─────────────────────────────────
 logos = "0.16.1"                      # DFA lexer

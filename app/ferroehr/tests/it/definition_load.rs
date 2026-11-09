@@ -201,8 +201,8 @@ fn repo_yaml(relative: &str) -> serde_norway::Value {
     serde_norway::from_str(&text).expect("the YAML file parses")
 }
 
-/// The copies of the professional fixture set the quickstart and the Helm CI
-/// values carry are the files of `deploy/definitions/professional/`, so a
+/// The copies of the professional fixture set the quickstart, the hosted
+/// sandbox and the Helm CI values carry are the files of `deploy/definitions/professional/`, so a
 /// lane loads what `the_professional_fixtures_load_and_carry_the_lanes_mapping`
 /// checks.
 #[test]
@@ -210,16 +210,18 @@ fn the_lanes_carry_the_professional_fixtures_unchanged() {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../deploy/definitions/professional");
     let source = |file: &str| std::fs::read_to_string(dir.join(file)).expect("readable");
-    let compose = repo_yaml("docker-compose.yml");
-    for (config, file) in [
-        ("ferroehr-definition-person", PROFESSIONAL[0]),
-        ("ferroehr-definition-role", PROFESSIONAL[1]),
-    ] {
-        assert_eq!(
-            compose["configs"][config]["content"].as_str(),
-            Some(source(file).as_str()),
-            "the compose config {config} is a copy of {file}"
-        );
+    for path in ["docker-compose.yml", "deploy/hosted/docker-compose.yml"] {
+        let compose = repo_yaml(path);
+        for (config, file) in [
+            ("ferroehr-definition-person", PROFESSIONAL[0]),
+            ("ferroehr-definition-role", PROFESSIONAL[1]),
+        ] {
+            assert_eq!(
+                compose["configs"][config]["content"].as_str(),
+                Some(source(file).as_str()),
+                "the config {config} of {path} is a copy of {file}"
+            );
+        }
     }
     let helm = repo_yaml("deploy/helm/ci/basic-auth-values.yaml");
     let files = helm["definitions"]["files"]

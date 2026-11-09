@@ -24,8 +24,8 @@
 //!
 //! NOTE: the spec leaves the exact serialization `[.tbd]`, so the signed
 //! bytes are OUR OWN extension: canonical openEHR JSON with the top-level
-//! `signature` removed, canonicalised per RFC 8785 (`serde_jcs`) so the bytes
-//! are deterministic — the single source for both signing and verification;
+//! `signature` removed, canonicalised per RFC 8785 (`canonical_form_impl`) so
+//! the bytes are deterministic — the single source for both signing and verification;
 //! the adjudication (including RFC 8785 over the ODIN the spec speculates
 //! about) is recorded on the tracker.
 //!
@@ -43,6 +43,7 @@
 
 use serde_json::Value;
 
+use crate::v1_2::common::change_control::canonical_form_impl::{canonical_json, canonical_object};
 use crate::v1_2::common::change_control::version::Version;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use openehr_base::v1_3::prelude::{HierObjectId, ObjectVersionId};
@@ -166,20 +167,17 @@ pub enum CanonicalFormError {
 /// Returns [`CanonicalFormError::Canonicalize`] if RFC 8785 canonicalisation
 /// of the value fails.
 pub fn canonical_form_of_json(value: &Value) -> Result<String, CanonicalFormError> {
-    // The `signature` attribute is dropped through a shallow reference view —
-    // never a deep copy of the (potentially large) version body; RFC 8785
-    // orders keys itself, so the view's map order is immaterial.
+    // The `signature` attribute is dropped by joining the remaining members by
+    // reference, never by a deep copy of the (potentially large) version body.
     match value {
-        Value::Object(map) if map.contains_key("signature") => {
-            let trimmed: std::collections::BTreeMap<&str, &Value> = map
-                .iter()
+        Value::Object(map) => canonical_object(
+            map.iter()
                 .filter(|(k, _)| k.as_str() != "signature")
-                .map(|(k, v)| (k.as_str(), v))
-                .collect();
-            serde_jcs::to_string(&trimmed).map_err(CanonicalFormError::Canonicalize)
-        }
-        _ => serde_jcs::to_string(value).map_err(CanonicalFormError::Canonicalize),
+                .map(|(k, v)| (k.as_str(), v)),
+        ),
+        _ => canonical_json(value),
     }
+    .map_err(CanonicalFormError::Canonicalize)
 }
 
 /// Produces the spec `canonical_form` of a serialised Version JSON value whose
@@ -201,15 +199,13 @@ pub fn canonical_form_of_json_with_data(
     let Value::Object(map) = envelope else {
         return canonical_form_of_json(envelope);
     };
-    let mut view: std::collections::BTreeMap<&str, &Value> = map
+    let joined = (!data.is_null()).then_some(("data", data));
+    let members = map
         .iter()
-        .filter(|(k, _)| k.as_str() != "signature")
         .map(|(k, v)| (k.as_str(), v))
-        .collect();
-    if !data.is_null() {
-        view.insert("data", data);
-    }
-    serde_jcs::to_string(&view).map_err(CanonicalFormError::Canonicalize)
+        .filter(|(k, _)| *k != "signature" && !(joined.is_some() && *k == "data"))
+        .chain(joined);
+    canonical_object(members).map_err(CanonicalFormError::Canonicalize)
 }
 
 #[cfg(test)]

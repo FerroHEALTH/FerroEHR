@@ -88,7 +88,7 @@ limits, with what each used on 2026-10-27 in the local rehearsal of #4242
 | **Total** | **6528m** | |
 
 That leaves about 1.1 GiB for the OS, Docker and the page cache. The one-shots
-(`identity-issuer-ready`, `ferropix-seed`) live for seconds and carry no limit.
+(`identity-issuer-ready`, `ferropix-seed`, `ferroehr-definitions`) live for seconds and carry no limit; `ferroehr-definitions` stores the professional PERSON and ROLE templates the party mapping names before the CDR starts.
 
 ## What is in this directory
 

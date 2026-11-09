@@ -12,6 +12,8 @@
 //! runs the scale test's queries against one seeded EHR and writes the report.
 //! `lookup` seeds the login binding's side table with bound persons and groups and
 //! times the lookup every request of a person makes against its budget (#5087).
+//! `groups` builds a SCIM Group to its cap one member per change and weighs
+//! each change against its budgets (#5015).
 //! No openEHR specification governs load generation: our own design.
 //!
 //! ```text
@@ -20,6 +22,7 @@
 //! scaleseed --database-url postgres://… check --sample 200
 //! scaleseed --database-url postgres://… measure --out target/scale/1m --host "…"
 //! scaleseed --database-url postgres://… lookup --out target/perf/lookup
+//! scaleseed --database-url postgres://… groups --out target/perf/groups
 //! ```
 
 #![expect(
@@ -29,6 +32,7 @@
 
 mod check;
 mod clone;
+mod groups;
 mod lookup;
 mod measure;
 mod proto;
@@ -90,6 +94,27 @@ enum Command {
         /// The host the store runs on, for the report.
         #[arg(long)]
         host: String,
+    },
+    /// Builds a SCIM Group to its cap and weighs each change.
+    Groups {
+        /// The members the Group is built to (`[scim] max_group_members`).
+        #[arg(long, default_value_t = 5_000)]
+        members: usize,
+        /// The removals and additions timed at the cap.
+        #[arg(long, default_value_t = 50)]
+        cycles: usize,
+        /// The p99 budget of one change at the cap, in milliseconds.
+        #[arg(long, default_value_t = 200.0)]
+        change_p99_ms: f64,
+        /// The budget of the bytes one change stores at the cap (2 MiB).
+        #[arg(long, default_value_t = 2_097_152)]
+        change_bytes: i64,
+        /// The budget of the bytes building the Group stores (12 GiB).
+        #[arg(long, default_value_t = 12_884_901_888)]
+        build_bytes: i64,
+        /// The directory the report is written to.
+        #[arg(long, default_value = "target/perf/groups")]
+        out: PathBuf,
     },
     /// Seeds the login binding's side table and times the lookup.
     Lookup {
@@ -184,6 +209,23 @@ async fn main() -> anyhow::Result<()> {
                     out.join("report.md").display()
                 );
             }
+        }
+        Command::Groups {
+            members,
+            cycles,
+            change_p99_ms,
+            change_bytes,
+            build_bytes,
+            out,
+        } => {
+            let target = groups::Target {
+                members,
+                cycles,
+                change_p99_ms,
+                change_bytes,
+                build_bytes,
+            };
+            Box::pin(groups::main(&pool, target, &out)).await?;
         }
         Command::Measure { out, host } => {
             measure::run(&svc, &pool, &cli.database_url, &host, &out).await?;
