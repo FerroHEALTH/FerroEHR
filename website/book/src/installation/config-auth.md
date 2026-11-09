@@ -478,8 +478,8 @@ changed claims changes nothing.
 A `PERSON` whose latest version is `incomplete` is provisional. The access
 record of each of its requests carries `binding = provisional`, a demographic
 read and an AQL query over `VERSION/lifecycle_state` show it, and
-`ferroehr party-binding check` lists the provisional persons older than
-`provisional_report_days`. What a provisional person may do is decided by
+`ferroehr party-binding check` reports the provisional persons older than
+`provisional_report_days` under `side_table.provisional`. What a provisional person may do is decided by
 their SMART scopes and roles, as for anyone. A SCIM client whose
 `binding_issuer` is the issuer's `identifier_issuer` completes the `PERSON`:
 it finds it by `userName`, with a binding key equal to its own, writes the

@@ -18,6 +18,7 @@
 //! with no cache. No openEHR spec governs resolving a login to a party: our
 //! own design.
 
+pub mod check;
 pub(crate) mod derive;
 pub mod fill;
 pub mod lookup;

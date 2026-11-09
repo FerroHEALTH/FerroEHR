@@ -99,16 +99,55 @@ two parties carry one selector value, naming both.
 
 ### `ferroehr party-binding check`
 
-```sh
-ferroehr party-binding check    # list the provisional persons older than provisional_report_days
+```text
+ferroehr party-binding check [--admin <PARTY_ID>]... [--admin-key <ISSUER> <KEY>]...
+                             [--migration <COMMITTER_NAME>]...
+                             [--expected <FILE> [--expected-issuer <ISSUER>]]
 ```
 
-Lists the provisional `PERSON`s that
-[just-in-time creation](config-auth.md#just-in-time-creation) created more
-than `[authz.party_binding] provisional_report_days` days ago (default 30) and
-that SCIM or an administrator has not completed: one line per `PERSON` with
-its container id and creation time, oldest first. It prints no name or other
-personal data.
+The pre-flight of a migration to party binding. It reads the party versions
+under the configured [party mapping](config-auth.md#the-party-mapping) and
+writes nothing: the side-table categories are read from a refill inside a
+transaction that is rolled back, so it runs before any boot fill and beside a
+running server. It connects with the configured database credentials and
+runs no migration.
+
+The report is a JSON document on stdout:
+
+- `issuers`: per `identifier_issuer`, the `PERSON`s that carry a binding key;
+- `duplicates`: every binding key, `userName` or `externalId` two `PERSON`s
+  carry, which a fill refuses;
+- `inactive` and `abandoned`: the key-bearing `PERSON`s whose head is
+  `800|inactive|` or `801|abandoned|`;
+- `side_table.provisional`: the provisional `PERSON`s that
+  [just-in-time creation](config-auth.md#just-in-time-creation) created more
+  than `[authz.party_binding] provisional_report_days` days ago (default 30)
+  and that SCIM or an administrator has not completed, by container id and
+  creation time, oldest first, with no name or other personal data;
+- `side_table.unadopted`: the key-bearing `PERSON`s that perform no
+  professional `ROLE`, which `adopt` has not reached;
+- `side_table.basic_users`: every `[[authz.party_binding.basic_user]]` with
+  the `PERSON` it binds today, or none;
+- `provenance`: for each key, the committer of the version that introduced
+  it and who that committer is under the provenance rule;
+- `expected`: with `--expected`, every login of the file (one per line) that
+  no live `PERSON` carries.
+
+A key passes the provenance rule when the version that introduced it was
+committed by a `[[scim.client]]` (its client identifier under its token
+issuer), by an administrator, by a declared migration, or by just-in-time
+creation at a first login of an `[[authz.party_binding.issuer]]` with
+`jit = true` (a `249|creation|` version carrying its description, committed
+by the new `PERSON` itself). A stored version
+records no role its committer held, so you name the administrators: by the
+id of their `PERSON` with `--admin`, or by the `identifier_issuer` and value
+of a key their `PERSON` carries with `--admin-key`. `--migration` declares a
+migration by the committer name its versions carry. The report repeats what
+you named.
+
+The command exits non-zero, after printing the report, on a duplicate, a
+mapped Basic user or expected login with no `PERSON`, or a key whose committer
+fails the provenance rule.
 
 ### `ferroehr healthcheck`
 
