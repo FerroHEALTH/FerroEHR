@@ -25,21 +25,21 @@ use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
 use ferrohealth_smart::party::source::Lookup;
 
 /// The professional `PERSON` archetype.
-const PERSON: &str = "openEHR-DEMOGRAPHIC-PERSON.professional.v1.0.0";
+pub(crate) const PERSON: &str = "openEHR-DEMOGRAPHIC-PERSON.professional.v1.0.0";
 /// The professional `ROLE` archetype.
-const ROLE: &str = "openEHR-DEMOGRAPHIC-ROLE.professional.v1.0.0";
+pub(crate) const ROLE: &str = "openEHR-DEMOGRAPHIC-ROLE.professional.v1.0.0";
 /// The identifier element every selector shares.
-const KEY_PATH: &str = "/details[id2]/items[id3]";
+pub(crate) const KEY_PATH: &str = "/details[id2]/items[id3]";
 /// The name element.
-const NAME_PATH: &str = "/identities[id4]/details[id5]/items[id6]";
+pub(crate) const NAME_PATH: &str = "/identities[id4]/details[id5]/items[id6]";
 /// The e-mail element under `contacts`.
 const EMAIL_PATH: &str = "/contacts[id10]/addresses[id11]/details[id12]/items[id13]";
 /// The `binding_issuer` of the client under test.
-const LOGIN: &str = "urn:example:staff-login";
+pub(crate) const LOGIN: &str = "urn:example:staff-login";
 /// The `binding_issuer` of another client.
 const OTHER: &str = "urn:example:other-login";
 /// The `PARTY_REF.namespace`.
-const NAMESPACE: &str = "demographic";
+pub(crate) const NAMESPACE: &str = "demographic";
 
 /// A synthetic ADL 2 archetype `hrid` rooted at `root`, with a name in
 /// `identities` and repeatable identifiers in `details`.
@@ -134,7 +134,7 @@ fn selectors() -> PersonSelectors {
 
 /// A service over a fresh database holding the two archetypes, with the
 /// mapping installed.
-async fn service() -> (testkit::TestDb, FerroEhrService) {
+pub(crate) async fn service() -> (testkit::TestDb, FerroEhrService) {
     let (db, svc) = crate::fixtures::service().await;
     for (hrid, root) in [(PERSON, "PERSON"), (ROLE, "ROLE")] {
         svc.template_adl2_upload(&archetype(hrid, root))
@@ -156,13 +156,19 @@ async fn service() -> (testkit::TestDb, FerroEhrService) {
 }
 
 /// The `DV_IDENTIFIER` `id` of `kind` under `issuer`.
-fn identifier(issuer: &str, kind: &str, id: &str) -> Value {
+pub(crate) fn identifier(issuer: &str, kind: &str, id: &str) -> Value {
     json!({ "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id, "type": kind })
 }
 
 /// The User of the client of `issuer` with the key `key`, the `userName`
 /// `user_name`, the `externalId` `external_id` and the name `name`.
-fn user(issuer: &str, key: &str, user_name: &str, external_id: &str, name: &str) -> NewUser {
+pub(crate) fn user(
+    issuer: &str,
+    key: &str,
+    user_name: &str,
+    external_id: &str,
+    name: &str,
+) -> NewUser {
     NewUser {
         template_id: PERSON.to_owned(),
         namespace: NAMESPACE.to_owned(),
@@ -203,7 +209,7 @@ async fn as_client<F: Future>(fut: F) -> F::Output {
 }
 
 /// Creates `user` for the client of `issuer`.
-async fn provision(
+pub(crate) async fn provision(
     svc: &FerroEhrService,
     issuer: &str,
     user: NewUser,

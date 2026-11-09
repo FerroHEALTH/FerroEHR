@@ -500,6 +500,13 @@ impl BindingMapping {
             || self.group.as_ref().is_some_and(|g| g.template == key)
     }
 
+    /// The canonical id of the professional role template, when the mapping
+    /// names one.
+    #[must_use]
+    pub fn professional_role(&self) -> Option<&str> {
+        self.professional_role.as_deref()
+    }
+
     /// Whether `template_id` (in any case) is the professional role
     /// template.
     #[must_use]
