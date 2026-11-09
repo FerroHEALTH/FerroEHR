@@ -15,4 +15,4 @@ Owner decisions 2026-10-06, recorded in #3606 until `docs/architecture.md` carri
 - 2026-10-08: that readiness milestone was renamed v4.3.6 so v4.3.5 could be a security-only patch cut from the v4.3.4 tag (#3664, #3656, #3629, #3700); the old v4.3.6 became v4.3.7. The in-tree FHIR connector is removed in v4.3.6 in favour of FerroBRIDGE (#3080).
 
 **Why:** the old readiness page said the deployer is the manufacturer; that reading is withdrawn.
-**How to apply:** never re-propose the deployer-as-manufacturer reading; compliance pages and issues follow these two decisions. Related: [[licence-busl]], [[platform-shape-single-tenant-ferrobridge]], [[compliance-corpus-direction]].
+**How to apply:** never re-propose the deployer-as-manufacturer reading; compliance pages and issues follow these two decisions. Related: [[license-busl]], [[platform-shape-single-tenant-ferrobridge]], [[compliance-corpus-direction]].

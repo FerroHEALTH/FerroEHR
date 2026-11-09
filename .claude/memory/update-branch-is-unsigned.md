@@ -9,4 +9,4 @@ Never refresh a stale pull-request branch with `gh pr update-branch` or the web 
 
 **Why:** seen on #3432 (2026-09-16); a local `git rebase origin/main` plus force-push of the branch cleared it at once.
 
-**How to apply:** `git fetch origin && git rebase origin/main && git push --force-with-lease` on the PR branch, commits signed locally. Same root cause as [[api-commits-are-unsigned]].
+**How to apply:** on the PR branch, `git fetch origin && git merge origin/main` (the merge commit signed locally by `commit.gpgsign`) and a plain `git push`. No force-push: the family worker rule brings a branch up to date by merging `origin/main` in, and the merge queue makes a stale branch harmless anyway ([[merge-queue-signed]]). Same root cause as [[api-commits-are-unsigned]].

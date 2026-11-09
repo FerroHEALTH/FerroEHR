@@ -38,23 +38,24 @@ first session's mid-edit files into its own commit.
   agents told to "create a new branch" in one checkout fought over
   HEAD/working files; one stashed the other's WIP incl. an untracked module
   that survived only in `stash@{N}^3`, and the tree ended half-mixed).
-  Worktree agents run NO cargo (the one-./target rule: a worktree build
-  would mint a second tree) — they commit on their branch; the orchestrator
-  runs every gate at convergence. Recovery pattern if it ever happens
+  Worktree agents build into their own worktree target (owner delegation
+  2026-11-09, [[worktrees-for-parallel-branches]]); a shared target lets one
+  worktree overwrite another's workspace-member outputs. Recovery pattern if it ever happens
   again: check `git stash list` FIRST (agents stash each other's work),
   including each stash's `^3` untracked-files parent.
 - Don't "fix" broken files you didn't touch (e.g. a half-edited test file) —
   they're the other session's work in progress.
 
-**ONE `./target` for everything (owner ruling 2026-07-16 — no
-`CARGO_TARGET_DIR` override anywhere):** the CLI, all subagents, AND the IDE
-share the single default `./target`. Every extra target dir is a full
+**ONE `./target` for the main checkout (owner ruling 2026-07-16):** the CLI,
+subagents working in the main checkout, AND the IDE share the single default
+`./target`; a worktree builds into its own target instead (2026-11-09,
+[[worktrees-for-parallel-branches]]). Every extra target dir is a full
 duplicate build tree — per-agent lanes and an IDE-specific dir are banned
 (they once filled 394 GB between them). Lock waiting is expected and never
 answered with a second target dir; subagents never run cargo in parallel
 (the orchestrator builds once at convergence); check `du -sh target` at
 session start and after any rewrite-scale change, `cargo clean` above
-~30 GB. Never pkill -9 rustc to "fix" slowness — it corrupts incremental
+~30 GB or above 200k entries in `deps/` (#5248). Never pkill -9 rustc to "fix" slowness — it corrupts incremental
 caches. Full discipline in CLAUDE.md §"Target-dir & warm-build discipline".
 
 **Never `git stash` the shared tree while a worker is live (2026-08-24 incident).**
