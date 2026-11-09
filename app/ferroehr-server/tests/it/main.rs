@@ -11,7 +11,8 @@
 //! `--set key=value` override parser and the subcommand shapes), the
 //! extension each `ferroehr definitions load` file is read by, the
 //! pure-stdout `ferroehr config default` path through
-//! [`run`](ferroehr_server::run), and the `[privacy]` policy the run path
+//! [`run`](ferroehr_server::process::run), the exit status of the run path
+//! ([`main`](ferroehr_server::process::main), `exit_status`), and the `[privacy]` policy the run path
 //! compiles out of the shipped defaults. Everything past that seam is tested
 //! where it lives — platform behaviour in `app/ferroehr/tests/it/`, the
 //! assembled ITS-REST router in `app/ferroehr-rest/tests/it/`.
@@ -25,4 +26,5 @@
 
 mod authz_wiring;
 mod definitions;
+mod exit_status;
 mod wiring;
