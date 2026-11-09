@@ -80,9 +80,6 @@ impl FerroEhrConfig {
             )));
         }
         self.validate_body_tier(&mut errors);
-        if let Some(terminology) = &self.terminology {
-            validate_terminology(terminology, &mut errors);
-        }
 
         if errors.is_empty() {
             Ok(())
@@ -91,60 +88,52 @@ impl FerroEhrConfig {
         }
     }
 
-    /// The client-credentials grants of the outbound connections that are in
-    /// use: the ITI-20 feed when it is configured, the remote policy service
-    /// when ABAC runs on it, and the terminology server when it is configured. A grant
-    /// beside credentials in the URL's userinfo is refused: the upstream would
-    /// receive two authorizations, and which one it honours is not ours to
-    /// guess. No openEHR spec governs outbound authentication — our own design.
+    /// The outbound endpoints in use: the ITI-20 feed and the terminology
+    /// server when they are configured, each by the endpoint rules
+    /// ([`crate::outbound::problems`]), and the grant of the remote policy
+    /// service when ABAC runs on it. A credential beside one in the URL's
+    /// userinfo is refused: the upstream would receive two authorizations, and
+    /// which one it honours is not ours to guess. No openEHR spec governs
+    /// outbound authentication: our own design.
     fn validate_outbound_clients(&self, errors: &mut Vec<ConfigError>) {
-        let feed = self.audit.fhir_feed.as_ref();
-        let remote = &self.authz.abac.remote;
-        let remote_in_use =
-            self.authz.abac.enabled && self.authz.abac.engine == authz::AbacEngineKind::Remote;
-        let terminology = self.terminology.as_ref();
-        let checks = [
-            (
-                "audit.fhir_feed",
-                feed.is_some(),
-                feed.and_then(|feed| feed.oauth.as_ref()),
-                feed.map(|feed| feed.url.expose()),
-            ),
-            (
-                "authz.abac.remote",
-                remote_in_use,
-                remote.oauth.as_ref(),
-                remote
-                    .url
-                    .as_ref()
-                    .map(ferrohealth_secret::secret_url::SecretUrl::expose),
-            ),
-            (
-                "terminology",
-                terminology.is_some(),
-                terminology.and_then(|terminology| terminology.oauth.as_ref()),
-                terminology.map(|terminology| terminology.url.expose()),
-            ),
-        ];
-        for (key, in_use, oauth, url) in checks {
-            let Some(oauth) = oauth.filter(|_| in_use) else {
-                continue;
-            };
+        if let Some(feed) = &self.audit.fhir_feed {
             errors.extend(
-                oauth
-                    .problems(&format!("{key}.oauth"))
+                crate::outbound::problems("audit.fhir_feed.endpoint", &feed.endpoint)
                     .into_iter()
                     .map(ConfigError::semantic),
             );
-            let userinfo = url
-                .and_then(|u| url::Url::parse(u).ok())
-                .is_some_and(|u| !u.username().is_empty() || u.password().is_some());
-            if userinfo {
-                errors.push(ConfigError::semantic(format!(
-                    "{key} carries credentials in its URL and an [{key}.oauth] grant; \
-                     authenticate one way: remove the userinfo or the grant"
-                )));
-            }
+        }
+        if let Some(terminology) = &self.terminology {
+            errors.extend(
+                crate::outbound::problems("terminology.endpoint", &terminology.endpoint)
+                    .into_iter()
+                    .map(ConfigError::semantic),
+            );
+        }
+        let remote = &self.authz.abac.remote;
+        let remote_in_use =
+            self.authz.abac.enabled && self.authz.abac.engine == authz::AbacEngineKind::Remote;
+        let Some(oauth) = remote.oauth.as_ref().filter(|_| remote_in_use) else {
+            return;
+        };
+        errors.extend(
+            oauth
+                .problems("authz.abac.remote.oauth")
+                .into_iter()
+                .map(ConfigError::semantic),
+        );
+        let userinfo = remote
+            .url
+            .as_ref()
+            .and_then(|u| url::Url::parse(u.expose()).ok())
+            .is_some_and(|u| !u.username().is_empty() || u.password().is_some());
+        if userinfo {
+            errors.push(ConfigError::semantic(
+                "authz.abac.remote carries credentials in its URL and an \
+                 [authz.abac.remote.oauth] grant; authenticate one way: remove the userinfo or \
+                 the grant"
+                    .to_owned(),
+            ));
         }
     }
 
@@ -279,7 +268,7 @@ impl FerroEhrConfig {
     /// the declared pseudonym namespaces and readable `[pixm.tls]` material, or
     /// an explicit `"local"`. Unset, the refusal names both choices.
     fn validate_ehr_index(&self, errors: &mut Vec<ConfigError>) {
-        use crate::service::ehr_index::config::{SubjectIndex, problems};
+        use crate::service::ehr_index::config::problems;
         let index = self.record.subject_index;
         let pixm = self.pixm.as_ref();
         errors.extend(
@@ -287,12 +276,6 @@ impl FerroEhrConfig {
                 .into_iter()
                 .map(ConfigError::semantic),
         );
-        if index == Some(SubjectIndex::Pixm)
-            && let Some(pixm) = pixm
-            && let Err(e) = ferrohealth_server::tls_client::TlsClient::read("pixm.tls", &pixm.tls)
-        {
-            errors.push(ConfigError::semantic(e.to_string()));
-        }
     }
 
     /// A cohort predicate is only a selection criterion if the deployment can
@@ -599,29 +582,6 @@ impl FerroEhrConfig {
 /// segment may carry without percent-encoding.
 const fn is_unreserved(c: char) -> bool {
     c.is_ascii_alphanumeric() || matches!(c, '-' | '.' | '_' | '~')
-}
-
-/// Semantic check on `[terminology]`: the table needs the server's base URL,
-/// a boot error rather than a silent fall back to the bundle. The
-/// `oauth` grant is checked with the other outbound grants
-/// (`FerroEhrConfig::validate_outbound_clients`). No openEHR spec governs
-/// configuration — our own design.
-pub(super) fn validate_terminology(
-    server: &crate::service::terminology::config::TerminologyServerConfig,
-    errors: &mut Vec<ConfigError>,
-) {
-    if server.url.expose().trim().is_empty() {
-        errors.push(ConfigError::semantic(
-            "[terminology] requires terminology.url (the FHIR R4B base URL of the terminology \
-             server)"
-                .to_owned(),
-        ));
-    }
-    if server.timeout.is_zero() {
-        errors.push(ConfigError::semantic(
-            "terminology.timeout must be longer than \"0s\"".to_owned(),
-        ));
-    }
 }
 
 /// The year count that satisfies every floor and ceiling in force when no day

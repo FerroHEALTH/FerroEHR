@@ -204,9 +204,8 @@ pub(crate) fn retired() -> Vec<Retired> {
     all
 }
 
-/// The keys `[audit.fhir_feed.oauth]` and `[authz.abac.remote.oauth]` read in
-/// v5.6, the two `oauth` tables of v5.6 that keep their place.
-const OAUTH_TABLES: [&str; 2] = ["audit.fhir_feed.oauth", "authz.abac.remote.oauth"];
+/// The `oauth` table of v5.6 that keeps its place, `[authz.abac.remote.oauth]`.
+const OAUTH_TABLES: [&str; 1] = ["authz.abac.remote.oauth"];
 
 /// Every retired key of a family section the merged `tree` sets, each with
 /// its replacement.

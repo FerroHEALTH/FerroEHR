@@ -251,8 +251,11 @@ async fn fhir_expand_server() -> MockServer {
 
 fn fhir_provider(base: &str) -> FhirTerminologyProvider {
     let cfg = TerminologyServerConfig {
-        url: ferrohealth_secret::secret_url::SecretUrl::new(base),
-        timeout: ferrohealth_config::units::Duration::from_millis(1_500),
+        endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+            url: base.to_owned(),
+            timeout: ferrohealth_config::units::Duration::from_millis(1_500),
+            ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+        },
         ..TerminologyServerConfig::default()
     };
     FhirTerminologyProvider::new(&cfg).expect("build provider")

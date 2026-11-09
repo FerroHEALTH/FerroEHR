@@ -607,8 +607,11 @@ pub(crate) fn provider(
     use ferroehr::service::terminology::config::TerminologyServerConfig;
     use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
     let cfg = TerminologyServerConfig {
-        url: ferrohealth_secret::secret_url::SecretUrl::new(base),
-        timeout: ferrohealth_config::units::Duration::from_millis(800),
+        endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+            url: base.to_owned(),
+            timeout: ferrohealth_config::units::Duration::from_millis(800),
+            ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+        },
         ..TerminologyServerConfig::default()
     };
     FhirTerminologyProvider::new(&cfg).expect("build provider")

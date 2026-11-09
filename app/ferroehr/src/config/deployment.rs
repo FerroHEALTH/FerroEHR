@@ -421,7 +421,7 @@ impl DeploymentPosture {
                 .audit
                 .fhir_feed
                 .as_ref()
-                .is_some_and(|feed| is_plaintext_http(feed.url.expose()))
+                .is_some_and(|feed| is_plaintext_http(&feed.endpoint.url))
         {
             gaps.push(DeploymentGap::PlaintextAuditFeed);
         }
@@ -1024,7 +1024,10 @@ mod tests {
         let feed = |enabled: bool, url: &str| {
             let mut config = production(separated());
             config.audit.fhir_feed = enabled.then(|| crate::system_log::config::FhirFeedConfig {
-                url: SecretUrl::new(url),
+                endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                    url: url.to_owned(),
+                    ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+                },
                 ..crate::system_log::config::FhirFeedConfig::default()
             });
             config

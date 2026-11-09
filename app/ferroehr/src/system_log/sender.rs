@@ -621,7 +621,8 @@ fn start_feed(
         return Ok((None, None));
     };
     let feed = repository(fhir_feed)?;
-    let retry_max = fhir_feed.retry.max_backoff.get();
+    // TODO(#5331): hand the forwarder the whole `retry` once ihe-atna 0.9.1 takes it.
+    let retry_max = fhir_feed.endpoint.retry.max_backoff.get();
     let Some(store) = store else {
         // NOTE: no specification governs the bounds of the store-off feed's
         // spool: our own design, about a day of records at a modest rate.

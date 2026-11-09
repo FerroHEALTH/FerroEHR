@@ -67,12 +67,18 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
     });
     config.terminology = Some(
         ferroehr::service::terminology::config::TerminologyServerConfig {
-            oauth: Some(ferrohealth_smart::config::credentials::OauthSection {
-                token_endpoint: "https://idp.example/token".to_owned(),
-                client_id: "ferroehr".to_owned(),
-                client_secret: Some(secrecy::SecretString::from(CLIENT_SECRET)),
-                ..ferrohealth_smart::config::credentials::OauthSection::default()
-            }),
+            endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                credentials: ferrohealth_smart::config::credentials::CredentialsSection {
+                    oauth: Some(ferrohealth_smart::config::credentials::OauthSection {
+                        token_endpoint: "https://idp.example/token".to_owned(),
+                        client_id: "ferroehr".to_owned(),
+                        client_secret: Some(secrecy::SecretString::from(CLIENT_SECRET)),
+                        ..ferrohealth_smart::config::credentials::OauthSection::default()
+                    }),
+                    ..ferrohealth_smart::config::credentials::CredentialsSection::default()
+                },
+                ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+            },
             ..ferroehr::service::terminology::config::TerminologyServerConfig::default()
         },
     );

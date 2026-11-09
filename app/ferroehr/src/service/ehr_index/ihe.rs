@@ -15,9 +15,6 @@
 //! `Patient`, which FerroEHR would only discard (GDPR Art. 5(1)(c), data
 //! minimisation), and its `$match` is patient matching.
 
-use std::time::Duration;
-
-use ferrohealth_server::tls_client::{TlsClient, TlsClientError};
 use ihe_atna::user::OnBehalfOf;
 use ihe_iti::authorizer::Authorizable as _;
 use ihe_iti::pixm::capabilities::CapabilitiesError;
@@ -25,22 +22,16 @@ use ihe_iti::pixm::error::{InvalidInput, PixmError};
 use ihe_iti::pixm::identifier::{CrossReference, SourceIdentifier, TargetSystem};
 use ihe_iti::pixm::{Invocation, PixmClient};
 use secrecy::SecretString;
-use url::Url;
 
 use crate::service::ehr_index::config::{PixmConfig, PixmInvocation};
 
 /// Why the identity source could not be built, reached or believed.
 #[derive(Debug, thiserror::Error)]
 pub enum IdentitySourceError {
-    /// The `[pixm.tls]` trust roots or client identity are unusable.
-    #[error("the identity source's TLS material is unusable")]
-    Tls(#[from] TlsClientError),
-    /// The HTTP client could not be built.
-    #[error("the identity source's HTTP client could not be built")]
-    Client(#[source] reqwest::Error),
-    /// The PIXm base URL does not parse.
-    #[error("pixm.url is not a URL")]
-    BaseUrl(#[source] url::ParseError),
+    /// `[pixm.endpoint]` is refused: its URL, its TLS material, its
+    /// credential or the HTTP client built from it.
+    #[error("the identity source's endpoint is refused")]
+    Endpoint(#[from] crate::outbound::EndpointError),
     /// The base URL, the assigning authority or a subject is no valid ITI-83
     /// input.
     #[error("the request to the identity source is not valid ITI-83 input")]
@@ -55,15 +46,21 @@ pub enum IdentitySourceError {
         /// How many identifiers it answered.
         count: usize,
     },
-    /// The `[pixm.oauth]` grant is incomplete or its token client could
-    /// not be built.
-    #[error("the identity source's client-credentials grant is unusable")]
-    Grant(#[source] Box<dyn std::error::Error + Send + Sync>),
     /// The PIX Manager's capabilities interaction (FHIR R4 http.html
     /// §capabilities) failed: no answer, a refusal, or no FHIR R4
     /// `CapabilityStatement`.
     #[error("the identity source did not answer its capabilities read")]
     Capabilities(#[from] CapabilitiesError),
+}
+
+/// Whether an ITI-83 exchange that failed with `error` may be asked again:
+/// no answer arrived, or the Manager answered a server error.
+fn transient(error: &PixmError) -> bool {
+    match error {
+        PixmError::Timeout | PixmError::Transport(_) => true,
+        PixmError::Rejected { status, .. } => status.is_server_error(),
+        _ => false,
+    }
 }
 
 /// The PIX Manager of the configured clinical domain.
@@ -73,8 +70,9 @@ pub struct IheIdentitySource {
     pixm: PixmClient,
     /// The assigning authority of the clinical domain.
     domain: TargetSystem,
-    /// How long one exchange may take.
-    timeout: Duration,
+    /// The endpoint: how long one exchange may take and how a failed one is
+    /// tried again.
+    endpoint: crate::outbound::Endpoint,
 }
 
 impl IheIdentitySource {
@@ -90,34 +88,22 @@ impl IheIdentitySource {
     /// [`IdentitySourceError`] when the trust roots, the client, the base URL
     /// or the assigning authority are unusable.
     pub fn new(config: &PixmConfig) -> Result<Self, IdentitySourceError> {
-        let timeout = config.timeout.get();
-        let builder = reqwest::Client::builder()
-            .redirect(reqwest::redirect::Policy::none())
-            .timeout(timeout);
-        let http = TlsClient::read("pixm.tls", &config.tls)?
-            .apply(builder)?
-            .build()
-            .map_err(IdentitySourceError::Client)?;
-        let base = Url::parse(config.url.expose().trim()).map_err(IdentitySourceError::BaseUrl)?;
+        let endpoint = crate::outbound::Endpoint::connect("pixm.endpoint", &config.endpoint)?;
         let invocation = match config.method {
             PixmInvocation::Get => Invocation::Get,
             PixmInvocation::Post => Invocation::Post,
         };
-        let mut pixm = PixmClient::new(base, http)?.invoked_by(invocation);
-        if let Some(oauth) = &config.oauth {
-            let grant = oauth
-                .resolve_with_tls(&ferrohealth_smart::config::ServerTls)
-                .map_err(|e| IdentitySourceError::Grant(Box::new(e)))?;
-            let source = ferrohealth_smart::client::cache::TokenSource::new(grant)
-                .map_err(|e| IdentitySourceError::Grant(Box::new(e)))?;
+        let mut pixm =
+            PixmClient::new(endpoint.url().clone(), endpoint.http())?.invoked_by(invocation);
+        if let Some(token) = endpoint.token() {
             pixm = pixm.with_authorizer(std::sync::Arc::new(
-                ihe_iti::authorizer::smart::TokenAuthorizer::new(source),
+                ihe_iti::authorizer::smart::TokenAuthorizer::new(token),
             ));
         }
         Ok(Self {
             pixm,
             domain: TargetSystem::new(config.assigning_authority.trim())?,
-            timeout,
+            endpoint,
         })
     }
 
@@ -135,7 +121,18 @@ impl IheIdentitySource {
     /// # Errors
     /// [`IdentitySourceError::Capabilities`] carrying the client's refusal.
     pub async fn probe(&self) -> Result<(), IdentitySourceError> {
-        self.pixm.capabilities(self.timeout).await?;
+        let timeout = self.endpoint.timeout();
+        self.endpoint
+            .retrying(
+                |error| {
+                    matches!(
+                        error,
+                        CapabilitiesError::Timeout | CapabilitiesError::Transport(_)
+                    )
+                },
+                || self.pixm.capabilities(timeout),
+            )
+            .await?;
         Ok(())
     }
 
@@ -154,14 +151,17 @@ impl IheIdentitySource {
         value: &str,
     ) -> Result<Option<SecretString>, IdentitySourceError> {
         let source = SourceIdentifier::new(system, SecretString::from(value.to_owned()))?;
+        let timeout = self.endpoint.timeout();
         let answer = self
-            .pixm
-            .cross_reference(
-                &source,
-                std::slice::from_ref(&self.domain),
-                &OnBehalfOf::System,
-                self.timeout,
-            )
+            .endpoint
+            .retrying(transient, || {
+                self.pixm.cross_reference(
+                    &source,
+                    std::slice::from_ref(&self.domain),
+                    &OnBehalfOf::System,
+                    timeout,
+                )
+            })
             .await?;
         let CrossReference::Matched(found) = answer else {
             return Ok(None);

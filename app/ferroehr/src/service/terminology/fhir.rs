@@ -54,7 +54,7 @@ use super::config::TerminologyServerConfig;
 /// The refusal of the client-credentials grant, naming the configuration key
 /// it sits under.
 #[cfg(feature = "fhir")]
-const GRANT_REFUSED: &str = "terminology.oauth: the grant is refused";
+const ENDPOINT_REFUSED: &str = "terminology.endpoint is refused";
 
 /// The `Term_relationship.relation_name` under which a FHIR `$expand`
 /// parent→child `contains` nesting is preserved.
@@ -147,7 +147,7 @@ impl FhirTerminologyProvider {
         #[cfg(feature = "fhir")]
         Ok(Self {
             wire: wire::connect(cfg)?,
-            endpoint: cfg.url.redacted(),
+            endpoint: cfg.masked_url(),
             fail_on_error: cfg.refuses_on_error(),
         })
     }
@@ -451,11 +451,10 @@ mod wire {
     };
     use ferrobridge_term::request::{Coded, Subsumption, Validation};
     use ferrobridge_term::smart::SmartToken;
-    use ferrohealth_smart::client::cache::TokenSource;
     use http::StatusCode;
 
     use super::{
-        Absence, CHILD_RELATION, Expansion, FhirTerminologyProvider, GRANT_REFUSED,
+        Absence, CHILD_RELATION, ENDPOINT_REFUSED, Expansion, FhirTerminologyProvider,
         TerminologyServerConfig,
     };
     use crate::error::{ErrorChain, INTERNAL_MESSAGE, ServiceError};
@@ -468,32 +467,23 @@ mod wire {
     /// The `tx-issue-type` code for "the code is not in the code system".
     const TX_ISSUE_INVALID_CODE: &str = "invalid-code";
 
-    /// Builds the client of the server `cfg` names.
+    /// Builds the client of the server `cfg` names, over the HTTP client,
+    /// the credential and the `retry` of `[terminology.endpoint]`.
     pub(super) fn connect(cfg: &TerminologyServerConfig) -> Result<Client, ServiceError> {
-        let raw = cfg.url.expose().trim();
-        if raw.is_empty() {
-            return Err(ServiceError::fault("terminology.url must not be empty"));
-        }
-        let base = url::Url::parse(raw)
-            .map_err(|e| ServiceError::fault_caused("terminology.url is not a URL", e))?;
-        // NOTE: no openEHR spec governs retrying — our own design: one attempt,
-        // so `timeout` bounds the whole call on the commit path.
-        let mut config = Config::new(base, WireVersion::R4B)
-            .with_timeout(cfg.timeout.get())
+        let endpoint = crate::outbound::Endpoint::connect("terminology.endpoint", &cfg.endpoint)
+            .map_err(|e| ServiceError::fault_caused(ENDPOINT_REFUSED, e))?;
+        let retry = endpoint.retry();
+        let mut config = Config::new(endpoint.url().clone(), WireVersion::R4B)
+            .with_timeout(endpoint.timeout())
             .with_retry(RetryPolicy {
-                max_attempts: 1,
-                ..RetryPolicy::default()
+                max_attempts: retry.max_attempts,
+                initial_backoff: retry.initial_backoff.get(),
+                max_backoff: retry.max_backoff.get(),
             });
-        if let Some(oauth) = &cfg.oauth {
-            let grant = oauth
-                .resolve_with_tls(&ferrohealth_smart::config::ServerTls)
-                .map_err(|e| ServiceError::fault_caused(GRANT_REFUSED, e))?;
-            let source = TokenSource::new(grant)
-                .map_err(|e| ServiceError::fault_caused(GRANT_REFUSED, e))?;
-            config =
-                config.with_credentials(Credentials::OAuth(Arc::new(SmartToken::from(source))));
+        if let Some(token) = endpoint.token() {
+            config = config.with_credentials(Credentials::OAuth(Arc::new(SmartToken::from(token))));
         }
-        Client::new(config)
+        Client::with_http(config, endpoint.http())
             .map_err(|e| ServiceError::fault_caused("building the terminology client failed", e))
     }
 
@@ -752,7 +742,10 @@ mod tests {
     #[test]
     fn empty_url_rejected() {
         let cfg = TerminologyServerConfig {
-            url: ferrohealth_secret::secret_url::SecretUrl::new("  "),
+            endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                url: "  ".to_owned(),
+                ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+            },
             ..TerminologyServerConfig::default()
         };
         assert!(FhirTerminologyProvider::new(&cfg).is_err());

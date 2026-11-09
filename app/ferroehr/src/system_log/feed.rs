@@ -34,42 +34,25 @@ use crate::system_log::AuditError;
 use crate::system_log::config::FhirFeedConfig;
 use crate::system_log::store::AuditStore;
 
-/// How long one `POST` may take; no specification governs it: our own design.
-const FEED_TIMEOUT: Duration = Duration::from_secs(30);
-
-/// The repository `config` names, authorized by its grant when one is set.
+/// The repository `config` names, over the HTTP client and the credential of
+/// `[audit.fhir_feed.endpoint]`.
 ///
 /// # Errors
-/// [`AuditError::Transport`] when the URL is not an `http(s)` URL, the
-/// configured grant is incomplete or its HTTP engine cannot be built; boot
-/// validation refuses an incomplete grant first.
+/// [`AuditError::Transport`] when the endpoint is refused or the URL is not an
+/// `http(s)` URL; boot validation refuses an incomplete table first.
 pub(super) fn repository(config: &FhirFeedConfig) -> Result<FeedRepository, AuditError> {
-    let token = config
-        .oauth
-        .as_ref()
-        .map(|oauth| {
-            let grant = oauth
-                .resolve_with_tls(&ferrohealth_smart::config::ServerTls)
-                .map_err(|e| AuditError::Transport(Box::new(e)))?;
-            ferrohealth_smart::client::cache::TokenSource::new(grant)
-                .map_err(|e| AuditError::Transport(Box::new(e)))
-        })
-        .transpose()?;
-    let base =
-        url::Url::parse(config.url.expose()).map_err(|e| AuditError::Transport(Box::new(e)))?;
-    let http = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
+    let endpoint = crate::outbound::Endpoint::connect("audit.fhir_feed.endpoint", &config.endpoint)
         .map_err(|e| AuditError::Transport(Box::new(e)))?;
+    let base = endpoint.url().clone();
     // NOTE: an `http` feed opens the `plaintext_audit_feed` deployment gap, which
     // production refuses unless it is accepted by name.
     let repository = if base.scheme() == "http" {
-        FeedRepository::cleartext(base, http, FEED_TIMEOUT)
+        FeedRepository::cleartext(base, endpoint.http(), endpoint.timeout())
     } else {
-        FeedRepository::new(base, http, FEED_TIMEOUT)
+        FeedRepository::new(base, endpoint.http(), endpoint.timeout())
     }
     .map_err(|e| AuditError::Transport(Box::new(e)))?;
-    Ok(match token {
+    Ok(match endpoint.token() {
         Some(token) => repository.with_credentials(Arc::new(Bearer::from(token))),
         None => repository,
     })

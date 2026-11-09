@@ -15,11 +15,11 @@
 
 use ferrohealth_config::removed::Removed;
 use ferrohealth_config::units::{ByteSize, Duration};
+use ferrohealth_smart::config::endpoint::EndpointSection;
 use serde::{Deserialize, Serialize};
 
 use crate::config::retention::RetentionPeriod;
 use ferrohealth_config::tls::TlsClientSection;
-use ferrohealth_secret::secret_url::SecretUrl;
 
 /// Behaviour when an audit record cannot be enqueued/delivered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -283,41 +283,52 @@ impl SyslogConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct FhirFeedConfig {
-    /// The ARR's FHIR base URL (`FERROEHR__AUDIT__FHIR_FEED__URL`); the
-    /// `AuditEvent` endpoint is `{url}/AuditEvent`. Credentials in the URL
-    /// (basic auth) are redacted from every rendering.
-    pub url: SecretUrl,
+    /// `[audit.fhir_feed.endpoint]`, the family's outbound endpoint: the ARR's
+    /// FHIR base URL (`url`; the `AuditEvent` endpoint is
+    /// `{url}/AuditEvent`), the timeout of one `POST`, the `retry` of a
+    /// delivery, the TLS and the credential, such as the OAuth 2.0 client
+    /// credentials grant of the IHE IUA authorized client. Credentials in the
+    /// URL are masked in every rendering.
+    pub endpoint: EndpointSection,
     /// How long the forwarder waits for a new record before it reads the
     /// store again (`FERROEHR__AUDIT__FHIR_FEED__POLL_INTERVAL`); at least
     /// 100 ms is waited.
     pub poll_interval: Duration,
-    /// `[audit.fhir_feed.retry]`: the wait between two delivery attempts.
-    pub retry: SinkRetry,
-    /// The OAuth 2.0 client-credentials grant the feed authenticates with
-    /// (`[audit.fhir_feed.oauth]`), the IHE IUA authorized client; absent, the
-    /// feed sends the Basic credentials of `url`, if any.
-    pub oauth: Option<ferrohealth_smart::config::credentials::OauthSection>,
     /// Retired in v5.7.0: refused at load, naming the table's presence.
     #[serde(skip_serializing)]
     pub enabled: Removed,
     /// Retired in v5.7.0: refused at load, naming `poll_interval`.
     #[serde(skip_serializing)]
     pub poll_interval_ms: Removed,
-    /// Retired in v5.7.0: refused at load, naming `retry.max_backoff`.
+    /// Retired in v5.7.0: refused at load, naming `endpoint.retry.max_backoff`.
     #[serde(skip_serializing)]
     pub retry_max_ms: Removed,
+    /// Retired in v5.7.0: refused at load, naming `endpoint.url`.
+    #[serde(skip_serializing)]
+    pub url: Removed,
+    /// Retired in v5.7.0: refused at load, naming `endpoint.credentials.oauth`.
+    #[serde(skip_serializing)]
+    pub oauth: Removed,
 }
 
 impl Default for FhirFeedConfig {
     fn default() -> Self {
         Self {
-            url: SecretUrl::new("http://localhost:8080/fhir"),
+            // NOTE: no specification governs this: our own design; a feed retries until the
+            // record is delivered, so its rounds back off further than one call does.
+            endpoint: EndpointSection {
+                retry: ferrohealth_smart::config::endpoint::RetrySection {
+                    max_backoff: Duration::from_mins(1),
+                    ..ferrohealth_smart::config::endpoint::RetrySection::default()
+                },
+                ..EndpointSection::default()
+            },
             poll_interval: Duration::from_secs(2),
-            retry: SinkRetry::default(),
-            oauth: None,
             enabled: Removed::default(),
             poll_interval_ms: Removed::default(),
             retry_max_ms: Removed::default(),
+            url: Removed::default(),
+            oauth: Removed::default(),
         }
     }
 }
@@ -709,7 +720,7 @@ mod tests {
         assert!(c.resolve_subject);
         assert_eq!(c.fail_mode, FailMode::Open);
         assert_eq!(
-            FhirFeedConfig::default().retry.max_backoff,
+            FhirFeedConfig::default().endpoint.retry.max_backoff,
             Duration::from_mins(1)
         );
         assert!(c.categories.templates.is_empty() && c.categories.archetypes.is_empty());
