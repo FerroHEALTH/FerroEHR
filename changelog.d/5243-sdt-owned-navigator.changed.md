@@ -1,0 +1,1 @@
+- `openehr_sdt::flat::navigate::Navigator` owns what it copies from its Web Template (the name-fallback table and the OPT2 archetype references) and carries no template lifetime, so a consumer can keep it beside the template it was built from; it is `Debug`, `Clone`, `Send` and `Sync`.

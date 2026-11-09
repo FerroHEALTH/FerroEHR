@@ -862,16 +862,12 @@ jobs:
       # `reuse lint` proves the declarations are COMPLETE. It cannot know that
       # this project also publishes a human-readable licensing chapter, which is
       # what a procurement reviewer actually reads and what drifts.
-      - name: Install yq
+      # The runner image's yq, held to the oldest version the scripts are
+      # verified on; no per-run download (#5256).
+      - name: The runner's yq is 4.53.3 or newer
         env:
-          YQ_VERSION: v4.53.3
-          YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
-        run: |
-          set -euo pipefail
-          curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o /tmp/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
-          echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
-          sudo install -m 0755 /tmp/yq /usr/local/bin/yq
-          yq --version
+          YQ_MIN_VERSION: 4.53.3
+        run: bash scripts/checks/runner-yq.sh
       - name: The declarations, the texts and the chapter agree
         run: bash scripts/checks/licensing-declarations.sh
       # The six Apache-2.0 crates publish so any project can take them; a
@@ -1347,16 +1343,12 @@ jobs:
       # `deny.toml` and the prose file are TOML, which jq cannot read. Pinned by
       # version and verified by checksum, like the chart lane's copy: this
       # binary decides whether the gate passes.
-      - name: Install yq
+      # The runner image's yq, held to the oldest version the scripts are
+      # verified on; no per-run download (#5256).
+      - name: The runner's yq is 4.53.3 or newer
         env:
-          YQ_VERSION: v4.53.3
-          YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
-        run: |
-          set -euo pipefail
-          curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o /tmp/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
-          echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
-          sudo install -m 0755 /tmp/yq /usr/local/bin/yq
-          yq --version
+          YQ_MIN_VERSION: 4.53.3
+        run: bash scripts/checks/runner-yq.sh
       - name: Every accepted advisory has a published VEX justification
         run: bash scripts/checks/vex-advisories.sh
       # The release pipeline's exploitability-record gate, proven on synthetic
@@ -1801,19 +1793,13 @@ jobs:
           helm lint deploy/helm/ferroehr -f deploy/helm/ci/all-features-values.yaml
       # The chart gates read the rendered YAML structurally (yq -o=json | jq),
       # because a grep over a manifest passes as soon as ONE container carries a
-      # field. Pinned by version and verified by checksum: this step runs before
-      # the security gates, so a substituted binary would decide whether they
-      # pass.
-      - name: Install yq
+      # field. The yq is the runner image's, trusted as its jq and bash are, and
+      # held to the oldest version the gates are verified on; a per-run release
+      # download turned pull requests red on 2026-11-09 (#5256).
+      - name: The runner's yq is 4.53.3 or newer
         env:
-          YQ_VERSION: v4.53.3
-          YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
-        run: |
-          set -euo pipefail
-          curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o /tmp/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
-          echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
-          sudo install -m 0755 /tmp/yq /usr/local/bin/yq
-          yq --version
+          YQ_MIN_VERSION: 4.53.3
+        run: bash scripts/checks/runner-yq.sh
       # The README drift check needs helm-docs, and validate.sh's self-skip when
       # it is absent is how the v4.0.5 README shipped a release stale through a
       # green lane (#2806) — so the tool is installed here (pinned in
@@ -2954,17 +2940,17 @@ jobs:
       # validator: cffconvert validates against the SAME schema file, vendored
       # at .github/cff-schema/ (scripts/vendor/cff-schema.sh), and the pinned
       # Rust jsonschema-cli validates the yq-converted document against it.
-      # yq is pinned + checksum-verified like the helm-golden job's copy.
-      - name: Install yq + the pinned jsonschema-cli
+      # yq is the runner image's, held to a version floor as in the helm-golden
+      # job (#5256).
+      - name: The runner's yq is 4.53.3 or newer
         env:
-          YQ_VERSION: v4.53.3
-          YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+          YQ_MIN_VERSION: 4.53.3
+        run: bash scripts/checks/runner-yq.sh
+      - name: Install the pinned jsonschema-cli
+        env:
           JSONSCHEMA_CLI_VERSION: 0.52.0
         run: |
           set -euo pipefail
-          curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o /tmp/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
-          echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
-          sudo install -m 0755 /tmp/yq /usr/local/bin/yq
           cargo install jsonschema-cli --version "${JSONSCHEMA_CLI_VERSION}" --locked
       - name: Validate CITATION.cff (CFF 1.2.0 schema)
         run: |

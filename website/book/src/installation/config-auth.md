@@ -242,6 +242,8 @@ attributes a person, and `enabled` is refused at boot.
 | `provider` | `{ issuer, id }`, or `[[authz.party_binding.provider]]` tables | **required** once `[auth]` admits a credential | The healthcare provider this deployment acts for, as an identifier issuer and id (in the Netherlands the URA). Every access record of a bound or provisional person and every version a person commits name it (EHDS Art. 13(4), Annex II 3.2(a)). A deployment that serves several providers declares one table per value of its issuers' `tenant_claim` (`tenant`, `issuer`, `id`) instead; the two forms cannot be combined, and a bound issuer that names no `tenant_claim` is refused beside the table form. |
 | `namespace` | string | `demographic` | The `PARTY_REF.namespace` a bound party is written under, the value of the ITS-REST overview example (`committer.external_ref.namespace="demographic"`), held to the `OBJECT_REF.namespace` pattern `[a-zA-Z][a-zA-Z0-9_.:/&?=+-]*`. |
 | `basic_user` | `[[authz.party_binding.basic_user]]` tables | `[]` | One per Basic user: `user`, `key_issuer` (the `identifier_issuer` of an `[[auth.party]]` table) and `key`, the binding key the user's `PERSON` carries. A Basic user with no table, a table naming no Basic user and a `key_issuer` no table names refuse the start. |
+| `issuer` | `[[authz.party_binding.issuer]]` tables | `[]` | One per `persons` issuer that creates a provisional `PERSON` at a first login; see [Just-in-time creation](#just-in-time-creation). |
+| `provisional_report_days` | integer | `30` | The age in days past which `ferroehr party-binding check` reports a provisional `PERSON`. |
 
 ```toml
 [authz.party_binding]
@@ -388,7 +390,9 @@ endpoints outside the auth layer answer. The problem names the identifier
 issuer to provision the person under, and the refusal of a token without the
 key claim names the missing claim instead. No setting serves an unbound person
 under a login-only committer, so provision every professional (through
-[SCIM](#scim) or the demographic API) before you add a `persons` issuer. Each
+[SCIM](#scim) or the demographic API) before you add a `persons` issuer, or
+let the issuer create a provisional `PERSON` at the first login
+([just-in-time creation](#just-in-time-creation)). Each
 refusal writes one `warn` line naming the issuer and the outcome, never the
 claim value, and counts into the `binding_refusals` metric by `issuer` and
 `outcome`.
@@ -403,6 +407,94 @@ to that EHR, whatever the token's scopes cover; a query must name it with
 `ehr_id`. Templates stay readable. A `persons` token whose only clinical scopes
 are `patient/` is a professional confined to its launch EHR, and its commits
 record the professional, never `PARTY_SELF`.
+
+#### Just-in-time creation
+
+Just-in-time creation lets a professional with no party work under their own
+account at their first login, before SCIM or an administrator completes the
+record. It is off by default and enabled per `persons` issuer in one
+`[[authz.party_binding.issuer]]` table. When a login of that issuer matches no
+party, FerroEHR commits one `PERSON` of the default template with lifecycle
+state `553|incomplete|`, which RM common §Incomplete Content allows for
+"incomplete demographic details", and its professional `ROLE` in the same
+demographic contribution, then serves the request bound to it. The next
+request binds to that `PERSON` and creates nothing. When a login creates a
+party is FerroEHR's own design: no openEHR specification governs it.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `issuer` | string | required | A `persons` issuer an `[[auth.party]]` table binds. |
+| `jit` | boolean | `false` | Whether a first login with no party creates a provisional `PERSON`. |
+| `guests_jit` | boolean | `false` | Whether a guest is created too; needs `jit` and the issuer's `[[auth.party]] guests`. |
+| `user_name_claim` | string | the profile's `person_key` | The claim the `userName` is read from. It must be one the issuer controls: an email address, a phone number, `preferred_username`, `name`, `upn` and `unique_name` refuse the start. |
+| `idp_claim` | string | `idp` | The dotted claim path the identity provider is read from (the Microsoft Entra `idp` claim). |
+| `admit_idp` | list of strings | `[]` | The identity providers whose logins are created. |
+| `admit_groups` | list of strings | `[]` | The groups, read from the `[[auth.party]] group_claim`, of which a created login holds one. |
+| `admit_roles` | list of strings | `[]` | The roles, read from `[auth] role_claims`, of which a created login holds one. |
+| `admit_assurance` | `low`, `substantial` or `high` | unset | The lowest `[authz.assurance]` level a created login carries. |
+
+`jit = true` needs at least one admission condition, and a login must meet
+every condition the table declares. It also needs a default person template
+with a `user_name` selector, `[authz.party_binding.professional_role]`, and an
+attribute that maps an OpenID Connect name claim (`name`, `given_name`,
+`family_name`, `middle_name` or `nickname`) to the default template; boot
+refuses the table otherwise.
+
+```toml
+[[authz.party_binding.issuer]]
+issuer = "https://login.microsoftonline.com/<tenant-id>/v2.0"
+jit = true
+admit_groups = ["5f2a9c1e-0000-4000-8000-00000000c11a"]
+admit_assurance = "substantial"
+```
+
+What it writes is the attribution minimum: the binding key, the `userName`
+and the name claims the token carries. Any other mapped attribute is written
+only where its `[[authz.party_binding.person.attribute]]` sets `jit = true`
+(GDPR Art. 25(2), data protection by default), and `externalId` is never
+written, since RFC 7643 §3.1 leaves it to the provisioning client. The
+version is committed with change type `249|creation|`, a description naming
+just-in-time creation and the issuer, and the person's own committer: the
+name, the login identifier and an `external_ref` naming the new `PERSON`.
+FerroEHR reads every value from the access token only (RFC 9068 §2.2.2), so
+the issuer must put the name claims in the access token.
+
+It runs only for a person or a delegated caller of the issuer, never for a
+representative, a patient, a system or a `federation` caller, and never for a
+login whose outcome is anything other than unbound: an ambiguous, inactive,
+abandoned or deprovisioned party, a token without the key claim and a party
+with the wrong marker are refused as before. A `PERSON` a SCIM client deleted
+is never created again by a later login, whatever the identity provider still
+issues. A login that fails an admission condition, or whose token carries no
+mapped name claim, is refused with `403` and `refused-unbound`.
+
+Concurrent first requests of one login commit one `PERSON`: the binding key's
+unique index refuses the second commit, and that request binds to the first
+one's `PERSON`. A login whose `userName` another party already holds is
+refused with `403` and binds nothing. Just-in-time creation only creates: it
+never updates, deactivates or deletes a `PERSON`, so a later login with
+changed claims changes nothing.
+
+A `PERSON` whose latest version is `incomplete` is provisional. The access
+record of each of its requests carries `binding = provisional`, a demographic
+read and an AQL query over `VERSION/lifecycle_state` show it, and
+`ferroehr party-binding check` lists the provisional persons older than
+`provisional_report_days`. What a provisional person may do is decided by
+their SMART scopes and roles, as for anyone. A SCIM client whose
+`binding_issuer` is the issuer's `identifier_issuer` completes the `PERSON`:
+it finds it by `userName`, with a binding key equal to its own, writes the
+`externalId` with a `PATCH`, and a complete `PUT` completes it. SCIM
+`active = false` abandons it.
+
+The lawful basis for the attribution minimum (key, `userName`, name) is GDPR
+Art. 6(1)(c): EHDS Art. 13(4) and the logging duties need the professional
+identified. An operator who opts a contact attribute in with `jit = true`
+names its own basis, Art. 6(1)(b) or (f). Because the data come from the
+identity provider and not from the person, tell the professionals what Art. 14
+asks: what is copied, from which source, and why. On a realm or tenant that
+creates persons, make the name attributes administrator-controlled, as the key
+is; [Enterprise identity providers](../identity-providers.md#just-in-time-creation)
+shows the settings per identity provider.
 
 ### `[authz.import]` and `[[authz.system_client]]`
 

@@ -158,6 +158,40 @@ fn every_corpus_instance_path_and_pointer_name_the_instance() {
     );
 }
 
+/// A navigator whose template is gone reaches exactly the instances one
+/// built over the live template reaches, over every corpus composition.
+#[test]
+fn a_navigator_that_outlived_its_template_reaches_the_same_instances() {
+    let templates = common::web_templates();
+    let mut compared = 0_usize;
+    for (name, template_id, composition) in common::compositions() {
+        let Some(template) = templates.get(&template_id) else {
+            continue;
+        };
+        let live = Navigator::new(template);
+        let detached = Navigator::new(&template.clone());
+        for node in nodes(&template.tree) {
+            let Ok(path) = node.aql_path.parse::<RmPath>() else {
+                continue;
+            };
+            let pointers = |navigator: &Navigator| -> Vec<String> {
+                navigator
+                    .instances(&composition, &path)
+                    .iter()
+                    .map(openehr_sdt::flat::navigate::Instance::pointer)
+                    .collect()
+            };
+            let reached = pointers(&live);
+            compared += reached.len();
+            assert_eq!(reached, pointers(&detached), "{name}: {path}");
+        }
+    }
+    assert!(
+        compared > 1000,
+        "the corpus reaches its instances ({compared})"
+    );
+}
+
 #[test]
 fn an_opt14_root_carries_the_terms_its_archetype_defines() {
     for (template_id, template) in common::web_templates() {

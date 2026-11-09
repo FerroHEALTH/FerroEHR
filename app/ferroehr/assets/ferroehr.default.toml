@@ -386,6 +386,9 @@ claim = "acr"                 # dotted path into a JSON object allowed
 # The PARTY_REF.namespace a bound party is written under, held to the
 # OBJECT_REF.namespace pattern (BASE base_types).
 namespace = "demographic"
+# The age in days past which `ferroehr party-binding check` reports a
+# provisional PERSON.
+provisional_report_days = 30
 #? provider = { issuer = "urn:oid:2.16.528.1.1007.3.3", id = "00000000" }   # issuer and id (in NL the URA)
 # The per-tenant form, in place of the line above:
 #   provider = [{ tenant = "<tenant_claim value>", issuer = "urn:oid:2.16.528.1.1007.3.3", id = "00000000" }]
@@ -396,6 +399,24 @@ namespace = "demographic"
 #? user = "alice"
 #? key_issuer = "urn:example:staff-login"
 #? key = "3f2b0c1e-0000-4000-8000-000000000001"
+# Just-in-time creation, off by default and per persons issuer: a first login
+# that matches no party creates a provisional (553|incomplete|) PERSON with
+# its professional ROLE. `jit` needs at least one admission condition, and a
+# login meets every condition declared: admit_idp (values of idp_claim),
+# admit_groups (the [[auth.party]] group_claim), admit_roles ([auth]
+# role_claims) and admit_assurance ([authz.assurance] levels). The userName
+# comes from user_name_claim, the profile's person_key when unset. A guest is
+# created only under guests_jit.
+#? [[authz.party_binding.issuer]]
+#? issuer = "https://idp.example/realms/staff"
+#? jit = true
+#? guests_jit = false
+#? user_name_claim = "employee_login"
+#? idp_claim = "idp"
+#? admit_idp = ["https://sts.example/"]
+#? admit_groups = ["clinicians"]
+#? admit_roles = ["CLINICAL"]
+#? admit_assurance = "substantial"
 
 # The one PERSON mapping SCIM, just-in-time creation and the binding share.
 # Each person template names the paths and DV_IDENTIFIER types of the binding

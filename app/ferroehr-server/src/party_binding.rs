@@ -6,7 +6,9 @@
 //! It is installed on the service and judged against its templates at boot;
 //! the binding side table is filled or checked under its digest, with this
 //! replica's lease renewed while it runs; and `ferroehr party-binding refill`
-//! is the one path by which the mapping of a deployment changes.
+//! is the one path by which the mapping of a deployment changes;
+//! `ferroehr party-binding check` reports the provisional persons that SCIM
+//! or an administrator has not completed.
 //!
 //! A mapping change is a stop-the-world step: every replica stops, the
 //! refill runs, and replicas with the new mapping start. No openEHR spec
@@ -29,6 +31,10 @@ pub enum PartyBindingCmd {
     /// configured mapping and store its digest. Run it with every replica
     /// stopped: it refuses while a replica's lease is live.
     Refill,
+    /// List the provisional persons just-in-time creation left incomplete
+    /// for longer than `[authz.party_binding] provisional_report_days`, by
+    /// container id and creation time, oldest first.
+    Check,
 }
 
 /// Returns `service` with the import rules and the configured party mapping
@@ -176,6 +182,24 @@ pub async fn run(
                 .await
                 .context("refilling the party binding side table")?;
             println!("the party binding side table is refilled under the configured mapping");
+            Ok(())
+        }
+        PartyBindingCmd::Check => {
+            let config = ferroehr::config::load(file, sets)?;
+            config.validate()?;
+            let pools = crate::connect_pool(&config).await?;
+            let days = config.authz.party_binding.provisional_report_days;
+            let old = FerroEhrService::new(&pools)
+                .provisional_persons(days)
+                .await
+                .context("reading the provisional persons")?;
+            println!(
+                "{} provisional PERSON(s) created more than {days} day(s) ago",
+                old.len()
+            );
+            for (party, created) in old {
+                println!("{party}\t{created}");
+            }
             Ok(())
         }
     }

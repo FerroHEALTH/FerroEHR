@@ -750,6 +750,7 @@ async fn standalone_and_group_held_relationships_never_count() {
                 lifecycle_state: None,
             }],
             "an administrator's GROUP",
+            None,
         )
         .await
         .expect("the server writes the GROUP as an administrator");

@@ -188,9 +188,14 @@ async fn build_authenticator(
 }
 
 /// The local party source over `backend`'s party pool, naming each party
-/// under `[authz.party_binding] namespace`.
-fn party_source(config: &AppConfig, backend: &FerroEhrService) -> Arc<dyn BindingSource> {
-    Arc::new(backend.party_source(config.party_binding.namespace.clone()))
+/// under `[authz.party_binding] namespace` and creating a provisional
+/// `PERSON` through `backend`.
+fn party_source(config: &AppConfig, backend: &Arc<FerroEhrService>) -> Arc<dyn BindingSource> {
+    Arc::new(
+        backend
+            .party_source(config.party_binding.namespace.clone())
+            .with_creator(Arc::clone(backend)),
+    )
 }
 
 /// Builds and serves the application with full observability until the

@@ -55,14 +55,16 @@ pub fn relative(parent: &RmPath, child: &RmPath) -> Option<RmPath> {
 ///
 /// Built once per template, it holds the name-fallback decision of every
 /// parent the template's paths pass through and the OPT2 archetype
-/// references, so each step decides in constant time.
+/// references, so each step decides in constant time. It owns both and keeps
+/// no borrow of the template, so it can live beside the template it was built
+/// from in one owned value.
 #[derive(Debug, Clone)]
-pub struct Navigator<'t> {
+pub struct Navigator {
     /// The name-fallback table of each parent, keyed by the parent's template
     /// path rendered with no positions.
     fallbacks: BTreeMap<String, NameFallback>,
     /// [`WebTemplate::archetype_refs`].
-    references: Option<&'t BTreeMap<String, String>>,
+    references: Option<BTreeMap<String, String>>,
 }
 
 /// One step of an [`Instance`]: the template segment it followed, the node it
@@ -195,10 +197,10 @@ impl<'a> Instance<'a> {
     }
 }
 
-impl<'t> Navigator<'t> {
-    /// The navigator of `template`.
+impl Navigator {
+    /// The navigator of `template`, which it copies what it needs from once.
     #[must_use]
-    pub fn new(template: &'t WebTemplate) -> Self {
+    pub fn new(template: &WebTemplate) -> Self {
         let mut tails: BTreeMap<String, Vec<Vec<PathSegment>>> = BTreeMap::new();
         let mut stack = vec![&template.tree];
         while let Some(node) = stack.pop() {
@@ -214,7 +216,7 @@ impl<'t> Navigator<'t> {
             .collect();
         Self {
             fallbacks,
-            references: template.archetype_refs.as_ref(),
+            references: template.archetype_refs.clone(),
         }
     }
 
@@ -314,6 +316,7 @@ impl<'t> Navigator<'t> {
         carried == wanted
             || self
                 .references
+                .as_ref()
                 .and_then(|refs| refs.get(carried))
                 .is_some_and(|interface| interface == wanted)
     }
@@ -395,6 +398,38 @@ mod tests {
             Navigator::new(&wt).instances(&composition, &path(&wt.tree.children[0].aql_path));
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].pointer(), "/content/0");
+    }
+
+    #[test]
+    fn a_navigator_outlives_its_template_and_decides_as_before() {
+        const fn owned<T: std::fmt::Debug + Clone + Send + Sync + 'static>() {}
+        owned::<Navigator>();
+        let refs = BTreeMap::from([(
+            "org.openehr::openEHR-EHR-EVALUATION.b.v1.2.0".to_owned(),
+            "openEHR-EHR-EVALUATION.b.v1".to_owned(),
+        )]);
+        let paths = [
+            "/content[openEHR-EHR-EVALUATION.a.v1,'Template Name']",
+            "/content[openEHR-EHR-EVALUATION.b.v1]",
+        ];
+        let navigator = {
+            let wt = template(&paths, Some(refs));
+            Navigator::new(&wt)
+        };
+        let composition = json!({"content": [
+            {"archetype_node_id": "openEHR-EHR-EVALUATION.a.v1", "name": {"value": "Runtime"}},
+            {"archetype_node_id": "org.openehr::openEHR-EHR-EVALUATION.b.v1.2.0", "name": {"value": "b"}}
+        ]});
+        let renamed = navigator.instances(&composition, &path(paths[0]));
+        assert_eq!(
+            renamed.len(),
+            1,
+            "the renamed-instance fallback still applies"
+        );
+        assert_eq!(renamed[0].pointer(), "/content/0");
+        let referenced = navigator.instances(&composition, &path(paths[1]));
+        assert_eq!(referenced.len(), 1, "the OPT2 references are still read");
+        assert_eq!(referenced[0].pointer(), "/content/1");
     }
 
     #[test]
