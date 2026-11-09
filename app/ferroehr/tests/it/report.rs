@@ -64,11 +64,11 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
         }],
         cache_ttl_seconds: 0,
     });
-    config.terminology.server.oauth = Some(ferrohealth_smart::config::OauthSection {
+    config.terminology.server.oauth = Some(ferrohealth_smart::config::credentials::OauthSection {
         token_endpoint: "https://idp.example/token".to_owned(),
         client_id: "ferroehr".to_owned(),
         client_secret: Some(secrecy::SecretString::from(CLIENT_SECRET)),
-        ..ferrohealth_smart::config::OauthSection::default()
+        ..ferrohealth_smart::config::credentials::OauthSection::default()
     });
     config.signing.key_path = Some(key.path().to_path_buf());
     config.signing.key_passphrase = Some(Secret::new(PASSPHRASE));

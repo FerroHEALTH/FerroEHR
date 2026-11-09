@@ -33,6 +33,7 @@ mod entra;
 mod groups;
 mod groups_entra;
 mod jit;
+mod migration;
 mod refusals;
 
 /// The deployment's own authorization server, which issues the clients' tokens.

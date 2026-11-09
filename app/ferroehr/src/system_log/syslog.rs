@@ -16,12 +16,13 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use ferrohealth_server::tls_client::TlsClient;
 use ihe_atna::atna::forwarder::Forwarder;
-use ihe_atna::atna::repository::{Repository, Timeouts, TlsSettings};
+use ihe_atna::atna::repository::{Repository, Timeouts};
 use ihe_atna::atna::spool::{Bounds, Spool};
 use ihe_atna::atna::syslog::Sender;
 use jiff::Timestamp;
-use secrecy::{SecretSlice, SecretString};
+use secrecy::SecretSlice;
 
 use crate::system_log::AuditError;
 use crate::system_log::config::SyslogConfig;
@@ -57,8 +58,8 @@ impl SyslogRoute {
     ///
     /// # Errors
     /// [`AuditError::Transport`] when a header field is not printable US-ASCII
-    /// of the length RFC 5424 §6.2 allows, the trust or identity files cannot
-    /// be read, `ihe-atna` refuses the address or the PEM material, or the
+    /// of the length RFC 5424 §6.2 allows, the `[audit.syslog.tls]` material
+    /// cannot be read or is refused, `ihe-atna` refuses the address, or the
     /// spool directory cannot be opened.
     pub async fn new(
         config: &SyslogConfig,
@@ -70,24 +71,15 @@ impl SyslogRoute {
             .map_err(|e| AuditError::Transport(Box::new(e)))?;
         let address = url::Url::parse(&format!("tls://{}:{}", config.host, config.port))
             .map_err(|e| AuditError::Transport(Box::new(e)))?;
-        let roots = match config.tls_ca_file.as_deref() {
-            Some(path) => Some(read(path).await?),
-            None => None,
-        };
-        let identity = match (
-            config.tls_identity_cert_file.as_deref(),
-            config.tls_identity_key_file.as_deref(),
-        ) {
-            (Some(cert), Some(key)) => {
-                let mut pem = read(cert).await?;
-                pem.push(b'\n');
-                pem.extend(read(key).await?);
-                let pem = String::from_utf8(pem).map_err(|e| AuditError::Transport(Box::new(e)))?;
-                Some(SecretString::from(pem))
-            }
-            _ => None,
-        };
-        let repository = Repository::tls(&address, &TlsSettings { roots, identity }, TIMEOUTS)
+        let section = config.tls.clone();
+        let tls = tokio::task::spawn_blocking(move || {
+            TlsClient::read("audit.syslog.tls", &section)
+                .and_then(|client| client.platform_config())
+        })
+        .await
+        .map_err(|e| AuditError::Transport(Box::new(e)))?
+        .map_err(|e| AuditError::Transport(Box::new(e)))?;
+        let repository = Repository::tls(&address, Arc::new(tls), TIMEOUTS)
             .map_err(|e| AuditError::Transport(Box::new(e)))?;
         let bounds = Bounds {
             max_messages: config.spool_max_messages,
@@ -131,13 +123,6 @@ impl SyslogRoute {
             .await
             .map_err(|e| AuditError::Transport(Box::new(e)))
     }
-}
-
-/// The bytes of the PEM file at `path`.
-async fn read(path: &str) -> Result<Vec<u8>, AuditError> {
-    tokio::fs::read(path)
-        .await
-        .map_err(|e| AuditError::Transport(Box::new(e)))
 }
 
 #[cfg(test)]

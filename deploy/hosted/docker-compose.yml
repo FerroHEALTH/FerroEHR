@@ -26,8 +26,8 @@
 # the name `ferroehr` on the compose network for Caddy and the viewer.
 #
 # Memory on the 8 GB box (limits, not use): CDR 3072m, FerroTERM 1536m,
-# viewer 1024m, FerroPIX 512m, issuer 256m, Caddy 128m: 6528m, which leaves
-# about 1.1 GiB of the ~7.6 GiB the kernel reports for the OS and Docker.
+# viewer 1024m, FerroPIX 512m, issuer 256m, Caddy 128m, the SCIM provisioner
+# 32m: 6560m, which leaves about 1.1 GiB of the ~7.6 GiB the kernel reports for the OS and Docker.
 
 services:
   ferroehr:
@@ -134,10 +134,16 @@ services:
     environment:
       # The CDR listens on 8080 in this namespace, so the provider moves.
       SERVER_PORT: "8180"
+      # A request for the scope ferroehr/scim gets a token for FerroEHR's SCIM
+      # endpoint (the ferroehr-provision service below); every other client
+      # credentials request gets one for FerroPIX.
       # `$$` is a literal `$` to compose.
       JSON_CONFIG: >-
         {"tokenCallbacks":[{"issuerId":"sandbox",
-        "requestMappings":[{"requestParam":"grant_type","match":"client_credentials",
+        "requestMappings":[{"requestParam":"scope","match":"ferroehr/scim",
+        "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
+        "aud":["ferroehr-scim"],"scope":"$${scope}"}},
+        {"requestParam":"grant_type","match":"client_credentials",
         "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
         "aud":["http://localhost:8090/fhir"],"scope":"$${scope}"}}]}]}
     read_only: true
@@ -164,6 +170,56 @@ services:
         curl -fsS -o /dev/null http://localhost:8180/sandbox/.well-known/openid-configuration && exit 0;
         sleep 1; done; echo 'the issuer did not answer in 120 s' >&2; exit 1
     read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  # Provisions the demo user `ferroehr` as a professional PERSON through the
+  # CDR's SCIM endpoint (RFC 7644 §3.3), the way an identity provider
+  # provisions people, so the Basic login is bound to the PERSON FerroEHR
+  # issues for its binding key: the `sandbox-scim` client takes a client
+  # credentials token (RFC 6749 §4.4) for the scope ferroehr/scim from the
+  # development issuer, asks for the User by `userName` (RFC 7644 §3.4.2.2)
+  # and creates it when it is missing. The nightly reset wipes every PERSON
+  # and restarts the CDR alone, so this service keeps asking every 30 seconds
+  # instead of exiting: the reseed (scripts/sandbox/reseed.sh) waits for the
+  # login to bind before it commits anything.
+  ferroehr-provision:
+    image: ${FERROEHR_CURL_IMAGE:-curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777}
+    container_name: ferroehr-sandbox-provision
+    restart: unless-stopped
+    network_mode: service:identity-issuer
+    depends_on:
+      identity-issuer-ready:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 32m
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        while true; do
+        token=$$(curl -fsS -d grant_type=client_credentials -d client_id=sandbox-scim
+        -d client_secret=sandbox -d scope=ferroehr/scim
+        http://localhost:8180/sandbox/token | sed -n 's/.*"access_token" *: *"\([^"]*\)".*/\1/p');
+        if [ -n "$$token" ]; then
+        found=$$(curl -sS -H "Authorization: Bearer $$token"
+        'http://localhost:8080/scim/v2/Users?filter=userName%20eq%20%22ferroehr%22' |
+        sed -n 's/.*"totalResults" *: *\([0-9]*\).*/\1/p');
+        if [ "$$found" = 0 ]; then
+        status=$$(curl -sS -o /tmp/answer -w '%{http_code}' -X POST
+        -H "Authorization: Bearer $$token" -H 'Content-Type: application/scim+json'
+        --data '{"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User"],"userName":"ferroehr","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User":{"loginIdentifier":"ferroehr"}}'
+        http://localhost:8080/scim/v2/Users);
+        echo "provisioning ferroehr answered $$status";
+        fi;
+        fi;
+        sleep 30; done
+    read_only: true
+    tmpfs:
+      - /tmp
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true

@@ -73,7 +73,7 @@ pub struct EhrIndexConfig {
     pub tls: TlsClientSection,
     /// The OAuth 2.0 client credentials grant whose access token every request
     /// carries (IUA ITI-72 §3.72.4.2, `[ehr_index.oauth]`). Unset sends none.
-    pub oauth: Option<ferrohealth_smart::config::OauthSection>,
+    pub oauth: Option<ferrohealth_smart::config::credentials::OauthSection>,
 }
 
 impl Default for EhrIndexConfig {
@@ -238,7 +238,7 @@ mod tests {
         assert_eq!(EhrIndexConfig::local().unused_keys(), Vec::<&str>::new());
         let switched = EhrIndexConfig {
             provider: ProviderKind::Local,
-            oauth: Some(ferrohealth_smart::config::OauthSection::default()),
+            oauth: Some(ferrohealth_smart::config::credentials::OauthSection::default()),
             ..ihe()
         };
         assert_eq!(switched.problems(&[]), Vec::<String>::new());

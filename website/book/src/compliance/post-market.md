@@ -18,7 +18,7 @@ This page keeps what is particular to FerroEHR.
 - **A vulnerability**, including one you have seen exploited: report it
   privately through
   [GitHub private vulnerability reporting][pvr] on the FerroEHR repository, or
-  by email to [info@cadasto.com](mailto:info@cadasto.com) with "FerroEHR
+  by email to [security@cadasto.com](mailto:security@cadasto.com) with "FerroEHR
   vulnerability" in the subject, as
   [`SECURITY.md`](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#reporting-a-vulnerability)
   says. If you have seen it exploited, say so.

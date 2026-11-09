@@ -197,13 +197,20 @@ audit message names a patient (ITI TF-2 §3.20.4.1.2.1.1).
 | `enabled` | bool | `false` | Ship DICOM PS3.15 audit records to an external repository over syslog. |
 | `host` | string | `localhost` | Repository host. |
 | `port` | int | `6514` | Repository port, the RFC 5425 port by default. |
-| `tls_ca_file` | path | unset | PEM file with the repository CA to trust beside the platform's roots. |
-| `tls_identity_cert_file` | path | unset | Client-certificate PEM for mutual TLS. |
-| `tls_identity_key_file` | path | unset | Client-key PEM for mutual TLS. |
+| `tls.trust_roots_file` | path | unset | PEM bundle of trust roots for the repository, beside the platform's. |
+| `tls.client_identity_file` | path | unset | The client certificate chain and its private key in one PEM, for mutual TLS. |
+| `tls.client_identity` | secret | unset | The same PEM inline, in place of `client_identity_file`. |
+| `tls.min_version` | string | `"1.3"` | The oldest TLS version the client speaks; set `"1.2"` for a repository that offers no TLS 1.3. |
 | `spool_dir` | path | unset | The directory of the spool every frame is stored in before it is sent. It must give no access to the group or to other users. Unset, the spool is held in memory, and a restart loses the frames not yet delivered. |
 | `spool_max_messages` | int | `100000` | The most frames the spool holds; a frame past it is refused and counted in `atna_audit_dropped`. |
 | `spool_max_bytes` | int | `268435456` | The most bytes the spool holds. |
 | `retry_max_ms` | int | `60000` | The longest wait between two delivery attempts after a failure. |
+
+`[audit.syslog.tls]` is the outbound TLS table every FerroHEALTH product
+takes, as `[ehr_index.tls]` is. The keys `tls_ca_file`,
+`tls_identity_cert_file` and `tls_identity_key_file` are retired: each is a
+boot error naming its replacement. Concatenate the certificate chain and the
+private key into the one PEM `client_identity_file` names.
 
 The drain stores each frame in `ihe-atna`'s spool, and the crate's forwarder
 delivers it: one connection held open, a failed send retried with an

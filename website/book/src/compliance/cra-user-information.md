@@ -76,7 +76,7 @@ FerroHEALTH book describes it once for all of them:
 product with digital elements can be reported and received, and where the
 manufacturer's policy on coordinated vulnerability disclosure can be found;"
 
-- **Report a vulnerability** to [info@cadasto.com](mailto:info@cadasto.com),
+- **Report a vulnerability** to [security@cadasto.com](mailto:security@cadasto.com),
   with "FerroEHR vulnerability" in the subject, or through
   [GitHub private vulnerability reporting](https://github.com/FerroHEALTH/FerroEHR/security/advisories/new).
   Both reach the same people and the same procedure. Do not open a public

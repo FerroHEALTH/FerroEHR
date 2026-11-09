@@ -186,6 +186,11 @@ exceptions = [
   # the same licence: its PIXm Consumer (ITI-83) asks the IHE patient identity
   # source of the EHR index (#3380).
   { allow = ["BUSL-1.1"], crate = "ihe-iti" },
+  # FerroBRIDGE's FHIR R4 search value grammar `fhir-search` is the same
+  # Licensor's code under the same licence: `ihe-atna` reads the ITI-81 query
+  # and `ihe-iti` its PIXm values with it, and the ITI-81 route reads its
+  # tokens (#5217).
+  { allow = ["BUSL-1.1"], crate = "fhir-search" },
 ]
 
 [bans]
