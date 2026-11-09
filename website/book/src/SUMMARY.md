@@ -22,6 +22,8 @@
     - [Audit](installation/config-audit.md)
     - [Privacy & data minimisation](installation/config-privacy.md)
     - [CLI & production checklist](installation/config-cli.md)
+  - [Party binding: bootstrap and migration](installation/party-binding-migration.md)
+    - [Breaking changes of party binding](installation/party-binding-breaking-changes.md)
 - [Concepts](concepts/index.md)
   - [openEHR primer](concepts/openehr-primer.md)
   - [System architecture](concepts/architecture.md)
