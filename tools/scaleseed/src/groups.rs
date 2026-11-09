@@ -7,8 +7,9 @@
 //!
 //! "A Version of a `PARTY` includes all the compositional parts, such as
 //! identities, contacts, Party relationships of which it is the source" (RM
-//! demographic `master02-demographic_package.adoc` §Versioning Semantics), so
-//! every membership change stores every membership of the Group again. The run
+//! demographic `master02-demographic_package.adoc` §Versioning Semantics), and
+//! a member is the source of its membership (#5220), so a membership change
+//! stores one version of the member's `PERSON`, whatever the Group's size. The run
 //! provisions the Users and writes the Group through the platform library's
 //! own SCIM service ([`FerroEhrService::provision_user`],
 //! [`FerroEhrService::update_group`]), the path a `PATCH /scim/v2/Groups/{id}`
@@ -17,8 +18,9 @@
 //!
 //! - the p99 of one member removed and one added at the cap, against
 //!   `--change-p99-ms`;
-//! - the bytes one change stores at the cap, its `version` and `node` rows as
-//!   `pg_column_size` counts them, against `--change-bytes`;
+//! - the bytes one change stores at the cap, the `version` and `node` rows of
+//!   the member's version as `pg_column_size` counts them, against
+//!   `--change-bytes`;
 //! - what building the Group stored, as the database's growth, against
 //!   `--build-bytes`;
 //! - the side-table rows one change writes, which must be one.
@@ -209,7 +211,9 @@ async fn run(pool: &PgPool, target: Target, out: &Path) -> anyhow::Result<Figure
 
     let mut changes = Vec::with_capacity(target.cycles * 2);
     let mut side_table_rows_per_change = 0;
+    let mut last = None;
     for member in members.iter().copied().cycle().take(target.cycles) {
+        last = Some(member);
         let without: Vec<VoId> = members.iter().copied().filter(|m| *m != member).collect();
         let timed = Instant::now();
         changed(svc.update_group(writer, id, state(&without), None).await)?;
@@ -220,7 +224,10 @@ async fn run(pool: &PgPool, target: Target, out: &Path) -> anyhow::Result<Figure
         changes.push(timed.elapsed().as_secs_f64() * 1000.0);
         side_table_rows_per_change = membership_rows(pool, id).await? - rows;
     }
-    let change_bytes = row_bytes(pool, id, Some(head(pool, id).await?)).await?;
+    let change_bytes = match last {
+        Some(member) => row_bytes(pool, member, Some(head(pool, member).await?)).await?,
+        None => 0,
+    };
     let figures = Figures {
         members: target.members,
         timed_changes: changes.len(),
@@ -359,7 +366,7 @@ async fn row_bytes(pool: &PgPool, id: VoId, sys_version: Option<i32>) -> anyhow:
     .bind(sys_version)
     .fetch_one(pool)
     .await
-    .context("weigh the Group's rows")
+    .context("weigh the party's rows")
 }
 
 /// The `sys_version` of the head of the party `id`.
@@ -368,7 +375,7 @@ async fn head(pool: &PgPool, id: VoId) -> anyhow::Result<i32> {
         .bind(id)
         .fetch_one(pool)
         .await
-        .context("read the Group's head")
+        .context("read the party's head")
 }
 
 /// Every `binding_membership` row of the `GROUP` `id`, retired ones
@@ -409,7 +416,7 @@ fn report(figures: &Figures, out: &Path) -> anyhow::Result<()> {
          | A change at the cap, p99 | {p99:.1} ms (p50 {p50:.1} ms) | {bp99} ms | {v1} |\n\
          | Bytes one change stores at the cap | {cb} | {bcb} | {v2} |\n\
          | Database growth while building | {bb} | {bbb} | {v3} |\n\
-         | Row bytes of every version | {rb} | | |\n\
+         | Row bytes of the GROUP's versions | {rb} | | |\n\
          | Side-table rows per change | {rows} | 1 | {v4} |\n\
          | A change while building, p99 | {build_p99:.1} ms | | |\n",
         members = figures.members,

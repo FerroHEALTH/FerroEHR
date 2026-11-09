@@ -3,10 +3,10 @@
 
 //! `/scim/v2/Groups` (#5015) through the assembled router: the RFC 7643 §8.4
 //! Group, the RFC 7644 §3.5.2.1 member `add` and §3.5.2.2 member `remove`
-//! examples read from the vendored RFCs, each `GROUP` version and
+//! examples read from the vendored RFCs, each `GROUP` and `PERSON` version and
 //! `PARTY_RELATIONSHIP` they leave, and the refusals. A Group is a demographic
-//! `GROUP` whose members are its inline `PARTY_RELATIONSHIP`s to their
-//! `PERSON`s, never a `ROLE`. The mapping is our own design.
+//! `GROUP` whose members each hold an inline `PARTY_RELATIONSHIP` from their
+//! `PERSON` to it (#5220), never a `ROLE`. The mapping is our own design.
 
 use std::sync::Arc;
 
@@ -136,16 +136,16 @@ async fn versions(pool: &sqlx::PgPool, id: &str) -> Vec<(String, String, Value)>
         .collect()
 }
 
-/// The targets of the membership relationships `body` holds, sorted, or
-/// `None` when `relationships` is Void.
-fn targets(body: &Value) -> Option<Vec<String>> {
+/// The `GROUP`s the membership relationships of the `PERSON` `body` target,
+/// sorted, or `None` when `relationships` is Void.
+fn memberships(body: &Value) -> Option<Vec<String>> {
     let relationships = body.get("relationships")?.as_array()?;
     let mut out: Vec<String> = relationships
         .iter()
         .map(|relationship| {
             assert_eq!(relationship["_type"], "PARTY_RELATIONSHIP");
-            assert_eq!(relationship["target"]["type"], "PERSON", "{relationship}");
-            assert_eq!(relationship["source"]["type"], "GROUP", "{relationship}");
+            assert_eq!(relationship["source"]["type"], "PERSON", "{relationship}");
+            assert_eq!(relationship["target"]["type"], "GROUP", "{relationship}");
             relationship["target"]["id"]["value"]
                 .as_str()
                 .expect("a target")
@@ -154,6 +154,17 @@ fn targets(body: &Value) -> Option<Vec<String>> {
         .collect();
     out.sort();
     Some(out)
+}
+
+/// The entity tag the Group `id` of `client` serves.
+async fn group_tag(app: &Router, client: &str, id: &str) -> String {
+    let (status, headers, body) =
+        call(app, "GET", &format!("/Groups/{id}"), client, None, &[]).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    headers[header::ETAG]
+        .to_str()
+        .expect("an entity tag")
+        .to_owned()
 }
 
 /// The RFC 7643 §8.4 Group, created with two Users of the client, and the
@@ -255,7 +266,7 @@ async fn the_rfc_group_and_member_examples_answer_as_documented() {
 /// memberships described, `relationships` Void when it holds none, and no
 /// `ROLE` beyond the Users' own.
 #[tokio::test]
-async fn each_step_leaves_one_group_version_with_its_memberships_and_no_role() {
+async fn each_step_leaves_its_versions_with_the_memberships_and_no_role() {
     let (_db, pool, app) = app_auditing(false).await;
     let first = user(&app, CLIENT, 1).await;
     let second = user(&app, CLIENT, 2).await;
@@ -267,14 +278,13 @@ async fn each_step_leaves_one_group_version_with_its_memberships_and_no_role() {
     assert_eq!(status, StatusCode::NO_CONTENT);
     assert_ne!(
         added_tag, created_tag,
-        "a membership change is a new GROUP version"
+        "a membership change moves the Group's version"
     );
 
     let remove = json!([{ "op": "remove", "path": format!("members[value eq \"{first}\"]") }]);
-    assert_eq!(
-        patch(&app, CLIENT, &id, remove).await.0,
-        StatusCode::NO_CONTENT
-    );
+    let (status, removed_tag) = patch(&app, CLIENT, &id, remove).await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    assert_ne!(removed_tag, added_tag);
     let rename = json!([{ "op": "replace", "path": "displayName", "value": "Ward 4" }]);
     assert_eq!(
         patch(&app, CLIENT, &id, rename).await.0,
@@ -283,29 +293,43 @@ async fn each_step_leaves_one_group_version_with_its_memberships_and_no_role() {
     let (status, _, body) = call(&app, "GET", &format!("/Groups/{id}"), CLIENT, None, &[]).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["displayName"], "Ward 4");
+    assert_eq!(members(&app, CLIENT, &id).await, sorted(&[&second]));
     let (status, _, _) = call(&app, "DELETE", &format!("/Groups/{id}"), CLIENT, None, &[]).await;
     assert_eq!(status, StatusCode::NO_CONTENT);
 
-    let stored = versions(&pool, &id).await;
-    assert_eq!(stored.len(), 5, "create, add, remove, rename, delete");
-    assert_eq!(stored[0].2["_type"], "GROUP");
-    assert_eq!(
-        targets(&stored[0].2),
-        None,
-        "an empty Group has relationships Void"
-    );
-    assert_eq!(targets(&stored[1].2), Some(sorted(&[&first, &second])));
-    assert_eq!(targets(&stored[2].2), Some(sorted(&[&second])));
-    assert_eq!(targets(&stored[3].2), Some(sorted(&[&second])));
-    assert_eq!(stored[4].2, Value::Null, "the delete stores no body");
-    assert_eq!(stored[4].0, "523");
-    for (index, version) in stored.iter().enumerate().skip(1) {
-        assert_ne!(
-            stored[index - 1].1,
-            version.1,
-            "one CONTRIBUTION per change"
-        );
+    // The GROUP is versioned by its creation, its rename and its deletion
+    // only, and never holds a membership.
+    let group_versions = versions(&pool, &id).await;
+    assert_eq!(group_versions.len(), 3, "create, rename, delete");
+    assert_eq!(group_versions[0].2["_type"], "GROUP");
+    for version in group_versions.iter().take(2) {
+        assert!(version.2.get("relationships").is_none(), "{}", version.2);
     }
+    assert_eq!(
+        group_versions[2].2,
+        Value::Null,
+        "the delete stores no body"
+    );
+    assert_eq!(group_versions[2].0, "523");
+
+    // Each member holds its membership: the add versions both PERSONs in one
+    // CONTRIBUTION, the remove the first, the delete the second.
+    let first_versions = versions(&pool, &first).await;
+    let second_versions = versions(&pool, &second).await;
+    let first_added = first_versions.iter().rev().nth(1).expect("the add");
+    let first_removed = first_versions.last().expect("the remove");
+    assert_eq!(memberships(&first_added.2), Some(vec![id.clone()]));
+    assert_eq!(memberships(&first_removed.2), None);
+    let second_added = second_versions.iter().rev().nth(1).expect("the add");
+    let second_dropped = second_versions.last().expect("the delete's drop");
+    assert_eq!(memberships(&second_added.2), Some(vec![id.clone()]));
+    assert_eq!(memberships(&second_dropped.2), None);
+    assert_eq!(first_added.1, second_added.1, "one CONTRIBUTION per change");
+    assert_ne!(first_removed.1, first_added.1);
+    assert_eq!(
+        second_dropped.1, group_versions[2].1,
+        "the Group's deletion drops its members' memberships in its CONTRIBUTION"
+    );
     let roles: i64 =
         sqlx::query_scalar("SELECT count(DISTINCT vo_id) FROM party.version WHERE kind = 'ROLE'")
             .fetch_one(&pool)
@@ -335,11 +359,12 @@ async fn each_step_leaves_one_group_version_with_its_memberships_and_no_role() {
     }
 }
 
-/// A membership change gives the Group a new entity tag and leaves the
-/// User's tag and body as they were; removing the last member leaves
-/// `relationships` Void.
+/// A membership change gives the Group and the member User a new entity
+/// tag, since the User's `PERSON` holds the membership (RFC 7643 §4.1.2,
+/// #5220); the User's body is unchanged, as it serves no `groups`, and
+/// removing the last member leaves its `relationships` Void.
 #[tokio::test]
-async fn a_membership_changes_the_groups_tag_and_never_the_users() {
+async fn a_membership_changes_the_groups_tag_and_the_users() {
     let (_db, pool, app) = app_auditing(false).await;
     let member = user(&app, CLIENT, 1).await;
     let user_path = format!("/Users/{member}");
@@ -349,10 +374,19 @@ async fn a_membership_changes_the_groups_tag_and_never_the_users() {
     let (_, added) = patch(&app, CLIENT, &id, add).await;
     assert_ne!(added, tag);
     let (_, after_headers, after) = call(&app, "GET", &user_path, CLIENT, None, &[]).await;
-    assert_eq!(after_headers[header::ETAG], before_headers[header::ETAG]);
-    assert_eq!(after, before, "the User serves no groups attribute");
+    assert_ne!(after_headers[header::ETAG], before_headers[header::ETAG]);
+    let without_meta = |body: &Value| {
+        let mut body = body.clone();
+        body.as_object_mut().expect("a User").remove("meta");
+        body
+    };
+    assert_eq!(
+        without_meta(&after),
+        without_meta(&before),
+        "the User serves no groups attribute"
+    );
 
-    let (status, _) = patch(
+    let (status, removed) = patch(
         &app,
         CLIENT,
         &id,
@@ -360,13 +394,14 @@ async fn a_membership_changes_the_groups_tag_and_never_the_users() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
-    let stored = versions(&pool, &id).await;
-    assert_eq!(targets(&stored.last().expect("a head").2), None);
+    assert_ne!(removed, added);
+    let stored = versions(&pool, &member).await;
+    assert_eq!(memberships(&stored.last().expect("a head").2), None);
 }
 
-/// Deleting a User takes its memberships out of every Group in the
-/// CONTRIBUTION that deletes its `PERSON`, the last one leaving
-/// `relationships` Void.
+/// Deleting a User deletes the memberships its `PERSON` holds with it, in
+/// one CONTRIBUTION that versions no `GROUP`, and each Group's version
+/// moves.
 #[tokio::test]
 async fn deleting_a_user_removes_its_memberships_in_the_same_contribution() {
     let (_db, pool, app) = app_auditing(false).await;
@@ -374,6 +409,10 @@ async fn deleting_a_user_removes_its_memberships_in_the_same_contribution() {
     let stayer = user(&app, CLIENT, 2).await;
     let (shared, _) = group(&app, CLIENT, "Shared", &[&leaver, &stayer]).await;
     let (alone, _) = group(&app, CLIENT, "Alone", &[&leaver]).await;
+    let tags = [
+        group_tag(&app, CLIENT, &shared).await,
+        group_tag(&app, CLIENT, &alone).await,
+    ];
     let (status, _, body) = call(
         &app,
         "DELETE",
@@ -385,18 +424,20 @@ async fn deleting_a_user_removes_its_memberships_in_the_same_contribution() {
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
 
-    let deleted = versions(&pool, &leaver).await;
-    let contribution = &deleted.last().expect("the deletion").1;
-    for (group, left) in [(&shared, Some(sorted(&[&stayer]))), (&alone, None)] {
-        let stored = versions(&pool, group).await;
-        let head = stored.last().expect("a head");
+    for (group, tag) in [&shared, &alone].into_iter().zip(tags) {
         assert_eq!(
-            &head.1, contribution,
-            "one CONTRIBUTION deletes the PERSON and edits {group}"
+            versions(&pool, group).await.len(),
+            1,
+            "{group} keeps its version"
         );
-        assert_eq!(targets(&head.2), left);
+        assert_ne!(
+            group_tag(&app, CLIENT, group).await,
+            tag,
+            "{group}'s version moves"
+        );
     }
     assert_eq!(members(&app, CLIENT, &shared).await, sorted(&[&stayer]));
+    assert_eq!(members(&app, CLIENT, &alone).await, Vec::<String>::new());
 }
 
 /// A `remove` of `members` with a value list (Microsoft Entra ID) and one
@@ -655,12 +696,12 @@ async fn a_token_naming_two_of_a_persons_groups_lists_exactly_those_two() {
     assert!(bound.groups.is_empty(), "{:?}", bound.groups);
 }
 
-/// A standalone relationship container from a Group to a User never makes
-/// a member, and deleting the User takes its membership out of a `GROUP` an
-/// administrator wrote too, in the same CONTRIBUTION: the protection admits
-/// a version that only drops the memberships of the client's own Users.
+/// Neither a standalone relationship container nor a `GROUP`'s own inline
+/// relationship to a User makes a member: only the membership the member's
+/// `PERSON` holds does (#5220). Deleting the User leaves an administrator's
+/// `GROUP` with its one version.
 #[tokio::test]
-async fn standalone_relationships_never_count_and_an_administrators_group_loses_the_leaver() {
+async fn standalone_and_group_held_relationships_never_count() {
     let (_db, pool, service, app) = app_of(config(), false).await;
     let leaver = user(&app, CLIENT, 1).await;
     let (owned, _) = group(&app, CLIENT, "Owned", &[]).await;
@@ -668,17 +709,20 @@ async fn standalone_relationships_never_count_and_an_administrators_group_loses_
         json!({ "_type": "PARTY_REF", "namespace": "demographic", "type": class,
                 "id": { "_type": "HIER_OBJECT_ID", "value": id } })
     };
-    let membership = |source: &str| {
+    let membership = |source: (&str, &str), target: (&str, &str)| {
         json!({
             "_type": "PARTY_RELATIONSHIP",
             "archetype_node_id": super::MEMBERSHIP,
             "name": { "_type": "DV_TEXT", "value": "Membership" },
-            "source": reference("GROUP", source),
-            "target": reference("PERSON", &leaver),
+            "source": reference(source.0, source.1),
+            "target": reference(target.0, target.1),
         })
     };
-    let standalone =
-        openehr_its::json::from_canonical_value(&membership(&owned)).expect("a PARTY_RELATIONSHIP");
+    let standalone = openehr_its::json::from_canonical_value(&membership(
+        ("PERSON", &leaver),
+        ("GROUP", &owned),
+    ))
+    .expect("a PARTY_RELATIONSHIP");
     service
         .party_relationship_create(ferroehr::service::version_update::WriteRequest::new(
             standalone,
@@ -692,7 +736,10 @@ async fn standalone_relationships_never_count_and_an_administrators_group_loses_
     let mut body = versions(&pool, &owned).await[0].2.clone();
     let object = body.as_object_mut().expect("a GROUP");
     object.remove("uid");
-    object.insert("relationships".to_owned(), json!([membership(&admin)]));
+    object.insert(
+        "relationships".to_owned(),
+        json!([membership(("GROUP", &admin), ("PERSON", &leaver))]),
+    );
     body["identities"][0]["details"]["items"][0]["value"]["value"] = json!("Administrators' team");
     service
         .create_parties(
@@ -706,6 +753,14 @@ async fn standalone_relationships_never_count_and_an_administrators_group_loses_
         )
         .await
         .expect("the server writes the GROUP as an administrator");
+    let rows: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM party.binding_membership WHERE group_id = $1::uuid",
+    )
+    .bind(&admin)
+    .fetch_one(&pool)
+    .await
+    .expect("count the rows");
+    assert_eq!(rows, 0, "a GROUP's own relationship makes no member");
 
     let (status, _, body) = call(
         &app,
@@ -717,14 +772,132 @@ async fn standalone_relationships_never_count_and_an_administrators_group_loses_
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
-    let contribution = versions(&pool, &leaver)
-        .await
-        .last()
-        .expect("the deletion")
-        .1
-        .clone();
-    let stored = versions(&pool, &admin).await;
-    assert_eq!(stored.len(), 2);
-    assert_eq!(stored[1].1, contribution);
-    assert_eq!(targets(&stored[1].2), None);
+    assert_eq!(versions(&pool, &admin).await.len(), 1);
+}
+
+/// Sets the `active` of the User `id` of `client`; the status.
+async fn set_active(app: &Router, client: &str, id: &str, active: bool) -> StatusCode {
+    let operations = json!([{ "op": "replace", "path": "active", "value": active }]);
+    let (status, _, body) = call(
+        app,
+        "PATCH",
+        &format!("/Users/{id}"),
+        client,
+        Some(&patch_op(operations)),
+        &[],
+    )
+    .await;
+    assert!(status.is_success(), "{status}: {body}");
+    status
+}
+
+/// Microsoft Entra ID disables a User and then removes it from its Groups:
+/// the deactivation drops the memberships its `PERSON` holds in the same
+/// version, each Group's version moves, and the later remove finds nothing to
+/// remove and answers success (RM common master06 §Version Lifecycle, #5220).
+#[tokio::test]
+async fn a_disabled_user_leaves_its_groups_and_the_later_remove_succeeds() {
+    let (_db, pool, app) = app_auditing(false).await;
+    let leaver = user(&app, CLIENT, 1).await;
+    let stayer = user(&app, CLIENT, 2).await;
+    let (id, _) = group(&app, CLIENT, "Ward 9", &[&leaver, &stayer]).await;
+    let before = group_tag(&app, CLIENT, &id).await;
+    set_active(&app, CLIENT, &leaver, false).await;
+    let head = versions(&pool, &leaver).await;
+    let deactivated = head.last().expect("the deactivation");
+    assert_eq!(deactivated.0, "800");
+    assert_eq!(
+        memberships(&deactivated.2),
+        None,
+        "the deactivation drops the memberships"
+    );
+    assert_eq!(members(&app, CLIENT, &id).await, sorted(&[&stayer]));
+    assert_ne!(
+        group_tag(&app, CLIENT, &id).await,
+        before,
+        "the Group's version moves"
+    );
+
+    let remove = json!([{ "op": "remove", "path": format!("members[value eq \"{leaver}\"]") }]);
+    assert_eq!(
+        patch(&app, CLIENT, &id, remove).await.0,
+        StatusCode::NO_CONTENT
+    );
+    let entra = json!([{ "op": "Remove", "path": "members", "value": [{ "value": leaver }] }]);
+    assert_eq!(
+        patch(&app, CLIENT, &id, entra).await.0,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(members(&app, CLIENT, &id).await, sorted(&[&stayer]));
+    assert_eq!(
+        versions(&pool, &leaver).await.len(),
+        head.len(),
+        "no version of the inactive PERSON"
+    );
+}
+
+/// An add naming an inactive User is refused with `400 invalidValue`, the
+/// cause named; a reactivated User belongs to no Group until its client adds
+/// it again.
+#[tokio::test]
+async fn an_inactive_user_takes_no_membership_and_comes_back_without_one() {
+    let (_db, _pool, app) = app_auditing(false).await;
+    let member = user(&app, CLIENT, 1).await;
+    let (id, _) = group(&app, CLIENT, "Ward 10", &[&member]).await;
+    set_active(&app, CLIENT, &member, false).await;
+    let add = json!([{ "op": "add", "path": "members", "value": [{ "value": member }] }]);
+    let (status, _, body) = call(
+        &app,
+        "PATCH",
+        &format!("/Groups/{id}"),
+        CLIENT,
+        Some(&patch_op(add.clone())),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["scimType"], "invalidValue", "{body}");
+    assert!(
+        body["detail"]
+            .as_str()
+            .is_some_and(|detail| detail.contains("reactivate the User first")),
+        "{body}"
+    );
+
+    set_active(&app, CLIENT, &member, true).await;
+    assert_eq!(
+        members(&app, CLIENT, &id).await,
+        Vec::<String>::new(),
+        "a reactivated User comes back with no membership"
+    );
+    assert_eq!(
+        patch(&app, CLIENT, &id, add).await.0,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(members(&app, CLIENT, &id).await, sorted(&[&member]));
+}
+
+/// Deleting a Group drops the membership of each active member in its
+/// CONTRIBUTION and versions no inactive member, whose deactivation already
+/// dropped it.
+#[tokio::test]
+async fn deleting_a_group_skips_its_inactive_members() {
+    let (_db, pool, app) = app_auditing(false).await;
+    let active = user(&app, CLIENT, 1).await;
+    let inactive = user(&app, CLIENT, 2).await;
+    let (id, _) = group(&app, CLIENT, "Ward 11", &[&active, &inactive]).await;
+    set_active(&app, CLIENT, &inactive, false).await;
+    let inactive_versions = versions(&pool, &inactive).await.len();
+    let (status, _, body) = call(&app, "DELETE", &format!("/Groups/{id}"), CLIENT, None, &[]).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+    let deleted = versions(&pool, &id).await;
+    let active_head = versions(&pool, &active).await;
+    let dropped = active_head.last().expect("the drop");
+    assert_eq!(memberships(&dropped.2), None);
+    assert_eq!(
+        dropped.1,
+        deleted.last().expect("the delete").1,
+        "one CONTRIBUTION"
+    );
+    assert_eq!(versions(&pool, &inactive).await.len(), inactive_versions);
 }

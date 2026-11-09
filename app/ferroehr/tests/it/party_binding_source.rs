@@ -664,8 +664,72 @@ async fn the_head_state_is_reported() {
     }
 }
 
-/// Creates a group of `template` named `external_id` whose members are
-/// `members`, in `lifecycle`.
+/// Gives the `PERSON` `member` exactly the memberships of `groups`: each an
+/// inline relationship from the `PERSON` to the `GROUP`, the member holding
+/// it (#5220).
+async fn memberships(svc: &FerroEhrService, member: VoId, groups: &[VoId]) {
+    let read = Box::pin(svc.party_get(
+        PartyKind::Person,
+        crate::fixtures::at(member.to_string()),
+        None,
+    ))
+    .await
+    .expect("the PERSON reads");
+    let uid = read.meta.as_ref().expect("a version").uid.clone();
+    let mut body = read.body;
+    let object = body.as_object_mut().expect("a PERSON object");
+    object.remove("uid");
+    let mut kept: Vec<Value> = object
+        .remove("relationships")
+        .and_then(|relationships| relationships.as_array().cloned())
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|relationship| relationship["archetype_node_id"] != MEMBERSHIP)
+        .collect();
+    kept.extend(groups.iter().map(|group| {
+        relationship(
+            MEMBERSHIP,
+            ("PERSON", member),
+            ("GROUP", *group),
+            "at0001",
+            None,
+        )
+    }));
+    if !kept.is_empty() {
+        object.insert("relationships".to_owned(), Value::Array(kept));
+    }
+    update(svc, PartyKind::Person, member, &uid, &body, "532").await;
+}
+
+/// Adds to the `PERSON` `member` a membership of `group`, keeping its others.
+async fn join(svc: &FerroEhrService, member: VoId, group: VoId) {
+    let mut groups = held_groups(svc, member).await;
+    groups.push(group);
+    memberships(svc, member, &groups).await;
+}
+
+/// The `GROUP`s the `PERSON` `member` holds a membership of.
+async fn held_groups(svc: &FerroEhrService, member: VoId) -> Vec<VoId> {
+    let read = Box::pin(svc.party_get(
+        PartyKind::Person,
+        crate::fixtures::at(member.to_string()),
+        None,
+    ))
+    .await
+    .expect("the PERSON reads");
+    read.body["relationships"]
+        .as_array()
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+        .iter()
+        .filter(|relationship| relationship["archetype_node_id"] == MEMBERSHIP)
+        .filter_map(|relationship| relationship["target"]["id"]["value"].as_str())
+        .map(|id| VoId(id.parse().expect("a container id")))
+        .collect()
+}
+
+/// Creates a group of `template` named `external_id` in `lifecycle`, and a
+/// membership of it in each of `members`.
 async fn team(
     svc: &FerroEhrService,
     template: &str,
@@ -675,20 +739,12 @@ async fn team(
 ) -> VoId {
     let body = group(template, external_id);
     let (vo, uid) = create(svc, PartyKind::Group, &body).await;
-    let mut with_members = body;
-    with_members["relationships"] = members
-        .iter()
-        .map(|member| {
-            relationship(
-                MEMBERSHIP,
-                ("GROUP", vo),
-                ("PERSON", *member),
-                "at0001",
-                None,
-            )
-        })
-        .collect();
-    update(svc, PartyKind::Group, vo, &uid, &with_members, lifecycle).await;
+    if lifecycle != "532" {
+        update(svc, PartyKind::Group, vo, &uid, &body, lifecycle).await;
+    }
+    for member in members {
+        join(svc, *member, vo).await;
+    }
     vo
 }
 
@@ -782,26 +838,9 @@ async fn a_membership_change_writes_one_row() {
     let (db, svc) = service().await;
     let (first, _) = professional(&svc, "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f").await;
     let (second, _) = professional(&svc, "4d5e6f7a-8b9c-4d0e-9f1a-3b4c5d6e7f8a").await;
-    let body = group(GROUP_TEMPLATE, "ward");
-    let (vo, uid) = create(&svc, PartyKind::Group, &body).await;
-    let with = |members: &[VoId]| {
-        let mut b = body.clone();
-        b["relationships"] = members
-            .iter()
-            .map(|m| relationship(MEMBERSHIP, ("GROUP", vo), ("PERSON", *m), "at0001", None))
-            .collect();
-        b
-    };
-    let uid = update(&svc, PartyKind::Group, vo, &uid, &with(&[first]), "532").await;
-    update(
-        &svc,
-        PartyKind::Group,
-        vo,
-        &uid,
-        &with(&[first, second]),
-        "532",
-    )
-    .await;
+    let (vo, _) = create(&svc, PartyKind::Group, &group(GROUP_TEMPLATE, "ward")).await;
+    join(&svc, first, vo).await;
+    join(&svc, second, vo).await;
     let rows: i64 =
         sqlx::query_scalar("SELECT count(*) FROM party.binding_membership WHERE group_id = $1")
             .bind(vo)
@@ -814,8 +853,8 @@ async fn a_membership_change_writes_one_row() {
     );
 }
 
-/// The live memberships of `group` and the targets the reverse index names
-/// for it, each sorted.
+/// The live memberships of `group` and the sources the reverse index names
+/// as pointing at it, each sorted.
 async fn group_rows(pool: &sqlx::PgPool, group: VoId) -> (Vec<VoId>, Vec<VoId>) {
     let members: Vec<VoId> = sqlx::query_scalar(
         "SELECT member_id FROM party.binding_membership \
@@ -825,15 +864,15 @@ async fn group_rows(pool: &sqlx::PgPool, group: VoId) -> (Vec<VoId>, Vec<VoId>) 
     .fetch_all(pool)
     .await
     .expect("the memberships read");
-    let targets: Vec<VoId> = sqlx::query_scalar(
-        "SELECT target_party_id FROM party.party_relationship_target \
-         WHERE source_vo_id = $1 ORDER BY 1",
+    let sources: Vec<VoId> = sqlx::query_scalar(
+        "SELECT source_vo_id FROM party.party_relationship_target \
+         WHERE target_party_id = $1 ORDER BY 1",
     )
     .bind(group)
     .fetch_all(pool)
     .await
     .expect("the reverse index reads");
-    (members, targets)
+    (members, sources)
 }
 
 #[tokio::test]
@@ -848,29 +887,22 @@ async fn a_large_group_writes_only_the_rows_a_change_changes() {
                 .0,
         );
     }
-    let body = group(GROUP_TEMPLATE, "ward");
-    let (vo, uid) = create(&svc, PartyKind::Group, &body).await;
-    let with = |members: &[VoId]| {
-        let mut b = body.clone();
-        b["relationships"] = members
-            .iter()
-            .map(|m| relationship(MEMBERSHIP, ("GROUP", vo), ("PERSON", *m), "at0001", None))
-            .collect();
-        b
-    };
+    let (vo, _) = create(&svc, PartyKind::Group, &group(GROUP_TEMPLATE, "ward")).await;
     let sorted = |members: &[VoId]| {
         let mut members = members.to_vec();
         members.sort();
         members
     };
     let all = people.get(..50).expect("fifty people").to_vec();
-    let uid = update(&svc, PartyKind::Group, vo, &uid, &with(&all), "532").await;
+    for member in &all {
+        join(&svc, *member, vo).await;
+    }
     assert_eq!(group_rows(&pool, vo).await, (sorted(&all), sorted(&all)));
 
-    // Ten members leave and five join in one version: the forty kept rows
-    // stay as they were, the ten are retired and the five inserted.
-    let mut changed = people.get(10..55).expect("forty-five people").to_vec();
-    changed.rotate_left(7);
+    // Ten members leave and five join, each by a version of its own PERSON:
+    // the forty kept rows stay as they were, the ten are retired and the
+    // five inserted.
+    let changed = people.get(10..55).expect("forty-five people").to_vec();
     let kept: Vec<String> = people
         .get(10..50)
         .expect("the kept members")
@@ -886,7 +918,12 @@ async fn a_large_group_writes_only_the_rows_a_change_changes() {
     .fetch_all(&pool)
     .await
     .expect("the kept rows read");
-    let uid = update(&svc, PartyKind::Group, vo, &uid, &with(&changed), "532").await;
+    for member in people.get(..10).expect("the leavers") {
+        memberships(&svc, *member, &[]).await;
+    }
+    for member in people.get(50..55).expect("the joiners") {
+        join(&svc, *member, vo).await;
+    }
     assert_eq!(
         group_rows(&pool, vo).await,
         (sorted(&changed), sorted(&changed))
@@ -911,22 +948,39 @@ async fn a_large_group_writes_only_the_rows_a_change_changes() {
     .await
     .expect("the kept rows read");
     assert_eq!(kept_after, kept_written, "a kept membership keeps its row");
+    let revision: i64 =
+        sqlx::query_scalar("SELECT revision FROM party.binding_group_revision WHERE group_id = $1")
+            .bind(vo)
+            .fetch_one(&pool)
+            .await
+            .expect("the revision");
+    assert_eq!(
+        revision, 65,
+        "every membership change moves the Group's revision"
+    );
 
     // A membership whose target is no container of this store is neither a
     // member nor indexed, and a refill rebuilds the same live rows.
-    let mut foreign = with(&changed);
-    foreign["relationships"]
-        .as_array_mut()
-        .expect("relationships")
-        .push(json!({
-            "_type": "PARTY_RELATIONSHIP",
-            "archetype_node_id": MEMBERSHIP,
-            "name": text("elsewhere"),
-            "source": party_ref("GROUP", vo),
-            "target": { "_type": "PARTY_REF", "namespace": NAMESPACE, "type": "PERSON",
-                        "id": { "_type": "GENERIC_ID", "value": "1.2.3", "scheme": "oid" } }
-        }));
-    update(&svc, PartyKind::Group, vo, &uid, &foreign, "532").await;
+    let foreign = *people.get(56).expect("a person");
+    let read = Box::pin(svc.party_get(
+        PartyKind::Person,
+        crate::fixtures::at(foreign.to_string()),
+        None,
+    ))
+    .await
+    .expect("the PERSON reads");
+    let uid = read.meta.as_ref().expect("a version").uid.clone();
+    let mut body = read.body;
+    body.as_object_mut().expect("an object").remove("uid");
+    body["relationships"] = json!([{
+        "_type": "PARTY_RELATIONSHIP",
+        "archetype_node_id": MEMBERSHIP,
+        "name": text("elsewhere"),
+        "source": party_ref("PERSON", foreign),
+        "target": { "_type": "PARTY_REF", "namespace": NAMESPACE, "type": "GROUP",
+                    "id": { "_type": "GENERIC_ID", "value": "1.2.3", "scheme": "oid" } }
+    }]);
+    update(&svc, PartyKind::Person, foreign, &uid, &body, "532").await;
     let before = group_rows(&pool, vo).await;
     assert_eq!(before, (sorted(&changed), sorted(&changed)));
     svc.refill_binding_table().await.expect("the refill runs");

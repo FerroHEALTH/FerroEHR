@@ -549,7 +549,7 @@ by default.
 | `max_deactivations` | integer | `100` | The most Users one client deactivates or deletes per window. Past it, a deactivation or deletion is **429** with `Retry-After` and logged at `error`. The count is kept in the database, so every replica shares one bound. At least 1. |
 | `deactivation_window_minutes` | integer | `60` | The length of that window. At least 1. |
 | `contact_erasure_minutes` | integer | `0` | How long after a User's deletion the contacts of every version of its `PERSON` are erased. `0` erases them in the deletion itself; at most 43200 (30 days). |
-| `max_group_members` | integer | `5000` | The most members one Group holds. An add past it is **400** `invalidValue`. Every membership change stores all of the Group's memberships again, so the cap bounds a Group's version storage. At least 1. |
+| `max_group_members` | integer | `5000` | The most members one Group holds. An add past it is **400** `invalidValue`. A membership change versions only the member's `PERSON`, so its cost does not grow with the Group. At least 1. |
 
 Each `[[scim.client]]` table declares one provisioning client:
 
@@ -703,10 +703,10 @@ demographic `GROUP` of the group template:
   `identifier_issuer` is the client's `binding_issuer`, so the group claim of
   that issuer's tokens matches it. `ferroehr config check` refuses a client
   whose table sets no `group_identifier_issuer`;
-- each member is one inline `PARTY_RELATIONSHIP` of the membership archetype,
-  with the `GROUP` as `source` and the member's `PERSON` as `target`, stored
-  in the `GROUP`'s own version (RM demographic §Party Relationships). No
-  `ROLE` is created for a Group, and a Group with no member has
+- each member holds one inline `PARTY_RELATIONSHIP` of the membership
+  archetype, with its `PERSON` as `source` and the `GROUP` as `target`,
+  stored in the member's own version (RM demographic §Party Relationships).
+  No `ROLE` is created for a Group, and a `PERSON` in no Group has
   `relationships` Void.
 
 A Group belongs to the client that created it; every other client gets
@@ -737,14 +737,29 @@ sends. RFC 7644 §3.5.2.2 removes "the attribute and all values" when no
 filter is specified; FerroEHR follows Entra only when the `value` list is
 present.
 
-Every membership change is a new version of the `GROUP`, so the Group's
-`ETag` changes and the member User's does not; the User serves no `groups`
-attribute. Each version holds every membership of the Group (RM demographic
-§Versioning Semantics), which `max_group_members` bounds. Deleting a User
-takes its memberships out of every live `GROUP` in the CONTRIBUTION that
-deletes its `PERSON`. A `GROUP` an administrator set `inactive` or
-`abandoned` keeps its version, since the version lifecycle draws no update of
-either state, and a SCIM write to such a Group is **400** `invalidValue`.
+A membership change is a new version of each member's `PERSON` it touches,
+in one CONTRIBUTION, and the `GROUP` gets no version; a change costs the same
+whatever the Group's size. The Group's `ETag` is its `GROUP` version with a
+membership revision that moves with every membership change, so it changes
+whenever its members do (RFC 7644 §3.14). The member User's `ETag` changes
+too, since its `PERSON` holds the membership (RFC 7643 §4.1.2); its body does
+not, because the User serves no `groups` attribute. Deleting a User deletes
+the memberships its `PERSON` holds with it. Deleting a Group drops the
+membership of each active member in the CONTRIBUTION that deletes the
+`GROUP`. A `GROUP` an administrator set `inactive` or `abandoned` keeps its
+version, since the version lifecycle draws no update of either state, and a
+SCIM write to such a Group is **400** `invalidValue`.
+
+**Deactivated Users leave their Groups.** The version lifecycle draws no
+update of an `inactive` or `abandoned` `PERSON` (RM common master06 §Version
+Lifecycle), so such a `PERSON` cannot take a membership change, and an
+inactive `PERSON` binds to nothing. Setting a User's `active` to `false`
+therefore drops all its memberships in the same version, and each Group's
+`ETag` changes. Microsoft Entra ID often disables a user and then removes it
+from its groups; the later `remove` finds nothing to remove and answers
+**204**. An `add` naming an inactive or abandoned User is **400**
+`invalidValue` ("reactivate the User first"). A reactivated User belongs to
+no Group until its client adds it again.
 
 ### Provision from Microsoft Entra ID
 

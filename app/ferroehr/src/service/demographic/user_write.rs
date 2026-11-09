@@ -25,6 +25,7 @@ use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
 use crate::party_binding::provisioned;
 use crate::service::FerroEhrService;
+use crate::service::demographic::group_provision::{is_membership, retain_relationships};
 use crate::service::demographic::mapped_write::clear_mapped_value;
 use crate::service::demographic::provision::ProvisionedUser;
 use crate::service::demographic::template::TemplateFit;
@@ -93,6 +94,9 @@ impl FerroEhrService {
     /// returning the User as it stands after, or `None` when the id names no
     /// User of that client.
     ///
+    /// A deactivation drops the User's memberships in the same version, so a
+    /// reactivated User belongs to no Group until its client adds it again.
+    ///
     /// # Errors
     /// [`ServiceError::VersionConflict`] when the current version is not the
     /// one `update` names; the `422` of an attribute change
@@ -142,6 +146,15 @@ impl FerroEhrService {
             Transition::One(lifecycle) => &[lifecycle][..],
             Transition::RetrieveThenComplete => &[state::INCOMPLETE, state::COMPLETE][..],
         };
+        if matches!(outcome, Transition::One(state::INACTIVE | state::ABANDONED))
+            && let Ok(mapping) = self.scim_group_mapping()
+        {
+            // NOTE: RM common master06 §Version Lifecycle draws no update of an
+            // inactive or abandoned version, so the deactivation drops the memberships.
+            retain_relationships(&mut body, |relationship| {
+                !is_membership(relationship, mapping.membership)
+            });
+        }
         for lifecycle in commits {
             // NOTE: RM common master06 §Abandoned and Inactive States, an abandoned
             // item is one that lost relevance while incomplete, so its content is.
@@ -166,9 +179,10 @@ impl FerroEhrService {
     }
 
     /// Logically deletes the User `id` of the client of `binding_issuer`:
-    /// its `PERSON` and its professional `ROLE`s, with its memberships taken
-    /// out of every live `GROUP`, in one demographic CONTRIBUTION (RM common
-    /// `master06-change_control_package.adoc` §Logical Deletion). `false` when the id names no User of that client.
+    /// its `PERSON`, with the memberships it holds, and its professional
+    /// `ROLE`s, in one demographic CONTRIBUTION (RM common
+    /// `master06-change_control_package.adoc` §Logical Deletion). `false`
+    /// when the id names no User of that client.
     /// With `contact_erasure_minutes` zero, the same transaction erases the
     /// contacts of every version of the `PERSON`; otherwise the sweep
     /// ([`FerroEhrService::erase_due_contacts`]) erases them that long after.
@@ -197,7 +211,6 @@ impl FerroEhrService {
         for role in self.professional_roles(&user.body).await? {
             changes.push(Change::delete(role, Kind::Role, None));
         }
-        changes.extend(self.membership_removals(id).await?);
         let commit = ScimCommit {
             limit: Some(limit),
             erase: (contact_erasure_minutes == 0).then_some(id),
