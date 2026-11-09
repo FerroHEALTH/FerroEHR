@@ -392,7 +392,7 @@ rust_decimal = { version = "1", features = ["serde-with-str"] }   # BigDecimal r
 # VERSION.canonical_form() (#5220); serde_jcs stays as its test oracle, and
 # ryu-js is the ECMAScript number form both use (RFC 8785 §3.2.2.3).
 serde_jcs = "0.2.0"
-ryu-js = { version = "0.2.2", default-features = false }
+ryu-js = { version = "1.0.3", default-features = false }
 
 # ── Parsing (native ADL / cADL / ODIN / AQL) ─────────────────────────────────
 logos = "0.16.1"                      # DFA lexer
