@@ -935,10 +935,10 @@ mod tests {
         let auth = test_support::trusting(ferrohealth_smart::config::IssuerEntry {
             mode: ferrohealth_smart::config::AuthMode::Introspection,
             introspection: Some(ferrohealth_smart::config::IntrospectionSection {
-                client: Some(ferrohealth_smart::config::OauthSection {
+                client: Some(ferrohealth_smart::config::credentials::OauthSection {
                     client_id: "ferroehr".to_owned(),
                     client_secret: Some(SecretString::from("synthetic-secret")),
-                    ..ferrohealth_smart::config::OauthSection::default()
+                    ..ferrohealth_smart::config::credentials::OauthSection::default()
                 }),
                 ..ferrohealth_smart::config::IntrospectionSection::default()
             }),
@@ -976,11 +976,11 @@ mod tests {
         bearer: bool,
         ca_file: Option<std::path::PathBuf>,
     ) -> AppConfig {
-        let grant = ferrohealth_smart::config::OauthSection {
+        let grant = ferrohealth_smart::config::credentials::OauthSection {
             token_endpoint: format!("{issuer}/token"),
             client_id: "ferroehr".to_owned(),
             client_secret: Some(SecretString::from("synthetic-secret")),
-            ..ferrohealth_smart::config::OauthSection::default()
+            ..ferrohealth_smart::config::credentials::OauthSection::default()
         };
         let (client, bearer) = if bearer {
             (None, Some(grant))

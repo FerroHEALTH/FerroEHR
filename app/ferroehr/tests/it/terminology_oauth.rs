@@ -17,7 +17,7 @@ use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::client::ClientAuth;
-use ferrohealth_smart::config::OauthSection;
+use ferrohealth_smart::config::credentials::OauthSection;
 use secrecy::SecretString;
 use serde_json::json;
 use wiremock::matchers::{body_string_contains, header, header_exists, method, path};

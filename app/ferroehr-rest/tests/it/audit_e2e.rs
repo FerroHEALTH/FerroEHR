@@ -143,7 +143,10 @@ async fn audit_capture(suppress_login: bool) -> (SyslogTlsListener, AuditSender)
             enabled: true,
             host: "127.0.0.1".to_owned(),
             port,
-            tls_ca_file: Some(socket.ca_file.display().to_string()),
+            tls: ferrohealth_server::tls_client::TlsClientSection {
+                trust_roots_file: Some(socket.ca_file.clone()),
+                ..ferrohealth_server::tls_client::TlsClientSection::default()
+            },
             ..SyslogConfig::default()
         },
         suppress_login_events: suppress_login,

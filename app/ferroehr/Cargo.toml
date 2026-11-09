@@ -26,7 +26,7 @@ multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 
 [dependencies]
 ferrohealth-secret = { workspace = true }
-ferrohealth-server = { workspace = true, features = ["reqwest"] }
+ferrohealth-server = { workspace = true, features = ["platform-verifier", "reqwest"] }
 ferrohealth-health = { workspace = true, features = ["registry"] }
 ferroehr-ext = { path = "../ferroehr-ext", optional = true }
 http.workspace = true

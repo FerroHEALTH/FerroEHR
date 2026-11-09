@@ -24,7 +24,10 @@ async fn tls_octet_counted_frame_round_trips() {
         enabled: true,
         host: "localhost".to_owned(),
         port: listener.port,
-        tls_ca_file: Some(listener.ca_file.display().to_string()),
+        tls: ferrohealth_server::tls_client::TlsClientSection {
+            trust_roots_file: Some(listener.ca_file.clone()),
+            ..ferrohealth_server::tls_client::TlsClientSection::default()
+        },
         ..SyslogConfig::default()
     };
     let route = SyslogRoute::new(&config, "cdr-01", "ferroehr")
@@ -64,7 +67,10 @@ async fn a_record_whose_send_fails_is_delivered_later() {
         enabled: true,
         host: "localhost".to_owned(),
         port: listener.port,
-        tls_ca_file: Some(listener.ca_file.display().to_string()),
+        tls: ferrohealth_server::tls_client::TlsClientSection {
+            trust_roots_file: Some(listener.ca_file.clone()),
+            ..ferrohealth_server::tls_client::TlsClientSection::default()
+        },
         retry_max_ms: 500,
         ..SyslogConfig::default()
     };
@@ -120,7 +126,10 @@ async fn the_drain_closes_its_connection_with_close_notify_when_it_exits() {
             enabled: true,
             host: "localhost".to_owned(),
             port: listener.port,
-            tls_ca_file: Some(listener.ca_file.display().to_string()),
+            tls: ferrohealth_server::tls_client::TlsClientSection {
+                trust_roots_file: Some(listener.ca_file.clone()),
+                ..ferrohealth_server::tls_client::TlsClientSection::default()
+            },
             ..SyslogConfig::default()
         },
         fail_mode: FailMode::Closed,

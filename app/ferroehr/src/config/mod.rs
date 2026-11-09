@@ -999,6 +999,27 @@ mod tests {
         }
     }
 
+    /// The `[audit.syslog]` TLS keys FerroEHR read before the table took the
+    /// family's `[audit.syslog.tls]` are refused by name at boot, each
+    /// refusal naming the key that replaces it (#5217).
+    #[test]
+    fn the_retired_syslog_tls_keys_are_refused_by_name() {
+        for (key, replacement) in [
+            ("tls_ca_file", "trust_roots_file"),
+            ("tls_identity_cert_file", "client_identity_file"),
+            ("tls_identity_key_file", "client_identity_file"),
+        ] {
+            let file = toml_file(&format!("[audit.syslog]\n{key} = \"/etc/a.pem\"\n"));
+            let config = assemble(Some(file.path()), &env(&[]), &[]).expect(key);
+            let text = config.validate().expect_err(key).to_string();
+            assert!(
+                text.contains(&format!("audit.syslog.{key} is retired"))
+                    && text.contains(replacement),
+                "{key}: {text}"
+            );
+        }
+    }
+
     /// The listener's bounds refuse what cannot be served: a zero header-read
     /// bound (it would disconnect every client) and a TLS minimum below 1.2
     /// (RFC 8996).
@@ -1270,7 +1291,7 @@ mod tests {
     /// keeps its host and path with the userinfo masked.
     #[test]
     fn url_userinfo_reaches_no_rendering() {
-        use ferrohealth_smart::config::OauthSection;
+        use ferrohealth_smart::config::credentials::OauthSection;
 
         let leaky =
             |n: u32| SecretUrl::new(format!("https://u{n}:URL_PW_SENTINEL_{n}@h{n}:1/p{n}"));
@@ -2241,7 +2262,7 @@ mod tests {
     /// keys, never a silently unauthenticated terminology request.
     #[test]
     fn validate_terminology_server_oauth_shape() {
-        use ferrohealth_smart::config::OauthSection;
+        use ferrohealth_smart::config::credentials::OauthSection;
 
         let mut c = standalone();
         c.terminology.server.enabled = true;

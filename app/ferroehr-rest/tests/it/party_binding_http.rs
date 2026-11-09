@@ -458,12 +458,12 @@ async fn an_overage_the_identity_provider_throttles_is_unavailable_with_its_retr
     }
     config.auth.idp.entra = Some(Box::new(ferrohealth_smart::idp::entra::GraphSection {
         base_url: format!("{}/v1.0", graph.uri()),
-        credentials: ferrohealth_smart::config::OauthSection {
+        credentials: ferrohealth_smart::config::credentials::OauthSection {
             token_endpoint: format!("{}/token", graph.uri()),
             client_id: "ferroehr-graph".to_owned(),
             client_secret: Some(secrecy::SecretString::from("graph-test-secret")),
             scope: "https://graph.microsoft.com/.default".to_owned(),
-            ..ferrohealth_smart::config::OauthSection::default()
+            ..ferrohealth_smart::config::credentials::OauthSection::default()
         },
         ..ferrohealth_smart::idp::entra::GraphSection::default()
     }));

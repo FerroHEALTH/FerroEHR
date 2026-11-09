@@ -448,9 +448,9 @@ mod wire {
     use ferrobridge_term::config::{Config, Credentials, RetryPolicy, WireVersion};
     use ferrobridge_term::error::{Error, UpstreamError};
     use ferrobridge_term::outcome::{
-        Coded, ExpandOutcome, ExpansionContains, LookupOutcome, SubsumesOutcome, Subsumption,
-        ValidateOutcome, Validation,
+        ExpandOutcome, ExpansionContains, LookupOutcome, SubsumesOutcome, ValidateOutcome,
     };
+    use ferrobridge_term::request::{Coded, Subsumption, Validation};
     use ferrobridge_term::smart::SmartToken;
     use ferrohealth_smart::client::cache::TokenSource;
     use http::StatusCode;
@@ -585,17 +585,16 @@ mod wire {
             code: &str,
             at_date: Option<String>,
         ) -> Result<Result<bool, Absence>, ServiceError> {
-            let validation = Validation {
-                value_set_url: value_set_url.to_owned(),
-                value_set_version: None,
-                date: at_date,
-                coded: Coded::Code {
+            let mut validation = Validation::new(
+                value_set_url,
+                Coded::Code {
                     system: system.to_owned(),
                     code: code.to_owned(),
                     version: None,
                     display: None,
                 },
-            };
+            );
+            validation.date = at_date;
             match self.wire.validate(&validation).await {
                 Ok(ValidateOutcome::Valid { .. }) => Ok(Ok(true)),
                 Ok(ValidateOutcome::Invalid { .. }) => Ok(Ok(false)),
@@ -636,7 +635,7 @@ mod wire {
         ) -> Result<Result<Expansion, Absence>, ServiceError> {
             match self
                 .wire
-                .expand(&ferrobridge_term::outcome::Expansion::new(value_set_url))
+                .expand(&ferrobridge_term::request::Expansion::new(value_set_url))
                 .await
             {
                 Ok(ExpandOutcome::Expanded(expanded)) => {

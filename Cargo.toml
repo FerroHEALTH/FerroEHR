@@ -226,18 +226,18 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # scope on a Basic user (GHSA-jhg2-jwjp-hq74), 0.9.3 reads a federation
 # token's consent decision reference and correlation id, and 0.9.4 a contact
 # point's IdA NameID with its format. Verified on crates.io 2026-11-08.
-ferrohealth-smart = { version = "=0.9.4", default-features = false, features = ["fetch", "idp-entra"] }
+ferrohealth-smart = { version = "=0.12.0", default-features = false, features = ["fetch", "idp-entra"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroAUTH, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
 # ferrohealth-smart's relying party. Verified on crates.io 2026-11-06.
-ferrohealth-session = { version = "=0.3.1", default-features = false }
+ferrohealth-session = { version = "=0.6.0", default-features = false }
 # The policy decision of the FerroHEALTH family (FerroAUTH, the same
 # Licensor's BUSL-1.1 code): the attribute-based request over the subject
 # ferrohealth-smart authenticates, the Cedar engine (`cedar`) and the remote
 # decision point (`remote`). Pinned exactly beside ferrohealth-smart.
 # Verified on crates.io 2026-11-06.
-ferrohealth-authz = { version = "=0.3.0", default-features = false }
+ferrohealth-authz = { version = "=0.6.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -262,7 +262,7 @@ ferrohealth-health = { version = "=0.1.1", default-features = false }
 # sets it on a `reqwest::ClientBuilder` (feature `reqwest`); `api_headers` is
 # the security header set the stack puts outermost on every response. Verified on
 # crates.io 2026-11-08 (0.6.2).
-ferrohealth-server = { version = "=0.6.2", default-features = false }
+ferrohealth-server = { version = "=0.6.4", default-features = false }
 # The family's telemetry (FerroSYS): the `[telemetry]` section, the console,
 # the one OpenTelemetry provider read by Prometheus and pushed over OTLP, the
 # request log with its `http.server.request.duration` histogram, and the panic
@@ -283,7 +283,7 @@ ferrohealth-usage-report = { version = "=0.2.1", features = ["telemetry"] }
 # change, a breaking one included, so it is pinned exactly. Verified on
 # crates.io 2026-11-06 (FerroBRIDGE v0.0.22, on ferrohealth-smart 0.9); `smart`
 # is its ferrohealth-smart token provider.
-ferrobridge-term = { version = "=0.1.143", features = ["smart"] }
+ferrobridge-term = { version = "=0.1.147", features = ["smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
@@ -295,8 +295,13 @@ ferrobridge-term = { version = "=0.1.143", features = ["smart"] }
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
 # crates.io 2026-11-08 (FerroAUDIT v0.5.2).
-ihe-atna = { version = "=0.5.2", default-features = false }
-ehds-logging = { version = "=0.5.2", default-features = false }
+ihe-atna = { version = "=0.7.1", default-features = false }
+ehds-logging = { version = "=0.7.1", default-features = false }
+# FerroBRIDGE's FHIR R4 search value grammar (the same Licensor's BUSL-1.1
+# code), whose token `ihe-atna` hands the ITI-81 route. Its crate line moves
+# one patch per change, so it is pinned exactly at the version `ihe-atna` and
+# `ihe-iti` require. Verified on crates.io 2026-11-09.
+fhir-search = { version = "=0.1.129", default-features = false }
 
 # ── Patient identity (the shared IHE ITI client library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly. `pixm` is the
@@ -304,7 +309,7 @@ ehds-logging = { version = "=0.5.2", default-features = false }
 # identity source of the EHR index is asked through (`[ehr_index]`); `smart` is
 # its ferrohealth-smart token authorizer. Verified on crates.io 2026-11-08
 # (ihe-iti 0.0.77, which takes ihe-atna 0.5).
-ihe-iti = { version = "=0.0.77", default-features = false }
+ihe-iti = { version = "=0.0.82", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
