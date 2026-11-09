@@ -405,7 +405,7 @@ pub fn parse_uid_based_id(raw: &str) -> Result<UidAddress, VersionIdError> {
 ///
 /// The protocol adapter and the versioning core both read the field here, so
 /// the demographic precondition comparison and the version-tree extraction
-/// ([`expected_from_if_match`]) always judge the same value.
+/// (`expected_from_if_match`) always judge the same value.
 #[must_use]
 pub fn entity_tag_value(field: &str) -> Cow<'_, str> {
     let field = field.trim();

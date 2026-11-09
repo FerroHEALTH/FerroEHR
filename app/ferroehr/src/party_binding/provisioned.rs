@@ -299,23 +299,44 @@ pub async fn owns_group(
     .await?)
 }
 
-/// The `GROUP`s of the mapped group template whose live memberships target
-/// `member`.
+/// The live members of the `GROUP` `group`: the `PERSON`s whose memberships
+/// target it, in the order they joined.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
-pub async fn groups_of_member(
+pub async fn group_members(
     conn: &mut PgConnection,
-    member: VoId,
+    group: VoId,
 ) -> Result<Vec<VoId>, StorageError> {
     let ids: Vec<Uuid> = sqlx::query_scalar(
-        "SELECT DISTINCT group_id FROM binding_membership \
-         WHERE member_id = $1 AND retired_at IS NULL ORDER BY group_id",
+        "SELECT member_id FROM binding_membership \
+         WHERE group_id = $1 AND retired_at IS NULL ORDER BY written_at, member_id",
     )
-    .bind(member)
+    .bind(group)
     .fetch_all(&mut *conn)
     .await?;
     Ok(ids.into_iter().map(VoId).collect())
+}
+
+/// The membership revision of the `GROUP` `group` and when it last moved;
+/// `None` before its first membership change.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn group_revision(
+    conn: &mut PgConnection,
+    group: VoId,
+) -> Result<Option<(i64, jiff::Timestamp)>, StorageError> {
+    let row =
+        sqlx::query("SELECT revision, revised_at FROM binding_group_revision WHERE group_id = $1")
+            .bind(group)
+            .fetch_optional(&mut *conn)
+            .await?;
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    let revised_at: jiff_sqlx::Timestamp = row.try_get("revised_at")?;
+    Ok(Some((row.try_get("revision")?, revised_at.to_jiff())))
 }
 
 /// Counts one deactivation or deletion of the client of `binding_issuer` on

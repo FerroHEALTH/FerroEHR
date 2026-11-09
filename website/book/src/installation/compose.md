@@ -397,6 +397,15 @@ four users whose roles are load-bearing:
 | `auditor` | `auditor` | `USER`, `READONLY` | reads succeed, every write is refused `403` |
 | `nobody` | `nobody` | none | an authenticated caller with no grant |
 
+The server refuses a person whose login no demographic party carries, so the
+overlay binds each of the four before you sign in. The realm import gives
+every user a fixed `id`, which Keycloak puts in `sub`, and the one-shot
+`ferroehr-provision-keycloak` creates a SCIM User for each with that id as its
+login key, through a second `[[scim.client]]` of the development issuer
+(`FERROEHR__SCIM__CLIENT__1__*`) whose `binding_issuer` is the realm's
+identifier issuer, `urn:ferroehr:keycloak-quickstart-login`. The service
+account acts for nobody, so it binds to no party.
+
 Two confidential clients are defined, and both put `ferroehr`, the audience the
 server checks, in every access token:
 

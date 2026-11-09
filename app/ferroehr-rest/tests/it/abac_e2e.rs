@@ -66,7 +66,7 @@ const PATIENT_OTHER: &str = "PATIENT-2";
 
 /// A minimal *valid* templateless RM COMPOSITION (RM ehr `COMPOSITION`
 /// mandatory attributes), so `create_composition` commits without an OPT upload.
-fn composition() -> Value {
+pub(crate) fn composition() -> Value {
     json!({
         "_type": "COMPOSITION",
         "archetype_node_id": "openEHR-EHR-COMPOSITION.encounter.v1",

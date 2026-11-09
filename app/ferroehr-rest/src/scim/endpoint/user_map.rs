@@ -556,9 +556,12 @@ pub(crate) fn service_refusal(error: &ServiceError) -> ScimError {
     use http::StatusCode;
     match error {
         ServiceError::Conflict(_) => ScimError::uniqueness(error.to_string()),
-        ServiceError::BadRequest(_)
-        | ServiceError::Unprocessable { .. }
-        | ServiceError::ValidationFailed(_) => {
+        // NOTE: RFC 7644 §3.12 `detail` is human-readable, so a refused
+        // content names the rule it breaks.
+        ServiceError::Unprocessable { violation, .. } => {
+            ScimError::bad_request(ScimType::InvalidValue, violation.to_string())
+        }
+        ServiceError::BadRequest(_) | ServiceError::ValidationFailed(_) => {
             ScimError::bad_request(ScimType::InvalidValue, error.to_string())
         }
         ServiceError::NotFound(_) => ScimError::new(StatusCode::NOT_FOUND, "Resource not found."),

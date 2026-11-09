@@ -4,8 +4,8 @@
 # The linkage gate: every OS VEX statement that argues from what a program
 # loads and imports is checked against the program the release just built.
 #
-# `security/vex/ferroehr-os.openvex.json` judges the distroless glibc, gcc-14
-# and zlib findings of the `ferroehr` and `ferroehr-viewer` images from the
+# `security/vex/ferroehr-os.openvex.json` judges the distroless glibc and
+# gcc-14 findings of the `ferroehr` and `ferroehr-viewer` images from the
 # one ELF program in each: its DT_NEEDED list, the absence of RPATH and
 # RUNPATH, and the glibc functions it never imports. Those facts were read
 # once with readelf. A dependency that adds C code, links libstdc++ or zlib,
@@ -329,7 +329,7 @@ STUB
   listing "$f" "$arm64" "${amd64_ok[@]}" -- -- "${base_imports[@]}"
   run "the amd64 loader on arm64 is refused" 1 "DT_NEEDED carries ld-linux-x86-64.so.2" ferroehr "$f"
   listing "$f" "$amd64" "${amd64_ok[@]}" libz.so.1 -- -- "${base_imports[@]}"
-  run "an added library (zlib) is refused" 1 "VIOLATED CVE-2026-27171 ferroehr (amd64): DT_NEEDED carries libz.so.1" ferroehr "$f"
+  run "an added library (zlib) is refused" 1 "ferroehr (amd64): DT_NEEDED carries libz.so.1" ferroehr "$f"
   listing "$f" "$amd64" "${amd64_ok[@]}" libstdc++.so.6 -- -- "${base_imports[@]}"
   run "an added library (libstdc++) is refused" 1 "VIOLATED CVE-2026-102010 ferroehr (amd64): DT_NEEDED carries libstdc++.so.6" ferroehr "$f"
   listing "$f" "$amd64" libgcc_s.so.1 libc.so.6 ld-linux-x86-64.so.2 -- -- "${base_imports[@]}"
@@ -353,9 +353,16 @@ STUB
   run "a static program is refused as unreadable" 2 "reports no DT_NEEDED entry" ferroehr "$f"
   listing "$f" "$amd64" "${amd64_ok[@]}" -- -- "${base_imports[@]}"
   run "a program no statement describes is a usage error" 2 "declares linkage facts for a program named ferroehr-postgres" ferroehr-postgres "$f"
+  # No statement forbids a string since the zlib ones went with the fixed
+  # base (#5152), so the check is driven over the document with one added.
+  local real_doc="$doc" first
+  first="$(jq -r '.statements[0].vulnerability.name' "$real_doc")"
+  jq '.statements[0]."ferroehr:linkage".forbidden_strings = ["Jean-loup Gailly"]' "$real_doc" > "$tmp/strings.json"
+  doc="$tmp/strings.json"
   mkdir -p "$tmp/case"
   printf 'x deflate 1.3.1 Copyright 1995-2024 Jean-loup Gailly and Mark Adler x\n' > "$tmp/case/ferroehr"
-  run "a statically linked zlib is refused by its copyright string" 1 "VIOLATED CVE-2026-85091 ferroehr (amd64): contains the string 'Jean-loup Gailly'" ferroehr "$f"
+  run "a forbidden string is refused" 1 "VIOLATED ${first} ferroehr (amd64): contains the string 'Jean-loup Gailly'" ferroehr "$f"
+  doc="$real_doc"
 
   # Every forbidden import the document declares, one at a time, with its
   # version when the statement could see one: each must fail and name a

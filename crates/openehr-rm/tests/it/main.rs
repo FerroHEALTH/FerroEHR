@@ -16,6 +16,7 @@
               (.claude/rules/testing.md §Test-fixture construction)"
 )]
 
+mod canonical_form_rfc8785;
 mod enforcement_reach;
 mod nonempty_rules;
 mod rm_model;

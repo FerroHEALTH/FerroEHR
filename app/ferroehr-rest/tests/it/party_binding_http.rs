@@ -58,7 +58,7 @@ pub(crate) fn mapping() -> BindingMapping {
 
 /// The `[auth]` table trusting `ISSUER`, whose logins the `[[auth.party]]`
 /// table binds by `person_key`, reading groups from `groups`.
-fn config(person_key: Option<&str>) -> AppConfig {
+pub(crate) fn config(person_key: Option<&str>) -> AppConfig {
     let mut auth = common::auth(AuthSection {
         issuer: IssuerKey::List(vec![IssuerEntry {
             jwks_file: common::jwks_file().display().to_string(),
@@ -86,16 +86,15 @@ fn config(person_key: Option<&str>) -> AppConfig {
 /// The router over `svc`, looking every caller up in its party source.
 async fn router(svc: Arc<FerroEhrService>, person_key: Option<&str>) -> Router {
     let source = Arc::new(svc.party_source("demographic"));
-    router_over(svc, person_key, source).await
+    router_with(svc, config(person_key), source).await
 }
 
-/// The router over `svc`, looking every caller up in `source`.
-async fn router_over(
+/// The router over `svc` under `config`, looking every caller up in `source`.
+pub(crate) async fn router_with(
     svc: Arc<FerroEhrService>,
-    person_key: Option<&str>,
+    config: AppConfig,
     source: Arc<dyn BindingSource>,
 ) -> Router {
-    let config = config(person_key);
     let authenticator = Authenticator::new(
         &config,
         None,
@@ -156,7 +155,7 @@ fn identities() -> Value {
                                       "name": text("name"), "value": text("professional") }] } }])
 }
 
-fn person(identifier_issuer: &str, key: &str) -> Value {
+pub(crate) fn person(identifier_issuer: &str, key: &str) -> Value {
     json!({
         "_type": "PERSON", "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
         "archetype_details": archetyped("openEHR-DEMOGRAPHIC-PERSON.person.v1", PERSON_TEMPLATE),
@@ -185,7 +184,7 @@ fn uid(response: &ferroehr::service::response::ServiceResponse) -> String {
     response.meta.as_ref().expect("a version").uid.clone()
 }
 
-fn vo(uid: &str) -> VoId {
+pub(crate) fn vo(uid: &str) -> VoId {
     VoId(
         uid.split("::")
             .next()
@@ -316,7 +315,7 @@ impl PartySource for Twice {
 #[tokio::test]
 async fn a_login_matching_two_parties_is_refused_naming_the_caller() {
     let (_db, svc) = service().await;
-    let app = router_over(svc, None, Arc::new(Twice)).await;
+    let app = router_with(svc, config(None), Arc::new(Twice)).await;
     let twice = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
     refused(&app, &token(twice, &json!({})), "refused-ambiguous").await;
     // The refusal carries the refused caller, which the failed-authentication
@@ -590,4 +589,135 @@ async fn a_key_claim_refusal_is_recorded_with_the_claim_name() {
         Some(json!({"claim": ["oid"]})),
         "the record names the key claim and carries no claim value"
     );
+}
+
+/// A tracing layer recording the fields of every event it sees.
+#[derive(Clone, Default)]
+struct Capture(Arc<std::sync::Mutex<Vec<String>>>);
+
+#[derive(Default)]
+struct Fields(Vec<String>);
+
+impl tracing::field::Visit for Fields {
+    fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+        self.0.push(format!("{}={value}", field.name()));
+    }
+    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+        self.0.push(format!("{}={value:?}", field.name()));
+    }
+}
+
+impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for Capture {
+    fn on_event(
+        &self,
+        event: &tracing::Event<'_>,
+        _ctx: tracing_subscriber::layer::Context<'_, S>,
+    ) {
+        let mut fields = Fields::default();
+        event.record(&mut fields);
+        self.0.lock().unwrap().push(fields.0.join(" "));
+    }
+}
+
+/// #5006: a person whose login no demographic party carries is refused with
+/// `403` on a read, an AQL query, a commit and a demographic write, each an
+/// access record of `refused-unbound`; the problem names the identifier
+/// issuer to provision the person under, and no fallback serves the login.
+#[tokio::test]
+async fn an_unbound_person_is_refused_on_every_kind_of_request() {
+    let (db, _audit, svc) = audited_service().await;
+    let app = router(svc, None).await;
+    let credential = token("8d9e0f1a-2b3c-4d4e-9f5a-6b7c8d9e0f1a", &json!({}));
+    let ehr = "9e0f1a2b-3c4d-4e5f-8a6b-7c8d9e0f1a2b";
+    let requests = [
+        common::req("GET", format!("{BASE}/definition/template/adl1.4"))
+            .auth(&credential)
+            .accept("application/json")
+            .build(),
+        common::req("POST", format!("{BASE}/query/aql"))
+            .auth(&credential)
+            .accept("application/json")
+            .json(r#"{"q":"SELECT e/ehr_id/value FROM EHR e"}"#)
+            .build(),
+        common::req("POST", format!("{BASE}/ehr/{ehr}/composition"))
+            .auth(&credential)
+            .accept("application/json")
+            .json(r#"{"_type":"COMPOSITION"}"#)
+            .build(),
+        common::req("POST", format!("{BASE}/demographic/person"))
+            .auth(&credential)
+            .accept("application/json")
+            .json(r#"{"_type":"PERSON"}"#)
+            .build(),
+    ];
+    for request in requests {
+        let target = format!("{} {}", request.method(), request.uri());
+        let (status, body) = common::send_body(&app, request).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{target}: {body}");
+        assert!(body.contains("refused-unbound"), "{target}: {body}");
+        assert!(
+            body.contains(LOGIN),
+            "the problem names the identifier issuer: {target}: {body}"
+        );
+    }
+    let rows = refusal_rows(&db.pool(), "refused-unbound", 4).await;
+    assert_eq!(rows.len(), 4, "one access record per refused request");
+}
+
+/// #5006: the refusal of a token without the key claim names the claim the
+/// issuer's binding reads, which "provision this person" would misdiagnose.
+#[tokio::test]
+async fn a_key_claim_refusal_names_the_missing_claim() {
+    let (_db, svc) = service().await;
+    let app = router(svc, Some("oid")).await;
+    let (status, body) = list(&app, &token("someone", &json!({}))).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    assert!(body.contains("refused-key-claim-missing"), "{body}");
+    assert!(
+        body.contains(r#"claim \"oid\""#),
+        "the claim is named: {body}"
+    );
+    assert!(!body.contains("provision"), "{body}");
+}
+
+/// #5006: each refusal writes one `warn` line naming the issuer and the
+/// outcome and never the claim value, and counts into `binding_refusals` by
+/// issuer and outcome.
+#[tokio::test]
+async fn a_refusal_logs_no_claim_value_and_is_counted_by_issuer_and_outcome() {
+    use tracing_subscriber::layer::SubscriberExt as _;
+
+    let telemetry = common::telemetry();
+    let (_db, svc) = service().await;
+    let app = router(svc, None).await;
+    let subject = "0f1a2b3c-4d5e-4f6a-9b7c-8d9e0f1a2b3c";
+    let capture = Capture::default();
+    let lines = Arc::clone(&capture.0);
+    {
+        let _guard = tracing::subscriber::set_default(tracing_subscriber::registry().with(capture));
+        refused(&app, &token(subject, &json!({})), "refused-unbound").await;
+    }
+    let lines = lines.lock().unwrap().clone();
+    let warned: Vec<&String> = lines
+        .iter()
+        .filter(|line| line.contains("the login binding refused the request"))
+        .collect();
+    assert_eq!(warned.len(), 1, "one warn line: {lines:?}");
+    assert!(
+        warned[0].contains(ISSUER) && warned[0].contains("unbound"),
+        "{warned:?}"
+    );
+    for line in &lines {
+        assert!(!line.contains(subject), "a claim value was logged: {line}");
+    }
+    let exposition = telemetry
+        .render_prometheus()
+        .expect("the exposition renders");
+    let counted = exposition.lines().any(|line| {
+        line.starts_with("binding_refusals_total{")
+            && line.contains(&format!("issuer=\"{ISSUER}\""))
+            && line.contains("outcome=\"unbound\"")
+            && line.ends_with(" 1")
+    });
+    assert!(counted, "{exposition}");
 }
