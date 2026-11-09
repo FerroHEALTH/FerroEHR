@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/postgres-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-11-07T00:00:00Z",
-  "version": 7,
+  "timestamp": "2026-11-08T00:00:00Z",
+  "version": 8,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -2475,6 +2475,30 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-115455: a stack buffer overflow when an application extracts data into a std::bitset from a wide-character stream, because the temporary buffer is sized in bytes, not in characters (trixie: no DSA, minor issue). The GCC fix, commit 5d419c69ce2e (PR libstdc++/124370), changes only include/std/bitset: operator>> for bitset is a header template compiled into the program that uses it. libstdc++.so.6 does not contain it: it exports no bitset symbol (nm -D on the rc8 images). PostgreSQL itself is C and does not link libstdc++.so.6. The C++ libraries it loads, ICU and LLVM (llvmjit.so), export no bitset extraction operator and import no std::basic_istream<wchar_t> symbol, which libstdc++.so.6 provides out of line, so neither reads a wide-character stream."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-115456"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/gcc-14-base"
+            },
+            {
+              "@id": "pkg:deb/debian/libgcc-s1"
+            },
+            {
+              "@id": "pkg:deb/debian/libstdc++6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-115456: an out-of-bounds read in std::from_chars when the string it is passed is not null-terminated (trixie: gcc-14 14.2.0-19 unfixed; Red Hat bug 2563044 names no upstream commit). libstdc++.so.6 exports the floating-point overloads of std::from_chars (float, double, long double, _Float128, and the float16 and bfloat16 helpers); the integer overloads are header templates compiled into the program that calls them. PostgreSQL itself is C and does not link libstdc++.so.6. No ELF file in the image imports a from_chars symbol: nm -D --undefined-only over every ELF file of the main image of 2026-11-07 (sha256:6bc239cc…), amd64 and arm64, the server, llvmjit.so, libLLVM.so.19.1 and the ICU libraries included, finds none, so the out-of-line code this package carries is never called. An integer instance inlined into ICU or LLVM would belong to libicu76 or libllvm19, not to the packages this finding names."
     },
     {
       "vulnerability": {
