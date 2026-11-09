@@ -94,9 +94,9 @@ probes_original_state() {
     "the reset server runs the shipped configuration"
   local effective
   effective="$(dc exec -T ferroehr /usr/local/bin/ferroehr config check 2>&1)"
-  assert_eq '"sandbox"' "$(toml_value "$effective" "" deployment_profile)" \
+  assert_eq '"sandbox"' "$(toml_value "$effective" deployment profile)" \
     "the quickstart declares the sandbox profile"
-  assert_eq "false" "$(toml_value "$effective" multimedia enabled)" \
+  assert_eq "false" "$(toml_value "$effective" record.multimedia enabled)" \
     "an exported override from before the reset must not survive it"
   assert_contains "$(curl -s "$CDR/ferroehr/rest/status")" '"profile":"sandbox"' \
     "the public status document reports the shipped profile"

@@ -5,11 +5,11 @@
 # holds the subject-to-EHR cross-reference, installed and asked.
 #
 #   1. `ferropix.enabled: true`, the default: the chart deploys FerroPIX and
-#      points `[ehr_index]` at it.
-#   2. `ferropix.enabled: false` with `pixm_url`: another PIX Manager over
+#      points `[pixm]` at it.
+#   2. `ferropix.enabled: false` with `pixm.url`: another PIX Manager over
 #      PIXm (ITI-83). The probe installs FerroPIX as its own release and names
 #      its Service, so the path runs without a second product.
-#   3. `ferropix.enabled: false` with `provider: local`: FerroEHR on its own.
+#   3. `ferropix.enabled: false` with `subject_index: local`: FerroEHR on its own.
 #
 # With neither 2 nor 3 the render is refused. Each live mode creates an EHR
 # and finds it again by its subject. Under the IHE modes the subject is named
@@ -120,7 +120,8 @@ YAML
 }
 
 # The CDR's half of an IHE mode: the clinical domain, and the grant it asks
-# the PIX Manager with. $1 is the `[ehr_index]` block's own keys.
+# the PIX Manager with. $1 is the `[pixm]` table's `url` line, empty for the
+# FerroPIX the chart runs beside it.
 k8s_pix_cdr_values() {
   cat <<YAML
 secrets:
@@ -128,12 +129,14 @@ secrets:
 config:
   # A cohort may name its patients by identifier, which is what asks the PIX
   # Manager; with no small-cell floor its one EHR is served, not withheld.
-  cohort:
-    subjects: true
-    small_cell_threshold: 0
   privacy:
     subject_namespaces: ["$K8S_PIX_CLINICAL"]
-  ehr_index:
+    cohort:
+      subjects: true
+      small_cell_threshold: 0
+${1:+  record:
+    subject_index: pixm
+}  pixm:
 $1
     assigning_authority: "$K8S_PIX_CLINICAL"
     oauth:
@@ -334,19 +337,19 @@ probes_k8s_ehr_index() {
 
   # The BROKEN state: FerroPIX off and no other identity source named.
   probe "P-K8S-INDEX-NEITHER" "$PROBE_BROKEN" "chart" "#5108" \
-    "ferropix.enabled=false with neither pixm_url nor provider=local is refused at render, naming both"
+    "ferropix.enabled=false with neither pixm.url nor subject_index=local is refused at render, naming both"
   local guard
   guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
-             -f "$K8S_AUTH_VALUES" --set config.ehr_index.provider=null 2>&1)"
-  assert_contains "$guard" "config.ehr_index.pixm_url" \
+             -f "$K8S_AUTH_VALUES" --set config.record.subject_index=null 2>&1)"
+  assert_contains "$guard" "config.pixm.url" \
     "the other PIX Manager is one way forward and the refusal must name its key"
-  assert_contains "$guard" "config.ehr_index.provider=local" \
+  assert_contains "$guard" "config.record.subject_index=local" \
     "the in-instance index is the other and must be named too"
   probe_done
 
   # Mode 3 is the release every other family measures.
   probe "P-K8S-INDEX-LOCAL" "$PROBE_WORKING" "server" "#5108" \
-    "provider: local with no FerroPIX: an EHR is found again by its subject"
+    "subject_index: local with no FerroPIX: an EHR is found again by its subject"
   if k8s_index_install /dev/null; then
     k8s_index_local_roundtrip
   else
@@ -366,18 +369,17 @@ probes_k8s_ehr_index() {
   fi
   k8s_pix_issuer_route
 
-  # Mode 2: FerroPIX as a release of its own, named by pixm_url.
+  # Mode 2: FerroPIX as a release of its own, named by pixm.url.
   probe "P-K8S-INDEX-PIXM" "$PROBE_WORKING" "server" "#5108" \
-    "ferropix.enabled=false with pixm_url naming a PIX Manager's Service: an EHR is found by its source identifier"
+    "ferropix.enabled=false with pixm.url naming a PIX Manager's Service: an EHR is found by its source identifier"
   k8s_pix_values > "$PROBE_TMP/pix-values.yaml"
-  k8s_pix_cdr_values "    provider: ihe
-    pixm_url: \"http://$K8S_PIX_RELEASE:8080/fhir\"" > "$PROBE_TMP/index-pixm.yaml"
+  k8s_pix_cdr_values "    url: \"http://$K8S_PIX_RELEASE:8080/fhir\"" > "$PROBE_TMP/index-pixm.yaml"
   if ! helm upgrade --install "$K8S_PIX_RELEASE" "$K8S_PIX_CHART" -n "$K8S_NS" \
        -f "$PROBE_TMP/pix-values.yaml" >/dev/null 2>&1 || ! k8s_pix_rollout; then
     probe_fail "the FerroPIX release rolled out" \
       "$(kc logs -l "$K8S_PIX_LABEL" --tail=6 --all-containers 2>&1 | tail -6)"
   elif ! k8s_index_install "$PROBE_TMP/index-pixm.yaml"; then
-    probe_fail "the CDR serving with pixm_url" \
+    probe_fail "the CDR serving with pixm.url" \
       "$(kc logs -l app.kubernetes.io/name=ferroehr --tail=6 2>&1 | tail -6)"
   else
     k8s_index_ihe_roundtrip
@@ -394,10 +396,10 @@ probes_k8s_ehr_index() {
     k8s_pix_values | sed 's/^/  /'
     k8s_pix_cdr_values ""
   } > "$PROBE_TMP/index-ferropix.yaml"
-  # The chart refuses any provider beside ferropix.enabled, and a null over
-  # the Basic-auth values' `provider: local` keeps the key, so this install
-  # takes those values without their ehr_index block.
-  awk '/^  ehr_index:/{skip=1; next} skip && /^  [^ ]|^[^ ]/{skip=0} !skip' \
+  # The chart refuses any subject index beside ferropix.enabled, and a null over
+  # the Basic-auth values' `subject_index: local` keeps the key, so this
+  # install takes those values without their record block.
+  awk '/^  record:/{skip=1; next} skip && /^  [^ ]|^[^ ]/{skip=0} !skip' \
     "$K8S_AUTH_VALUES" > "$PROBE_TMP/auth-no-index.yaml"
   if ! K8S_AUTH_VALUES="$PROBE_TMP/auth-no-index.yaml" k8s_index_install "$PROBE_TMP/index-ferropix.yaml" \
      || ! k8s_pix_rollout; then

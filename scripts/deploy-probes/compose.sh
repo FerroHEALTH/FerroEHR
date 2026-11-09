@@ -247,7 +247,7 @@ probes_multimedia() {
   probe "P-MM-ENV" "$PROBE_WORKING" "compose" "#2169" \
     "exported FERROEHR__RECORD__MULTIMEDIA__* reaches the server"
   local env_doc; env_doc="$(curl -s -u "$BASIC" "$CDR/management/env")"
-  assert_contains "$env_doc" '"endpoint":"http://seaweedfs:8333"' \
+  assert_contains "$env_doc" '"url":"http://seaweedfs:8333"' \
     "the compose file must pass the multimedia keys through from the shell"
   assert_contains "$env_doc" '"enabled":true'
   probe_done

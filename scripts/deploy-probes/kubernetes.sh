@@ -391,7 +391,7 @@ probes_k8s_boot() {
   # templates are reached, so both are named, as an operator must, and the
   # refusal read here is the CDR's own on the default install (#5103).
   guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
-             --set config.deployment_profile=sandbox \
+             --set config.deployment.profile=sandbox \
              --set database.existingSecret=ferroehr-db \
              --set ferropix.database.existingSecret=ferropix-db \
              --set ferropix.dataKey.existingSecret=ferropix-data-key 2>&1)"
