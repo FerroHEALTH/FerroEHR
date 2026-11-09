@@ -211,16 +211,17 @@ pub async fn list(
     pool: &PgPool,
     pattern: Option<&QueryNamePattern>,
 ) -> Result<Vec<StoredQueryRow>, StorageError> {
-    const ORDER: &str =
-        " ORDER BY reverse_domain_name, semantic_id, string_to_array(semver, '.')::int[]";
-    const COLUMNS: &str = "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, created_at \
-         FROM stored_query ";
+    // NOTE: PostgreSQL 18 §9.4 `left`, each part is compared as a bound value, so `%` and `_`
+    // in a pattern match themselves, as no `LIKE` reads them.
     let mut connection = acquire(pool).await?;
     let rows = if let Some(pattern) = pattern.filter(|pattern| pattern.is_qualified()) {
-        sqlx::query(sqlx::AssertSqlSafe(format!(
-            "{COLUMNS}WHERE ($1::text IS NULL OR lower(reverse_domain_name) = lower($1)) \
-                   AND left(lower(semantic_id), length($2)) = lower($2){ORDER}"
-        )))
+        sqlx::query(
+            "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, created_at \
+             FROM stored_query \
+             WHERE ($1::text IS NULL OR lower(reverse_domain_name) = lower($1)) \
+               AND left(lower(semantic_id), length($2)) = lower($2) \
+             ORDER BY reverse_domain_name, semantic_id, string_to_array(semver, '.')::int[]",
+        )
         .bind(pattern.namespace())
         .bind(pattern.name())
         .fetch_all(&mut *connection)
@@ -228,13 +229,16 @@ pub async fn list(
     } else {
         let prefix = pattern.map(QueryNamePattern::name).unwrap_or_default();
         let defaulted = pattern.map(|pattern| format!("{DEFAULT_NAMESPACE}::{}", pattern.name()));
-        sqlx::query(sqlx::AssertSqlSafe(format!(
-            "{COLUMNS}WHERE left(lower(CASE WHEN reverse_domain_name = '' THEN semantic_id \
+        sqlx::query(
+            "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, created_at \
+             FROM stored_query \
+             WHERE left(lower(CASE WHEN reverse_domain_name = '' THEN semantic_id \
                          ELSE reverse_domain_name || '::' || semantic_id END), \
                     length($1)) = lower($1) \
-                    OR left(lower(reverse_domain_name || '::' || semantic_id), \
-                    length($2)) = lower($2){ORDER}"
-        )))
+                OR left(lower(reverse_domain_name || '::' || semantic_id), \
+                    length($2)) = lower($2) \
+             ORDER BY reverse_domain_name, semantic_id, string_to_array(semver, '.')::int[]",
+        )
         .bind(prefix)
         .bind(defaulted)
         .fetch_all(&mut *connection)

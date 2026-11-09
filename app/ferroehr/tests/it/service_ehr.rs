@@ -1281,6 +1281,20 @@ async fn stored_query_list_matches_name_prefix() {
         0,
         "a namespace is matched whole once `::` closes it"
     );
+    for name in ["org_x::q", "orgAx::q"] {
+        svc.query_store(&qn(name), None, "AQL", "SELECT e FROM EHR e".to_owned())
+            .await
+            .expect("store");
+    }
+    assert_eq!(
+        names(
+            &svc.query_list(Some(&query_pattern("org_x::")))
+                .await
+                .expect("an underscore namespace")
+        ),
+        ["org_x::q"],
+        "`_` in a pattern matches itself"
+    );
 }
 
 #[tokio::test]
