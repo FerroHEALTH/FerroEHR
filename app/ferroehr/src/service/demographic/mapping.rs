@@ -16,6 +16,7 @@ use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 
 use crate::config::binding::person::{Sections, Source};
 use crate::error::ServiceError;
+use crate::party_binding::check::{CheckError, CheckInput, Report};
 use crate::party_binding::fill::{FillError, Lease};
 use crate::service::FerroEhrService;
 
@@ -317,5 +318,18 @@ impl FerroEhrService {
             return Err(FillError::Unmapped);
         }
         crate::party_binding::fill::refill(&self.demographic_pool, &self.binding, ttl).await
+    }
+
+    /// Runs the pre-flight of a migration to party binding under the installed
+    /// mapping, writing nothing ([`crate::party_binding::check::check`]).
+    ///
+    /// # Errors
+    /// [`CheckError::Unmapped`] when no mapping is installed, and the
+    /// [`crate::party_binding::check::check`] refusals.
+    pub async fn check_binding(&self, input: &CheckInput) -> Result<Report, CheckError> {
+        if self.binding.is_empty() {
+            return Err(CheckError::Unmapped);
+        }
+        crate::party_binding::check::check(&self.demographic_pool, &self.binding, input).await
     }
 }

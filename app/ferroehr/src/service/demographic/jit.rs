@@ -139,10 +139,7 @@ impl FerroEhrService {
             login,
             person.provider,
         );
-        let description = format!(
-            "just-in-time creation at a first login of the issuer {}",
-            person.login_issuer
-        );
+        let description = description(&person.login_issuer);
         Box::pin(crate::party_binding::protect::provisioning(
             person.key_issuer,
             self.create_parties(parties, &description, Some(committer)),
@@ -166,4 +163,12 @@ impl FerroEhrService {
         let mut conn = crate::db::acquire::acquire(&self.demographic_pool).await?;
         Ok(crate::party_binding::provisioned::provisional_before(&mut conn, before).await?)
     }
+}
+
+/// The audit description of the just-in-time creation at a first login of
+/// the issuer `login_issuer`, which the pre-flight's provenance rule reads
+/// back ([`crate::party_binding::check`]).
+#[must_use]
+pub fn description(login_issuer: &str) -> String {
+    format!("just-in-time creation at a first login of the issuer {login_issuer}")
 }

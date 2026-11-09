@@ -184,7 +184,9 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         })) => run_config_check(config, set),
         Some(Command::Db { cmd }) => db_cmd::run(&cmd, config, set).await,
         Some(Command::Definitions { cmd }) => definitions::run(&cmd, config, set).await,
-        Some(Command::PartyBinding { cmd }) => party_binding::run(&cmd, config, set).await,
+        Some(Command::PartyBinding { cmd }) => {
+            Box::pin(party_binding::run(&cmd, config, set)).await
+        }
         Some(Command::UsageReport { print: _, event }) => {
             run_usage_report(event, config, set).await
         }
