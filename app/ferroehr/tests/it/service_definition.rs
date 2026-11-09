@@ -16,7 +16,7 @@ use ferroehr::service::definition::types::TemplateListFilter;
 use ferroehr::service::list::Page;
 
 use crate::adl2_fixture::adl2_source;
-use crate::fixtures::{qn, query_version, version_pattern};
+use crate::fixtures::{qn, query_pattern, query_version, version_pattern};
 use openehr_its::rest::stored_query::{QualifiedQueryName, QueryNameError, VersionPattern};
 
 fn fixture(rel: &str) -> String {
@@ -646,7 +646,7 @@ async fn query_store_name_grammar_and_reserved_name() {
             .await
             .unwrap_or_else(|e| panic!("namespace-less name `{name}` must store: {e:?}"));
         let listed = svc
-            .query_list(Some(&qn(name)))
+            .query_list(Some(&query_pattern(name)))
             .await
             .unwrap_or_else(|e| panic!("`{name}` must be retrievable: {e:?}"));
         // The descriptor carries the ONE canonical identity — the
@@ -1051,7 +1051,7 @@ async fn query_store_get_list_delete() {
     all.sort();
     assert_eq!(all, vec!["ehr::over_50", "misc::bare_name"]);
     assert_eq!(
-        listed_query_names(&svc.query_list(Some(&qn("ehr"))).await.unwrap()),
+        listed_query_names(&svc.query_list(Some(&query_pattern("ehr"))).await.unwrap()),
         vec!["ehr::over_50"]
     );
 

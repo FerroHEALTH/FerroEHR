@@ -45,18 +45,28 @@ pub(crate) const REST_TEXT_SCHEMAS: &[RestTextType] = &[
 /// version carries a pre-release modifier (ADL 2
 /// `master07.05-adl_identification.adoc` §Version Identifiers), so only the
 /// stored-query operations read it as a query version pattern.
-pub(crate) const REST_TEXT_PARAMETERS: &[RestTextType] = &[RestTextType {
-    component: "version",
-    operations: &[
-        "definition_query_version_get",
-        "definition_query_version_store.yaml",
-        "query_execute_stored_query_version",
-        "query_execute_stored_query_version_body",
-    ],
-    rust_type: "crate::rest::stored_query::VersionPattern",
-    citation: "parameters/path/version.yaml: \"an exact version (e.g. `1.7.1`), or a pattern as \
+pub(crate) const REST_TEXT_PARAMETERS: &[RestTextType] = &[
+    RestTextType {
+        component: "qualified_query_name",
+        operations: &["definition_query_list"],
+        rust_type: "crate::rest::stored_query::QueryNamePattern",
+        citation: "operations/definition_query_list.yaml: \"matched by `qualified_query_name` as \
+                   pattern\", `[{namespace}::]{query-name}`, \"and when is empty, it will be \
+                   treated as \"wildcard\" in the search\"",
+    },
+    RestTextType {
+        component: "version",
+        operations: &[
+            "definition_query_version_get",
+            "definition_query_version_store.yaml",
+            "query_execute_stored_query_version",
+            "query_execute_stored_query_version_body",
+        ],
+        rust_type: "crate::rest::stored_query::VersionPattern",
+        citation: "parameters/path/version.yaml: \"an exact version (e.g. `1.7.1`), or a pattern as \
                partial prefix, in a form of `{major}` or `{major}.{minor}`\"",
-}];
+    },
+];
 
 /// The type a component schema is read as, when a grammar types it.
 pub(crate) fn schema_type(component: &str) -> Option<&'static RestTextType> {

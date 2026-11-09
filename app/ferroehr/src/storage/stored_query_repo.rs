@@ -10,7 +10,9 @@
 //! (`string_to_array(semver, '.')::int[]`). No openEHR spec governs the SQL:
 //! our own design.
 
-use openehr_its::rest::stored_query::{QualifiedQueryName, QueryVersion, VersionPattern};
+use openehr_its::rest::stored_query::{
+    QualifiedQueryName, QueryNamePattern, QueryVersion, VersionPattern,
+};
 use sqlx::Connection as _;
 use sqlx::{PgPool, Row as _};
 
@@ -194,38 +196,54 @@ pub async fn find(
         .transpose()
 }
 
-/// Every stored version of every query whose qualified name starts with the
-/// text of `name_prefix`, case-insensitively, or of every query when it is
-/// `None`.
+/// Every stored version of every query `pattern` matches, case-insensitively,
+/// or of every query when it is `None`.
 ///
-/// A prefix with no namespace also matches under the default namespace. The
-/// rows are ordered by name, then numerically by version.
+/// A pattern without `::` is a prefix of the qualified name, and also matches
+/// under the default namespace; one with `::` matches the namespace it names
+/// (any, when empty) and the query names its name starts with. The rows are
+/// ordered by name, then numerically by version.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure or a column that does not
 /// decode.
 pub async fn list(
     pool: &PgPool,
-    name_prefix: Option<&QualifiedQueryName>,
+    pattern: Option<&QueryNamePattern>,
 ) -> Result<Vec<StoredQueryRow>, StorageError> {
-    let prefix = name_prefix.map(ToString::to_string).unwrap_or_default();
-    let defaulted = name_prefix
-        .filter(|name| name.namespace().is_none())
-        .map(|name| format!("{DEFAULT_NAMESPACE}::{name}"));
-    let rows = sqlx::query(
-        "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, created_at \
-         FROM stored_query \
-         WHERE left(lower(CASE WHEN reverse_domain_name = '' THEN semantic_id \
+    // NOTE: PostgreSQL 18 §9.4 `left`, each part is compared as a bound value, so `%` and `_`
+    // in a pattern match themselves, as no `LIKE` reads them.
+    let mut connection = acquire(pool).await?;
+    let rows = if let Some(pattern) = pattern.filter(|pattern| pattern.is_qualified()) {
+        sqlx::query(
+            "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, created_at \
+             FROM stored_query \
+             WHERE ($1::text IS NULL OR lower(reverse_domain_name) = lower($1)) \
+               AND left(lower(semantic_id), length($2)) = lower($2) \
+             ORDER BY reverse_domain_name, semantic_id, string_to_array(semver, '.')::int[]",
+        )
+        .bind(pattern.namespace())
+        .bind(pattern.name())
+        .fetch_all(&mut *connection)
+        .await?
+    } else {
+        let prefix = pattern.map(QueryNamePattern::name).unwrap_or_default();
+        let defaulted = pattern.map(|pattern| format!("{DEFAULT_NAMESPACE}::{}", pattern.name()));
+        sqlx::query(
+            "SELECT reverse_domain_name, semantic_id, semver, query_type, query_text, created_at \
+             FROM stored_query \
+             WHERE left(lower(CASE WHEN reverse_domain_name = '' THEN semantic_id \
                          ELSE reverse_domain_name || '::' || semantic_id END), \
                     length($1)) = lower($1) \
-            OR left(lower(reverse_domain_name || '::' || semantic_id), \
+                OR left(lower(reverse_domain_name || '::' || semantic_id), \
                     length($2)) = lower($2) \
-         ORDER BY reverse_domain_name, semantic_id, string_to_array(semver, '.')::int[]",
-    )
-    .bind(prefix)
-    .bind(defaulted)
-    .fetch_all(&mut *acquire(pool).await?)
-    .await?;
+             ORDER BY reverse_domain_name, semantic_id, string_to_array(semver, '.')::int[]",
+        )
+        .bind(prefix)
+        .bind(defaulted)
+        .fetch_all(&mut *connection)
+        .await?
+    };
     rows.iter().map(stored_query_row).collect()
 }
 

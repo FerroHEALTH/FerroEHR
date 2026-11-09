@@ -22,7 +22,9 @@ use ferroehr::versioning::object_version_id::{
     TreeId, UidAddress, parse_uid_based_id, parse_version_uid,
 };
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateAuditData, UpdateVersion};
-use openehr_its::rest::stored_query::{QualifiedQueryName, QueryVersion, VersionPattern};
+use openehr_its::rest::stored_query::{
+    QualifiedQueryName, QueryNamePattern, QueryVersion, VersionPattern,
+};
 use openehr_rm::prelude::PartyProxy;
 
 /// The identity the shared fixtures write as — both the COMPOSITION `composer`
@@ -771,6 +773,11 @@ pub(crate) async fn ckm_example(svc: &ferroehr::service::FerroEhrService, templa
 /// The stored-query name `text`, read by the ITS-REST grammar.
 pub(crate) fn qn(text: &str) -> QualifiedQueryName {
     text.parse().expect("a valid qualified query name")
+}
+
+/// The stored-query list pattern `text`, read by the ITS-REST grammar.
+pub(crate) fn query_pattern(text: &str) -> QueryNamePattern {
+    text.parse().expect("a valid query name pattern")
 }
 
 /// The stored-query version pattern `text`.

@@ -17,7 +17,9 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use openehr_its::rest::stored_query::{QualifiedQueryName, QueryVersion, VersionPattern};
+use openehr_its::rest::stored_query::{
+    QualifiedQueryName, QueryNamePattern, QueryVersion, VersionPattern,
+};
 use serde_json::{Value, json};
 
 use crate::aql::error::AqlError;
@@ -271,21 +273,23 @@ impl FerroEhrService {
         Ok(stored_query_json(&row))
     }
 
-    /// List stored queries whose qualified name starts with `name_pattern`
-    /// (`definition_query_list.yaml`: the name is a **prefix**: a bare
-    /// `org.openehr` prefix "will list all versions of all queries with names
-    /// starting with `org.openehr`"; `None` lists every query, the empty
-    /// pattern the operation calls a "wildcard"). All stored versions of
-    /// every matching name are returned. The prefix match is case-insensitive,
-    /// and a namespace-less pattern also matches under the `misc` namespace,
-    /// the key a name without a namespace is stored under.
+    /// List the stored queries `name_pattern` matches
+    /// (`definition_query_list.yaml`: "matched by `qualified_query_name` as
+    /// pattern", where an empty part "will be treated as \"wildcard\""). A
+    /// bare `org.openehr` is a prefix that "will list all versions of all
+    /// queries with names starting with `org.openehr`", and also matches under
+    /// the `misc` namespace, the key a name without a namespace is stored
+    /// under; `org.openehr::` lists every query of that namespace, and `::q`
+    /// every query whose name starts with `q` in any namespace. `None` lists
+    /// every query. All stored versions of every matching name are returned,
+    /// matched case-insensitively.
     ///
     /// # Errors
     ///
     /// A row-decode failure (a server fault) or a database failure (`500`).
     pub async fn query_list(
         &self,
-        name_pattern: Option<&QualifiedQueryName>,
+        name_pattern: Option<&QueryNamePattern>,
     ) -> Result<Vec<Value>, ServiceError> {
         Ok(stored_query_repo::list(&self.pool, name_pattern)
             .await?

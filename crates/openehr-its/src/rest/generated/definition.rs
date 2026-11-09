@@ -1811,7 +1811,9 @@ impl DefinitionTemplateAdl2VersionGetParams {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinitionQueryListParams {
     /// `qualified_query_name` (path)
-    pub qualified_query_name: super::common::QueryName,
+    ///
+    /// Read by its grammar, operations/definition_query_list.yaml: "matched by `qualified_query_name` as pattern", `[{namespace}::]{query-name}`, "and when is empty, it will be treated as "wildcard" in the search".
+    pub qualified_query_name: crate::rest::stored_query::QueryNamePattern,
     #[serde(rename = "Accept")]
     #[serde(skip_serializing_if = "Option::is_none")]
     /// `Accept` (header)
