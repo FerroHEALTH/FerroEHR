@@ -120,8 +120,26 @@ pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
             },
         )));
     }
+    Some(professional(
+        external_ref,
+        details.name,
+        login,
+        details.provider,
+    ))
+}
+
+/// The committer of a professional: a `PARTY_IDENTIFIED` naming their
+/// `PERSON` in `external_ref`, with `name`, their `login` identifier and the
+/// identifier of the healthcare `provider` (`issuer`, `id`) they act for.
+#[must_use]
+pub fn professional(
+    external_ref: Option<PartyRef>,
+    name: Option<String>,
+    login: DvIdentifier,
+    provider: Option<(String, String)>,
+) -> PartyProxy {
     let mut identifiers = openehr_base::containers::NonEmptyVec::of(login);
-    if let Some((issuer, id)) = details.provider {
+    if let Some((issuer, id)) = provider {
         identifiers.push(DvIdentifier {
             issuer: Some(issuer),
             assigner: None,
@@ -129,13 +147,11 @@ pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
             r#type: Some(PROVIDER_TYPE.to_owned()),
         });
     }
-    Some(PartyProxy::PartyIdentified(
-        PartyIdentified::PartyIdentified(PartyIdentifiedData {
-            external_ref,
-            name: details.name,
-            identifiers: Some(identifiers),
-        }),
-    ))
+    PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(PartyIdentifiedData {
+        external_ref,
+        name,
+        identifiers: Some(identifiers),
+    }))
 }
 
 /// The login identifier of `identity`: the issuer profile's `person_key`

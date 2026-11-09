@@ -29,6 +29,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::config::auth_section::AuthConfig;
 
+pub mod jit;
 pub mod person;
 
 /// The `[authz.party_binding]` table.
@@ -55,6 +56,12 @@ pub struct PartyBindingConfig {
     pub membership: Option<person::MembershipSection>,
     /// The representation `PARTY_RELATIONSHIP` archetype.
     pub representation: Option<person::RepresentationSection>,
+    /// What FerroEHR does for each `persons` issuer beyond the lookup
+    /// (`[[authz.party_binding.issuer]]`): just-in-time creation.
+    pub issuer: Vec<jit::IssuerBinding>,
+    /// The age in days past which `ferroehr party-binding check` reports a
+    /// provisional `PERSON`.
+    pub provisional_report_days: u32,
     /// The removed `enabled` key, held only so its presence is refused by
     /// name: binding has no switch.
     #[serde(default, skip_serializing)]
@@ -88,6 +95,8 @@ impl Default for PartyBindingConfig {
             group: None,
             membership: None,
             representation: None,
+            issuer: Vec::new(),
+            provisional_report_days: 30,
             enabled: None,
         }
     }
@@ -273,6 +282,7 @@ pub fn errors(
     key_types(binding, resolved, &mut errors);
     shared_audiences(resolved, &mut errors);
     providers(binding, resolved, &mut errors);
+    errors.extend(jit::errors(binding, resolved, &authz.assurance));
     if let Err(e) = resolved.check_role_issuers("authz.rbac.role_issuers", &authz.rbac.role_issuers)
     {
         errors.push(e.to_string());
@@ -643,6 +653,10 @@ mod tests {
                 "urn:ura",
             ),
             ("FERROEHR__AUTHZ__PARTY_BINDING__PROVIDER__ID", "1234"),
+            (
+                "FERROEHR__AUTHZ__PARTY_BINDING__PROVISIONAL_REPORT_DAYS",
+                "14",
+            ),
             ("FERROEHR__AUTHZ__RBAC__IMPORT_ROLE", "IMPORTER"),
             ("FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS", "https://a,https://b"),
             ("FERROEHR__AUTHZ__IMPORT__TRUSTED_SYSTEMS", "sys-a"),
@@ -653,6 +667,7 @@ mod tests {
             Some(ferrohealth_smart::assurance::AssuranceLevel::High)
         );
         assert_eq!(c.authz.party_binding.namespace, "hr");
+        assert_eq!(c.authz.party_binding.provisional_report_days, 14);
         assert_eq!(
             c.authz.party_binding.provider,
             Some(Providers::One(ProviderId {

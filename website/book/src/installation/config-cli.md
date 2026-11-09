@@ -97,6 +97,19 @@ mapping's digest. Run it with every replica stopped after a mapping change:
 it refuses while a replica holds a live lease, and refuses a store in which
 two parties carry one selector value, naming both.
 
+### `ferroehr party-binding check`
+
+```sh
+ferroehr party-binding check    # list the provisional persons older than provisional_report_days
+```
+
+Lists the provisional `PERSON`s that
+[just-in-time creation](config-auth.md#just-in-time-creation) created more
+than `[authz.party_binding] provisional_report_days` days ago (default 30) and
+that SCIM or an administrator has not completed: one line per `PERSON` with
+its container id and creation time, oldest first. It prints no name or other
+personal data.
+
 ### `ferroehr healthcheck`
 
 Asks the running server's `GET /health/readiness` and exits 0 on `200`, 1

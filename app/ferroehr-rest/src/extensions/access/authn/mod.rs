@@ -468,7 +468,7 @@ impl Authenticator {
     /// Binds and admits the caller of the verified `access`.
     async fn admitted(&self, access: Access) -> Result<Authenticated, AuthError> {
         let access = match &self.party {
-            Some(binding) => party::bind(binding, access).await?,
+            Some(binding) => party::bind(binding, access, &self.role_issuers).await?,
             None => access,
         };
         // NOTE: no openEHR spec governs resolving a login to a party, our own design: with
