@@ -180,23 +180,13 @@ jobs:
 
       # The chart gates read the rendered YAML structurally (yq -o=json | jq),
       # because a grep over a manifest passes as soon as ONE container carries a
-      # field. Pinned by version and verified by checksum: this step runs before
-      # the security gates, so a substituted binary would decide whether they
-      # pass.
-      - name: Install yq
+      # field. The yq is the runner image's, trusted as its jq and bash are, and
+      # held to the oldest version the gates are verified on; a per-run release
+      # download turned pull requests red on 2026-11-09 (#5256).
+      - name: The runner's yq is 4.53.3 or newer
         env:
-          YQ_VERSION: v4.53.3
-          YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
-        run: |
-          set -euo pipefail
-          # An idempotent read, retried inside curl (scripts/gh/retry-net.sh):
-          # a publishing lane must not die on one transient download.
-          source scripts/gh/retry-net.sh
-          retry_read "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" \
-            -o /tmp/yq
-          echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
-          sudo install -m 0755 /tmp/yq /usr/local/bin/yq
-          yq --version
+          YQ_MIN_VERSION: 4.53.3
+        run: bash scripts/checks/runner-yq.sh
       # validate.sh FAILS in CI when helm-docs is absent (#2806) — the README
       # drift check is load-bearing here, since this lane packages what it
       # validated. The v4.0.6 chart leg failed on exactly this: #2806 gave the
