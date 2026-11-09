@@ -17,8 +17,8 @@ FerroEHR's console is `ferroehr-viewer`.
 - **Shared, never single use.** A component this console needs and FerroUI
   lacks is filed on FerroUI (label `component`) and built there, never as a
   local one-off.
-- **Reactive.** A link, a form or an action never reloads the whole
-  document; see [[reactive-console-ui]].
+- **Server-rendered** (owner, 2026-10-29, FerroUI #510): a navigation is one
+  document, an in-page change a FerroUI module; see [[reactive-console-ui]].
 - **All consoles move in lockstep.** Every FerroUI release is rolled out to
   every console at once: a pin-bump pull request in each repository, merged
   together, so no console runs an older FerroUI than the others. The rollout

@@ -13,3 +13,5 @@ Breaking changes (removed REST routes, removed config keys) may ship in the curr
 **Why:** the owner said "we do not care okay because it's still sort of greenfield okay!!! so no real production apps use it" when the custom FHIR mapper was removed in favour of FerroBRIDGE (2026-10-08).
 
 **How to apply:** remove superseded code outright in the release being cut; still record it under `### Removed` in CHANGELOG.md and update the book in the same PR. Same spirit as the migration-rewrite ruling ("the rewrite is breaking changes only"). Re-ask only if a real production deployment is mentioned.
+
+**One release only (owner hard rule, 2026-11-09):** where a removal does carry a named refusal (a "renamed to" message for a config key, a refusal of a removed route, flag, env variable or format), it lives exactly the one release that removes it and the next release deletes it; then the strict config sweep or the plain absence of the route refuses the old form. Record the introducing release beside each refusal. See [[no-compat-shims]].

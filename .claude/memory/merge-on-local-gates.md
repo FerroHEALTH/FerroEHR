@@ -42,3 +42,5 @@ read-tree` into a temp `GIT_INDEX_FILE`, `hash-object`, `commit-tree -S`,
 `git push origin <sha>:refs/heads/<branch>`), never by switching branches under
 a worker's uncommitted tree. Force-push is hook-blocked for every branch, so
 resolve a conflict by MERGING `origin/main` into the PR branch, not rebasing.
+
+**Superseded (owner, 2026-10-21, and the merge queue):** nothing merges before the required `conclusion` check is green, and nothing merges by hand or through the admin bypass ([[admin-bypass-stays]]). Every PR is armed with `gh pr merge <n> --auto` as its own command and lands through the merge queue ([[pr-auto-merge]], [[merge-queue-signed]]). Keep the part that still holds: while a PR waits, work the next issue ([[workers-never-idle-on-merge-queue]]).

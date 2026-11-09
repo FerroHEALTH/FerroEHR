@@ -44,16 +44,18 @@ The rules that follow from it:
 - **Nothing is hand-written that a shared crate or another product
   provides.** When the shared crate lacks something, it is added in the
   owning repository and released; a local copy is never the workaround.
-- **Every console is reactive.** A link, a form or an action never reloads
-  the whole document; WebAssembly is the normal path and the
-  no-WebAssembly page only the fallback (FerroUI #410).
+- **Every console is server-rendered** (owner, 2026-10-29, FerroUI #510):
+  each page is one document the console's server draws whole from FerroUI's
+  components, FerroUI's plain script modules add behaviour on top, and no
+  console carries Leptos or WebAssembly. It supersedes the reactive mode of
+  2026-10-25 (FerroUI #410).
 
 FerroSYS is shared crates like FerroAUDIT and FerroAUTH, never a control plane
 or a central service. Out of scope until the owner says otherwise: FerroFORMS
-(paused) and Veredictum (being rewritten,
-so its verdicts are not authority). The FerroHEALTH umbrella repository is
-active again (owner, 2026-10-26): its book holds the family pages and the EHDS
-system documents of FerroEHR with FerroBRIDGE. FerroPULSE receives the products'
+(paused) and Veredictum (being rewritten, so its verdicts are not authority).
+The FerroHEALTH umbrella repository is active again (owner, 2026-10-26): its
+book holds the family pages and the EHDS system documents of FerroEHR with
+FerroBRIDGE. FerroPULSE receives the products'
 usage report, which release compose files keep on by default with a
 documented off switch.
 
