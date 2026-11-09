@@ -300,3 +300,63 @@ async fn store_refuses_a_query_nested_beyond_the_depth_bound() {
         assert_eq!(status, StatusCode::BAD_REQUEST, "{uri}: {body}");
     }
 }
+
+// ── the list reads its name as a pattern with empty parts as wildcards ───────
+
+/// `definition_query_list.yaml`: the queries "matched by
+/// `qualified_query_name` as pattern", where an empty part "will be treated
+/// as \"wildcard\"", so `{namespace}::` lists the namespace, as the bare
+/// namespace does by prefix (#5268). The store and the single-query read keep
+/// the stored-name grammar (`Qualified_query_name.md`) and refuse the empty
+/// name.
+#[tokio::test]
+async fn the_list_takes_a_namespace_pattern_with_an_empty_name() {
+    let (_pg, app) = common::app(common::api_config(false)).await;
+    for name in [
+        "org.cadasto.bench::probe",
+        "org.cadasto.bench::other",
+        "org.other::probe",
+    ] {
+        let (status, _h, body) = send(&app, put(format!("{BASE}/definition/query/{name}"))).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+    }
+    let list = |pattern: &str| {
+        common::req("GET", format!("{BASE}/definition/query/{pattern}"))
+            .accept("application/json")
+            .build()
+    };
+    for pattern in ["org.cadasto.bench::", "org.cadasto.bench"] {
+        let (status, _h, body) = send(&app, list(pattern)).await;
+        assert_eq!(status, StatusCode::OK, "{pattern}: {body}");
+        let rows: serde_json::Value = serde_json::from_str(&body).expect("a JSON list");
+        let mut names: Vec<&str> = rows
+            .as_array()
+            .expect("an array")
+            .iter()
+            .filter_map(|row| row["name"].as_str())
+            .collect();
+        names.sort_unstable();
+        assert_eq!(
+            names,
+            ["org.cadasto.bench::other", "org.cadasto.bench::probe"],
+            "{pattern}"
+        );
+    }
+
+    let (status, _h, body) = send(
+        &app,
+        put(format!("{BASE}/definition/query/org.cadasto.bench::")),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "the store refuses it: {body}"
+    );
+    let (status, _h, body) = send(&app, list("org.cadasto.bench::/1.0.0")).await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "a single read refuses it: {body}"
+    );
+}
