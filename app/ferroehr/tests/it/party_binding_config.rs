@@ -110,6 +110,23 @@ access_class = "automated"
     )
 }
 
+/// A person template whose key is of the `guid` type the staff issuer's
+/// `[[auth.party]]` table looks logins up under, with its professional role.
+const KEY_TEMPLATE: &str = r#"
+[[authz.party_binding.person.template]]
+template_id = "FerroEHR professional"
+default = true
+key = { path = "/details[id2]/items[id3]", type = "guid" }
+
+[authz.party_binding.professional_role]
+template_id = "FerroEHR professional role"
+"#;
+
+/// `toml` with [`KEY_TEMPLATE`], so its persons issuer's logins can bind.
+fn bound(toml: &str) -> String {
+    format!("{toml}{KEY_TEMPLATE}")
+}
+
 /// The configuration `toml` assembles to, or the assemble refusal.
 fn assemble(toml: &str) -> Result<FerroEhrConfig, String> {
     let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp file");
@@ -137,7 +154,7 @@ fn with(old: &str, new: &str) -> String {
 
 #[test]
 fn a_full_configuration_loads_and_states_its_binding() {
-    let config = assemble(&full()).expect("assembles");
+    let config = assemble(&bound(&full())).expect("assembles");
     config.validate().expect("validates");
     let posture = BindingPosture::of(&config);
     assert_eq!(posture.issuers.len(), 4);
@@ -173,6 +190,33 @@ fn a_persons_issuer_with_no_party_table_is_refused() {
         ),
         "{text}"
     );
+}
+
+/// An `[[auth.party]]` table looks logins up under an `identifier_type` some
+/// person template's key is written under, or no login of its issuer binds.
+#[test]
+fn a_party_table_whose_identifier_type_no_template_key_carries_is_refused() {
+    let text = refusal(&full());
+    assert!(
+        text.contains(
+            "the [[auth.party]] table of \"https://idp.example/realms/staff\" looks logins up \
+             under identifier_type \"guid\", which no person template's key carries: no \
+             [[authz.party_binding.person.template]] is declared"
+        ),
+        "{text}"
+    );
+    let text = refusal(&bound(&full()).replacen("type = \"guid\" }", "type = \"login\" }", 1));
+    assert!(
+        text.contains(
+            "under identifier_type \"guid\", which no person template's key carries: the person \
+             templates' keys are of the types {\"login\"}"
+        ),
+        "{text}"
+    );
+    assemble(&bound(&full()))
+        .expect("assembles")
+        .validate()
+        .expect("a table whose type a template's key carries loads");
 }
 
 #[test]
@@ -456,7 +500,7 @@ fn a_contact_points_person_agreement_names_its_ehdsi_service() {
         "accessor = \"person\"\nehdsi_service = \"eprescription\"",
         1,
     );
-    assemble(&served)
+    assemble(&bound(&served))
         .expect("assembles")
         .validate()
         .expect("a contact point's person agreement naming its service loads");
@@ -502,7 +546,7 @@ fn a_chained_agreement_needs_its_issuer_to_map_the_correlation_id() {
         &format!("{fields}\n\"correlation_id\" = [{{ claim = \"correlation_id\" }}]"),
         1,
     );
-    assemble(&claim)
+    assemble(&bound(&claim))
         .expect("assembles")
         .validate()
         .expect("a chained agreement whose issuer maps the id from a claim loads");
@@ -544,7 +588,7 @@ fn an_nl_agreement_for_a_keuring_or_without_a_purpose_is_refused() {
     );
     let text = refusal(&nl("purpose = \"keuring\""));
     assert!(text.contains("is an NL agreement for a keuring"), "{text}");
-    assemble(&nl("purpose = \"care\""))
+    assemble(&bound(&nl("purpose = \"care\"")))
         .expect("assembles")
         .validate()
         .expect("an NL agreement for care loads");
@@ -779,11 +823,11 @@ fn scim(issuer: &str, binding_issuer: &str, extra: &str) -> String {
 
 #[test]
 fn a_scim_client_of_the_machines_issuer_binding_a_party_issuer_loads() {
-    let config = assemble(&scim(
+    let config = assemble(&bound(&scim(
         "https://idp.example/realms/machines",
         "urn:example:staff-login",
         "",
-    ))
+    )))
     .expect("assembles");
     config.validate().expect("validates");
     assert!(config.scim.enabled);
