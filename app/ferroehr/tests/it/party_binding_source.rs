@@ -605,7 +605,7 @@ async fn one_contribution_creates_a_person_and_the_role_naming_it() {
             lifecycle_state: None,
         },
     ];
-    let committed = Box::pin(svc.create_parties(parties_of_set, "provision a professional"))
+    let committed = Box::pin(svc.create_parties(parties_of_set, "provision a professional", None))
         .await
         .expect("the set commits");
     let written: Vec<VoId> = committed.versions.iter().map(|c| c.vo_id).collect();

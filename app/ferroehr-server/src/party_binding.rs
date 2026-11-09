@@ -6,7 +6,10 @@
 //! It is installed on the service and judged against its templates at boot;
 //! the binding side table is filled or checked under its digest, with this
 //! replica's lease renewed while it runs; and `ferroehr party-binding refill`
-//! is the one path by which the mapping of a deployment changes.
+//! is the one path by which the mapping of a deployment changes;
+//! `ferroehr party-binding check` is the read-only pre-flight of a migration
+//! to binding, the provisional persons just-in-time creation left
+//! incomplete among what it reports.
 //!
 //! A mapping change is a stop-the-world step: every replica stops, the
 //! refill runs, and replicas with the new mapping start. No openEHR spec
@@ -33,8 +36,10 @@ pub enum PartyBindingCmd {
     /// stopped: it refuses while a replica's lease is live.
     Refill,
     /// Report, from the party versions and writing nothing, what binding
-    /// will make of them: the keys per issuer, duplicates, inactive,
-    /// abandoned and provisional persons, key-bearing persons with no
+    /// will make of them: the keys per issuer, duplicates, inactive and
+    /// abandoned persons, the provisional persons just-in-time creation
+    /// left incomplete for longer than `[authz.party_binding]
+    /// provisional_report_days`, key-bearing persons with no
     /// professional `ROLE`, the mapped Basic users, and the committer that
     /// introduced each key. It exits non-zero on a duplicate, a missing
     /// person or a key whose committer fails the provenance rule.
@@ -64,10 +69,6 @@ pub struct CheckArgs {
     /// when more than one `[[auth.party]]` table is configured.
     #[arg(long, value_name = "ISSUER", requires = "expected")]
     pub expected_issuer: Option<String>,
-    /// How many days a `553|incomplete|` `PERSON` may stay provisional before
-    /// it is reported.
-    #[arg(long, default_value_t = 30)]
-    pub horizon_days: u32,
 }
 
 /// Returns `service` with the import rules and the configured party mapping
@@ -302,7 +303,15 @@ pub async fn check(args: &CheckArgs, config: &FerroEhrConfig) -> anyhow::Result<
         administrators,
         migrations: args.migrations.clone(),
         expected,
-        horizon_days: args.horizon_days,
+        provisional_report_days: config.authz.party_binding.provisional_report_days,
+        jit_issuers: config
+            .authz
+            .party_binding
+            .issuer
+            .iter()
+            .filter(|table| table.jit)
+            .map(|table| table.issuer.clone())
+            .collect(),
         today: ferroehr::support::today_utc().to_string(),
     };
     let pools = ferroehr::db::connect_domains(&config.db, &config.storage)

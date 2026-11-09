@@ -401,7 +401,10 @@ fn identified_expr(out: &mut String, expr: &IdentifiedExpr) {
                 CompareOperand::Path(p) => identified_path(out, p),
                 CompareOperand::Function(f) => function_call(out, f),
             }
+            // NOTE: QUERY 1.1.0 master03-syntax.adoc §WHERE and §Parameters space the operator.
+            out.push(' ');
             out.push_str(comp_op_text(*op));
+            out.push(' ');
             terminal(out, rhs);
         }
         IdentifiedExpr::Like { path, operand } => {
@@ -422,7 +425,7 @@ fn identified_expr(out: &mut String, expr: &IdentifiedExpr) {
         // Never parser-produced; rendered as the equivalent boolean literal
         // comparison so output stays parseable.
         IdentifiedExpr::Resolved(value) => {
-            let _ = write!(out, "{value}={value}");
+            let _ = write!(out, "{value} = {value}");
         }
     }
 }

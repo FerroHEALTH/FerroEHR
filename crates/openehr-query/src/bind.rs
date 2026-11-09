@@ -28,7 +28,7 @@
 //! let mut parameters = Parameters::default();
 //! parameters.insert("uid", Primitive::String("8849182c-82ad-4088-a07f-48ead4180515::node::1".into()));
 //! bind(&mut query, &parameters)?;
-//! assert!(to_aql(&query, None).ends_with("='8849182c-82ad-4088-a07f-48ead4180515::node::1'"));
+//! assert!(to_aql(&query, None).ends_with(" = '8849182c-82ad-4088-a07f-48ead4180515::node::1'"));
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 

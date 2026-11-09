@@ -10,8 +10,9 @@
 //! inside a transaction that is then rolled back, so the check writes
 //! nothing. For each binding key a live `PERSON` carries it reports the
 //! committer of the version that introduced the key and judges it: a SCIM
-//! client of `[[scim.client]]`, an administrator the operator names, or a
-//! migration the operator declares. A stored version records no role its
+//! client of `[[scim.client]]`, an administrator the operator names, a
+//! migration the operator declares, or just-in-time creation on an issuer
+//! with `jit = true`. A stored version records no role its
 //! committer held, so the administrators are operator input, named in the
 //! report. No openEHR spec governs a deployment's migration: our own design.
 
@@ -26,9 +27,12 @@ use uuid::Uuid;
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::Identifier;
 use crate::party_binding::fill::{self, Duplicate};
+use crate::party_binding::provisioned;
 use crate::party_binding::store::{self, HeldSelector};
+use crate::service::demographic::jit;
 use crate::storage::error::StorageError;
 use crate::versioning::Kind;
+use crate::versioning::audit::change_type;
 use crate::versioning::committer::bound::CLIENT_TYPE;
 
 /// Why the pre-flight cannot run.
@@ -48,6 +52,9 @@ pub enum CheckError {
         /// The key as given.
         key: String,
     },
+    /// The provisional cut-off is out of the time range.
+    #[error("provisional_report_days puts the report cut-off out of range")]
+    Horizon(#[source] jiff::Error),
     /// A stored committer is no canonical `PARTY_PROXY`.
     #[error("the committer of a version of PERSON {party} is no canonical PARTY_PROXY")]
     Committer {
@@ -118,8 +125,11 @@ pub struct CheckInput {
     pub migrations: Vec<String>,
     /// The logins the identity provider assigns, when given.
     pub expected: Option<Expected>,
-    /// How many days a `553|incomplete|` `PERSON` may stay provisional.
-    pub horizon_days: u32,
+    /// `[authz.party_binding] provisional_report_days`: the age in days past
+    /// which a provisional `PERSON` is reported.
+    pub provisional_report_days: u32,
+    /// The `[[authz.party_binding.issuer]]`s with `jit = true`.
+    pub jit_issuers: Vec<String>,
     /// The date a professional `ROLE` is judged on (`YYYY-MM-DD`).
     pub today: String,
 }
@@ -131,8 +141,8 @@ pub struct Report {
     pub administrators: Vec<NamedAdministrator>,
     /// The committer names of the declared migrations.
     pub migrations: Vec<String>,
-    /// The provisional horizon in days.
-    pub horizon_days: u32,
+    /// The age in days past which a provisional `PERSON` is reported.
+    pub provisional_report_days: u32,
     /// Each selector value two or more live `PERSON`s carry.
     pub duplicates: Vec<DuplicateValue>,
     /// The `PERSON`s carrying a binding key, per key issuer.
@@ -141,9 +151,6 @@ pub struct Report {
     pub inactive: Vec<Uuid>,
     /// The key-bearing `PERSON`s whose head is `801|abandoned|`.
     pub abandoned: Vec<Uuid>,
-    /// The key-bearing `PERSON`s whose head is `553|incomplete|` and whose
-    /// first version is older than the horizon.
-    pub provisional: Vec<Uuid>,
     /// What the side table answers, absent while a duplicate stands, since a
     /// fill refuses one.
     pub side_table: Option<SideTable>,
@@ -188,8 +195,20 @@ pub struct SideTable {
     /// The key-bearing `PERSON`s that perform no professional `ROLE`, which
     /// `adopt` has not reached.
     pub unadopted: Vec<Uuid>,
+    /// The provisional `PERSON`s, `553|incomplete|` with a binding key, created
+    /// more than `provisional_report_days` days ago, oldest first.
+    pub provisional: Vec<ProvisionalPerson>,
     /// Every mapped Basic user, with the `PERSON` it binds.
     pub basic_users: Vec<BasicUserReport>,
+}
+
+/// A provisional `PERSON` and when it was created.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ProvisionalPerson {
+    /// The `PERSON`.
+    pub party: Uuid,
+    /// When its first version was committed (RFC 3339).
+    pub created: String,
 }
 
 /// A mapped Basic user and the `PERSON` it binds.
@@ -245,6 +264,8 @@ pub enum Origin {
     Administrator,
     /// A migration the operator declared.
     Migration,
+    /// Just-in-time creation at a first login of an issuer with `jit = true`.
+    Jit,
 }
 
 /// The expected logins with no live `PERSON`.
@@ -294,7 +315,7 @@ impl Report {
         out.extend(self.provenance.iter().filter(|p| p.by.is_none()).map(|p| {
             format!(
                 "the binding key of PERSON {} was introduced by a committer that is no SCIM \
-                 client, named administrator or declared migration",
+                 client, named administrator, declared migration or just-in-time creation",
                 p.party
             )
         }));
@@ -352,19 +373,14 @@ async fn run(
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect();
-    let heads = head_states(tx, &bearers, input.horizon_days).await?;
+    let heads = head_states(tx, &bearers).await?;
     let in_state = |state: &str| -> Vec<Uuid> {
         heads
             .iter()
-            .filter(|(_, (s, _))| s == state)
+            .filter(|(_, s)| s.as_str() == state)
             .map(|(party, _)| *party)
             .collect()
     };
-    let provisional = heads
-        .iter()
-        .filter(|(_, (s, old))| s == "553" && *old)
-        .map(|(party, _)| *party)
-        .collect();
     let side_table = if duplicates.is_empty() {
         store::refill(tx, mapping).await?;
         Some(side_table(tx, &bearers, input, &canonical_of).await?)
@@ -388,7 +404,7 @@ async fn run(
     Ok(Report {
         administrators,
         migrations: input.migrations.clone(),
-        horizon_days: input.horizon_days,
+        provisional_report_days: input.provisional_report_days,
         duplicates,
         issuers: by_issuer
             .into_iter()
@@ -399,7 +415,6 @@ async fn run(
             .collect(),
         inactive: in_state("800"),
         abandoned: in_state("801"),
-        provisional,
         side_table,
         provenance,
         expected,
@@ -463,39 +478,27 @@ async fn provenance_of(
         party: key.party_id,
         issuer: key.issuer.clone(),
         key: key.value.clone(),
-        by: origin(&found.committer, input, administrators),
+        by: origin(&found, key.party_id, input, administrators),
         committer: named_committer(&found.committer),
         committed_at: found.committed_at,
         contribution: found.contribution,
     }))
 }
 
-/// The head state of each of `parties`, and whether its first version is
-/// older than `horizon_days`.
+/// The head state of each of `parties`.
 async fn head_states(
     tx: &mut PgConnection,
     parties: &[Uuid],
-    horizon_days: u32,
-) -> Result<BTreeMap<Uuid, (String, bool)>, CheckError> {
+) -> Result<BTreeMap<Uuid, String>, CheckError> {
     let rows = sqlx::query(
-        "SELECT h.vo_id, h.lifecycle_state, \
-                (SELECT min(v.committed_at) FROM version v WHERE v.vo_id = h.vo_id) \
-                    < now() - make_interval(days => $2) AS old \
-         FROM vo_head h WHERE h.vo_id = ANY($1) ORDER BY h.vo_id",
+        "SELECT vo_id, lifecycle_state FROM vo_head WHERE vo_id = ANY($1) ORDER BY vo_id",
     )
     .bind(parties)
-    .bind(i32::try_from(horizon_days).unwrap_or(i32::MAX))
     .fetch_all(&mut *tx)
     .await?;
     let mut out = BTreeMap::new();
     for row in rows {
-        out.insert(
-            row.try_get("vo_id")?,
-            (
-                row.try_get("lifecycle_state")?,
-                row.try_get::<Option<bool>, _>("old")?.unwrap_or(false),
-            ),
-        );
+        out.insert(row.try_get("vo_id")?, row.try_get("lifecycle_state")?);
     }
     Ok(out)
 }
@@ -538,7 +541,21 @@ async fn side_table(
             party,
         });
     }
+    let before = jiff::Timestamp::now()
+        .saturating_sub(jiff::SignedDuration::from_hours(
+            i64::from(input.provisional_report_days) * 24,
+        ))
+        .map_err(CheckError::Horizon)?;
+    let provisional = provisioned::provisional_before(tx, before)
+        .await?
+        .into_iter()
+        .map(|(party, created)| ProvisionalPerson {
+            party: party.0,
+            created: created.to_string(),
+        })
+        .collect();
     Ok(SideTable {
+        provisional,
         unadopted: bearers
             .iter()
             .filter(|party| !professionals.contains(party))
@@ -556,6 +573,10 @@ struct Introduced {
     contribution: Uuid,
     /// Its committer.
     committer: PartyProxy,
+    /// Its `audit change type` code.
+    change_type: String,
+    /// Its audit description text, when it has one.
+    description: Option<String>,
 }
 
 /// The commit instant and CONTRIBUTION of the first version of the `PERSON`
@@ -567,7 +588,8 @@ async fn introduced(
 ) -> Result<Option<Introduced>, CheckError> {
     let rows = sqlx::query(
         "SELECT v.body, v.committed_at::text AS committed_at, v.contribution_id, \
-                a.committer::text AS committer \
+                a.committer::text AS committer, a.change_type, \
+                a.description ->> 'value' AS description \
          FROM version v JOIN commit_audit a ON a.id = v.commit_audit_id \
          WHERE v.vo_id = $1 AND v.body IS NOT NULL ORDER BY v.sys_version",
     )
@@ -596,6 +618,8 @@ async fn introduced(
         return Ok(Some(Introduced {
             committed_at: row.try_get("committed_at")?,
             contribution: row.try_get("contribution_id")?,
+            change_type: row.try_get("change_type")?,
+            description: row.try_get("description")?,
             committer,
         }));
     }
@@ -667,16 +691,21 @@ fn named_committer(committer: &PartyProxy) -> Committer {
     }
 }
 
-/// Who `committer` is under the provenance rule: a SCIM client names itself
-/// by its client identifier under its token issuer with no `external_ref`
+/// Who committed `introduced`, the version that introduced a key of the
+/// `PERSON` `party`, under the provenance rule: a SCIM client names itself by
+/// its client identifier under its token issuer with no `external_ref`
 /// (`committer::bound::server_committer`), an administrator's committer
-/// references its `PERSON`, and a declared migration is named by its
-/// committer name with no `external_ref`.
+/// references its `PERSON`, a declared migration is named by its committer
+/// name with no `external_ref`, and just-in-time creation is a
+/// `249|creation|` version with its description (`jit::description`) whose
+/// committer references the new `PERSON` itself.
 fn origin(
-    committer: &PartyProxy,
+    introduced: &Introduced,
+    party: Uuid,
     input: &CheckInput,
     administrators: &BTreeSet<Uuid>,
 ) -> Option<Origin> {
+    let committer = &introduced.committer;
     let Parts {
         name,
         external_ref,
@@ -701,8 +730,17 @@ fn origin(
             return Some(Origin::Migration);
         }
     }
-    // TODO(#5016): accept a `249|creation|` version with the just-in-time description on an issuer with `jit = true`.
     let referenced = external_ref.and_then(|id| id.parse::<Uuid>().ok());
+    let jit = introduced.change_type == change_type::CREATION
+        && introduced.description.as_deref().is_some_and(|text| {
+            input
+                .jit_issuers
+                .iter()
+                .any(|issuer| text == jit::description(issuer))
+        });
+    if person && jit && referenced == Some(party) {
+        return Some(Origin::Jit);
+    }
     if person && referenced.is_some_and(|party| administrators.contains(&party)) {
         return Some(Origin::Administrator);
     }

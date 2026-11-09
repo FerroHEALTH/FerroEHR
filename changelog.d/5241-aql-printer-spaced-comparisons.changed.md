@@ -1,0 +1,1 @@
+- `openehr_query::printer::to_aql` writes each `WHERE` comparison with one space on each side of the operator (`c/name/value = $nameValue`), as the QUERY 1.1.0 AQL syntax examples do; path predicates keep their unspaced form (`[ehr_id/value=$ehrUid]`). The query builder's generated AQL follows.

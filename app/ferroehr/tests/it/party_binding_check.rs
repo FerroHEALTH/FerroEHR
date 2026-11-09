@@ -25,6 +25,8 @@ use ferroehr::party_binding::check::{
 };
 use ferroehr::party_binding::{BindingMapping, IdentifierSelector};
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::demographic::jit;
+use ferroehr::service::demographic::party_set::NewParty;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::version_update::WriteRequest;
 
@@ -250,7 +252,7 @@ fn input() -> CheckInput {
         key_types: BTreeMap::from([(LOGIN.to_owned(), "guid".to_owned())]),
         scim_clients: vec![(MACHINES.to_owned(), CLIENT.to_owned())],
         migrations: vec![MIGRATION.to_owned()],
-        horizon_days: 30,
+        provisional_report_days: 30,
         today: ferroehr::support::today_utc().to_string(),
         ..CheckInput::default()
     }
@@ -287,7 +289,7 @@ async fn the_check_reports_every_category_and_writes_nothing() {
         issuer: LOGIN.to_owned(),
         key: ADMIN_KEY.to_uppercase(),
     }];
-    input.horizon_days = 0;
+    input.provisional_report_days = 0;
     input.basic_users = vec![
         BasicUser {
             user: "ferroehr".to_owned(),
@@ -329,8 +331,9 @@ async fn the_check_reports_every_category_and_writes_nothing() {
     assert_eq!(report.issuers[0].persons, bearers);
     assert_eq!(report.inactive, [inactive.0]);
     assert_eq!(report.abandoned, Vec::<Uuid>::new());
-    assert_eq!(report.provisional, [provisional.0]);
     let table = report.side_table.as_ref().expect("no duplicate stands");
+    let provisional_parties: Vec<Uuid> = table.provisional.iter().map(|p| p.party).collect();
+    assert_eq!(provisional_parties, [provisional.0], "{table:?}");
     assert_eq!(table.unadopted, [planted.0], "{table:?}");
     assert_eq!(table.basic_users.len(), 2);
     assert_eq!(table.basic_users[0].party, Some(provisioned.0));
@@ -438,4 +441,78 @@ async fn a_service_with_no_mapping_has_nothing_to_check() {
     let (_db, svc) = crate::fixtures::service().await;
     let refused = svc.check_binding(&input()).await;
     assert!(matches!(refused, Err(CheckError::Unmapped)), "{refused:?}");
+}
+
+/// The issuer whose first logins just-in-time creation provisions.
+const JIT_ISSUER: &str = "https://login.example/jit";
+const JIT_KEY: &str = "3b8c9d0e-1f2a-4b3c-8d4e-5f6a7b8c9d0e";
+
+/// A provisional `PERSON` carrying [`JIT_KEY`] and its professional `ROLE`,
+/// committed in one CONTRIBUTION as just-in-time creation commits them: the
+/// `249|creation|` change type, the description `jit::description` writes
+/// for `issuer`, and a committer whose `external_ref` is `referenced`, or the
+/// new `PERSON` itself when `None`.
+async fn jit_created(svc: &FerroEhrService, issuer: &str, referenced: Option<VoId>) -> VoId {
+    let (person_id, role_id) = (svc.allocate_party_id(), svc.allocate_party_id());
+    let (person_vo, role_vo) = (person_id.id(), role_id.id());
+    let mut body = person(JIT_KEY);
+    body["roles"] = json!([party_ref("ROLE", role_vo)]);
+    let committer =
+        openehr_its::json::from_canonical_value(&administrator(referenced.unwrap_or(person_vo)))
+            .expect("a PARTY_PROXY");
+    let parties = vec![
+        NewParty {
+            id: person_id,
+            kind: PartyKind::Person,
+            body,
+            lifecycle_state: Some("553".to_owned()),
+        },
+        NewParty {
+            id: role_id,
+            kind: PartyKind::Role,
+            body: role(person_vo),
+            lifecycle_state: None,
+        },
+    ];
+    svc.create_parties(parties, &jit::description(issuer), Some(committer))
+        .await
+        .expect("the creation commits");
+    person_vo
+}
+
+/// The provenance verdict of the one key the store holds under `input`.
+async fn verdict(svc: &FerroEhrService, input: &CheckInput) -> Option<Origin> {
+    let report = svc.check_binding(input).await.expect("the check runs");
+    assert_eq!(report.provenance.len(), 1, "{report:?}");
+    report.provenance[0].by
+}
+
+#[tokio::test]
+async fn a_key_just_in_time_creation_introduced_passes_on_a_jit_issuer() {
+    let (_db, svc) = service().await;
+    let created = jit_created(&svc, JIT_ISSUER, None).await;
+    let mut input = input();
+
+    assert_eq!(
+        verdict(&svc, &input).await,
+        None,
+        "no issuer has jit = true"
+    );
+    input.jit_issuers = vec![JIT_ISSUER.to_owned()];
+    assert_eq!(verdict(&svc, &input).await, Some(Origin::Jit));
+    input.provisional_report_days = 0;
+    let report = svc.check_binding(&input).await.expect("the check runs");
+    let table = report.side_table.expect("no duplicate stands");
+    assert_eq!(table.provisional.len(), 1, "{table:?}");
+    assert_eq!(table.provisional[0].party, created.0);
+}
+
+#[tokio::test]
+async fn a_creation_naming_another_committer_is_no_jit_creation() {
+    let (_db, svc) = service().await;
+    jit_created(&svc, JIT_ISSUER, Some(VoId(Uuid::now_v7()))).await;
+    let mut input = input();
+    input.jit_issuers = vec![JIT_ISSUER.to_owned()];
+
+    assert_eq!(verdict(&svc, &input).await, None);
 }
