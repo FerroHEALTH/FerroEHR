@@ -49,10 +49,10 @@ pub struct TerminologyServerConfig {
     /// The OAuth 2.0 client credentials grant whose bearer token every request
     /// carries (`[terminology.oauth]`). Unset = unauthenticated.
     pub oauth: Option<ferrohealth_smart::config::credentials::OauthSection>,
-    /// Retired: refused at load, naming `api.terminology`.
+    /// Retired in v5.7.0: refused at load, naming `api.terminology`.
     #[serde(skip_serializing)]
     pub api_enabled: Removed,
-    /// Retired: refused at load, naming the keys of `[terminology]`.
+    /// Retired in v5.7.0: refused at load, naming the keys of `[terminology]`.
     #[serde(skip_serializing)]
     pub server: Removed,
 }

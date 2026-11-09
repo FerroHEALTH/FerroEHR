@@ -216,7 +216,7 @@ impl std::fmt::Debug for Observability {
 /// Only the opted-in endpoints are mounted; a disabled endpoint is simply
 /// absent → `404`. When [`ManagementConfig::enabled`] is `false`, the router is
 /// empty. This same router is either merged into the main app (when
-/// `management.port` is unset) or served on its own listener by the binary.
+/// `management.listen` is unset) or served on its own listener by the binary.
 pub fn router(state: ManagementState) -> Router {
     if !state.config.enabled {
         return Router::new();

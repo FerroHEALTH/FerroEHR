@@ -1797,12 +1797,15 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
     use ferroehr::system_log::store::AuditStore;
 
     let db = testkit::db().await.expect("testkit database");
-    let clinical = ferroehr::db::connect(&DbConfig {
-        url: ferrohealth_secret::secret_url::SecretUrl::new(
-            crate::fixtures::dsn_as(&db, "audclin", "ferroehr_clinical").await,
-        ),
-        ..DbConfig::default()
-    })
+    let clinical = ferroehr::db::connect_domain(
+        &DbConfig {
+            url: ferrohealth_secret::secret_url::SecretUrl::new(
+                crate::fixtures::dsn_as(&db, "audclin", "ferroehr_clinical").await,
+            ),
+            ..DbConfig::default()
+        },
+        ferroehr::db::domain::Domain::Clinical,
+    )
     .await
     .expect("the clinical pool connects on its own credential");
 
@@ -1830,12 +1833,15 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
         .await
         .expect("the clinical role verifies the chain");
 
-    let reader = ferroehr::db::connect(&DbConfig {
-        url: ferrohealth_secret::secret_url::SecretUrl::new(
-            crate::fixtures::dsn_as(&db, "audread", "ferroehr_clinical_reader").await,
-        ),
-        ..DbConfig::default()
-    })
+    let reader = ferroehr::db::connect_domain(
+        &DbConfig {
+            url: ferrohealth_secret::secret_url::SecretUrl::new(
+                crate::fixtures::dsn_as(&db, "audread", "ferroehr_clinical_reader").await,
+            ),
+            ..DbConfig::default()
+        },
+        ferroehr::db::domain::Domain::Clinical,
+    )
     .await
     .expect("the clinical reader connects");
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.audit_event")

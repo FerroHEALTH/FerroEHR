@@ -10,7 +10,7 @@
 //! preparation on its own credential. Every one is a configuration key an
 //! operator can leave unset, and a deployment that quietly has none of them
 //! looks, from its own logs and its own API, exactly like one that has all of
-//! them. The top-level `deployment_profile` key gives the server a declared
+//! them. The top-level `deployment.profile` key gives the server a declared
 //! posture: `production` refuses to start when a property is missing and not
 //! explicitly accepted, `sandbox` says which are missing, loudly and on every
 //! surface, so it cannot be mistaken for the other.
@@ -35,38 +35,6 @@ use serde::{Deserialize, Serialize};
 use crate::config::FerroEhrConfig;
 use crate::config::rest::binds_loopback;
 use crate::db::MigrationMode;
-
-/// The `[deployment]` table: what this deployment is.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct DeploymentConfig {
-    /// `profile` — the declared posture (`sandbox` | `production`; default
-    /// `sandbox`). `production` refuses to start while a separation it
-    /// asserts is missing and not accepted by name (#3226).
-    pub profile: DeploymentProfile,
-    /// `accepts` — the [`DeploymentGap`]s a `production` deployment runs
-    /// without, each stated on every boot and on `/management/status`.
-    /// Ignored under `sandbox`, which accepts everything.
-    pub accepts: Vec<DeploymentGap>,
-    /// `spec_profile` — the openEHR specification generation set the server
-    /// runs (`development` | `stable`; default `development`).
-    pub spec_profile: crate::config::profile::SpecProfile,
-    /// `licence_file` — the commercial licence token file the licensor
-    /// issued. Optional in every respect: an unset, missing, malformed or
-    /// expired token is logged once at boot and the server runs unlicensed,
-    /// identically in every other way.
-    pub licence_file: Option<std::path::PathBuf>,
-}
-
-impl DeploymentConfig {
-    /// The licence configuration `licence_file` names.
-    #[must_use]
-    pub fn licence(&self) -> crate::licence::config::LicenceConfig {
-        crate::licence::config::LicenceConfig {
-            file: self.licence_file.clone(),
-        }
-    }
-}
 
 /// How rigorously this deployment is held to the separations.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -99,7 +67,7 @@ impl fmt::Display for DeploymentProfile {
     }
 }
 
-/// A `deployment_profile` token that names no profile.
+/// A `deployment.profile` token that names no profile.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeploymentProfileParseError {
     /// The token as written.
@@ -110,7 +78,7 @@ impl fmt::Display for DeploymentProfileParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "unknown deployment_profile `{}` (expected `sandbox` or `production`)",
+            "unknown deployment.profile `{}` (expected `sandbox` or `production`)",
             self.unrecognized
         )
     }
@@ -202,7 +170,7 @@ pub enum DeploymentGap {
     RbacOff,
     /// A listener speaks plaintext on an address reachable off the host: the
     /// main listener with no `[server.tls]` and a non-loopback `server.listen`,
-    /// or the separate management listener (`management.port`), which always
+    /// or the separate management listener (`management.listen`), which always
     /// binds every interface in plain HTTP.
     ///
     /// The management listener is covered by this gap rather than given TLS of
@@ -255,13 +223,13 @@ impl DeploymentGap {
         match self {
             Self::SharedCredential => {
                 "the clinical and party domains share a database credential; set \
-                 [storage.party] url (or [storage.clinical] url) to roles that hold one \
+                 [database.party] url (or [database.clinical] url) to roles that hold one \
                  domain each"
             }
             Self::SharedCluster => {
                 "two domains reach the same PostgreSQL cluster (pg_control_system().system_identifier \
                  is equal); give the party and audit domains their own clusters through \
-                 [storage.party] and [storage.audit] url"
+                 [database.party] and [database.audit] url"
             }
             Self::OpenSubjectNamespace => {
                 "[privacy] subject_namespaces is empty, so an EHR_STATUS subject may carry a real \
@@ -493,7 +461,7 @@ impl DeploymentPosture {
     #[must_use]
     pub fn refusal_message(&self) -> String {
         let mut out = String::from(
-            "deployment_profile = \"production\" refuses to start: this deployment has not made \
+            "deployment.profile = \"production\" refuses to start: this deployment has not made \
              the separations production asserts. Make them, or accept each one by name in \
              deployment_accepts (which is then stated on every boot and on /management/status):",
         );
@@ -563,12 +531,14 @@ mod tests {
         }
     }
 
-    fn production(base: FerroEhrConfig) -> FerroEhrConfig {
-        {
-            let mut c = base;
-            c.deployment.profile = DeploymentProfile::Production;
-            c
-        }
+    fn production(mut config: FerroEhrConfig) -> FerroEhrConfig {
+        config.deployment.profile = DeploymentProfile::Production;
+        config
+    }
+
+    fn accepting(mut config: FerroEhrConfig, gaps: Vec<DeploymentGap>) -> FerroEhrConfig {
+        config.deployment.accepts = gaps;
+        config
     }
 
     fn distinct_clusters() -> DatabaseFacts {
@@ -696,11 +666,7 @@ mod tests {
         assert_eq!(posture.gaps, [DeploymentGap::SharedCluster]);
         assert!(!posture.permits_boot());
 
-        let config = {
-            let mut c = config;
-            c.deployment.accepts = vec![DeploymentGap::SharedCluster];
-            c
-        };
+        let config = accepting(config, vec![DeploymentGap::SharedCluster]);
         let accepted = DeploymentPosture::evaluate(&config, &same_cluster);
         assert!(accepted.permits_boot());
         assert_eq!(accepted.accepted, [DeploymentGap::SharedCluster]);
@@ -826,14 +792,13 @@ mod tests {
 
         // Accepted by name: the deployment boots and both stay listed.
         let accepted = DeploymentPosture::evaluate(
-            &{
-                let mut c = config;
-                c.deployment.accepts = vec![
+            &accepting(
+                config,
+                vec![
                     DeploymentGap::AuditFailsOpen,
                     DeploymentGap::OpenEhrAccessDefault,
-                ];
-                c
-            },
+                ],
+            ),
             &distinct_clusters(),
         );
         assert!(accepted.permits_boot());
@@ -888,7 +853,7 @@ mod tests {
         assert!(!posture.permits_boot());
         let message = posture.refusal_message();
         assert!(
-            message.contains("[storage.audit]"),
+            message.contains("[database.audit]"),
             "the remedy names the audit domain's own DSN: {message}"
         );
     }
@@ -1086,11 +1051,10 @@ mod tests {
             off.gaps.is_empty(),
             "a disabled feed sends nothing: {off:?}"
         );
-        let accepted = {
-            let mut c = feed(true, "http://arr.internal/fhir");
-            c.deployment.accepts = vec![DeploymentGap::PlaintextAuditFeed];
-            c
-        };
+        let accepted = accepting(
+            feed(true, "http://arr.internal/fhir"),
+            vec![DeploymentGap::PlaintextAuditFeed],
+        );
         assert!(DeploymentPosture::evaluate(&accepted, &distinct_clusters()).permits_boot());
 
         let store = |enabled: bool, allow_http: bool| {
@@ -1119,11 +1083,7 @@ mod tests {
             DeploymentPosture::evaluate(&store(false, true), &distinct_clusters()).gaps,
             Vec::<DeploymentGap>::new()
         );
-        let accepted = {
-            let mut c = store(true, true);
-            c.deployment.accepts = vec![DeploymentGap::PlaintextObjectStore];
-            c
-        };
+        let accepted = accepting(store(true, true), vec![DeploymentGap::PlaintextObjectStore]);
         assert!(DeploymentPosture::evaluate(&accepted, &distinct_clusters()).permits_boot());
     }
 
@@ -1158,11 +1118,7 @@ mod tests {
             DeploymentPosture::evaluate(&declared, &distinct_clusters()).gaps,
             Vec::<DeploymentGap>::new()
         );
-        let accepted = {
-            let mut c = unmapped();
-            c.deployment.accepts = vec![DeploymentGap::NoCategoryMap];
-            c
-        };
+        let accepted = accepting(unmapped(), vec![DeploymentGap::NoCategoryMap]);
         assert!(DeploymentPosture::evaluate(&accepted, &distinct_clusters()).permits_boot());
     }
 }

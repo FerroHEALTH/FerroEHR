@@ -8,7 +8,8 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use ferroehr::config::authz::{AbacConfig, AbacEngineKind, AbacParam, PolicyRule, RemoteConfig};
+use ferroehr::config::abac_rules::RemoteConfig;
+use ferroehr::config::authz::{AbacConfig, AbacEngineKind, AbacParam, PolicyRule};
 use ferroehr_rest::extensions::access::authz::remote_pdp;
 use ferroehr_rest::extensions::access::authz::request::{
     AccessMode, AuthzRequest, ResourceKind, model,

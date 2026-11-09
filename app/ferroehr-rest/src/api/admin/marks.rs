@@ -23,7 +23,7 @@
 //! answer what has fallen due and leave the decision where it belongs.
 //!
 //! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::admin.enabled` config gate
+//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
 //! (`405` with an empty `Allow` when off) unchanged.
 
 #![expect(

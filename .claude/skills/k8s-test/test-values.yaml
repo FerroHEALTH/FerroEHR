@@ -28,10 +28,9 @@ secrets:
 
 config:
   # The chart has no default posture and refuses to render without one.
-  deployment_profile: sandbox
+  deployment:
+    profile: sandbox
   # The in-instance EHR index: the live run has no identity source.
-  ehr_index:
-    provider: local
   # No version-skew block: the deploy probe proved the published appVersion
   # image boots on the chart's stock config: defaults (P-K8S-BOOT, run of
   # 2026-08-14). If a future chart introduces keys the published image
@@ -45,6 +44,8 @@ config:
         - user: ferroehr
           scopes: [user/composition-*.cruds, user/template-*.cruds, user/aql-*.cruds, __ferroehr.platform]
           roles: [ADMIN, USER]
+  record:
+    subject_index: local
 
 # A test cluster is not an installation; it sends no usage report (#3623).
 usageReport:

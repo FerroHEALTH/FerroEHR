@@ -39,7 +39,7 @@
 //! or `$validate-code result=false`) is an unknown-entity refusal
 //! ([`ServiceError::NotFound`]) and a transport fault is a curated
 //! [`ServiceError::Fault`]; the fail-open choice belongs to the caller
-//! ([`config::TerminologyServerConfig::fail_on_error`](super::config::TerminologyServerConfig::fail_on_error)).
+//! ([`config::TerminologyServerConfig::on_error`](super::config::TerminologyServerConfig::on_error)).
 
 use std::collections::BTreeMap;
 
@@ -84,7 +84,7 @@ pub struct FhirTerminologyProvider {
     /// record.
     endpoint: String,
     /// Whether a binding this server cannot resolve refuses the composition
-    /// ([`TerminologyServerConfig::fail_on_error`]).
+    /// ([`TerminologyServerConfig::on_error`]).
     fail_on_error: bool,
 }
 

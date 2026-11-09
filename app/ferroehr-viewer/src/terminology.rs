@@ -10,7 +10,7 @@
 //! NOTE: no openEHR spec governs this wire shape — the CDR's own extension.
 //!
 //! **Absence is a state, not an error.** The whole group is config-gated on the
-//! CDR side (`[terminology].api_enabled`, off by default) and answers `404` as
+//! CDR side (`[api] terminology`, off by default) and answers `404` as
 //! if unmounted when it is off — the same `404` an unknown terminology, code or
 //! value set produces. Every read below therefore returns `Ok(None)` for a
 //! `404` and lets the screen say what is absent, exactly as
@@ -252,7 +252,7 @@ fn require_value(value: &str, what: &str) -> Result<String, ViewerError> {
 /// The terminology ids the CDR serves (`GET /terminology`).
 ///
 /// `Ok(None)` is the first-class "the terminology extension is disabled on this
-/// server" state (`[terminology].api_enabled` off — the CDR answers `404` as if
+/// server" state (`[api] terminology` off — the CDR answers `404` as if
 /// the routes were unmounted), not an error.
 ///
 /// # Errors

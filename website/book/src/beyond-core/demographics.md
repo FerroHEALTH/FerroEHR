@@ -40,7 +40,7 @@ reads as absent, and deleting one twice is refused.
 Parties do not live in the clinical schema. They live in a `party` schema of
 their own, with its own archival partitions and its own database roles, and the
 database refuses the mix in both directions: a version with no owning EHR cannot
-enter the clinical schema, and one that has an owner cannot enter `party`. Point `[storage.party] url` at a role of its own
+enter the clinical schema, and one that has an owner cannot enter `party`. Point `[database.party] url` at a role of its own
 and the schema separation becomes a credential separation as well. See
 [Operations → Database roles and least
 privilege](../operations.md#database-roles-and-least-privilege) for the roles
@@ -48,7 +48,7 @@ and [the pseudonymisation boundary](../security.md#the-pseudonymisation-boundary
 for what the split is for.
 
 The demographic side is where a person's national identifier legitimately
-lives, and `[demographic.identifier_protection]` decides how it is held there:
+lives, and `[privacy.identifier_protection]` decides how it is held there:
 with it on, the value leaves the versioned body for an encrypted column and
 the body keeps a reference, while a keyed digest beside the ciphertext still
 answers "which party holds this identifier". The wire shape of every route
@@ -130,7 +130,7 @@ Two limits are worth knowing because they are deliberate rather than accidental:
 ## The specification generation a body is read against
 
 The server runs one openEHR specification generation set at a time, chosen by the
-`spec_profile` setting (`development` by default, `stable` for the released
+`deployment.spec_profile` setting (`development` by default, `stable` for the released
 generations; see the
 [configuration reference](../installation/configuration.md)). For demographics
 this shows up at the door, because the two generations disagree about one

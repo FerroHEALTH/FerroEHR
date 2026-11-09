@@ -72,13 +72,13 @@ carries only its own schema on its `search_path`. The **role** separation is a
 deployment choice, and it is one configuration table per domain:
 
 ```toml
-[storage.party]
+[database.party]
 url = "postgres://ferroehr_party:***@pg:5432/ferroehr"
 ```
 
 (or `url_file`, for a mounted secret). With a domain's `url` set the server
 opens that pool on that credential, and a flaw that reaches one of them reaches
-one domain. Left unset, the domain uses `[db].url` and the separation is
+one domain. Left unset, the domain uses `[database].url` and the separation is
 schema-only. Set both domains and no credential the server uses can join a
 party to its EHR in SQL; the crossing happens in the application, over
 two connections, and is recorded as an access event (see [Security → Resolving
@@ -94,14 +94,14 @@ Two boot checks make the posture honest. Two domains configured on **different**
 DSNs that authenticate as the **same** database role are refused — a separation
 that exists only in the configuration reads as one that holds, which is worse
 than none. And a domain role that does not exist is a warning under
-`deployment_profile = "sandbox"` and a refusal under `production`: absent roles
+`deployment.profile = "sandbox"` and a refusal under `production`: absent roles
 mean absent grants, and the boundary check would otherwise pass by having
 nothing to measure.
 
 ### Which credential prepares the schema
 
 **None of the domain credentials.** Preparing a database spans every schema in
-it at once: the DDL of each resident migration set under `db.migrate = "apply"`,
+it at once: the DDL of each resident migration set under `[database] migrations = "apply"`,
 and their `_sqlx_migrations` bookkeeping tables under `"verify"` — a read, but a
 read across the whole database. Each runtime role holds exactly one domain, so
 none can do it, and `verify` is not the exception: a role that is a member of
@@ -112,18 +112,18 @@ So the credential that prepares the schema is named separately, and the server
 uses it for that one boot step:
 
 ```toml
-[db]
+[database]
 url = "postgres://ferroehr_clinical:***@pg:5432/ferroehr"
 migrate_url = "postgres://ferroehr_migrator:***@pg:5432/ferroehr"
 
-[storage.party]
+[database.party]
 url = "postgres://ferroehr_party:***@pg:5432/ferroehr"
 ```
 
 `migrate_url` prepares every domain that reaches the same DATABASE it does,
 which is all of them in the posture above: three credentials, one database. A
 domain whose DSN reaches a DIFFERENT database is prepared there on that
-database's own migrator, `[storage.migrate.<domain>] url`, because
+database's own migrator, `[database.<domain>]` migrate_url`, because
 `migrate_url` names one database and a relocated domain is not in it; unset, it
 falls back to the domain's own DSN, which a DML-only role cannot use. Which case a domain is in is read from the server itself
 (`pg_control_system()` and `current_database()`), never from the DSN text — two
@@ -140,9 +140,9 @@ the fix is visible from the message:
 
 ```text
 database role `app_ehr` cannot read the migration state of schema
-`ext`: … point `[db] migrate_url` (or `migrate_url_file`) at the credential
-that prepares the schema — unset, it falls back to `[db] url` — and, for a
-domain in a database of its own, `[storage.migrate.<domain>] url` at that
+`ext`: … point `[database] migrate_url` (or `migrate_url_file`) at the credential
+that prepares the schema — unset, it falls back to `[database] url` — and, for a
+domain in a database of its own, `[database.<domain>]` migrate_url` at that
 database's migration credential
 ```
 
@@ -152,7 +152,7 @@ domain and fails, naming the role and the object, if either runtime role can
 read across the boundary. `ferroehr db verify` runs the same check. When the
 four roles do not exist at all (the development, compose and test-harness case,
 where the migrator holds no `CREATEROLE`) the check warns rather than inventing
-a failure — under `deployment_profile = "production"` it refuses, because absent
+a failure — under `deployment.profile = "production"` it refuses, because absent
 roles mean absent grants and there is then nothing to measure.
 
 On Kubernetes the same choice is chart values, mounted as files the same way
@@ -191,7 +191,7 @@ then give each login role membership of exactly one of the first four.
 `ferroehr db verify` tells you whether the boundary holds afterwards.
 
 The local Audit Record Repository is written on its own pool
-(`[storage.audit]`), and the `audit` schema is granted to `ferroehr_clinical`
+(`[database.audit]`), and the `audit` schema is granted to `ferroehr_clinical`
 (record an event, stamp it forwarded, run the retention reaper, verify the
 chain) and to `ferroehr_clinical_reader` (read it and verify the chain). A
 clinical login role that is a member of `ferroehr_clinical` alone writes its own
@@ -218,11 +218,11 @@ Exercised against a real PostgreSQL 18:
 - All four domain roles refused every relation in the domain they do not own,
   enumerated from `information_schema` rather than from a written list
   (`app/ferroehr/tests/it/pseudonymisation_boundary.rs`).
-- The boot sequence on separated credentials with `[db] migrate_url`, under
+- The boot sequence on separated credentials with `[database] migrate_url`, under
   both `verify` and `apply`, and the single-DSN fallback under both
   (`app/ferroehr/tests/it/schema_preparation_credential.rs`).
 - The party domain relocated to a second database, prepared and verified
-  there on `[storage.migrate.party]`, and the
+  there on `[database.party]`, and the
   refusal when the domain's two DSNs reach different databases
   (`app/ferroehr/tests/it/relocated_domain_preparation.rs`).
 - The chart's production overlay on three PostgreSQL clusters, one per domain,
@@ -241,7 +241,7 @@ Not exercised by anything, and stated rather than left to inference:
 - **Role provisioning on a managed database** where the migrator holds no
   `CREATEROLE` and the roles are created by the manual step above.
 
-Which posture you actually get depends on `db.migrate`, because the server's
+Which posture you actually get depends on `[database] migrations`, because the server's
 embedded migrations are DDL: a self-migrating deployment necessarily runs as a
 role that can execute DDL. The single-container quickstart takes that path: its
 DSN authenticates as a non-superuser role that owns the database and is a member
@@ -249,7 +249,7 @@ of `ferroehr_migrator`, `ferroehr_clinical` and `ferroehr_party`.
 
 ## Applying migrations
 
-`db.migrate` decides who runs the schema:
+`[database] migrations` decides who runs the schema:
 
 - **`apply`** (the default): the server applies its embedded migrations at
   boot. This is what makes a fresh checkout and an empty database work with no
@@ -263,9 +263,9 @@ of `ferroehr_migrator`, `ferroehr_clinical` and `ferroehr_party`.
   hold no schema rights at all, which is the least-privilege production
   posture: an application-level SQL flaw can reach rows, never the schema. The
   check itself still reads every schema's bookkeeping, so it runs on
-  `db.migrate_url` — see [which credential prepares the
+  `[database] migrate_url` — see [which credential prepares the
   schema](#which-credential-prepares-the-schema), and set that key whenever
-  `db.url` is a role that holds one domain.
+  `database.url` is a role that holds one domain.
 
 Migrations are **append-only**, so upgrading an existing database in place is
 the supported path and always has been the one your data takes. A released
@@ -401,7 +401,7 @@ from the configuration, and the `linkage` blocks under `database` and `backup`
 from the chart values: the server now refuses both tables as unknown keys, and
 the chart schema refuses both blocks.
 
-On a co-located database (no `[storage.<domain>]` naming another database) the
+On a co-located database (no `[database.<domain>]` naming another database) the
 first boot does the rest. Migration `audit/0021_drop_linkage_domain.sql` drops
 the `linkage` schema, revokes what the role held on `ext`, drops the role when
 nothing else in the cluster names it, and drops the `btree_gist` extension.
@@ -412,7 +412,7 @@ The migration runs in the database that holds the audit domain, so it does not
 reach every layout. Run the following by hand, as a superuser or a member of
 `ferroehr_linkage`, when either applies:
 
-- the linkage domain lived in a database of its own, or `[storage.audit]` names
+- the linkage domain lived in a database of its own, or `[database.audit]` names
   a database other than the one that held `linkage`;
 - the cluster holds more than one FerroEHR database, which keeps the role named
   in the others.
@@ -477,7 +477,7 @@ domains that live in it. What never changes is that the clinical record and the
 identities land in two different artefacts with two different audiences. `ferroehr config check` prints the resolved layout, which is the
 list a backup runbook is written from. The audit repository travels with the
 clinical dump while it shares that database (`--schema=audit` below) and needs a
-dump of its own once `[storage.audit]` names another one. On Kubernetes that
+dump of its own once `[database.audit]` names another one. On Kubernetes that
 third dump is not yours to schedule: the chart renders a `backup.audit`
 CronJob as soon as `database.audit` carries a Secret of its own, and drops
 `--schema=audit` from the clinical job in the same render.
@@ -493,7 +493,7 @@ pg_dump --dbname="$PARTY_DSN" --format=custom --no-owner \
   --schema=party \
   --file=/backups/party/party-$(date -u +%Y%m%dT%H%M%SZ).dump
 
-# The audit trail, ONLY when [storage.audit] names a database of its own —
+# The audit trail, ONLY when [database.audit] names a database of its own —
 # co-located it is in the clinical dump above, and dumping it twice is a second
 # copy of who read what
 pg_dump --dbname="$AUDIT_DSN" --format=custom --no-owner \
@@ -697,9 +697,9 @@ audited requests about 10 GB.
 
 ### Audit retention
 
-`[audit.store] retention_days = 0`, the default, keeps every audit record
+`[audit.store] retention = 0`, the default, keeps every audit record
 forever, so the access log grows with every request for the life of the
-database. A horizon (`retention_days`, or `retention_years` in calendar years)
+database. A horizon (`retention`, or `retention` in calendar years)
 makes the reaper delete each record on or after its end date, hourly, and the
 `audit_event` table then levels off at roughly the horizon times the request
 rate. The space of a deleted row is not returned to the operating system:
@@ -783,7 +783,7 @@ version. The functions are described in PostgreSQL 18 docs,
 
 ## Rotating the national-identifier key
 
-Only relevant when `[demographic.identifier_protection]` is on. With it on, a
+Only relevant when `[privacy.identifier_protection]` is on. With it on, a
 national identifier of a configured scheme never sits in the versioned body:
 the value lives in `party.national_identifier`, sealed with AES-256-GCM under a
 key derived per domain from your root key, with an HMAC-SHA-256 digest beside it
@@ -950,7 +950,7 @@ why they are written as your checklist rather than as our claim.
   refused at load (GHSA-52mf-qg39-4q4j). See
   [`[server.tls]`](installation/config-server.md#servertls-native-tls-and-mutual-tls-client-authentication).
 - **Bound the DDL yourself.** Every pooled connection carries the
-  `db.statement_timeout_ms` value (60 seconds by default), and the migration
+  `[database] statement_timeout` value (60 seconds by default), and the migration
   step runs on that pool, so a runaway statement is cut off, but there is **no
   `lock_timeout`**, so a migration that waits behind a long transaction waits
   as long as that transaction lasts. On a busy table use
@@ -1203,7 +1203,7 @@ Not every indicator blocks readiness, and the distinction is deliberate:
 | `migrations` | this build's schema is present, re-tested on every probe | yes |
 | `audit_sender` | the audit posture: `DEGRADED` with the consequence stated when auditing is off (no access log, no EHDS logging component); `UP` with `fail_mode`, the local store and its retention in the detail, and a stated caution under `fail_mode = "open"` | no: reports `DEGRADED`, never `503` |
 | `audit_delivery` | each forwarder to an external Audit Record Repository (present when `[audit.syslog]` or `[audit.fhir_feed]` is on): the records waiting, those the repository refused, those delivered, and whether the last attempt reached it; `DEGRADED` when the repository is unreachable or a record was refused | no: records wait in their spool or the store, so delivery problems never take the instance out of rotation |
-| `audit_chain` | the latest scheduled verification of the local audit store's hash chain (incremental from the last intact link, with a periodic full pass) (present when the local store is on and `[audit.store] verify_interval_seconds` is not `0`): `UP` while intact or before the first run, `DOWN` naming the finding count and the first damaged position, `DEGRADED` when the verification could not run | no: a damaged chain reports `DOWN` in the body, never `503`, because the trail keeps recording while the damage is investigated |
+| `audit_chain` | the latest scheduled verification of the local audit store's hash chain (incremental from the last intact link, with a periodic full pass) (present when the local store is on and `[audit.store] verify_interval` is not `0`): `UP` while intact or before the first run, `DOWN` naming the finding count and the first damaged position, `DEGRADED` when the verification could not run | no: a damaged chain reports `DOWN` in the body, never `503`, because the trail keeps recording while the damage is investigated |
 
 An instance whose audit repository is unreachable therefore keeps taking
 traffic and says so in the body; an instance that cannot reach its database, or whose
@@ -1233,11 +1233,11 @@ the server try a connection of its own: when that cannot reach the database,
 the request answers `503` at once, and so does every request after it, until
 a fresh attempt (at most every half second) connects again. A pool that is
 only busy keeps its requests queued up to
-[`db.acquire_timeout_secs`](installation/config-server.md#db) (30 seconds by
+[`[database] acquire_timeout`](installation/config-server.md#db) (30 seconds by
 default).
 
 A statement the database cancels (SQLSTATE `57014`, by
-[`db.statement_timeout_ms`](installation/config-server.md#db) or by an
+[`[database] statement_timeout`](installation/config-server.md#db) or by an
 operator's `pg_cancel_backend`) also answers `503` with `Retry-After`: the
 statement rolled back, so the request can be repeated. With the defaults the
 request timeout (30 seconds) answers first, so the statement timeout (60
@@ -1260,7 +1260,7 @@ depend on it.
 |---|---|---|
 | `FERROEHR__MANAGEMENT__ENABLED` | `false` | enable the management surface |
 | `FERROEHR__MANAGEMENT__BASE_PATH` | `/management` | base path for the surface |
-| `FERROEHR__MANAGEMENT__PORT` | unset (main listener) | serve management on its own port |
+| `FERROEHR__MANAGEMENT__LISTEN` | unset (main listener) | serve management on its own socket address, for example `0.0.0.0:9090` |
 | `FERROEHR__MANAGEMENT__ENDPOINTS__<NAME>` | `off` | the access level for ONE endpoint: `off`, `private`, `admin_only` or `public`. There is no global default beside it: an endpoint you do not name is not mounted and answers `404`. |
 
 The ops endpoints:
@@ -1271,7 +1271,7 @@ not a default you already have.
 
 | Endpoint | Endpoint name to set | Purpose | Level to give it |
 |---|---|---|---|
-| `GET /management/info` | `info` | product name and version, build SHA, build date, `rustc`, the active `spec_profile`, the openEHR specification versions that profile selects, the PostgreSQL target, the `audit` posture (`enabled`, `fail_mode`, `local_store`, `retention_days`), the `manufacturer` of the release (`name`, `postal_address`, `email`, `website`), and the `support` period (`release_date`, `support_ends`, `status`) | `admin_only` |
+| `GET /management/info` | `info` | product name and version, build SHA, build date, `rustc`, the active `deployment.spec_profile`, the openEHR specification versions that profile selects, the PostgreSQL target, the `audit` posture (`enabled`, `fail_mode`, `local_store`, `retention`), the `manufacturer` of the release (`name`, `postal_address`, `email`, `website`), and the `support` period (`release_date`, `support_ends`, `status`) | `admin_only` |
 | `GET /management/prometheus` | `prometheus` | Prometheus text exposition | `admin_only`, or `public` only when the port is not reachable outside the cluster; a `public` endpoint is served OUTSIDE authentication |
 | `GET /management/metrics` | `metrics` | JSON list of the registered metric names | `admin_only` |
 | `GET /management/metrics/{name}` | `metrics` | the current value(s) of one metric; `404` for a name that is not registered | `admin_only` |
@@ -1312,7 +1312,7 @@ curl -u admin:… -o flamegraph.svg \
 ```
 
 - `seconds` (default 10) and `frequency` (default 99 Hz) are capped by
-  `management.profiling.max_seconds` and `max_frequency` (30 and 999 out of the
+  `management.profiling.max_duration` and `max_frequency` (30 and 999 out of the
   box); a request beyond a cap is refused with `400`, never silently clamped.
 - **One sample window at a time**: a second request while one runs answers
   `409`; retry when the window completes.
@@ -1338,7 +1338,7 @@ surface an operator or a user reads:
 | startup banner | `Manufactured by Cadasto B.V. · https://www.cadasto.com/contact/`, then the postal address and `info@cadasto.com` |
 | `ferroehr --version` | the version (a release build prints the release, any other build appends its commit as `+dev.<commit>`, as `server_version` on `GET /ferroehr/rest/status` does), then `Manufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherlands, info@cadasto.com` and the website |
 | `GET /management/info` | a `manufacturer` object with `name`, `postal_address`, `email` and `website` |
-| `OPTIONS` on the API base path | `vendor` defaults to `Cadasto B.V.` ([`[rest.identity]`](installation/config-server.md#restidentity)) |
+| `OPTIONS` on the API base path | `vendor` defaults to `Cadasto B.V.` ([`[api.options]`](installation/config-server.md#restidentity)) |
 | viewer | the footer of every screen, and a Manufacturer card on `/system` |
 | container images | the `eu.ferroehr.image.manufacturer` label |
 

@@ -27,9 +27,9 @@
 //! - Resolved and the code is a member: accepted.
 //! - Resolved and the code is not a member: a [`ValidationKind::Terminology`]
 //!   violation, `422`. It is a constraint violation rather than a service
-//!   failure, so `fail_on_error` does not apply.
+//!   failure, so `on_error` does not apply.
 //! - Unresolvable (server down, `5xx`, unknown value set): governed by
-//!   `[terminology] fail_on_error` — fail-closed rejects the composition, fail-open (the
+//!   `[terminology] on_error` — fail-closed rejects the composition, fail-open (the
 //!   default) accepts it and logs a warning.
 //!
 //! NOTE: no openEHR spec maps `CODE_PHRASE.terminology_id` values to FHIR system
@@ -285,7 +285,7 @@ mod tests {
 
     /// Terminology server unreachable: fail-open (the default) accepts the
     /// composition, fail-closed rejects it. The observable difference is the
-    /// whole point of `[terminology] fail_on_error`.
+    /// whole point of `[terminology] on_error`.
     #[tokio::test]
     async fn an_unresolvable_binding_follows_fail_on_error() {
         // TEST-NET-1 (RFC 5737 §3: 192.0.2.0/24 "for use in documentation",
@@ -315,7 +315,7 @@ mod tests {
             "fail-closed must reject an unresolvable binding"
         );
         assert!(
-            violations[0].message.contains("fail_on_error"),
+            violations[0].message.contains("on_error"),
             "the refusal names the posture that caused it, got {}",
             violations[0].message
         );

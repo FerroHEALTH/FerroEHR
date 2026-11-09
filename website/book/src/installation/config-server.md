@@ -1,7 +1,7 @@
 # Server, database & telemetry
 
-The listener (`[server]`), the REST surface (`[rest]`), the PostgreSQL
-connection (`[db]`), the observability section (`[telemetry]`), and the
+The listener (`[server]`), the REST surface (`[api]`), the PostgreSQL
+connection (`[database]`), the observability section (`[telemetry]`), and the
 usage report (`[usage_report]`). Precedence, the
 environment-name grammar, and file discovery are on the
 [Configuration reference](configuration.md) index.
@@ -37,11 +37,11 @@ compression_min_bytes = 1024
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `listen` | socket address | `0.0.0.0:8080` | The IP address and port the listener binds: every interface at the port the container image exposes. A host name is refused at startup. `PORT` alone gives `0.0.0.0:<PORT>`, and `FERROEHR__SERVER__LISTEN` wins over both. Set `127.0.0.1:8080` to keep a bare binary on the loopback. |
-| `base_path` | string | empty | The path every route is served under, the health routes included. Empty serves them at the process root. The openEHR API path is [`rest.base_path`](#rest). |
+| `base_path` | string | empty | The path every route is served under, the health routes included. Empty serves them at the process root. The openEHR API path is [`api.base_path`](#rest). |
 | `request_timeout_ms` | int | `30000` | A request still running after this long is answered `408` with the openEHR error body. |
 | `header_read_timeout_ms` | int | `30000` | How long a client may take to send its request head, counted from accept for a connection's first request and from the first byte of each later request on a kept-alive connection; a client that has not sent it by then, one that sent nothing after connecting included, is disconnected. Bounds the slow-header and the silent connection, which no other limit reaches. `0` is refused. |
 | `idle_timeout_ms` | int | `120000` | How long a kept-alive HTTP/1.1 connection may wait for its next request; past it the server closes the connection with a clean end of stream. Keep it longer than the idle timeout of your clients (Go's `http.DefaultTransport` keeps an idle connection 90 s) and of any load balancer, ingress controller or proxy in front, so they close an idle connection first and never send a request into one the server is closing. `0` is refused. |
-| `body_limit_bytes` | int | `67108864` (64 MiB) | The largest request body any route reads, refused `413` above it. The bulk routes (operational-template upload, `/message/import`) take up to this; [`rest.body_limit_bytes`](#rest) narrows the rest of the clinical surface below it. The largest operational template in the vendored CKM corpus is several megabytes, well below this ceiling. |
+| `body_limit_bytes` | int | `67108864` (64 MiB) | The largest request body any route reads, refused `413` above it. The bulk routes (operational-template upload, `/message/import`) take up to this; [`api.body_limit`](#rest) narrows the rest of the clinical surface below it. The largest operational template in the vendored CKM corpus is several megabytes, well below this ceiling. |
 | `drain_delay_ms` | int | `0` | On `SIGTERM` or `SIGINT`, readiness answers `503` this long while the listener still accepts, so an orchestrator stops routing first. |
 | `shutdown_timeout_ms` | int | `10000` | Then the listener closes and the requests in flight get this long to finish; a connection still open after it is dropped. |
 | `max_concurrent_requests` | int | unset | The requests served at once. Past it a request is answered `503` with `Retry-After` and the openEHR error body, never queued, so offered load beyond capacity cannot exhaust memory. The health routes are never refused. Unset, there is no bound. |
@@ -103,8 +103,8 @@ commonly terminate TLS at an ingress. `client_auth = "required"` is the IHE
 ATNA ITI-19 mutually-authenticated-node posture (see the
 [Audit trail chapter](../audit.md#node-authentication-iti-19-mutual-tls)). The
 separate-port management listener always stays plain HTTP, so under
-`deployment_profile = "production"` setting `[management] port` opens the
-[`plaintext_listener`](configuration.md#deployment_profile) gap.
+`deployment.profile = "production"` setting `management.listen` opens the
+[`plaintext_listener`](configuration.md#deployment.profile) gap.
 
 ```toml
 [server.tls]
@@ -149,15 +149,14 @@ accepts exactly the leaf certificate in `certificate_file`.
 > `-pkeyopt ec_param_enc:named_curve`; `openssl ecparam -name prime256v1
 > -genkey` writes a named curve.
 
-## `[rest]`
+## `[api]`
 
 The openEHR REST surface the listener serves.
 
 ```toml
-[rest]
+[api]
 base_path = "/ferroehr/rest/openehr/v1"
-swagger_ui = "private"
-cors_permissive = false
+openapi_ui = "private"
 system_id = "ferroehr.local"
 # body_limit_bytes = 16777216
 ```
@@ -165,8 +164,11 @@ system_id = "ferroehr.local"
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `base_path` | string | `/ferroehr/rest/openehr/v1` | ITS-REST base path all API routes hang off. Shortening it is supported; see [below](#base_path-shortening-the-rest-base-path). The served OpenAPI document describes whatever paths this setting produces, never the defaults. |
-| `swagger_ui` | enum{off,admin_only,private,public} | `private` | Who may read the Swagger UI and the OpenAPI documents under the REST root: `off` does not mount them, `admin_only` needs the admin role, `private` needs any authenticated principal (unauthenticated is `401` with the server's `WWW-Authenticate` challenge, so a browser prompts for the Basic credential), `public` needs nothing. The documents list the whole enabled operation surface, admin and message groups included, so `public` discloses it to anyone who can reach the port; the [hosted sandbox](https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui) sets it deliberately. With authentication off the guard admits everyone, as the management endpoints do. |
-| `cors_permissive` | bool | `false` | Permissive (development) CORS. Left on, any origin may read API responses, so the server warns loudly at boot. Production configures explicit origins at the edge. |
+| `openapi_ui` | enum{off,admin_only,private,public} | `private` | Who may read the Swagger UI and the OpenAPI documents under the REST root: `off` does not mount them, `admin_only` needs the admin role, `private` needs any authenticated principal (unauthenticated is `401` with the server's `WWW-Authenticate` challenge, so a browser prompts for the Basic credential), `public` needs nothing. The documents list the whole enabled operation surface, admin and message groups included, so `public` discloses it to anyone who can reach the port; the [hosted sandbox](https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui) sets it deliberately. With authentication off the guard admits everyone, as the management endpoints do. |
+| `cors` | table | absent | `[api.cors]`, the CORS protocol answers (Fetch Standard §3.2.3): `allow_origins`, `allow_methods`, `allow_headers`, `expose_headers`, `allow_credentials` and `max_age` (a duration), each named for the header it sets. Absent, no CORS header is sent. `allow_origins = ["*"]` admits any origin, which the server warns about at boot and which refuses `allow_credentials`. Production lists its origins. |
+| `body_limit` | size | unset | The largest body the clinical surface accepts, below `server.body_limit_bytes`, which the bulk routes keep. |
+| `admin` | bool | `false` | Serve the ADMIN API group (physical delete); off, every admin route answers `405`. |
+| `terminology` | bool | `false` | Mount the terminology extension API; the server it asks is [`[terminology]`](config-integrations.md#terminology). |
 | `system_id` | string | `ferroehr.local` | **This deployment's own openEHR system identifier**; see [below](#system_id-the-data-authoring-identity). Set a stable, deployment-unique name in production (`FERROEHR__API__SYSTEM_ID`). |
 | `body_limit_bytes` | int | unset | The largest body the ordinary clinical surface accepts, below [`server.body_limit_bytes`](#server), which the bulk routes keep. Unset, every route takes the listener's limit. A value at or above the listener's is refused at startup. The largest example composition in the vendored corpus is 526 KB; raise it if your compositions embed large `DV_MULTIMEDIA` data. |
 
@@ -210,7 +212,7 @@ FERROEHR__API__BASE_PATH=/ferroehr/v1
 > [!NOTE]
 > The `ferroehr healthcheck` subcommand, which the published container images
 > run as their Docker health check, asks `GET /health/readiness` on the
-> `server.listen` port over the loopback, so `rest.base_path` does not move it.
+> `server.listen` port over the loopback, so `api.base_path` does not move it.
 
 ### Behind a path-prefixed reverse proxy
 
@@ -234,7 +236,7 @@ which gives `https://cdr.example.org/cdr/ferroehr/v1/definition/template/adl1.4`
 
 Whichever you choose, tell every client. The server builds its `Location`
 headers, its served OpenAPI paths and its SMART discovery document from its own
-`rest.base_path`, and it cannot see a prefix the proxy adds. The
+`api.base_path`, and it cannot see a prefix the proxy adds. The
 [FerroEHR Viewer](../viewer/index.md) has its own mirror key, `cdr.base_path`,
 which must match.
 
@@ -275,13 +277,13 @@ Practical notes:
   `system_id` no other member uses (Federation Tier N42a); the default
   `ferroehr.local` is the same on every node that leaves it unset. See
   [FerroEHR as a federation node](../beyond-core/federation-node.md#admission-n42a).
-- **`system_id` is not `[rest.identity]`.** `system_id` says *which system
-  authored the data*; [`[rest.identity]`](#restidentity) is the *display*
+- **`system_id` is not `[api.options]`.** `system_id` says *which system
+  authored the data*; [`[api.options]`](#restidentity) is the *display*
   identity of the `OPTIONS` System-Options manifest. Rebranding changes the
   manifest and nothing in stored data; changing `system_id` changes what new
   data says about its origin and leaves the manifest alone.
 
-### `[rest.identity]`
+### `[api.options]`
 
 The System-Options manifest identity (`OPTIONS` on the API base path, e.g.
 `OPTIONS /ferroehr/rest/openehr/v1`, the System API's one location). This is
@@ -300,44 +302,44 @@ Override them only to rebrand. The manifest's `conformance_profile` is no
 identity field and has no key here: the build derives it from the committed
 conformance record (see [Using the API](../using-the-api/index.md#capability-discovery)).
 
-## `[db]`
+## `[database]`
 
 PostgreSQL connection.
 
 ```toml
-[db]
+[database]
 url = "postgres://ferroehr:ferroehr@localhost:5432/ferroehr"
-migrate = "apply"
+migrations = "apply"
 max_connections = 20
 min_connections = 2
-acquire_timeout_secs = 30
-statement_timeout_ms = 60000
+acquire_timeout = "30s"
+statement_timeout = "1min"
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `url` | secret URL | `postgres://ferroehr:ferroehr@localhost:5432/ferroehr` | Connection DSN. The default suits a local from-source run against a localhost PostgreSQL, and the server logs a prominent warning at boot while it is in use; **production MUST set it**. Credentials are redacted from every rendering. `DATABASE_URL` is a recognized lower-priority alias. |
 | `url_file` | path | unset | Read the DSN from a file instead of the key above, for a mounted secret. Preferred over the environment form in Kubernetes: an environment value is readable through `/proc/<pid>/environ` and inherited by every child process. At most one of the pair, where the built-in development default does not count as "set". |
-| `migrate_url` | secret URL | unset | DSN that PREPARES the schema, used for that one boot step and then closed. Preparation spans every schema of a database at once, which no domain-scoped runtime credential can do, so a deployment separating the runtime roles names the credential that can here. It prepares every domain whose DSN reaches the SAME DATABASE — which is the whole of the separated-credential posture, where each domain has a login role of its own on one database; a domain whose DSN reaches a different database is prepared on that database's `storage.migrate.<domain>.url` (on the domain's own DSN when that is unset). Which it is, is read from the server (`pg_control_system()` plus `current_database()`), never from the DSN text. Unset, it falls back to `url`. See [Operations → Which credential prepares the schema](../operations.md#which-credential-prepares-the-schema). |
+| `migrate_url` | secret URL | unset | DSN that PREPARES the schema, used for that one boot step and then closed. Preparation spans every schema of a database at once, which no domain-scoped runtime credential can do, so a deployment separating the runtime roles names the credential that can here. It prepares every domain whose DSN reaches the SAME DATABASE — which is the whole of the separated-credential posture, where each domain has a login role of its own on one database; a domain whose DSN reaches a different database is prepared on that database's `database.<domain>.migrate_url` (on the domain's own DSN when that is unset). Which it is, is read from the server (`pg_control_system()` plus `current_database()`), never from the DSN text. Unset, it falls back to `url`. See [Operations → Which credential prepares the schema](../operations.md#which-credential-prepares-the-schema). |
 | `migrate_url_file` | path | unset | Read `migrate_url` from a file instead, for a mounted secret. At most one of the pair. |
 | `migrate` | enum{apply,verify} | `apply` | Whether the server applies its embedded migrations at boot. `apply` is what makes an empty configuration boot against an empty database. `verify` issues **no DDL at all**: it checks that the database already carries exactly this build's migrations and refuses to start otherwise, so the serving DSN can authenticate as a role with no DDL rights. That check still READS every `_sqlx_migrations` table of each database, which no least-privilege role can do, so pair it with `migrate_url` above and with `ferroehr db migrate` run out of band; see [Operations](../operations.md#which-credential-prepares-the-schema). |
 | `max_connections` | int | `20` | Pool ceiling. Write-heavy deployments benefit from raising it. |
 | `min_connections` | int | `2` | Idle connections kept open, avoiding cold-reopen churn under variable load. |
-| `acquire_timeout_secs` | int | `30` | Seconds to wait for a free connection before failing. |
-| `statement_timeout_ms` | int | `60000` | `statement_timeout` applied to every pooled connection; `0` leaves the server default. |
+| `acquire_timeout` | duration | `"30s"` | How long to wait for a free connection before failing. |
+| `statement_timeout` | duration | `"1min"` | `statement_timeout` applied to every pooled connection; `"0s"` leaves the server default. |
 
-`statement_timeout_ms` is the backstop for every statement. An AQL query
+`statement_timeout` is the backstop for every statement. An AQL query
 (ad hoc or stored) and the composition-count statistics stop sooner when their
 caller goes away: a client that disconnects, or the AQL engine's own
-[`query.timeout_ms`](config-integrations.md#query), closes the statement's
+[`record.query.timeout`](config-integrations.md#query), closes the statement's
 connection, its pool slot frees at once, and every pooled session sets
 PostgreSQL's `client_connection_check_interval` to one second, so the backend
 stops the statement within about a second. Other statements run to their end
-or to this timeout, so keep it **above** `query.timeout_ms`: the AQL engine's
+or to this timeout, so keep it **above** `record.query.timeout`: the AQL engine's
 typed refusal then fires first and this only catches what the engine does not
 govern.
 
-## `[storage]`
+## `[database.<domain>]`
 
 One DSN per storage domain. Every domain always lives in its own schema
 (`clinical`, `party`, `audit`) and every pool carries only its own on
@@ -347,16 +349,16 @@ separation, and — if the DSN names another host — lets the domain live in a
 database or cluster of its own.
 
 ```toml
-[storage.party]
+[database.party]
 url_file = "/run/secrets/db-party-dsn"
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `storage.clinical.url` | secret URL | unset | DSN the clinical domain connects on (role `ferroehr_clinical`). Unset, it uses `db.url`. |
-| `storage.party.url` | secret URL | unset | DSN the party (demographic) domain connects on (role `ferroehr_party`). Unset, it uses `db.url`. |
-| `storage.audit.url` | secret URL | unset | DSN the audit repository is written through. Unset, it uses `db.url`. |
-| `storage.<domain>.url_file` | path | unset | Read that domain's DSN from a file instead, for a mounted secret. At most one of the pair. |
+| `database.clinical.url` | secret URL | unset | DSN the clinical domain connects on (role `ferroehr_clinical`). Unset, it uses `database.url`. |
+| `database.party.url` | secret URL | unset | DSN the party (demographic) domain connects on (role `ferroehr_party`). Unset, it uses `database.url`. |
+| `database.audit.url` | secret URL | unset | DSN the audit repository is written through. Unset, it uses `database.url`. |
+| `database.<domain>.url_file` | path | unset | Read that domain's DSN from a file instead, for a mounted secret. At most one of the pair. |
 
 Why a schema is not always enough: a base backup, WAL archiving and physical
 replication carry every schema of a database together
@@ -375,26 +377,25 @@ What the server checks at boot:
 - two domains configured on **different** DSNs that turn out to authenticate as
   the **same** database role are refused — a separation that exists only in the
   configuration is worse than none, because it reads as one that holds;
-- a missing domain role is a warning under `deployment_profile = "sandbox"` and a
+- a missing domain role is a warning under `deployment.profile = "sandbox"` and a
   refusal under `production`, where there are no grants to separate anything
   with.
 
-Each database is prepared on its own migration credential. `[db] migrate_url`
+Each database is prepared on its own migration credential. `[database] migrate_url`
 names one database; a domain whose DSN reaches another database is prepared
-there, and verified there under `migrate = "verify"`, on the credential named in
-`[storage.migrate.<domain>]`:
+there, and verified there under `migrations = "verify"`, on the credential named in
+`[database.<domain>]`:
 
 ```toml
-[storage.party]
-url_file = "/run/secrets/db-party-dsn"           # postgres://ferroehr_party:…@party-db/…
-[storage.migrate.party]
-url_file = "/run/secrets/db-party-migrate-dsn"   # postgres://ferroehr_migrator:…@party-db/…
+[database.party]
+url_file = "/run/secrets/db-party-dsn"                   # postgres://ferroehr_party:…@party-db/…
+migrate_url_file = "/run/secrets/db-party-migrate-dsn"   # postgres://ferroehr_migrator:…@party-db/…
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `storage.migrate.<domain>.url` | secret URL | unset | DSN that prepares the database the domain lives in, when that is not the database `db.migrate_url` reaches. Used for that one step and closed again. Unset, such a database is prepared on the domain's own `url`, which a DML-only runtime role cannot do: it is refused on the first bookkeeping table it cannot read. |
-| `storage.migrate.<domain>.url_file` | path | unset | Read it from a file instead, for a mounted secret. At most one of the pair. |
+| `database.<domain>.migrate_url` | secret URL | unset | DSN that prepares the database the domain lives in, when that is not the database `database.migrate_url` reaches. Used for that one step and closed again. Unset, such a database is prepared on the domain's own `url`, which a DML-only runtime role cannot do: it is refused on the first bookkeeping table it cannot read. |
+| `database.<domain>.migrate_url_file` | path | unset | Read it from a file instead, for a mounted secret. At most one of the pair. |
 
 The server refuses to start when a domain's `url` and its `storage.migrate`
 URL reach different databases. `[storage.linkage]` and

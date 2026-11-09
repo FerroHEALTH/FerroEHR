@@ -660,7 +660,7 @@ async fn evaluate_deployment(
             posture = "deployment",
             profile = "sandbox",
             open_gaps = posture.gaps.len(),
-            "deployment_profile is sandbox: this deployment has not made the production \
+            "deployment.profile is sandbox: this deployment has not made the production \
              separations and must not hold real patient data"
         );
     } else {
@@ -668,7 +668,7 @@ async fn evaluate_deployment(
             posture = "deployment",
             profile = "production",
             accepted_gaps = posture.accepted.len(),
-            "deployment_profile is production: every separation holds or is accepted by name"
+            "deployment.profile is production: every separation holds or is accepted by name"
         );
     }
     Ok(posture)
@@ -710,7 +710,7 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
         tracing::warn!(
             url = db::DEFAULT_URL,
             "[database] url is the built-in DEVELOPMENT DEFAULT ({}); no file/env/CLI value was \
-             supplied. Set db.url (FERROEHR__DATABASE__URL / DATABASE_URL) for any non-dev deployment — \
+             supplied. Set database.url (FERROEHR__DATABASE__URL / DATABASE_URL) for any non-dev deployment — \
              production MUST override it.",
             db::DEFAULT_URL,
         );
@@ -719,7 +719,7 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
         .api
         .cors
         .as_ref()
-        .is_some_and(|cors| cors.any_origin())
+        .is_some_and(ferroehr::config::rest::CorsConfig::any_origin)
     {
         tracing::warn!(
             "api.cors.allow_origins is [\"*\"]: any origin may read API responses. This is a \

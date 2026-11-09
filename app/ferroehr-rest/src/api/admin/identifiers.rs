@@ -11,7 +11,7 @@
 //! supported way to see one again (#3776).
 //!
 //! Gating: mounted under `/admin/`, so the route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::admin.enabled` config gate
+//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
 //! (`405` with an empty `Allow` when off). Beside that it needs its own
 //! permission, `[authz.rbac] identifier_reader_role`, so holding the admin role
 //! alone reveals no national identifier. Every read writes an access record

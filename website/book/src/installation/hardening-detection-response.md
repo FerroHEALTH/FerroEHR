@@ -23,7 +23,7 @@ you can judge the exposure rather than reading "secrets" generically.
 |---|---|---|
 | **The database DSN** | always | **direct read/write access to all patient data**, bypassing the API, its authorization and its audit trail entirely |
 | A Basic user's Argon2id hash | `secrets.basicUserPasswordHashes` | an offline cracking target, not a usable password |
-| The version-signing passphrase (plus the PGP key via `config.files`) | `config.signing.mode: pgp` | the ability to forge version signatures, breaking the integrity guarantee |
+| The version-signing passphrase (plus the PGP key via `config.files`) | `config.record.signing.mode: pgp` | the ability to forge version signatures, breaking the integrity guarantee |
 | A terminology `client_secret` | `secrets.terminologyClientSecret` | access to the terminology server as this client |
 | The audit repository URL | `secrets.auditFhirFeedUrl` | the ability to read or forge audit records at the repository |
 | S3 credentials | `secrets.multimediaSecretAccessKey` (with `secrets.multimediaAccessKeyId`) | offloaded `DV_MULTIMEDIA` blobs, which **are PHI** |
@@ -63,8 +63,8 @@ them from a secret manager:
   Driver](https://secrets-store-csi-driver.sigs.k8s.io/) with the Vault, AWS,
   Azure or GCP provider) mounts the value as a file. Point `extraVolumes` and
   `extraVolumeMounts` at it and set the matching `*_file` configuration key;
-  `config.signing.key_passphrase_file`,
-  `config.multimedia.secret_access_key_file`, the terminology grant's
+  `config.record.signing.key_passphrase_file`,
+  `config.record.multimedia.secret_access_key_file`, the terminology grant's
   `client_secret_file`. Nothing reaches a Kubernetes Secret at all.
 - **An operator that syncs into a Secret** (External Secrets Operator, Vault
   Agent Injector) still lands in etcd, so it buys rotation rather than removal:
@@ -291,14 +291,14 @@ signature carries no key identifier and a version signature is an immutable
 committed fact that cannot be re-issued. Keep the retired **public** key:
 
 ```toml
-[signing]
+[record.signing]
 mode = "pgp"
-key_path = "/etc/ferroehr/signing.asc"                  # the new certificate
-retired_key_paths = ["/etc/ferroehr/signing-2025.pub.asc"]   # public, verify-only
+key_file = "/etc/ferroehr/signing.asc"                  # the new certificate
+retired_key_files = ["/etc/ferroehr/signing-2025.pub.asc"]   # public, verify-only
 ```
 
-Under Helm these are `config.signing.key_path` and
-`config.signing.retired_key_paths`, with both files mounted through
+Under Helm these are `config.record.signing.key_file` and
+`config.record.signing.retired_key_files`, with both files mounted through
 `config.files`.
 
 > [!NOTE]
@@ -319,10 +319,10 @@ was valid and reject one made after, and nothing in a detached signature proves
 approach [Sigstore](https://docs.sigstore.dev/about/security/) takes with
 short-lived keys and a timestamp authority. FerroEHR does not implement it, so
 treat an expired signing key as a certificate replacement and use
-`config.signing.retired_key_paths`.
+`config.record.signing.retired_key_files`.
 
 If you are mid-rotation and need reads to keep working before either mechanism
-is in place, `config.signing.verify_on_read: warn` downgrades a verification
+is in place, `config.record.signing.verify_on_read: warn` downgrades a verification
 failure from a 5xx to a logged and metered event
 (`version_signature_invalid_total{verdict="pgp_invalid"}`). That is a deliberate,
 recorded reduction in an integrity guarantee, not a setting to leave on.
@@ -346,7 +346,7 @@ record:**
 | Destination | stdout/stderr → node → your collector | its own store in the database, plus optional forwarding to an external repository |
 | Format | JSON lines, ours | DICOM PS3.15 plus FHIR `AuditEvent` (IHE BALP), standardised |
 | Retrieval | your log tool | the ITI-81 FHIR `AuditEvent` search endpoint |
-| Retention | your collector's policy | `config.audit.store.retention_days` (`0` keeps forever) |
+| Retention | your collector's policy | `config.audit.store.retention` (`0` keeps forever) |
 | May it be sampled or dropped? | **yes**, it is diagnostics | **no** |
 
 > [!IMPORTANT]

@@ -20,11 +20,10 @@ secrets:
 
 config:
   # The chart has no default posture and refuses to render without one.
-  deployment_profile: sandbox
+  deployment:
+    profile: sandbox
   # The in-instance EHR index, the opt-in of a FerroEHR run on its own:
   # this overlay renders another surface and runs no identity source.
-  ehr_index:
-    provider: local
   auth:
     enabled: true
     # The issuer the Basic users bind under. It signs nothing: its key set,
@@ -84,6 +83,8 @@ config:
     tls:
       certificate_file: /etc/ferroehr-tls/tls.crt
       key_file: /etc/ferroehr-tls/tls.key
+  record:
+    subject_index: local
 
 extraVolumes:
   - name: server-tls

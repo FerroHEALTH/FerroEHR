@@ -856,7 +856,7 @@ async fn app_with_swagger() -> (testkit::TestDb, Router) {
 /// The API's `default-src 'none'` is right for JSON and fatal for the one surface
 /// on this origin that is rendered: the vendored bundle's own same-origin scripts
 /// and styles would be blocked and the page would come up blank. Under the
-/// default configuration `swagger_ui` is ON, so this was a shipped regression
+/// default configuration `openapi_ui` is ON, so this was a shipped regression
 /// waiting to be reported as "the docs are broken".
 #[tokio::test]
 async fn swagger_ui_gets_a_policy_it_can_run_under() {

@@ -62,35 +62,22 @@ fn how_dialog() -> Html {
 /// The sections of Configuration, each with the top-level keys of the CDR's
 /// configuration it holds; the viewer's own is last.
 const SECTIONS: [(&str, ConsoleMsg, &[&str]); 7] = [
-    (
-        "deployment",
-        ConsoleMsg::ConfigDeployment,
-        &[
-            "deployment_profile",
-            "spec_profile",
-            "deployment_accepts",
-            "deployment",
-        ],
-    ),
+    ("deployment", ConsoleMsg::ConfigDeployment, &["deployment"]),
     (
         "server",
         ConsoleMsg::ConfigServer,
-        &["server", "db", "query"],
+        &["server", "api", "database"],
     ),
-    (
-        "access",
-        ConsoleMsg::ConfigAccess,
-        &["auth", "authz", "admin", "smart"],
-    ),
+    ("access", ConsoleMsg::ConfigAccess, &["auth", "authz"]),
     (
         "records",
         ConsoleMsg::ConfigRecords,
-        &["signing", "audit", "privacy"],
+        &["record", "audit", "privacy"],
     ),
     (
         "integrations",
         ConsoleMsg::ConfigIntegrations,
-        &["outbox", "terminology"],
+        &["terminology", "pixm"],
     ),
     (
         "operations",

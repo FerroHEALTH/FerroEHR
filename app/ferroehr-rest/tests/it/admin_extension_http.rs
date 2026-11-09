@@ -774,7 +774,7 @@ async fn dump_serves_every_declared_enumeration_member() {
 }
 
 /// Every route of all three extension groups inherits the ADMIN group's config
-/// gate: with `admin.enabled` off they answer `405` with an empty `Allow`,
+/// gate: with `api.admin` off they answer `405` with an empty `Allow`,
 /// before the backend is touched.
 #[tokio::test]
 async fn the_admin_gate_covers_the_extension_groups() {

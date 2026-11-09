@@ -127,7 +127,7 @@ profile, and the server acts on the kind:
   - it holds only the `patient/` scopes the agreement `reads` (beside
     `openid`, `profile`, `fhirUser`, `online_access` and `launch`), so a token
     with any other scope is refused, and it reaches only the EHR of its
-    launch context, which needs the issuer in `[smart] patient_issuers`;
+    launch context, which needs the issuer in `[auth.smart] patient_issuers`;
   - it is an access-service caller by its kind, so an opted-out EHR answers
     `404` as an unknown one does (EHDS Art. 10(1)). Only an external person
     under an agreement with `opt_out_override` reaches one, under an emergency
@@ -188,7 +188,7 @@ A `federation` issuer with `contact_point = true` in its `[[auth.federation]]`
 table is a MyHealth@EU national contact point (NCPeH-A's authorization
 server). Its person agreement names the service it serves in `ehdsi_service`
 (`patient_summary`, `eprescription` or `orcd`), and its issuer goes into
-`[smart] patient_issuers`. Every request runs with a sender-constrained token
+`[auth.smart] patient_issuers`. Every request runs with a sender-constrained token
 (`sender_constraint = "required"`). On every patient-data route:
 
 - The token carries the patient of the treatment relationship confirmation
@@ -215,7 +215,7 @@ server). Its person agreement names the service it serves in `ehdsi_service`
 - Where the agreement sets `discard`, the person may discard a dispensation
   of a template its `writes` lists, as a logical delete
   (`DELETE /ehr/{ehr_id}/composition/{preceding_version_uid}`), within
-  `discard_window_hours` of its first commit (MyHealth@EU Requirements
+  `discard_window` of its first commit (MyHealth@EU Requirements
   Catalogue 10.0.0, requirement 07.04). The eHDSI point of care is a name
   only, so the dispensation's `EVENT_CONTEXT.health_care_facility` must
   carry every identifier the discarding token names its point of care by:

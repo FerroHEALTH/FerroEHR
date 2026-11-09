@@ -9,7 +9,8 @@
 
 use std::collections::BTreeMap;
 
-use ferroehr::config::authz::{AbacConfig, AbacEngineKind, AbacParam, PolicyRule, RemoteConfig};
+use ferroehr::config::abac_rules::RemoteConfig;
+use ferroehr::config::authz::{AbacConfig, AbacEngineKind, AbacParam, PolicyRule};
 use ferroehr_rest::extensions::access::authz::remote_pdp;
 use ferroehr_rest::extensions::access::authz::request::{AccessMode, AuthzRequest, ResourceKind};
 use ferrohealth_authz::engine::{AuthzError, PolicyEngine};

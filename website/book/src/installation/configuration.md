@@ -18,7 +18,7 @@ Copy the annotated template, edit it, and run:
 curl -fsSLo ferroehr.toml \
   https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/main/app/ferroehr/assets/ferroehr.default.toml
 
-# Edit it — at minimum set db.url and an auth mechanism.
+# Edit it — at minimum set database.url and an auth mechanism.
 $EDITOR ferroehr.toml
 
 # Validate without touching the database, then run.
@@ -43,7 +43,7 @@ highest:
 
 Some conventional names sit *below* their `FERROEHR_` forms within layer 3:
 
-- `DATABASE_URL` → `db.url`, and `RUST_LOG` → `telemetry.filter`.
+- `DATABASE_URL` → `database.url`, and `RUST_LOG` → `telemetry.filter`.
 - `PORT` → a `0.0.0.0:<PORT>` value for `server.listen` (the port container
   platforms such as Vercel, Cloud Run and Heroku inject and route traffic
   to).
@@ -65,10 +65,10 @@ including after the `FERROEHR` prefix.** A single underscore only ever appears
 
 | TOML | Environment variable |
 |---|---|
-| `[db] max_connections = 20` | `FERROEHR__DATABASE__MAX_CONNECTIONS=20` |
+| `[database] max_connections = 20` | `FERROEHR__DATABASE__MAX_CONNECTIONS=20` |
 | `[authz.rbac] admin_role = "…"` | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE=…` |
 | `[management.endpoints] env = "off"` | `FERROEHR__MANAGEMENT__ENDPOINTS__ENV=off` |
-| `[terminology.server] url = "…"` | `FERROEHR__TERMINOLOGY__URL=…` |
+| `[terminology] url = "…"` | `FERROEHR__TERMINOLOGY__URL=…` |
 
 Scalars are typed automatically (bool / int / float, else string).
 **List-typed keys take comma-separated values**
@@ -114,10 +114,42 @@ server refuses to start on any error:
 - **Semantic errors are aggregated:** one pass reports every problem at once,
   so a broken configuration is fixed in a single iteration.
 
-## `spec_profile`
+### Durations, sizes and periods
+
+Every duration is one string with its unit and no space: `"500ms"`, `"30s"`,
+`"10min"`, `"12h"`, `"7d"`. The unit symbols are the UCUM codes (`ms`, `s`,
+`min`, `h`, `d`), the unit system FHIR `Quantity` and openEHR `DV_QUANTITY`
+use, so `"10m"` is refused (`m` is the metre) and a bare number is refused,
+never read as seconds or milliseconds. Every size is one string with an
+IEC 80000-13 binary unit: `"512B"`, `"256KiB"`, `"64MiB"`, `"1GiB"`; decimal
+units such as `"64MB"` are refused. A retention is an ISO 8601 calendar period
+of whole years or days, `"P5Y"` or `"P1830D"`; unset keeps forever. The
+environment carries the same strings: `FERROEHR__RECORD__QUERY__TIMEOUT=45s`.
+`[server]` and `[auth]` are family sections that keep their own key shapes
+until the family releases move them.
+
+### Keys a release before v5.7.0 read
+
+v5.7.0 moved the configuration tree to one table per concern. Every key an
+earlier release read is refused at load with the key that replaced it, all of
+them in one pass, so `ferroehr config check --config <old file>` prints the
+whole move list for an old file:
+
+```text
+db was replaced by [database]: db.acquire_timeout_secs is database.acquire_timeout ...
+rest was replaced by [api]: rest.swagger_ui is api.openapi_ui ...
+audit.store.retention_days was replaced by audit.store.retention, a calendar period ...
+```
+
+No key is read under two names. These refusals ship in v5.7.0 only; the next
+release removes them, and an old key is then an unknown key. The full map is
+in the v5.7.0 changelog.
+
+## `deployment.spec_profile`
 
 ```toml
 # The openEHR specification generation set the server runs.
+[deployment]
 spec_profile = "development"   # or "stable"
 ```
 
@@ -130,8 +162,7 @@ running server serves.
 | `development` *(default)* | 1.2.0 | 1.3.0 | You want the generations this build is developed against. This is the default for every deployment that does not set the key. |
 | `stable` | 1.1.0 | 1.2.0 | Your governance requires running on released openEHR specifications only. |
 
-Environment form: `FERROEHR__DEPLOYMENT__SPEC_PROFILE=stable`. The key is a top-level
-scalar, not a section; there is no `[spec_profile]` table.
+Environment form: `FERROEHR__DEPLOYMENT__SPEC_PROFILE=stable`.
 
 ### Why it is one key and not two
 
@@ -229,12 +260,13 @@ read stays a read.
 > compatibility direction it relies on: minor releases within a major line are
 > additive supersets.
 
-## `deployment_profile`
+## `deployment.profile`
 
 ```toml
 # The declared posture: what this deployment may hold.
-deployment_profile = "sandbox"   # or "production"
-deployment_accepts = []          # production only: gaps run without, by name
+[deployment]
+profile = "sandbox"   # or "production"
+accepts = []          # production only: gaps run without, by name
 ```
 
 Every separation FerroEHR can make is a configuration key an operator can leave
@@ -245,26 +277,26 @@ declared posture and makes the two impossible to confuse.
 | Value | Asserts | On boot |
 |---|---|---|
 | `sandbox` *(the binary's default; the Helm chart has none and refuses to render until you choose)* | Nothing; the deployment must not hold real personal data | Says which separations are missing: a red notice on the banner, one `warn` line per gap with the structured field `posture = "deployment"`, and the same list on `GET /management/status` under `deployment`; the public `GET /ferroehr/rest/status` carries the profile only |
-| `production` | Every separation below holds, or is accepted by name in `deployment_accepts` | Refuses to start otherwise, naming each open gap, what it found and what to change |
+| `production` | Every separation below holds, or is accepted by name in `deployment.accepts` | Refuses to start otherwise, naming each open gap, what it found and what to change |
 
 The separations, each a real property the server checks rather than a box
 ticked by being present:
 
 | Gap token | What `production` requires |
 |---|---|
-| `shared_credential` | `[storage.party] url` (or `[storage.clinical] url`) set, so the two domains connect on their own database roles |
+| `shared_credential` | `[database.party] url` (or `[database.clinical] url`) set, so the two domains connect on their own database roles |
 | `shared_cluster` | The three pools reach three different PostgreSQL clusters, read from `pg_control_system().system_identifier` on each pool, never from the DSN text. The audit pool counts: Swiss law keeps the access log on a system separate from the one processing the data |
 | `open_subject_namespace` | `[privacy] subject_namespaces` declared, so an `EHR_STATUS` subject is an opaque pseudonym |
 | `audit_off` | `[audit]` enabled with a durable sink (the local store, syslog or the FHIR feed) |
 | `audit_fails_open` | `[audit] fail_mode = "closed"`, so an operation whose access record cannot be taken is refused instead of succeeding unlogged |
 | `no_category_map` | A category map applies while auditing is on: the one FerroEHR ships (the default) or `[audit.categories]` templates and archetypes of your own, so every access record names the categories of the data it reached (EHDS Annex II 3.2(c)). The gap opens only with `[audit.categories] shipped_map = false` and nothing declared |
 | `open_ehr_access_default` | `[authz.rbac] ehr_access_default = "restricted"`, so an EHR carrying no `ACCESS_CONTROL_SETTINGS` is reachable only by an admin. The shipped default is `open`. The setting is enforced with `[authz.rbac] enabled` on or off |
-| `migrate_on_runtime_credential` | `[db] migrate_url` set, or `migrate = "verify"`, so no credential that serves requests can alter the schema. Evaluated per domain database: a domain relocated to a database of its own is prepared on `[storage.migrate.<domain>] url` when that is set, and on that domain's runtime DSN, which opens the gap, when it is not |
+| `migrate_on_runtime_credential` | `[database] migrate_url` set, or `migrations = "verify"`, so no credential that serves requests can alter the schema. Evaluated per domain database: a domain relocated to a database of its own is prepared on `[database.<domain>] migrate_url` when that is set, and on that domain's runtime DSN, which opens the gap, when it is not |
 | `auth_off` | `[auth] enabled = true`, so no request is served unauthenticated (CRA Annex I Part I(2)(d)) |
 | `rbac_off` | `[authz.rbac] enabled = true` whenever authentication is on, so a caller reaches only the operations its roles allow (CRA Annex I Part I(2)(d)). Not reported while `auth_off` is |
-| `plaintext_listener` | `[server.tls]` set, or `[server] listen` on a loopback address, so data does not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment behind a TLS-terminating ingress accepts `plaintext_listener` by name, which records that the ingress carries the encryption. The gap also opens when `[management] port` is set on an enabled management surface: that listener binds every interface and never speaks TLS, so unset the port (the surface then shares the main listener) or accept the gap by name where the port is unreachable off the host |
+| `plaintext_listener` | `[server.tls]` set, or `[server] listen` on a loopback address, so data does not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment behind a TLS-terminating ingress accepts `plaintext_listener` by name, which records that the ingress carries the encryption. The gap also opens when `management.listen` is set on an enabled management surface: that listener never speaks TLS, so unset it (the surface then shares the main listener) or accept the gap by name where it is unreachable off the host |
 | `plaintext_audit_feed` | An `https://` URL for an enabled audit FHIR feed (`[audit.fhir_feed] url`), so the access records, which name the patient and the professional, do not cross the network in clear (CRA Annex I Part I(2)(e)). A deployment whose repository is reached on a segment it trusts accepts `plaintext_audit_feed` by name |
-| `plaintext_object_store` | `[multimedia] allow_http = false` on an enabled multimedia store, so the externalised clinical blobs travel over an `https://` endpoint (CRA Annex I Part I(2)(e)). A deployment whose object store is reached on a segment it trusts accepts `plaintext_object_store` by name |
+| `plaintext_object_store` | An `https://` `record.multimedia.url` on an enabled multimedia store, so the externalised clinical blobs travel over an `https://` endpoint (CRA Annex I Part I(2)(e)). A deployment whose object store is reached on a segment it trusts accepts `plaintext_object_store` by name |
 
 An accepted gap is stated on every boot and on `/management/status`; it can be run,
 not hidden. Environment form: `FERROEHR__DEPLOYMENT__PROFILE=production`,
@@ -287,25 +319,25 @@ rather than inherit from a quickstart. See
 
 | Section | What it covers | Page |
 |---|---|---|
+| `[deployment]` | The declared posture, the openEHR specification set and the licence token | This page |
 | `[server]`, `[server.caller_rate]`, `[server.tls]` | The HTTP listener (the family section): timeouts, the body limit, the concurrency bound, the drain, the caller rate, TLS | [Server, database & telemetry](config-server.md) |
-| `[rest]`, `[rest.identity]` | The openEHR REST surface: the API base path, the system identifier, Swagger UI, CORS, the clinical body tier, the deployment's own identity | [Server, database & telemetry](config-server.md#rest) |
-| `[db]` | PostgreSQL connection, pool, migrations | [Server, database & telemetry](config-server.md) |
+| `[api]`, `[api.options]`, `[api.cors]` | The openEHR REST API: the API base path, the system identifier, the OpenAPI UI, CORS, the clinical body tier, the ADMIN and terminology groups, the deployment's own identity | [Server, database & telemetry](config-server.md#rest) |
+| `[database]` | PostgreSQL connection, pool, migrations | [Server, database & telemetry](config-server.md) |
 | `[telemetry]` | The console, the request log and the OpenTelemetry export | [Server, database & telemetry](config-server.md) |
 | `[usage_report]` | The daily installation report to FerroPULSE, on by default; what it sends is on the [Usage report](../usage-report.md) page | [Server, database & telemetry](config-server.md#usage_report) |
 | `[auth]`, `[authz]` | Authentication (Basic, OAuth2/OIDC) and RBAC/ABAC | [Authentication & access](config-auth.md) |
-| `[admin]`, `[management]` | The ADMIN API group and the ops-introspection surface | [Authentication & access](config-auth.md) |
-| `[smart]` | SMART App Launch discovery and scope enforcement | [Authentication & access](config-auth.md) |
-| `[access_delay]` | The EHDS Art. 3(3) delay of the person's own access to new data, off by default | [Authentication & access](config-auth.md#access_delay) |
-| `[signing]` | VERSION signing and read-time verification | [Authentication & access](config-auth.md) |
-| `[versioning]` | The opt-in answer to an update whose content equals the current version's, off by default | [Authentication & access](config-auth.md#versioning) |
-| `[licence]` | The commercial licence token | [Authentication & access](config-auth.md) |
-| `[query]` | AQL execution budgets and result ceilings | [Integrations](config-integrations.md) |
-| `[ehr_index]`, `[ehr_index.oauth]`, `[ehr_index.tls]` | Who holds the patient-to-EHR cross-reference: an IHE patient identity source over PIXm (the default) or the in-instance map | [Integrations](config-integrations.md#ehr_index) |
-| `[outbox]` | The commit-event outbox and the readers of its feed | [Integrations](config-integrations.md#outbox) |
-| `[terminology]`, `[multimedia]` | The terminology server, multimedia externalization | [Integrations](config-integrations.md) |
+| `[management]` | The ops-introspection surface | [Authentication & access](config-auth.md) |
+| `[auth.smart]` | SMART App Launch discovery and scope enforcement | [Authentication & access](config-auth.md) |
+| `[privacy.access_delay]` | The EHDS Art. 3(3) delay of the person's own access to new data, off by default | [Authentication & access](config-auth.md#access_delay) |
+| `[record.signing]` | VERSION signing and read-time verification | [Authentication & access](config-auth.md) |
+| `[record.versioning]` | The opt-in answer to an update whose content equals the current version's, off by default | [Authentication & access](config-auth.md#versioning) |
+| `[record.query]` | AQL execution budgets and result ceilings | [Integrations](config-integrations.md) |
+| `record.subject_index`, `[pixm]`, `[pixm.oauth]`, `[pixm.tls]` | Who holds the patient-to-EHR cross-reference: an IHE patient identity source over PIXm or the in-instance map | [Integrations](config-integrations.md#ehr_index) |
+| `[record.change_feed]` | The commit-event outbox and the readers of its feed | [Integrations](config-integrations.md#outbox) |
+| `[terminology]`, `[record.multimedia]` | The terminology server, multimedia externalization | [Integrations](config-integrations.md) |
 | `[audit]`, `[audit.store]`, `[audit.syslog]`, `[audit.fhir_feed]` | The IHE ATNA audit trail and its sinks | [Audit](config-audit.md) |
-| `[origins]` | The origins of data the deployment recognises, which a retention period and an ABAC rule may name (EHDS Annex II 3.4) | [Audit](config-audit.md#origins-the-origins-a-deployment-recognises) |
+| `[[authz.origin]]` | The origins of data the deployment recognises, which a retention period and an ABAC rule may name (EHDS Annex II 3.4) | [Audit](config-audit.md#origins-the-origins-a-deployment-recognises) |
 | `[privacy]`, `[privacy.identifier_scan]` | What the clinical side refuses to hold: the subject reference, identified parties, the identifier scanner | [Privacy & data minimisation](config-privacy.md) |
-| `[cohort]`, `[cohort.predicates]` | Cross-domain cohort queries: the demographic predicate allow-list, the small-cell floor, the cohort ceiling | [Privacy & data minimisation](config-privacy.md) |
-| `[demographic.identifier_protection]` | Sealing national identifiers in the demographic domain, and the key that opens them | [Privacy & data minimisation](config-privacy.md) |
+| `[privacy.cohort]`, `[privacy.cohort.predicates]` | Cross-domain cohort queries: the demographic predicate allow-list, the small-cell floor, the cohort ceiling | [Privacy & data minimisation](config-privacy.md) |
+| `[privacy.identifier_protection]` | Sealing national identifiers in the demographic domain, and the key that opens them | [Privacy & data minimisation](config-privacy.md) |
 | — | The CLI, the production checklist, file-versus-environment guidance | [CLI & production checklist](config-cli.md) |

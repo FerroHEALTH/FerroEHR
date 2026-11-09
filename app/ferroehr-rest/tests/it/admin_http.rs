@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! End-to-end HTTP tests for the ADMIN API group (physical EHR delete): the
-//! config gate (`AppConfig::admin.enabled`) and the `204`/`404` wire outcomes —
+//! config gate (`AppConfig::api.admin`) and the `204`/`404` wire outcomes —
 //! driven through the assembled router over a **real** `AdminService` on a real
 //! `PostgreSQL`. Per the vendored Admin OAS (`operations/admin_ehr_delete_all.yaml`)
 //! the bulk delete declares only bodyless successes (`202`/`204`), and an absent

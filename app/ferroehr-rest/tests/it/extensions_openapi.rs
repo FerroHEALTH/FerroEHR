@@ -559,7 +559,6 @@ fn app_config() -> AppConfig {
             ..SmartConfig::default()
         };
         c.api.terminology = true;
-        c.auth.scim = Some(ferroehr::config::scim::ScimConfig::default());
         c
     }
 }
@@ -567,13 +566,16 @@ fn app_config() -> AppConfig {
 /// A server trusting the shared metadata issuer, with every extension surface
 /// enabled, so every documented path is mounted.
 async fn full_app() -> Router {
+    let base = app_config();
+    let mut auth = common::trusting(vec![common::entry(
+        common::metadata_issuer().await,
+        "ferroehr",
+    )]);
+    auth.smart = base.auth.smart.clone();
     let config = AppConfig {
         server: common::server(),
-        auth: common::trusting(vec![common::entry(
-            common::metadata_issuer().await,
-            "ferroehr",
-        )]),
-        ..app_config()
+        auth,
+        ..base
     };
     let public = EndpointLevels {
         info: AccessLevel::Public,

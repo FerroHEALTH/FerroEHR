@@ -69,7 +69,7 @@ feed and the ITI-81 retrieval carry. See
 for the exact list of settings a slim binary rejects.
 
 > [!NOTE]
-> One gap worth knowing if you build slim: `terminology.api_enabled` is a
+> One gap worth knowing if you build slim: `api.terminology` is a
 > *route* switch, and in a slim build those routes are simply not compiled in,
 > so the setting has no effect rather than failing loudly. The boot refusals cover the settings that would otherwise
 > lose or fail to deliver data.

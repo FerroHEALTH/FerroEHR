@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The subject-id posture, switched on by `[pixm] provider = "local"` from
+//! The subject-id posture, switched on by `[record] subject_index = "local"` from
 //! the environment over a configuration written for an IHE patient identity
 //! source, end to end over the router (#4379).
 //!
@@ -27,9 +27,11 @@ use crate::common::{self, BASE};
 /// A configuration written for an IHE patient identity source: the source and
 /// its client credentials grant, with no pseudonym namespace declared.
 const IHE_CONFIG: &str = r#"
+[record]
+subject_index = "pixm"
+
 [pixm]
-provider = "ihe"
-pixm_url = "http://localhost:8090/fhir"
+url = "http://localhost:8090/fhir"
 assigning_authority = "urn:oid:2.999.7.1"
 
 [pixm.oauth]

@@ -114,7 +114,7 @@ pub struct ProfilingConfig {
     pub max_duration: ferrohealth_config::units::Duration,
     /// The highest sampling frequency a request may ask for, in Hz.
     pub max_frequency: i32,
-    /// Retired: refused at load, naming `max_duration`.
+    /// Retired in v5.7.0: refused at load, naming `max_duration`.
     #[serde(skip_serializing)]
     pub max_seconds: ferrohealth_config::removed::Removed,
 }
@@ -165,7 +165,7 @@ pub struct ManagementConfig {
     /// file, for `inferno-flamegraph` to render offline. Unset, nothing is
     /// captured.
     pub flame_file: Option<std::path::PathBuf>,
-    /// Retired: refused at load, naming `listen`.
+    /// Retired in v5.7.0: refused at load, naming `listen`.
     #[serde(skip_serializing)]
     pub port: ferrohealth_config::removed::Removed,
 }

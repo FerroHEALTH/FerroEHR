@@ -22,9 +22,10 @@ its terminology routes as if they were not mounted, and the screen says so in
 one card instead of pretending to work:
 
 ```toml
-[terminology]
-api_enabled = true
-```
+
+
+[api]
+terminology = true```
 
 or, as an environment override, `FERROEHR__API__TERMINOLOGY=true`.
 

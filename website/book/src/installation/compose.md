@@ -57,13 +57,13 @@ schema separation is exercised on one credential. That single credential is
 deliberate: one container with one DSN cannot demonstrate the credential
 separation honestly.
 
-A least-privilege deployment sets `db.migrate = "verify"`, runs
+A least-privilege deployment sets `database.migrations = "verify"`, runs
 `ferroehr db migrate` out of band under the migrator DSN, and serves on a
 narrow runtime credential. It also has to name the credential that prepares
-the schema, in `[db] migrate_url`: preparation reads all four
+the schema, in `[database] migrate_url`: preparation reads all four
 `_sqlx_migrations` bookkeeping tables even under `verify`, which no
 least-privilege role can do, `ferroehr_clinical` included. Unset, `migrate_url`
-falls back to `[db] url`, which is what the quickstart runs. See
+falls back to `[database] url`, which is what the quickstart runs. See
 [Operations → Which credential prepares the
 schema](../operations.md#which-credential-prepares-the-schema) and
 [Applying migrations](../operations.md#applying-migrations).
@@ -113,7 +113,7 @@ and the server below, and the patient identity source described in
 
 The API is then at `http://localhost:8080/ferroehr/rest/openehr/v1`, with
 Swagger UI at `http://localhost:8080/ferroehr/rest/swagger-ui` (the browser asks
-for the API credential; `rest.swagger_ui` chooses who may read it).
+for the API credential; `api.openapi_ui` chooses who may read it).
 
 > [!IMPORTANT]
 > **Every published port binds the loopback interface by default**
@@ -220,7 +220,7 @@ evaluation, not for production:
   `GET /management/status`, and the viewer raises a notice saying the
   deployment must not hold real patient data. That is the quickstart telling
   the truth about itself, not a fault. See
-  [`deployment_profile`](configuration.md#deployment_profile).
+  [`deployment.profile`](configuration.md#deployment.profile).
 
 > [!WARNING]
 > These are development credentials and development defaults. Before exposing
@@ -241,7 +241,7 @@ inline config or your own mounted TOML file.
 FerroEHR keeps no patient-to-record cross-reference of its own by default. It
 asks an IHE patient identity source over PIXm (ITI-83) which pseudonym the
 clinical domain holds for a patient
-([`[ehr_index]`](config-integrations.md#ehr_index)). The quickstart runs
+([`[pixm]`](config-integrations.md#ehr_index)). The quickstart runs
 FerroPIX as that source, pinned by tag and image-index digest (CI runs the
 `config check` of every pinned image over its inline configuration), with four
 services beside the server:
@@ -258,7 +258,7 @@ services beside the server:
   a one-shot job that writes its sealing key into a volume, so the file
   carries no key.
 
-The server's `[ehr_index]` names the endpoint and the grant, and
+The server's `[pixm]` names the endpoint and the grant, and
 `[privacy] subject_namespaces` declares the clinical domain. The server reads
 FerroPIX's `CapabilityStatement` at boot and does not start until it answers.
 
@@ -282,13 +282,13 @@ curl -s -X PUT -H "Authorization: Bearer $SRC" \
   -d '{"resourceType":"Patient","identifier":[{"system":"urn:oid:2.999.1.1","value":"H-1"}],"name":[{"family":"Synthetic"}]}'
 ```
 
-Any conformant PIX Manager can take FerroPIX's place: point `pixm_url`,
-`assigning_authority` and `[ehr_index.oauth]` at it.
+Any conformant PIX Manager can take FerroPIX's place: point `pixm.url`,
+`assigning_authority` and `[pixm.oauth]` at it.
 
 ## The local EHR index
 
 The other supported posture keeps the subject-to-EHR cross-reference in
-FerroEHR ([`[ehr_index]`](config-integrations.md#ehr_index)): `EHR_STATUS.subject`
+FerroEHR ([`[pixm]`](config-integrations.md#ehr_index)): `EHR_STATUS.subject`
 names a patient by its own namespace and identifier, and
 `GET /ehr?subject_id=…&subject_namespace=…` finds the EHR by them. One
 variable selects it, with no copy of the configuration to make:
@@ -298,7 +298,7 @@ FERROEHR_EHR_INDEX=local docker compose up
 ```
 
 The server then runs the file's `ferroehr-config-local` block, which differs
-from `ferroehr-config` in `[ehr_index]` and `[privacy]` alone: the local map,
+from `ferroehr-config` in `[pixm]` and `[privacy]` alone: the local map,
 and no pseudonym namespace, so a subject reference is stored as the client
 sends it:
 
@@ -401,7 +401,7 @@ The server refuses a person whose login no demographic party carries, so the
 overlay binds each of the four before you sign in. The realm import gives
 every user a fixed `id`, which Keycloak puts in `sub`, and the one-shot
 `ferroehr-provision-keycloak` creates a SCIM User for each with that id as its
-login key, through a second `[[scim.client]]` of the development issuer
+login key, through a second `[[auth.scim.client]]` of the development issuer
 (`FERROEHR__AUTH__SCIM__CLIENT__1__*`) whose `binding_issuer` is the realm's
 identifier issuer, `urn:ferroehr:keycloak-quickstart-login`. The service
 account acts for nobody, so it binds to no party.
@@ -429,7 +429,7 @@ curl -H "Authorization: Bearer $TOKEN" -X POST -i \
 A service with no user behind it takes the client-credentials grant with
 `ferroehr-service`. Its service account holds `USER`, so the token reaches the
 clinical API and the admin routes refuse it with `403`. Its `system/aql-*`
-grant counts because the overlay names the client in `[smart] backend_clients`
+grant counts because the overlay names the client in `[auth.smart] backend_clients`
 (`FERROEHR__AUTH__SMART__BACKEND_CLIENTS`). It creates EHRs because the overlay
 declares it as an `[[authz.system_client]]` (`FERROEHR__AUTHZ__SYSTEM_CLIENT__0__*`),
 the only way a caller acting for no person commits; it lists no `writes`, so it
@@ -539,9 +539,8 @@ you ask for them:
 
   ```shell
   export FERROEHR__RECORD__MULTIMEDIA__ENABLED=true
-  export FERROEHR__RECORD__MULTIMEDIA__URL=http://seaweedfs:8333
+  export FERROEHR__RECORD__MULTIMEDIA__URL=http://seaweedfs:8333   # dev only; production S3 is HTTPS
   export FERROEHR__RECORD__MULTIMEDIA__BUCKET=openehr-multimedia
-  export FERROEHR__RECORD__MULTIMEDIA__ALLOW_HTTP=true    # dev only; production S3 is HTTPS
 
   docker compose --profile s3 up -d --wait ferroehr seaweedfs
   ```

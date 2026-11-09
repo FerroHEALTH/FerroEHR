@@ -53,16 +53,16 @@ pub struct ScimConfig {
     pub max_group_members: u32,
     /// The provisioning clients.
     pub client: Vec<ScimClient>,
-    /// Retired: refused at load, naming the table's presence.
+    /// Retired in v5.7.0: refused at load, naming the table's presence.
     #[serde(skip_serializing)]
     pub enabled: Removed,
-    /// Retired: refused at load, naming `filter_max_results`.
+    /// Retired in v5.7.0: refused at load, naming `filter_max_results`.
     #[serde(skip_serializing)]
     pub max_results: Removed,
-    /// Retired: refused at load, naming `deactivation_window`.
+    /// Retired in v5.7.0: refused at load, naming `deactivation_window`.
     #[serde(skip_serializing)]
     pub deactivation_window_minutes: Removed,
-    /// Retired: refused at load, naming `contact_erasure_delay`.
+    /// Retired in v5.7.0: refused at load, naming `contact_erasure_delay`.
     #[serde(skip_serializing)]
     pub contact_erasure_minutes: Removed,
 }

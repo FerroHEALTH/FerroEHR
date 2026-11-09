@@ -222,7 +222,7 @@ pub(crate) struct SigningCtx<'a> {
     /// (`version.origins`): the committing client's registered origin, or
     /// [`Self::system_id`] (EHDS Annex II 3.4, [`crate::origins`]).
     pub(crate) direct_origin: String,
-    /// `[record.versioning] skip_identical_resend`: a direct update whose content
+    /// `[record.versioning] idempotent_resend`: a direct update whose content
     /// equals the current version's answers with that version and commits
     /// nothing (#4415).
     pub(crate) skip_identical_resend: bool,

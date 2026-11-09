@@ -169,7 +169,7 @@ impl FerroEhrService {
 }
 
 impl FerroEhrService {
-    /// Records a skipped identical re-send (`[record.versioning] skip_identical_resend`,
+    /// Records a skipped identical re-send (`[record.versioning] idempotent_resend`,
     /// #4415) on the access log: one `resend` record naming the version the
     /// content matched, its content digest, the committer and the time, and
     /// no commit audit, contribution or outbox event.

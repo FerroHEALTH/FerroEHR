@@ -70,7 +70,7 @@ What a deployment gets by default, and what declaring a namespace adds:
 | Minting | FerroEHR mints none | FerroEHR mints none: the IHE patient identity source does |
 
 FerroEHR mints no pseudonym. Under the IHE patient identity source
-([`[ehr_index]`](config-integrations.md#ehr_index)), the source answers the
+([`[pixm]`](config-integrations.md#ehr_index)), the source answers the
 pseudonym the clinical domain holds for a patient, and the identity source
 mints it on the first ask; that domain's assigning authority is a declared
 namespace. Every value that arrives from elsewhere, a client writing
@@ -301,7 +301,7 @@ The second refuses a Dutch postcode paired with a house number — the pair is
 what identifies a household; a postcode alone does not. A pattern that does not
 compile is a boot error naming it.
 
-## `[cohort]`
+## `[privacy.cohort]`
 
 Cross-domain **cohort queries**: select a population in the demographic domain,
 resolve it to the EHRs whose `EHR_STATUS` subject names it, and run AQL over
@@ -310,18 +310,18 @@ worked example are in [Querying with AQL](../querying-aql.md#cohort-queries-acro
 
 **Off until a predicate is bound.** Which demographic leaf may be selected on is
 a deployment fact about the archetypes in use, never something the server can
-infer, so `[cohort.predicates]` is empty by default and `POST /query/cohort`
+infer, so `[privacy.cohort.predicates]` is empty by default and `POST /query/cohort`
 answers `404` until it is not. `subjects = true` turns the surface on without
 a predicate, for cohorts that name their subjects by identifier. That is the one
-form an IHE patient identity source serves (`[ehr_index] provider = "ihe"`):
+form an IHE patient identity source serves (`[pixm] subject_index = "pixm"`):
 it holds no party-to-EHR map, so a predicate is refused there.
 
 ```toml
-[cohort]
+[privacy.cohort]
 small_cell_threshold = 5
 max_cohort_size = 100000
 
-[cohort.predicates]
+[privacy.cohort.predicates]
 city = { archetype = "openEHR-DEMOGRAPHIC-ADDRESS.address.v1", node = "at0012", kind = "text" }
 ```
 
@@ -330,7 +330,7 @@ city = { archetype = "openEHR-DEMOGRAPHIC-ADDRESS.address.v1", node = "at0012", 
 | `small_cell_threshold` | int | `5` | The distinct-EHR floor a result set must reach to be served. Below it the rows are withheld and the response is marked `suppressed`; `0` disables suppression. |
 | `max_cohort_size` | int | `100000` | The largest cohort a predicate may select. A wider one is refused `422` rather than truncated: a silently shortened cohort is a wrong denominator. |
 | `predicates` | table | empty | The allow-list, keyed by the name a caller uses. Empty, with `subjects` off, leaves the surface off. |
-| `subjects` | bool | `false` | Let a request name its subjects by identifier, in any identifier domain, each resolved through the `[ehr_index]` provider: under the IHE provider by a forward PIXm translation into the server's clinical domain, never back. |
+| `subjects` | bool | `false` | Let a request name its subjects by identifier, in any identifier domain, each resolved through the `[pixm]` provider: under the IHE provider by a forward PIXm translation into the server's clinical domain, never back. |
 
 ### The allow-list
 
@@ -367,9 +367,9 @@ an ATNA message or a trace record.
 
 The rules above keep national identifiers off the **clinical** side. The
 demographic side is where a party's identifiers legitimately live, and
-`[demographic.identifier_protection]` decides how they are held there.
+`[privacy.identifier_protection]` decides how they are held there.
 
-With it on, an identifier of a configured scheme never sits in the versioned
+With the table present, an identifier of a configured scheme never sits in the versioned
 body. The value moves to `party.national_identifier`, sealed with
 AES-256-GCM under a key derived per domain, and the body keeps a reference in
 its place. Beside the ciphertext sits an HMAC-SHA-256 digest of the value, which
@@ -378,9 +378,8 @@ anything — and, because it is keyed, what stops the database, a backup or a re
 replica from reversing a nine-digit space.
 
 ```toml
-[demographic.identifier_protection]
-enabled = false
-schemes = ["nl-bsn"]
+#? [privacy.identifier_protection]
+#? schemes = ["nl-bsn"]
 #? key_file = "/run/secrets/ferroehr-identifier-key"
 ```
 

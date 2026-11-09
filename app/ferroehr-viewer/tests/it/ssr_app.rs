@@ -710,7 +710,7 @@ async fn every_screen_draws_its_heading_and_its_reading() {
         ),
         (
             "/configuration".to_owned(),
-            vec!["deployment_profile", "sandbox"],
+            vec!["deployment.profile", "sandbox"],
         ),
     ];
     for (path, expected) in screens {

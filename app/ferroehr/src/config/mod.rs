@@ -70,7 +70,7 @@ use crate::config::loader::{ConfigError, ConfigErrors};
 pub struct FerroEhrConfig {
     /// `[deployment]`: the declared posture, the openEHR specification set
     /// and the licence token.
-    pub deployment: deployment::DeploymentConfig,
+    pub deployment: profile::DeploymentConfig,
     /// `[server]` — the HTTP listener: the family's section (the listen
     /// address, the timeouts, the body limit, the overload bound, the drain,
     /// TLS, the trusted proxies, the caller rate and compression).
@@ -112,64 +112,64 @@ pub struct FerroEhrConfig {
     /// `[pixm]` — the IHE PIXm patient identity source the subject index asks
     /// (ITI-83) under `record.subject_index = "pixm"`.
     pub pixm: Option<crate::service::ehr_index::config::PixmConfig>,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub spec_profile: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub deployment_profile: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub deployment_accepts: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub rest: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub db: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub storage: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub admin: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub smart: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub signing: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub licence: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub query: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub outbox: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub multimedia: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub origins: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub demographic: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub cohort: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub ehr_index: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub access_delay: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub versioning: Removed,
-    /// Retired: refused at load, naming its replacement ([`retired`]).
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
     pub scim: Removed,
 }
@@ -183,7 +183,7 @@ impl Default for FerroEhrConfig {
     /// keeps both. No openEHR spec governs configuration: our own design.
     fn default() -> Self {
         Self {
-            deployment: deployment::DeploymentConfig::default(),
+            deployment: profile::DeploymentConfig::default(),
             server: ferrohealth_server::section::ServerSection {
                 listen: std::net::SocketAddr::from(([0, 0, 0, 0], 8080)),
                 body_limit_bytes: 64 * 1024 * 1024,
@@ -632,7 +632,10 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER__0__ALGORITHMS", "ES256"),
                 ("FERROEHR__AUTH__SCOPES_SUPPORTED", "openid"),
                 ("FERROEHR__AUTH__SMART__BACKEND_CLIENTS", "etl"),
-                ("FERROEHR__AUTH__SMART__PATIENT_ISSUERS", "https://as.example"),
+                (
+                    "FERROEHR__AUTH__SMART__PATIENT_ISSUERS",
+                    "https://as.example",
+                ),
                 ("FERROEHR__AUTH__SMART__DEMOGRAPHIC_CLIENTS", "mpi"),
                 ("FERROEHR__RECORD__CHANGE_FEED__READERS", "ferrobridge"),
             ]),
@@ -1049,12 +1052,12 @@ mod tests {
             "[database]\nurl = \"postgres://u:p@h:5432/d\"\nurl_file = \"/dev/null\"\n",
             "[database]\nmigrate_url = \"postgres://u:p@h:5432/d\"\n\
              migrate_url_file = \"/dev/null\"\n",
-            "[storage.party]\nurl = \"postgres://u:p@h:5432/d\"\n\
+            "[database.party]\nurl = \"postgres://u:p@h:5432/d\"\n\
              url_file = \"/dev/null\"\n",
-            "[storage.audit]\nurl = \"postgres://u:p@h:5432/d\"\n\
+            "[database.audit]\nurl = \"postgres://u:p@h:5432/d\"\n\
              url_file = \"/dev/null\"\n",
-            "[storage.migrate.party]\nurl = \"postgres://u:p@h:5432/d\"\n\
-             url_file = \"/dev/null\"\n",
+            "[database.party]\nmigrate_url = \"postgres://u:p@h:5432/d\"\n\
+             migrate_url_file = \"/dev/null\"\n",
             "[[auth.basic.users]]\nuser = \"a\"\npassword_hash = \"x\"\n\
              password_hash_file = \"/dev/null\"\n",
         ];
@@ -1078,7 +1081,7 @@ mod tests {
         let dsn = assert_fs::NamedTempFile::new("dsn").expect("temp");
         dsn.write_str("postgres://u:p@h:5432/d\n").expect("write");
         // A DIFFERENT DSN, so the assertion below cannot pass by falling back
-        // to `db.url` — which is what an unwired `migrate_url_file` would do.
+        // to `database.url` — which is what an unwired `migrate_url_file` would do.
         let migrate = assert_fs::NamedTempFile::new("migrate-dsn").expect("temp");
         migrate
             .write_str("postgres://m:p@h:5432/d\n")
@@ -1112,7 +1115,7 @@ mod tests {
             c.database.dsn(crate::db::domain::Domain::Party),
             "postgres://m:p@h:5432/d",
             "the party domain's own DSN arrives through the env grammar, rather than \
-             falling back to db.url as an unwired key would"
+             falling back to database.url as an unwired key would"
         );
         assert_eq!(
             c.database
@@ -1285,7 +1288,10 @@ mod tests {
             "user/composition-*.r"
         );
         assert_eq!(value["auth"]["issuer"][0]["issuer"], "https://idp.example");
-        assert_eq!(value["multimedia"]["access_key_id"], "AKIA_PUBLIC_ID");
+        assert_eq!(
+            value["record"]["multimedia"]["access_key_id"],
+            "AKIA_PUBLIC_ID"
+        );
     }
 
     /// The `[privacy]` section is reachable from the environment, both scalars
@@ -2072,7 +2078,7 @@ mod tests {
         }
     }
 
-    /// `rest.system_id` is judged by the openEHR `uid` grammar itself.
+    /// `api.system_id` is judged by the openEHR `uid` grammar itself.
     ///
     /// It occupies the `creating_system_id` position of every
     /// `OBJECT_VERSION_ID` this CDR mints — "`creating_system_id` = `uid`" with

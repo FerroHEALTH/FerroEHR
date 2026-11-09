@@ -121,7 +121,7 @@ pub struct CdrConfig {
     /// [`Self::base_url`] with the CDR's default `/management` base path.
     ///
     /// One knob covers both ways a deployment can move that surface: the CDR
-    /// can serve it from its own internal listener (`management.port`) and can
+    /// can serve it from its own internal listener (`management.listen`) and can
     /// rename its base path (`management.base_path`), so the viewer takes the
     /// whole prefix rather than guessing a port and a path separately. No
     /// openEHR spec governs a management surface — our own operational
@@ -449,7 +449,7 @@ mod tests {
     #[test]
     fn a_configured_management_base_wins_and_may_move_host_port_and_path() {
         // The whole prefix is configurable: a separate internal listener
-        // (`management.port` CDR-side) and a renamed `management.base_path`
+        // (`management.listen` CDR-side) and a renamed `management.base_path`
         // are the same one knob here.
         let cfg = CdrConfig {
             management_base_url: "http://cdr.internal:9464/ops/".to_owned(),

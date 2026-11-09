@@ -202,7 +202,7 @@ fn party_source(config: &AppConfig, backend: &Arc<FerroEhrService>) -> Arc<dyn B
 /// Builds and serves the application with full observability until the
 /// process receives `SIGTERM` or `SIGINT`, then drains.
 ///
-/// Binds `server.listen` and, when `management.port` is set, the management
+/// Binds `server.listen` and, when `management.listen` is set, the management
 /// surface on its own internal listener (otherwise merged into the main app),
 /// and hands both to [`serve_on`]. ATNA auditing lives in the backend's
 /// `SystemLog` component.

@@ -13,7 +13,7 @@
 //!
 //! Every relation is named UNQUALIFIED and resolves through the party pool's
 //! `search_path`, which does not carry `clinical`. Under
-//! `[storage.party].url` that pool authenticates as `ferroehr_party`,
+//! `[database.party].url` that pool authenticates as `ferroehr_party`,
 //! which holds no grant on it.
 //!
 //! The join is the storage model's own: a node row's nested-set interval

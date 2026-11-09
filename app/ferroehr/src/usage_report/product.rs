@@ -184,7 +184,7 @@ pub fn grouping(base_path: &str, route: Option<&str>) -> Option<Key> {
 /// The mounts FerroEHR's API route templates sit under.
 ///
 /// Each is `server.base_path`, where every route is served, followed by
-/// `rest.base_path` for the openEHR API or by the extensions root for
+/// `api.base_path` for the openEHR API or by the extensions root for
 /// FerroEHR's own extensions (#4330).
 #[must_use]
 pub fn api_mounts(config: &FerroEhrConfig) -> Vec<String> {

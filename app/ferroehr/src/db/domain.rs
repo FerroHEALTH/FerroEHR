@@ -497,19 +497,16 @@ mod tests {
         );
     }
 
-    /// The linkage domain is gone (#4684): a configuration that still names it
-    /// is refused like any unknown key, never run without the separation it
+    /// The linkage domain is gone (#4684): a configuration that names it is
+    /// refused like any unknown key, never run without the separation it
     /// asked for.
     #[test]
-    fn the_retired_linkage_storage_keys_are_refused() {
-        for body in [
-            "[storage.linkage]\nurl = \"postgres://u:p@h:5432/d\"\n",
-            "[storage.migrate.linkage]\nurl = \"postgres://u:p@h:5432/d\"\n",
-        ] {
-            let err =
-                toml::from_str::<crate::config::FerroEhrConfig>(body).expect_err("an unknown key");
-            assert!(err.to_string().contains("linkage"), "{body}: {err}");
-        }
+    fn a_linkage_domain_is_refused() {
+        let err = toml::from_str::<crate::config::FerroEhrConfig>(
+            "[database.linkage]\nurl = \"postgres://u:p@h:5432/d\"\n",
+        )
+        .expect_err("an unknown key");
+        assert!(err.to_string().contains("linkage"), "{err}");
     }
 
     #[test]

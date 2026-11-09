@@ -89,10 +89,10 @@ pub struct Agreement {
     /// For a `chained` access: how long the requester keeps its log, a
     /// calendar period (`"P5Y"`).
     pub chained_log_retention: Option<crate::config::retention::RetentionPeriod>,
-    /// Retired: refused at load, naming `discard_window`.
+    /// Retired in v5.7.0: refused at load, naming `discard_window`.
     #[serde(skip_serializing)]
     pub discard_window_hours: ferrohealth_config::removed::Removed,
-    /// Retired: refused at load, naming `chained_log_retention`.
+    /// Retired in v5.7.0: refused at load, naming `chained_log_retention`.
     #[serde(skip_serializing)]
     pub chained_log_retention_years: ferrohealth_config::removed::Removed,
 }

@@ -82,13 +82,13 @@ pub struct SmartConfig {
     /// own design).
     pub demographic_clients: Vec<String>,
 
-    /// Retired: refused at load, naming `discovery`.
+    /// Retired in v5.7.0: refused at load, naming `discovery`.
     #[serde(skip_serializing)]
     pub enabled: Removed,
-    /// Retired: refused at load, naming `episode_launch`.
+    /// Retired in v5.7.0: refused at load, naming `episode_launch`.
     #[serde(skip_serializing)]
     pub episode: Removed,
-    /// Retired: refused at load, naming `launch-base64-json` in
+    /// Retired in v5.7.0: refused at load, naming `launch-base64-json` in
     /// `auth.capabilities`.
     #[serde(skip_serializing)]
     pub launch_base64_json: Removed,

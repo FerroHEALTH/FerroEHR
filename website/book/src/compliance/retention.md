@@ -27,7 +27,7 @@ legal citation the period rests on.
 |---|---|
 | `kind` | The content category: `COMPOSITION`, `EHR_STATUS`, `FOLDER`, or `EHR` for the whole record |
 | `category` | Optional: the EHDS category the period is keyed on, named as `[audit.categories]` names it: a priority category by its code (`Patient-Summaries`, `Electronic-Prescriptions`, `Electronic-Dispensations`, `Medical-Imaging`, `Laboratory-Reports`, `Discharge-Reports`) or as `<system>\|<code>`, a declared national category as its `<system>\|<code>`, or `none`; stored as the `<system>\|<code>` token; empty keys the period on every object of the kind |
-| `origin` | Optional: the origin the period is keyed on, the id of an origin [`[origins]`](#keying-a-period-on-an-origin) registers; empty keys the period on every origin |
+| `origin` | Optional: the origin the period is keyed on, the id of an origin [`[[authz.origin]]`](#keying-a-period-on-an-origin) registers; empty keys the period on every origin |
 | `jurisdiction` | ISO 3166-1 alpha-2, the same key the [identifier scanner](../installation/config-privacy.md) rules use |
 | `period` | How long content of that category is kept |
 | `anchor` | What the period is measured from: `last_commit`, `death`, or `majority` |
@@ -92,11 +92,11 @@ Every version records its origins at commit: each `FEEDER_AUDIT`
 originating-system id the body carries (RM common, `FEEDER_AUDIT_DETAILS`), or,
 for a body that carries none, the origin of the client that committed it. The
 ids a sending system writes are free text, so you declare the origins your
-deployment recognises in `[origins]`, each by the id its data carry and with the
+deployment recognises in `[[authz.origin]]`, each by the id its data carry and with the
 clients whose direct commits come from it:
 
 ```toml
-[[origins.registered]]
+[[authz.origin]]
 id = "lab.example"          # the FEEDER_AUDIT system_id the lab's feed writes
 clients = ["lab-gateway"]   # a Basic user, or the client its token's issuer profile names (client_claims)
 ```
@@ -254,23 +254,23 @@ so the deployment declares it:
 
 ```toml
 [audit.store]
-retention_years = 3
+retention = 3
 sgb_v_309_controller = true
 ```
 
 With the declaration in place, the server refuses at boot any horizon above the
-ceiling, including `retention_days = 0` (keep forever), and refuses a
+ceiling, including no `retention` (keep forever), and refuses a
 configuration whose floors and ceilings contradict each other outright, rather
 than silently preferring one.
 
 Germany is a Member State, so the EHDS floor of three years applies there as
 well. Both rules are three calendar years, which is why the horizon above is
-stated in years: `retention_years = 3` meets the floor and the ceiling exactly,
+stated in years: `retention = 3` meets the floor and the ceiling exactly,
 and the reaper deletes what is older than the same calendar date three years
 ago. A day count cannot: three calendar years span 1095 or 1096 days, so a
 floor in days has to be 1096 and a ceiling 1095, and with
-`sgb_v_309_controller = true` the server refuses every `retention_days` value
-and names `retention_years = 3` as the fix.
+`sgb_v_309_controller = true` the server refuses every `retention` value
+and names `retention = 3` as the fix.
 Retention of the trail itself is described in
 [Audit](../audit.md#retention-and-who-chooses-it).
 

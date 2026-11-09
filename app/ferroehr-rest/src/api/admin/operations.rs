@@ -15,7 +15,7 @@
 //! physical party delete,
 //! stored-query-version delete, and the redacted config read.
 //!
-//! The group is config-gated (`AppConfig::admin.enabled`, default false): while
+//! The group is config-gated (`AppConfig::api.admin`, default false): while
 //! disabled every admin route answers `405 Method Not Allowed` with an empty
 //! `Allow`, without touching the backend — declared for the bulk delete by
 //! `responses/405.yaml`, and for the rest by the cross-cutting SHOULD in
@@ -135,7 +135,7 @@ pub(crate) async fn ehr_delete_all(
 /// `/admin/`: these, and those of the [`archive`](super::archive) and
 /// [`report`](super::report) extension groups.
 ///
-/// `Some(refusal)` while `AppConfig::admin.enabled` is off, `None` when the
+/// `Some(refusal)` while `AppConfig::api.admin` is off, `None` when the
 /// group serves. One decision in one place, so no route under `/admin/` can
 /// drift out of the gate.
 ///

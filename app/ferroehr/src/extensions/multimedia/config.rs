@@ -57,7 +57,7 @@ pub struct MultimediaConfig {
     /// secrets). Exactly one of the pair may be set; the loader reads and trims
     /// the file.
     pub secret_access_key_file: Option<PathBuf>,
-    /// Retired: refused at load, naming the `url` scheme in its place.
+    /// Retired in v5.7.0: refused at load, naming the `url` scheme in its place.
     #[serde(skip_serializing)]
     pub allow_http: ferrohealth_config::removed::Removed,
 }

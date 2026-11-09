@@ -515,7 +515,6 @@ services:
       FERROEHR__RECORD__MULTIMEDIA__URL:
       FERROEHR__RECORD__MULTIMEDIA__BUCKET:
       FERROEHR__RECORD__MULTIMEDIA__REGION:
-      FERROEHR__RECORD__MULTIMEDIA__ALLOW_HTTP:
       FERROEHR__RECORD__MULTIMEDIA__THRESHOLD:
       FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID:
       FERROEHR__RECORD__MULTIMEDIA__SECRET_ACCESS_KEY:
@@ -691,12 +690,11 @@ services:
   # SeaweedFS S3 gateway for DV_MULTIMEDIA externalization — DEV/TEST ONLY,
   # behind the `s3` profile (off by default; externalization is OFF by default,
   # so the app does NOT depend on this). To try it — three steps, none skippable:
-  #   1. export these FOUR variables — the `ferroehr` service passes
+  #   1. export these THREE variables — the `ferroehr` service passes
   #      the whole FERROEHR__RECORD__MULTIMEDIA__* set through from your shell:
   #        export FERROEHR__RECORD__MULTIMEDIA__ENABLED=true
-  #        export FERROEHR__RECORD__MULTIMEDIA__URL=http://seaweedfs:8333
+  #        export FERROEHR__RECORD__MULTIMEDIA__URL=http://seaweedfs:8333   # dev only; prod S3 is HTTPS
   #        export FERROEHR__RECORD__MULTIMEDIA__BUCKET=openehr-multimedia
-  #        export FERROEHR__RECORD__MULTIMEDIA__ALLOW_HTTP=true   # dev only; prod S3 is HTTPS
   #   2. docker compose --profile s3 up -d --wait ferroehr seaweedfs
   #      `seaweedfs-init` creates the bucket; the gateway ships with none, and an
   #      S3 PUT into a missing bucket answers 403 AccessDenied, which reads as a

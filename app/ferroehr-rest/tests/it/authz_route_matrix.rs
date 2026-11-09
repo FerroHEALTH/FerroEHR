@@ -83,7 +83,7 @@ enum Effect {
 
 /// Ungated surfaces, mounted OUTSIDE the authentication layer (absolute paths):
 /// the always-on health family, the operational status document, SMART
-/// discovery, the OAS/Swagger pair (mounted only when `server.swagger_ui` is
+/// discovery, the OAS/Swagger pair (mounted only when `api.openapi_ui` is
 /// on) and the System `OPTIONS` manifest, which the router mounts on the outer
 /// router above the CORS layer and therefore above authentication too.
 ///
@@ -818,7 +818,7 @@ async fn the_role_matrix_holds_for_every_gated_route() {
 /// authenticated-but-refused is `403`).
 ///
 /// Scope: the always-on family plus the System `OPTIONS` manifest. The OAS /
-/// Swagger pair is mounted only when `server.swagger_ui` is on (off here), and
+/// Swagger pair is mounted only when `api.openapi_ui` is on (off here), and
 /// the SMART discovery document only when SMART is enabled.
 #[tokio::test]
 async fn the_public_family_needs_no_credential_and_the_gated_surface_does() {
@@ -894,7 +894,7 @@ async fn every_route_outside_the_public_inventory_needs_a_credential() {
     );
 }
 
-/// `server.swagger_ui` is an access level over the Swagger UI and the OpenAPI
+/// `api.openapi_ui` is an access level over the Swagger UI and the OpenAPI
 /// documents (#3094): `private` needs a credential (`401` with the server's
 /// `WWW-Authenticate` challenge for an anonymous request, so a browser prompts),
 /// `admin_only` needs the admin role (`403` for a role-less principal), `off`
@@ -966,7 +966,7 @@ async fn the_swagger_surface_honours_its_access_level() {
             .await
             .status,
         StatusCode::NOT_FOUND,
-        "an unknown path is not mounted, whatever `swagger_ui` is"
+        "an unknown path is not mounted, whatever `openapi_ui` is"
     );
     let (_pg_off, smart_off) = app_with(AccessLevel::Private, false).await;
     assert_eq!(

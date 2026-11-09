@@ -11,7 +11,7 @@
 //! record carrying both. No openEHR ITS-REST operation governs it.
 //!
 //! Gating: mounted under `/admin/`, so the route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::admin.enabled` config gate
+//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
 //! (`405` with an empty `Allow` when off) unchanged.
 
 #![expect(

@@ -79,7 +79,7 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 
 > [!NOTE]
 > Small-cell suppression applies to the cohort query only. A cohort result
-> serving fewer distinct EHRs than `cohort.small_cell_threshold` has its rows
+> serving fewer distinct EHRs than `privacy.cohort.small_cell_threshold` has its rows
 > withheld and is marked suppressed; an ordinary `POST /query/aql` takes no
 > threshold, so a query returning one row about one rare condition is served
 > like any other.
@@ -105,19 +105,19 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 | Categories of personal data | Per access: the accessing person and organisation, the roles held, the object and its domain, the outcome, the declared purpose of use, the configured legal basis and the time. Refusals are recorded too, unattributed where no principal was established |
 | Recipients | *yours*: the local repository, plus any syslog or FHIR-feed Audit Record Repository configured |
 | Third-country transfers | *yours* |
-| Retention | `[audit.store] retention_days`, `0` meaning forever, reaped hourly otherwise. Where an active identifier rule names a jurisdiction with a registered floor, a shorter value is refused at boot |
+| Retention | `[audit.store] retention`, `0` meaning forever, reaped hourly otherwise. Where an active identifier rule names a jurisdiction with a registered floor, a shorter value is refused at boot |
 | Security measures | Records are hash-chained and verifiable with `audit.verify_audit_chain()`; the runtime role may insert and stamp delivery and nothing else; the `audit` schema sits outside both pseudonymisation domains; the syslog feed can run over RFC 5425 TLS with a client certificate |
 
 ## 6. Change-event feed (off by default)
 
 | Art. 30 field | What the software does |
 |---|---|
-| Purpose | Telling downstream systems that a commit happened, when `[outbox] readers` names a reader |
+| Purpose | Telling downstream systems that a commit happened, when `[record.change_feed] readers` names a reader |
 | Categories of data subject | Record subjects, indirectly |
 | Categories of personal data | A PHI-free envelope: the contribution id, the EHR id, the commit instant, and per version the object id, kind, version number, change type and template. No clinical content |
 | Recipients | The configured readers (FerroBRIDGE, for one), and whoever they deliver to |
 | Third-country transfers | *yours*: wherever the readers and their broker run |
-| Retention | Rows pruned `[outbox] retention_days` after their commit, seven days by default, once every active reader has acknowledged them |
+| Retention | Rows pruned `[record.change_feed] retention` after their commit, seven days by default, once every active reader has acknowledged them |
 | Security measures | Written in the same transaction as the commit it announces, so there is no event without its commit; read only by a caller holding the `__ferroehr.outbox` scope, one access record per read; the envelope carries identifiers, so a consumer still has to authenticate to the API to read anything |
 
 ## Fields no software can fill

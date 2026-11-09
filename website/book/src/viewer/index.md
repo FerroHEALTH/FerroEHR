@@ -154,7 +154,7 @@ notices.
 ## The deployment profile
 
 The status pill at the end of the top bar says whether the CDR answers. A
-deployment that declares the `sandbox` profile (`deployment_profile` in its
+deployment that declares the `sandbox` profile (`deployment.profile` in its
 configuration, reported on `GET /rest/status`) raises a band under the top bar
 on every signed-in page: this deployment must not hold real patient data,
 with the number of production separations the server reported as open (a
@@ -164,7 +164,7 @@ Its **Details** opens Server's Overview, which names each one. A production
 deployment raises no band. The
 quickstart and the composed stacks run as `sandbox`; a CDR older than the
 profile reports none and the viewer claims nothing. See the
-[deployment profile](../installation/configuration.md#deployment_profile) in
+[deployment profile](../installation/configuration.md#deployment.profile) in
 the server configuration.
 
 ## Configuration
@@ -185,12 +185,12 @@ override, because the viewer's variables share its prefix:
 | `server.*` | as the CDR's | The other keys of the CDR's [`[server]`](../installation/config-server.md) table (`header_read_timeout_ms`, `idle_timeout_ms`, `max_concurrent_requests`, `retry_after_s`, `trusted_proxies`, `forwarded_header`, `compression`, `compression_min_bytes`) apply as they do there. `base_path` and `caller_rate` are refused: the viewer's pages are served at `/`, and it mounts no per-caller limit. |
 | `telemetry.*` | as the CDR's | The CDR's [`[telemetry]`](../installation/config-server.md#telemetry) section: `format` (`auto`, `json` or `pretty`), `filter` (default `info,hyper=warn,tower=warn,h2=warn`, refused at startup when it does not parse; `RUST_LOG` is a lower-priority fallback, as on the CDR), `logged_query_parameters`, `environment` and the `[telemetry.otlp]` export. A viewer request line has the CDR's fields, and a panic writes the CDR's one fixed line. The `service.name` is `ferroehr-viewer`; the viewer serves no Prometheus surface, so its `http.server.request.duration` histogram leaves only over OTLP with `otlp.metrics`. |
 | `cdr.base_url` | `http://localhost:8080` | The CDR origin (`cdr.base_path` is appended). |
-| `cdr.base_path` | `/ferroehr/rest/openehr/v1` | The CDR's ITS-REST base path. Mirror of the CDR's own `rest.base_path`: set the same value here when a deployment [shortens it](../installation/config-server.md#base_path-shortening-the-rest-base-path), or the viewer calls paths the CDR does not serve. The status document, the OpenAPI documents and the SMART discovery document are derived from it by the same rule the CDR uses. |
+| `cdr.base_path` | `/ferroehr/rest/openehr/v1` | The CDR's ITS-REST base path. Mirror of the CDR's own `api.base_path`: set the same value here when a deployment [shortens it](../installation/config-server.md#base_path-shortening-the-rest-base-path), or the viewer calls paths the CDR does not serve. The status document, the OpenAPI documents and the SMART discovery document are derived from it by the same rule the CDR uses. |
 | `cdr.request_timeout_secs` | `30` | Per-request timeout toward the CDR. |
 | `cdr.tls.trust_roots_file` | unset | A PEM bundle of certificate authorities trusted for the CDR beside the platform's roots, for a CDR behind a private PKI. |
 | `cdr.tls.client_identity` (`_file`) | unset | The client certificate chain and its private key, in one PEM, presented to a CDR that asks for mutual TLS. |
 | `cdr.tls.min_version` | `"1.3"` | The oldest TLS version the CDR client speaks; `"1.2"` lowers it. |
-| `cdr.management_base_url` | derived from `cdr.base_url` | The CDR's management surface, base path included; set it when the CDR serves management on its own internal listener (`management.port`) or under a renamed base path. Drives Server's [management tabs](server.md#health-metrics-and-logging). |
+| `cdr.management_base_url` | derived from `cdr.base_url` | The CDR's management surface, base path included; set it when the CDR serves management on its own internal listener (`management.listen`) or under a renamed base path. Drives Server's [management tabs](server.md#health-metrics-and-logging). |
 | `auth.basic_enabled` | `true` | Offer the username/password form (validated against the CDR; held server-side). |
 | `auth.oidc_enabled` | `false` | Offer the OpenID Connect sign-in (authorization code + PKCE) at the provider `[oidc]` names. |
 | `auth.public_base_url` | — | The viewer's externally visible origin: the origin the same-origin check compares a post with, the base of `oidc.redirect_uri` (`<public_base_url>/auth/callback`) when that is not set, and the base of `oidc.post_logout_redirect_uri` (`<public_base_url>/sign-in?signed-out=1`, the signed-out page) when that is not set. |

@@ -276,7 +276,7 @@ mod tests {
             purpose_codes = ["TREAT", "ETREAT"]
             emergency_purpose_codes = ["ETREAT"]
             [store]
-            retention_years = 10
+            retention = "P10Y"
             [categories.templates]
             "Lab Report" = ["Laboratory-Reports"]
             "#,

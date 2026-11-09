@@ -269,10 +269,10 @@ async fn a_service_without_a_provider_refuses_naming_both_choices() {
         .await
         .expect_err("no provider installed");
     assert!(
-        refused.message().contains("provider = \"local\""),
+        refused.message().contains("subject_index = \"local\""),
         "{refused}"
     );
-    assert!(refused.message().contains("pixm_url"), "{refused}");
+    assert!(refused.message().contains("[pixm] url"), "{refused}");
 }
 
 /// The boot check reads the PIX Manager's `CapabilityStatement`; a refusal and

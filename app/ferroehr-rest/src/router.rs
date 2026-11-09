@@ -5,7 +5,7 @@
 //!
 //! Every ITS-REST resource path is relative to the configured API base path
 //! (overview `Resources.md` §Resource identification), so the generated API
-//! surface ([`crate::api`]) nests under `rest.base_path`. The `/rest/status`
+//! surface ([`crate::api`]) nests under `api.base_path`. The `/rest/status`
 //! document hangs off the `/ferroehr/rest` root and the System Options manifest
 //! answers at the base-path root itself.
 //!
@@ -424,7 +424,7 @@ fn management_rbac(state: &AppState) -> ferroehr::config::authz::RbacConfig {
 
 /// Builds the standalone management application for separate-port mode.
 ///
-/// The binary serves it on the management listener when `management.port` is
+/// The binary serves it on the management listener when `management.listen` is
 /// set: the management routes inside the family stack, with the same health
 /// routes.
 pub fn management_router(state: &AppState, authenticator: Arc<Authenticator>) -> Router {

@@ -83,16 +83,16 @@ pub struct StoreConfig {
     /// `SELECT * FROM audit.verify_audit_chain()` on demand. Default one week.
     /// A run that found damage is always followed by a full pass.
     pub full_verify_interval: Duration,
-    /// Retired: refused at load, naming `retention`.
+    /// Retired in v5.7.0: refused at load, naming `retention`.
     #[serde(skip_serializing)]
     pub retention_days: Removed,
-    /// Retired: refused at load, naming `retention`.
+    /// Retired in v5.7.0: refused at load, naming `retention`.
     #[serde(skip_serializing)]
     pub retention_years: Removed,
-    /// Retired: refused at load, naming `verify_interval`.
+    /// Retired in v5.7.0: refused at load, naming `verify_interval`.
     #[serde(skip_serializing)]
     pub verify_interval_seconds: Removed,
-    /// Retired: refused at load, naming `full_verify_interval`.
+    /// Retired in v5.7.0: refused at load, naming `full_verify_interval`.
     #[serde(skip_serializing)]
     pub full_verify_interval_seconds: Removed,
 }
@@ -196,31 +196,31 @@ pub struct SyslogConfig {
     pub spool_max_size: ByteSize,
     /// `[audit.syslog.retry]`: the wait between two delivery attempts.
     pub retry: SinkRetry,
-    /// Retired: refused at load, naming `[audit.syslog.tls] trust_roots_file`.
+    /// Retired in v5.7.0: refused at load, naming `[audit.syslog.tls] trust_roots_file`.
     #[serde(skip_serializing)]
     pub tls_ca_file: Removed,
-    /// Retired: refused at load, naming `[audit.syslog.tls] client_identity_file`.
+    /// Retired in v5.7.0: refused at load, naming `[audit.syslog.tls] client_identity_file`.
     #[serde(skip_serializing)]
     pub tls_identity_cert_file: Removed,
-    /// Retired: refused at load, naming `[audit.syslog.tls] client_identity_file`.
+    /// Retired in v5.7.0: refused at load, naming `[audit.syslog.tls] client_identity_file`.
     #[serde(skip_serializing)]
     pub tls_identity_key_file: Removed,
-    /// Retired: refused at load, naming the table's presence.
+    /// Retired in v5.7.0: refused at load, naming the table's presence.
     #[serde(skip_serializing)]
     pub enabled: Removed,
-    /// Retired: refused at load, naming `url`.
+    /// Retired in v5.7.0: refused at load, naming `url`.
     #[serde(skip_serializing)]
     pub host: Removed,
-    /// Retired: refused at load, naming `url`.
+    /// Retired in v5.7.0: refused at load, naming `url`.
     #[serde(skip_serializing)]
     pub port: Removed,
-    /// Retired: refused at load, naming `spool_max_events`.
+    /// Retired in v5.7.0: refused at load, naming `spool_max_events`.
     #[serde(skip_serializing)]
     pub spool_max_messages: Removed,
-    /// Retired: refused at load, naming `spool_max_size`.
+    /// Retired in v5.7.0: refused at load, naming `spool_max_size`.
     #[serde(skip_serializing)]
     pub spool_max_bytes: Removed,
-    /// Retired: refused at load, naming `retry.max_backoff`.
+    /// Retired in v5.7.0: refused at load, naming `retry.max_backoff`.
     #[serde(skip_serializing)]
     pub retry_max_ms: Removed,
 }
@@ -297,13 +297,13 @@ pub struct FhirFeedConfig {
     /// (`[audit.fhir_feed.oauth]`), the IHE IUA authorized client; absent, the
     /// feed sends the Basic credentials of `url`, if any.
     pub oauth: Option<ferrohealth_smart::config::credentials::OauthSection>,
-    /// Retired: refused at load, naming the table's presence.
+    /// Retired in v5.7.0: refused at load, naming the table's presence.
     #[serde(skip_serializing)]
     pub enabled: Removed,
-    /// Retired: refused at load, naming `poll_interval`.
+    /// Retired in v5.7.0: refused at load, naming `poll_interval`.
     #[serde(skip_serializing)]
     pub poll_interval_ms: Removed,
-    /// Retired: refused at load, naming `retry.max_backoff`.
+    /// Retired in v5.7.0: refused at load, naming `retry.max_backoff`.
     #[serde(skip_serializing)]
     pub retry_max_ms: Removed,
 }

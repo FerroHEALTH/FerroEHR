@@ -14,7 +14,8 @@ database:
 
 config:
   # The chart has no default posture and refuses to render without one.
-  deployment_profile: sandbox
+  deployment:
+    profile: sandbox
   auth:
     # `auth.enabled` is true in the chart defaults and a server with no
     # mechanism refuses to boot (RFC 9110 §11.6.1 — a 401 challenge must name a
@@ -63,7 +64,7 @@ config:
   # PIXm URL. The client secret is secrets.ehrIndexClientSecret.
   privacy:
     subject_namespaces: [urn:oid:2.999.7.1]
-  ehr_index:
+  pixm:
     assigning_authority: urn:oid:2.999.7.1
     oauth:
       token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token

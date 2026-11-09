@@ -38,34 +38,34 @@ default` writes an annotated template with every key at its default, and
 `ferroehr config check` validates the result without touching the database.
 
 **The schema is the binary's, and who applies it is a choice.** By default
-(`db.migrate = "apply"`) the server applies its embedded migrations at boot, so
-an empty database self-provisions. Setting `db.migrate = "verify"` makes the
+(`database.migrations = "apply"`) the server applies its embedded migrations at boot, so
+an empty database self-provisions. Setting `database.migrations = "verify"` makes the
 server issue no DDL at all (it checks the schema and refuses to start if it is
 not this build's) which lets the runtime role hold no DDL rights. Something
 else then runs `ferroehr db migrate` under a migrator role first. That check
 still reads every schema's migration state, so a least-privilege deployment
-also sets `db.migrate_url` to the credential that can. Both postures are laid
+also sets `database.migrate_url` to the credential that can. Both postures are laid
 out in [Operations → Applying migrations](../operations.md#applying-migrations).
 
 **A deployment declares what it may hold.** The top-level
-`deployment_profile` key is `sandbox` by default: the server starts whatever
+`deployment.profile` key is `sandbox` by default: the server starts whatever
 separations are missing and names every one of them on the banner, in the log
 and on `GET /management/status`. Set it to `production` and the server
 refuses to start while a separation is open and not accepted by name in
-`deployment_accepts`. Read
-[`deployment_profile`](configuration.md#deployment_profile) before you point a
+`deployment.accepts`. Read
+[`deployment.profile`](configuration.md#deployment.profile) before you point a
 deployment at real patient data.
 
 ## Choosing a specification generation
 
-One top-level key, **`spec_profile`**, selects which openEHR specification
+One top-level key, **`deployment.spec_profile`**, selects which openEHR specification
 generation set the deployment runs: `development` (the default: Reference
 Model 1.2.0 with BASE 1.3.0) or `stable` (the latest released generations:
 Reference Model 1.1.0 with BASE 1.2.0). It is a
 single coupled choice, and `stable → development` is always safe while the
 reverse is not, so decide it before you commit clinical data. The full
 semantics, defaults, and the direction contract are in
-[`spec_profile`](configuration.md#spec_profile).
+[`deployment.spec_profile`](configuration.md#deployment.spec_profile).
 
 > [!NOTE]
 > A Clinical Data Repository stores PHI. In production the database must be an

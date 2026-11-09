@@ -40,5 +40,5 @@ with its own hash chain over audit records.
 downloaded, not the data you stored. All three coexist and none substitutes
 for another.
 
-Every `[signing]` key, with defaults and environment forms, is in the
+Every `[record.signing]` key, with defaults and environment forms, is in the
 [configuration reference](../installation/config-auth.md#signing).

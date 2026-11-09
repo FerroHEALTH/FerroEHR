@@ -62,15 +62,22 @@ ServiceAccount name.
 
 {{/*
 The container port the ops-introspection surface (prometheus / metrics / info /
-env / loggers) is reachable on. When management.port is set the surface runs on
+env / loggers) is reachable on. When management.listen is set the surface runs on
 its own listener; otherwise it shares the main API port. The health probes are
 never on this port-selection path: they are always served on the main HTTP port.
 */}}
 {{- define "ferroehr.managementPort" -}}
-{{- if .Values.config.management.port }}
-{{- .Values.config.management.port }}
-{{- else }}
-{{- 8080 }}
+{{- include "ferroehr.managementOwnPort" . | default 8080 }}
+{{- end }}
+
+{{/*
+The port of the management surface's own listener, read from
+config.management.listen (`address:port`); empty when the surface shares the
+main API listener.
+*/}}
+{{- define "ferroehr.managementOwnPort" -}}
+{{- with .Values.config.management.listen }}
+{{- regexFind "[0-9]+$" (toString .) }}
 {{- end }}
 {{- end }}
 
@@ -257,7 +264,7 @@ The SecretUrl leaves are matched by PATH because their name (`url`) carries
 no shape a classifier can see — a URL's userinfo component is the credential.
 */}}
 {{- define "ferroehr.secretScan" -}}
-{{- $urlPaths := list "db.url" "storage.clinical.url" "storage.party.url" "storage.audit.url" "audit.fhir_feed.url" -}}
+{{- $urlPaths := list "database.url" "database.migrate_url" "database.clinical.url" "database.party.url" "database.audit.url" "database.clinical.migrate_url" "database.party.migrate_url" "database.audit.migrate_url" "audit.fhir_feed.url" -}}
 {{- $node := .node -}}
 {{- $path := .path -}}
 {{- $kind := kindOf $node -}}
@@ -295,10 +302,10 @@ The `secrets:` key that carries a routed secret, keyed on its leaf name.
 */}}
 {{- define "ferroehr.secretRemedy" -}}
 {{- $routes := dict
-  "url" "route it through the matching `secrets:` key — `auditFhirFeedUrl` (env; that key still has no `*_file` sibling), or `database.existingSecret` for the shared DSN (mounted via db.url_file) and `database.<domain>.existingSecret` for one storage domain's own (mounted via storage.<domain>.url_file)"
+  "url" "route it through the matching `secrets:` key — `auditFhirFeedUrl` (env; that key still has no `*_file` sibling), or `database.existingSecret` for the shared DSN (mounted via database.url_file) and `database.<domain>.existingSecret` for one storage domain's own (mounted via database.<domain>.url_file)"
   "key_passphrase" "set `secrets.signingKeyPassphrase` instead"
   "secret_access_key" "set `secrets.multimediaSecretAccessKey` instead"
-  "client_secret" "set `secrets.terminologyClientSecret` (for [terminology.server.oauth]) or `secrets.ehrIndexClientSecret` (for [ehr_index.oauth]) instead"
+  "client_secret" "set `secrets.terminologyClientSecret` (for [terminology.oauth]) or `secrets.ehrIndexClientSecret` (for [pixm.oauth]) instead"
   "password_hash" "set `secrets.basicUserPasswordHashes.<user>` instead, and leave only `user`/`scopes` under `config:` (the chart mounts the hash and injects password_hash_file)"
 -}}
 {{- get $routes . | default "no `secrets:` route exists for this key" -}}
@@ -324,19 +331,12 @@ secret VALUE refused outright.
 */}}
 {{- define "ferroehr.configToml" -}}
 {{- $config := omit .Values.config "files" -}}
-{{/* Multi-tenancy was withdrawn: the server rejects unknown configuration keys,
-     so a values file still carrying config.tenancy renders a ferroehr.toml the
-     pod refuses at boot and crash-loops on. Refuse it here, where the operator
-     reads the reason (CHANGELOG.md, ### Removed: multi-tenancy is achieved by
-     running separate instances). */}}
-{{- if hasKey $config "tenancy" -}}
-{{- fail "config.tenancy is set, and multi-tenancy no longer exists: it is achieved by running separate instances — one instance, one database, one set of domain roles per organisation (CHANGELOG.md, ### Removed). The server refuses unknown configuration keys, so rendering this key would crash-loop the pod at boot. Drop config.tenancy." -}}
-{{- end -}}
+
 {{/* EHDS Annex II 1.2: an installation that follows the quickstart rather than
      the instructions for use must not run the sandbox posture by default, so the
      chart has no default and refuses to render until the operator names one. */}}
-{{- if not $config.deployment_profile -}}
-{{- fail "config.deployment_profile is unset, and the chart has no default: choose the posture this installation runs. `sandbox` must not hold real patient data (the server names every missing separation on every boot); `production` refuses to boot while a separation is missing (start from values-production.yaml). Set it in your values file or with --set config.deployment_profile=sandbox|production." -}}
+{{- if not (dig "deployment" "profile" "" $config) -}}
+{{- fail "config.deployment.profile is unset, and the chart has no default: choose the posture this installation runs. `sandbox` must not hold real patient data (the server names every missing separation on every boot); `production` refuses to boot while a separation is missing (start from values-production.yaml). Set it in your values file or with --set config.deployment.profile=sandbox|production." -}}
 {{- end -}}
 {{- $findings := include "ferroehr.secretScan" (dict "node" $config "path" "") | trim -}}
 {{- $lines := list -}}
@@ -364,34 +364,36 @@ secret VALUE refused outright.
 {{- end -}}
 {{- end -}}
 {{- if .Values.secrets.terminologyClientSecret -}}
-{{- $oauth := dig "terminology" "server" "oauth" "" $rendered -}}
+{{- $oauth := dig "terminology" "oauth" "" $rendered -}}
 {{- if not (kindIs "map" $oauth) -}}
-{{- fail "secrets.terminologyClientSecret is set and config.terminology.server.oauth declares no grant (declare its token_endpoint or issuer and its client_id there; only the secret belongs here)" -}}
+{{- fail "secrets.terminologyClientSecret is set and config.terminology.oauth declares no grant (declare its token_endpoint or issuer and its client_id there; only the secret belongs here)" -}}
 {{- end -}}
 {{- $_ := set $oauth "client_secret_file" (printf "%s/terminology.server.oauth.client_secret" (include "ferroehr.secretMountPath" $)) -}}
 {{- end -}}
 {{- if .Values.secrets.ehrIndexClientSecret -}}
-{{- $oauth := dig "ehr_index" "oauth" "" $rendered -}}
+{{- $oauth := dig "pixm" "oauth" "" $rendered -}}
 {{- if not (kindIs "map" $oauth) -}}
-{{- fail "secrets.ehrIndexClientSecret is set and config.ehr_index.oauth holds no grant (declare its token_endpoint or issuer and its client_id there; only the secret belongs here)" -}}
+{{- fail "secrets.ehrIndexClientSecret is set and config.pixm.oauth holds no grant (declare its token_endpoint or issuer and its client_id there; only the secret belongs here)" -}}
 {{- end -}}
 {{- $_ := set $oauth "client_secret_file" (printf "%s/ehr_index.oauth.client_secret" (include "ferroehr.secretMountPath" $)) -}}
 {{- end -}}
-{{- /* The EHR index provider. With ferropix.enabled the in-cluster FerroPIX is
+{{- /* The subject index. With ferropix.enabled the in-cluster FerroPIX is
        the IHE patient identity source, injected as the terminology server is
-       below, and a provider or pixm_url the operator also wrote is refused for
-       the same reason. Without it the values must name a source or the local
-       opt-in, because the server refuses to boot on neither. */ -}}
-{{- if not (hasKey $rendered "ehr_index") -}}{{- $_ := set $rendered "ehr_index" (dict) -}}{{- end -}}
-{{- $ehrIndex := get $rendered "ehr_index" -}}
+       below, and a subject_index or pixm.url the operator also wrote is
+       refused for the same reason. Without it the values must name a source or
+       the local opt-in, because the server refuses to boot on neither. */ -}}
+{{- if not (hasKey $rendered "record") -}}{{- $_ := set $rendered "record" (dict) -}}{{- end -}}
+{{- $record := get $rendered "record" -}}
+{{- $pixm := get $rendered "pixm" | default dict -}}
 {{- if $.Values.ferropix.enabled -}}
-{{- if or (hasKey $ehrIndex "provider") (hasKey $ehrIndex "pixm_url") -}}
-{{- fail "ferropix.enabled=true already points config.ehr_index at the in-cluster FerroPIX (provider = \"ihe\" and its pixm_url), so declaring config.ehr_index.provider or config.ehr_index.pixm_url too is two answers to one question: drop them, or set ferropix.enabled=false to name another identity source or provider = \"local\"." -}}
+{{- if or (hasKey $record "subject_index") (hasKey $pixm "url") -}}
+{{- fail "ferropix.enabled=true already points the subject index at the in-cluster FerroPIX (config.record.subject_index = \"pixm\" and config.pixm.url), so declaring either too is two answers to one question: drop them, or set ferropix.enabled=false to name another identity source or subject_index = \"local\"." -}}
 {{- end -}}
-{{- $_ := set $ehrIndex "provider" "ihe" -}}
-{{- $_ := set $ehrIndex "pixm_url" (include "ferropix.fhirBaseUrl" (dict "Values" $.Values.ferropix "Release" $.Release "Chart" (dict "Name" "ferropix"))) -}}
-{{- else if not (or (eq (toString (get $ehrIndex "provider")) "local") (get $ehrIndex "pixm_url")) -}}
-{{- fail "ferropix.enabled=false and config.ehr_index names no patient identity source: set config.ehr_index.pixm_url and assigning_authority (an IHE PIXm endpoint), or opt in to the in-instance map with config.ehr_index.provider=local for a FerroEHR run on its own, or set ferropix.enabled=true." -}}
+{{- $_ := set $record "subject_index" "pixm" -}}
+{{- $_ := set $pixm "url" (include "ferropix.fhirBaseUrl" (dict "Values" $.Values.ferropix "Release" $.Release "Chart" (dict "Name" "ferropix"))) -}}
+{{- $_ := set $rendered "pixm" $pixm -}}
+{{- else if not (or (eq (toString (get $record "subject_index")) "local") (get $pixm "url")) -}}
+{{- fail "ferropix.enabled=false and the configuration names no patient identity source: set config.record.subject_index=pixm with config.pixm.url and assigning_authority (an IHE PIXm endpoint), or opt in to the in-instance map with config.record.subject_index=local for a FerroEHR run on its own, or set ferropix.enabled=true." -}}
 {{- end -}}
 {{- if and $.Values.terminology.enabled $.Values.terminology.wireCdr -}}
 {{- /* The in-cluster FerroTERM is wired the same way the mounted secret paths
@@ -404,26 +406,20 @@ secret VALUE refused outright.
        An injection that overwrites is indistinguishable from one that agrees:
        the render succeeds either way and the value an operator reads back in
        their own values file is not the value the server runs on. The chart's
-       own `config.terminology.server` defaults therefore declare none of
-       `enabled`, `url` and `fail_on_error` — a defaulted key cannot be told
-       apart from a typed one, and the server's own defaults (off, no URL,
-       fail-open) are what is left to it. */ -}}
+       own `config.terminology` defaults therefore declare neither `url` nor
+       `on_error` — a defaulted key cannot be told apart from a typed one, and
+       the server's own defaults (no server, accept) are what is left to it. */ -}}
 {{- if not (hasKey $rendered "terminology") -}}{{- $_ := set $rendered "terminology" (dict) -}}{{- end -}}
-{{- $terminology := get $rendered "terminology" -}}
-{{- if not (hasKey $terminology "server") -}}{{- $_ := set $terminology "server" (dict) -}}{{- end -}}
-{{- $server := get $terminology "server" -}}
+{{- $server := get $rendered "terminology" -}}
+{{- $onError := ternary "refuse" "accept" $.Values.terminology.failOnError -}}
 {{- if hasKey $server "url" -}}
-{{- fail "terminology.enabled=true already points config.terminology.server.url at the in-cluster FerroTERM Service, so declaring it in values too is two answers to one question: drop config.terminology.server.url, or set terminology.wireCdr=false to keep your own server and run FerroTERM unwired." -}}
+{{- fail "terminology.enabled=true already points config.terminology.url at the in-cluster FerroTERM Service, so declaring it in values too is two answers to one question: drop config.terminology.url, or set terminology.wireCdr=false to keep your own server and run FerroTERM unwired." -}}
 {{- end -}}
-{{- if and (hasKey $server "enabled") (not (get $server "enabled")) -}}
-{{- fail "config.terminology.server.enabled=false is set while terminology.enabled=true and terminology.wireCdr=true, which inject enabled=true — the rendered ferroehr.toml would say the opposite of your values file, and the CDR would resolve bindings against FerroTERM anyway. Drop config.terminology.server.enabled, or set terminology.wireCdr=false to keep your own [terminology.server] and run FerroTERM unwired." -}}
-{{- end -}}
-{{- if and (hasKey $server "fail_on_error") (ne (get $server "fail_on_error") $.Values.terminology.failOnError) -}}
-{{- fail (printf "config.terminology.server.fail_on_error=%v contradicts terminology.failOnError=%v, and the wiring injects the second — the rendered ferroehr.toml would carry a fail posture your values file denies. Set terminology.failOnError=%v and drop config.terminology.server.fail_on_error, or set terminology.wireCdr=false to keep your own [terminology.server]." (get $server "fail_on_error") $.Values.terminology.failOnError (get $server "fail_on_error")) -}}
+{{- if and (hasKey $server "on_error") (ne (toString (get $server "on_error")) $onError) -}}
+{{- fail (printf "config.terminology.on_error=%v contradicts terminology.failOnError=%v, and the wiring injects on_error = %s — the rendered ferroehr.toml would carry a fail posture your values file denies. Drop config.terminology.on_error and set terminology.failOnError, or set terminology.wireCdr=false to keep your own [terminology]." (get $server "on_error") $.Values.terminology.failOnError $onError) -}}
 {{- end -}}
 {{- $_ := set $server "url" (printf "http://%s:%v/r4b" (include "ferroehr.terminologyFullname" $) $.Values.terminology.service.port) -}}
-{{- $_ := set $server "enabled" true -}}
-{{- $_ := set $server "fail_on_error" $.Values.terminology.failOnError -}}
+{{- $_ := set $server "on_error" $onError -}}
 {{- end -}}
 {{- /* The usage report: the switch is the top-level usageReport.enabled value,
        and the deployment kind the report states is always `helm` under this
@@ -950,14 +946,14 @@ because a client speaking plain HTTP to a TLS listener fails every call.
 {{/*
 The in-cluster root of the release's own CDR management surface, its base path
 included, as the viewer's `[cdr] management_base_url` names it. On the API port
-it is the CDR origin; on its own port (config.management.port) the Service
+it is the CDR origin; on its own port (config.management.listen) the Service
 publishes that port and the listener serves plain HTTP whatever
 config.server.tls says, so the scheme there is always http.
 */}}
 {{- define "ferroehr.cdrManagementUrl" -}}
 {{- $basePath := .Values.config.management.base_path | trimSuffix "/" }}
-{{- if .Values.config.management.port }}
-{{- printf "http://%s:%v%s" (include "ferroehr.fullname" .) .Values.config.management.port $basePath }}
+{{- with include "ferroehr.managementOwnPort" . }}
+{{- printf "http://%s:%v%s" (include "ferroehr.fullname" $) . $basePath }}
 {{- else }}
 {{- printf "%s%s" (include "ferroehr.cdrOrigin" .) $basePath }}
 {{- end }}
@@ -966,10 +962,10 @@ config.server.tls says, so the scheme there is always http.
 {{/*
 The in-cluster ITS-REST root of the release's own CDR, as FerroBRIDGE's `[cdr]
 base_url` names it: the origin plus the REST base path, which is the server's
-own default when config.rest.base_path is unset.
+own default when config.api.base_path is unset.
 */}}
 {{- define "ferroehr.cdrRestUrl" -}}
-{{- printf "%s%s" (include "ferroehr.cdrOrigin" .) (dig "rest" "base_path" "/ferroehr/rest/openehr/v1" (.Values.config | default dict)) }}
+{{- printf "%s%s" (include "ferroehr.cdrOrigin" .) (dig "api" "base_path" "/ferroehr/rest/openehr/v1" (.Values.config | default dict)) }}
 {{- end }}
 
 {{/*

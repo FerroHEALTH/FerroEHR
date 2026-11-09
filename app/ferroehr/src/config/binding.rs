@@ -62,7 +62,7 @@ pub struct PartyBindingConfig {
     /// The age past which `ferroehr party-binding check` reports a
     /// provisional `PERSON`.
     pub provisional_report_after: ferrohealth_config::units::Duration,
-    /// Retired: refused at load, naming `provisional_report_after`.
+    /// Retired in v5.7.0: refused at load, naming `provisional_report_after`.
     #[serde(skip_serializing)]
     pub provisional_report_days: ferrohealth_config::removed::Removed,
     /// The removed `enabled` key, held only so its presence is refused by

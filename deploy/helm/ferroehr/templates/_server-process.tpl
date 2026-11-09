@@ -42,7 +42,7 @@ the same configuration (`ferroehr definitions load`).
        reaches: preparation runs per database, and under
        migrate=verify it reads that database's ext and domain
        bookkeeping, which the domain's DML-only role cannot. */}}
-- name: FERROEHR__DATABASE__MIGRATE__{{ upper $domain }}__URL_FILE
+- name: FERROEHR__DATABASE__{{ upper $domain }}__MIGRATE_URL_FILE
   value: {{ printf "%s/storage.migrate.%s.url" (include "ferroehr.secretMountPath" $) $domain | quote }}
 {{- end }}
 {{- end }}

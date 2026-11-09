@@ -67,7 +67,7 @@ probes_original_state() {
   local up_status=0
   (
     unset FERROEHR__RECORD__MULTIMEDIA__ENABLED FERROEHR__RECORD__MULTIMEDIA__URL \
-      FERROEHR__RECORD__MULTIMEDIA__BUCKET FERROEHR__RECORD__MULTIMEDIA__ALLOW_HTTP
+      FERROEHR__RECORD__MULTIMEDIA__BUCKET
     dc -f docker-compose.yml up -d --wait ferroehr ferroehr-provision >/dev/null 2>&1
   ) || up_status=$?
 

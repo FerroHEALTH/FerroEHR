@@ -81,7 +81,7 @@ pub struct Committed {
     /// here so the service layer never re-reads the row it just wrote.
     pub time_committed: jiff::Timestamp,
     /// `true` when nothing was committed: the update's content equalled the
-    /// current version's and `[record.versioning] skip_identical_resend` answered
+    /// current version's and `[record.versioning] idempotent_resend` answered
     /// with that version (#4415). The fields then name the existing version.
     pub skipped: bool,
     /// SHA-256 over the canonical body with the root `uid` removed

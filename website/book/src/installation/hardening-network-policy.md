@@ -116,7 +116,7 @@ The chart's bounds, and where they come from:
 |---|---|---|
 | `resources.requests.cpu` | `250m` | the scheduling floor: enough to boot, run migrations and serve steady traffic. An idle-but-serving pod uses far less, so this is deliberately generous rather than tuned to observed idle: a request is what the scheduler reserves, and a too-tight one gets the pod placed on a node with nothing left for a traffic spike. |
 | `resources.requests.memory` | `256Mi` | observed steady-state resident use is a fraction of this, and the headroom is for the connection pool, the template and WebTemplate caches, and the per-request AQL working set. |
-| `resources.limits.cpu` | `2` | AQL execution is the CPU-heavy path and is bounded per query by `config.query.timeout_ms`; two cores lets a query and normal traffic proceed without throttling. CPU limits throttle rather than kill, so this trades latency, not availability. |
+| `resources.limits.cpu` | `2` | AQL execution is the CPU-heavy path and is bounded per query by `config.record.query.timeout`; two cores lets a query and normal traffic proceed without throttling. CPU limits throttle rather than kill, so this trades latency, not availability. |
 | `resources.limits.memory` | `1Gi` | a **hard** ceiling: exceeding it is an OOM kill, so it sits well above observed use. The application-level body and result limits below are what keep a single request from approaching it. |
 
 Those figures are for a modest replica. Tune them from your own metrics rather than
@@ -128,9 +128,9 @@ viewer has its own, smaller bounds under `viewer.resources`.
 nested bounds, each catching what the next cannot:
 
 1. **Per request:** `config.server.body_limit_bytes` and
-   `config.rest.body_limit_bytes` (413 on an over-large body),
-   `config.server.request_timeout_ms` (408), `config.query.timeout_ms` and `config.query.max_result_rows` (a query
-   cannot return an unbounded row set), `config.db.statement_timeout_ms` as the
+   `config.api.body_limit` (413 on an over-large body),
+   `config.server.request_timeout_ms` (408), `config.record.query.timeout` and `config.record.query.max_result_rows` (a query
+   cannot return an unbounded row set), `config.database.statement_timeout` as the
    backstop the HTTP timeout cannot be, because dropping a handler future does not
    cancel the statement PostgreSQL is running.
 2. **Per connection / per caller:** `config.server.header_read_timeout_ms`
@@ -286,13 +286,13 @@ unless its key is set, so add only the rows you have switched on:
 | PostgreSQL | the DSN, **never optional** | the DSN's (5432) | off-cluster (managed) |
 | OTLP collector | `config.telemetry.otlp.endpoint` | 4317 gRPC / 4318 HTTP | in-cluster |
 | Token issuer (metadata + key set) | each `config.auth.issuer` table, **unless** it sets its own `jwks_file` | 443 | off-cluster |
-| External policy decision point | `config.authz.abac.engine: remote` plus `config.authz.abac.remote.server` | the URL's (3001) | in-cluster |
-| FHIR terminology server | `config.terminology.server.enabled` plus its `url` | 443 | off-cluster |
+| External policy decision point | `config.authz.abac.engine: remote` plus `config.authz.abac.remote.url` | the URL's (3001) | in-cluster |
+| FHIR terminology server | `config.the [terminology] table` plus its `url` | 443 | off-cluster |
 | FerroTERM in the cluster | `terminology.enabled` | 8080 | in-cluster, and the **chart renders this rule itself** — it chose the destination when it wired the CDR at the Service, so you do not add it to `rules`. Omitted, terminology would fail silently: under the shipped fail-open posture an unresolvable binding is accepted, so nothing refuses and nothing logs. |
-| Terminology token endpoint | `config.terminology.server.oauth.token_endpoint` | 443 | off-cluster |
-| Object store | `config.multimedia.enabled` plus `config.multimedia.endpoint` (unset means AWS regional resolution) | 443, or the endpoint's | off-cluster |
-| Syslog audit repository | `config.audit.syslog.enabled` | 6514 TCP (TLS) | off-cluster |
-| FHIR audit repository | `config.audit.fhir_feed.enabled` plus `secrets.auditFhirFeedUrl` | 443 | off-cluster |
+| Terminology token endpoint | `config.[terminology].oauth.token_endpoint` | 443 | off-cluster |
+| Object store | `config.record.multimedia.enabled` plus `config.record.multimedia.url` (unset means AWS regional resolution) | 443, or the endpoint's | off-cluster |
+| Syslog audit repository | `config.audit.syslog.url` | 6514 TCP (TLS) | off-cluster |
+| FHIR audit repository | `config.audit.fhir_feed.url` plus `secrets.auditFhirFeedUrl` | 443 | off-cluster |
 | FerroPULSE usage report | `usageReport.enabled`, **on by default** | 443 | off-cluster, `report.ferropulse.eu`. Without the rule the report logs a warning and nothing else is affected; see [Usage report](../usage-report.md#network) |
 
 The viewer, when enabled, carries its own egress policy rather than

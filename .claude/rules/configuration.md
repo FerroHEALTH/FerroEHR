@@ -54,7 +54,7 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
   by the loader. Redaction is a property of the type — never a per-endpoint
   redactor list. A new secret field MUST use these types + add a `*_file` sibling.
 - **Zero-config boot (P-2).** An empty file and empty env must boot with
-  dev-appropriate defaults; the dev-default `db.url` is announced with a boot
+  dev-appropriate defaults; the dev-default `database.url` is announced with a boot
   `warn` (never a silent production trap).
 
 ## When you change the schema
@@ -63,10 +63,14 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
    deny_unknown_fields)]`, `Default` is the source of truth).
 2. If you add/rename a key, update the annotated template
    `app/ferroehr/assets/ferroehr.default.toml` **in the same change** — the
-   template-sync tests (`config::tests`) fail otherwise. There is NO legacy
-   alias layer (greenfield, owner ruling 2026-07-15): renamed/removed keys
-   simply fail at boot via the strict sweep's did-you-mean; never add a
-   remapping table.
+   template-sync tests (`config::tests`) fail otherwise. A key is never read
+   under two names: no alias layer, no remapping table. A renamed or removed
+   key keeps a `ferrohealth_config::removed::Removed` field that
+   `config::retired::removals` refuses at load naming its replacement, for ONE
+   release only (owner rule 2026-11-09): the refusal records the release that
+   introduced it, ships in that release with the upgrade step in the
+   changelog fragment, and the next release deletes it so
+   `deny_unknown_fields` takes over.
 3. If the change is user-visible, update
    `website/book/src/installation/configuration.md`, the Helm `values.yaml`
    `config:` block + golden renders (`deploy/helm/validate.sh --update`), and

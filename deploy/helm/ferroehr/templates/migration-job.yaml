@@ -131,7 +131,7 @@ spec:
             {{- if $dsn.migrateExistingSecret }}
             # The migrator of the database this domain lives in: the Job applies
             # the schema in every database the configuration places a domain in.
-            - name: FERROEHR__DATABASE__MIGRATE__{{ upper $domain }}__URL_FILE
+            - name: FERROEHR__DATABASE__{{ upper $domain }}__MIGRATE_URL_FILE
               value: {{ printf "%s/storage.migrate.%s.url" (include "ferroehr.secretMountPath" $) $domain | quote }}
             {{- end }}
             {{- end }}

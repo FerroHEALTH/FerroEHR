@@ -1332,7 +1332,9 @@ async fn a_pooled_connection_applies_the_configured_statement_timeout() {
         ..db::DbConfig::default()
     };
 
-    let pool = db::connect(&settings).await.expect("clinical pool");
+    let pool = db::connect_domain(&settings, db::domain::Domain::Clinical)
+        .await
+        .expect("clinical pool");
     let timeout: String = sqlx::query_scalar("SHOW statement_timeout")
         .fetch_one(&pool)
         .await

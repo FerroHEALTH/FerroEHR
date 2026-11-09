@@ -179,7 +179,7 @@ pub struct FerroEhrService {
     /// [`Self::new`] so a bare service (tests, embeddings) never silently drops
     /// an event; the binary sets the real gate via [`Self::with_outbox_enabled`].
     outbox_enabled: bool,
-    /// `[record.versioning] skip_identical_resend` (#4415); the binary sets it via
+    /// `[record.versioning] idempotent_resend` (#4415); the binary sets it via
     /// [`Self::with_skip_identical_resend`].
     skip_identical_resend: bool,
     /// The `[[authz.origin]]` register: which origin a direct commit by a registered
@@ -496,7 +496,7 @@ impl FerroEhrService {
         &self.origins
     }
 
-    /// Sets `[record.versioning] skip_identical_resend` (#4415): an update whose
+    /// Sets `[record.versioning] idempotent_resend` (#4415): an update whose
     /// content equals the current version's answers with that version and
     /// commits nothing.
     #[must_use]

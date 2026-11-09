@@ -112,14 +112,14 @@ spec:
             {{- end }}
             {{- if .Values.config.management.enabled }}
             # The management surface as the CDR serves it: on its own port when
-            # config.management.port is set, under config.management.base_path
+            # config.management.listen is set, under config.management.base_path
             # either way, so the viewer never guesses either.
             - name: FERROEHR_VIEWER__CDR__MANAGEMENT_BASE_URL
               value: {{ include "ferroehr.cdrManagementUrl" . | quote }}
             {{- end }}
-            {{- with (dig "rest" "base_path" "" (.Values.config | default dict)) }}
+            {{- with (dig "api" "base_path" "" (.Values.config | default dict)) }}
             # The viewer's base path mirrors the CDR's own, so shortening
-            # config.rest.base_path cannot leave the two disagreeing.
+            # config.api.base_path cannot leave the two disagreeing.
             - name: FERROEHR_VIEWER__CDR__BASE_PATH
               value: {{ . | quote }}
             {{- end }}
@@ -325,10 +325,10 @@ spec:
       ports:
         - protocol: TCP
           port: 8080
-        {{- if and .Values.config.management.enabled .Values.config.management.port }}
+        {{- if and .Values.config.management.enabled (include "ferroehr.managementOwnPort" .) }}
         # The management surface on its own listener, which the env above names.
         - protocol: TCP
-          port: {{ .Values.config.management.port }}
+          port: {{ include "ferroehr.managementOwnPort" . }}
         {{- end }}
     # DNS. Without this the Service name above does not resolve and the viewer
     # fails in a way that looks like the CDR being down.

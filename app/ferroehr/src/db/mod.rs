@@ -19,7 +19,7 @@
 //! serves them all. [`verify_domain_isolation`] is the boot gate that refuses
 //! to serve when the runtime roles can read across those boundaries, when two
 //! separately-configured domains turn out to authenticate as one role, or —
-//! under `deployment_profile = "production"` — when a domain role is missing
+//! under `deployment.profile = "production"` — when a domain role is missing
 //! altogether. The `sea-query` identifier vocabulary for the live schema lives
 //! in [`iden`]. This is the defining module for the whole bootstrap surface,
 //! with no re-exports.
@@ -317,7 +317,7 @@ pub enum DbError {
     /// the grants to be real.
     #[error(
         "database role `{role}` does not exist, so the `{domain}` domain's grants separate \
-         nothing and this check has nothing to measure. deployment_profile = \"production\" \
+         nothing and this check has nothing to measure. deployment.profile = \"production\" \
          requires the runtime roles to exist: the migrations create them only when the migrator \
          holds CREATEROLE, so provision them (CREATE ROLE {role} NOLOGIN NOINHERIT) and grant \
          each pool's login role membership in exactly one of them"
@@ -512,21 +512,6 @@ pub async fn connect_domain(settings: &DbConfig, domain: Domain) -> Result<PgPoo
         .connect(settings.dsn(domain))
         .await?;
     Ok(pool)
-}
-
-/// Create the clinical pool on the shared `[database] url`, for a caller that holds
-/// only a [`DbConfig`].
-///
-/// [`connect_domain`] over a default [`StorageConfig`] — the co-located
-/// deployment's clinical pool. The test harness and the operator checks use it;
-/// the serving path uses [`connect_domains`], which honours every
-/// `[database.<domain>]` DSN.
-///
-/// # Errors
-///
-/// Whatever [`connect_domain`] returns.
-pub async fn connect(settings: &DbConfig) -> Result<PgPool, DbError> {
-    connect_domain(settings, Domain::Clinical).await
 }
 
 /// Create all three domain pools.
@@ -1324,7 +1309,7 @@ async fn verify_role_barriers(pool: &PgPool, profile: DeploymentProfile) -> Resu
                     %domain,
                     "the domain role does not exist, so this database enforces no grant \
                      separation for that domain; provision the runtime roles (the migrations \
-                     create them only with CREATEROLE). deployment_profile = \"production\" \
+                     create them only with CREATEROLE). deployment.profile = \"production\" \
                      refuses to boot in this state"
                 );
                 continue;

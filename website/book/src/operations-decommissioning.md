@@ -103,8 +103,8 @@ The command runs in this order:
    `DROP SCHEMA … CASCADE`. The cascade takes every table, row, function,
    partition and stored setting in them. A database is either erased whole or left as it was.
 
-It connects as `ferroehr db migrate` does: on `[db] migrate_url` (or
-`[db] url` when that is unset) for every domain in that database, and on a
+It connects as `ferroehr db migrate` does: on `[database] migrate_url` (or
+`[database] url` when that is unset) for every domain in that database, and on a
 relocated domain's own DSN otherwise. That credential must own the schemas,
 which the credential that ran the migrations does.
 
@@ -150,7 +150,7 @@ DROP DATABASE ferroehr WITH (FORCE);
 
 Run it as the owner or a superuser, connected to another database
 ([DROP DATABASE](https://www.postgresql.org/docs/18/sql-dropdatabase.html)).
-Repeat it for every database `[storage.party]` or `[storage.audit]` names.
+Repeat it for every database `[database.party]` or `[database.audit]` names.
 
 The roles are cluster-wide, so neither command removes them: the migrations
 create `ferroehr_migrator`, `ferroehr_clinical`, `ferroehr_clinical_reader`,

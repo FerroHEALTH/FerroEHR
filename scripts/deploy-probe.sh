@@ -85,7 +85,6 @@ echo
 export FERROEHR__RECORD__MULTIMEDIA__ENABLED=true
 export FERROEHR__RECORD__MULTIMEDIA__URL=http://seaweedfs:8333
 export FERROEHR__RECORD__MULTIMEDIA__BUCKET=openehr-multimedia
-export FERROEHR__RECORD__MULTIMEDIA__ALLOW_HTTP=true
 # A probe instance sends no usage report; every family's stack reads this.
 export FERROEHR__USAGE_REPORT__ENABLED=false
 

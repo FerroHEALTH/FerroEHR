@@ -94,12 +94,11 @@ migrations:
     existingSecretKey: FERROEHR__DATABASE__MIGRATE_URL
 
 config:
-  deployment_profile: production
-  # The one gap this overlay accepts, and why: see plaintext_listener above.
-  deployment_accepts: [plaintext_listener]
+  deployment:
+    profile: production
+    # The one gap this overlay accepts, and why: see plaintext_listener above.
+    accepts: [plaintext_listener]
 
-  db:
-    migrate: verify
 
   auth:
     enabled: true
@@ -156,12 +155,6 @@ config:
   # chart injects the provider and its in-cluster URL. Name the clinical domain
   # and the client credentials grant; the client secret comes from a Secret you
   # own (extraEnv below).
-  ehr_index:
-    assigning_authority: urn:oid:2.999.7.1
-    oauth:
-      token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token
-      client_id: ferroehr
-      scope: system/Patient.rs
 
   audit:
     enabled: true
@@ -169,6 +162,14 @@ config:
     fail_mode: closed
     store:
       enabled: true
+  pixm:
+    assigning_authority: urn:oid:2.999.7.1
+    oauth:
+      token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token
+      client_id: ferroehr
+      scope: system/Patient.rs
+  database:
+    migrations: verify
 
 # ── Network: TLS at the Ingress, and only the controller reaches the pods ─────
 ingress:

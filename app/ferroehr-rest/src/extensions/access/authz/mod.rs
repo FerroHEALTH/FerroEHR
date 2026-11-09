@@ -57,6 +57,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use ferrohealth_config::units::Duration;
 use http::Method;
 
 /// An attribute-resolution failure (a DB lookup error). Fail-closed at the
@@ -115,8 +116,8 @@ pub type ContentOfVersionFn =
 /// The deployment's rules for the category and origin attributes (EHDS
 /// Annex II 3.4).
 ///
-/// The category map every access is classified through, the `[[authz.origin]]`
-/// register, and the `system_id` a direct commit by an unregistered client is
+/// The category map every access is classified through, the origin register
+/// (`[[authz.origin]]`), and the `system_id` a direct commit by an unregistered client is
 /// stamped with.
 #[derive(Debug, Clone)]
 pub struct ContentRules {
@@ -176,10 +177,7 @@ pub fn build_engine(config: &AbacConfig) -> Result<Option<Arc<dyn PolicyEngine>>
                 .policy_dir
                 .as_deref()
                 .ok_or_else(|| AuthzError::Load("abac.cedar.policy_dir is not set".into()))?;
-            let reload = config
-                .cedar
-                .reload_interval
-                .map(ferrohealth_config::units::Duration::get);
+            let reload = config.cedar.reload_interval.map(Duration::get);
             Arc::new(CedarEngine::from_directory(request::model(), dir, reload)?)
         }
         AbacEngineKind::Remote => Arc::new(remote_pdp(config)?),

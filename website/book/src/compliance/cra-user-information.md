@@ -255,7 +255,7 @@ data;"
   open. The `production` profile refuses to start while one of the
   separations it checks is open and not accepted by name, and a gap you accept
   by name is stated on every boot and on `GET /management/status`
-  ([`deployment_profile`](../installation/configuration.md#deployment_profile)).
+  ([`deployment.profile`](../installation/configuration.md#deployment.profile)).
   A configuration change that opens such a gap shows there.
 - **Integrations.** Every outbound integration is off by default. Turning one
   on sends data to another system, and the

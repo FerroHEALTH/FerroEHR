@@ -513,7 +513,7 @@ async fn resend_records(pool: &PgPool, expected: usize) -> Vec<(String, String)>
     }
 }
 
-/// With `[record.versioning] skip_identical_resend` on, an update whose content
+/// With `[record.versioning] idempotent_resend` on, an update whose content
 /// equals the current version's commits nothing and answers with that version;
 /// the access log keeps exactly one `resend` record naming the version matched
 /// and its content digest (the entry Cadasto writes for a skipped send,

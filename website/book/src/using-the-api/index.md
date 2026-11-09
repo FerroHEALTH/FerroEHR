@@ -43,7 +43,7 @@ The status and documentation routes hang off the **REST root**, which the server
 derives from the base path by dropping the segments that name the openEHR API:
 `/ferroehr/rest` by default. The public, unauthenticated status probe is at
 `/ferroehr/rest/status` and interactive docs at `/ferroehr/rest/swagger-ui` at
-the access level `swagger_ui` names (by default any authenticated principal, so
+the access level `openapi_ui` names (by default any authenticated principal, so
 a browser prompts for the API credential; the documents list the whole enabled
 operation surface). Every deployment serves that UI from its own routes, so your
 own server always documents its own surface. The health probes stay at the
@@ -82,7 +82,7 @@ Two things to know before you build discovery on it:
   FerroEHR's own extension families (health, management, messaging, item tags,
   the archetype-source routes) declare themselves through the served OpenAPI
   document instead.
-- **The identity fields are configurable** (`[rest.identity]`, see
+- **The identity fields are configurable** (`[api.options]`, see
   [Server, database & telemetry](../installation/config-server.md#restidentity));
   their defaults are the build's own provenance.
 - **`conformance_profile` is derived from the conformance record.** The build

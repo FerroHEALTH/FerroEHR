@@ -21,8 +21,8 @@ const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoa
 fn full() -> String {
     format!(
         r#"
-[pixm]
-provider = "local"
+[record]
+subject_index = "local"
 
 [[auth.issuer]]
 issuer = "https://idp.example/realms/staff"
@@ -430,7 +430,7 @@ fn every_organisation_agreement_refusal_is_named() {
         (
             "access_class = \"automated\"",
             "access_class = \"chained\"",
-            "is chained and needs chained_log_retention_years",
+            "is chained and needs chained_log_retention",
         ),
     ] {
         let base = full();
@@ -442,10 +442,10 @@ fn every_organisation_agreement_refusal_is_named() {
     }
     let chained = with(
         "access_class = \"automated\"",
-        "access_class = \"chained\"\nchained_log_retention_years = 2\n\n[audit.store]\nretention_years = 5",
+        "access_class = \"chained\"\nchained_log_retention = \"P2Y\"\n\n[audit.store]\nretention = \"P5Y\"",
     );
     assert!(
-        refusal(&chained).contains("keeps the requester's log 2 years, shorter than"),
+        refusal(&chained).contains("keeps the requester's log for \"P2Y\", shorter than"),
         "{chained}"
     );
     let contact = full()
@@ -533,7 +533,7 @@ fn a_contact_points_person_agreement_names_its_ehdsi_service() {
 fn a_chained_agreement_needs_its_issuer_to_map_the_correlation_id() {
     let chained = with(
         "access_class = \"automated\"",
-        "access_class = \"chained\"\nchained_log_retention_years = 30\n\n[audit.store]\nretention_years = 5",
+        "access_class = \"chained\"\nchained_log_retention = \"P30Y\"\n\n[audit.store]\nretention = \"P5Y\"",
     );
     let text = refusal(&chained);
     assert!(
@@ -621,7 +621,7 @@ fn a_trusted_system_that_is_this_node_is_refused() {
         "trusted_systems = [\"legacy.example\"]",
         "trusted_systems = [\"ferroehr.local\"]",
     ));
-    assert!(text.contains("this node's own rest.system_id"), "{text}");
+    assert!(text.contains("this node's own api.system_id"), "{text}");
 }
 
 #[tokio::test]
@@ -760,7 +760,7 @@ fn two_equal_selectors_are_refused() {
 #[test]
 fn a_key_of_a_protected_scheme_is_refused() {
     let toml = format!(
-        "{}\n[privacy.identifier_protection]\nenabled = true\nschemes = [\"guid\"]\nkey = \"{}\"\n",
+        "{}\n[privacy.identifier_protection]\nschemes = [\"guid\"]\nkey = \"{}\"\n",
         mapped("", ""),
         "00".repeat(32)
     );
@@ -826,7 +826,7 @@ fn a_relationship_code_outside_subject_relationship_is_refused() {
 /// `binding_issuer`, followed by `extra`.
 fn scim(issuer: &str, binding_issuer: &str, extra: &str) -> String {
     format!(
-        "{}\n[auth.scim]\nenabled = true\npublic_base_url = \"https://cdr.example.com\"\n\n\
+        "{}\n[auth.scim]\npublic_base_url = \"https://cdr.example.com\"\n\n\
          [[auth.scim.client]]\nissuer = \"{issuer}\"\nclient_id = \"entra\"\nscope = \"ferroehr/scim\"\n\
          binding_issuer = \"{binding_issuer}\"\n{extra}",
         full()
@@ -874,7 +874,7 @@ fn every_scim_client_refusal_is_named() {
     ));
     assert!(shared.contains("shares binding_issuer"), "{shared}");
     let unknown = refusal(&format!(
-        "{}\n[auth.scim]\nenabled = true\nmax_deactivation = 3\n",
+        "{}\n[auth.scim]\nmax_deactivation = 3\n",
         full()
     ));
     assert!(unknown.contains("max_deactivation"), "{unknown}");

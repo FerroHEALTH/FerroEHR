@@ -79,11 +79,11 @@ Two properties follow, and both matter for verification:
 flowchart TD
     A["commit<br/>(direct write or CONTRIBUTION)"] --> B{"UPDATE_VERSION.signature<br/>supplied by the client?"}
     B -->|yes| C["stored verbatim<br/>signature_client_supplied = true"]
-    B -->|no| D{"signing.enabled"}
+    B -->|no| D{"record.signing.enabled"}
     D -->|false| E["no signature stored"]
     D -->|true| F["assemble the VERSION envelope<br/>uid, contribution, commit_audit,<br/>lifecycle_state, data,<br/>at-committal attestations"]
     F --> G["canonical form:<br/>drop signature, RFC 8785 (JCS)"]
-    G --> H{"signing.mode"}
+    G --> H{"record.signing.mode"}
     H -->|digest| I["sha256: + base64(SHA-256(canonical))"]
     H -->|pgp| J["RFC 4880 detached signature,<br/>ASCII-armored"]
     I --> K[("version row<br/>same transaction")]
@@ -125,7 +125,7 @@ documents the report and its five defect values.
 
 ## Verification at read
 
-`signing.verify_on_read` resolves to `strict` whenever signing is enabled,
+`record.signing.verify_on_read` resolves to `strict` whenever signing is enabled,
 so the default deployment checks its own digests. On a VERSION read the
 server rebuilds the envelope from the stored row, recomputes the canonical
 form, recomputes the digest, and compares.
@@ -208,5 +208,5 @@ The reverse direction is weaker. A PGP-signed version read by a server in
 verdict rather than failing. Keep the certificate configured if those
 versions must stay checkable.
 
-Every key in `[signing]`, with defaults and environment forms, is in the
+Every key in `[record.signing]`, with defaults and environment forms, is in the
 [configuration reference](../installation/config-auth.md#signing).

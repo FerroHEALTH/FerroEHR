@@ -13,7 +13,7 @@
 //! operation governs any of it.
 //!
 //! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::admin.enabled` config gate
+//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
 //! (`405` with an empty `Allow` when off) unchanged. Recording is refused while
 //! `[authz.rbac] access_service_roles` is empty, since the mark would then
 //! hold for nobody; reversing and reading are always open, so a recorded

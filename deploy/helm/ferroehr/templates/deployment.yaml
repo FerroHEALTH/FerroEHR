@@ -72,7 +72,7 @@ spec:
                set, and that listener speaks the server's own TLS when it is on;
                kubernetes_sd scrape configs read the scheme from this annotation
                by convention, and default to http without it. */}}
-        {{- if and (not (and .Values.config.management.enabled .Values.config.management.port)) (eq (include "ferroehr.serverTls" .) "true") }}
+        {{- if and (not (and .Values.config.management.enabled (include "ferroehr.managementOwnPort" .))) (eq (include "ferroehr.serverTls" .) "true") }}
         prometheus.io/scheme: "https"
         {{- end }}
         {{- end }}
@@ -143,9 +143,9 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
-            {{- if and .Values.config.management.enabled .Values.config.management.port }}
+            {{- if and .Values.config.management.enabled (include "ferroehr.managementOwnPort" .) }}
             - name: management
-              containerPort: {{ .Values.config.management.port }}
+              containerPort: {{ include "ferroehr.managementOwnPort" . }}
               protocol: TCP
             {{- end }}
           # Only SECRET config is env; the rest is the mounted ferroehr.toml.
@@ -241,7 +241,7 @@ spec:
             # Same 0440 as the secrets volume, for the same reason: this volume
             # is not only ferroehr.toml. Every `config.files` entry lands here,
             # and that key's documented use includes the PGP signing PRIVATE key
-            # (signing.key_path), mutual-TLS PEMs and a JWKS blob; when the
+            # (record.signing.key_file), mutual-TLS PEMs and a JWKS blob; when the
             # configuration holds a secret the chart cannot route out of it,
             # ferroehr.toml itself arrives from a Secret too. Without a mode the
             # projection defaults to 0644 — world-readable inside the container.

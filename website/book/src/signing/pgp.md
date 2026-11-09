@@ -34,16 +34,16 @@ differs.
 
 ## Configuring the key
 
-`pgp` mode needs a `key_path` pointing at an armored secret key, and the
+`pgp` mode needs a `key_file` pointing at an armored secret key, and the
 passphrase that unlocks it if it has one:
 
 ```toml
-[signing]
+[record.signing]
 enabled = true
 mode = "pgp"
-key_path = "/etc/ferroehr/signing.asc"
+key_file = "/etc/ferroehr/signing.asc"
 key_passphrase_file = "/run/secrets/pgp-pass"
-retired_key_paths = ["/etc/ferroehr/signing-2025.pub.asc"]
+retired_key_files = ["/etc/ferroehr/signing-2025.pub.asc"]
 ```
 
 The same settings as environment variables:
@@ -63,7 +63,7 @@ walkthrough are in the
 [configuration reference](../installation/config-auth.md#signing).
 
 **Boot is fail-closed.** The server loads the key, then signs a fixed test
-string with it. A missing `key_path`, an unparseable file, a wrong
+string with it. A missing `key_file`, an unparseable file, a wrong
 passphrase, or a certificate with no usable signing component all stop
 startup with an error rather than leaving a running server that cannot sign.
 
@@ -160,7 +160,7 @@ has to keep the old one verifiable. Two mechanisms do that:
   certificate retains the previous one, and verification tries the primary
   key and every subkey. Revoking the old subkey stops it signing and keeps
   it verifying. Nothing else changes.
-- **`retired_key_paths`.** A replaced certificate's **public** half is
+- **`retired_key_files`.** A replaced certificate's **public** half is
   listed there and consulted during verification. A public key verifies and
   can never sign again, so a retired entry cannot become an active signer.
 
@@ -181,7 +181,7 @@ commit is signed by this server when signing is enabled.
 **Client-supplied** reaches the server through one route: an
 `UPDATE_VERSION.signature` inside a CONTRIBUTION commit. When a member
 carries one, the server stores it verbatim and does not sign that version
-itself, whatever `signing.mode` says. openEHR models the signature as a
+itself, whatever `record.signing.mode` says. openEHR models the signature as a
 fact created by the committer and carried with the data, potentially in
 another agreed serialization, so the server has nothing to recompute it
 against. Such a signature is never re-verified at read, and no

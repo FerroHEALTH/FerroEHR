@@ -110,7 +110,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   root's `uid` and
   header coming back from the reading version's row. Nothing physical is
   ever deleted below the object, so a shared tree is never orphaned; the
-  opt-in `[versioning] skip_identical_resend` answers an identical re-send
+  opt-in `[record.versioning] record.versioning.idempotent_resend` answers an identical re-send
   with the existing version and commits nothing, which ITS-REST does not
   govern: our own design.
 - **`vo_head`** — the one mutable row per versioned object, and the only row a
@@ -198,7 +198,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `ehr_folder` and `item_tag`, which stand outside change control; the
   definition stores `template_ref`, `template_store`, `archetype_store`,
   `adl2_artefact` and `stored_query`; the change-event `event_outbox` with its
-  `event_outbox_reader` cursors, which the readers `[outbox] readers` names
+  `event_outbox_reader` cursors, which the readers `[record.change_feed] readers` names
   move over the outbox feed (`extensions::outbox`); and
   `blob_ref`, which records that a version references an externalized
   multimedia blob so collection is an index probe rather than a scan of `node`.
@@ -251,9 +251,9 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   resolve a party or a subject through them; `service::linkage` holds those
   crossings and the access record each one owes. The linkage schema that held a
   cross-reference before is gone (`audit/0021_drop_linkage_domain.sql`).
-- **One pool and one DSN per storage domain.** `[storage.clinical]`,
-  `[storage.party]` and `[storage.audit]` each carry a
-  `url`/`url_file`, defaulting to the shared `[db].url`, and
+- **One pool and one DSN per storage domain.** `[database.clinical]`,
+  `[database.party]` and `[database.audit]` each carry a
+  `url`/`url_file`, defaulting to the shared `[database].url`, and
   `db::connect_domains` opens the three pools each with only its own schema on
   its `search_path`. A domain whose DSN names another host lives in a database
   or cluster of its own, which is the separation a schema cannot make (a base
@@ -272,7 +272,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   the domains it does not own, in both directions, and the boot gate
   (`db::verify_domain_isolation`) refuses to serve when any of them can read
   across, when two separately-configured domains authenticate as one role, or —
-  under `deployment_profile = "production"` — when a domain role is missing.
+  under `deployment.profile = "production"` — when a domain role is missing.
 - Migrations via `sqlx migrate add` (official CLI): four sets, run per database
   in order — `ext`, then `clinical`, `party`, `audit` — each with
   its own `_sqlx_migrations` table, each a sequence of natural files with one

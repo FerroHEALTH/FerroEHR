@@ -10,7 +10,10 @@
 //! default in the place of what its operator wrote, and no key is read under
 //! two names. A whole table that moved is refused by its old name, and the
 //! refusal names the table it moved to and every key inside it whose name or
-//! value form changed. No openEHR spec governs configuration: our own design.
+//! value form changed. Every refusal here was introduced in v5.7.0 and lives
+//! for that one release: v5.8.0 deletes this module and the `Removed` fields,
+//! and an old key is then an unknown key. No openEHR spec governs
+//! configuration: our own design.
 
 use ferrohealth_config::removed::Removals;
 

@@ -1,8 +1,8 @@
 {{- if .Values.metrics.serviceMonitor.enabled }}
-{{- $scrapesApi := not (and .Values.config.management.enabled .Values.config.management.port) }}
+{{- $scrapesApi := not (and .Values.config.management.enabled (include "ferroehr.managementOwnPort" .)) }}
 {{- $tls := and $scrapesApi (eq (include "ferroehr.serverTls" .) "true") }}
 {{- if $scrapesApi }}
-{{- include "ferroehr.cdrTrustRequired" (dict "root" . "client" "the ServiceMonitor scrape (metrics.serviceMonitor.enabled, no config.management.port)") }}
+{{- include "ferroehr.cdrTrustRequired" (dict "root" . "client" "the ServiceMonitor scrape (metrics.serviceMonitor.enabled, no config.management.listen)") }}
 {{- end }}
 # A Prometheus Operator ServiceMonitor. The prometheus.io/* pod annotations that
 # `metrics.enabled` adds are honoured only by a Prometheus whose scrape config
@@ -32,7 +32,7 @@ spec:
       - {{ .Release.Namespace }}
   endpoints:
     # The Service port the ops-introspection surface answers on: its own
-    # `management` port when config.management.port is set, else the API port.
+    # `management` port when config.management.listen is set, else the API port.
     - port: {{ if $scrapesApi }}http{{ else }}management{{ end }}
       path: {{ printf "%s/prometheus" (.Values.config.management.base_path | trimSuffix "/") | quote }}
       interval: {{ .Values.metrics.serviceMonitor.interval }}

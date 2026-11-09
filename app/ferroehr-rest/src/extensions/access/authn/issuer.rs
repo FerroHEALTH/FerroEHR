@@ -32,8 +32,9 @@ pub(super) async fn issuer_metadata(path: &str) -> Result<ServerMetadata, String
     let text = tokio::fs::read_to_string(path)
         .await
         .map_err(|e| format!("auth.smart.issuer_metadata_file {path} could not be read: {e}"))?;
-    let absolute = std::path::absolute(path)
-        .map_err(|e| format!("auth.smart.issuer_metadata_file {path} could not be resolved: {e}"))?;
+    let absolute = std::path::absolute(path).map_err(|e| {
+        format!("auth.smart.issuer_metadata_file {path} could not be resolved: {e}")
+    })?;
     let location = url::Url::from_file_path(&absolute)
         .map_err(|()| format!("auth.smart.issuer_metadata_file {path} is not a file path"))?;
     parse_metadata(&location, &text).map_err(|e| {

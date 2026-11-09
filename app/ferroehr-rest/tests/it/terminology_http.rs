@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! End-to-end HTTP tests for the terminology extension API group: the config gate
-//! (`AppConfig::terminology_api_enabled`), the `200`/`404`/`400` wire outcomes
+//! (`[api] terminology`), the `200`/`404`/`400` wire outcomes
 //! for `get_terminology_ids` / `get_terminology_description` / `get_term` /
 //! `subsumes` / `get_value_set` / `value_set_validate`, and the JSON body shapes
 //! — driven through the assembled router over the **real** `FerroEhrService`

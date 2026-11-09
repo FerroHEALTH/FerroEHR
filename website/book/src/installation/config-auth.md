@@ -1,8 +1,8 @@
 # Authentication & access
 
 Who may call the server, what they may do once identified, and the surfaces
-that are gated rather than always-on: `[auth]`, `[authz]`, `[admin]`,
-`[smart]`, `[management]`, and `[signing]`. Precedence, the
+that are gated rather than always-on: `[auth]`, `[authz]`, `[api] admin`,
+`[auth.smart]`, `[management]`, and `[record.signing]`. Precedence, the
 environment-name grammar, and file discovery are on the
 [Configuration reference](configuration.md) index.
 
@@ -49,7 +49,7 @@ The section keys:
 | `scopeless_subjects` | list of `{ issuer, sub }` | `[]` | The subjects whose token, when it carries no resource scope of either the SMART on openEHR or the SMART on FHIR grammar, meets every SMART on openEHR requirement. Only a system (app-only) caller of that issuer is admitted by an entry. A token that carries resource scopes gets only its scopes, and the allowlist reaches neither the ADMIN API nor the DEMOGRAPHIC API, which need the product scope. A string entry refuses the start. |
 | `capabilities` | list of string | `[]` | SMART capabilities the discovery document adds: one SMART App Launch or the SMART on openEHR draft lists, or a full URI. |
 | `scopes_supported` | list of string | `[]` | The scopes the discovery document lists. Empty, it lists the scopes the route table honours. |
-| `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the bearer clients in `[smart] demographic_clients`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
+| `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the bearer clients in `[auth.smart] demographic_clients`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
 
 The keys `audience`, `algorithms`, `token_profile`, `clock_skew_seconds`,
 `jwks_max_age_seconds`, `jwks_refresh_interval_seconds`, `jwks_file`,
@@ -78,7 +78,7 @@ operator rule boot cannot see.
 | `clock_skew_seconds` | int | `60` | Leeway on `exp`, `nbf` and `iat`. At most `300`. |
 | `jwks_max_age_seconds` | int | `600` | A key set older than this is read again. |
 | `jwks_refresh_interval_seconds` | int | `60` | A token naming an unknown `kid` reads the key set again at most once per interval. |
-| `jwks_file` | path | `""` | A JWK Set of public keys handed over out of band, read instead of the issuer's metadata. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error. An issuer read from a file has no metadata, so it serves the SMART discovery document only with [`[smart] issuer_metadata_file`](#smart) set. |
+| `jwks_file` | path | `""` | A JWK Set of public keys handed over out of band, read instead of the issuer's metadata. A symmetric key (`kty: "oct"`) or a private-key member (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`) is a boot error. An issuer read from a file has no metadata, so it serves the SMART discovery document only with [`[auth.smart] issuer_metadata_file`](#smart) set. |
 | `timeout_ms` | int | `10000` | One call to the authorization server. |
 | `mode` | `jwt` or `introspection` | `jwt` | How the issuer's tokens are checked: as JWTs against its key set, or posted to its RFC 7662 endpoint (see [Opaque tokens](#opaque-tokens-by-introspection)). |
 | `role_claims` | list of string | `["roles","groups","entitlements"]` | Token claim paths the caller's roles are read from; dotted paths walk nested claims, and a role is matched without regard to case. **`scope` is not a role source**. A `federation` issuer reads no role. Whether a role grants `admin_role` and the other privileged roles is [`[authz.rbac] role_issuers`](#authzrbac). |
@@ -243,7 +243,7 @@ attributes a person, and `enabled` is refused at boot.
 | `namespace` | string | `demographic` | The `PARTY_REF.namespace` a bound party is written under, the value of the ITS-REST overview example (`committer.external_ref.namespace="demographic"`), held to the `OBJECT_REF.namespace` pattern `[a-zA-Z][a-zA-Z0-9_.:/&?=+-]*`. |
 | `basic_user` | `[[authz.party_binding.basic_user]]` tables | `[]` | One per Basic user: `user`, `key_issuer` (the `identifier_issuer` of an `[[auth.party]]` table) and `key`, the binding key the user's `PERSON` carries. A Basic user with no table, a table naming no Basic user and a `key_issuer` no table names refuse the start. |
 | `issuer` | `[[authz.party_binding.issuer]]` tables | `[]` | One per `persons` issuer that creates a provisional `PERSON` at a first login; see [Just-in-time creation](#just-in-time-creation). |
-| `provisional_report_days` | integer | `30` | The age in days past which `ferroehr party-binding check` reports a provisional `PERSON`. |
+| `provisional_report_after` | duration | `"30d"` | The age past which `ferroehr party-binding check` reports a provisional `PERSON`. |
 
 ```toml
 [authz.party_binding]
@@ -318,7 +318,7 @@ key differing only in case binds one login.
 
 Boot refuses, naming the key: no or two `default` tables; a selector path
 that does not compile; two equal selectors; a key whose scheme
-`[demographic.identifier_protection]` protects; any selector under the Dutch
+`[privacy.identifier_protection]` protects; any selector under the Dutch
 BSN namespace (OID `2.16.840.1.113883.2.4.6.3`); a key fed by an email
 address, a phone number, `preferred_username`, `name`, `upn` or
 `unique_name`; a template that is absent, rooted at another class or lacks
@@ -479,7 +479,7 @@ A `PERSON` whose latest version is `incomplete` is provisional. The access
 record of each of its requests carries `binding = provisional`, a demographic
 read and an AQL query over `VERSION/lifecycle_state` show it, and
 `ferroehr party-binding check` reports the provisional persons older than
-`provisional_report_days` under `side_table.provisional`. What a provisional person may do is decided by
+`provisional_report_after` under `side_table.provisional`. What a provisional person may do is decided by
 their SMART scopes and roles, as for anyone. A SCIM client whose
 `binding_issuer` is the issuer's `identifier_issuer` completes the `PERSON`:
 it finds it by `userName`, with a binding key equal to its own, writes the
@@ -500,7 +500,7 @@ shows the settings per identity provider.
 
 `[authz.import] trusted_systems` lists the `creating_system_id` values whose
 wrapped committers may name a local party on import; this node's own
-`[rest] system_id` is refused.
+`[api] system_id` is refused.
 
 Each OAuth client-credentials client that commits is declared in one
 `[[authz.system_client]]` table, keyed by `issuer` (a `machines` or `persons`
@@ -539,12 +539,12 @@ own accessor kind; every agreement is listed on the boot line and in
 | `consent` | `mitz` or `local` | unset | The source of the consent the exchange is conditioned on, never its legal ground. A read under it needs the consent decision reference the token carries in the field its `[[auth.federation]]` table maps to `consent.reference`, and is refused with `403` without it. Required for every NL agreement with `reads` (Wabvpz Art. 15a(1)); an organisation may not take it from Mitz, whose closed question needs a responsible professional. |
 | `reads` | list of `patient/` scopes | `[]` | The most an external caller may read; a `user/` or `system/` scope refuses the start. |
 | `writes` | list of template ids | `[]` | The templates an external person may commit; an organisation agreement takes none (EHDS Art. 13(4)), and a template the store does not hold refuses the start. |
-| `discard`, `discard_window_hours` | bool, int | `false`, `24` | Whether an external person may discard a dispensation of the same point of care within the window (MyHealth@EU Requirements Catalogue 10.0.0, requirement 07.04). |
+| `discard`, `discard_window` | bool, int | `false`, `24` | Whether an external person may discard a dispensation of the same point of care within the window (MyHealth@EU Requirements Catalogue 10.0.0, requirement 07.04). |
 | `ehdsi_service` | `patient_summary`, `eprescription` or `orcd` | unset | The MyHealth@EU service a `contact_point` issuer's person agreement serves, whose `*_NOT_FOUND` code a request outside the patient of the treatment relationship confirmation answers ([the contact-point route](../identity-providers.md#the-myhealtheu-contact-point-route)). Required on a contact point's person agreement; on any other agreement it refuses the start. |
 | `caller_rate` | `{ requests_per_second, burst }` | **required** | The admission rate per caller, keyed on the token's subject and kept per replica: each caller gets `burst` requests at once and `requests_per_second` after that, and a request above it is answered `429` with `Retry-After` before any patient lookup, a contact point's included, and counted into the caller's [summary record](../audit.md#refusal-records-and-their-budgets). |
 | `opt_out_override` | bool | `false` | Whether a professional may read an opted-out EHR under national vital-interest access (EHDS Art. 10(2)); never on an organisation agreement. |
 | `access_class` | `automated` or `chained` | unset | For an organisation, required: no natural person views the data, or the requester logs the person and every request carries its correlation id as an attested claim. A `chained` agreement needs its issuer's `[[auth.federation]]` table to map `correlation_id` from a claim or an attested `authorization_details` member (a constant refuses the start); a request without the id is refused with `403` and recorded as `refused-correlation-missing`, a request header never stands in for it, and the access record carries the id with its source. |
-| `chained_log_retention_years` | int | unset | For `chained`, required: how long the requester keeps its log, at least `[audit.store]`'s retention. |
+| `chained_log_retention` | calendar period | unset | For `chained`, required: how long the requester keeps its log (`"P5Y"`), at least `[audit.store]`'s retention. |
 
 An organisation agreement on a MyHealth@EU `contact_point` issuer refuses the
 start.
@@ -574,7 +574,7 @@ start.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | Master ABAC switch. |
+| `enabled` | bool | `false` | Master ABAC switch. The table keeps `enabled` where other optional features use the table's presence, because `organization_claim` applies while it is off: the access log records it. |
 | `engine` | enum{cedar,remote} | `cedar` | Embedded Cedar, or a remote decision point. |
 | `organization_claim` | string | `organization_id` | JWT claim carrying the caller's organization. |
 | `patient_claim` | string | `patient_id` | JWT claim carrying the patient id. Set, it scopes every request to the patient it names (see below). Empty turns the patient scope off. |
@@ -600,14 +600,14 @@ applies to queries whether or not `patient_claim` is set. Without
 namespaces is refused with `403`, because a bare id would name both subjects.
 
 - **`[authz.abac.cedar]`:** `policy_dir` (path, required when
-  `engine = "cedar"` and ABAC is on) and `reload_secs` (int, unset, an
-  optional hot-reload interval).
-- **`[authz.abac.remote]`:** `server` (secret URL, required when
+  `engine = "cedar"` and ABAC is on) and `reload_interval` (duration, unset,
+  an optional hot-reload interval).
+- **`[authz.abac.remote]`:** `url` (secret URL, required when
   `engine = "remote"`, and it must end with `/`, because the policy name is
-  appended; credentials embedded in it are redacted from every rendering), `connect_timeout_ms` (int, `2000`), `request_timeout_ms` (int,
-  `5000`).
+  appended; credentials embedded in it are redacted from every rendering),
+  `connect_timeout` (duration, `"2s"`) and `timeout` (duration, `"5s"`).
 - **`[authz.abac.remote.oauth]`:** calls the policy service as an OAuth 2.0
-  client instead of with the Basic credentials of `server`: FerroEHR obtains a
+  client instead of with the Basic credentials of `url`: FerroEHR obtains a
   token with the client credentials grant and sends it as a bearer token. The
   keys are those of [`[audit.fhir_feed.oauth]`](config-audit.md#auditfhir_feedoauth-authenticating-with-oauth-20-client-credentials)
   (`token_endpoint` or `issuer`, `client_id`, `client_secret` or
@@ -615,7 +615,7 @@ namespaces is refused with `403`, because a bare id would name both subjects.
   When the policy service refuses the token with `401`, a new one is fetched
   and the decision asked once more; a token that cannot be obtained, or that
   is refused again, is no decision, and the request fails closed with a `500`,
-  never a `403`. `server` with credentials beside this table stops startup.
+  never a `403`. A `url` with credentials beside this table stops startup.
 - **`[authz.abac.policy.<kind>]`:** one entry per resource kind, with `kind` ∈
   `ehr`, `ehr_status`, `composition`, `contribution`, `query`, `directory`.
   Keys: `name` (string, the policy to evaluate) and `parameters` (list of
@@ -633,17 +633,17 @@ namespaces is refused with `403`, because a bare id would name both subjects.
 > blanket `403`s on live traffic. The Cedar engine reads its policies from
 > `authz.abac.cedar.policy_dir` and needs no entries here.
 
-## `[admin]`
+## `[api] admin`
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | Mount the ADMIN API (physical, irreversible delete). Off ⇒ every admin route answers `405 Method Not Allowed` with an empty `Allow` header, never `403`, and never touches the backend. |
+| `admin` | bool | `false` | Mount the ADMIN API (physical, irreversible delete). Off ⇒ every admin route answers `405 Method Not Allowed` with an empty `Allow` header, never `403`, and never touches the backend. |
 
 Physical deletion is irreversible, so the group stays off by default. With it
 on, `/admin` also joins the group list the `OPTIONS` System-Options manifest
 advertises, so the manifest never names a group that answers `404`.
 
-## `[scim]`
+## `[auth.scim]`
 
 FerroEHR is a SCIM 2.0 service provider (RFC 7644) at `/scim/v2/`, the
 endpoint an identity provider provisions each professional through. It is off
@@ -651,15 +651,14 @@ by default.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | Serve `/scim/v2/`. Off, every path under it answers `404`. |
-| `public_base_url` | string | none | The externally reachable origin, such as `https://cdr.example.com`, that every `meta.location` and discovery document names as `<public_base_url>/scim/v2` (RFC 7643 §3.1). Required when `enabled`; it carries no userinfo, query or fragment. |
-| `max_results` | integer | `100` | The most resources one list response returns, which `ServiceProviderConfig` declares as `filter.maxResults`. At least 1. |
+| `public_base_url` | string | none | The externally reachable origin, such as `https://cdr.example.com`, that every `meta.location` and discovery document names as `<public_base_url>/scim/v2` (RFC 7643 §3.1). Required; it carries no userinfo, query or fragment. |
+| `filter_max_results` | integer | `100` | The most resources one list response returns, which `ServiceProviderConfig` declares as `filter.maxResults`. At least 1. |
 | `max_deactivations` | integer | `100` | The most Users one client deactivates or deletes per window. Past it, a deactivation or deletion is **429** with `Retry-After` and logged at `error`. The count is kept in the database, so every replica shares one bound. At least 1. |
-| `deactivation_window_minutes` | integer | `60` | The length of that window. At least 1. |
-| `contact_erasure_minutes` | integer | `0` | How long after a User's deletion the contacts of every version of its `PERSON` are erased. `0` erases them in the deletion itself; at most 43200 (30 days). |
+| `deactivation_window` | duration | `"1h"` | The length of that window. At least `"1min"`. |
+| `contact_erasure_delay` | duration | `"0s"` | How long after a User's deletion the contacts of every version of its `PERSON` are erased (GDPR Art. 17). `"0s"` erases them in the deletion itself; at most `"30d"`. |
 | `max_group_members` | integer | `5000` | The most members one Group holds. An add past it is **400** `invalidValue`. A membership change versions only the member's `PERSON`, so its cost does not grow with the Group. At least 1. |
 
-Each `[[scim.client]]` table declares one provisioning client:
+Each `[[auth.scim.client]]` table declares one provisioning client:
 
 | Key | Description |
 |---|---|
@@ -677,11 +676,10 @@ with: a default person template with a `user_name` selector, and
 `[authz.party_binding.professional_role]`.
 
 ```toml
-[scim]
-enabled = true
+[auth.scim]
 public_base_url = "https://cdr.example.com"
 
-[[scim.client]]
+[[auth.scim.client]]
 issuer = "https://as.example.com"
 client_id = "entra-provisioning"
 scope = "ferroehr/scim"
@@ -786,10 +784,10 @@ deletions beside `max_deactivations`.
 Only the attribution minimum waits for that horizon: the name, the binding key
 and the identifiers, `userName` and `externalId` among them. The contacts
 serve no attribution, so FerroEHR erases them (GDPR Art. 5(1)(e)): with
-`contact_erasure_minutes = 0` the deletion removes the `contacts` of every
+`auth.scim.contact_erasure_delay = 0` the deletion removes the `contacts` of every
 version of the `PERSON` in the same transaction, and with a period a sweep
 that runs every minute removes them once the period has passed. The sweep
-reaches every deleted `PERSON` whose binding key a `[[scim.client]]` issues,
+reaches every deleted `PERSON` whose binding key a `[[auth.scim.client]]` issues,
 an administrator's demographic `DELETE` included. Each version keeps its uid,
 audit and contribution, and its node rows are derived again from the erased
 body. A server signature on such a version is removed, because it was taken
@@ -894,11 +892,11 @@ it, so the steps split between the two.
    its `type`. FerroEHR holds one value per `type` and no preference among
    them, so `/scim/v2/Schemas` declares `primary` read-only and the `primary`
    Entra sends is ignored (RFC 7644 §3.3).
-2. **Declare the client.** Add a `[[scim.client]]` whose `issuer` is your
+2. **Declare the client.** Add a `[[auth.scim.client]]` whose `issuer` is your
    authorization server, an `[[auth.issuer]]` of kind `machines`, and whose
    `binding_issuer` is the `identifier_issuer` of the `[[auth.party]]` your
    professionals log in through. Set `public_base_url` to the origin Entra
-   reaches. In the Helm chart, `config.scim.enabled: true` also adds the
+   reaches. In the Helm chart, `config.the [auth.scim] table: true` also adds the
    `/scim/v2` path to the Ingress. `ferroehr config check` refuses a mapping
    the endpoint cannot serve.
 3. **Federate Entra's credential at your authorization server.** Entra's
@@ -954,31 +952,28 @@ Entra writes `Replace` and `Add` with a capital letter, disables a User with
 null. A value cleared in Entra therefore stays in FerroEHR until the User is
 replaced or deleted, or an administrator removes it.
 
-## `[access_delay]`
+## `[privacy.access_delay]`
 
 The EHDS Art. 3(3) delay of the person's own access to newly registered data,
-a Member State option: turn it on only where your Member State's rule provides
-for the delay. What it does is on [delayed access by the
+a Member State option: write the table only where your Member State's rule
+provides for the delay; its presence turns the delay on. What it does is on [delayed access by the
 person](../security.md#delayed-access-by-the-person-ehds-art-33).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | Hold new compositions of the listed categories from patient-context requests until a professional releases them or `hours` pass. Off, the person's access is immediate (Art. 3(1)), every hold already placed stops withholding, and the admin route refuses a new hold with **400**. |
 | `categories` | list of string | `[]` | The categories held at creation, named as [`[audit.categories]`](config-audit.md) names one: a priority category of Art. 14(1) by its code (`Laboratory-Reports`, `Medical-Imaging`, …) or as `<system>|<code>`, or a national category the map declares. A name the map does not hold, and `none`, refuse the start. Empty holds nothing at creation; a professional still holds a composition by hand. |
-| `hours` | integer | `0` | The limit of a hold, 1 to 8784 (one year), required while `enabled`: the length of a hold placed at creation and the latest end a professional may give one. Art. 3(3) allows the delay "for a limited period of time" only; the period is the Member State's to set. |
+| `max_delay` | duration | required | The limit of a hold, a whole number of hours from `"1h"` to `"8784h"` (one year): new compositions of the listed categories are held from patient-context requests until a professional releases them or it passes. Absent, the person's access is immediate (Art. 3(1)), every hold already placed stops withholding, and the admin route refuses a new hold with **400**. It is the length of a hold placed at creation and the latest end a professional may give one. Art. 3(3) allows the delay "for a limited period of time" only; the period is the Member State's to set. |
 
 ```toml
-[access_delay]
-enabled = true
+[privacy.access_delay]
 categories = ["Laboratory-Reports", "Medical-Imaging"]
-hours = 168
+max_delay = "7d"
 ```
 
-The environment forms are `FERROEHR__ACCESS_DELAY__ENABLED`,
-`FERROEHR__PRIVACY__ACCESS_DELAY__CATEGORIES` (comma-separated) and
-`FERROEHR__PRIVACY__ACCESS_DELAY__MAX_DELAY`.
+The environment forms are `FERROEHR__PRIVACY__ACCESS_DELAY__CATEGORIES`
+(comma-separated) and `FERROEHR__PRIVACY__ACCESS_DELAY__MAX_DELAY`.
 
-## `[smart]`
+## `[auth.smart]`
 
 The SMART on openEHR scopes are enforced on **every route** whenever
 `[auth]` is on: each operation carries a requirement from FerroEHR's route
@@ -989,18 +984,19 @@ whose grants count for what. See [SMART App Launch](../smart-app-launch.md).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | Serve `/.well-known/smart-configuration`. It is built from the metadata of one `[auth]` issuer (the first introspected `[auth]` issuer, else the issuer `[smart] issuer_metadata_file` names, else the first issuer whose metadata is read from it, else the first issuer), so it needs an issuer whose metadata names a `token_endpoint` (SMART App Launch 2.2.0, Conformance, §Metadata); an issuer read from a `jwks_file` refuses the start with `enabled = true` unless `issuer_metadata_file` supplies that metadata. |
+| `discovery` | bool | `false` | Serve `/.well-known/smart-configuration`. It is built from the metadata of one `[auth]` issuer (the first introspected `[auth]` issuer, else the issuer `[auth.smart] issuer_metadata_file` names, else the first issuer whose metadata is read from it, else the first issuer), so it needs an issuer whose metadata names a `token_endpoint` (SMART App Launch 2.2.0, Conformance, §Metadata); an issuer read from a `jwks_file` refuses the start with `discovery = true` unless `issuer_metadata_file` supplies that metadata. |
 | `issuer_metadata_file` | path | unset | A JSON file holding the RFC 8414 §2 metadata of the `[auth]` issuer it names, whose key set is a `jwks_file`, read at boot. It must name an `[auth]` issuer, wherever it stands in the list, repeat no member name, and every endpoint it names must be `https` (a loopback host excepted); the discovery document takes its `token_endpoint` and the other endpoints from it. Set for an issuer whose metadata is read from the issuer, it is a boot error. |
 | `platform_base_url` | string | unset ⇒ the REST root | The path the discovery document hangs off, e.g. `/gateway/v1`. |
-| `public_base_url` | string | **required when enabled** | The server's externally reachable origin (e.g. `https://cdr.example.com`), from which the discovery document's absolute `services.*.baseUrl` values are built. |
-| `launch_base64_json` | bool | `false` | Advertise the `launch-base64-json` capability. Experimental, and advisory: the base64 JSON launch object is consumed by the application, not the CDR. |
+| `public_base_url` | string | **required with `discovery`** | The server's externally reachable origin (e.g. `https://cdr.example.com`), from which the discovery document's absolute `services.*.baseUrl` values are built. |
+| `episode_launch` | bool | `false` | Advertise episode context and accept the `launch/episode` scope and `episodeId` claim; applies no episode-scoped filtering. |
 | `backend_clients` | list of string | `[]` | The `client_id`s a `system/aql-*` grant counts for: such a grant "would grant access to all registered and ad-hoc AQL queries system-wide" (master08 §Resource Scopes). |
 | `patient_issuers` | list of string | `[]` | The issuers whose `patient/` grants count, each confined to the EHR the token's `ehrId` claim names (master07 §Context Selection). Empty, a `patient/` grant grants nothing. |
 | `demographic_clients` | list of string | `[]` | The bearer `client_id`s that reach the DEMOGRAPHIC API, which no SMART on openEHR scope covers. A Basic user-id never matches an entry. A caller holding `[auth] product_scope` reaches it too. |
 
-`[smart.episode]`: `enabled` (bool, `false`) advertises episode context and
-accepts the `launch/episode` scope and `episodeId` claim, but applies no
-episode-scoped filtering.
+The `launch-base64-json` capability (master09) is advertised by listing it in
+`[auth] capabilities`; the base64 JSON launch object is the application's to
+consume. The table is always read, since its lists apply whether or not the
+document is served; `discovery` alone turns the document on.
 
 No `smart` URL may carry a user name or password, whether or not the document
 is served: the discovery document publishes these URLs to every application,
@@ -1062,7 +1058,7 @@ on and at which level.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `max_seconds` | int | `30` | Longest sample window one request may ask for. A request asking for more is refused with `400`, never clamped. |
+| `max_duration` | duration | `"30s"` | Longest sample window one request may ask for, in whole seconds. A request asking for more is refused with `400`, never clamped. |
 | `max_frequency` | int | `999` | Highest sampling frequency (Hz) a request may ask for. Same refusal semantics. |
 
 > [!WARNING]
@@ -1070,7 +1066,7 @@ on and at which level.
 > strict, so a file or environment variable still setting either one fails at
 > boot with an unknown-key error: delete the key; the probes are always on.
 
-## `[licence]`
+## `[deployment]`
 
 The commercial licence token. Every build embeds the licensor's
 `non-commercial` grant; a deployment that holds a `commercial` licence installs
@@ -1081,9 +1077,9 @@ the one in force on `GET /management/status` (`licence.use`, `licence.licensee`,
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `file` | path | unset | The licence token the licensor issued. A token that cannot be read or does not verify is reported as `refused` on `/management/status`; the embedded grant stays in force. |
+| `licence_file` | path | unset | The licence token the licensor issued. A token that cannot be read or does not verify is reported as `refused` on `/management/status`; the embedded grant stays in force. |
 
-## `[signing]`
+## `[record.signing]`
 
 VERSION signing. On by default in `digest` mode, with read-time verification of
 the server's own signatures **strict** by default.
@@ -1092,12 +1088,12 @@ the server's own signatures **strict** by default.
 |---|---|---|---|
 | `enabled` | bool | `true` | Server-side signing of committed versions. |
 | `mode` | enum{digest,pgp} | `digest` | A SHA-256 integrity digest, or an OpenPGP (RFC 4880) detached signature. |
-| `key_path` | path | unset | Armored secret key; **required for `pgp`** (a boot error otherwise). |
+| `key_file` | path | unset | Armored secret key; **required for `pgp`** (a boot error otherwise). |
 | `key_passphrase` / `key_passphrase_file` | secret / path | unset | Key passphrase. At most one of the pair. |
-| `retired_key_paths` | list of path | `[]` | Armored **public** keys retired from signing and kept for verification, so versions signed before a key rotation keep verifying. |
+| `retired_key_files` | list of path | `[]` | Armored **public** keys retired from signing and kept for verification, so versions signed before a key rotation keep verifying. |
 | `verify_on_read` | enum{off,warn,strict} | unset ⇒ `strict` when signing is enabled | Read-time recompute-and-compare policy for the server's own signatures. |
 
-`retired_key_paths` exists because a stored `VERSION.signature` records no key
+`retired_key_files` exists because a stored `VERSION.signature` records no key
 identifier and is an immutable committed fact that cannot be re-issued;
 keeping the retired public key is the only way history stays verifiable across
 a rotation, and a public key can verify but never sign. Its environment form
@@ -1126,7 +1122,7 @@ or **Ed448** signing key at boot: their private-key arithmetic runs on
 `crypto-bigint` 0.5, whose constant-time operations can branch on secret
 values (RUSTSEC-2026-0387), with no fixed release on that line. The boot error
 names the advisory. Move to Ed25519 with the steps below; the old certificate
-goes in `retired_key_paths`, where it keeps verifying, because verification
+goes in `retired_key_files`, where it keeps verifying, because verification
 uses only public values.
 
 An **RSA** signing key is accepted, but it makes every commit perform an RSA
@@ -1140,17 +1136,17 @@ immutable committed facts that cannot be re-issued. Instead it logs a warning
 at boot naming the advisory. To clear it:
 
 1. Generate a new signing key: `gpg --quick-generate-key "…" ed25519 sign`, and
-   export the armored secret key to `key_path`.
+   export the armored secret key to `key_file`.
 2. Export the **public** half of the old certificate and add it to
-   `retired_key_paths`, so versions signed with it still verify (see above).
+   `retired_key_files`, so versions signed with it still verify (see above).
 3. Restart. New versions are signed with Ed25519; old ones keep verifying.
 
 Rotation inside one certificate is cheaper still: add an Ed25519 **signing
 subkey** to the existing certificate, export the armored secret key again to
-`key_path`, and restart. The server signs with the newest subkey whose binding
+`key_file`, and restart. The server signs with the newest subkey whose binding
 grants signing and that is neither expired nor revoked
 ([the rule](../signing/pgp.md#configuring-the-key)), with no
-`retired_key_paths` entry needed: the certificate keeps the previous subkey, so
+`retired_key_files` entry needed: the certificate keeps the previous subkey, so
 past signatures continue to verify. For a refused ECDSA or Ed448 key this works
 when the new Ed25519 subkey is the one chosen. The steps above, with a new
 certificate, work in every case.
@@ -1165,7 +1161,7 @@ config:
   signing:
     enabled: true
     mode: pgp
-    key_path: /etc/ferroehr/signing-key.asc
+    key_file: /etc/ferroehr/signing-key.asc
   files:
     signing-key.asc: |
       -----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -1180,7 +1176,7 @@ never world-readable inside the container. **To go back to `digest`**, set
 `mode: digest` and drop the key material; versions already signed keep their
 signatures and still verify.
 
-## `[versioning]`
+## `[record.versioning]`
 
 What a commit stores is not a setting: a version whose content equals the
 current version's is committed like any other, with its own commit audit,
@@ -1190,7 +1186,7 @@ answer to a repeated send of the same content.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `skip_identical_resend` | bool | `false` | When `true`, a `PUT` whose content equals the current version's commits nothing and answers like a successful update with the existing version: `200` (or `204` under `Prefer: return=minimal`), and that version's `ETag` and `Location`. |
+| `record.versioning.idempotent_resend` | bool | `false` | When `true`, a `PUT` whose content equals the current version's commits nothing and answers like a successful update with the existing version: `200` (or `204` under `Prefer: return=minimal`), and that version's `ETag` and `Location`. |
 
 Turn it on only for the integration that needs it: with the rule on, the
 repeated send leaves no commit audit and no contribution, so the version
@@ -1207,6 +1203,6 @@ does not govern skipping an identical commit; the answer is FerroEHR's own,
 chosen to match what a client sees from Cadasto.
 
 ```toml
-[versioning]
-skip_identical_resend = true
+[record.versioning]
+idempotent_resend = true
 ```

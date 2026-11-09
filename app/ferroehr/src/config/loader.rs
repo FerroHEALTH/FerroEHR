@@ -424,11 +424,7 @@ mod tests {
     #[test]
     fn an_unknown_file_key_is_named_as_itself() {
         for (text, key, doubled) in [
-            (
-                "[api]\nno_such_key = true\n",
-                "api.no_such_key",
-                "api.api",
-            ),
+            ("[api]\nno_such_key = true\n", "api.no_such_key", "api.api"),
             (
                 "[server.no_such_table]\nx = 1\n",
                 "server.no_such_table",

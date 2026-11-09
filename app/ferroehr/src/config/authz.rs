@@ -16,11 +16,10 @@
 //! enforced by the per-route guard in `ferroehr-rest`.
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use ferrohealth_secret::secret_url::SecretUrl;
+use crate::config::abac_rules::{CedarConfig, RemoteConfig};
 
 /// The server-wide disposition for an EHR that carries no
 /// `ACCESS_CONTROL_SETTINGS` of its own — the `ehr_access_default` tri-state's
@@ -204,62 +203,6 @@ pub struct PolicyRule {
     /// The parameters the PDP body carries; empty = an unparameterized policy.
     #[serde(default)]
     pub parameters: Vec<AbacParam>,
-}
-
-/// The embedded-Cedar engine settings.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct CedarConfig {
-    /// Directory of `*.cedar` policy files (required when `engine = cedar`).
-    pub policy_dir: Option<PathBuf>,
-    /// Optional periodic hot-reload interval; off when unset.
-    pub reload_interval: Option<ferrohealth_config::units::Duration>,
-    /// Retired: refused at load, naming `reload_interval`.
-    #[serde(skip_serializing)]
-    pub reload_secs: ferrohealth_config::removed::Removed,
-}
-
-/// The remote-PDP client settings.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct RemoteConfig {
-    /// The PDP base URL; the policy name is appended, so it must end with `/`
-    /// (required when `engine = remote`). Any `userinfo` in it is masked in
-    /// every rendering.
-    pub url: Option<SecretUrl>,
-    /// TCP connect timeout (default `"2s"`): without one, a PDP that
-    /// blackholes packets parks the request until the OS TCP timeout.
-    pub connect_timeout: ferrohealth_config::units::Duration,
-    /// Whole-request timeout (default `"5s"`).
-    pub timeout: ferrohealth_config::units::Duration,
-    /// The OAuth 2.0 client-credentials grant the policy service is called
-    /// with (`[authz.abac.remote.oauth]`); absent, the calls carry the Basic
-    /// credentials of `url`, if any.
-    pub oauth: Option<ferrohealth_smart::config::credentials::OauthSection>,
-    /// Retired: refused at load, naming `url`.
-    #[serde(skip_serializing)]
-    pub server: ferrohealth_config::removed::Removed,
-    /// Retired: refused at load, naming `connect_timeout`.
-    #[serde(skip_serializing)]
-    pub connect_timeout_ms: ferrohealth_config::removed::Removed,
-    /// Retired: refused at load, naming `timeout`.
-    #[serde(skip_serializing)]
-    pub request_timeout_ms: ferrohealth_config::removed::Removed,
-}
-
-impl Default for RemoteConfig {
-    fn default() -> Self {
-        Self {
-            url: None,
-            connect_timeout: ferrohealth_config::units::Duration::from_secs(2),
-            // 5 s, the whole-request budget the discovery and terminology clients use too.
-            timeout: ferrohealth_config::units::Duration::from_secs(5),
-            oauth: None,
-            server: ferrohealth_config::removed::Removed::default(),
-            connect_timeout_ms: ferrohealth_config::removed::Removed::default(),
-            request_timeout_ms: ferrohealth_config::removed::Removed::default(),
-        }
-    }
 }
 
 /// The fine-grained attribute-based access-control settings.
@@ -455,6 +398,10 @@ impl AuthzConfig {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
+    use ferrohealth_secret::secret_url::SecretUrl;
+
     use super::*;
     use crate::config::abac_rules::REQUIRED_REMOTE_POLICY_KINDS;
 
@@ -551,8 +498,7 @@ mod tests {
                     engine: AbacEngineKind::Cedar,
                     cedar: CedarConfig {
                         policy_dir: Some(PathBuf::from("/tmp/policies")),
-                        reload_interval: None,
-                        reload_secs: ferrohealth_config::removed::Removed::default(),
+                        ..CedarConfig::default()
                     },
                     policy,
                     ..AbacConfig::default()
@@ -581,8 +527,7 @@ mod tests {
                 enabled: true,
                 cedar: CedarConfig {
                     policy_dir: Some(PathBuf::from("/tmp/p")),
-                    reload_interval: None,
-                    reload_secs: ferrohealth_config::removed::Removed::default(),
+                    ..CedarConfig::default()
                 },
                 policy,
                 ..AbacConfig::default()
@@ -712,8 +657,7 @@ mod tests {
                 engine: AbacEngineKind::Cedar,
                 cedar: CedarConfig {
                     policy_dir: Some(PathBuf::from("/etc/ferroehr/policies")),
-                    reload_interval: None,
-                    reload_secs: ferrohealth_config::removed::Removed::default(),
+                    ..CedarConfig::default()
                 },
                 ..AbacConfig::default()
             },
@@ -733,8 +677,7 @@ mod tests {
                 engine: AbacEngineKind::Cedar,
                 cedar: CedarConfig {
                     policy_dir: Some(PathBuf::from("/etc/ferroehr/policies")),
-                    reload_interval: None,
-                    reload_secs: ferrohealth_config::removed::Removed::default(),
+                    ..CedarConfig::default()
                 },
                 check_directory: true,
                 ..AbacConfig::default()
