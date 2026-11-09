@@ -45,7 +45,8 @@
 //!    kinds no build can ship a rule for ([`detect`]). A `DV_IDENTIFIER`
 //!    whose `type` declares an item rather than a person, and one in a
 //!    feeder audit's item-id lists that declares no person, is not scanned
-//!    (`identifier_kind`).
+//!    (`identifier_kind`). One with no `type`, or a type naming neither
+//!    kind, is read by the `name` of the `ELEMENT` that holds it instead.
 //!
 //! A finding never carries the offending VALUE, only its RM path and the rule
 //! that matched: a refusal travels into an error body, an access log and a
@@ -97,6 +98,21 @@ enum Slot {
     Content,
     /// An element of one of the [`ITEM_ID_KEYS`] lists.
     ItemIds,
+}
+
+/// The walk's position: the [`Slot`] and, for the `value` of an `ELEMENT`,
+/// the kind that element's `name` declares.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Position {
+    slot: Slot,
+    element_name: DeclaredKind,
+}
+
+impl Position {
+    const CONTENT: Self = Self {
+        slot: Slot::Content,
+        element_name: DeclaredKind::Undeclared,
+    };
 }
 
 /// What a clinical commit body carried that the policy refuses.
@@ -261,7 +277,7 @@ impl PrivacyPolicy {
         if root == "EHR_STATUS" && self.subject_rule_in_force() {
             self.check_subject(root, body, &mut findings);
         }
-        self.walk(root, body, Slot::Content, &mut findings);
+        self.walk(root, body, Position::CONTENT, &mut findings);
         findings
     }
 
@@ -379,28 +395,34 @@ impl PrivacyPolicy {
 
     /// The identified-party rule and the identifier scanner, over every node of
     /// the body.
-    fn walk(&self, at: &str, node: &Value, slot: Slot, findings: &mut Vec<Finding>) {
+    fn walk(&self, at: &str, node: &Value, position: Position, findings: &mut Vec<Finding>) {
         match node {
             Value::Object(map) => {
                 if !self.allow_identified_parties {
                     check_party(at, map, findings);
                 }
-                let unscanned_id = names_no_person(map, slot);
+                let unscanned_id = names_no_person(map, position);
+                let element_name = element_name_kind(map);
                 for (key, child) in map {
                     if key == TERMINOLOGY_CODE_KEY || (unscanned_id && key == "id") {
                         continue;
                     }
-                    let child_slot = if ITEM_ID_KEYS.contains(&key.as_str()) {
+                    let slot = if ITEM_ID_KEYS.contains(&key.as_str()) {
                         Slot::ItemIds
                     } else {
                         Slot::Content
                     };
-                    self.walk(&format!("{at}/{key}"), child, child_slot, findings);
+                    let element_name = match element_name {
+                        Some(kind) if key == "value" => kind,
+                        _ => DeclaredKind::Undeclared,
+                    };
+                    let child_position = Position { slot, element_name };
+                    self.walk(&format!("{at}/{key}"), child, child_position, findings);
                 }
             }
             Value::Array(items) => {
                 for (index, child) in items.iter().enumerate() {
-                    self.walk(&format!("{at}[{index}]"), child, slot, findings);
+                    self.walk(&format!("{at}[{index}]"), child, position, findings);
                 }
             }
             Value::String(text) => self.scan_text(at, text, findings),
@@ -444,14 +466,19 @@ impl PrivacyPolicy {
 }
 
 /// Whether `map` is a `DV_IDENTIFIER` whose `id` the identifier scanner
-/// leaves alone: its `type` declares an item, or it sits in a feeder audit's
-/// item-id list and its `type` declares no person.
+/// leaves alone: its `type` declares an item, or it declares no kind and the
+/// enclosing `ELEMENT`'s `name` declares an item, or it sits in a feeder
+/// audit's item-id list and neither declares a person.
+///
+/// A declared `type` takes precedence over the element name, so a value typed
+/// as a person identifier is scanned under any name, and one typed as an item
+/// is left alone under any name.
 ///
 /// A list element may omit `_type` where the static type is concrete, and
 /// `DV_IDENTIFIER` is the only RM 1.2.0 class with a `String` attribute named
 /// `id` (`PARTY_REF.id` and `OBJECT_REF.id` are objects), so an untyped object
 /// with a string `id` is one too.
-fn names_no_person(map: &serde_json::Map<String, Value>, slot: Slot) -> bool {
+fn names_no_person(map: &serde_json::Map<String, Value>, position: Position) -> bool {
     let is_identifier = match map.get("_type").and_then(Value::as_str) {
         Some(rm_type) => rm_type == "DV_IDENTIFIER",
         None => map.get("id").is_some_and(Value::is_string),
@@ -459,11 +486,30 @@ fn names_no_person(map: &serde_json::Map<String, Value>, slot: Slot) -> bool {
     if !is_identifier {
         return false;
     }
-    match declared_kind(map.get("type").and_then(Value::as_str)) {
+    let kind = match declared_kind(map.get("type").and_then(Value::as_str)) {
+        DeclaredKind::Undeclared => position.element_name,
+        declared => declared,
+    };
+    match kind {
         DeclaredKind::Item => true,
-        DeclaredKind::Undeclared => slot == Slot::ItemIds,
+        DeclaredKind::Undeclared => position.slot == Slot::ItemIds,
         DeclaredKind::Person => false,
     }
+}
+
+/// The kind an `ELEMENT`'s `name` declares for its `value`, or `None` when
+/// `map` is not an `ELEMENT`.
+fn element_name_kind(map: &serde_json::Map<String, Value>) -> Option<DeclaredKind> {
+    // NOTE: RM common `org.openehr.rm.common.locatable.adoc` §Attributes: an ELEMENT's `name`
+    // is "the original label by which this entry was known to end users", so it names its value.
+    if map.get("_type").and_then(Value::as_str) != Some("ELEMENT") {
+        return None;
+    }
+    Some(declared_kind(
+        map.get("name")
+            .and_then(|name| name.get("value"))
+            .and_then(Value::as_str),
+    ))
 }
 
 /// Refuse the party-proxy attributes that identify the record's subject.
