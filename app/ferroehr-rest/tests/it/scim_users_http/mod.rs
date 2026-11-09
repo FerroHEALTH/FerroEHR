@@ -32,6 +32,7 @@ use crate::common;
 mod entra;
 mod groups;
 mod groups_entra;
+mod jit;
 mod refusals;
 
 /// The deployment's own authorization server, which issues the clients' tokens.

@@ -351,6 +351,46 @@ broker and connect that instead:
 
 The broker owns the LDAP bind; the CDR sees only signed tokens.
 
+## Just-in-time creation
+
+An issuer can let a professional with no party work at their first login:
+FerroEHR then creates a provisional `PERSON` from the access token and binds
+the login to it, as
+[the configuration reference](installation/config-auth.md#just-in-time-creation)
+describes. It is off by default. What each identity provider must do for it:
+
+- **Put the name claims in the access token.** FerroEHR reads the person's
+  data from the access token only (RFC 9068 §2.2.2 lets an authorization
+  server include resource owner attributes there), never from an ID token or
+  the userinfo endpoint. A generic issuer emits the OpenID Connect Core 1.0
+  §5.1 claims your mapped attributes name (`name`, `given_name`,
+  `family_name`).
+- **Microsoft Entra ID (the `entra` preset):** add the optional claims
+  `given_name` and `family_name` to the access token of your app
+  registration and request the `profile` scope: Entra documents both as v2.0
+  optional claims that "Requires the `profile` scope" (Microsoft identity
+  platform, *Optional claims reference*). Admit logins by group
+  (`admit_groups`, the object ids in `groups`) or by the `idp` claim, which
+  "records the identity provider that authenticated the subject of the
+  token" and differs from the issuer for a guest (*Access token claims
+  reference*). The key is the object id `oid`, never `upn` or `email`, which
+  Entra calls mutable.
+- **Keycloak (the `keycloak` preset):** the built-in `profile` client scope
+  maps the name claims; check that its mappers add them to the access token.
+  Make the name attributes administrator-controlled as the key is: in the
+  realm's user profile, set the attribute's *Who can edit* permission to
+  *Admin* only (`"permissions": { "edit": ["admin"] }` in the JSON editor),
+  which Keycloak defines as writable only from the administrative context
+  (Server Administration Guide, *Managing user attributes*, Permission). A
+  professional who could edit their own name could change what their first
+  login writes.
+
+The `userName` comes from `user_name_claim`, or the key when it is unset, and
+never from a claim the user can change. SCIM completes a provisional `PERSON`
+later: a client whose `binding_issuer` is the issuer's `identifier_issuer`
+finds it by `userName`, sets the `externalId`, and a complete `PUT` makes it
+`complete`.
+
 ## Serving SMART apps
 
 If your IdP is also the authorization server for SMART App Launch apps, the same

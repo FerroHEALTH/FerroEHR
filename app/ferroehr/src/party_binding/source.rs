@@ -18,13 +18,17 @@
 use std::collections::BTreeMap;
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::Arc;
 
 use ferrohealth_smart::party::source::{Lookup, PartyRecord, PartySource, Query, SourceError};
 use ferrohealth_smart::party::{Markers, Membership, PartyRef, PartyState, Represented};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::error::ServiceError;
 use crate::party_binding::lookup::{self, KeyRow};
+use crate::service::FerroEhrService;
+use crate::service::demographic::jit::ProvisionalPerson;
 use crate::storage::error::StorageError;
 
 /// The RM class of a bound party.
@@ -43,6 +47,24 @@ pub trait BindingSource: PartySource {
     ) -> Pin<Box<dyn Future<Output = Result<Option<String>, SourceError>> + Send + 'a>> {
         Box::pin(async { Ok(None) })
     }
+
+    /// Creates the provisional `PERSON` `person` a first login with no party
+    /// asks for, returning its container.
+    ///
+    /// # Errors
+    /// The refusals of [`crate::service::FerroEhrService::create_provisional_person`];
+    /// a source that writes no party refuses every creation.
+    fn create_provisional(
+        &self,
+        person: ProvisionalPerson,
+    ) -> Pin<Box<dyn Future<Output = Result<Uuid, ServiceError>> + Send + '_>> {
+        let issuer = person.login_issuer;
+        Box::pin(async move {
+            Err(ServiceError::not_permitted(format!(
+                "this party source creates no PERSON at a first login of {issuer}"
+            )))
+        })
+    }
 }
 
 /// The party source over the binding side table.
@@ -53,7 +75,10 @@ pub struct LocalPartySource {
     /// The `PARTY_REF.namespace` a reported party is named under.
     namespace: String,
     /// The mapping whose name paths name a bound `PERSON`.
-    mapping: std::sync::Arc<crate::party_binding::BindingMapping>,
+    mapping: Arc<crate::party_binding::BindingMapping>,
+    /// The service a provisional `PERSON` is created through; `None` for a
+    /// source that creates none.
+    creator: Option<Arc<FerroEhrService>>,
 }
 
 impl LocalPartySource {
@@ -64,18 +89,24 @@ impl LocalPartySource {
         Self {
             pool,
             namespace: namespace.into(),
-            mapping: std::sync::Arc::default(),
+            mapping: Arc::default(),
+            creator: None,
         }
     }
 
     /// Returns this source naming a bound `PERSON` at the name paths of
     /// `mapping`.
     #[must_use]
-    pub fn with_mapping(
-        mut self,
-        mapping: std::sync::Arc<crate::party_binding::BindingMapping>,
-    ) -> Self {
+    pub fn with_mapping(mut self, mapping: Arc<crate::party_binding::BindingMapping>) -> Self {
         self.mapping = mapping;
+        self
+    }
+
+    /// Returns this source creating a provisional `PERSON` at a first login
+    /// through `service`.
+    #[must_use]
+    pub fn with_creator(mut self, service: Arc<FerroEhrService>) -> Self {
+        self.creator = Some(service);
         self
     }
 
@@ -255,6 +286,21 @@ impl BindingSource for LocalPartySource {
                 return Ok(None);
             };
             self.name(id).await.map_err(SourceError::new)
+        })
+    }
+
+    fn create_provisional(
+        &self,
+        person: ProvisionalPerson,
+    ) -> Pin<Box<dyn Future<Output = Result<Uuid, ServiceError>> + Send + '_>> {
+        Box::pin(async move {
+            let Some(service) = &self.creator else {
+                return Err(ServiceError::not_permitted(format!(
+                    "this party source creates no PERSON at a first login of {}",
+                    person.login_issuer
+                )));
+            };
+            Ok(Box::pin(service.create_provisional_person(person)).await?.0)
         })
     }
 }
