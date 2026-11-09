@@ -239,7 +239,7 @@ ferrohealth-session = { version = "=0.9.0", default-features = false }
 # ferrohealth-smart authenticates, the Cedar engine (`cedar`) and the remote
 # decision point (`remote`). Pinned exactly beside ferrohealth-smart.
 # Verified on crates.io 2026-11-06.
-ferrohealth-authz = { version = "=0.8.0", default-features = false }
+ferrohealth-authz = { version = "=0.8.1", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -298,8 +298,8 @@ ferrobridge-term = { version = "=0.2.0", default-features = false, features = ["
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
 # crates.io 2026-11-08 (FerroAUDIT v0.5.2).
-ihe-atna = { version = "=0.9.0", default-features = false }
-ehds-logging = { version = "=0.9.0", default-features = false }
+ihe-atna = { version = "=0.9.1", default-features = false }
+ehds-logging = { version = "=0.9.1", default-features = false }
 # The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
 # the viewer reads the ITI-81 searchset, each BALP `AuditEvent` and a refusal's
 # `OperationOutcome` through it. Verified on crates.io 2026-11-08.

@@ -215,8 +215,9 @@ decides what the commit does.
 
 ### The endpoint table
 
-Every outbound HTTP integration, `[terminology.endpoint]`, `[pixm.endpoint]`
-and `[audit.fhir_feed.endpoint]`, is the FerroHEALTH family's one endpoint
+Every outbound HTTP integration, `[terminology.endpoint]`, `[pixm.endpoint]`,
+`[audit.fhir_feed.endpoint]` and `[authz.abac.remote.endpoint]`, is the
+FerroHEALTH family's one endpoint
 table, so an operator writes the same keys for each integration of each
 product.
 

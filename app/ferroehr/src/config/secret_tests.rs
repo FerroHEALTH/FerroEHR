@@ -254,7 +254,7 @@ fn url_userinfo_reaches_no_rendering() {
             ..crate::service::terminology::config::TerminologyServerConfig::default()
         },
     );
-    c.authz.abac.remote.url = Some(leaky(12));
+    c.authz.abac.remote.endpoint.url = leaky(12).expose().to_owned();
     c.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
         endpoint: leaky(13),
         ..ferrohealth_telemetry::section::OtlpSection::default()

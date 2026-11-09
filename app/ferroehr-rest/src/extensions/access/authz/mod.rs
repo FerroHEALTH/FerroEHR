@@ -186,21 +186,22 @@ pub fn build_engine(config: &AbacConfig) -> Result<Option<Arc<dyn PolicyEngine>>
 }
 
 /// The remote decision point `[authz.abac.remote]` and `[authz.abac.policy]`
-/// describe: each resource kind bound to its policy, and the client
-/// credentials token of `[authz.abac.remote.oauth]` when one is set.
+/// describe.
+///
+/// Each resource kind is bound to its policy, and the point is called over
+/// the endpoint's HTTP client and `retry`, with the client credentials token
+/// of `[authz.abac.remote.endpoint.credentials.oauth]` when one is set.
 ///
 /// # Errors
 /// [`AuthzError::Load`] when the server is unset or no URL, a policy names an
 /// unknown resource kind, or the grant does not resolve; [`AuthzError::Remote`]
 /// when the settings are refused.
 pub fn remote_pdp(config: &AbacConfig) -> Result<RemotePdp, AuthzError> {
-    let server = config
-        .remote
-        .url
-        .as_ref()
-        .filter(|s| !s.expose().trim().is_empty())
-        .ok_or_else(|| AuthzError::Load("authz.abac.remote.url is not set".into()))?;
-    let server = url::Url::parse(server.expose()).map_err(|e| AuthzError::Load(Box::new(e)))?;
+    let endpoint = ferroehr::outbound::Endpoint::connect(
+        "authz.abac.remote.endpoint",
+        &config.remote.endpoint,
+    )
+    .map_err(|e| AuthzError::Load(Box::new(e)))?;
     let mut bindings = std::collections::BTreeMap::new();
     for (key, rule) in &config.policy {
         let kind = request::ResourceKind::from_config_key(key).ok_or_else(|| {
@@ -218,26 +219,20 @@ pub fn remote_pdp(config: &AbacConfig) -> Result<RemotePdp, AuthzError> {
             },
         );
     }
-    let token = config
-        .remote
-        .oauth
-        .as_ref()
-        .map(|oauth| {
-            let grant = oauth
-                .resolve_with_tls(&ferrohealth_smart::config::ServerTls)
-                .map_err(|e| AuthzError::Load(Box::new(e)))?;
-            ferrohealth_smart::client::cache::TokenSource::new(grant)
-                .map_err(|e| AuthzError::Load(Box::new(e)))
-        })
-        .transpose()?;
-    RemotePdp::new(
+    RemotePdp::with_client(
         RemoteSettings {
-            server,
+            server: endpoint.url().clone(),
             bindings,
-            connect_timeout: config.remote.connect_timeout.get(),
-            request_timeout: config.remote.timeout.get(),
+            connect_timeout: config
+                .remote
+                .endpoint
+                .connect_timeout
+                .map_or(endpoint.timeout(), Duration::get),
+            request_timeout: endpoint.timeout(),
         },
-        token,
+        endpoint.http(),
+        endpoint.retry(),
+        endpoint.token(),
     )
 }
 

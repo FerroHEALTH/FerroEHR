@@ -670,10 +670,13 @@ check_directory = false      # submit DIRECTORY (FOLDER) operations to the PDP;
 #? policy_dir = "/etc/ferroehr/policies"   # required when engine = cedar and abac enabled
 #? reload_interval = "30s"
 
-[authz.abac.remote]
+# The remote policy decision point: the family's endpoint table, the keys of
+# [terminology.endpoint].
+[authz.abac.remote.endpoint]
 #? url = "http://pdp:3001/exec/"          # required when engine = remote; must end '/'
 connect_timeout = "2s"
 timeout = "5s"
+#? retry = { max_attempts = 3, initial_backoff = "200ms", max_backoff = "5s" }
 
 # Per-resource-kind policy bindings (kind ∈ ehr, ehr_status, composition,
 # contribution, query, directory):

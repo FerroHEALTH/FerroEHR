@@ -88,10 +88,10 @@ impl FerroEhrConfig {
         }
     }
 
-    /// The outbound endpoints in use: the ITI-20 feed and the terminology
-    /// server when they are configured, each by the endpoint rules
-    /// ([`crate::outbound::problems`]), and the grant of the remote policy
-    /// service when ABAC runs on it. A credential beside one in the URL's
+    /// The outbound endpoints in use, each by the endpoint rules
+    /// ([`crate::outbound::problems`]): the ITI-20 feed and the terminology
+    /// server when they are configured, and the remote policy service when
+    /// ABAC runs on it. A credential beside one in the URL's
     /// userinfo is refused: the upstream would receive two authorizations, and
     /// which one it honours is not ours to guess. No openEHR spec governs
     /// outbound authentication: our own design.
@@ -110,30 +110,17 @@ impl FerroEhrConfig {
                     .map(ConfigError::semantic),
             );
         }
-        let remote = &self.authz.abac.remote;
         let remote_in_use =
             self.authz.abac.enabled && self.authz.abac.engine == authz::AbacEngineKind::Remote;
-        let Some(oauth) = remote.oauth.as_ref().filter(|_| remote_in_use) else {
-            return;
-        };
-        errors.extend(
-            oauth
-                .problems("authz.abac.remote.oauth")
+        if remote_in_use {
+            errors.extend(
+                crate::outbound::problems(
+                    "authz.abac.remote.endpoint",
+                    &self.authz.abac.remote.endpoint,
+                )
                 .into_iter()
                 .map(ConfigError::semantic),
-        );
-        let userinfo = remote
-            .url
-            .as_ref()
-            .and_then(|u| url::Url::parse(u.expose()).ok())
-            .is_some_and(|u| !u.username().is_empty() || u.password().is_some());
-        if userinfo {
-            errors.push(ConfigError::semantic(
-                "authz.abac.remote carries credentials in its URL and an \
-                 [authz.abac.remote.oauth] grant; authenticate one way: remove the userinfo or \
-                 the grant"
-                    .to_owned(),
-            ));
+            );
         }
     }
 

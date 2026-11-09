@@ -228,7 +228,7 @@ async fn trail(pool: &PgPool, resource: &str, expected: usize) -> Vec<(String, S
 /// new settings, and the repair is an access record naming the administrator.
 #[tokio::test]
 async fn an_administrator_repairs_a_held_ehr() {
-    let (_db, pool, app) = app().await;
+    let (_db, pool, app) = Box::pin(app()).await;
     let ehr = format!("/ehr/{HELD}");
     assert_eq!(
         send(&app, "GET", &ehr, "bob", None).await.0,
@@ -283,7 +283,7 @@ async fn an_administrator_repairs_a_held_ehr() {
 /// commits.
 #[tokio::test]
 async fn the_repair_is_refused_unless_an_administrator_repairs_a_held_ehr() {
-    let (_db, pool, app) = app().await;
+    let (_db, pool, app) = Box::pin(app()).await;
     let fixed = restricted_to("carol");
 
     let (status, body) = repair(&app, "bob", HELD, &fixed).await;

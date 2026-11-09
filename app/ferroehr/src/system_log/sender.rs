@@ -621,8 +621,8 @@ fn start_feed(
         return Ok((None, None));
     };
     let feed = repository(fhir_feed)?;
-    // TODO(#5331): hand the forwarder the whole `retry` once ihe-atna 0.9.1 takes it.
-    let retry_max = fhir_feed.endpoint.retry.max_backoff.get();
+    let retry = ihe_atna::atna::retry::Retry::try_from(fhir_feed.endpoint.retry)
+        .map_err(|e| AuditError::Transport(Box::new(e)))?;
     let Some(store) = store else {
         // NOTE: no specification governs the bounds of the store-off feed's
         // spool: our own design, about a day of records at a modest rate.
@@ -631,7 +631,7 @@ fn start_feed(
             max_bytes: 256 * 1024 * 1024,
             write_timeout: Duration::from_secs(2),
         });
-        let forwarder = Forwarder::fhir_feed(spool, feed, retry_max);
+        let forwarder = Forwarder::fhir_feed_with_retry(spool, feed, retry);
         deliveries.push(deliver("fhir_feed", &forwarder));
         return Ok((None, Some(forwarder)));
     };
@@ -646,7 +646,7 @@ fn start_feed(
     );
     deliveries.push(deliver(
         "fhir_feed",
-        &Forwarder::fhir_feed_from(outbox, feed, retry_max),
+        &Forwarder::fhir_feed_from_with_retry(outbox, feed, retry),
     ));
     Ok((Some(notify), None))
 }

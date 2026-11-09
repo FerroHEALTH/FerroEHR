@@ -229,16 +229,19 @@ const CEDAR_RELOAD_SECS: Retired = Retired::replaced(
     concat!("authz.abac.cedar.reload_interval, ", duration!()),
     SINCE,
 );
-const REMOTE_SERVER: Retired =
-    Retired::replaced("authz.abac.remote.server", "authz.abac.remote.url", SINCE);
+const REMOTE_SERVER: Retired = Retired::replaced(
+    "authz.abac.remote.server",
+    "authz.abac.remote.endpoint.url",
+    SINCE,
+);
 const REMOTE_CONNECT_TIMEOUT_MS: Retired = Retired::replaced(
     "authz.abac.remote.connect_timeout_ms",
-    concat!("authz.abac.remote.connect_timeout, ", duration!()),
+    concat!("authz.abac.remote.endpoint.connect_timeout, ", duration!()),
     SINCE,
 );
 const REMOTE_REQUEST_TIMEOUT_MS: Retired = Retired::replaced(
     "authz.abac.remote.request_timeout_ms",
-    concat!("authz.abac.remote.timeout, ", duration!()),
+    concat!("authz.abac.remote.endpoint.timeout, ", duration!()),
     SINCE,
 );
 const PARTY_BINDING_ENABLED: Retired = Retired::removed(
@@ -358,11 +361,15 @@ const FEED_RETRY_MAX_MS: Retired = Retired::replaced(
     concat!("audit.fhir_feed.endpoint.retry.max_backoff, ", duration!()),
     SINCE,
 );
-const FEED_URL: Retired = Retired::replaced(
-    "audit.fhir_feed.url",
-    "audit.fhir_feed.endpoint.url",
+const REMOTE_OAUTH: Retired = Retired::replaced(
+    "authz.abac.remote.oauth",
+    "[authz.abac.remote.endpoint.credentials.oauth], whose tls table holds trust_roots_file and \
+     client_identity_file and whose refresh_margin, timeout and previous_key_overlap are \
+     durations",
     SINCE,
 );
+const FEED_URL: Retired =
+    Retired::replaced("audit.fhir_feed.url", "audit.fhir_feed.endpoint.url", SINCE);
 const FEED_OAUTH: Retired = Retired::replaced(
     "audit.fhir_feed.oauth",
     "[audit.fhir_feed.endpoint.credentials.oauth], whose tls table holds trust_roots_file and \
@@ -380,7 +387,7 @@ const MULTIMEDIA_ALLOW_HTTP: Retired = Retired::removed(
 /// Every key this module refuses, for the test that holds each to the one
 /// release it lives for.
 #[cfg(test)]
-pub(crate) const RETIRED: [Retired; 59] = [
+pub(crate) const RETIRED: [Retired; 60] = [
     TERMINOLOGY_API_ENABLED,
     TERMINOLOGY_SERVER,
     PROFILING_MAX_SECONDS,
@@ -439,6 +446,7 @@ pub(crate) const RETIRED: [Retired; 59] = [
     FEED_RETRY_MAX_MS,
     FEED_URL,
     FEED_OAUTH,
+    REMOTE_OAUTH,
     MULTIMEDIA_ALLOW_HTTP,
 ];
 
@@ -516,6 +524,7 @@ fn authz(config: &FerroEhrConfig, removals: &mut Removals) {
     removals.check(remote.server, &REMOTE_SERVER);
     removals.check(remote.connect_timeout_ms, &REMOTE_CONNECT_TIMEOUT_MS);
     removals.check(remote.request_timeout_ms, &REMOTE_REQUEST_TIMEOUT_MS);
+    removals.check(remote.oauth, &REMOTE_OAUTH);
     removals.check(authz.party_binding.enabled, &PARTY_BINDING_ENABLED);
     removals.check(authz.professional, &PROFESSIONAL);
     removals.check(

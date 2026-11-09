@@ -35,9 +35,16 @@ fn config(server: &str, name: &str, parameters: Vec<AbacParam>) -> AbacConfig {
         enabled: true,
         engine: AbacEngineKind::Remote,
         remote: RemoteConfig {
-            url: Some(ferrohealth_secret::secret_url::SecretUrl::new(server)),
-            connect_timeout: ferrohealth_config::units::Duration::from_millis(500),
-            timeout: ferrohealth_config::units::Duration::from_millis(1000),
+            endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                url: server.to_owned(),
+                connect_timeout: Some(ferrohealth_config::units::Duration::from_millis(500)),
+                timeout: ferrohealth_config::units::Duration::from_millis(1000),
+                retry: ferrohealth_smart::config::endpoint::RetrySection {
+                    max_attempts: 1,
+                    ..ferrohealth_smart::config::endpoint::RetrySection::default()
+                },
+                ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+            },
             ..RemoteConfig::default()
         },
         policy,
@@ -159,6 +166,34 @@ async fn a_server_error_is_not_a_decision() {
             "status {status} must be a fail-closed error, not a deny: {outcome:?}"
         );
     }
+}
+
+/// `[authz.abac.remote.endpoint] retry` is honoured: a `503` is asked again,
+/// and the second answer decides.
+#[tokio::test]
+async fn a_server_error_is_tried_again_under_the_endpoint_retry() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(503))
+        .up_to_n_times(1)
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let base = format!("{}/", server.uri());
+    let mut cfg = config(&base, "p", vec![AbacParam::Patient]);
+    cfg.remote.endpoint.retry = ferrohealth_smart::config::endpoint::RetrySection {
+        max_attempts: 2,
+        initial_backoff: ferrohealth_config::units::Duration::from_millis(1),
+        max_backoff: ferrohealth_config::units::Duration::from_millis(1),
+    };
+    let pdp = remote_pdp(&cfg).expect("build");
+    let req = composition_req(Some(Attr::One("p-1".to_owned())), None);
+    assert_eq!(decide(&pdp, &req).await.expect("decided"), Decision::Permit);
 }
 
 #[tokio::test]
@@ -316,7 +351,7 @@ async fn the_policy_service_is_called_with_a_client_credentials_token() {
         "p",
         vec![AbacParam::Organization],
     );
-    cfg.remote.oauth = Some(grant(&auth.uri()));
+    cfg.remote.endpoint.credentials.oauth = Some(grant(&auth.uri()));
     let pdp = remote_pdp(&cfg).expect("build");
     for _ in 0..2 {
         assert_eq!(
@@ -353,7 +388,7 @@ async fn a_refused_grant_or_token_fails_closed() {
         "p",
         vec![AbacParam::Organization],
     );
-    cfg.remote.oauth = Some(grant(&auth.uri()));
+    cfg.remote.endpoint.credentials.oauth = Some(grant(&auth.uri()));
     let pdp = remote_pdp(&cfg).expect("build");
     let err = decide(&pdp, &composition_req(None, None))
         .await
@@ -380,7 +415,7 @@ async fn a_refused_grant_or_token_fails_closed() {
         "p",
         vec![AbacParam::Organization],
     );
-    cfg.remote.oauth = Some(grant(&auth.uri()));
+    cfg.remote.endpoint.credentials.oauth = Some(grant(&auth.uri()));
     let pdp = remote_pdp(&cfg).expect("build");
     let err = decide(&pdp, &composition_req(None, None))
         .await

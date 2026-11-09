@@ -9,7 +9,8 @@
 
 use std::path::PathBuf;
 
-use ferrohealth_secret::secret_url::{RedactedUrl, SecretUrl};
+use ferrohealth_secret::secret_url::RedactedUrl;
+use ferrohealth_smart::config::endpoint::EndpointSection;
 use serde::{Deserialize, Serialize};
 
 use crate::config::authz::{AbacConfig, AbacEngineKind, AbacParam, AuthzConfigError};
@@ -74,11 +75,7 @@ impl AbacConfig {
     /// (an unconfigured kind denies, and the missing rule is a boot error
     /// rather than a silent refusal at request time).
     fn validate_remote_engine(&self) -> Result<(), AuthzConfigError> {
-        let server = self
-            .remote
-            .url
-            .as_ref()
-            .map(SecretUrl::expose)
+        let server = Some(self.remote.endpoint.url.as_str())
             .filter(|s| !s.trim().is_empty())
             .ok_or(AuthzConfigError::RemoteServerMissing)?;
         if !server.ends_with('/') {
@@ -115,19 +112,18 @@ pub struct CedarConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct RemoteConfig {
-    /// The PDP base URL; the policy name is appended, so it must end with `/`
-    /// (required when `engine = remote`). Any `userinfo` in it is masked in
-    /// every rendering.
-    pub url: Option<SecretUrl>,
-    /// TCP connect timeout (default `"2s"`): without one, a PDP that
-    /// blackholes packets parks the request until the OS TCP timeout.
-    pub connect_timeout: ferrohealth_config::units::Duration,
-    /// Whole-request timeout (default `"5s"`).
-    pub timeout: ferrohealth_config::units::Duration,
-    /// The OAuth 2.0 client-credentials grant the policy service is called
-    /// with (`[authz.abac.remote.oauth]`); absent, the calls carry the Basic
-    /// credentials of `url`, if any.
-    pub oauth: Option<ferrohealth_smart::config::credentials::OauthSection>,
+    /// `[authz.abac.remote.endpoint]`, the family's outbound endpoint: the PDP
+    /// base URL (`url`; the policy name is appended, so it must end with `/`;
+    /// required when `engine = remote`), the timeouts (a connect timeout keeps
+    /// a PDP that blackholes packets from parking the request until the OS TCP
+    /// timeout), the `retry` of a call that got no answer or a `5xx`, the TLS
+    /// and the credential, such as the OAuth 2.0 client credentials grant.
+    /// Any `userinfo` in the URL is masked in every rendering.
+    pub endpoint: EndpointSection,
+    /// Retired in v5.7.0: refused at load, naming
+    /// `endpoint.credentials.oauth`.
+    #[serde(skip_serializing)]
+    pub oauth: ferrohealth_config::removed::Removed,
     /// Retired in v5.7.0: refused at load, naming `url`.
     #[serde(skip_serializing)]
     pub server: ferrohealth_config::removed::Removed,
@@ -142,11 +138,12 @@ pub struct RemoteConfig {
 impl Default for RemoteConfig {
     fn default() -> Self {
         Self {
-            url: None,
-            connect_timeout: ferrohealth_config::units::Duration::from_secs(2),
-            // 5 s, the whole-request budget the discovery and terminology clients use too.
-            timeout: ferrohealth_config::units::Duration::from_secs(5),
-            oauth: None,
+            endpoint: EndpointSection {
+                timeout: ferrohealth_config::units::Duration::from_secs(5),
+                connect_timeout: Some(ferrohealth_config::units::Duration::from_secs(2)),
+                ..EndpointSection::default()
+            },
+            oauth: ferrohealth_config::removed::Removed::default(),
             server: ferrohealth_config::removed::Removed::default(),
             connect_timeout_ms: ferrohealth_config::removed::Removed::default(),
             request_timeout_ms: ferrohealth_config::removed::Removed::default(),

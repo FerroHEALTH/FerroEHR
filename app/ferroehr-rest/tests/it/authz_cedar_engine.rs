@@ -163,12 +163,12 @@ async fn remote_permit_when_patient_ok() -> (MockServer, RemotePdp) {
         enabled: true,
         engine: AbacEngineKind::Remote,
         remote: RemoteConfig {
-            url: Some(ferrohealth_secret::secret_url::SecretUrl::new(format!(
-                "{}/",
-                server.uri()
-            ))),
-            connect_timeout: ferrohealth_config::units::Duration::from_millis(500),
-            timeout: ferrohealth_config::units::Duration::from_millis(1000),
+            endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                url: format!("{}/", server.uri()),
+                connect_timeout: Some(ferrohealth_config::units::Duration::from_millis(500)),
+                timeout: ferrohealth_config::units::Duration::from_millis(1000),
+                ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+            },
             ..RemoteConfig::default()
         },
         policy,

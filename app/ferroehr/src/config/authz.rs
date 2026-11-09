@@ -384,8 +384,6 @@ impl AuthzConfig {
 mod tests {
     use std::path::PathBuf;
 
-    use ferrohealth_secret::secret_url::SecretUrl;
-
     use super::*;
     use crate::config::abac_rules::REQUIRED_REMOTE_POLICY_KINDS;
 
@@ -549,7 +547,10 @@ mod tests {
         let no_slash = AuthzConfig {
             abac: AbacConfig {
                 remote: RemoteConfig {
-                    url: Some(SecretUrl::new("http://pdp:3001/exec")),
+                    endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                        url: "http://pdp:3001/exec".to_owned(),
+                        ..RemoteConfig::default().endpoint
+                    },
                     ..RemoteConfig::default()
                 },
                 ..base.clone()
@@ -564,7 +565,10 @@ mod tests {
         let ok = AuthzConfig {
             abac: AbacConfig {
                 remote: RemoteConfig {
-                    url: Some(SecretUrl::new("http://pdp:3001/exec/")),
+                    endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                        url: "http://pdp:3001/exec/".to_owned(),
+                        ..RemoteConfig::default().endpoint
+                    },
                     ..RemoteConfig::default()
                 },
                 ..base
@@ -585,7 +589,10 @@ mod tests {
                 enabled: true,
                 engine: AbacEngineKind::Remote,
                 remote: RemoteConfig {
-                    url: Some(SecretUrl::new("http://pdp:3001/exec/")),
+                    endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                        url: "http://pdp:3001/exec/".to_owned(),
+                        ..RemoteConfig::default().endpoint
+                    },
                     ..RemoteConfig::default()
                 },
                 policy,
@@ -680,11 +687,11 @@ mod tests {
     fn remote_timeouts_default() {
         let c = AbacConfig::default();
         assert_eq!(
-            c.remote.connect_timeout,
-            ferrohealth_config::units::Duration::from_secs(2)
+            c.remote.endpoint.connect_timeout,
+            Some(ferrohealth_config::units::Duration::from_secs(2))
         );
         assert_eq!(
-            c.remote.timeout,
+            c.remote.endpoint.timeout,
             ferrohealth_config::units::Duration::from_secs(5)
         );
     }
@@ -698,7 +705,7 @@ mod tests {
     fn a_partial_table_falls_back_to_the_default_impl() {
         let parsed: AuthzConfig = toml::from_str(
             "[rbac]\nadmin_role = \"OPERATOR\"\n\n[abac]\nenabled = true\n\n\
-             [abac.remote]\nconnect_timeout = \"750ms\"\n",
+             [abac.remote.endpoint]\nconnect_timeout = \"750ms\"\n",
         )
         .expect("partial authz table");
 
@@ -707,8 +714,8 @@ mod tests {
         assert_eq!(parsed.rbac.admin_role, "OPERATOR");
         assert!(parsed.abac.enabled);
         assert_eq!(
-            parsed.abac.remote.connect_timeout,
-            ferrohealth_config::units::Duration::from_millis(750)
+            parsed.abac.remote.endpoint.connect_timeout,
+            Some(ferrohealth_config::units::Duration::from_millis(750))
         );
         // Every unmentioned key came from the Default impl, not from
         // `<field type>::default()` (which would be `false`/`0`/empty).

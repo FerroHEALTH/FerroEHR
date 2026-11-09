@@ -156,27 +156,6 @@ const PARTY: [Retired; 1] = [Retired::removed(
     SINCE,
 )];
 
-const OAUTH: [Retired; 6] = [
-    Retired::replaced("ca_file", "tls.trust_roots_file", SINCE),
-    Retired::replaced(
-        "client_certificate_file",
-        "tls.client_identity_file, one PEM holding the chain and the key",
-        SINCE,
-    ),
-    Retired::replaced(
-        "client_key_file",
-        "tls.client_identity_file, one PEM holding the chain and the key",
-        SINCE,
-    ),
-    renamed!("refresh_margin_ms", "refresh_margin", duration!()),
-    renamed!("timeout_ms", "timeout", duration!()),
-    renamed!(
-        "previous_key_overlap_ms",
-        "previous_key_overlap",
-        duration!()
-    ),
-];
-
 const FLAT_ISSUER: Retired = Retired::replaced(
     "auth.issuer",
     "one [[auth.issuer]] table per trusted issuer, with issuer, kind and audience",
@@ -197,15 +176,11 @@ pub(crate) fn retired() -> Vec<Retired> {
         &DPOP,
         &ENTRA,
         &PARTY,
-        &OAUTH,
     ] {
         all.extend_from_slice(table);
     }
     all
 }
-
-/// The `oauth` table of v5.6 that keeps its place, `[authz.abac.remote.oauth]`.
-const OAUTH_TABLES: [&str; 1] = ["authz.abac.remote.oauth"];
 
 /// Every retired key of a family section the merged `tree` sets, each with
 /// its replacement.
@@ -219,10 +194,7 @@ pub fn removals(tree: &toml::Table) -> Removals {
         ("auth.basic", &BASIC),
         ("auth.dpop", &DPOP),
         ("auth.idp.entra", &ENTRA),
-    ]
-    .into_iter()
-    .chain(OAUTH_TABLES.map(|table| (table, &OAUTH[..])))
-    {
+    ] {
         if let Some(toml::Value::Table(keys)) = lookup(tree, table) {
             check(keys, retired, table, &mut removals);
         }
