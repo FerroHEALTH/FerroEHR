@@ -1202,17 +1202,17 @@ mod tests {
             // An operator the criterion catalog has no widget for.
             (
                 "SELECT c FROM EHR e CONTAINS COMPOSITION c WHERE c/context/x/value>1.0",
-                "c/context/x/value>1.0",
+                "c/context/x/value > 1.0",
             ),
             // A path with no DV-attribute suffix the catalog knows.
             (
                 "SELECT c FROM EHR e CONTAINS COMPOSITION c WHERE c/context/x/defining_code='a'",
-                "c/context/x/defining_code='a'",
+                "c/context/x/defining_code = 'a'",
             ),
             // A path-to-path comparison.
             (
                 "SELECT c FROM EHR e CONTAINS COMPOSITION c WHERE c/a/value=c/b/value",
-                "c/a/value=c/b/value",
+                "c/a/value = c/b/value",
             ),
             // A MATCHES set mixing types.
             (
@@ -1251,7 +1251,7 @@ mod tests {
         // kinds, so they lift as two conditions — which still re-lowers to the
         // identical text, so the round-trip law holds.
         let aql = "SELECT c FROM EHR e CONTAINS COMPOSITION c \
-                   WHERE c/a[at0001]/value/magnitude>=36.0 AND c/a[at0001]/value/magnitude<=38";
+                   WHERE c/a[at0001]/value/magnitude >= 36.0 AND c/a[at0001]/value/magnitude <= 38";
         let lifted = from_aql(aql).expect("lifts as two criteria");
         assert_eq!(to_aql(&lifted).expect("lowers"), aql);
         let Some(CriterionNode::Group { children, .. }) = lifted.criteria else {
