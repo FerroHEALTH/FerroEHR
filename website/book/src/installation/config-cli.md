@@ -26,6 +26,21 @@ Manufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar, The Netherland
 https://www.cadasto.com/contact/
 ```
 
+### Exit status
+
+Every command, the server included, exits with one of these statuses, the
+failure written to stderr with its whole cause:
+
+| Status | Meaning |
+|---|---|
+| `0` | The command did what it was asked. |
+| `1` | The command failed for any other reason: a database it cannot reach, a probe that reads unhealthy, a server that cannot serve. |
+| `2` | clap could not parse the command line. |
+| `78` | The binary refuses its configuration (`EX_CONFIG` of `sysexits(3)`): an unknown or invalid key, a semantic rule the configuration breaks, an `[auth]` table with no mechanism, or a SCIM mapping it cannot serve. |
+
+An orchestrator can tell a configuration to fix from a failure to retry by the
+status alone.
+
 ### `ferroehr config …`
 
 ```text
@@ -40,7 +55,7 @@ point for a real `ferroehr.toml`, is
 unknown-key sweep, the type pass, the aggregated semantic rules, and the
 "authentication enabled needs a mechanism" rule) and **touches no database**,
 so it is safe in CI and before a rollout. It exits 0 when the configuration is
-valid and 1 otherwise; on success it prints the effective configuration as TOML
+valid and 78 otherwise; on success it prints the effective configuration as TOML
 with every secret redacted, and notes on stderr when `database.url` is still the
 built-in development default.
 

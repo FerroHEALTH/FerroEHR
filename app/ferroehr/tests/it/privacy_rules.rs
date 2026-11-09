@@ -722,7 +722,8 @@ fn identifier(id: &str, kind: Option<&str>) -> Value {
 }
 
 /// A lab result whose order numbers sit where one carries them: the feeder
-/// audit's originating-system item ids and the order id in the protocol.
+/// audit's originating-system item ids and an identifier element in the
+/// protocol, under a name that declares no kind (#5291).
 fn lab_result(order: &str, order_type: Option<&str>) -> Value {
     let mut placer = identifier("CL2509-0042", Some("placer_order_number"));
     if let Some(object) = placer.as_object_mut() {
@@ -746,7 +747,7 @@ fn lab_result(order: &str, order_type: Option<&str>) -> Value {
                     "name": { "_type": "DV_TEXT", "value": "order details" },
                     "items": [{
                         "_type": "ELEMENT",
-                        "name": { "_type": "DV_TEXT", "value": "order id" },
+                        "name": { "_type": "DV_TEXT", "value": "reference" },
                         "value": identifier(order, order_type)
                     }]
                 }]
@@ -781,7 +782,7 @@ fn an_untyped_item_id_in_the_feeder_audit_is_not_a_finding_but_one_in_content_is
             paths(&default.findings("COMPOSITION", &lab_result(order, None))),
             ["COMPOSITION/content[0]/protocol/items[0]/items[0]/value/id"],
             "FEEDER_AUDIT.originating_system_item_ids identify the item, an untyped \
-             DV_IDENTIFIER elsewhere is still scanned"
+             DV_IDENTIFIER elsewhere under a name that declares no kind is still scanned"
         );
     }
 }
@@ -840,5 +841,137 @@ fn an_order_number_in_free_text_is_still_claimed_by_the_rules_in_force() {
         dutch.findings("COMPOSITION", &text),
         Vec::<Finding>::new(),
         "a deployment that does not enable gb-nhs-number never claims an NHS Number"
+    );
+}
+
+// ── identifiers read by their element's name ─────────────────────────────────
+
+/// The node names of `openEHR-EHR-OBSERVATION.laboratory_test_result.v1`'s
+/// protocol (`corpus/archetypes/ckm/adl14/`): the "Test request details"
+/// cluster (at0094) and its two order identifier elements (at0062, at0063).
+const TEST_REQUEST_DETAILS: &str = "Test request details";
+const REQUESTER_ORDER_IDENTIFIER: &str = "Requester order identifier";
+const RECEIVER_ORDER_IDENTIFIER: &str = "Receiver order identifier";
+
+/// Where the reported order id sits: the second element of "Test request
+/// details", "Receiver order identifier" (at0063).
+const ORDER_ID_PATH: &str = "COMPOSITION/content[0]/protocol/items[0]/items[1]/value/id";
+
+/// A `laboratory_test_result.v1` observation whose second "Test request
+/// details" element, named `element_name`, carries `order` typed `order_type`.
+fn laboratory_test_result(order: &str, order_type: Option<&str>, element_name: &str) -> Value {
+    json!({
+        "_type": "COMPOSITION",
+        "name": { "_type": "DV_TEXT", "value": "laboratory report" },
+        "content": [{
+            "_type": "OBSERVATION",
+            "archetype_node_id": "openEHR-EHR-OBSERVATION.laboratory_test_result.v1",
+            "name": { "_type": "DV_TEXT", "value": "Laboratory test result" },
+            "protocol": {
+                "_type": "ITEM_TREE",
+                "archetype_node_id": "at0004",
+                "name": { "_type": "DV_TEXT", "value": "Tree" },
+                "items": [{
+                    "_type": "CLUSTER",
+                    "archetype_node_id": "at0094",
+                    "name": { "_type": "DV_TEXT", "value": TEST_REQUEST_DETAILS },
+                    "items": [{
+                        "_type": "ELEMENT",
+                        "archetype_node_id": "at0062",
+                        "name": { "_type": "DV_TEXT", "value": REQUESTER_ORDER_IDENTIFIER },
+                        "value": identifier("CL2509-0042", None)
+                    }, {
+                        "_type": "ELEMENT",
+                        "archetype_node_id": "at0063",
+                        "name": { "_type": "DV_TEXT", "value": element_name },
+                        "value": identifier(order, order_type)
+                    }]
+                }]
+            }
+        }]
+    })
+}
+
+#[test]
+fn an_untyped_order_number_under_an_order_identifier_element_is_not_a_finding() {
+    let default = policy(&PrivacyConfig::default());
+    for order in ORDER_NUMBERS {
+        for name in [RECEIVER_ORDER_IDENTIFIER, REQUESTER_ORDER_IDENTIFIER] {
+            assert_eq!(
+                paths(&default.findings("COMPOSITION", &laboratory_test_result(order, None, name))),
+                Vec::<&str>::new(),
+                "with no type, the element name {name} declares an order identifier"
+            );
+        }
+    }
+}
+
+#[test]
+fn an_untyped_nhs_number_under_an_element_named_for_a_person_is_a_finding() {
+    let default = policy(&PrivacyConfig::default());
+    for name in [
+        "NHS number",
+        "Patient identifier",
+        "Patient order identifier",
+    ] {
+        let findings = default.findings(
+            "COMPOSITION",
+            &laboratory_test_result(SYNTHETIC_NHS_NUMBER, None, name),
+        );
+        assert_eq!(
+            paths(&findings),
+            [ORDER_ID_PATH],
+            "{name} names a person identifier, so its value is scanned"
+        );
+        assert!(findings[0].message.contains("gb-nhs-number"));
+    }
+    assert_eq!(
+        paths(&default.findings(
+            "COMPOSITION",
+            &laboratory_test_result(SYNTHETIC_NHS_NUMBER, None, "Laboratory internal identifier")
+        )),
+        [ORDER_ID_PATH],
+        "an element name that declares no kind proves nothing"
+    );
+}
+
+#[test]
+fn a_declared_type_takes_precedence_over_the_element_name() {
+    let default = policy(&PrivacyConfig::default());
+    for kind in ["NHS Number", "Social Security Number"] {
+        assert_eq!(
+            paths(&default.findings(
+                "COMPOSITION",
+                &laboratory_test_result(
+                    SYNTHETIC_NHS_NUMBER,
+                    Some(kind),
+                    RECEIVER_ORDER_IDENTIFIER
+                )
+            )),
+            [ORDER_ID_PATH],
+            "a type naming a person keeps the value scanned under an order element"
+        );
+    }
+    for order in ORDER_NUMBERS {
+        assert_eq!(
+            paths(&default.findings(
+                "COMPOSITION",
+                &laboratory_test_result(order, Some("filler_order_number"), "Patient identifier")
+            )),
+            Vec::<&str>::new(),
+            "a type naming an item is read before the element name"
+        );
+    }
+    assert_eq!(
+        paths(&default.findings(
+            "COMPOSITION",
+            &laboratory_test_result(
+                ORDER_NUMBERS[0],
+                Some("reference"),
+                RECEIVER_ORDER_IDENTIFIER
+            )
+        )),
+        Vec::<&str>::new(),
+        "a type naming neither kind falls back to the element name"
     );
 }

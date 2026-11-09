@@ -217,6 +217,12 @@ beside it for `GET /health/readiness` over the loopback (over TLS when
 `server.tls` is set) and exits `0` only on `200`. The viewer serves the
 family's health routes: `/health/liveness`, `/health/readiness` and `/health`.
 
+Every command exits `78` (`EX_CONFIG` of `sysexits(3)`) when the viewer
+refuses its configuration (an unknown or invalid key, a TLS file that does not
+read, an `[oidc]` or `[session]` table it cannot use) and `1` on any other
+failure, with the whole cause on stderr. A command line clap cannot parse
+exits `2`.
+
 ### Browser security headers
 
 Every response carries a Content-Security-Policy that admits scripts and

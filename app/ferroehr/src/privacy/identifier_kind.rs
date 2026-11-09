@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! What a `DV_IDENTIFIER` says it identifies, read from its own `type`.
+//! What a `DV_IDENTIFIER` says it identifies, read from its own `type` or,
+//! when that declares nothing, from the `name` of the `ELEMENT` holding it.
 //!
 //! The RM gives the value a declared kind: `type` is the "Optional identifier
 //! type, such as prescription, or Social Security Number", and the class's own
@@ -162,6 +163,20 @@ mod tests {
         ] {
             assert_eq!(declared_kind(Some(text)), DeclaredKind::Person, "{text}");
         }
+    }
+
+    #[test]
+    fn the_laboratory_test_result_order_identifier_names_declare_an_item() {
+        // The ELEMENT names of `openEHR-EHR-OBSERVATION.laboratory_test_result.v1`
+        // at0062 and at0063, under the protocol's "Test request details" (at0094).
+        for name in ["Requester order identifier", "Receiver order identifier"] {
+            assert_eq!(declared_kind(Some(name)), DeclaredKind::Item, "{name}");
+        }
+        assert_eq!(
+            declared_kind(Some("Laboratory internal identifier")),
+            DeclaredKind::Undeclared,
+            "at0068 names neither an item nor a person"
+        );
     }
 
     #[test]

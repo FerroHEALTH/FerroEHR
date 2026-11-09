@@ -258,13 +258,23 @@ findings, then moves to `strict`.
 A `DV_IDENTIFIER` carries an optional `type`, which the Reference Model
 describes as the "identifier type, such as prescription, or Social Security
 Number", and its examples run from a social security number to an "order id".
-The scanner reads it before it scans the `id`:
+The scanner reads it before it scans the `id`. When the `type` is absent or
+names neither kind, the scanner reads the `name` of the `ELEMENT` that holds
+the identifier instead, by the same words. Every `ELEMENT` is a `LOCATABLE`,
+whose `name` the Reference Model calls "the original label by which this
+entry was known to end users", and an archetyped element carries its node
+name there:
 
 | `DV_IDENTIFIER` | In clinical content | In `FEEDER_AUDIT.originating_system_item_ids` or `feeder_system_item_ids` |
 |---|---|---|
 | `type` names a person identifier | scanned | scanned |
 | `type` names an item (an order, specimen, accession, sample, lot) | not scanned | not scanned |
-| no `type`, or one naming neither | scanned | not scanned |
+| no `type`, or one naming neither, and the element name names a person | scanned | scanned |
+| no `type`, or one naming neither, and the element name names an item | not scanned | not scanned |
+| no `type`, or one naming neither, and no element name naming either | scanned | not scanned |
+
+A `type` that names a kind takes precedence over the element name, so an
+identifier typed `NHS Number` is scanned under any element name.
 
 The type is free text, so it is read by its words, in any case and in
 `snake_case`, `camelCase` or spaced form. Words such as `patient`, `person`,
@@ -279,7 +289,12 @@ says it identifies a person.
 
 A laboratory filler order number typed `filler_order_number` is therefore
 stored even when its ten digits pass the NHS Number check by chance, which one
-ten-digit run in eleven does. The same number written into free text is still
+ten-digit run in eleven does. So is an untyped order number in the
+`Requester order identifier` or `Receiver order identifier` element of
+`openEHR-EHR-OBSERVATION.laboratory_test_result.v1`, while an untyped value in
+an element named `NHS number` or `Patient identifier` is scanned. The
+archetype's `Laboratory internal identifier` names neither kind, so a value
+there is scanned unless its `type` names an item. The same number written into free text is still
 claimed by every rule in `rules`; a deployment with no NHS Numbers in its
 content leaves `gb-nhs-number` out of that list.
 

@@ -2456,7 +2456,6 @@ dependencies = [
 name = "ferroehr-viewer"
 version = "5.6.3"
 dependencies = [
- "anyhow",
  "axum",
  "base64 0.23.1",
  "clap",
@@ -2610,7 +2609,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-smart"
-version = "0.15.0"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07d2584c06dfeda06e72c3e0eb99f96882603d6e6e3a4b035a5d779a3f5d1dc1"
 dependencies = [
  "argon2 0.6.0",
  "aws-lc-rs",
