@@ -206,6 +206,11 @@ jobs:
           echo "image=$image" >> "$GITHUB_OUTPUT"
       - name: The path classifier finds a match first and last in a 2000-path list
         run: bash scripts/lib/change-lanes.sh --self-test
+      - name: Every lane that starts a consumer of the server binary builds it
+        run: |
+          set -euo pipefail
+          bash scripts/checks/binary-consumers.sh --self-test
+          bash scripts/checks/binary-consumers.sh
       - id: filter
         shell: bash
         env:
@@ -2069,6 +2074,9 @@ jobs:
   # The third (#4539) is the `conformance` job, on a pull request and in the
   # merge queue: it judges this binary, so the server compiles once per change.
   # A push to main judges the image containers.yml pushes instead.
+  # The fourth is `deploy-probe`, on its own lanes, so a change to the
+  # deployment harness alone builds the binary its probe runs (#5271);
+  # scripts/checks/binary-consumers.sh holds every consumer's lanes here.
   # A push the merge queue verified keeps this job and skips its consumers:
   # it is main's writer of the binary cache and the sccache entries (#4546).
   ui-e2e-binary:
@@ -2078,7 +2086,8 @@ jobs:
       needs.changes.outputs.viewer == 'true' ||
       needs.changes.outputs.chart_boot == 'true' ||
       (needs.changes.outputs.perf == 'true' && needs.changes.outputs.queue_verified != 'true') ||
-      (needs.changes.outputs.conformance == 'true' && github.event_name != 'push')
+      (needs.changes.outputs.conformance == 'true' && github.event_name != 'push') ||
+      ((needs.changes.outputs.code == 'true' || needs.changes.outputs.deploy == 'true') && needs.changes.outputs.queue_verified != 'true')
     runs-on: ubuntu-latest
     # Generous: a binary-cache miss with a cold sccache is a full release
     # build of the ~190 kLoC first-party graph (714 s measured cold, plus
