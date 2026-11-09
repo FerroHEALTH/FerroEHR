@@ -66,7 +66,9 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
    template-sync tests (`config::tests`) fail otherwise. There is NO legacy
    alias layer (greenfield, owner ruling 2026-07-15): renamed/removed keys
    simply fail at boot via the strict sweep's did-you-mean; never add a
-   remapping table.
+   remapping table. A named refusal of a removed key, where one is added,
+   lives exactly the one release that removes it and is deleted in the next
+   (owner hard rule, 2026-11-09, `.claude/memory/no-compat-shims.md`).
 3. If the change is user-visible, update
    `website/book/src/installation/configuration.md`, the Helm `values.yaml`
    `config:` block + golden renders (`deploy/helm/validate.sh --update`), and

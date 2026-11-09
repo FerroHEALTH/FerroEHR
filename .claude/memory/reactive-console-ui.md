@@ -1,6 +1,6 @@
 ---
 name: reactive-console-ui
-description: The consoles must be reactive with no full page reload for an interaction (owner, 2026-10-25); WebAssembly is the normal path and the no-WebAssembly page only the fallback
+description: Superseded 2026-10-29 by FerroUI #510: every console draws every page on its server with a little plain JavaScript and no WebAssembly; an in-page change is a module over what the server drew, a navigation one document
 metadata:
   type: feedback
 ---
@@ -8,16 +8,23 @@ metadata:
 <!-- SPDX-FileCopyrightText: Cadasto B.V. -->
 <!-- SPDX-License-Identifier: BUSL-1.1 -->
 
-The owner ruled on 2026-10-25 that every FerroHEALTH console stays reactive:
-a link, a form or an action never reloads the whole document. WebAssembly is
-the normal path; a page that works without it is the fallback, never the
-design target.
+The owner ruled on 2026-10-29 (FerroUI #510) that every FerroHEALTH console
+moves to the VernumBOEK model: server-rendered HTML from FerroUI's Askama
+components, a little plain JavaScript, no WebAssembly and no Leptos
+hydration. It supersedes the ruling of 2026-10-25, which kept the consoles
+reactive with WebAssembly as the normal path (FerroUI #410).
 
-**Why:** FerroUI #196 (PR #223, 2026-10-22) moved the consoles to islands
-mode on bundle size and time-to-interactive alone and made every action a
-plain form post, so each click became a full page load, which the owner
-found slow and unacceptable. FerroUI #410 restores client navigation.
+**Why:** the hydrated consoles flickered on every click, lost what the
+operator had selected, and redrew the whole page for a tree node or a tab,
+because every in-page action was a router navigation that rebuilt its route
+and asked the server again. A navigation as one document the browser paints
+whole, and an in-page change as a module toggling what the server drew,
+keep the state and need no WebAssembly before a click works.
 
-**How to apply:** user experience outranks bundle bytes. Judge a UI change
-by the interaction it gives, measure navigations as well as first load, and
-never land a design whose every interaction reloads the page.
+**How to apply:** a console moves whole to FerroUI 0.6, in the order and the
+steps of FerroUI `docs/migration-0.6.md` (FerroEHR's viewer is on FerroUI 0.6). A
+page is an axum handler that reads its data and returns the document; an
+action is a form post; a behaviour the library lacks is a FerroUI issue and
+never a script of the console's own. Judge a UI change by the interaction it
+gives: an in-page change loads no document and keeps its state, and every
+page works with the modules refused.

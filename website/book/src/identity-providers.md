@@ -23,8 +23,13 @@ existing governance. So the split is deliberate and permanent:
   its claims, and enforces [RBAC/ABAC and per-EHR access
   control](security.md#authorization) on every request.
 
-The HTTP Basic user list in `ferroehr.toml` is for machines and bootstrap,
-not a user store; people authenticate with bearer tokens from the IdP.
+The HTTP Basic user list in `ferroehr.toml` holds persons only, and it is not
+a user store: each Basic user maps to the `PERSON` that carries its binding
+key, which the identity provider provisions through SCIM
+([bootstrap and migration](installation/party-binding-migration.md)). A
+machine authenticates with OAuth 2.0 client credentials under a declared
+`[[authz.system_client]]`, and most people authenticate with bearer tokens
+from the IdP.
 
 > [!NOTE]
 > The viewer follows the same rule: it authenticates against the same
