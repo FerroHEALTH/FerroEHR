@@ -16,8 +16,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use ihe_atna::atna::forwarder::Forwarder;
 use ferrohealth_server::tls_client::TlsClient;
+use ihe_atna::atna::forwarder::Forwarder;
 use ihe_atna::atna::repository::{Repository, Timeouts};
 use ihe_atna::atna::spool::{Bounds, Spool};
 use ihe_atna::atna::syslog::Sender;
@@ -73,7 +73,8 @@ impl SyslogRoute {
             .map_err(|e| AuditError::Transport(Box::new(e)))?;
         let section = config.tls.clone();
         let tls = tokio::task::spawn_blocking(move || {
-            TlsClient::read("audit.syslog.tls", &section).and_then(|client| client.platform_config())
+            TlsClient::read("audit.syslog.tls", &section)
+                .and_then(|client| client.platform_config())
         })
         .await
         .map_err(|e| AuditError::Transport(Box::new(e)))?

@@ -2073,7 +2073,10 @@ mod tests {
         c.auth.shared.issuer = issuer;
         let err = c.validate().expect_err("an oct key must refuse the tree");
         let text = err.to_string();
-        assert!(text.contains("auth.jwks_file"), "{text}");
+        assert!(
+            text.contains("jwks_file") && text.contains("symmetric key"),
+            "{text}"
+        );
         assert!(!text.contains(secret_k), "{text}");
     }
 

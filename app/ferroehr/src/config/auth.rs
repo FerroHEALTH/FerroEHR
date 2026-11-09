@@ -521,10 +521,7 @@ mod tests {
             validate(&basic(&phc(FLOOR.0, FLOOR.1, 0))),
             Err(AuthConfigError::Section { .. })
         ));
-        for (m, t, p) in [
-            FLOOR,
-            (65_536, 3, 4),
-        ] {
+        for (m, t, p) in [FLOOR, (65_536, 3, 4)] {
             assert!(
                 validate(&basic(&phc(m, t, p))).is_ok(),
                 "m={m},t={t},p={p} meets the floor"
