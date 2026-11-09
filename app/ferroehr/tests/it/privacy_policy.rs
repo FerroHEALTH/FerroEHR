@@ -528,3 +528,105 @@ async fn an_nhs_number_typed_as_one_is_still_refused_while_the_rule_is_on() {
         .await
         .expect("a deployment that leaves gb-nhs-number off never claims an NHS Number");
 }
+
+/// A `laboratory_test_result.v1` observation whose "Receiver order
+/// identifier" element (at0063, under "Test request details", at0094) is
+/// named `element_name` and carries `id` with no `type`, as the reporting
+/// deployment sends it (#5291).
+fn laboratory_test_result(id: &str, element_name: &str) -> Value {
+    let mut composition = composition_with_text("laboratory report", "Full blood count");
+    let archetype = "openEHR-EHR-OBSERVATION.laboratory_test_result.v1";
+    let entry = &mut composition["content"][0];
+    entry["_type"] = json!("OBSERVATION");
+    entry["archetype_node_id"] = json!(archetype);
+    entry["archetype_details"]["archetype_id"]["value"] = json!(archetype);
+    entry["name"] = json!({ "_type": "DV_TEXT", "value": "Laboratory test result" });
+    if let Some(object) = entry.as_object_mut() {
+        object.remove("data");
+    }
+    entry["data"] = json!({
+        "_type": "HISTORY",
+        "archetype_node_id": "at0001",
+        "name": { "_type": "DV_TEXT", "value": "Event Series" },
+        "origin": { "_type": "DV_DATE_TIME", "value": "2026-11-02T08:15:00Z" },
+        "events": [{
+            "_type": "POINT_EVENT",
+            "archetype_node_id": "at0002",
+            "name": { "_type": "DV_TEXT", "value": "Any event" },
+            "time": { "_type": "DV_DATE_TIME", "value": "2026-11-02T08:15:00Z" },
+            "data": {
+                "_type": "ITEM_TREE",
+                "archetype_node_id": "at0003",
+                "name": { "_type": "DV_TEXT", "value": "Tree" },
+                "items": [{
+                    "_type": "ELEMENT",
+                    "archetype_node_id": "at0005",
+                    "name": { "_type": "DV_TEXT", "value": "Test name" },
+                    "value": { "_type": "DV_TEXT", "value": "Full blood count" }
+                }]
+            }
+        }]
+    });
+    entry["protocol"] = json!({
+        "_type": "ITEM_TREE",
+        "archetype_node_id": "at0004",
+        "name": { "_type": "DV_TEXT", "value": "Tree" },
+        "items": [{
+            "_type": "CLUSTER",
+            "archetype_node_id": "at0094",
+            "name": { "_type": "DV_TEXT", "value": "Test request details" },
+            "items": [{
+                "_type": "ELEMENT",
+                "archetype_node_id": "at0062",
+                "name": { "_type": "DV_TEXT", "value": "Requester order identifier" },
+                "value": { "_type": "DV_IDENTIFIER", "id": "CL2509-0042" }
+            }, {
+                "_type": "ELEMENT",
+                "archetype_node_id": "at0063",
+                "name": { "_type": "DV_TEXT", "value": element_name },
+                "value": { "_type": "DV_IDENTIFIER", "id": id }
+            }]
+        }]
+    });
+    composition
+}
+
+#[tokio::test]
+async fn an_untyped_order_number_under_the_receiver_order_identifier_commits() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = service(&db, &PrivacyConfig::default());
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
+    svc.create_composition(
+        ehr_id,
+        uv(
+            &laboratory_test_result(ORDER_NUMBERS[0], "Receiver order identifier"),
+            "249",
+            None,
+        ),
+    )
+    .await
+    .expect("the element name declares an order identifier when the type is absent");
+}
+
+#[tokio::test]
+async fn an_untyped_nhs_number_under_an_element_named_for_one_is_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = service(&db, &PrivacyConfig::default());
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
+    let error = svc
+        .create_composition(
+            ehr_id,
+            uv(
+                &laboratory_test_result(SYNTHETIC_NHS_NUMBER, "NHS number"),
+                "249",
+                None,
+            ),
+        )
+        .await
+        .expect_err("an element named for a person identifier keeps its value scanned");
+    assert_refused_service(
+        &error,
+        "COMPOSITION/content[0]/protocol/items[0]/items[1]/value/id",
+    );
+    assert!(finding_messages(&error).contains("gb-nhs-number"));
+}
