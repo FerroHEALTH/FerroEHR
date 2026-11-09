@@ -258,7 +258,7 @@ pub async fn empty_db() -> Result<TestDb, TestkitError> {
 /// one server both see it missing and the second `CREATE ROLE` fails with
 /// `23505`. A test that migrates a database [`empty_db`] returned, or that
 /// drops a role the migrations create, holds this lock around that step,
-/// taken after its databases exist, since [`db`] may build the template under
+/// taken after its databases exist, since [`db()`] may build the template under
 /// the same lock.
 #[derive(Debug)]
 pub struct RolesLock {
