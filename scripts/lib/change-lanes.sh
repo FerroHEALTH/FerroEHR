@@ -198,6 +198,7 @@ the e2e harness runs the cargo lanes and the viewer|ci|scripts/ui-e2e.sh|code,vi
 the sandbox viewer posture runs its viewer test|ci|deploy/hosted/ferroehr-viewer.sandbox.toml|code
 any other script runs no lane|ci|scripts/watch/eu-acts.sh|
 the deploy probe runs the deploy lane|ci|scripts/deploy-probe.sh|deploy
+a deploy probe family runs the deploy lane|ci|scripts/deploy-probes/bootstrap.sh|deploy
 the server Dockerfile reaches six lanes|ci|docker/Dockerfile|deploy,viewer,server_dockerfile,chart_boot,perf
 the viewer Dockerfile reaches its own image lane|ci|docker/viewer/Dockerfile|deploy,viewer,viewer_dockerfile
 the chart runs helm and chart boot|ci|deploy/helm/ferroehr/values.yaml|helm,chart_boot
@@ -254,7 +255,7 @@ CASES
     failures=1
   fi
   [[ "$failures" -eq 0 ]] || return 1
-  echo "change-lanes: self-test OK (30 paths classified first and last in a 2000-path list, the pipe form fails on it, and the fuzz closure follows fuzz/Cargo.toml)."
+  echo "change-lanes: self-test OK (31 paths classified first and last in a 2000-path list, the pipe form fails on it, and the fuzz closure follows fuzz/Cargo.toml)."
 }
 
 case "${1-}" in
