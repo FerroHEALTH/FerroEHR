@@ -138,6 +138,91 @@ impl fmt::Display for QualifiedQueryName {
     }
 }
 
+/// The pattern `definition_query_list` reads its `qualified_query_name` as.
+///
+/// `specifications/operations/definition_query_list.yaml`: the stored
+/// queries are "matched by `qualified_query_name` as pattern", given "in the
+/// format of `[{namespace}::]{query-name}`, and when is empty, it will be
+/// treated as \"wildcard\" in the search". So `org.openehr::` names every
+/// query of that namespace, `::q` every query whose name starts with `q` in
+/// any namespace, and a pattern without `::` a prefix of the whole name
+/// ("will list all versions of all queries with names starting with
+/// `org.openehr`"). A part that is not empty takes the characters of a
+/// [`QualifiedQueryName`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct QueryNamePattern {
+    namespace: Option<String>,
+    name: String,
+}
+
+impl QueryNamePattern {
+    /// Whether the pattern is written with `::`, so its parts match the
+    /// namespace and the query name each.
+    #[must_use]
+    pub fn is_qualified(&self) -> bool {
+        self.namespace.is_some()
+    }
+
+    /// The namespace the pattern names; `None` without `::` and for the
+    /// empty namespace, the wildcard.
+    #[must_use]
+    pub fn namespace(&self) -> Option<&str> {
+        self.namespace
+            .as_deref()
+            .filter(|namespace| !namespace.is_empty())
+    }
+
+    /// The prefix of the query name, or of the whole name without `::`; the
+    /// empty prefix matches every name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl From<QualifiedQueryName> for QueryNamePattern {
+    fn from(name: QualifiedQueryName) -> Self {
+        Self {
+            namespace: name.namespace,
+            name: name.name,
+        }
+    }
+}
+
+impl FromStr for QueryNamePattern {
+    type Err = QueryNameError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let (namespace, name) = match value.split_once(NAMESPACE_SEPARATOR) {
+            Some((namespace, name)) => (Some(namespace), name),
+            None => (None, value),
+        };
+        if namespace.is_none() && name.is_empty() {
+            return Err(QueryNameError::Empty);
+        }
+        if !namespace
+            .into_iter()
+            .chain([name])
+            .all(|part| part.chars().all(is_name_char))
+        {
+            return Err(QueryNameError::Malformed);
+        }
+        Ok(Self {
+            namespace: namespace.map(str::to_owned),
+            name: name.to_owned(),
+        })
+    }
+}
+
+impl fmt::Display for QueryNamePattern {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.namespace {
+            Some(namespace) => write!(f, "{namespace}{NAMESPACE_SEPARATOR}{}", self.name),
+            None => f.write_str(&self.name),
+        }
+    }
+}
+
 /// Whether `c` may appear in a query name or a namespace.
 fn is_name_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-')
@@ -331,7 +416,12 @@ macro_rules! text_serde {
     )+};
 }
 
-text_serde!(QualifiedQueryName, QueryVersion, VersionPattern);
+text_serde!(
+    QualifiedQueryName,
+    QueryNamePattern,
+    QueryVersion,
+    VersionPattern
+);
 
 #[cfg(test)]
 mod tests {
@@ -377,6 +467,41 @@ mod tests {
         }
         let name: QualifiedQueryName = "org.openehr::aqlx".parse().expect("valid");
         assert_eq!(name.check_registrable(), Ok(()));
+    }
+
+    #[test]
+    fn an_empty_part_of_a_list_pattern_is_the_wildcard() {
+        let pattern = |text: &str| text.parse::<QueryNamePattern>().expect("a pattern");
+        let namespace = pattern("org.cadasto.bench::");
+        assert!(namespace.is_qualified());
+        assert_eq!(
+            (namespace.namespace(), namespace.name()),
+            (Some("org.cadasto.bench"), "")
+        );
+        let name = pattern("::probe");
+        assert!(name.is_qualified());
+        assert_eq!((name.namespace(), name.name()), (None, "probe"));
+        let both = pattern("::");
+        assert_eq!((both.namespace(), both.name()), (None, ""));
+        let bare = pattern("org.cadasto.bench");
+        assert!(!bare.is_qualified());
+        assert_eq!((bare.namespace(), bare.name()), (None, "org.cadasto.bench"));
+        for text in [
+            "org.cadasto.bench::",
+            "::probe",
+            "::",
+            "org.openehr::q",
+            "org",
+        ] {
+            assert_eq!(pattern(text).to_string(), text);
+        }
+        for (text, error) in [
+            ("", QueryNameError::Empty),
+            ("a::b::c", QueryNameError::Malformed),
+            ("with space::", QueryNameError::Malformed),
+        ] {
+            assert_eq!(text.parse::<QueryNamePattern>(), Err(error), "{text:?}");
+        }
     }
 
     #[test]

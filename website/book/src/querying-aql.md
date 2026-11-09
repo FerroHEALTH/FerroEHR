@@ -324,9 +324,13 @@ the ad-hoc `/query/aql` route) and is rejected with a
 
 **Reading and executing.**
 
-- `GET /definition/query/{name}` lists the queries under that name as a prefix
-  pattern; `GET /definition/query` (no name at all) lists every stored query, a
-  FerroEHR convenience, since the openEHR API defines only the named form.
+- `GET /definition/query/{pattern}` lists every version of the queries the
+  pattern matches, where an empty part is a wildcard: `org.example` lists the
+  names that start with `org.example`, `org.example::` every query in that
+  namespace, `org.example::bp` the names in it that start with `bp`, and
+  `::bp` the names that start with `bp` in any namespace. `GET
+  /definition/query` (no name at all) lists every stored query, a FerroEHR
+  convenience, since the openEHR API defines only the named form.
 - `GET /definition/query/{name}/{version}` fetches one, by exact SemVer or by
   prefix (`1`, `1.0` → the highest matching stored version).
 - `GET|POST /query/{name}` executes the **latest** version;

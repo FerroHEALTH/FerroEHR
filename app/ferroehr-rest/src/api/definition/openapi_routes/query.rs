@@ -90,7 +90,8 @@ guarded_handler! {
     /// List the stored versions of a named stored query
     /// (`GET /definition/query/{qualified_query_name}`).
     ///
-    /// The name is a prefix pattern (`[{namespace}::]{query-name}`), so an unmatched
+    /// The name is a pattern (`[{namespace}::]{query-name}`, an empty part a
+    /// wildcard, a bare name a prefix), so an unmatched
     /// name yields an empty `200` list, never `404` (see the module doc).
     #[utoipa::path(
         get, path = "/definition/query/{qualified_query_name}", tag = "Query",
@@ -113,7 +114,10 @@ guarded_handler! {
                             `qualified_query_name` as pattern\" \
                             (`operations/definition_query_list.yaml`, whose own \
                             example lists \"all versions of all queries with names \
-                            starting with `org.openehr`\"). The prefix match is \
+                            starting with `org.openehr`\"), and an empty part \
+                            \"will be treated as \\\"wildcard\\\"\": `{namespace}::` \
+                            lists every query of the namespace, `::{query-name}` the \
+                            names starting with it in any namespace. The prefix match is \
                             case-insensitive, and a namespace-less prefix also \
                             matches its `misc::`-namespaced form, because that is \
                             the canonical key every surface stores under (our own \

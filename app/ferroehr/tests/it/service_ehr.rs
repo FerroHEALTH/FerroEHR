@@ -18,7 +18,7 @@ use ferroehr::error::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::service::FerroEhrService;
 use ferroehr::versioning::change::Committed;
 
-use crate::fixtures::{composition, folder, qn, uid, uv, version_pattern};
+use crate::fixtures::{composition, folder, qn, query_pattern, uid, uv, version_pattern};
 use crate::item_tag_fixture::ehr_tag;
 
 use crate::fixtures::{commit_audit, committer};
@@ -1135,7 +1135,7 @@ async fn stored_query_crud() {
     assert_eq!(got["type"], "AQL");
 
     let list = svc
-        .query_list(Some(&qn("org.example::all_comps")))
+        .query_list(Some(&query_pattern("org.example::all_comps")))
         .await
         .expect("list");
     assert_eq!(list.len(), 1);
@@ -1217,13 +1217,13 @@ async fn stored_query_list_matches_name_prefix() {
     }
 
     let by_namespace = svc
-        .query_list(Some(&qn("org.example")))
+        .query_list(Some(&query_pattern("org.example")))
         .await
         .expect("prefix list");
     assert_eq!(by_namespace.len(), 3, "all versions of all org.example::*");
 
     let by_full_name = svc
-        .query_list(Some(&qn("org.example::all_comps")))
+        .query_list(Some(&query_pattern("org.example::all_comps")))
         .await
         .expect("full-name list");
     assert_eq!(by_full_name.len(), 2, "both versions of the named query");
@@ -1236,6 +1236,51 @@ async fn stored_query_list_matches_name_prefix() {
 
     let all = svc.query_list(None).await.expect("wildcard list");
     assert_eq!(all.len(), 4, "empty pattern is a wildcard");
+
+    // An empty part of `[{namespace}::]{query-name}` "will be treated as
+    // \"wildcard\"" (#5268).
+    let names = |rows: &[Value]| {
+        rows.iter()
+            .map(|q| q["name"].as_str().unwrap_or_default().to_owned())
+            .collect::<Vec<_>>()
+    };
+    let in_namespace = svc
+        .query_list(Some(&query_pattern("org.example::")))
+        .await
+        .expect("namespace list");
+    assert_eq!(
+        names(&in_namespace),
+        [
+            "org.example::all_comps",
+            "org.example::all_comps",
+            "org.example::observations"
+        ],
+        "every version of every query in the namespace"
+    );
+    let in_any_namespace = svc
+        .query_list(Some(&query_pattern("::o")))
+        .await
+        .expect("name list");
+    assert_eq!(
+        names(&in_any_namespace),
+        ["com.acme::other", "org.example::observations"],
+        "the names starting with o, in any namespace"
+    );
+    assert_eq!(
+        svc.query_list(Some(&query_pattern("::")))
+            .await
+            .expect("both empty")
+            .len(),
+        4
+    );
+    assert_eq!(
+        svc.query_list(Some(&query_pattern("org.exam::")))
+            .await
+            .expect("another namespace")
+            .len(),
+        0,
+        "a namespace is matched whole once `::` closes it"
+    );
 }
 
 #[tokio::test]
