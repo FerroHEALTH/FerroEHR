@@ -116,6 +116,16 @@ env:
   #   * ui-e2e-binary and ui-e2e-viewer, on their own triggers: they write
   #     the exact-key binary caches and main's sccache entries.
   # A push no queue run passed (an administrator's bypass) runs every lane.
+  #
+  # The merge queue proves the merged tree, never the performance (#5284;
+  # the family CI rule of 2026-11-09: every pull-request and merge-group run
+  # under 20 minutes, queue included). The long non-functional lanes, perf
+  # and the browser lanes (ui-e2e, ui-docs-shots, viewer-login-smoke, and
+  # ui-e2e-viewer, which builds only for them), skip a merge_group run and
+  # run on the pull request and on EVERY push to main, a verified one too,
+  # with the same limits, journeys and shards. `conclusion` names them in
+  # its summary. The deployment harness and chart boot are functional and
+  # stay in the queue.
   # No lane reads anything a queue run cannot: the conformance catalogue runs
   # for a push in containers.yml, against the images it pushes.
   #
@@ -1890,7 +1900,7 @@ jobs:
   perf:
     name: perf
     needs: [changes, ui-e2e-binary]
-    if: needs.changes.outputs.perf == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: needs.changes.outputs.perf == 'true' && github.event_name != 'merge_group'
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
@@ -2077,7 +2087,7 @@ jobs:
     if: >-
       needs.changes.outputs.viewer == 'true' ||
       needs.changes.outputs.chart_boot == 'true' ||
-      (needs.changes.outputs.perf == 'true' && needs.changes.outputs.queue_verified != 'true') ||
+      (needs.changes.outputs.perf == 'true' && github.event_name != 'merge_group') ||
       (needs.changes.outputs.conformance == 'true' && github.event_name != 'push')
     runs-on: ubuntu-latest
     # Generous: a binary-cache miss with a cold sccache is a full release
@@ -2192,7 +2202,7 @@ jobs:
   ui-e2e-viewer:
     name: ui-e2e viewer + test binaries
     needs: changes
-    if: needs.changes.outputs.viewer == 'true'
+    if: needs.changes.outputs.viewer == 'true' && github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -2277,7 +2287,7 @@ jobs:
   ui-e2e:
     name: ui-e2e ${{ matrix.viewport }} ${{ matrix.shard }}/${{ needs.changes.outputs.ui_e2e_shard_count }}
     needs: [changes, ui-e2e-binary, ui-e2e-viewer]
-    if: needs.changes.outputs.viewer == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: needs.changes.outputs.viewer == 'true' && github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # The battery runs once at the desktop width and once at a phone's 390 px,
@@ -2383,7 +2393,7 @@ jobs:
   ui-docs-shots:
     name: ui-docs-shots
     needs: [changes, ui-e2e-binary, ui-e2e-viewer]
-    if: needs.changes.outputs.viewer == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: needs.changes.outputs.viewer == 'true' && github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -2462,7 +2472,7 @@ jobs:
   viewer-login-smoke:
     name: viewer login smoke
     needs: [changes, ui-e2e-binary, ui-e2e-viewer]
-    if: needs.changes.outputs.viewer == 'true' && needs.changes.outputs.queue_verified != 'true'
+    if: needs.changes.outputs.viewer == 'true' && github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -3285,6 +3295,15 @@ jobs:
     timeout-minutes: 5
     permissions: {}
     steps:
+      - name: The long non-functional lanes are not run in a merge group
+        if: github.event_name == 'merge_group'
+        run: |
+          set -euo pipefail
+          {
+            echo "### Not run in the merge queue"
+            echo
+            echo "perf, ui-e2e, ui-docs-shots, viewer-login-smoke and ui-e2e-viewer are skipped here: the merge queue proves the merged tree, and these lanes ran on the pull request and run again on the push to main (#5284)."
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Every needed job succeeded or was skipped
         env:
           NEEDS: ${{ toJSON(needs) }}
