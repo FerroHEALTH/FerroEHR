@@ -2250,6 +2250,8 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 [[package]]
 name = "ferrobridge-term"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1b5cf22f6c786e380a16e181982f2a22518e5a6a4ec702ebd8d2c840f861817"
 dependencies = [
  "async-trait",
  "backon",
