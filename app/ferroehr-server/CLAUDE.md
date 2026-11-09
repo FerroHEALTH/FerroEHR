@@ -9,16 +9,21 @@ assembled, aborted at shutdown) and the family's `serve`/`config check`/`healthc
 (`ferrohealth_server::cli::Common`, flattened) beside FerroEHR's `db`/`definitions`/`party-binding`/`usage-report`/`report`
 subcommands (`db` = `migrate`, `verify`, and `erase` in `src/db_cmd.rs`, whose dry run and
 confirmation live in `ferroehr::decommission`; `definitions load` in
-`src/definitions.rs` over `ferroehr::service::definition::load`); `src/main.rs` is a
-thin `ferroehr_server::run(Cli::parse())` shell and must stay that way (a
-bin-only crate is untestable by construction — Book ch11.3).
+`src/definitions.rs` over `ferroehr::service::definition::load`). `src/process.rs`
+is the process run path over the family's `ferrohealth_server::run::Run`: the
+clap parse, the runtime with its 16 MiB thread stack, and the exit status
+(78, `EX_CONFIG`, when the cause chain holds a configuration refusal, else 1).
+`src/main.rs` is a thin `ferroehr_server::process::main(std::env::args_os())`
+shell beside the allocator and must stay that way (a bin-only crate is
+untestable by construction — Book ch11.3).
 
 - **No logic lives here.** Anything beyond wiring belongs in `ferroehr`
   (platform) or `ferroehr-rest` (protocol adapter). `anyhow` is allowed here
   (the lib target is the binary's own logic half, not a consumable library);
   `thiserror` everywhere else.
 - **`tests/it/` may test ONLY the wiring seam** — `Cli` parsing (incl. the
-  `--set key=value` override parser), the subcommand shapes, the `run`
+  `--set key=value` override parser), the subcommand shapes, the exit status of
+  `process::main`, the `run`
   branches that need no database, listener, or network, and
   the **boot-installed POLICY posture**: what the shipped configuration
   compiles into and this crate installs on the service (`build_authz`, the

@@ -80,7 +80,7 @@ Two global flags and three subcommand groups round the CLI out:
 - `--set <key>=<value>` is a repeatable dotted-path override with the highest
   precedence of all (`--set db.max_connections=40`);
 - `ferroehr config check` validates the effective configuration and prints it
-  redacted, exiting 0 when valid and 1 otherwise, the fastest way to test a
+  redacted, exiting 0 when valid and 78 otherwise, the fastest way to test a
   deployment's configuration before starting it;
 - `ferroehr db migrate` applies the embedded migrations and exits, the
   out-of-band schema step, run under a `ferroehr_migrator` DSN;
