@@ -243,6 +243,28 @@ async fn a_representation_the_source_does_not_record_is_refused() {
     .await;
 }
 
+/// #5011: a person login, one asserting no represented subject, on a row
+/// that carries only the representative marker is refused with `403`
+/// (`refused-wrong-marker`): a representative's `PERSON` never binds a
+/// professional.
+#[tokio::test]
+async fn a_person_login_on_a_representative_row_is_refused_as_the_wrong_marker() {
+    let (_db, svc) = service().await;
+    let app = router(
+        Arc::clone(&svc),
+        Arc::new(Recorded {
+            subjects: vec![CHILD],
+        }),
+    )
+    .await;
+    refused(
+        &app,
+        &token("rep-login", &json!({})),
+        "refused-wrong-marker",
+    )
+    .await;
+}
+
 #[tokio::test]
 async fn a_persons_token_with_patient_grants_reaches_its_launch_ehr_and_never_commits_as_party_self()
  {
