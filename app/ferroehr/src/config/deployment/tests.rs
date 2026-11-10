@@ -274,20 +274,10 @@ fn every_gap_token_is_the_shared_vocabulary() {
 /// number of natural persons".
 #[test]
 fn production_refuses_the_open_access_default_and_the_open_audit_fail_mode() {
-    let config = production(FerroEhrConfig {
-        audit: crate::system_log::config::AuditConfig {
-            fail_mode: crate::system_log::config::FailMode::Open,
-            ..crate::system_log::config::AuditConfig::default()
-        },
-        authz: crate::config::authz::AuthzConfig {
-            rbac: crate::config::authz::RbacConfig {
-                ehr_access_default: crate::config::authz::EhrAccessDefault::Open,
-                ..crate::config::authz::RbacConfig::default()
-            },
-            ..crate::config::authz::AuthzConfig::default()
-        },
-        ..separated()
-    });
+    let mut open = separated();
+    open.audit.fail_mode = crate::system_log::config::FailMode::Open;
+    open.authz.rbac.ehr_access_default = crate::config::authz::EhrAccessDefault::Open;
+    let config = production(open);
     let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
     assert_eq!(
         posture.gaps,
@@ -489,10 +479,7 @@ fn production_refuses_a_routable_plaintext_listener_and_exempts_loopback() {
     }
 
     config.server.listen = "0.0.0.0:8080".parse().expect("an address");
-    config.deployment.accepts = vec![DeploymentGap::PlaintextListener];
-    let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
-    assert!(accepted.permits_boot());
-    assert_eq!(accepted.accepted, [DeploymentGap::PlaintextListener]);
+    let accepted = accepting_the_plain_listener(&mut config);
     assert_eq!(accepted.gaps, [DeploymentGap::PlaintextListener]);
 }
 
@@ -529,10 +516,17 @@ fn production_refuses_a_plain_management_listener_on_its_own_port() {
     );
 
     config.management.enabled = true;
+    accepting_the_plain_listener(&mut config);
+}
+
+/// `config` once it accepts `plaintext_listener` by name, which boots and
+/// names the gap accepted.
+fn accepting_the_plain_listener(config: &mut FerroEhrConfig) -> DeploymentPosture {
     config.deployment.accepts = vec![DeploymentGap::PlaintextListener];
-    let accepted = DeploymentPosture::evaluate(&config, &distinct_clusters());
+    let accepted = DeploymentPosture::evaluate(config, &distinct_clusters());
     assert!(accepted.permits_boot());
     assert_eq!(accepted.accepted, [DeploymentGap::PlaintextListener]);
+    accepted
 }
 
 /// `production` refuses an enabled audit FHIR feed on a plain `http://` URL and
