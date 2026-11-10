@@ -1,80 +1,106 @@
-/* FerroEHR landing page — design tokens + layout.
-   docs/plans/w1-docs-website.md §3a (tokens) + §3b (sections).
-   Self-contained: system font stack, no external assets, light/dark via
-   prefers-color-scheme. Relative URLs only. */
+/* SPDX-FileCopyrightText: Cadasto B.V. */
+/* SPDX-License-Identifier: BUSL-1.1 */
+
+/* FerroEHR landing page: tokens and layout, the family site's layout with
+   FerroEHR's own palette. Self-contained: a system font stack, no external
+   asset, and light and dark through prefers-color-scheme. Relative URLs only.
+   The accent is the ferro (Oxide & Iron) of assets/brand/tokens.css. */
 
 :root {
-  /* brand */
-  --rs-rust: #b7410e;
-  --rs-rust-600: #9a360b;
-  --rs-umber: #5a2408;
-  --rs-umber-050: #f6ede7;
-  /* light theme */
-  --rs-bg: #ffffff;
-  --rs-surface: #faf7f5;
-  --rs-text: #1b1613;
-  --rs-muted: #6b605a;
-  --rs-border: #e7ddd6;
-  --rs-shadow: 0 1px 2px rgba(27, 22, 19, 0.06), 0 8px 24px rgba(27, 22, 19, 0.06);
+  /* accent: ferro (Oxide & Iron), with a deeper step for hover and a pale fill */
+  --fe-accent: #b7431b;
+  --fe-accent-600: #9a3816;
+  --fe-accent-050: #fbf1ec;
+  --fe-on-accent: #ffffff;
+  /* light theme: porcelain surface and iron ink from the brand tokens */
+  --fe-bg: #ffffff;
+  --fe-surface: #f2f1ef;
+  --fe-text: #21262b;
+  --fe-muted: #5f656c;
+  --fe-border: #e2dfdb;
+  --fe-shadow: 0 1px 2px rgba(33, 38, 43, 0.06), 0 8px 24px rgba(33, 38, 43, 0.06);
   /* fonts */
-  --rs-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --rs-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  --rs-serif: Georgia, "Times New Roman", serif;
+  --fe-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --fe-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   /* layout */
-  --rs-max: 1120px;
-  --rs-radius: 12px;
+  --fe-max: 1080px;
+  --fe-radius: 12px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --rs-bg: #14100e;
-    --rs-surface: #1e1815;
-    --rs-text: #f3ece8;
-    --rs-muted: #b3a79f;
-    --rs-border: #332822;
-    --rs-rust: #e4712f;
-    --rs-rust-600: #c85a1d;
-    --rs-umber-050: #241812;
-    --rs-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.4);
+    /* dark theme: the iron ground and porcelain text, ember as the voice */
+    --fe-bg: #16191c;
+    --fe-surface: #21262b;
+    --fe-text: #f2f1ef;
+    --fe-muted: #a9adb2;
+    --fe-border: #343a40;
+    --fe-accent: #d97742;
+    --fe-accent-600: #e8955f;
+    --fe-accent-050: #2a1a12;
+    /* ember is a light fill, so text on it takes the tile ground */
+    --fe-on-accent: #16191c;
+    --fe-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.4);
   }
 }
 
 * { box-sizing: border-box; }
 
+/* Smooth scrolling and the hover transitions run only for a reader who has
+   not asked for reduced motion. */
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
+  .btn { transition: transform 0.06s ease, background 0.15s ease, border-color 0.15s ease; }
+  .card { transition: transform 0.1s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
 }
 
 body {
   margin: 0;
-  font-family: var(--rs-sans);
-  color: var(--rs-text);
-  background: var(--rs-bg);
+  font-family: var(--fe-sans);
+  color: var(--fe-text);
+  background: var(--fe-bg);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-a { color: var(--rs-rust); text-decoration: none; }
-a:hover { color: var(--rs-rust-600); text-decoration: underline; }
+a { color: var(--fe-accent); text-decoration: none; }
+a:hover { color: var(--fe-accent-600); text-decoration: underline; }
+/* Every link and button shows where the keyboard is. */
+a:focus-visible {
+  outline: 2px solid var(--fe-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
 
 img, svg { max-width: 100%; height: auto; }
 
+/* Inline code breaks anywhere, so a long URL or image name wraps inside its
+   box at any width; a shell transcript (.cmd) scrolls instead. */
+code {
+  font-family: var(--fe-mono);
+  font-size: 0.88em;
+  background: var(--fe-accent-050);
+  padding: 0.1em 0.35em;
+  border-radius: 5px;
+  overflow-wrap: anywhere;
+}
+
 .wrap {
   width: 100%;
-  max-width: var(--rs-max);
+  max-width: var(--fe-max);
   margin: 0 auto;
   padding: 0 1.25rem;
 }
 
-/* ── Nav ─────────────────────────────────────────────────────────────────── */
+/* Nav */
 .nav {
   position: sticky;
   top: 0;
   z-index: 50;
   backdrop-filter: saturate(180%) blur(12px);
-  background: color-mix(in srgb, var(--rs-bg) 82%, transparent);
-  border-bottom: 1px solid var(--rs-border);
+  background: color-mix(in srgb, var(--fe-bg) 82%, transparent);
+  border-bottom: 1px solid var(--fe-border);
 }
 .nav .wrap {
   display: flex;
@@ -83,16 +109,16 @@ img, svg { max-width: 100%; height: auto; }
   height: 60px;
 }
 .brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.55rem;
   font-weight: 800;
-  font-size: 1.05rem;
-  color: var(--rs-text);
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+  color: var(--fe-text);
 }
-.brand:hover { text-decoration: none; }
-.brand img { width: 30px; height: 30px; }
-.brand .tld { color: var(--rs-rust); }
+.brand:hover { text-decoration: none; color: var(--fe-accent); }
+.brand img { width: 28px; height: 28px; }
 .nav-links {
   margin-left: auto;
   display: flex;
@@ -101,11 +127,10 @@ img, svg { max-width: 100%; height: auto; }
   font-weight: 600;
   font-size: 0.95rem;
 }
-.nav-links a { color: var(--rs-muted); }
-.nav-links a:hover { color: var(--rs-rust); text-decoration: none; }
-.nav-toggle { display: none; }
+.nav-links a { color: var(--fe-muted); }
+.nav-links a:hover { color: var(--fe-accent); text-decoration: none; }
 
-/* ── Buttons ─────────────────────────────────────────────────────────────── */
+/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -115,18 +140,17 @@ img, svg { max-width: 100%; height: auto; }
   font-weight: 700;
   font-size: 1rem;
   border: 1.5px solid transparent;
-  transition: transform 0.06s ease, background 0.15s ease, border-color 0.15s ease;
 }
 .btn:hover { text-decoration: none; transform: translateY(-1px); }
-.btn-primary { background: var(--rs-rust); color: #fff; }
-.btn-primary:hover { background: var(--rs-rust-600); color: #fff; }
-.btn-ghost { border-color: var(--rs-border); color: var(--rs-text); background: var(--rs-surface); }
-.btn-ghost:hover { border-color: var(--rs-rust); color: var(--rs-rust); }
+.btn-primary { background: var(--fe-accent); color: var(--fe-on-accent); }
+.btn-primary:hover { background: var(--fe-accent-600); color: var(--fe-on-accent); }
+.btn-ghost { border-color: var(--fe-border); color: var(--fe-text); background: var(--fe-surface); }
+.btn-ghost:hover { border-color: var(--fe-accent); color: var(--fe-accent); }
 
-/* ── Hero ────────────────────────────────────────────────────────────────── */
+/* Hero */
 .hero {
   position: relative;
-  padding: clamp(3rem, 8vw, 6rem) 0 clamp(2.5rem, 6vw, 4rem);
+  padding: clamp(3rem, 8vw, 5.5rem) 0 clamp(2.5rem, 6vw, 4rem);
   text-align: center;
   overflow: hidden;
 }
@@ -135,50 +159,168 @@ img, svg { max-width: 100%; height: auto; }
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(60% 55% at 50% 0%, color-mix(in srgb, var(--rs-rust) 16%, transparent), transparent 70%),
-    linear-gradient(180deg, var(--rs-umber-050), transparent 40%);
+    radial-gradient(60% 55% at 50% 0%, color-mix(in srgb, var(--fe-accent) 16%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--fe-accent-050), transparent 42%);
   pointer-events: none;
 }
 .hero > * { position: relative; }
-.hero-logo { max-width: 460px; width: 80%; margin: 0 auto 1.75rem; display: block; }
+/* The mark is the brand SVG as shipped on the light ground; the page swaps
+   in ferroehr-icon-dark.svg through <picture> on the dark one. */
+.hero-logo { width: 88px; height: 88px; margin: 0 auto 1.25rem; display: block; }
 .hero h1 {
   font-size: clamp(1.6rem, 3.6vw, 2.5rem);
   line-height: 1.2;
   margin: 0 auto 1rem;
-  max-width: 20ch;
+  max-width: 24ch;
   letter-spacing: -0.01em;
 }
 .hero .sub {
-  color: var(--rs-muted);
-  font-size: clamp(1rem, 1.6vw, 1.2rem);
+  color: var(--fe-muted);
+  font-size: clamp(1rem, 1.6vw, 1.18rem);
   max-width: 62ch;
   margin: 0 auto 2rem;
 }
+/* The release badge at the top of the hero. */
+.status {
+  display: inline-block;
+  margin: 0 auto 1.25rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  background: var(--fe-accent-050);
+  border: 1px solid var(--fe-border);
+  color: var(--fe-accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.status:hover { text-decoration: none; border-color: var(--fe-accent); }
 .hero-cta { display: flex; gap: 0.85rem; justify-content: center; flex-wrap: wrap; }
-.hero .note { margin-top: 1.25rem; color: var(--rs-muted); font-size: 0.85rem; }
+.hero .note {
+  margin: 1.5rem auto 0;
+  max-width: 60ch;
+  color: var(--fe-muted);
+  font-size: 0.86rem;
+}
 
-/* ── Section scaffolding ─────────────────────────────────────────────────── */
-section { padding: clamp(3rem, 7vw, 5rem) 0; }
-.section-head { text-align: center; max-width: 60ch; margin: 0 auto 2.5rem; }
+/* Section scaffolding */
+section { padding: clamp(3rem, 7vw, 4.5rem) 0; }
+.surface { background: var(--fe-surface); border-block: 1px solid var(--fe-border); }
+.section-head { text-align: center; max-width: 62ch; margin: 0 auto 2.5rem; }
 .section-head h2 {
   font-size: clamp(1.4rem, 3vw, 2rem);
   margin: 0 0 0.6rem;
   letter-spacing: -0.01em;
 }
-.section-head p { color: var(--rs-muted); margin: 0; font-size: 1.05rem; }
-.section-cta { display: flex; justify-content: center; margin-top: 2.25rem; }
+.section-head p { color: var(--fe-muted); margin: 0; font-size: 1.05rem; }
 .eyebrow {
   display: inline-block;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.75rem;
   font-weight: 800;
-  color: var(--rs-rust);
+  color: var(--fe-accent);
   margin-bottom: 0.5rem;
 }
 
-/* ── Conformance proof strip ─────────────────────────────────────────────── */
-.proof { background: var(--rs-surface); border-block: 1px solid var(--rs-border); }
+.tag {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--fe-muted);
+  margin-bottom: 0.5rem;
+}
+
+/* Cards */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 1.1rem;
+}
+/* A grid item may shrink below its content's width, so nothing inside it
+   pushes it past its column. */
+.grid > * { min-width: 0; }
+.card {
+  background: var(--fe-bg);
+  border: 1px solid var(--fe-border);
+  border-radius: var(--fe-radius);
+  padding: 1.5rem;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--fe-shadow);
+  border-color: color-mix(in srgb, var(--fe-accent) 40%, var(--fe-border));
+}
+.card h3 { margin: 0 0 0.4rem; font-size: 1.08rem; }
+.card p { margin: 0; color: var(--fe-muted); font-size: 0.94rem; }
+.card code { font-size: 0.85em; }
+
+.audiences { grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); }
+.audience ul {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* A shell transcript: scrolls inside its own box, so a long line never widens
+   the page. */
+.cmd {
+  max-width: 760px;
+  margin: 0 auto;
+  background: var(--fe-bg);
+  border: 1px solid var(--fe-border);
+  border-radius: var(--fe-radius);
+  padding: 1.1rem 1.25rem;
+  overflow-x: auto;
+  font-family: var(--fe-mono);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+.cmd code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; white-space: pre; }
+
+.prose { max-width: 68ch; margin: 1.75rem auto 0; color: var(--fe-muted); }
+.prose p { margin: 0 0 0.9rem; }
+
+/* A card that is one link reads as a card, not as link text: hovering lifts
+   the card (the .card:hover above) and underlines its title alone, never its
+   body, and the keyboard focus rings the whole card. */
+a.card,
+a.card:hover,
+a.card:focus-visible { display: block; color: inherit; text-decoration: none; }
+a.card * { text-decoration: none; }
+a.card h3 { color: var(--fe-accent); }
+a.card:hover h3,
+a.card:focus-visible h3 { text-decoration: underline; text-underline-offset: 3px; }
+a.card:focus-visible {
+  outline: 2px solid var(--fe-accent);
+  outline-offset: 3px;
+  border-radius: var(--fe-radius);
+}
+
+/* A screenshot of the console, light or dark with the reader's scheme. It
+   scales inside its box, so it never widens the page. */
+.shot { max-width: 960px; margin: 0 auto; }
+.shot img {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--fe-border);
+  border-radius: var(--fe-radius);
+  box-shadow: var(--fe-shadow);
+}
+.shot figcaption {
+  margin-top: 0.8rem;
+  text-align: center;
+  color: var(--fe-muted);
+  font-size: 0.9rem;
+}
+
+
+/* The conformance section: the numbers the build fills from the committed
+   record, the badges, and the links to the run. */
 .proof-nums {
   display: flex;
   justify-content: center;
@@ -186,21 +328,21 @@ section { padding: clamp(3rem, 7vw, 5rem) 0; }
   flex-wrap: wrap;
   margin-bottom: 1.75rem;
 }
-.proof-record { text-align: center; color: var(--rs-muted); margin: 0 auto 1.5rem; }
+.proof-record { text-align: center; color: var(--fe-muted); margin: 0 auto 1.5rem; }
 .proof-badges { display: grid; gap: 0.75rem; justify-items: center; margin: 0 auto 1.75rem; }
 .proof-badge-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4rem 0.5rem; }
-.proof-badge-label { flex-basis: 100%; text-align: center; color: var(--rs-muted); font-size: 0.85rem; }
+.proof-badge-label { flex-basis: 100%; text-align: center; color: var(--fe-muted); font-size: 0.85rem; }
 .proof-badge-row img { display: block; height: 20px; width: auto; max-width: 100%; }
 .proof-num { text-align: center; }
 .proof-num .n {
   font-size: clamp(2rem, 5vw, 3rem);
   font-weight: 800;
   line-height: 1;
-  color: var(--rs-rust);
+  color: var(--fe-accent);
   font-variant-numeric: tabular-nums;
 }
-.proof-num .n.zero { color: var(--rs-text); }
-.proof-num .l { display: block; margin-top: 0.4rem; color: var(--rs-muted); font-size: 0.9rem; }
+.proof-num .n.zero { color: var(--fe-text); }
+.proof-num .l { display: block; margin-top: 0.4rem; color: var(--fe-muted); font-size: 0.9rem; }
 .proof-pills { display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; }
 .pill {
   display: inline-flex;
@@ -210,92 +352,24 @@ section { padding: clamp(3rem, 7vw, 5rem) 0; }
   border-radius: 999px;
   font-weight: 700;
   font-size: 0.9rem;
-  background: var(--rs-umber-050);
-  border: 1px solid var(--rs-border);
-  color: var(--rs-text);
+  background: var(--fe-accent-050);
+  border: 1px solid var(--fe-border);
+  color: var(--fe-text);
 }
-.pill:hover { border-color: var(--rs-rust); text-decoration: none; }
-.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--rs-rust); }
+.pill:hover { border-color: var(--fe-accent); text-decoration: none; }
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fe-accent); }
 
-/* ── Feature grid ────────────────────────────────────────────────────────── */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.1rem;
-}
-.card {
-  background: var(--rs-surface);
-  border: 1px solid var(--rs-border);
-  border-radius: var(--rs-radius);
-  padding: 1.5rem;
-  transition: transform 0.1s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-}
-.card:hover { transform: translateY(-3px); box-shadow: var(--rs-shadow); border-color: color-mix(in srgb, var(--rs-rust) 40%, var(--rs-border)); }
-.card .ico {
-  width: 40px; height: 40px;
-  display: grid; place-items: center;
-  border-radius: 10px;
-  background: var(--rs-umber-050);
-  color: var(--rs-rust);
-  margin-bottom: 0.9rem;
-}
-.card .ico svg { width: 22px; height: 22px; }
-.card h3 { margin: 0 0 0.4rem; font-size: 1.08rem; }
-.card p { margin: 0; color: var(--rs-muted); font-size: 0.95rem; }
+/* A page of its own (the 404 page, a code-system page): one column of prose
+   under the nav. */
+.page { padding: clamp(3rem, 8vw, 5rem) 0; }
+.page h1 { font-size: clamp(1.5rem, 3.2vw, 2.2rem); line-height: 1.2; margin: 0 0 1rem; }
+.page p { max-width: 68ch; color: var(--fe-muted); }
+.page .hero-cta { justify-content: flex-start; margin-top: 2rem; }
 
-/* ── Quick start ─────────────────────────────────────────────────────────── */
-.quickstart { background: var(--rs-surface); border-block: 1px solid var(--rs-border); }
-.code {
-  max-width: 820px;
-  margin: 0 auto;
-  background: var(--rs-bg);
-  border: 1px solid var(--rs-border);
-  border-radius: var(--rs-radius);
-  box-shadow: var(--rs-shadow);
-  overflow: hidden;
-}
-.code-head {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1rem;
-  border-bottom: 1px solid var(--rs-border);
-  background: var(--rs-umber-050);
-  font-size: 0.85rem;
-  color: var(--rs-muted);
-  font-weight: 600;
-}
-.code-head .lights { display: flex; gap: 0.35rem; }
-.code-head .lights i { width: 11px; height: 11px; border-radius: 50%; background: var(--rs-border); display: inline-block; }
-.code-head .lights i:first-child { background: var(--rs-rust); }
-.code pre {
-  margin: 0;
-  padding: 1.25rem 1.35rem;
-  overflow-x: auto;
-  font-family: var(--rs-mono);
-  font-size: 0.86rem;
-  line-height: 1.7;
-}
-.code pre code { white-space: pre; }
-.code .cmt { color: var(--rs-muted); }
-.code .prompt { color: var(--rs-rust); font-weight: 700; }
-
-/* ── Integration chips ───────────────────────────────────────────────────── */
-.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.7rem; }
-.chip {
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
-  border: 1px solid var(--rs-border);
-  background: var(--rs-surface);
-  color: var(--rs-muted);
-  font-weight: 600;
-  font-size: 0.92rem;
-}
-
-/* ── Footer ──────────────────────────────────────────────────────────────── */
+/* Footer */
 .footer {
-  border-top: 1px solid var(--rs-border);
-  background: var(--rs-surface);
+  border-top: 1px solid var(--fe-border);
+  background: var(--fe-surface);
   padding: 3rem 0 2.5rem;
   font-size: 0.92rem;
 }
@@ -306,33 +380,31 @@ section { padding: clamp(3rem, 7vw, 5rem) 0; }
   justify-content: space-between;
   align-items: flex-start;
 }
-.footer-brand { max-width: 42ch; }
+.footer-brand { max-width: 46ch; }
 .footer-brand .brand { margin-bottom: 0.75rem; }
-.footer-brand p { color: var(--rs-muted); margin: 0.35rem 0; }
+.footer-brand p { color: var(--fe-muted); margin: 0.35rem 0; }
 .footer-links { display: flex; gap: 2.5rem; flex-wrap: wrap; }
 .footer-links ul { list-style: none; margin: 0; padding: 0; }
-.footer-links h4 { margin: 0 0 0.6rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--rs-text); }
+.footer-links h4 { margin: 0 0 0.6rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fe-text); }
 .footer-links li { margin: 0.35rem 0; }
-.footer-links a { color: var(--rs-muted); }
-.footer-links a:hover { color: var(--rs-rust); }
+.footer-links a { color: var(--fe-muted); }
+.footer-links a:hover { color: var(--fe-accent); }
 .footer-note {
   margin-top: 2.25rem;
   padding-top: 1.5rem;
-  border-top: 1px solid var(--rs-border);
-  color: var(--rs-muted);
+  border-top: 1px solid var(--fe-border);
+  color: var(--fe-muted);
   font-size: 0.85rem;
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
 }
 
-/* ── Responsive ──────────────────────────────────────────────────────────── */
+/* Responsive */
 @media (max-width: 720px) {
   .nav-links { gap: 1rem; font-size: 0.9rem; }
   .nav-links .hide-sm { display: none; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; }
+/* A phone keeps the commands on one line inside their box where it can; a
+   longer line still scrolls inside the box, never the page. */
+@media (max-width: 480px) {
+  .cmd { font-size: 0.7rem; padding: 0.9rem 0.75rem; }
 }
