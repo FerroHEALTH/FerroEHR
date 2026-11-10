@@ -228,19 +228,20 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # point's IdA NameID with its format; 0.13.1 keeps a refused key set,
 # introspection or metadata body out of the error (GHSA-5qm7-v4fw-p2v9);
 # 0.16 builds every outbound client (`client::outbound::OutboundClient`) and
-# reads `[auth.idp]`. Verified on crates.io 2026-11-10.
-ferrohealth-smart = { version = "=0.16.3", default-features = false, features = ["fetch", "idp-entra"] }
+# reads `[auth.idp]`; 0.17 names a TLS refusal under `<key>.tls` and types
+# every configured endpoint as a `SecretUrl`. Verified on crates.io 2026-11-10.
+ferrohealth-smart = { version = "=0.17.0", default-features = false, features = ["fetch", "idp-entra"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroAUTH, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
 # ferrohealth-smart's relying party. Verified on crates.io 2026-11-10.
-ferrohealth-session = { version = "=0.10.0", default-features = false }
+ferrohealth-session = { version = "=0.11.0", default-features = false }
 # The policy decision of the FerroHEALTH family (FerroAUTH, the same
 # Licensor's BUSL-1.1 code): the attribute-based request over the subject
 # ferrohealth-smart authenticates, the Cedar engine (`cedar`) and the remote
 # decision point (`remote`). Pinned exactly beside ferrohealth-smart.
 # Verified on crates.io 2026-11-10.
-ferrohealth-authz = { version = "=0.9.0", default-features = false }
+ferrohealth-authz = { version = "=0.10.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -265,7 +266,7 @@ ferrohealth-health = { version = "=0.1.1", default-features = false }
 # sets it on a `reqwest::ClientBuilder` (feature `reqwest`); `api_headers` is
 # the security header set the stack puts outermost on every response. Verified on
 # crates.io 2026-11-08 (0.6.2).
-ferrohealth-server = { version = "=0.8.1", default-features = false }
+ferrohealth-server = { version = "=0.8.2", default-features = false }
 # The family's telemetry (FerroSYS): the `[telemetry]` section, the console,
 # the one OpenTelemetry provider read by Prometheus and pushed over OTLP, the
 # request log with its `http.server.request.duration` histogram, and the panic
@@ -288,7 +289,7 @@ ferrohealth-usage-report = { version = "=0.4.0", features = ["telemetry"] }
 # crates.io 2026-11-10, on ferrohealth-smart 0.16; `smart` builds its client
 # from ferrohealth-smart's outbound client, and `r4b` the one wire release the
 # terminology client speaks.
-ferrobridge-term = { version = "0.3.0", default-features = false, features = ["r4b", "smart"] }
+ferrobridge-term = { version = "0.4.0", default-features = false, features = ["r4b", "smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
@@ -300,8 +301,8 @@ ferrobridge-term = { version = "0.3.0", default-features = false, features = ["r
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
 # crates.io 2026-11-10.
-ihe-atna = { version = "=0.10.1", default-features = false }
-ehds-logging = { version = "=0.10.1", default-features = false }
+ihe-atna = { version = "=0.11.0", default-features = false }
+ehds-logging = { version = "=0.11.0", default-features = false }
 # The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
 # the viewer reads the ITI-81 searchset, each BALP `AuditEvent` and a refusal's
 # `OperationOutcome` through it. `r4-resources` compiles R4's resources alone;

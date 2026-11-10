@@ -244,7 +244,7 @@ fn url_userinfo_reaches_no_rendering() {
                 url: leaky(9),
                 credentials: ferrohealth_smart::config::credentials::CredentialsSection {
                     oauth: Some(OauthSection {
-                        token_endpoint: "https://u10:URL_PW_SENTINEL_10@h10:1/p10".to_owned(),
+                        token_endpoint: SecretUrl::new("https://u10:URL_PW_SENTINEL_10@h10:1/p10"),
                         ..OauthSection::default()
                     }),
                     ..ferrohealth_smart::config::credentials::CredentialsSection::default()

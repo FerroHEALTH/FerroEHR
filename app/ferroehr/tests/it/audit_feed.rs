@@ -220,7 +220,10 @@ async fn the_feed_authenticates_with_a_client_credentials_token() {
         .endpoint
         .credentials
         .oauth = Some(ferrohealth_smart::config::credentials::OauthSection {
-        token_endpoint: format!("{}/token", auth.uri()),
+        token_endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+            "{}/token",
+            auth.uri()
+        )),
         client_id: "ferroehr-feed".to_owned(),
         client_secret: Some(secrecy::SecretString::from("s3cret")),
         ..Default::default()

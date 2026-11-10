@@ -620,7 +620,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
                 url: leaky(2),
                 credentials: ferrohealth_smart::config::credentials::CredentialsSection {
                     oauth: Some(ferrohealth_smart::config::credentials::OauthSection {
-                        token_endpoint: "https://u3:URL_PW_SENTINEL_3@h3/p".to_owned(),
+                        token_endpoint: SecretUrl::new("https://u3:URL_PW_SENTINEL_3@h3/p"),
                         ..ferrohealth_smart::config::credentials::OauthSection::default()
                     }),
                     ..ferrohealth_smart::config::credentials::CredentialsSection::default()

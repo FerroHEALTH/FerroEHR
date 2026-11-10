@@ -5,6 +5,9 @@
   exchange's `timeout` now bounds the exchange with its tries and the waits
   between them, and the viewer refuses a `[cdr] timeout` of zero at start.
 - The family crates move to their newest releases: `ferrohealth-smart`
-  0.16.3, `ferrohealth-session` 0.10.0, `ferrohealth-authz` 0.9.0,
-  `ferrohealth-config` 0.4.2, `ferrohealth-server` 0.8.1, `ferrobridge-term`
-  0.3.0, `ihe-atna` and `ehds-logging` 0.10.1, and `ihe-iti` 0.2.0.
+  0.17.0, `ferrohealth-session` 0.11.0, `ferrohealth-authz` 0.10.0,
+  `ferrohealth-config` 0.4.2, `ferrohealth-server` 0.8.2, `ferrobridge-term`
+  0.4.0, `ihe-atna` and `ehds-logging` 0.11.0, and `ihe-iti` 0.3.0. Every
+  OAuth token endpoint and introspection endpoint renders with its
+  credentials masked, and a TLS refusal of an outbound client names its
+  `<key>.tls` table.
