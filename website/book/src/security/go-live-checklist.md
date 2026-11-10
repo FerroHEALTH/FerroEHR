@@ -213,7 +213,7 @@ blast radius of the database it audits:
 url = "tls://arr.example:6514"
 
 # or, for a RESTful ARR
-[audit.fhir_feed]
+[audit.fhir_feed.endpoint]
 url = "https://arr.example/fhir"
 ```
 

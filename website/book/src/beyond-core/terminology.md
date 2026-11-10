@@ -54,12 +54,12 @@ is a `400`.
 
 The terminology server is off by default, and while it is off nothing is
 requested: validation uses the in-process bundle alone. The keys live under
-`[terminology]`; the full table, including the timeout and OAuth2, is on
+`[terminology]` and its `[terminology.endpoint]` table; the full table, including the timeout and OAuth2, is on
 [Integrations](../installation/config-integrations.md#terminology). The minimum
 is the switch and the server's FHIR R4B base URL:
 
 ```toml
-[terminology]
+[terminology.endpoint]
 url = "http://ferroterm:8080/r4b"
 ```
 

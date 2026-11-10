@@ -286,7 +286,7 @@ async fn run_report_writes_a_redacted_file_naming_an_unreachable_database() -> a
         "[database]\n\
          url = \"postgres://reportuser:{DB_PW}@127.0.0.1:1/ferroehr\"\n\
          migrate_url = \"postgres://migrator:{MIGRATE_PW}@127.0.0.1:1/ferroehr\"\n\
-         [audit.fhir_feed]\n\
+         [audit.fhir_feed.endpoint]\n\
          url = \"https://feed:{FEED_PW}@arr.example/fhir\"\n\
          [record]\n\
          subject_index = \"local\"\n"
@@ -359,10 +359,10 @@ endpoint = "https://u2:URL_PW_SENTINEL_2@h2:4317/p2"
 [record.multimedia]
 url = "https://u3:URL_PW_SENTINEL_3@h3:8333/p3"
 
-[authz.abac.remote]
+[authz.abac.remote.endpoint]
 url = "https://u4:URL_PW_SENTINEL_4@h4:3001/p4/"
 
-[terminology]
+[terminology.endpoint]
 url = "https://u5:URL_PW_SENTINEL_5@h5:443/p5"
 
 [privacy]
@@ -372,8 +372,10 @@ subject_namespaces = ["urn:oid:2.999.7.1"]
 subject_index = "pixm"
 
 [pixm]
-url = "https://u7:URL_PW_SENTINEL_7@h7:8443/p7"
 assigning_authority = "urn:oid:2.999.7.1"
+
+[pixm.endpoint]
+url = "https://u7:URL_PW_SENTINEL_7@h7:8443/p7"
 "#,
     );
     assert!(ok, "the configuration checks: {text}");
@@ -402,10 +404,10 @@ audience = ["ferroehr"]
 [auth.smart]
 public_base_url = "https://u9:URL_PW_SENTINEL_9@cdr.example"
 
-[terminology]
+[terminology.endpoint]
 url = "https://h5:443/p5"
 
-[terminology.oauth]
+[terminology.endpoint.credentials.oauth]
 token_endpoint = "https://u6:URL_PW_SENTINEL_6@h6:8443/p6"
 client_id = "client"
 client_secret = "CLIENT_SECRET_SENTINEL"
@@ -414,7 +416,10 @@ client_secret = "CLIENT_SECRET_SENTINEL"
     assert!(!ok, "userinfo in these keys is refused: {text}");
     assert!(!text.contains("URL_PW_SENTINEL"), "{text}");
     assert!(!text.contains("CLIENT_SECRET_SENTINEL"), "{text}");
-    assert!(text.contains("terminology.oauth.token_endpoint"), "{text}");
+    assert!(
+        text.contains("terminology.endpoint.credentials.oauth.token_endpoint"),
+        "{text}"
+    );
     assert!(text.contains("auth.issuer"), "{text}");
     assert!(text.contains("auth.smart.public_base_url"), "{text}");
 
