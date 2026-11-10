@@ -1421,7 +1421,7 @@ Read on the tree after commit `a6ce1927d`, for the FerroEHR release candidate
 - **SCIM 2.0 provisioning** at `/scim/v2/`, off by default, with the Entra ID profile and contact erasure (#5014, #5015, #5178). Just-in-time creation of a provisional person is off by default (#5016).
 - **The caller kinds:** system callers, federation agreements with the Wabvpz Art. 15f roles, the MyHealth@EU contact point route and its caller rate, and representative confinement (#5086, #5100, #5101, #5102, #5107, #5149).
 - **The access record** carries the binding outcome, and every refused request is recorded (#5118, #5119).
-- **The security fixes** GHSA-jhg2-jwjp-hq74 and GHSA-pfgx-xq28-2629 (#5003, #5047), and the zlib fixes in the three images (#5137, #5152).
+- **The security fixes** GHSA-jhg2-jwjp-hq74 and GHSA-pfgx-xq28-2629 (#5003, #5047), the zlib fixes in the three images (#5137, #5152), and the four krb5 CVEs of the PostgreSQL image judged `not_affected` (#5344).
 - **The configuration tree** is one table per concern, with every retired key refused by name (#5259). The four outbound integrations use one endpoint table (#5331).
 - **The family run path** (#5321).
 - **Chart 25.0.1-rc1** with `appVersion` 5.7.0-rc1.

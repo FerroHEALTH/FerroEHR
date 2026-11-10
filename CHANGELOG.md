@@ -19,7 +19,7 @@ has no matching section here.
 
 ## [5.7.0-rc1] - 2026-11-10
 
-5.7.0-rc1 is the first release candidate of 5.7.0, published for testing. 5.6.3 stays the stable release: this pre-release moves neither the `latest` image tags, the book under `/docs/latest/` nor the hosted sandbox, it publishes no crates, and it receives no fixes; the next release candidate or 5.7.0 itself replaces it. Before you try it: the configuration is one table per concern with typed durations and sizes, so run `ferroehr config check` on your file first, which names every key a release before 5.7.0 read with its replacement, all at once; every person is bound to a demographic `PERSON`, so each `persons` issuer needs its `[[auth.party]]` table and each Basic user its `[[authz.party_binding.basic_user]]` mapping, with the steps on the book's bootstrap and migration page; and a deployment whose FerroBRIDGE facade or FerroFED gateway writes to FerroEHR adds its `persons` issuers only after FerroBRIDGE v0.0.23 and FerroFED v0.0.17 reach it. Party migrations 0027 to 0032, clinical migration 0035 and audit migrations 0023 to 0025 add the binding, SCIM, DPoP replay and refusal tables, columns and codes. Helm chart 25.0.1-rc1 carries `appVersion` 5.7.0-rc1. Security carries two advisories, GHSA-jhg2-jwjp-hq74 and GHSA-pfgx-xq28-2629, and the zlib fixes of CVE-2026-76844, CVE-2026-85091 and CVE-2026-27171 in the three images.
+5.7.0-rc1 is the first release candidate of 5.7.0, published for testing. 5.6.3 stays the stable release: this pre-release moves neither the `latest` image tags, the book under `/docs/latest/` nor the hosted sandbox, it publishes no crates, and it receives no fixes; the next release candidate or 5.7.0 itself replaces it. Before you try it: the configuration is one table per concern with typed durations and sizes, so run `ferroehr config check` on your file first, which names every key a release before 5.7.0 read with its replacement, all at once; every person is bound to a demographic `PERSON`, so each `persons` issuer needs its `[[auth.party]]` table and each Basic user its `[[authz.party_binding.basic_user]]` mapping, with the steps on the book's bootstrap and migration page; and a deployment whose FerroBRIDGE facade or FerroFED gateway writes to FerroEHR adds its `persons` issuers only after FerroBRIDGE v0.0.23 and FerroFED v0.0.17 reach it. Party migrations 0027 to 0032, clinical migration 0035 and audit migrations 0023 to 0025 add the binding, SCIM, DPoP replay and refusal tables, columns and codes. Helm chart 25.0.1-rc1 carries `appVersion` 5.7.0-rc1. Security carries two advisories, GHSA-jhg2-jwjp-hq74 and GHSA-pfgx-xq28-2629, the zlib fixes of CVE-2026-76844, CVE-2026-85091 and CVE-2026-27171 in the three images, and the `not_affected` judgements of four krb5 CVEs in the PostgreSQL image.
 
 ### Added
 
@@ -844,6 +844,15 @@ Shipped with functional changes because: the advisory reaches only a deployment 
   earlier releases carry `1:1.3.dfsg+really1.3.1-1+b1`, judged `affected`
   with the upgrade as its action, as the `ferroehr-postgres` image of those
   releases is (`security/vex/ferroehr-os.openvex.json`) (#5152, #5329).
+
+- CVE-2026-112321, CVE-2026-112322 and CVE-2026-112323 (memory and CPU
+  exhaustion in `kadmind` through the AUTH_GSSAPI handler) and
+  CVE-2026-119079 (CPU exhaustion in the KDC decoding an AS-REQ or TGS-REQ)
+  in MIT Kerberos 5 have no Debian fix for trixie and are judged
+  `not_affected` in `ferroehr-postgres`. The image carries neither `kadmind`,
+  a KDC nor `libgssrpc`, and the PostgreSQL server never decodes either
+  request; the configuration FerroEHR ships enables no GSS-API
+  authentication (`security/vex/postgres-os.openvex.json`) (#5344).
 
 ## [5.6.3] - 2026-11-05
 
