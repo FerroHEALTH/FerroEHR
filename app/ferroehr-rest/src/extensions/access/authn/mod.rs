@@ -43,6 +43,7 @@ pub(crate) mod declared;
 mod gates;
 mod issuer;
 mod party;
+pub(crate) mod purpose;
 pub(crate) mod record;
 pub(crate) mod refusal;
 mod scope;
@@ -575,6 +576,9 @@ pub(crate) async fn middleware(
             mut principal,
             fresh,
         }) => {
+            if let Some(refusal) = purpose::mismatch(&layer, &principal, &req) {
+                return refusal;
+            }
             if let Some(refusal) = trc::patient_context(&layer, &mut principal, &req).await {
                 return refusal;
             }
@@ -861,7 +865,9 @@ mod tests {
         ca_file: Option<std::path::PathBuf>,
     ) -> AppConfig {
         let grant = ferrohealth_smart::config::credentials::OauthSection {
-            token_endpoint: format!("{issuer}/token"),
+            token_endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+                "{issuer}/token"
+            )),
             client_id: "ferroehr".to_owned(),
             client_secret: Some(SecretString::from("synthetic-secret")),
             tls: ferrohealth_config::tls::TlsClientSection {
@@ -878,7 +884,9 @@ mod tests {
         let mut auth = test_support::trusting(ferrohealth_smart::config::IssuerEntry {
             mode: ferrohealth_smart::config::AuthMode::Introspection,
             introspection: Some(ferrohealth_smart::config::IntrospectionSection {
-                endpoint: format!("{issuer}/introspect"),
+                endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+                    "{issuer}/introspect"
+                )),
                 client,
                 bearer,
                 ..ferrohealth_smart::config::IntrospectionSection::default()

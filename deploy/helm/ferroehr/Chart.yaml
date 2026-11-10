@@ -50,7 +50,7 @@ appVersion: "5.7.0-rc2"
 # fetches it into charts/ before any render (deploy/helm/validate.sh does).
 dependencies:
   - name: ferropix
-    version: 0.3.17
+    version: 0.3.18
     repository: oci://ghcr.io/ferrohealth/charts
     condition: ferropix.enabled
 

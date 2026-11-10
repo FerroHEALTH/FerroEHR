@@ -222,8 +222,45 @@ pub struct AuditEvent {
     /// For a summary record, the count of the refusals it stands for and the
     /// EHR ids they named; `None` on every other record.
     pub summary: Option<crate::system_log::binding::Summary>,
+    /// What the access token states about the professional under its
+    /// issuer's `[[auth.attributes]]` table: the purposes of use and the
+    /// roles (IHE ITI TF-2 §3.71.4.2.2.1.1, RFC 9396 §2); `None` for a token
+    /// of an issuer without one, or no token.
+    pub token: Option<TokenAttributes>,
     /// The event time.
     pub timestamp: Timestamp,
+}
+
+/// One coded value the access token states, a FHIR `Coding` reduced to its
+/// system and code.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+pub struct Coding {
+    /// The code system, when the token names one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system: Option<String>,
+    /// The code.
+    pub code: String,
+}
+
+/// The purposes of use and the professional roles an access token states,
+/// as the `token_attributes` column stores them.
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TokenAttributes {
+    /// The purposes of use, sorted and without duplicates.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub purposes: Vec<Coding>,
+    /// The professional's roles (the IUA `subject_role`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub roles: Vec<Coding>,
+}
+
+impl TokenAttributes {
+    /// Whether the token states a purpose whose code is `code`.
+    #[must_use]
+    pub fn states_purpose(&self, code: &str) -> bool {
+        self.purposes.iter().any(|purpose| purpose.code == code)
+    }
 }
 
 /// How the credential acts: a natural person, a client application for one, a
@@ -340,6 +377,52 @@ impl AccessDomain {
 }
 
 impl AuditEvent {
+    /// Whether `test` holds for the code of a purpose of use the record names:
+    /// the declared one, or one the access token states.
+    pub fn names_purpose(&self, mut test: impl FnMut(&str) -> bool) -> bool {
+        self.purpose.as_deref().is_some_and(&mut test)
+            || self
+                .token
+                .iter()
+                .flat_map(|token| token.purposes.iter())
+                .any(|purpose| test(&purpose.code))
+    }
+
+    /// The purposes of use the record renders: those the access token states,
+    /// then the declared one when the token states no purpose of its code.
+    #[must_use]
+    pub fn purpose_codings(&self) -> Vec<Coding> {
+        let mut codings: Vec<Coding> = self
+            .token
+            .as_ref()
+            .map(|token| token.purposes.clone())
+            .unwrap_or_default();
+        if let Some(code) = &self.purpose
+            && !codings.iter().any(|coding| &coding.code == code)
+        {
+            codings.push(Coding {
+                system: None,
+                code: code.clone(),
+            });
+        }
+        codings
+    }
+
+    /// The roles the record renders: the roles the caller held, then the
+    /// professional roles the access token states.
+    #[must_use]
+    pub fn role_codings(&self) -> Vec<Coding> {
+        let held = self.roles.iter().map(|role| Coding {
+            system: None,
+            code: role.clone(),
+        });
+        let stated = self
+            .token
+            .iter()
+            .flat_map(|token| token.roles.iter().cloned());
+        held.chain(stated).collect()
+    }
+
     /// Whether the audited data moves from this server to the client, which
     /// makes the server the Source and the client the Destination participant.
     ///
@@ -401,6 +484,7 @@ impl AuditEvent {
             request_id: None,
             binding: None,
             summary: None,
+            token: None,
             timestamp: Timestamp::now(),
         }
     }

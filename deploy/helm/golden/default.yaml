@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "0.0.25"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.17
+    helm.sh/chart: ferropix-0.3.18
 spec:
   podSelector:
     matchLabels:
@@ -75,7 +75,7 @@ metadata:
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "0.0.25"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.17
+    helm.sh/chart: ferropix-0.3.18
 spec:
   maxUnavailable: 1
   unhealthyPodEvictionPolicy: AlwaysAllow
@@ -120,7 +120,7 @@ metadata:
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "0.0.25"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.17
+    helm.sh/chart: ferropix-0.3.18
 automountServiceAccountToken: false
 
 ---
@@ -180,14 +180,13 @@ metadata:
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "0.0.25"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.17
+    helm.sh/chart: ferropix-0.3.18
 data:
   ferropix.toml: |
     profile = "production"
     public_base_url = "https://pix.example.com"
     
     [auth]
-      audience = ["https://pix.example.org/fhir"]
     
       [[auth.issuer]]
         audience = ["https://pix.example.com/fhir"]
@@ -391,7 +390,7 @@ metadata:
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "0.0.25"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.17
+    helm.sh/chart: ferropix-0.3.18
     app.kubernetes.io/component: server
 spec:
   type: ClusterIP
@@ -442,7 +441,7 @@ metadata:
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "0.0.25"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.17
+    helm.sh/chart: ferropix-0.3.18
     app.kubernetes.io/component: server
 spec:
   replicas: 1
@@ -458,10 +457,10 @@ spec:
         app.kubernetes.io/instance: ferroehr
         app.kubernetes.io/version: "0.0.25"
         app.kubernetes.io/managed-by: Helm
-        helm.sh/chart: ferropix-0.3.17
+        helm.sh/chart: ferropix-0.3.18
         app.kubernetes.io/component: server
       annotations:
-        checksum/config: 86c24f282117679c958dbdf35a28e3e2e3086d380b5ce3514785f962f8dbc72f
+        checksum/config: d5e7ab5f0a2198f10d040e7be8caf30b16aca8e9c5cbf423bf5881316ca9a12f
     spec:
       serviceAccountName: ferroehr-ferropix
       automountServiceAccountToken: false

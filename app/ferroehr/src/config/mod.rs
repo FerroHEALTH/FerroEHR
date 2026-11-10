@@ -1825,7 +1825,7 @@ mod tests {
         }
 
         let complete = || OauthSection {
-            token_endpoint: "https://idp.example/token".to_owned(),
+            token_endpoint: SecretUrl::new("https://idp.example/token"),
             client_id: "cdr".to_owned(),
             client_secret: Some(secrecy::SecretString::from("s3cret")),
             ..OauthSection::default()
@@ -1895,7 +1895,7 @@ mod tests {
             .oauth
             .as_ref()
             .expect("the grant from env");
-        assert_eq!(oauth.token_endpoint, "https://idp/token");
+        assert_eq!(oauth.token_endpoint.expose(), "https://idp/token");
         assert_eq!(oauth.client_id, "cdr");
         assert_eq!(
             oauth

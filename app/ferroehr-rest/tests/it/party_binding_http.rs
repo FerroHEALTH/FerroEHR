@@ -468,7 +468,10 @@ async fn an_overage_the_identity_provider_throttles_is_unavailable_with_its_retr
     config.auth.shared.idp.entra = Some(Box::new(ferrohealth_smart::idp::entra::GraphSection {
         base_url: format!("{}/v1.0", graph.uri()),
         credentials: ferrohealth_smart::config::credentials::OauthSection {
-            token_endpoint: format!("{}/token", graph.uri()),
+            token_endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+                "{}/token",
+                graph.uri()
+            )),
             client_id: "ferroehr-graph".to_owned(),
             client_secret: Some(secrecy::SecretString::from("graph-test-secret")),
             scope: "https://graph.microsoft.com/.default".to_owned(),
@@ -602,7 +605,7 @@ async fn a_key_claim_refusal_is_recorded_with_the_claim_name() {
 
 /// A tracing layer recording the fields of every event it sees.
 #[derive(Clone, Default)]
-struct Capture(Arc<std::sync::Mutex<Vec<String>>>);
+pub(crate) struct Capture(pub(crate) Arc<std::sync::Mutex<Vec<String>>>);
 
 #[derive(Default)]
 struct Fields(Vec<String>);

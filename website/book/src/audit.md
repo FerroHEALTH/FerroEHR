@@ -117,7 +117,8 @@ Each record additionally carries:
 | `domain` | The pseudonymisation domain read: `ehr`, `demographic`, `linkage` for a crossing that resolves a party or a subject to its EHRs, or `system` for an operation that touches no domain. |
 | `organisation` | The organisation the caller acted for, read from the access token's `[authz.abac] organization_claim` — the same claim the ABAC layer decides on, so no second setting can name a different one. The recording does not depend on that layer being switched on. A Basic-authenticated caller and an unconfigured claim both leave it empty. |
 | `purpose` | The purpose of use the caller declared in the `x-purpose-of-use` header, when the deployment accepts it. |
-| `emergency_access` | `true` when the declared purpose is one of `[audit] emergency_purpose_codes`: an [emergency access](#emergency-access-ehds-art-115) (EHDS Art. 11(5)). |
+| `token_attributes` | The purposes of use and the professional roles the access token states, each with its code system, for an issuer with an `[[auth.attributes]]` table ([where the purpose comes from](#where-the-purpose-of-use-comes-from)). |
+| `emergency_access` | `true` when the declared purpose, or a purpose the token states, is one of `[audit] emergency_purpose_codes`: an [emergency access](#emergency-access-ehds-art-115) (EHDS Art. 11(5)). |
 | `legal_basis` | The basis the deployment processes under, from `[audit] legal_basis`. |
 | `result_count` | How many records the operation served. |
 | `request_id` | The `x-request-id` correlation id the response carried. |
@@ -293,16 +294,42 @@ One further element, adjacent to the five: **the declared purpose of use
 reaches one export of the two**, and only one of them could carry it. It is
 stored on the record, served by ITI-81, and rendered as
 [`agent.purposeOfUse`](https://hl7.org/fhir/R4/auditevent.html) on the
-requesting person's agent in the FHIR export. The coding carries the code
-alone, with no system: the vocabulary is the one you agree with your callers
-in `[audit] purpose_codes`, which has no published code system URI, and
-attributing the code to a system it does not come from would misdescribe it.
+requesting person's agent in the FHIR export. A declared code carries no
+system: the vocabulary is the one you agree with your callers in `[audit]
+purpose_codes`, which has no published code system URI, and attributing the
+code to a system it does not come from would misdescribe it. A purpose the
+access token states keeps the system the token gives it.
 The
 [DICOM Audit Message schema](https://dicom.nema.org/medical/dicom/current/output/chtml/part15/sect_A.5.html)
 of PS3.15 §A.5 defines no purpose element at all — `EventIdentification`,
 `ActiveParticipant`, `AuditSourceIdentification` and
 `ParticipantObjectIdentification`, and none of them carries one — so on that
 side it is a limit of the format, not something this code withholds.
+
+### Where the purpose of use comes from
+
+The purpose of use reaches the record from two places:
+
+- **The access token.** An issuer with an `[[auth.attributes]]` table
+  (`mapping = "iua"`) states its professionals' attributes in the token: the
+  IHE IUA `purpose_of_use` and `subject_role` claims under
+  `extensions.ihe_iua` (IHE ITI TF-2 §3.71.4.2.2.1.1), and with
+  `authorization_details_purposes` the `purpose_of_use` of each RFC 9396
+  `authorization_details` entry. The record stores them in
+  `token_attributes`, and both renderings write them with their code systems:
+  the purposes at the requesting agent's `purposeOfUse`, the roles at its
+  `role`, beside the roles the caller held.
+- **The `[audit] purpose_header`** (`x-purpose-of-use`), which the caller
+  sets. It works alone for an issuer without an `[[auth.attributes]]` table,
+  as before.
+
+The token is the authorization server's statement, so it decides. A request
+whose header names a purpose the token, which states purposes, does not
+state is refused with `403`, and the refusal is recorded as a failed
+authentication naming the caller and the token's purposes. A header naming
+one of the token's purposes is admitted and recorded with both. Which source
+wins is FerroEHR's own design; no openEHR specification governs the purpose
+of use.
 
 > [!NOTE]
 > Every row of this table is asserted by a test
@@ -318,7 +345,9 @@ than assumed to still hold; see the
 ### The binding outcome
 
 Every record of an authenticated request carries `binding`: how the caller
-was bound to a demographic party, or why the binding refused it. It answers
+was bound to a demographic party, or why the binding refused it. The
+committer the same request writes into a version is on
+[Who is the committer](security/committer.md). It answers
 Annex II 3.2(a) and (b) where the token's subject alone does not. The columns
 beside it hold what each outcome needs:
 
@@ -337,8 +366,9 @@ or actor, `external` for a verified external accessor and `system` for a client
 acting for nobody (`client` remains on records written before). The FHIR
 `AuditEvent` writes each mode as the person's `agent.role`. A record of a
 request with no authenticated caller carries no binding. The columns are in the
-chain digest: a record written from this release is digest version 2, which
-hashes them, and a record written before keeps verifying under version 1.
+chain digest: version 2 hashes them, version 3 adds `token_attributes`, a new
+record is version 3, and a record written before keeps verifying under its own
+version.
 
 #### The binding fields in the renderings
 

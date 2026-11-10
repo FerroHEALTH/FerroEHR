@@ -102,21 +102,42 @@ release run left open:
 ## The performance gate
 
 Every pull request that touches the server's build, its images or the gate
-runs the `perf` job in `ci.yml` (#5081), and the release's `performance` job
-runs the same gate on the release image. `scripts/perf/gate.sh` starts the
-server and the FerroEHR PostgreSQL image in containers, seeds them, and runs
-`ferrohealth-perf` (FerroSYS #249, pinned in `docs/VERSIONS.md`) in two
-phases:
+runs the `perf` job in `ci.yml` (#5081, #5326). `scripts/perf/gate.sh ab`
+starts two servers side by side on one runner, each in a container with its
+own FerroEHR PostgreSQL container:
 
-- **Idle:** 60 seconds with no requests. The server's CPU stays under 2 % of one
-  core, and its database commits and rolls back fewer than 5 transactions a
-  second, whatever the background workers do. FerroPIX #490 ran about 8,000.
-- **Load:** the request set in `perf/plan.toml`, sent at a fixed rate. It
-  covers EHR create and read, composition commit and read, the lab-results
-  AQL query with and without `ORDER BY`, a template upload, and two
+- **The head:** the image this tree builds, with this tree's gate
+  configuration.
+- **The base:** the change's base commit, the first parent of the commit
+  under test. The `perf-base-binary` job builds its server exactly as
+  `ui-e2e-binary` builds the head's (the same container, toolchain and `e2e`
+  profile), so the arms differ in the change alone. The `perf` job packages
+  it with the base tree's own Dockerfile and PostgreSQL image, and the gate
+  runs it under that tree's `perf/ferroehr.toml`, professional templates,
+  SCIM client and seed data, so each arm meets the configuration contract of
+  its own tree.
+
+It runs `ferrohealth-perf ab` (FerroSYS #249, pinned in `docs/VERSIONS.md`)
+over this tree's `perf/plan.toml`, with each arm's seeded ids:
+
+- **Idle:** 60 seconds with no requests to the head. The head's CPU stays
+  under 2 % of one core, and its database commits and rolls back fewer than 5
+  transactions a second, whatever the background workers do. FerroPIX #490
+  ran about 8,000.
+- **Load, in pairs:** the request set, sent at a fixed rate to both servers
+  at once, four pairs, the base leading in the first and the head in the
+  next. It covers EHR create and read, composition commit and read, the
+  lab-results AQL query with and without `ORDER BY`, a template upload, and two
   demographic reads. Each group's p50, p95 and p99 latency, the throughput,
   the peak memory, the CPU time per request and the transactions per request
-  are compared with `perf/baseline.toml`.
+  of the head are judged against the base's.
+
+Runners of one CPU model differ by 25 to 45 % in latency and CPU per
+request, so the change is judged against its base on the same runner in the
+same job, never against a stored number. The release's `performance` job runs
+`gate.sh run` on the release image: the idle limits, with the load phase
+reported; the candidate's load against the previous release is the A/B run
+beside it.
 
 The job first runs `gate.sh self-test`. It polls a table with no wait during
 the idle phase, and the self-test passes only when the gate fails that run on
@@ -125,21 +146,24 @@ the idle phase, and the self-test passes only when the gate fails that run on
 ### Reading the report
 
 The job summary and the `perf-report` artifact (`target/perf/summary.md`,
-`latest.json`) open with the verdict. A failed run lists its breaches first:
-each one names the metric, the measured value, the baseline or limit, and the
-threshold it crossed. A load metric fails when it is worse than the baseline
-by more than the larger of its tolerance and the noise floor its entry was
-measured with. A run that cannot be judged exits 2 and says why: no
-baseline, no entry for the runner's CPU model, an entry to re-measure, a
-baseline of another plan, a generator that lagged, or a window whose second
-half was not as fast as its first. A request answered with a status other
-than the plan's expected one fails the run too. Locally, `PERF_SERVER`,
-`PERF_DATABASE` and `PERF_TARGET` point the script at a server you started
-yourself (see the script's header).
+`latest.json`) open with the verdict. A failed run lists its breaches first.
+Each one names the metric, the base, the head, their ratio, the tolerance,
+the noise floor and in how many pairs the head breached. A load metric fails
+when the head's median is worse than the base's by more than the larger of
+the plan's tolerance and the noise floor measured within the two arms, and
+the head breaches in most of the pairs. A run that cannot be judged exits 2
+and says why: a phase that stalled, a generator that lagged, a window that
+was not steady, or a base that fell behind the schedule. A request the head
+answered with a status other than the plan's expected one fails the run
+too. `target/perf/base-rev` names the base commit. Locally, `PERF_SERVER`,
+`PERF_DATABASE` and `PERF_TARGET` point `gate.sh run` at a server you
+started yourself (see the script's header).
 
 ### Writing the baseline
 
-The load baseline is kept per CPU model of the runner pool the gate runs on
+The pull-request gate needs no baseline. `gate.sh run` and the
+**Performance baseline** workflow still measure one server against
+`perf/baseline.toml` (#5095). The load baseline is kept per CPU model of the runner pool the gate runs on
 (`ubuntu-26.04`), because one model's latencies say nothing about another's.
 `perf/baseline.toml` holds one `[[baseline]]` entry per model, keyed by the
 `model name` line of `/proc/cpuinfo`. Until that file is committed (#5095), a

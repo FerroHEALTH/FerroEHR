@@ -178,7 +178,7 @@ Kubernetes: `>=1.36.0-0`
 
 | Repository | Name | Version |
 |------------|------|---------|
-| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.17 |
+| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.18 |
 
 > [!NOTE]
 > Rows under `config.*` carry no description here on purpose. Those keys are the

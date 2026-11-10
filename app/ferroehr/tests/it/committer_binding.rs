@@ -486,3 +486,165 @@ fn source_system_id(extract: &Value) -> String {
         .unwrap_or_else(|| text.clone());
     uid.split(marker).nth(1).unwrap_or_default().to_owned()
 }
+
+/// The key of the representative's `PERSON`.
+const REPRESENTATIVE_KEY: &str = "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f";
+
+/// `composition("…")` composed by `composer`.
+fn composed_by(name: &str, composer: &Value) -> Value {
+    let mut body = composition(name);
+    body["composer"] = composer.clone();
+    body
+}
+
+/// The `PARTY_RELATED` composer a representative names.
+fn related() -> Value {
+    json!({ "_type": "PARTY_RELATED", "name": "Rep Roe",
+        "relationship": { "_type": "DV_CODED_TEXT", "value": "unknown",
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": "253" } } })
+}
+
+/// Writes `body` into `ehr` as `identity`: a creation, or with `preceding` an
+/// update of that version; the version uid it landed.
+async fn write_as(
+    svc: &FerroEhrService,
+    ehr: EhrId,
+    identity: CommitterIdentity,
+    body: &Value,
+    preceding: Option<(&VoId, &str)>,
+) -> Result<String, ServiceError> {
+    let written = match preceding {
+        None => {
+            with_committer(
+                Some(identity),
+                Box::pin(svc.create_composition(ehr, write(body, None))),
+            )
+            .await
+        }
+        Some((vo, uid)) => {
+            with_committer(
+                Some(identity),
+                Box::pin(svc.update_composition(ehr, *vo, write(body, Some(uid)))),
+            )
+            .await
+        }
+    }
+    .map_err(ServiceError::flattened)?;
+    Ok(format!(
+        "{}::{}::{}",
+        written.vo_id, written.creating_system_id, written.tree
+    ))
+}
+
+/// The versioned object of the version uid `uid`.
+fn vo_of(uid: &str) -> VoId {
+    VoId(
+        uid.split("::")
+            .next()
+            .and_then(|id| id.parse().ok())
+            .expect("a versioned object id"),
+    )
+}
+
+/// #5359: a representative's write is the person's under EHDS Art. 5. It names
+/// the person or the representative as composer, may not alter a
+/// professional's entry, is recorded as `PARTY_RELATED`, and the person may
+/// change it and sees it flagged as inserted for them.
+#[tokio::test]
+async fn a_representatives_write_is_held_to_the_persons_rules() {
+    let (_db, svc, ehr) = service().await;
+    professional(&svc, "Dr Jane Roe", KEY).await;
+    professional(&svc, "Rep Roe", REPRESENTATIVE_KEY).await;
+    let clinician = bound(&svc, "sub-a", KEY).await;
+    let mut representative = bound(&svc, "sub-r", REPRESENTATIVE_KEY).await;
+    representative.representative = true;
+    let patient = CommitterIdentity {
+        subject: "jane".to_owned(),
+        id_type: "oauth2",
+        issuer: Some(ISSUER.to_owned()),
+        client: None,
+        person: true,
+        party: None,
+        representative: false,
+        bound: None,
+        system: false,
+        system_client: None,
+        external: None,
+    };
+    let refused = |result: Result<String, ServiceError>| match result {
+        Err(ServiceError::Restricted { .. } | ServiceError::Forbidden(_)) => {}
+        other => panic!("expected 403, got {other:?}"),
+    };
+
+    let by_professional = write_as(&svc, ehr, clinician, &composition("by Dr Roe"), None)
+        .await
+        .expect("the professional's entry");
+    refused(
+        write_as(
+            &svc,
+            ehr,
+            representative.clone(),
+            &composed_by("altered", &related()),
+            Some((&vo_of(&by_professional), &by_professional)),
+        )
+        .await,
+    );
+    refused(
+        write_as(
+            &svc,
+            ehr,
+            representative.clone(),
+            &composition("as a professional"),
+            None,
+        )
+        .await,
+    );
+    let by_representative = write_as(
+        &svc,
+        ehr,
+        representative,
+        &composed_by("by the representative", &related()),
+        None,
+    )
+    .await
+    .expect("the representative's entry");
+    let stored = svc
+        .composition_version_envelope(ehr, by_representative.parse().expect("a version uid"))
+        .await
+        .expect("the stored version")
+        .body["commit_audit"]["committer"]
+        .clone();
+    assert_eq!(stored["_type"], "PARTY_RELATED", "{stored}");
+    write_as(
+        &svc,
+        ehr,
+        patient,
+        &composed_by("amended by the person", &json!({ "_type": "PARTY_SELF" })),
+        Some((&vo_of(&by_representative), &by_representative)),
+    )
+    .await
+    .expect("the person amends the representative's entry");
+
+    let listed = svc
+        .ehr_contribution_list_page(ehr, 0, 10)
+        .await
+        .expect("the contribution list");
+    let flags: Vec<(String, bool)> = listed["rows"]
+        .as_array()
+        .expect("rows")
+        .iter()
+        .map(|row| {
+            (
+                row["committer"].as_str().unwrap_or_default().to_owned(),
+                row["inserted_by_person"].as_bool().expect("a flag"),
+            )
+        })
+        .collect();
+    assert!(flags.contains(&("Rep Roe".to_owned(), true)), "{flags:?}");
+    assert!(
+        flags.contains(&("Dr Jane Roe".to_owned(), false)),
+        "{flags:?}"
+    );
+}
