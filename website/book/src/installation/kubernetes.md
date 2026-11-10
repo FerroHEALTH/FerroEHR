@@ -986,7 +986,8 @@ The chart pins FerroPIX 0.0.25 by digest (`ferropix.image`) with the
 FerroPIX chart built for it. Since FerroPIX 0.0.19 every `[[auth.issuer]]`
 entry carries its `kind` and its own `audience`: an issuer that signs only
 the client credentials tokens of the Source and of FerroEHR is
-`kind: machines`, and FerroPIX refuses `auth.audience`. Since 0.0.21 a
+`kind: machines`, and FerroPIX refuses an audience written on the auth
+section itself. Since 0.0.21 a
 Patient Identity Source is admitted only with a client credentials token,
 and a Basic user holding a `system/` scope refuses the start. Since FerroPIX 0.0.8, `public_base_url` is a
 top-level key and the clients that may act as a Patient Identity Source sit
