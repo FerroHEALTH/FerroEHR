@@ -153,9 +153,11 @@ next_version() {
 }
 
 # `crate level` lines, one per `Checking` the judge's log on stdin printed,
-# the level read from the `Summary` after it: major, minor or none.
+# the level read from the `Summary` after it: major, minor or none. The
+# colour codes a CI terminal adds around the status word are dropped first.
 read_summaries() {
   awk '
+    { gsub(/\033\[[0-9;]*m/, "") }
     $1 == "Checking" { crate = $2; next }
     $1 == "Summary" && crate != "" {
       level = "none"
@@ -210,7 +212,7 @@ judge() {
         group+=(--package "$crate")
       done
       [[ "${#group[@]}" -gt 0 ]] || continue
-      local -a run=(check-release "${group[@]}" --baseline-version "$newest" --release-type patch)
+      local -a run=(check-release "${group[@]}" --baseline-version "$newest" --release-type patch --color never)
       [[ "$selection" == default ]] || run+=(--only-explicit-features)
       note "semver: judging $(( ${#group[@]} / 2 )) crate(s) against $newest on the $selection feature set"
       status=0
@@ -331,6 +333,7 @@ self_test() {
      Summary semver requires new minor version: 0 major and 2 minor checks failed
 EOF
 )" $'openehr-base none\nopenehr-rm major\nopenehr-its minor'
+  expect "a coloured summary is read" "$(printf '\033[1m\033[32m    Checking\033[0m openehr-adl v0.0.136 -> v0.0.128 (assume patch change)\n\033[1m\033[32m     Summary\033[0m no semver update required\n' | read_summaries)" "openehr-adl none"
   expect "a caret line of 0.y" "$(compat_line 0.16.3)" 0.16
   expect "an exact line of 0.0.z" "$(compat_line "=0.0.7")" 0.0.7
   expect "a moved line is named" "$(moved_lines $'ferrohealth-secret 0.2' $'ferrohealth-secret 0.3')" "ferrohealth-secret 0.2->0.3"
