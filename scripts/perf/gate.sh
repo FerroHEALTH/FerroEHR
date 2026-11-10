@@ -231,7 +231,7 @@ render() {
   plan="${plan//@AQL_ORDER_BY@/$(aql "$read_ehr" true)}"
   plan="${plan//@AQL_UNORDERED@/$(aql "$read_ehr" false)}"
   leftover=$(grep -oE '@[A-Z_]+@' <<<"$plan" | sort -u | while read -r name; do
-    [[ "${3:-}" == per-arm ]] && printf '%s\n' "${SEED[@]}" | grep -q "^${name//@/}=" && continue
+    [[ "${3:-}" == per-arm ]] && grep -q "^${name//@/}=" <<<"$(printf '%s\n' "${SEED[@]}")" && continue
     echo "$name"
   done | paste -sd, -)
   [[ -z "$leftover" ]] || die "the plan names a placeholder the seed does not fill: $leftover"
