@@ -1150,10 +1150,10 @@ jobs:
         env:
           LOADTEST_BIN: target/release/loadtest
         run: bash scripts/perf/audit.sh ferroehr:perf ferroehr-postgres:perf perf-audit
-      # The pull-request performance gate on the release image (#5081): idle
-      # limits and the committed baseline, on the same runner image it was
-      # measured on. The release build is at least as fast as the e2e build the
-      # baseline was measured with, so a breach here is a regression.
+      # The performance gate on the release image (#5081): its idle limits,
+      # with the load phase reported. The candidate's load against the previous
+      # release is the A/B run above; the pull-request gate judges each change
+      # against main side by side (#5326).
       - name: Install the pinned ferrohealth-perf
         run: bash scripts/perf/gate.sh install
       - name: The performance gate
