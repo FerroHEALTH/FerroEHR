@@ -108,11 +108,14 @@ own FerroEHR PostgreSQL container:
 
 - **The head:** the image this tree builds, with this tree's gate
   configuration.
-- **The base:** the published image of `main` and its PostgreSQL image. The
-  gate reads the commit the image names (`org.opencontainers.image.revision`),
-  archives that commit from the clone's history, and runs the base under its
-  own tree's `perf/ferroehr.toml`, professional templates, SCIM client and seed
-  data, so each arm meets the configuration contract of its own tree.
+- **The base:** the change's base commit, the first parent of the commit
+  under test. The `perf-base-binary` job builds its server exactly as
+  `ui-e2e-binary` builds the head's (the same container, toolchain and `e2e`
+  profile), so the arms differ in the change alone. The `perf` job packages
+  it with the base tree's own Dockerfile and PostgreSQL image, and the gate
+  runs it under that tree's `perf/ferroehr.toml`, professional templates,
+  SCIM client and seed data, so each arm meets the configuration contract of
+  its own tree.
 
 It runs `ferrohealth-perf ab` (FerroSYS #249, pinned in `docs/VERSIONS.md`)
 over this tree's `perf/plan.toml`, with each arm's seeded ids:

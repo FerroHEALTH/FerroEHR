@@ -25,10 +25,11 @@
 #
 # Usage:
 #   scripts/perf/gate.sh install                     the pinned ferrohealth-perf into target/tools/perf
-#   scripts/perf/gate.sh ab <image> <pg-image> <base-image> <base-pg-image>
-#       the head images against the base images; the base's tree is the
-#       commit its image names (org.opencontainers.image.revision), taken
-#       from this clone's history with `git archive`
+#   scripts/perf/gate.sh ab <image> <pg-image> <base-image> <base-pg-image> [<base-rev>]
+#       the head images against the base images; the base's tree is
+#       <base-rev>, or the commit the base image names
+#       (org.opencontainers.image.revision), taken from this clone's history
+#       with `git archive`
 #   scripts/perf/gate.sh run <image> <pg-image>      one server: the idle limits, the load reported
 #   scripts/perf/gate.sh update <image> <pg-image>   one server, writing perf/baseline.toml
 #   scripts/perf/gate.sh self-test <image> <pg-image>
@@ -76,7 +77,7 @@ OUT="${PERF_OUT:-$ROOT/target/perf}"
 readonly OUT
 
 usage() {
-  sed -n '26,38p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+  sed -n '26,39p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -279,13 +280,16 @@ gate() { # <update: true|false> <image> <pg-image>
   return "$status"
 }
 
-# base_tree <base-image>: the source tree of the commit the base image names
-# (org.opencontainers.image.revision), archived from this clone into
-# BASE_TREE, so the base arm runs under its own tree's configuration.
+# base_tree <base-image> [<rev>]: the source tree of <rev>, or of the commit
+# the base image names (org.opencontainers.image.revision), archived from
+# this clone into BASE_TREE, so the base arm runs under its own tree's
+# configuration.
 base_tree() {
-  local rev
-  rev=$(docker inspect -f '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$1") \
-    || die "the base image $1 cannot be inspected"
+  local rev="${2:-}"
+  if [[ -z "$rev" ]]; then
+    rev=$(docker inspect -f '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$1") \
+      || die "the base image $1 cannot be inspected"
+  fi
   [[ "$rev" =~ ^[0-9a-f]{40}$ ]] || die "the base image $1 names no revision"
   git -C "$ROOT" cat-file -e "${rev}^{commit}" 2>/dev/null \
     || die "this clone does not hold $rev, the base image's commit: fetch the full history"
@@ -302,12 +306,12 @@ base_tree() {
 # side by side, each seeded and provisioned from its own tree, judged by
 # `ferrohealth-perf ab` over this checkout's plan with each arm's ids.
 ab() {
-  [[ "$#" -eq 4 ]] || usage
+  [[ "$#" -eq 4 || "$#" -eq 5 ]] || usage
   local bin status=0 entry
   bin=$(binary)
   mkdir -p "$OUT"
   teardown
-  base_tree "$3"
+  base_tree "$3" "${5:-}"
   up "$1" "$2"
   local head_url="$SERVER_URL" head_db="$DATABASE_URL" head_container="${TARGET[1]}"
   local -a vars=()
