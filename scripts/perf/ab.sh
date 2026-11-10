@@ -92,8 +92,14 @@ measure() {
   fi
   echo "==> run $n: $side ($image)"
   down "$file"
+  # The quickstart from 5.7.0 binds its Basic login to a PERSON through its
+  # ferroehr-provision service (#5006); a side whose file defines it starts it.
+  local -a services=(ferroehr-postgres ferroehr)
+  if grep -qx '  ferroehr-provision:' "$file"; then
+    services+=(ferroehr-provision)
+  fi
   if ! FERROEHR_IMAGE="$image" FERROEHR_POSTGRES_IMAGE="$pg_image" \
-    docker compose -f "$file" up -d --wait --wait-timeout 300 ferroehr-postgres ferroehr; then
+    docker compose -f "$file" up -d --wait --wait-timeout 300 "${services[@]}"; then
     echo "::error::the $side stack did not become healthy" >&2
     docker compose -f "$file" logs ferroehr >&2 || true
     down "$file"
