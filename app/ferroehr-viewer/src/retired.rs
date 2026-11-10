@@ -6,50 +6,79 @@
 //!
 //! `[server]`, `[telemetry]`, `[oidc]` and `[session]` are family sections,
 //! whose crates retired these keys in releases FerroEHR never shipped and
-//! refuse an unknown key when they load, so [`removals`] reads the merged tree
+//! refuse an unknown key when they load, so [`refuse`] reads the merged tree
 //! before the typed load and names each key it finds. Every refusal here was
 //! introduced in v5.7.0 and lives for that one release. No openEHR spec
 //! governs configuration: our own design.
 
-use ferrohealth_config::removed::{Removals, Removed, Retired};
+use std::fmt;
+
+use ferrohealth_config::removed::{Removals, Removed, RemovedKeys, Retired};
 use serde::Deserialize;
+
+use crate::locale::server::ServerMsg;
 
 /// The FerroEHR release that retired every key here.
 const SINCE: &str = "5.7.0";
 
-/// A retired key whose replacement is `<new>` in the same table, a duration.
+/// How the value of a retired key's replacement is written, which the
+/// refusal adds from the catalog once per form it names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Form {
+    /// A duration with its unit.
+    Duration,
+    /// A size with its unit.
+    Size,
+    /// One PEM holding a client certificate chain and its key.
+    Identity,
+    /// The value the retired key held.
+    Same,
+}
+
+impl Form {
+    /// The catalog line that says how a value of this form is written.
+    fn note(self) -> Option<ServerMsg> {
+        match self {
+            Self::Duration => Some(ServerMsg::RetiredFormDuration),
+            Self::Size => Some(ServerMsg::RetiredFormSize),
+            Self::Identity => Some(ServerMsg::RetiredFormIdentity),
+            Self::Same => None,
+        }
+    }
+}
+
+/// A retired key replaced by `<new>` in the same table, a duration.
 macro_rules! duration {
     ($key:literal, $new:literal) => {
-        Retired::replaced(
-            $key,
-            concat!(
-                $new,
-                " in the same table, a duration such as \"30s\", \"10min\" or \"1h\""
-            ),
-            SINCE,
-        )
+        (Retired::replaced($key, $new, SINCE), Form::Duration)
     };
 }
 
-/// A retired key whose replacement is `<new>` in the same table, a size.
+/// A retired key replaced by `<new>` in the same table, a size.
 macro_rules! size {
     ($key:literal, $new:literal) => {
-        Retired::replaced(
-            $key,
-            concat!($new, " in the same table, a size such as \"16MiB\""),
-            SINCE,
+        (Retired::replaced($key, $new, SINCE), Form::Size)
+    };
+}
+
+/// A retired client certificate or key, replaced by the one identity file.
+macro_rules! identity {
+    ($key:literal) => {
+        (
+            Retired::replaced($key, "tls.client_identity_file", SINCE),
+            Form::Identity,
         )
     };
 }
 
-/// What replaced the client certificate and key of a TLS table.
-macro_rules! identity {
-    () => {
-        "tls.client_identity_file in the same table, one PEM holding the chain and the key"
+/// A retired key replaced by `<new>` in the same table, with the same value.
+macro_rules! renamed {
+    ($key:literal, $new:literal) => {
+        (Retired::replaced($key, $new, SINCE), Form::Same)
     };
 }
 
-const TABLES: [(&str, &[Retired]); 6] = [
+const TABLES: [(&str, &[(Retired, Form)]); 6] = [
     (
         "server",
         &[
@@ -67,24 +96,24 @@ const TABLES: [(&str, &[Retired]); 6] = [
     (
         "telemetry.otlp",
         &[
-            Retired::replaced("trust_roots_file", "tls.trust_roots_file", SINCE),
-            Retired::replaced("client_identity_file", identity!(), SINCE),
+            renamed!("trust_roots_file", "tls.trust_roots_file"),
+            identity!("client_identity_file"),
         ],
     ),
     ("cdr", &[duration!("request_timeout_secs", "timeout")]),
     (
         "oidc",
         &[
-            Retired::replaced("ca_file", "tls.trust_roots_file", SINCE),
+            renamed!("ca_file", "tls.trust_roots_file"),
             duration!("timeout_s", "timeout"),
         ],
     ),
     (
         "oidc.tls",
         &[
-            Retired::replaced("client_certificate", identity!(), SINCE),
-            Retired::replaced("client_key", identity!(), SINCE),
-            Retired::replaced("client_key_file", identity!(), SINCE),
+            identity!("client_certificate"),
+            identity!("client_key"),
+            identity!("client_key_file"),
         ],
     ),
     (
@@ -97,21 +126,63 @@ const TABLES: [(&str, &[Retired]); 6] = [
     ),
 ];
 
-/// Every retired key the merged `tree` sets, each with its replacement.
-#[must_use]
-pub fn removals(tree: &toml::Table) -> Removals {
+/// Retired keys the configuration sets, each named with its replacement in
+/// the same table, followed by how the replacements' values are written.
+#[derive(Debug, thiserror::Error)]
+#[error("{keys}{}", Notes(.notes))]
+pub struct RetiredKeys {
+    keys: RemovedKeys,
+    notes: Vec<String>,
+}
+
+impl RetiredKeys {
+    /// Every retired key that was set.
+    #[must_use]
+    pub fn keys(&self) -> &RemovedKeys {
+        &self.keys
+    }
+}
+
+/// Renders the catalog notes, each on its own line after the keys.
+struct Notes<'a>(&'a [String]);
+
+impl fmt::Display for Notes<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for note in self.0 {
+            write!(formatter, "\n{note}")?;
+        }
+        Ok(())
+    }
+}
+
+/// Refuses every retired key the merged `tree` sets.
+///
+/// # Errors
+///
+/// [`RetiredKeys`] when the tree sets any, naming each with its replacement.
+pub fn refuse(tree: &toml::Table) -> Result<(), RetiredKeys> {
     let mut removals = Removals::new();
+    let mut forms = Vec::new();
     for (table, retired) in TABLES {
         let Some(toml::Value::Table(keys)) = lookup(tree, table) else {
             continue;
         };
-        for key in retired {
+        for (key, form) in retired {
             if let Some(value) = lookup(keys, key.key()) {
                 removals.check_under(set(value), key, table);
+                forms.push(*form);
             }
         }
     }
-    removals
+    forms.sort_unstable();
+    forms.dedup();
+    removals.finish().map_err(|keys| RetiredKeys {
+        keys,
+        notes: std::iter::once(ServerMsg::RetiredSameTable)
+            .chain(forms.into_iter().filter_map(Form::note))
+            .map(crate::locale::tr_served)
+            .collect(),
+    })
 }
 
 /// The value at the dotted `key` of `table`.
@@ -145,13 +216,14 @@ mod tests {
     #[test]
     fn every_refusal_records_its_release() {
         for (_, retired) in TABLES {
-            for key in retired {
+            for (key, _) in retired {
                 assert_eq!(key.since(), SINCE, "{}", key.key());
             }
         }
     }
 
-    /// A v5.6 key of each family section is named with its replacement.
+    /// A v5.6 key of each family section is named with its replacement, and
+    /// the refusal says once how each form it names is written.
     #[test]
     fn a_v5_6_key_is_named_with_its_replacement() {
         let tree: toml::Table = toml::from_str(
@@ -159,26 +231,41 @@ mod tests {
              [cdr]\nrequest_timeout_secs = 30\n",
         )
         .expect("a tree");
-        let named: Vec<String> = removals(&tree)
+        let refused = refuse(&tree).expect_err("retired keys are refused");
+        let named: Vec<String> = refused
+            .keys()
             .removals()
             .iter()
             .map(ToString::to_string)
             .collect();
         assert_eq!(named.len(), 4, "{named:?}");
+        for line in [
+            "server.body_limit_bytes was replaced by body_limit",
+            "oidc.ca_file was replaced by tls.trust_roots_file",
+            "cdr.request_timeout_secs was replaced by timeout",
+        ] {
+            assert!(named.iter().any(|n| n == line), "{line} in {named:?}");
+        }
+        let rendered = refused.to_string();
+        for msg in [
+            ServerMsg::RetiredSameTable,
+            ServerMsg::RetiredFormDuration,
+            ServerMsg::RetiredFormSize,
+        ] {
+            let note = crate::locale::tr_served(msg);
+            assert_eq!(rendered.matches(note.as_str()).count(), 1, "{rendered}");
+        }
         assert!(
-            named
-                .iter()
-                .any(|n| n.starts_with("server.body_limit_bytes was replaced by body_limit"))
+            !rendered.contains(&crate::locale::tr_served(ServerMsg::RetiredFormIdentity)),
+            "{rendered}"
         );
-        assert!(
-            named
-                .iter()
-                .any(|n| n.starts_with("oidc.ca_file was replaced by tls.trust_roots_file"))
-        );
-        assert!(
-            named
-                .iter()
-                .any(|n| n.starts_with("cdr.request_timeout_secs was replaced by timeout"))
-        );
+    }
+
+    /// A tree that sets no retired key is not refused.
+    #[test]
+    fn a_tree_without_retired_keys_passes() {
+        let tree: toml::Table =
+            toml::from_str("[server]\nbody_limit = \"1MiB\"\n").expect("a tree");
+        assert!(refuse(&tree).is_ok());
     }
 }

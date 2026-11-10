@@ -240,7 +240,7 @@ pub enum ConfigError {
     Invalid(String),
     /// Keys v5.6 read and v5.7.0 retired, each named with its replacement.
     #[error(transparent)]
-    Retired(#[from] ferrohealth_config::removed::RemovedKeys),
+    Retired(#[from] crate::retired::RetiredKeys),
     /// `[oidc]` or `[session]` is refused.
     #[error(transparent)]
     Session(Box<ferrohealth_session::config::ConfigError>),
@@ -309,7 +309,7 @@ fn refuse_retired(
     let Ok(tree) = tree else {
         return Ok(());
     };
-    Ok(crate::retired::removals(tree.settings()).finish()?)
+    Ok(crate::retired::refuse(tree.settings())?)
 }
 
 /// Refuses every variable under `FERROEHR_VIEWER_` that is neither an

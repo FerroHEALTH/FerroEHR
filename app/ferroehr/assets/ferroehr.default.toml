@@ -391,7 +391,7 @@ scopeless_subjects = []      # e.g. [{ issuer = "https://idp.example/realms/staf
 #? roles = ["ADMIN", "USER"]
 # How long a Basic credential that verified is kept, so a repeat request skips
 # the Argon2id derivation, which costs 10 to 15 ms of CPU per check. Default
-# 300; 0 turns the cache off and checks every request. The entry is a keyed
+# "5min"; "0s" turns the cache off and checks every request. The entry is a keyed
 # hash of the credential, never the password, and only a credential that
 # verified is kept; the TTL bounds how long a removed user keeps working.
 #? [auth.basic]

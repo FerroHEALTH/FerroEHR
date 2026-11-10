@@ -9,6 +9,14 @@
 crate::locale::messages! {
     /// A string the server alone draws, by its message in its catalog.
     ServerMsg in "./locales/server" {
+        /// `each replacement is written in the same table as the key it replaces`
+        RetiredSameTable = "retired-same-table",
+        /// `a duration is written with its unit, such as "30s", "10min" or "1h"`
+        RetiredFormDuration = "retired-form-duration",
+        /// `a size is written with its unit, such as "16MiB"`
+        RetiredFormSize = "retired-form-size",
+        /// `tls.client_identity_file is one PEM file holding the certificate chain and its key`
+        RetiredFormIdentity = "retired-form-identity",
         /// `no EHR id to delete`
         NoEhrIdDelete = "no-ehr-id-delete",
         /// `a stored-query delete needs both a qualified name and a version`

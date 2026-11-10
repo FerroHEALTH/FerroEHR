@@ -73,8 +73,8 @@ honour **refuses to boot** rather than degrading at the first request:
 | an `[authz.rbac] role_issuers` entry that is not a `persons` issuer | error: only a person holds an administrator or emergency role |
 
 Successfully verified Basic credentials are cached for
-`FERROEHR__AUTH__BASIC__CACHE_TTL_SECONDS` (default `0`, which checks every
-request) so a busy client pays the deliberately expensive Argon2 verification
+`FERROEHR__AUTH__BASIC__CACHE_TTL` (default `5min`; `0s` turns the cache off
+and checks every request) so a busy client pays the deliberately expensive Argon2 verification
 once per TTL instead of on every request. The cache names each entry by a keyed
 hash of the credential, never the password, and an entry exists only after a
 successful verification; the TTL bounds how long a removed user can still
@@ -90,11 +90,11 @@ The bearer settings:
 | `FERROEHR__AUTH__ISSUER__0__AUDIENCE` | unset (**required with an issuer**) | accepted `aud` values |
 | `FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS` | unset | the deployment's own clients, the only ones a `persons` token is admitted through beside `delegates` |
 | `FERROEHR__AUTH__ISSUER__0__ALGORITHMS` | `RS256,RS384,PS256,PS384,ES256,ES384` | accepted signing algorithms, asymmetric only |
-| `FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW_SECONDS` | `60` | leeway on `exp`, `nbf` and `iat`; capped at `300` |
+| `FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW` | `60s` | leeway on `exp`, `nbf` and `iat`; capped at `5min` |
 | `FERROEHR__AUTH__ISSUER__0__JWKS_FILE` | unset | a static JWK Set of public keys, read instead of the issuer's metadata |
-| `FERROEHR__AUTH__ISSUER__0__JWKS_MAX_AGE_SECONDS` | `600` | a key set older than this is read again |
-| `FERROEHR__AUTH__ISSUER__0__JWKS_REFRESH_INTERVAL_SECONDS` | `60` | an unknown `kid` reads the key set again at most once per interval |
-| `FERROEHR__AUTH__ISSUER__0__TIMEOUT_MS` | `10000` | one call to the authorization server |
+| `FERROEHR__AUTH__ISSUER__0__JWKS_MAX_AGE` | `10min` | a key set older than this is read again |
+| `FERROEHR__AUTH__ISSUER__0__JWKS_REFRESH_INTERVAL` | `1min` | an unknown `kid` reads the key set again at most once per interval |
+| `FERROEHR__AUTH__ISSUER__0__TIMEOUT` | `10s` | one call to the authorization server |
 | `FERROEHR__AUTH__REALM` | `ferroehr` | the realm every challenge names |
 | `FERROEHR__AUTH__PRODUCT_SCOPE` | `__ferroehr.platform` | the scope that admits the ADMIN and DEMOGRAPHIC APIs |
 
