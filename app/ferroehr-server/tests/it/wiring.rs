@@ -394,8 +394,9 @@ assigning_authority = "urn:oid:2.999.7.1"
 
     let (ok, text) = config_check(
         r#"
-[auth]
+[[auth.issuer]]
 issuer = "https://u7:URL_PW_SENTINEL_7@idp.example/realms/r"
+kind = "machines"
 audience = ["ferroehr"]
 
 [auth.smart]
