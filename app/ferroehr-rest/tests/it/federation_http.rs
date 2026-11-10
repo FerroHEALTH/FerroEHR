@@ -979,3 +979,93 @@ async fn an_nl_agreement_admits_only_a_care_provider_organisation() {
         );
     }
 }
+
+/// A professional's token whose `ihe_iua` extension is `edit`ed.
+fn professional_edited(
+    ehr: &str,
+    edit: impl FnOnce(&mut serde_json::Map<String, Value>),
+) -> String {
+    let mut iua = json!({
+        "subject_name": "Dr Remote",
+        "subject_role": "doctor",
+        "national_provider_identifier": "hp-1",
+        "subject_organization_id": "urn:oid:2.999.7",
+        "subject_organization": "Remote clinic",
+        "country": "DE",
+        "issuing_authority": "Registry",
+    });
+    if let Some(iua) = iua.as_object_mut() {
+        edit(iua);
+    }
+    token(&json!({
+        "sub": "hp-remote-1", "acr": "high", "client_id": "remote-portal", "ehrId": ehr,
+        "extensions": { "ihe_iua": iua },
+    }))
+}
+
+/// A `federation` token that fits no caller is refused with `401`, and the
+/// gate logs the typed reason naming the field, never its value: a token
+/// naming neither a professional nor an organisation statement, a
+/// professional missing a field, a country outside the issuer's `countries`,
+/// and an attribute holding U+202E (#5011).
+#[tokio::test]
+async fn a_federation_token_that_fits_no_caller_is_refused_naming_why() {
+    use tracing_subscriber::layer::SubscriberExt as _;
+
+    let (_db, svc, app) = serve(vec![agreement(Accessor::Person)]).await;
+    let target = ehr(&svc).await.to_string();
+    let cases = [
+        (
+            "no professional and no organisation statement",
+            token(
+                &json!({ "sub": "remote-system", "client_id": "remote-system", "ehrId": target }),
+            ),
+            "names no professional and states no organisation access",
+        ),
+        (
+            "a professional without a name",
+            professional_edited(&target, |iua| {
+                iua.remove("subject_name");
+            }),
+            "names a professional and misses",
+        ),
+        (
+            "a country outside the issuer's countries",
+            professional_edited(&target, |iua| {
+                iua.insert("country".to_owned(), json!("FR"));
+            }),
+            "outside the declared bounds",
+        ),
+        (
+            "a name holding U+202E",
+            professional_edited(&target, |iua| {
+                iua.insert("subject_name".to_owned(), json!("Dr \u{202e}etomeR"));
+            }),
+            "holds a refused character",
+        ),
+    ];
+    for (case, credential, reason) in cases {
+        let capture = crate::party_binding_http::Capture::default();
+        let lines = Arc::clone(&capture.0);
+        {
+            let _guard =
+                tracing::subscriber::set_default(tracing_subscriber::registry().with(capture));
+            let status = read(&app, &target, &credential, None).await;
+            assert_eq!(status, StatusCode::UNAUTHORIZED, "{case}");
+        }
+        let lines = lines.lock().unwrap().clone();
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.contains("an access token names no caller kind")
+                    && line.contains(reason)),
+            "{case}: the reason {reason:?} is logged: {lines:?}"
+        );
+        for line in &lines {
+            assert!(
+                !line.contains("etomeR") && !line.contains("\"FR\""),
+                "{case}: a claim value was logged: {line}"
+            );
+        }
+    }
+}

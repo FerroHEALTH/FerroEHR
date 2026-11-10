@@ -602,7 +602,7 @@ async fn a_key_claim_refusal_is_recorded_with_the_claim_name() {
 
 /// A tracing layer recording the fields of every event it sees.
 #[derive(Clone, Default)]
-struct Capture(Arc<std::sync::Mutex<Vec<String>>>);
+pub(crate) struct Capture(pub(crate) Arc<std::sync::Mutex<Vec<String>>>);
 
 #[derive(Default)]
 struct Fields(Vec<String>);
