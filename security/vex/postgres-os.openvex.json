@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/postgres-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-11-08T00:00:00Z",
-  "version": 8,
+  "timestamp": "2026-11-10T00:00:00Z",
+  "version": 9,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -2679,6 +2679,114 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-119591: SQLite before 3.54.0 has a stack exhaustion in countOfViewOptimization() through count(*) over a large multi-row VALUES clause, in SQL or a crafted view (trixie 3.46.1-7+deb13u2: unfixed). In this image SQLite is linked only by liblastlog2, and liblastlog2 only by lslogins (readelf over every executable and shared object of the rc8 image). Nothing in the image runs lslogins, login, su or lastlog2: the entrypoint starts PostgreSQL through gosu, and PostgreSQL does not link SQLite. No SQLite database, WAL file, changeset or SQL text is ever opened or parsed by SQLite, so the defective code never runs."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112321"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in the AUTH_GSSAPI handler of lib/rpc/svc_auth_gssapi.c, which is built into libgssrpc and runs in kadmind. Neither libgssrpc nor kadmind is installed in this image, and postgres does not link libgssrpc."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112322"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The quadratic scan is in clean_client() of lib/rpc/svc_auth_gssapi.c, which is built into libgssrpc and runs in kadmind. Neither libgssrpc nor kadmind is installed in this image, and postgres does not link libgssrpc."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112323"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in the AUTH_GSSAPI handler of lib/rpc/svc_auth_gssapi.c, which is built into libgssrpc and runs in kadmind. Neither libgssrpc nor kadmind is installed in this image, and postgres does not link libgssrpc."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119079"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "decode_sequence_of() in libkrb5 is reached by the KDC decoding an AS-REQ or TGS-REQ. The image runs no KDC, and postgres, a GSS-API acceptor at most, never decodes either request. The configuration FerroEHR ships has no gss or hostgssenc line in pg_hba.conf and no server keytab (krb_server_keyfile), so the server decodes no Kerberos message from a client at all."
     }
   ]
 }
