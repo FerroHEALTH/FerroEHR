@@ -45,6 +45,9 @@ the Art. 30 fields, in
    `AuditEvent` renderings.
 6. **Change-event feed**: a PHI-free envelope per commit, served to the
    readers `[record.change_feed] readers` names.
+7. **Workforce identity**: the professionals' `PERSON`s, their groups and
+   their professional `ROLE`s, provisioned through SCIM or created at a
+   first login, which each version's committer and each access record name.
 
 Everything else the server does (templates, terminology lookup, conformance
 reporting) operates on definitions rather than on people.
@@ -140,6 +143,7 @@ assessment has to size.
 | R7 | Access records are altered or lost | Records are hash-chained and `audit.verify_audit_chain()` names any that changed; the runtime role can insert and stamp delivery and nothing more; syslog and FHIR-feed forwarding put copies off the box | The chain is evidence, not prevention. A local repository shares the blast radius of the database it audits, and a read made straight against the database appears nowhere |
 | R8 | A backup carries what the grants withheld | One dump per domain, each under its own read-only role and its own claim, and the chart refuses to render when two domains name the same claim | Each dump is plaintext of its own domain. Two of them together rebuild the join. Nothing prunes old dumps |
 | R9 | A deployment has made none of the separations and looks like one that has | `deployment.profile = "production"` refuses to start while a separation is open and not accepted by name; `sandbox` names every open one on the banner, in the log and on `GET /management/status` | The default is `sandbox`, so an operator who sets nothing gets the loud version rather than the enforced one |
+| R11 | A professional's data are copied from the identity provider beyond what attribution needs, or a login reaches another person's `PERSON` | SCIM and just-in-time creation write only the attributes the party mapping names; just-in-time creation writes the key, the `userName` and the name only, and contacts are unmapped by default; the binding key is the identity provider's immutable user id, never an email, a name or a `upn`, and never changes once set; a professional's `PERSON` is writable only by its SCIM client or an administrator ([Who is the committer](committer.md)) | The lawful basis for each mapped attribute, the Art. 14 information to the professionals, the retention of the attribution minimum (in the Netherlands the BW 7:454(3) horizon), and the identity provider's own controls over who may change a user |
 | R10 | Anyone with a database connection is past every API control | Least-privilege roles revoked from each other's domains, and a version table that is appended to rather than overwritten | This is inherent. Authorization is enforced at the API, so protecting the credentials and the network path is yours |
 
 ## 7. Controls, by issue and legal source

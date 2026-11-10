@@ -384,6 +384,8 @@ These things about the payload are worth calling out:
   `PARTY_RELATED`. This deviates from the ITS-REST rule that a stated
   committer is merged: the record has to identify who acted (EHDS Art.
   13(4)). A patient-context token commits no demographic version (**403**).
+  [Who is the committer](../security/committer.md) has the committer for
+  every kind of caller.
 - **Importing needs the import role.** `POST /message/import…` needs the role
   `[authz.rbac] import_role` names, or a `system/` caller. A wrapped
   `commit_audit` or attestation of an imported version is kept as received,

@@ -51,6 +51,10 @@ shares; FerroEHR checks tokens and never issues them.
   token's signature (asymmetric algorithms only), issuer, audience, lifetime
   and type under RFC 9068.
 
+Every person a request comes from is bound to a demographic `PERSON`, and the
+server writes each version's committer from that party:
+[Who is the committer](security/committer.md).
+
 Both mechanisms are validated at startup, and a configuration the server cannot
 honour **refuses to boot** rather than degrading at the first request:
 
