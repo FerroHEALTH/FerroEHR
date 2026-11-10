@@ -138,7 +138,10 @@ mod tests {
             "app/ferroehr/src/access_log_draft/access_log/access_log_record.rs",
             "app/ferroehr/src/access_log_draft/access_log/access_log_tombstone.rs",
         ] {
-            assert!(paths.contains(&expected), "{expected} missing from {paths:?}");
+            assert!(
+                paths.contains(&expected),
+                "{expected} missing from {paths:?}"
+            );
         }
         assert!(files.iter().all(|f| f.body.starts_with("// @generated")));
         let root = files

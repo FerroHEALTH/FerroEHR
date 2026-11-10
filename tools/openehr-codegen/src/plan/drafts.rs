@@ -87,8 +87,6 @@ pub(crate) const DRAFTS: &[DraftModule] = &[DraftModule {
 
 /// A draft resolved into its schema, resolution model and reference index.
 pub(crate) struct ComposedDraft {
-    /// The table row this draft was resolved from.
-    pub draft: &'static DraftModule,
     /// The draft's own schema.
     pub schema: BmmSchema,
     /// The merged resolution model: the dependency generations, then the draft.
@@ -106,8 +104,8 @@ pub(crate) struct ComposedDraft {
 /// Returns an error if the file cannot be read or parsed.
 fn load_draft(file: &str) -> Result<BmmSchema, Box<dyn std::error::Error>> {
     let path = Path::new(DRAFT).join(file);
-    let src = std::fs::read_to_string(&path)
-        .map_err(|e| format!("draft BMM {}: {e}", path.display()))?;
+    let src =
+        std::fs::read_to_string(&path).map_err(|e| format!("draft BMM {}: {e}", path.display()))?;
     Ok(BmmSchema::parse_json(&src)?)
 }
 
@@ -162,7 +160,6 @@ pub(crate) fn compose_draft(
         .into());
     }
     Ok(ComposedDraft {
-        draft,
         schema,
         model,
         dep_schemas,
@@ -180,7 +177,7 @@ fn unresolved_types(model: &Model, schema: &BmmSchema, external: &External) -> B
     let local = emittable_specs(model, schema);
     let mut out = BTreeSet::new();
     for (name, class) in &schema.classes {
-        for spec in model.referenced_specs(class, &[], &Default::default()) {
+        for spec in model.referenced_specs(class, &[], &std::collections::BTreeMap::default()) {
             if !local.contains(&spec) && !external.contains(&spec) {
                 out.insert(format!("{name} -> {spec}"));
             }
@@ -206,14 +203,14 @@ mod tests {
     fn a_type_no_schema_defines_is_refused() {
         let d = &DRAFTS[0];
         let composed = compose_draft(d).expect("the access log draft composes");
-        let mut src: serde_json::Value = serde_json::from_str(
-            &std::fs::read_to_string(std::path::Path::new(super::DRAFT).join(d.file))
-                .expect("the draft BMM reads"),
-        )
-        .expect("the draft BMM parses");
-        src["class_definitions"]["ACCESS_CHANNEL"]["properties"]["interface"]["type"] =
-            serde_json::Value::from("NO_SUCH_CLASS");
-        let broken = BmmSchema::parse_json(&src.to_string()).expect("the edited draft parses");
+        let src = std::fs::read_to_string(std::path::Path::new(super::DRAFT).join(d.file))
+            .expect("the draft BMM reads");
+        // ACCESS_CHANNEL.interface, the one property after its name typed DV_CODED_TEXT.
+        let name = "\"name\": \"interface\"";
+        let (head, tail) = src.split_once(name).expect("ACCESS_CHANNEL.interface");
+        let tail = tail.replacen("\"DV_CODED_TEXT\"", "\"NO_SUCH_CLASS\"", 1);
+        let edited = format!("{head}{name}{tail}");
+        let broken = BmmSchema::parse_json(&edited).expect("the edited draft parses");
         let deps = crate::plan::composition::generation_dep_schemas(d.model_deps)
             .expect("the dependency generations load");
         let mut all: Vec<&BmmSchema> = deps.iter().collect();

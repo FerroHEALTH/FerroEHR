@@ -1,5 +1,15 @@
 # `ferroehr` — the platform library
 
+**One generated module lives here: `access_log_draft`.** `openehr-codegen
+emit-drafts` emits it from the FerroEHR-local draft BMM
+`tools/openehr-codegen/draft/bmm/openehr_access_log_0.1.0.bmm.json`
+(`org.openehr.rm.access_log` 0.1.0, our change proposal, no openEHR release),
+with the canonical-JSON serde the spec crates get. Never hand-edit it: change
+the draft BMM or the emitter and regenerate (`codegen-drift` checks it). Its
+class invariants are hand-written in `access_log_invariants`. If openEHR adopts
+the package, it moves to `openehr-rm` as a generation of the RM and leaves
+this crate.
+
 The application core (five app crates, zero re-exports). Top-level modules
 (`src/lib.rs`): `service` (the service layer), `storage`, `aql` (the query
 engine), `versioning` (change control + VERSION `signature` signing),

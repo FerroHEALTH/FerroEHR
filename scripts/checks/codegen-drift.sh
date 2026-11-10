@@ -9,8 +9,9 @@
 # hand-editing a `// @generated` file, or changing the emitter without
 # regenerating. Run in CI and locally before committing generator changes.
 #
-# The files checked are exactly the generator's: every file under crates/
-# whose first line contains `@generated`, the test openehr-codegen itself
+# The files checked are exactly the generator's: every file under crates/ and
+# the draft modules (app/ferroehr/src/access_log_draft) whose first line
+# contains `@generated`, the test openehr-codegen itself
 # applies (`is_generated_file`) when it wipes and rewrites a crate. The set is
 # read before the run (a file the generator stops writing is deleted, #4203)
 # and after it (a file it starts writing is new), so a hand-written file
@@ -24,10 +25,11 @@ set -euo pipefail
 # shellcheck source=scripts/lib/guard-args.sh
 . "$(dirname "$0")/../lib/guard-args.sh"
 
-# The generator writes only under the workspace crates/ directory.
-readonly ROOT=crates
+# The generator writes under the workspace crates/ directory, and the draft
+# modules plan::drafts names into their application crates.
+readonly ROOTS=(crates app/ferroehr/src/access_log_draft)
 
-# Print, sorted, every file under $ROOT (tracked or not, ignored excluded)
+# Print, sorted, every file under ROOTS (tracked or not, ignored excluded)
 # whose first line names it generated.
 generated_files() {
   local path first
@@ -36,7 +38,7 @@ generated_files() {
     first=""
     IFS= read -r first <"$path" || true
     [[ "$first" == *@generated* ]] && printf '%s\n' "$path"
-  done < <(git ls-files -z --cached --others --exclude-standard -- "$ROOT")
+  done < <(git ls-files -z --cached --others --exclude-standard -- "${ROOTS[@]}")
   return 0
 }
 
@@ -57,6 +59,8 @@ regenerate() {
   cargo run -q -p openehr-codegen -- emit-rm-model
   echo "regenerating the RM invariant cores (openehr-rm/src/validate/generated.rs)…"
   cargo run -q -p openehr-codegen -- emit-validate
+  echo "regenerating the FerroEHR-local draft modules (app/ferroehr/src/access_log_draft)…"
+  cargo run -q -p openehr-codegen -- emit-drafts
 }
 
 # drift <regenerate command>: run it between two reads of the generated set
@@ -71,13 +75,13 @@ drift() {
     files+=("$path")
   done < <(printf '%s\n%s\n' "$before" "$after" | sed '/^$/d' | sort -u)
   if [[ "${#files[@]}" -eq 0 ]]; then
-    echo "::error::No file under $ROOT/ carries a first-line @generated banner: nothing to check." >&2
+    echo "::error::No file under ${ROOTS[*]} carries a first-line @generated banner: nothing to check." >&2
     return 1
   fi
   untracked="$(git ls-files --others --exclude-standard -- "${files[@]}")"
   if ! git diff --quiet -- "${files[@]}" || [[ -n "$untracked" ]]; then
     echo "::error::Generated code is out of sync with the vendored specs." >&2
-    echo "Run: cargo run -p openehr-codegen -- emit && … emit-xml && … emit-json && … emit-rest && … emit-opt && … emit-aom2 && … emit-rm-model && … emit-validate, then commit." >&2
+    echo "Run: cargo run -p openehr-codegen -- emit && … emit-xml && … emit-json && … emit-rest && … emit-opt && … emit-aom2 && … emit-rm-model && … emit-validate && … emit-drafts, then commit." >&2
     git diff --stat -- "${files[@]}" >&2
     [[ -z "$untracked" ]] || echo "new, not committed: ${untracked//$'\n'/ }" >&2
     return 1

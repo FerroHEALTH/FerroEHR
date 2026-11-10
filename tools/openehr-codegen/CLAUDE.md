@@ -20,6 +20,11 @@ The single deterministic generator behind the whole spec layer. Lives under
 - `emit-rm-model` — the static RM attribute/type model (refreshes the subtree
   `emit` already writes).
 - `emit-validate` — the machine-classified RM invariant cores.
+- `emit-drafts` — the FerroEHR-local draft BMM schemas of `plan::drafts`
+  (`draft/bmm/`, no openEHR release) into a generated module of their
+  application crate: the access log draft into `app/ferroehr/src/access_log_draft`.
+  A draft's `includes` must equal the table's, and a type it names that
+  neither it nor its dependency generations define is refused.
 - `model-query` — read-only report: what the vendored BMM states about every
   class attribute (declared type, existence, container + cardinality, class
   abstractness) beside the field shape the emitter currently emits for it;

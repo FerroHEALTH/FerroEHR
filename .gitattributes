@@ -50,6 +50,8 @@ crates/openehr-rm/src/model/data.rs linguist-generated=true
 crates/openehr-base/src/** linguist-generated=true
 crates/openehr-rm/src/**   linguist-generated=true
 crates/openehr-am/src/**   linguist-generated=true
+# The draft access-log module openehr-codegen emits into the app (#5124).
+app/ferroehr/src/access_log_draft/** linguist-generated=true
 crates/openehr-base/src/**/*_impl.rs linguist-generated=false
 crates/openehr-rm/src/**/*_impl.rs   linguist-generated=false
 crates/openehr-am/src/**/*_impl.rs   linguist-generated=false
