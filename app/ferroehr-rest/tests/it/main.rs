@@ -61,6 +61,7 @@ mod base_path_http;
 mod basic_binding_http;
 mod binding_commits_http;
 mod binding_issuers_http;
+mod binding_purposes_http;
 mod caller_kinds_http;
 mod cohort_http;
 mod composition_validation_http;
