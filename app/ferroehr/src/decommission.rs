@@ -17,7 +17,6 @@
 //! database the clinical domain lives in.
 
 use crate::config::FerroEhrConfig;
-use crate::db::domain::StorageConfig;
 use crate::db::{DatabaseErasure, DbConfig, DbError, EraseReport};
 
 /// What an erasure would remove, read without changing anything.
@@ -87,7 +86,7 @@ pub enum DecommissionError {
     /// A blob store is configured, but this binary was built without the
     /// `multimedia` feature and cannot reach it.
     #[error(
-        "[multimedia] names a blob store, but this binary was built without the `multimedia` \
+        "[record.multimedia] names a blob store, but this binary was built without the `multimedia` \
          feature and cannot delete its blobs; run the erase with a build that has it"
     )]
     BlobStoreUnsupported,
@@ -103,7 +102,6 @@ pub enum DecommissionError {
 #[derive(Debug, Clone)]
 pub struct Decommission {
     db: DbConfig,
-    storage: StorageConfig,
     #[cfg(feature = "multimedia")]
     blobs: Option<ferroehr_ext::multimedia::store::BlobStore>,
 }
@@ -111,10 +109,9 @@ pub struct Decommission {
 impl Decommission {
     /// Creates a decommissioning over the databases alone, with no blob store.
     #[must_use]
-    pub fn new(db: DbConfig, storage: StorageConfig) -> Self {
+    pub fn new(db: DbConfig) -> Self {
         Self {
             db,
-            storage,
             #[cfg(feature = "multimedia")]
             blobs: None,
         }
@@ -129,17 +126,18 @@ impl Decommission {
     }
 
     /// Creates the decommissioning a configuration describes: its databases,
-    /// and its blob store when `[multimedia]` enables one or names an endpoint.
+    /// and its blob store when `[record.multimedia]` enables one or names a `url`.
     ///
     /// # Errors
     /// [`DecommissionError::Blobs`] when the blob store client cannot be built,
     /// and [`DecommissionError::BlobStoreUnsupported`] when a store is
     /// configured on a build without the `multimedia` feature.
     pub fn from_config(config: &FerroEhrConfig) -> Result<Self, DecommissionError> {
-        let decommission = Self::new(config.db.clone(), config.storage.clone());
+        let decommission = Self::new(config.database.clone());
         #[cfg(feature = "multimedia")]
         {
-            let engine = crate::extensions::multimedia::engine_from_config(&config.multimedia)?;
+            let engine =
+                crate::extensions::multimedia::engine_from_config(&config.record.multimedia)?;
             Ok(match engine {
                 Some(engine) => decommission.with_blob_store(engine.store().clone()),
                 None => decommission,
@@ -147,7 +145,7 @@ impl Decommission {
         }
         #[cfg(not(feature = "multimedia"))]
         {
-            if config.multimedia.enabled || config.multimedia.endpoint.is_some() {
+            if config.record.multimedia.enabled || config.record.multimedia.url.is_some() {
                 return Err(DecommissionError::BlobStoreUnsupported);
             }
             Ok(decommission)
@@ -164,7 +162,7 @@ impl Decommission {
     /// [`DecommissionError::Db`] when a database cannot be read.
     pub async fn inventory(&self) -> Result<Inventory, DecommissionError> {
         let blobs = self.blob_inventory().await?;
-        let databases = crate::db::erase_inventory(&self.db, &self.storage).await?;
+        let databases = crate::db::erase_inventory(&self.db).await?;
         Ok(Inventory { databases, blobs })
     }
 
@@ -188,7 +186,7 @@ impl Decommission {
             return Err(DecommissionError::NotConfirmed);
         }
         let blobs_deleted = self.delete_blobs().await?;
-        let report = crate::db::erase_schema(&self.db, &self.storage).await?;
+        let report = crate::db::erase_schema(&self.db).await?;
         Ok(Erasure::Erased {
             databases: report.databases,
             blobs_deleted,

@@ -49,7 +49,7 @@ pub(super) fn repository(config: &FhirFeedConfig) -> Result<FeedRepository, Audi
         .as_ref()
         .map(|oauth| {
             let grant = oauth
-                .resolve()
+                .resolve_with_tls(&ferrohealth_smart::config::ServerTls)
                 .map_err(|e| AuditError::Transport(Box::new(e)))?;
             ferrohealth_smart::client::cache::TokenSource::new(grant)
                 .map_err(|e| AuditError::Transport(Box::new(e)))

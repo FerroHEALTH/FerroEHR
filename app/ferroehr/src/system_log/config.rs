@@ -13,10 +13,13 @@
 //! default** with only the local store active: compliance out of the box,
 //! nothing leaves the node.
 
+use ferrohealth_config::removed::Removed;
+use ferrohealth_config::units::{ByteSize, Duration};
 use serde::{Deserialize, Serialize};
 
+use crate::config::retention::RetentionPeriod;
+use ferrohealth_config::tls::TlsClientSection;
 use ferrohealth_secret::secret_url::SecretUrl;
-use ferrohealth_server::tls_client::TlsClientSection;
 
 /// Behaviour when an audit record cannot be enqueued/delivered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -39,20 +42,16 @@ pub struct StoreConfig {
     /// Persist every record locally (`FERROEHR__AUDIT__STORE__ENABLED`).
     /// **On by default** (owner posture: compliance out of the box).
     pub enabled: bool,
-    /// Days to keep records; `0` = keep forever
-    /// (`FERROEHR__AUDIT__STORE__RETENTION_DAYS`). Applied hourly by the
-    /// retention reaper.
-    pub retention_days: u32,
-    /// Calendar years to keep records, in place of `retention_days`
-    /// (`FERROEHR__AUDIT__STORE__RETENTION_YEARS`); unset by default.
+    /// How long records are kept, a calendar period (`"P5Y"`, `"P1830D"`);
+    /// unset keeps them forever (`FERROEHR__AUDIT__STORE__RETENTION`).
+    /// Applied hourly by the retention reaper.
     ///
     /// The floors and ceilings the horizon answers to are written in years, and
     /// a day count can only approximate them: three calendar years span 1095
     /// or 1096 days, so a three-year floor and a three-year ceiling leave no
     /// day count that satisfies both. A horizon in years is compared exactly
-    /// and reaped with calendar arithmetic. Setting it together with a non-zero
-    /// `retention_days`, or to `0`, is a boot error.
-    pub retention_years: Option<u32>,
+    /// and reaped with calendar arithmetic. The name is EHDS Annex II's.
+    pub retention: Option<RetentionPeriod>,
     /// Whether this deployment is one of the controllers SGB V § 307 names for
     /// a German telematics-infrastructure application
     /// (`FERROEHR__AUDIT__STORE__SGB_V_309_CONTROLLER`). **Off by default.**
@@ -67,9 +66,9 @@ pub struct StoreConfig {
     /// So the deployment declares it here, beside the horizon it bounds, and the
     /// DE ceiling applies from then on.
     pub sgb_v_309_controller: bool,
-    /// Seconds between two scheduled verifications of the store's hash chain
-    /// (`FERROEHR__AUDIT__STORE__VERIFY_INTERVAL_SECONDS`); `0` turns the
-    /// schedule off. Default one hour.
+    /// The time between two scheduled verifications of the store's hash chain
+    /// (`FERROEHR__AUDIT__STORE__VERIFY_INTERVAL`); `"0s"` turns the schedule
+    /// off. Default one hour.
     ///
     /// A run verifies the records written since the newest link an earlier run
     /// found intact (`audit.verify_audit_chain_incremental()`), so its cost
@@ -77,27 +76,42 @@ pub struct StoreConfig {
     /// counted and reported by the `audit_chain` health indicator
     /// (`docs/law/eu/cra/text.html Annex I Part I(2)(f)`: "report on
     /// corruptions").
-    pub verify_interval_seconds: u64,
-    /// Seconds between two scheduled full passes over the hash chain
-    /// (`FERROEHR__AUDIT__STORE__FULL_VERIFY_INTERVAL_SECONDS`), which also
-    /// recompute the records before the checkpoint; `0` leaves the full pass
-    /// to `SELECT * FROM audit.verify_audit_chain()` on demand. Default one
-    /// week. A run that found damage is always followed by a full pass.
-    pub full_verify_interval_seconds: u64,
+    pub verify_interval: Duration,
+    /// The time between two scheduled full passes over the hash chain
+    /// (`FERROEHR__AUDIT__STORE__FULL_VERIFY_INTERVAL`), which also recompute
+    /// the records before the checkpoint; `"0s"` leaves the full pass to
+    /// `SELECT * FROM audit.verify_audit_chain()` on demand. Default one week.
+    /// A run that found damage is always followed by a full pass.
+    pub full_verify_interval: Duration,
+    /// Retired in v5.7.0: refused at load, naming `retention`.
+    #[serde(skip_serializing)]
+    pub retention_days: Removed,
+    /// Retired in v5.7.0: refused at load, naming `retention`.
+    #[serde(skip_serializing)]
+    pub retention_years: Removed,
+    /// Retired in v5.7.0: refused at load, naming `verify_interval`.
+    #[serde(skip_serializing)]
+    pub verify_interval_seconds: Removed,
+    /// Retired in v5.7.0: refused at load, naming `full_verify_interval`.
+    #[serde(skip_serializing)]
+    pub full_verify_interval_seconds: Removed,
 }
 
 impl Default for StoreConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
             // One hour: a run recomputes only the records written since the
             // last one, so the hour bounds how long damage to them goes
             // unreported; a week bounds it for older records.
-            verify_interval_seconds: 3_600,
-            full_verify_interval_seconds: 604_800,
+            verify_interval: Duration::from_hours(1),
+            full_verify_interval: Duration::from_days(7),
+            retention_days: Removed::default(),
+            retention_years: Removed::default(),
+            verify_interval_seconds: Removed::default(),
+            full_verify_interval_seconds: Removed::default(),
         }
     }
 }
@@ -106,7 +120,7 @@ impl Default for StoreConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "unit", content = "value")]
 pub enum Retention {
-    /// Records are kept forever (`retention_days = 0`, no `retention_years`).
+    /// Records are kept forever (no `retention`).
     #[default]
     Forever,
     /// Records older than this many days are reaped.
@@ -117,123 +131,151 @@ pub enum Retention {
 }
 
 impl Retention {
-    /// The `retention_days` / `retention_years` spelling, for messages.
+    /// The `audit.store.retention` spelling, for messages.
     #[must_use]
     pub fn describe(self) -> String {
         match self {
-            Retention::Forever => "retention_days = 0 (keep forever)".to_owned(),
-            Retention::Days(days) => format!("retention_days = {days}"),
-            Retention::Years(years) => format!("retention_years = {years}"),
+            Retention::Forever => "no retention (keep forever)".to_owned(),
+            Retention::Days(days) => format!("retention = \"P{days}D\""),
+            Retention::Years(years) => format!("retention = \"P{years}Y\""),
         }
     }
 }
 
 impl StoreConfig {
-    /// The horizon this configuration states. A `retention_years` takes the
-    /// place of `retention_days`; the boot validation refuses the two together.
+    /// The horizon this configuration states.
     #[must_use]
-    pub fn retention(&self) -> Retention {
-        match (self.retention_years, self.retention_days) {
-            (Some(years), _) => Retention::Years(years),
-            (None, 0) => Retention::Forever,
-            (None, days) => Retention::Days(days),
+    pub fn horizon(&self) -> Retention {
+        match self.retention {
+            None => Retention::Forever,
+            Some(RetentionPeriod::Days(days)) => Retention::Days(days),
+            Some(RetentionPeriod::Years(years)) => Retention::Years(years),
+        }
+    }
+}
+
+/// The `retry` table of a forwarding sink: how long the forwarder may wait
+/// between two delivery attempts. A sink's forwarder retries until the record
+/// is delivered, so the table has no attempt count.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct SinkRetry {
+    /// The longest wait between two delivery attempts after a failure.
+    pub max_backoff: Duration,
+}
+
+impl Default for SinkRetry {
+    fn default() -> Self {
+        Self {
+            max_backoff: Duration::from_mins(1),
         }
     }
 }
 
 /// The classic ATNA feed (`[audit.syslog]`): the DICOM PS3.15 §A.5 XML
 /// record over syslog (IHE ITI TF-2 ITI-20; the RFC 5424 message over RFC 5425
-/// TLS, sent through `ihe-atna`).
+/// TLS, sent through `ihe-atna`). Present, records are shipped.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct SyslogConfig {
-    /// Ship records to an external ARR over syslog
-    /// (`FERROEHR__AUDIT__SYSLOG__ENABLED`).
-    pub enabled: bool,
-    /// ARR host (`FERROEHR__AUDIT__SYSLOG__HOST`).
-    pub host: String,
-    /// ARR port (`FERROEHR__AUDIT__SYSLOG__PORT`), the RFC 5425 §4.1 port
-    /// 6514 by default.
-    pub port: u16,
+    /// The Audit Record Repository, `tls://host:port`
+    /// (`FERROEHR__AUDIT__SYSLOG__URL`): RFC 5425 TLS, on the §4.1 port 6514
+    /// by default.
+    pub url: String,
     /// The TLS material of the connection to the ARR
     /// (`[audit.syslog.tls]`): the family's outbound TLS keys, the client
     /// identity for mutual TLS and the trust roots beside the platform's.
     pub tls: TlsClientSection,
-    /// The retired `tls_ca_file` key, held only so its presence is refused
-    /// by name with a pointer to `[audit.syslog.tls] trust_roots_file`.
-    #[serde(default, skip_serializing)]
-    pub tls_ca_file: Option<serde::de::IgnoredAny>,
-    /// The retired `tls_identity_cert_file` key, refused by name.
-    #[serde(default, skip_serializing)]
-    pub tls_identity_cert_file: Option<serde::de::IgnoredAny>,
-    /// The retired `tls_identity_key_file` key, refused by name.
-    #[serde(default, skip_serializing)]
-    pub tls_identity_key_file: Option<serde::de::IgnoredAny>,
     /// The directory of the `ihe-atna` spool every record is stored in before
     /// it is sent (`FERROEHR__AUDIT__SYSLOG__SPOOL_DIR`), owner-only; unset,
     /// the spool is held in memory and a restart loses what it holds.
     pub spool_dir: Option<std::path::PathBuf>,
-    /// The most records the spool holds (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_MESSAGES`).
-    pub spool_max_messages: usize,
-    /// The most bytes the spool holds (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_BYTES`).
-    pub spool_max_bytes: u64,
-    /// The longest wait between two delivery attempts after a failure, in
-    /// milliseconds (`FERROEHR__AUDIT__SYSLOG__RETRY_MAX_MS`).
-    pub retry_max_ms: u64,
+    /// The most records the spool holds (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_EVENTS`).
+    pub spool_max_events: usize,
+    /// The most the spool holds in size (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_SIZE`).
+    pub spool_max_size: ByteSize,
+    /// `[audit.syslog.retry]`: the wait between two delivery attempts.
+    pub retry: SinkRetry,
+    /// Retired in v5.7.0: refused at load, naming `[audit.syslog.tls] trust_roots_file`.
+    #[serde(skip_serializing)]
+    pub tls_ca_file: Removed,
+    /// Retired in v5.7.0: refused at load, naming `[audit.syslog.tls] client_identity_file`.
+    #[serde(skip_serializing)]
+    pub tls_identity_cert_file: Removed,
+    /// Retired in v5.7.0: refused at load, naming `[audit.syslog.tls] client_identity_file`.
+    #[serde(skip_serializing)]
+    pub tls_identity_key_file: Removed,
+    /// Retired in v5.7.0: refused at load, naming the table's presence.
+    #[serde(skip_serializing)]
+    pub enabled: Removed,
+    /// Retired in v5.7.0: refused at load, naming `url`.
+    #[serde(skip_serializing)]
+    pub host: Removed,
+    /// Retired in v5.7.0: refused at load, naming `url`.
+    #[serde(skip_serializing)]
+    pub port: Removed,
+    /// Retired in v5.7.0: refused at load, naming `spool_max_events`.
+    #[serde(skip_serializing)]
+    pub spool_max_messages: Removed,
+    /// Retired in v5.7.0: refused at load, naming `spool_max_size`.
+    #[serde(skip_serializing)]
+    pub spool_max_bytes: Removed,
+    /// Retired in v5.7.0: refused at load, naming `retry.max_backoff`.
+    #[serde(skip_serializing)]
+    pub retry_max_ms: Removed,
 }
 
 impl Default for SyslogConfig {
     fn default() -> Self {
         Self {
-            enabled: false,
-            host: "localhost".to_owned(),
-            port: ihe_atna::atna::syslog::TLS_PORT,
+            url: format!("tls://localhost:{}", ihe_atna::atna::syslog::TLS_PORT),
             tls: TlsClientSection::default(),
-            tls_ca_file: None,
-            tls_identity_cert_file: None,
-            tls_identity_key_file: None,
             spool_dir: None,
-            spool_max_messages: 100_000,
-            spool_max_bytes: 256 * 1024 * 1024,
-            retry_max_ms: 60_000,
+            spool_max_events: 100_000,
+            spool_max_size: ByteSize::from_mib(256),
+            retry: SinkRetry::default(),
+            tls_ca_file: Removed::default(),
+            tls_identity_cert_file: Removed::default(),
+            tls_identity_key_file: Removed::default(),
+            enabled: Removed::default(),
+            host: Removed::default(),
+            port: Removed::default(),
+            spool_max_messages: Removed::default(),
+            spool_max_bytes: Removed::default(),
+            retry_max_ms: Removed::default(),
         }
     }
 }
 
 impl SyslogConfig {
-    /// The retired TLS keys this table sets, each with the refusal that names
-    /// the `[audit.syslog.tls]` key replacing it.
-    #[must_use]
-    pub fn retired_tls_keys(&self) -> Vec<String> {
-        let identity = "put the client certificate chain and its private key in one PEM \
-                        named by [audit.syslog.tls] client_identity_file";
-        [
-            (
-                "tls_ca_file",
-                self.tls_ca_file.is_some(),
-                "name the trust roots file as [audit.syslog.tls] trust_roots_file",
-            ),
-            (
-                "tls_identity_cert_file",
-                self.tls_identity_cert_file.is_some(),
-                identity,
-            ),
-            (
-                "tls_identity_key_file",
-                self.tls_identity_key_file.is_some(),
-                identity,
-            ),
-        ]
-        .into_iter()
-        .filter(|(_, set, _)| *set)
-        .map(|(key, _, replacement)| format!("audit.syslog.{key} is retired: {replacement}"))
-        .collect()
+    /// The ARR address `url` names: a `tls://host:port` URL.
+    ///
+    /// # Errors
+    /// A message naming `audit.syslog.url` when it is no `tls://` URL with a
+    /// host and a port.
+    pub fn address(&self) -> Result<url::Url, String> {
+        let refused = || {
+            format!(
+                "audit.syslog.url ({}) must be a tls://host:port URL, such as tls://arr.example:6514 \
+                 (RFC 5425 TLS)",
+                self.url
+            )
+        };
+        let Ok(url) = url::Url::parse(self.url.trim()) else {
+            return Err(refused());
+        };
+        if url.scheme() != "tls" || url.host_str().is_none_or(str::is_empty) || url.port().is_none()
+        {
+            return Err(refused());
+        }
+        Ok(url)
     }
 }
 
-/// The RESTful-ATNA feed (`[audit.fhir_feed]`): ITI-20 **ATX: FHIR Feed** —
+/// The RESTful-ATNA feed (`[audit.fhir_feed]`): ITI-20 **ATX: FHIR Feed**.
+///
 /// HTTP `POST {url}/AuditEvent` of the FHIR R4 `AuditEvent` (IHE BALP shape)
-/// to an external Audit Record Repository.
+/// to an external Audit Record Repository. Present, records are shipped.
 ///
 /// `ihe-atna`'s forwarder delivers it. With the local store on it delivers
 /// from the store (`audit.fhir_feed_outbox`), so a down ARR loses
@@ -241,34 +283,41 @@ impl SyslogConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct FhirFeedConfig {
-    /// Ship records to an external FHIR ARR
-    /// (`FERROEHR__AUDIT__FHIR_FEED__ENABLED`).
-    pub enabled: bool,
     /// The ARR's FHIR base URL (`FERROEHR__AUDIT__FHIR_FEED__URL`); the
     /// `AuditEvent` endpoint is `{url}/AuditEvent`. Credentials in the URL
     /// (basic auth) are redacted from every rendering.
     pub url: SecretUrl,
     /// How long the forwarder waits for a new record before it reads the
-    /// store again, in milliseconds
-    /// (`FERROEHR__AUDIT__FHIR_FEED__POLL_INTERVAL_MS`).
-    pub poll_interval_ms: u64,
-    /// The longest wait between two delivery attempts after a failure, in
-    /// milliseconds (`FERROEHR__AUDIT__FHIR_FEED__RETRY_MAX_MS`).
-    pub retry_max_ms: u64,
+    /// store again (`FERROEHR__AUDIT__FHIR_FEED__POLL_INTERVAL`); at least
+    /// 100 ms is waited.
+    pub poll_interval: Duration,
+    /// `[audit.fhir_feed.retry]`: the wait between two delivery attempts.
+    pub retry: SinkRetry,
     /// The OAuth 2.0 client-credentials grant the feed authenticates with
     /// (`[audit.fhir_feed.oauth]`), the IHE IUA authorized client; absent, the
     /// feed sends the Basic credentials of `url`, if any.
     pub oauth: Option<ferrohealth_smart::config::credentials::OauthSection>,
+    /// Retired in v5.7.0: refused at load, naming the table's presence.
+    #[serde(skip_serializing)]
+    pub enabled: Removed,
+    /// Retired in v5.7.0: refused at load, naming `poll_interval`.
+    #[serde(skip_serializing)]
+    pub poll_interval_ms: Removed,
+    /// Retired in v5.7.0: refused at load, naming `retry.max_backoff`.
+    #[serde(skip_serializing)]
+    pub retry_max_ms: Removed,
 }
 
 impl Default for FhirFeedConfig {
     fn default() -> Self {
         Self {
-            enabled: false,
             url: SecretUrl::new("http://localhost:8080/fhir"),
-            poll_interval_ms: 2000,
-            retry_max_ms: 60_000,
+            poll_interval: Duration::from_secs(2),
+            retry: SinkRetry::default(),
             oauth: None,
+            enabled: Removed::default(),
+            poll_interval_ms: Removed::default(),
+            retry_max_ms: Removed::default(),
         }
     }
 }
@@ -366,10 +415,11 @@ pub struct AuditConfig {
     pub categories: crate::system_log::categories::CategoryMapConfig,
     /// `[audit.store]` — the local Audit Record Repository.
     pub store: StoreConfig,
-    /// `[audit.syslog]` — the classic DICOM-over-syslog feed.
-    pub syslog: SyslogConfig,
-    /// `[audit.fhir_feed]` — the RESTful-ATNA FHIR `AuditEvent` feed.
-    pub fhir_feed: FhirFeedConfig,
+    /// `[audit.syslog]` — the classic DICOM-over-syslog feed; absent, off.
+    pub syslog: Option<SyslogConfig>,
+    /// `[audit.fhir_feed]` — the RESTful-ATNA FHIR `AuditEvent` feed; absent,
+    /// off.
+    pub fhir_feed: Option<FhirFeedConfig>,
 }
 
 impl Default for AuditConfig {
@@ -391,8 +441,8 @@ impl Default for AuditConfig {
             legal_basis: None,
             categories: crate::system_log::categories::CategoryMapConfig::default(),
             store: StoreConfig::default(),
-            syslog: SyslogConfig::default(),
-            fhir_feed: FhirFeedConfig::default(),
+            syslog: None,
+            fhir_feed: None,
         }
     }
 }
@@ -413,10 +463,11 @@ pub struct AuditPosture {
     pub fail_mode: FailMode,
     /// Whether the local Audit Record Repository is on.
     pub local_store: bool,
-    /// Days the local store keeps records; `0` = forever.
+    /// Days the local store keeps records, when the horizon is stated in
+    /// days; `0` = forever.
     pub retention_days: u32,
     /// Calendar years the local store keeps records, when the horizon is stated
-    /// in years (`retention_years`).
+    /// in years.
     pub retention_years: Option<u32>,
     /// The digest of the `[audit.categories]` map every access record is
     /// classified through and carries (EHDS Annex II 3.2(c)); `None` only for a
@@ -432,8 +483,14 @@ impl AuditPosture {
             enabled: config.enabled,
             fail_mode: config.fail_mode,
             local_store: config.store.enabled,
-            retention_days: config.store.retention_days,
-            retention_years: config.store.retention_years,
+            retention_days: match config.store.horizon() {
+                Retention::Days(days) => days,
+                Retention::Forever | Retention::Years(_) => 0,
+            },
+            retention_years: match config.store.horizon() {
+                Retention::Years(years) => Some(years),
+                Retention::Forever | Retention::Days(_) => None,
+            },
             // NOTE: an invalid map has no digest; `FerroEhrConfig::validate` refuses to boot on it.
             category_map: config.categories.compile().ok().map(|map| map.digest()),
         }
@@ -485,7 +542,7 @@ impl AuditPosture {
 /// written in calendar years as the law writes it, with the provision it rests
 /// on.
 ///
-/// A horizon in years (`retention_years`) is compared against [`Self::years`]
+/// A horizon in years (`retention = "P3Y"`) is compared against [`Self::years`]
 /// exactly. A horizon in days is compared conservatively against [`Self::days`]:
 /// for a floor, the most that many calendar years can span; for a ceiling, the
 /// fewest.
@@ -640,17 +697,21 @@ mod tests {
         let c = AuditConfig::default();
         assert!(c.enabled, "auditing is on by default (owner posture)");
         assert!(c.store.enabled, "the local store is the default sink");
-        assert_eq!(c.store.retention_days, 0, "keep forever by default");
-        assert!(!c.syslog.enabled, "forwarding is opt-in");
-        assert!(!c.fhir_feed.enabled, "forwarding is opt-in");
+        assert_eq!(c.store.retention, None, "keep forever by default");
+        assert!(c.syslog.is_none(), "forwarding is opt-in");
+        assert!(c.fhir_feed.is_none(), "forwarding is opt-in");
         // RFC 5425 §4.1: syslog over TLS listens on 6514, the one transport
         // ITI TF-2 §3.20.4.1.2.1.1 recommends and `ihe-atna` sends.
-        assert_eq!(c.syslog.port, 6514);
+        let syslog = SyslogConfig::default();
+        assert_eq!(syslog.address().expect("the default").port(), Some(6514));
         assert_eq!(c.value_if_missing, "UNKNOWN");
         assert!(c.suppress_login_events);
         assert!(c.resolve_subject);
         assert_eq!(c.fail_mode, FailMode::Open);
-        assert_eq!(c.fhir_feed.retry_max_ms, 60_000);
+        assert_eq!(
+            FhirFeedConfig::default().retry.max_backoff,
+            Duration::from_mins(1)
+        );
         assert!(c.categories.templates.is_empty() && c.categories.archetypes.is_empty());
     }
 
@@ -704,15 +765,32 @@ mod tests {
         assert_eq!(retention_ceiling("DE", false), None);
     }
 
-    /// `retention_years` takes the place of `retention_days`.
+    /// The store states one horizon: forever, days or years.
     #[test]
     fn the_store_states_one_horizon() {
         let mut store = StoreConfig::default();
-        assert_eq!(store.retention(), Retention::Forever);
-        store.retention_days = 30;
-        assert_eq!(store.retention(), Retention::Days(30));
-        store.retention_days = 0;
-        store.retention_years = Some(3);
-        assert_eq!(store.retention(), Retention::Years(3));
+        assert_eq!(store.horizon(), Retention::Forever);
+        store.retention = Some(RetentionPeriod::Days(30));
+        assert_eq!(store.horizon(), Retention::Days(30));
+        store.retention = Some(RetentionPeriod::Years(3));
+        assert_eq!(store.horizon(), Retention::Years(3));
+    }
+
+    #[test]
+    fn the_syslog_address_is_a_tls_url_with_a_port() {
+        let with = |url: &str| SyslogConfig {
+            url: url.to_owned(),
+            ..SyslogConfig::default()
+        };
+        assert!(with("tls://arr.example:6514").address().is_ok());
+        for bad in [
+            "arr.example:6514",
+            "tcp://arr.example:6514",
+            "tls://arr.example",
+            "",
+        ] {
+            let err = with(bad).address().expect_err(bad);
+            assert!(err.contains("audit.syslog.url"), "{err}");
+        }
     }
 }

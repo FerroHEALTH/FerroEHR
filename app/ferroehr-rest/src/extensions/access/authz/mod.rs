@@ -31,10 +31,12 @@
 //! - [`roles`]: the RBAC gate decision over the caller's roles.
 //! - [`classify`]: `operation_id → OperationClass` / `ResourceKind` /
 //!   `AccessMode` (total-coverage-guarded).
+//! - [`remote`]: the remote decision point `[authz.abac.remote]` describes.
 //! - [`request`]: the ABAC request and the model the Cedar schema is written
 //!   from.
 
 pub mod classify;
+pub mod remote;
 pub mod request;
 pub mod roles;
 
@@ -50,14 +52,13 @@ use ferroehr::storage::version_repo::meta::VersionContent;
 use ferroehr::system_log::categories::Classifier;
 use ferrohealth_authz::cedar::CedarEngine;
 use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
-use ferrohealth_authz::remote::{Binding, RemotePdp, RemoteSettings};
 
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::time::Duration;
 
+use ferrohealth_config::units::Duration;
 use http::Method;
 
 /// An attribute-resolution failure (a DB lookup error). Fail-closed at the
@@ -116,16 +117,16 @@ pub type ContentOfVersionFn =
 /// The deployment's rules for the category and origin attributes (EHDS
 /// Annex II 3.4).
 ///
-/// The category map every access is classified through, the `[origins]`
-/// register, and the `system_id` a direct commit by an unregistered client is
+/// The category map every access is classified through, the origin register
+/// (`[[authz.origin]]`), and the `system_id` a direct commit by an unregistered client is
 /// stamped with.
 #[derive(Debug, Clone)]
 pub struct ContentRules {
     /// The compiled `[audit.categories]` map.
     pub categories: Classifier,
-    /// The `[origins]` register.
+    /// The `[[authz.origin]]` register.
     pub origins: OriginsConfig,
-    /// The effective openEHR `system_id` (`[rest] system_id`).
+    /// The effective openEHR `system_id` (`[api] system_id`).
     pub system_id: String,
 }
 
@@ -177,66 +178,12 @@ pub fn build_engine(config: &AbacConfig) -> Result<Option<Arc<dyn PolicyEngine>>
                 .policy_dir
                 .as_deref()
                 .ok_or_else(|| AuthzError::Load("abac.cedar.policy_dir is not set".into()))?;
-            let reload = config.cedar.reload_secs.map(Duration::from_secs);
+            let reload = config.cedar.reload_interval.map(Duration::get);
             Arc::new(CedarEngine::from_directory(request::model(), dir, reload)?)
         }
-        AbacEngineKind::Remote => Arc::new(remote_pdp(config)?),
+        AbacEngineKind::Remote => Arc::new(remote::remote_pdp(config)?),
     };
     Ok(Some(engine))
-}
-
-/// The remote decision point `[authz.abac.remote]` and `[authz.abac.policy]`
-/// describe: each resource kind bound to its policy, and the client
-/// credentials token of `[authz.abac.remote.oauth]` when one is set.
-///
-/// # Errors
-/// [`AuthzError::Load`] when the server is unset or no URL, a policy names an
-/// unknown resource kind, or the grant does not resolve; [`AuthzError::Remote`]
-/// when the settings are refused.
-pub fn remote_pdp(config: &AbacConfig) -> Result<RemotePdp, AuthzError> {
-    let server = config
-        .remote
-        .server
-        .as_ref()
-        .filter(|s| !s.expose().trim().is_empty())
-        .ok_or_else(|| AuthzError::Load("abac.remote.server is not set".into()))?;
-    let server = url::Url::parse(server.expose()).map_err(|e| AuthzError::Load(Box::new(e)))?;
-    let mut bindings = std::collections::BTreeMap::new();
-    for (key, rule) in &config.policy {
-        let kind = request::ResourceKind::from_config_key(key).ok_or_else(|| {
-            AuthzError::Load(format!("abac.policy names the unknown resource kind {key}").into())
-        })?;
-        bindings.insert(
-            kind.resource_type().to_owned(),
-            Binding {
-                policy: rule.name.clone(),
-                parameters: rule
-                    .parameters
-                    .iter()
-                    .map(|p| p.wire_key().to_owned())
-                    .collect(),
-            },
-        );
-    }
-    let token = config
-        .remote
-        .oauth
-        .as_ref()
-        .map(|oauth| {
-            let grant = oauth.resolve().map_err(|e| AuthzError::Load(Box::new(e)))?;
-            ferrohealth_smart::client::cache::TokenSource::new(grant)
-                .map_err(|e| AuthzError::Load(Box::new(e)))
-        })
-        .transpose()?;
-    RemotePdp::new(
-        RemoteSettings {
-            server,
-            bindings,
-            connect_timeout: Duration::from_millis(config.remote.connect_timeout_ms),
-            request_timeout: Duration::from_millis(config.remote.request_timeout_ms),
-        },
-        token,
-    )
 }
 
 /// The per-server authorization handle.

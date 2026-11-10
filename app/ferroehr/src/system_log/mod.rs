@@ -202,9 +202,9 @@ pub fn require_fhir_disabled(cfg: &config::AuditConfig) -> Result<(), String> {
                 .to_owned(),
         );
     }
-    if cfg.fhir_feed.enabled {
+    if cfg.fhir_feed.is_some() {
         return Err(
-            "audit.fhir_feed.enabled = true, but this binary was built without \
+            "[audit.fhir_feed] is configured, but this binary was built without \
              the `fhir` cargo feature"
                 .to_owned(),
         );

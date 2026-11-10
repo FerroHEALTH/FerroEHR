@@ -250,7 +250,10 @@ pub(super) fn committing(access: &Access) -> Option<ExternalCaller> {
                 contact_point,
                 ..professional(external)
             }),
-            discard_window_hours: agreement.discard.then_some(agreement.discard_window_hours),
+            discard_window_hours: agreement
+                .discard
+                .then(|| agreement.discard_window_hours())
+                .flatten(),
         },
         _ => ExternalCaller::Organisation,
     })

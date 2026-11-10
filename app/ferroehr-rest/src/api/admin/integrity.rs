@@ -24,7 +24,7 @@
 //! unchanged — the coarse RBAC `OperationClass::Admin` classifier (`401`
 //! unauthenticated / `403` non-admin, our own authorization design; the
 //! released admin operations carry `security: []`) and the
-//! `AppConfig::admin.enabled` config gate, which answers `405` with an empty
+//! `AppConfig::api.admin` config gate, which answers `405` with an empty
 //! `Allow` while the group is off (`crate::api::admin::dispatch`, whose ground
 //! is the overview rule "If a method is recognized but not allowed for the
 //! target resource, the response SHOULD be `405 Method Not Allowed` status

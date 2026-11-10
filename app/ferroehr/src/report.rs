@@ -262,8 +262,12 @@ fn licence_part(
         Ok(anchors) => {
             manifest.push(ManifestEntry::included("licence"));
             Some(
-                LicenceState::load_now(&config.licence, crate::licence::EMBEDDED_TOKEN, &anchors)
-                    .status(),
+                LicenceState::load_now(
+                    &config.deployment.licence(),
+                    crate::licence::EMBEDDED_TOKEN,
+                    &anchors,
+                )
+                .status(),
             )
         }
         Err(error) => {
@@ -288,7 +292,7 @@ async fn database_parts(
 ) -> (DeploymentPosture, Option<Vec<DatabaseLevels>>) {
     let (facts, levels) = tokio::join!(
         bounded(read_facts(config)),
-        bounded(crate::db::schema_levels(&config.db, &config.storage)),
+        bounded(crate::db::schema_levels(&config.database)),
     );
     let deployment = match facts {
         Ok(facts) => {
@@ -395,12 +399,12 @@ async fn bounded<T>(read: impl Future<Output = Result<T, DbError>>) -> Result<T,
 /// Connects the four domain pools, one connection each and waiting at most
 /// [`POOL_ACQUIRE_SECS`], reads the deployment facts, and closes them again.
 async fn read_facts(config: &FerroEhrConfig) -> Result<DatabaseFacts, DbError> {
-    let mut db = config.db.clone();
+    let mut db = config.database.clone();
     db.max_connections = 1;
     db.min_connections = 0;
-    db.acquire_timeout_secs = POOL_ACQUIRE_SECS;
-    let pools = crate::db::connect_domains(&db, &config.storage).await?;
-    let facts = crate::db::database_facts(&db, &config.storage, &pools).await;
+    db.acquire_timeout = ferrohealth_config::units::Duration::from_secs(POOL_ACQUIRE_SECS);
+    let pools = crate::db::connect_domains(&db).await?;
+    let facts = crate::db::database_facts(&db, &pools).await;
     pools.close().await;
     facts
 }
@@ -439,8 +443,8 @@ impl Scrubber {
     fn from_config(config: &FerroEhrConfig) -> Self {
         let dsns = Domain::ALL
             .iter()
-            .map(|domain| config.storage.dsn(*domain, &config.db))
-            .chain(std::iter::once(config.db.migrate_dsn()));
+            .map(|domain| config.database.dsn(*domain))
+            .chain(std::iter::once(config.database.migrate_dsn()));
         let mut needles: Vec<String> = Vec::new();
         for dsn in dsns {
             // NOTE: no openEHR spec governs this — our own design; a DSN that does not
@@ -541,7 +545,7 @@ mod tests {
     #[test]
     fn the_scrubber_masks_every_configured_credential() {
         let mut config = FerroEhrConfig::default();
-        config.db.url = SecretUrl::new("postgres://dbuser:p%40ss@db.internal:5432/ferroehr");
+        config.database.url = SecretUrl::new("postgres://dbuser:p%40ss@db.internal:5432/ferroehr");
         let scrubber = Scrubber::from_config(&config);
         let masked = scrubber.scrub(
             "role dbuser refused (p@ss, p%40ss) at postgres://dbuser:p%40ss@db.internal/ferroehr",

@@ -101,8 +101,8 @@ const MODIFICATION: &str = "251";
 /// so the width keeps the pool busy rather than the CPU.
 const SEED_CONCURRENCY: usize = 16;
 
-/// The retention window the prune bench asks for, in days.
-const PRUNE_RETENTION_DAYS: i64 = 7;
+/// The retention window the prune bench asks for.
+const PRUNE_RETENTION: Duration = Duration::from_hours(7 * 24);
 
 /// How long a counter read waits for the pool's backends to publish.
 ///
@@ -1837,7 +1837,7 @@ fn bench_lifecycle(
                 rt.block_on(async {
                     let start = Instant::now();
                     for _ in 0..iters {
-                        ferroehr::extensions::outbox::prune(pool, PRUNE_RETENTION_DAYS)
+                        ferroehr::extensions::outbox::prune(pool, PRUNE_RETENTION)
                             .await
                             .expect("prune the outbox");
                     }

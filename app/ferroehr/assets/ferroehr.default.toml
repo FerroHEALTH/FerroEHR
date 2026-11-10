@@ -6,11 +6,19 @@
 # `#?` are optional/derived/secret and are shown commented for reference.
 # Lines marked `# PROD:` MUST be reviewed before a production deployment.
 #
+# One table per concern. A duration is a string with its unit ("500ms", "30s",
+# "10min", "12h", "7d"; UCUM codes, so `m` is refused as the metre) and a size
+# a string with an IEC binary unit ("64MiB"); a retention is a calendar period
+# ("P5Y", "P1830D"). A key a release before v5.7.0 read is refused at load,
+# naming the key that replaced it.
+#
 # Env overrides use `FERROEHR` + the TOML path, `__` between every segment
-# (including after the prefix), e.g. `[db] max_connections` ⇔
-# FERROEHR__DB__MAX_CONNECTIONS. `--set key=value` wins over env. `DATABASE_URL`
-# and `RUST_LOG` are recognized (lower-priority) aliases.
+# (including after the prefix), e.g. `[database] max_connections` ⇔
+# FERROEHR__DATABASE__MAX_CONNECTIONS. `--set key=value` wins over env.
+# `DATABASE_URL` and `RUST_LOG` are recognized (lower-priority) aliases.
 
+# ── [deployment] — what this deployment is ───────────────────────────────────
+[deployment]
 # The openEHR specification generation set this server runs:
 #   "development" — RM 1.2.0 + BASE 1.3.0 + LANG 1.1.0 (the default)
 #   "stable"      — RM 1.1.0 + BASE 1.2.0 + LANG 1.0.0 (the released generations)
@@ -31,18 +39,24 @@ spec_profile = "development"
 # The declared deployment posture. `sandbox` (the default) must not hold real
 # patient data and says which separations are missing on the banner, in the
 # log and on GET /management/status; `production` refuses to start while one is
-# missing and not named in deployment_accepts (shared_credential,
+# missing and not named in accepts (shared_credential,
 # shared_cluster, open_subject_namespace, audit_off, audit_fails_open,
 # no_category_map, open_ehr_access_default, migrate_on_runtime_credential,
 # auth_off, rbac_off, plaintext_listener, plaintext_audit_feed,
 # plaintext_object_store; accept plaintext_listener
-# behind a TLS-terminating ingress; a [management] port opens it too, since that
+# behind a TLS-terminating ingress; a management.listen opens it too, since that
 # listener is plain HTTP on every interface;
 # plaintext_audit_feed on an enabled [audit.fhir_feed] http:// url,
-# plaintext_object_store on an enabled [multimedia] with allow_http). Our own
+# plaintext_object_store on an enabled [record.multimedia] with an http:// url). Our own
 # posture; auth_off and rbac_off follow CRA Annex I Part I(2)(d), the plaintext_* gaps (e).
-deployment_profile = "sandbox"   # sandbox | production
-#? deployment_accepts = ["shared_cluster"]
+profile = "sandbox"          # sandbox | production
+#? accepts = ["shared_cluster"]
+
+# The commercial licence token. FerroEHR is BUSL-1.1: production use in the
+# course of a business needs a commercial licence. The server runs identically
+# with or without the token; its state is logged once at boot and reported on
+# GET /management/status.
+#? licence_file = "/etc/ferroehr/licence.asc"
 
 # ── [server] — the HTTP listener ─────────────────────────────────────────────
 # The FerroHEALTH family's listener section, the same keys in every product.
@@ -52,34 +66,34 @@ deployment_profile = "sandbox"   # sandbox | production
 # sets 0.0.0.0:<PORT>.
 listen = "0.0.0.0:8080"
 # The path every route is served under, the health routes included. Empty
-# serves them at the process root; the openEHR API path is [rest] base_path.
+# serves them at the process root; the openEHR API path is [api] base_path.
 base_path = ""
-request_timeout_ms = 30000     # a request still running then is answered 408
+request_timeout = "30s"       # a request still running then is answered 408
 # How long a client may take to send its request head, counted from accept for
 # the first request and from the first byte of each later one; a client still
 # sending then is disconnected.
-header_read_timeout_ms = 30000
+header_read_timeout = "30s"
 # How long a kept-alive connection may wait for its next request before the
 # server closes it. Keep it longer than the idle timeout of your clients (90 s
 # for a Go client) and of any load balancer in front, so they close first.
-idle_timeout_ms = 120000
+idle_timeout = "2min"
 # The largest request body any route reads, refused 413 above it. The bulk
 # routes (template upload, /message/import) take up to this;
-# [rest] body_limit_bytes narrows the clinical surface below it. 64 MiB; the
+# [api] body_limit narrows the clinical surface below it. 64 MiB; the
 # largest operational template in the vendored CKM corpus is 5.4 MB.
-body_limit_bytes = 67108864
-drain_delay_ms = 0             # on SIGTERM, readiness is 503 this long before the listener closes
-shutdown_timeout_ms = 10000    # then the requests in flight get this long to finish
+body_limit = "64MiB"
+drain_delay = "0s"            # on SIGTERM, readiness is 503 this long before the listener closes
+shutdown_timeout = "10s"      # then the requests in flight get this long to finish
 # The requests served at once; past it a request is answered 503 with
 # Retry-After, and the health routes are never refused. Unset, no bound.
 #? max_concurrent_requests = 256
-retry_after_s = 1              # the Retry-After of a 503 or 429 the listener writes
+retry_after = "1s"            # the Retry-After of a 503 or 429 the listener writes
 # The reverse proxies whose forwarded client address is believed (addresses or
 # CIDR blocks), and the header they name the client in.
 trusted_proxies = []
 forwarded_header = "forwarded" # forwarded | x-forwarded-for
 compression = true             # gzip or Brotli when the client accepts one
-compression_min_bytes = 1024
+compression_min_size = "1KiB"
 
 # [server.caller_rate] — the requests one authenticated caller may send,
 # refused 429 + Retry-After past it, keyed on the authenticated subject.
@@ -94,7 +108,7 @@ compression_min_bytes = 1024
 # on the main listener (the IHE ATNA ITI-19 node-authentication posture). Unset
 # by default: deployments commonly terminate TLS at an ingress. The
 # separate-port management listener stays plain HTTP (internal surface). The
-# files are read again on SIGHUP and every reload_interval_s.
+# files are read again on SIGHUP and every reload_interval.
 #? [server.tls]
 #? certificate_file = "/etc/ferroehr/server.pem"
 #? key_file = "/etc/ferroehr/server.key"
@@ -108,48 +122,61 @@ compression_min_bytes = 1024
 # TLS 1.3 by default; "1.2" admits 1.2 alongside it, and 1.0 and 1.1 are
 # refused at load (RFC 8996).
 #? min_version = "1.3"             # 1.3 | 1.2
-#? reload_interval_s = 60
+#? reload_interval = "1min"
 # The client chain and key, in one PEM, `ferroehr healthcheck` presents to a
 # listener that requires a client certificate.
 #? healthcheck_identity_file = "/etc/ferroehr/healthcheck.pem"
 
-# ── [rest] — the openEHR REST surface ────────────────────────────────────────
-[rest]
-# Shortening is supported (e.g. "/ferroehr/v1" behind a path-prefixed proxy);
-# the first segment must be /ferroehr and the last must be v1.
+# ── [api] — the openEHR REST API ─────────────────────────────────────────────
+[api]
+# From the root of the listener. Shortening is supported (e.g. "/ferroehr/v1"
+# behind a path-prefixed proxy); the first segment must be /ferroehr and the
+# last must be v1. management.base_path is set the same way.
 base_path = "/ferroehr/rest/openehr/v1"
-swagger_ui = "private"       # off | admin_only | private | public — "public" discloses the whole operation surface anonymously
-cors_permissive = false      # PROD: keep false; configure explicit origins
+openapi_ui = "private"       # off | admin_only | private | public — "public" discloses the whole operation surface anonymously
 # This CDR's own openEHR system identifier: stamped into EHR.system_id, the
 # AUDIT_DETAILS.system_id server default, and every
 # OBJECT_VERSION_ID.creating_system_id. It MUST be a legal openEHR `uid` —
 # an internet id (a DNS-style host name, the common convention), an ISO OID or
 # a UUID — and the server refuses to boot otherwise. PROD: set a stable,
 # deployment-unique name. Changing it never rewrites identifiers already
-# committed. Distinct from [rest.identity], which is only the OPTIONS
+# committed. Distinct from [api.options], which is only the OPTIONS
 # manifest's display identity.
 system_id = "ferroehr.local"
 # The largest body the clinical surface accepts, below [server]
-# body_limit_bytes, which the bulk routes keep. Unset, every route takes the
+# body_limit, which the bulk routes keep. Unset, every route takes the
 # listener's limit. The largest example composition in the vendored corpus is
 # 526 KB; raise it if your compositions embed large DV_MULTIMEDIA data.
-#? body_limit_bytes = 16777216
+#? body_limit = "16MiB"
+# The ADMIN API group (physical delete). Off, every admin route answers 405.
+admin = false
+# The terminology extension API; the server it asks is [terminology].
+terminology = false
 
-# [rest.identity] — the OPTIONS / System-Options manifest. Defaults are the
-# measured build/provenance identity; override only to rebrand.
-#? [rest.identity]
+# [api.options] — the OPTIONS / System-Options manifest. The product version
+# and the ITS-REST release are facts of the build; override only to rebrand.
+#? [api.options]
 #? solution = "FerroEHR"
-#? solution_version = "<build version>"
 #? vendor = "Cadasto B.V."
-#? restapi_specs_version = "<tested contract identity>"
 
-# ── [db] — PostgreSQL ────────────────────────────────────────────────────────
-[db]
+# [api.cors] — the CORS answers (Fetch Standard §3.2.3), each key named for the
+# header it sets. Absent, no CORS header is sent. PROD: list explicit origins;
+# ["*"] admits any origin and refuses allow_credentials.
+#? [api.cors]
+#? allow_origins = ["https://app.example"]
+#? allow_methods = []          # empty admits the method a preflight asks for
+#? allow_headers = []          # empty admits the headers a preflight asks for
+#? expose_headers = ["etag", "location"]
+#? allow_credentials = false
+#? max_age = "10min"
+
+# ── [database] — PostgreSQL ──────────────────────────────────────────────────
+[database]
 url = "postgres://ferroehr:ferroehr@localhost:5432/ferroehr"  # PROD: real DSN via env/secret
 #? url_file = "/run/secrets/db-dsn"   # or point at a mounted file instead of passing the DSN as env
 # The credential that PREPARES the schema, used for that one boot step and
 # then closed. Preparing spans every schema of a database — the DDL of each
-# resident migration set under migrate = "apply", their bookkeeping tables
+# resident migration set under migrations = "apply", their bookkeeping tables
 # under "verify" — so a deployment whose runtime DSNs each hold one domain
 # names the credential that can reach them all here. Unset, it falls back to
 # the url above, which is what every single-credential deployment runs. It
@@ -162,53 +189,50 @@ url = "postgres://ferroehr:ferroehr@localhost:5432/ferroehr"  # PROD: real DSN v
 # empty database; "verify" never issues DDL and refuses to serve unless the
 # database already carries exactly this build's migrations, so the runtime role
 # needs no schema rights.
-migrate = "apply"            # apply | verify — PROD: verify
+migrations = "apply"         # apply | verify — PROD: verify
 max_connections = 20
 min_connections = 2
-acquire_timeout_secs = 30
+acquire_timeout = "30s"
 # statement_timeout on every pooled connection — the backstop the HTTP request
 # timeout cannot be, because dropping a handler future does not cancel the
-# statement PostgreSQL is running. Set ABOVE query.timeout_ms so the engine's
+# statement PostgreSQL is running. Set ABOVE record.query.timeout so the engine's
 # typed refusal fires first and this only catches what the engine does not
-# govern. 0 leaves the server default (usually unlimited).
-statement_timeout_ms = 60000
+# govern. "0s" leaves the server default (usually unlimited).
+statement_timeout = "1min"
 
-# ── [storage] — one DSN per storage domain ───────────────────────────────────
+# [database.<domain>] — one DSN per storage domain (clinical, party, audit).
 # Each domain always lives in its own schema (clinical, party, audit)
 # and every pool carries only its own on its search_path. Set a url here to give
 # a domain its own database ROLE as well — and, if the DSN names another host, a
 # database or cluster of its own: a schema separates a domain inside one
 # database, but a base backup, WAL archiving and physical replication carry every
-# schema of that database together. Unset, the domain connects on [db] url, which
+# schema of that database together. Unset, the domain connects on [database] url, which
 # is what the compose quickstart and every single-credential deployment run.
 #
 # The server refuses to boot when a runtime role can read across a boundary, when
 # two separately-configured domains turn out to authenticate as one role, and —
-# under deployment_profile = "production" — when a domain role is missing.
+# under deployment.profile = "production" — when a domain role is missing.
 #
-# Schema preparation runs per DATABASE: [db] migrate_url prepares the one it
-# reaches, and a domain in a database of its own is prepared on that database's
-# migration credential, [storage.migrate.<domain>] url, for both migrate =
+# Schema preparation runs per DATABASE: [database] migrate_url prepares the one
+# it reaches, and a domain in a database of its own is prepared on that
+# database's migration credential, its migrate_url, for both migrations =
 # "apply" and "verify". Unset, it falls back to the domain's own url, which a
 # DML-only runtime role cannot use.
-#? [storage.clinical]
+#? [database.clinical]
 #? url = "postgres://ferroehr_clinical:...@localhost:5432/ferroehr"
 #? url_file = "/run/secrets/db-clinical-dsn"
-#? [storage.party]
+#? migrate_url = "postgres://ferroehr_migrator:...@clinical-db:5432/ferroehr"
+#? migrate_url_file = "/run/secrets/db-clinical-migrate-dsn"
+#? [database.party]
 #? url = "postgres://ferroehr_party:...@localhost:5432/ferroehr"
 #? url_file = "/run/secrets/db-party-dsn"
-#? [storage.audit]
+#? migrate_url = "postgres://ferroehr_migrator:...@party-db:5432/ferroehr"
+#? migrate_url_file = "/run/secrets/db-party-migrate-dsn"
+#? [database.audit]
 #? url = "postgres://ferroehr_audit:...@localhost:5432/ferroehr_audit"
 #? url_file = "/run/secrets/db-audit-dsn"
-#? [storage.migrate.clinical]
-#? url = "postgres://ferroehr_migrator:...@clinical-db:5432/ferroehr"
-#? url_file = "/run/secrets/db-clinical-migrate-dsn"
-#? [storage.migrate.party]
-#? url = "postgres://ferroehr_migrator:...@party-db:5432/ferroehr"
-#? url_file = "/run/secrets/db-party-migrate-dsn"
-#? [storage.migrate.audit]
-#? url = "postgres://ferroehr_migrator:...@audit-db:5432/ferroehr_audit"
-#? url_file = "/run/secrets/db-audit-migrate-dsn"
+#? migrate_url = "postgres://ferroehr_migrator:...@audit-db:5432/ferroehr_audit"
+#? migrate_url_file = "/run/secrets/db-audit-migrate-dsn"
 
 # ── [telemetry] — console, request log, OpenTelemetry export ──────────────────
 # The FerroHEALTH family's shared section (the ferrohealth-telemetry crate).
@@ -242,7 +266,7 @@ realm = ""                   # the challenge realm; empty = "ferroehr"
 capabilities = []            # SMART capabilities the discovery document adds
 scopes_supported = []        # the scopes the discovery document lists; empty = the ones the route table honours
 # product_scope: FerroEHR's own scope, which admits the ADMIN API and, beside
-# the clients in [smart] demographic_clients, the DEMOGRAPHIC API — the two
+# the clients in [auth.smart] demographic_clients, the DEMOGRAPHIC API — the two
 # surfaces no SMART on openEHR resource family covers. A full URI or a string
 # starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context,
 # §Extensibility). Empty = "__ferroehr.platform".
@@ -251,10 +275,14 @@ product_scope = ""
 # of either grammar, meets every SMART on openEHR requirement; only a system
 # (app-only) caller of that issuer is admitted by an entry.
 scopeless_subjects = []      # e.g. [{ issuer = "https://idp.example/realms/staff", sub = "etl-loader" }]
-# A PEM bundle of certificate authorities trusted in addition to the platform
-# roots, for an issuer behind a private PKI: its metadata and key set, and
-# under mode = "introspection" the introspection and token calls too.
-#? ca_file = "/run/secrets/issuer-ca.pem"
+# [auth.tls] — the TLS of the calls to the issuers: a PEM bundle of certificate
+# authorities trusted in addition to the platform roots, for an issuer behind a
+# private PKI (its metadata and key set), a client identity and the minimum
+# version. An introspection grant's calls use the grant's own `tls` table.
+#? [auth.tls]
+#? trust_roots_file = "/run/secrets/issuer-ca.pem"
+#? client_identity_file = "/run/secrets/ferroehr-client.pem"   # one PEM: the chain and its key
+#? min_version = "1.3"             # 1.3 | 1.2
 
 # The trusted issuers, one [[auth.issuer]] table each (the flat `issuer = "…"`
 # form is refused). Every setting of an issuer lives on its own table. `kind`
@@ -281,11 +309,11 @@ scopeless_subjects = []      # e.g. [{ issuer = "https://idp.example/realms/staf
 #? token_types = ["at+jwt", "application/at+jwt"]   # the accepted `typ` (RFC 9068 §4)
 #? required_claims = ["iss", "exp", "aud", "sub", "client_id", "iat", "jti"]
 #? algorithms = ["RS256", "RS384", "PS256", "PS384", "ES256", "ES384"]   # asymmetric only (RFC 8725 §3.1)
-#? clock_skew_seconds = 60         # at most 300 (RFC 9068 §4)
-#? jwks_max_age_seconds = 600      # a key set older than this is read again
-#? jwks_refresh_interval_seconds = 60   # at most one read per interval on an unknown `kid`
+#? clock_skew = "60s"             # at most 5min (RFC 9068 §4)
+#? jwks_max_age = "10min"         # a key set older than this is read again
+#? jwks_refresh_interval = "1min" # at most one read per interval on an unknown `kid`
 #? jwks_file = ""                  # a JWK Set of PUBLIC keys handed over out of band
-#? timeout_ms = 10000              # one call to the authorization server
+#? timeout = "10s"                # one call to the authorization server
 #? mode = "jwt"                    # jwt | introspection (RFC 7662)
 #? role_claims = ["roles", "groups", "entitlements"]   # RFC 9068 §2.2.3.1
 #? sender_constraint = "none"      # none | required: DPoP (RFC 9449) or mTLS (RFC 8705) bound tokens only
@@ -319,20 +347,30 @@ scopeless_subjects = []      # e.g. [{ issuer = "https://idp.example/realms/staf
 #? mapping = "iua"
 #? fields = { "consent.reference" = [{ claim = "consent_ref" }], "correlation_id" = [{ authorization_details = "correlation_id" }] }
 
+# What a persons issuer's tokens state about its own professionals: one
+# [[auth.attributes]] table per persons issuer (the ferrohealth-smart section).
+# `mapping = "iua"` reads the IHE IUA claims (ITI TF-2 §3.71.4.2.2.1.1), and
+# `authorization_details_purposes` adds each RFC 9396 authorization_details
+# entry's purpose_of_use. FerroEHR's access record does not read them yet.
+#? [[auth.attributes]]
+#? issuer = "https://idp.example/realms/staff"
+#? mapping = "iua"
+#? authorization_details_purposes = false
+
 # The DPoP proof check (RFC 9449) of a sender-constrained issuer. Each accepted
 # proof is recorded in the database every replica shares, so a proof is
 # accepted once across all of them (RFC 9449 §11.1).
 #? [auth.dpop]
 #? external_url = "https://ehr.example"   # REQUIRED: the base URL clients address
-#? max_age_seconds = 60
-#? clock_skew_seconds = 10
+#? max_age = "60s"
+#? clock_skew = "10s"
 
 # The Microsoft Graph access of the idp-entra adapter, which an issuer turns on
 # with `adapter = "idp-entra"` to read the groups of an Entra ID groups overage;
 # an issuer naming the adapter without this table refuses the start.
 #? [auth.idp.entra]
 #? base_url = "https://graph.microsoft.com/v1.0"
-#? timeout_ms = 2000
+#? timeout = "2s"
 #? [auth.idp.entra.credentials]
 #? issuer = "https://login.microsoftonline.com/{tenant}/v2.0"
 #? client_id = "ferroehr-graph-reader"
@@ -353,11 +391,75 @@ scopeless_subjects = []      # e.g. [{ issuer = "https://idp.example/realms/staf
 #? roles = ["ADMIN", "USER"]
 # How long a Basic credential that verified is kept, so a repeat request skips
 # the Argon2id derivation, which costs 10 to 15 ms of CPU per check. Default
-# 300; 0 turns the cache off and checks every request. The entry is a keyed
+# "5min"; "0s" turns the cache off and checks every request. The entry is a keyed
 # hash of the credential, never the password, and only a credential that
 # verified is kept; the TTL bounds how long a removed user keeps working.
 #? [auth.basic]
-#? cache_ttl_seconds = 300
+#? cache_ttl = "5min"
+
+# [auth.smart] — SMART on openEHR.
+# The SMART on openEHR scopes are enforced on every route whenever [auth] is on
+# (master08 §Resource Scopes); this section decides what beside the route
+# table: the discovery document, and whose grants count for what.
+[auth.smart]
+# Serve /.well-known/smart-configuration, built from one [auth] issuer's
+# metadata: the issuer issuer_metadata_file names, else the first whose
+# metadata is read from it, else the first. A jwks_file issuer carries none,
+# so it serves the document only with issuer_metadata_file set.
+discovery = false
+# The RFC 8414 §2 authorization-server metadata of the [auth] issuer it names,
+# whose key set is a jwks_file: a JSON document naming that issuer and at
+# least its token_endpoint, read at boot.
+#? issuer_metadata_file = "/etc/ferroehr/issuer-metadata.json"
+#? platform_base_url = "/gateway/v1"
+#? public_base_url = "https://cdr.example.com"   # REQUIRED with discovery: the external origin the absolute services.*.baseUrl values are built from (master04 §Services)
+# launch-base64-json (master09) is advertised by listing it in [auth] capabilities.
+# The client_ids a system/aql-* grant counts for: it "would grant access to all
+# registered and ad-hoc AQL queries system-wide" (master08 §Resource Scopes).
+backend_clients = []
+# The issuers whose patient/ grants count, each confined to the EHR the
+# token's `ehrId` claim names (master07 §Context Selection). Empty = a
+# patient/ grant grants nothing.
+patient_issuers = []
+# The client_ids that reach the DEMOGRAPHIC API, which no SMART scope covers;
+# a caller holding [auth] product_scope reaches it too.
+demographic_clients = []
+# Advertise episode context (master09 §Experimental), advisory only.
+episode_launch = false
+
+# [auth.scim] — the SCIM 2.0 service provider at /scim/v2/ (RFC 7644), through which
+# an identity provider provisions each professional as a demographic PERSON.
+# Absent by default; the table's presence serves it. Each [[auth.scim.client]] is an OAuth client-credentials client of
+# the deployment's own authorization server (an [[auth.issuer]] of kind
+# machines), acting for nobody, whose tokens must hold `scope`. It owns the
+# Users whose binding key its `binding_issuer` (the identifier_issuer of an
+# [[auth.party]] table) issues; no two clients share a binding_issuer.
+# `public_base_url` is the externally reachable origin every meta.location and
+# discovery document names; required. /scim/v2/ServiceProviderConfig
+# is readable without a token; every other path needs a client's token.
+# `max_deactivations` caps the Users one client deactivates or deletes per
+# `deactivation_window`, counted in the database so every replica
+# shares the bound; past it a deactivation or deletion is refused with 429.
+# `contact_erasure_delay` after a User's deletion ("0s": in the deletion, at
+# most "30d") the contacts of every version of its PERSON are erased; the
+# name, the binding key and the identifiers stay.
+# /scim/v2/Groups is served when [authz.party_binding] names a group template
+# with its display_name and a membership archetype; a client's Groups carry
+# their externalId under the group_identifier_issuer of its [[auth.party]]
+# table. `max_group_members` caps one Group: every membership change stores
+# all of the Group's memberships again, and an add past the cap is refused.
+#? [auth.scim]
+#? public_base_url = "https://cdr.example.com"
+#? filter_max_results = 100     # RFC 7643 §5 filter.maxResults
+#? max_deactivations = 100
+#? deactivation_window = "1h"
+#? contact_erasure_delay = "0s"
+#? max_group_members = 5000
+#? [[auth.scim.client]]
+#? issuer = "https://as.example.com"
+#? client_id = "entra-provisioning"
+#? scope = "ferroehr/scim"
+#? binding_issuer = "urn:example:login"
 
 # ── [authz] — RBAC + ABAC ─────────────────────────────────────────────────────
 [authz]
@@ -386,9 +488,9 @@ claim = "acr"                 # dotted path into a JSON object allowed
 # The PARTY_REF.namespace a bound party is written under, held to the
 # OBJECT_REF.namespace pattern (BASE base_types).
 namespace = "demographic"
-# The age in days past which `ferroehr party-binding check` reports a
-# provisional PERSON.
-provisional_report_days = 30
+# The age past which `ferroehr party-binding check` reports a provisional
+# PERSON.
+provisional_report_after = "30d"
 #? provider = { issuer = "urn:oid:2.16.528.1.1007.3.3", id = "00000000" }   # issuer and id (in NL the URA)
 # The per-tenant form, in place of the line above:
 #   provider = [{ tenant = "<tenant_claim value>", issuer = "urn:oid:2.16.528.1.1007.3.3", id = "00000000" }]
@@ -453,7 +555,7 @@ provisional_report_days = 30
 #? relationship_codes = { at0010 = "254", at0011 = "264" }
 
 # The creating_system_id values whose wrapped committers may name a local
-# party on import; never this node's own [rest] system_id.
+# party on import; never this node's own [api] system_id.
 [authz.import]
 trusted_systems = []
 
@@ -477,7 +579,7 @@ trusted_systems = []
 # `caller_rate` is required. An organisation agreement runs without a named
 # person: it needs name, version, legal_ground and access_class, takes no
 # writes, no opt_out_override and no consent from mitz, and is logged at warn
-# on every boot. A "chained" access class needs chained_log_retention_years at
+# on every boot. A "chained" access class needs chained_log_retention at
 # least [audit.store]'s and its issuer's [[auth.federation]] table mapping
 # correlation_id from the token; a chained request without the id is refused.
 # A caller above caller_rate is answered 429 before any patient lookup. An NL
@@ -500,12 +602,12 @@ trusted_systems = []
 #? reads = ["patient/composition-*.r"]
 #? writes = []
 #? discard = false
-#? discard_window_hours = 24
+#? discard_window = "24h"
 #? ehdsi_service = "eprescription"  # patient_summary | eprescription | orcd: a contact point's person agreement only
 #? caller_rate = { requests_per_second = 5, burst = 10 }
 #? opt_out_override = false
 #? access_class = "chained"          # automated | chained
-#? chained_log_retention_years = 5
+#? chained_log_retention = "P5Y"
 
 [authz.rbac]
 # The coarse role gate. Off, every authenticated caller may use every enabled
@@ -551,6 +653,8 @@ ehr_access_default = "open"   # open | restricted
 # The management surface is NOT configured here — see [management.endpoints],
 # which owns it, one level per endpoint.
 
+# `enabled` stays here: organization_claim is read for the access log while
+# ABAC is off.
 [authz.abac]
 enabled = false
 engine = "cedar"             # cedar | remote
@@ -564,12 +668,12 @@ check_directory = false      # submit DIRECTORY (FOLDER) operations to the PDP;
 
 [authz.abac.cedar]
 #? policy_dir = "/etc/ferroehr/policies"   # required when engine = cedar and abac enabled
-#? reload_secs = 30
+#? reload_interval = "30s"
 
 [authz.abac.remote]
-#? server = "http://pdp:3001/exec/"       # required when engine = remote; must end '/'
-connect_timeout_ms = 2000
-request_timeout_ms = 5000
+#? url = "http://pdp:3001/exec/"          # required when engine = remote; must end '/'
+connect_timeout = "2s"
+timeout = "5s"
 
 # Per-resource-kind policy bindings (kind ∈ ehr, ehr_status, composition,
 # contribution, query, directory):
@@ -577,40 +681,19 @@ request_timeout_ms = 5000
 #? name = "composition-access"
 #? parameters = ["organization", "patient", "template"]
 
-# ── [admin] — the ADMIN API group (physical delete) ──────────────────────────
-[admin]
-enabled = false
-
-# ── [smart] — SMART on openEHR ────────────────────────────────────────────────
-# The SMART on openEHR scopes are enforced on every route whenever [auth] is on
-# (master08 §Resource Scopes); this section decides what beside the route
-# table: the discovery document, and whose grants count for what.
-[smart]
-# Serve /.well-known/smart-configuration, built from one [auth] issuer's
-# metadata: the issuer issuer_metadata_file names, else the first whose
-# metadata is read from it, else the first. A jwks_file issuer carries none,
-# so it serves the document only with issuer_metadata_file set.
-enabled = false
-# The RFC 8414 §2 authorization-server metadata of the [auth] issuer it names,
-# whose key set is a jwks_file: a JSON document naming that issuer and at
-# least its token_endpoint, read at boot.
-#? issuer_metadata_file = "/etc/ferroehr/issuer-metadata.json"
-#? platform_base_url = "/gateway/v1"
-#? public_base_url = "https://cdr.example.com"   # REQUIRED when enabled: the external origin the absolute services.*.baseUrl values are built from (master04 §Services)
-launch_base64_json = false
-# The client_ids a system/aql-* grant counts for: it "would grant access to all
-# registered and ad-hoc AQL queries system-wide" (master08 §Resource Scopes).
-backend_clients = []
-# The issuers whose patient/ grants count, each confined to the EHR the
-# token's `ehrId` claim names (master07 §Context Selection). Empty = a
-# patient/ grant grants nothing.
-patient_issuers = []
-# The client_ids that reach the DEMOGRAPHIC API, which no SMART scope covers;
-# a caller holding [auth] product_scope reaches it too.
-demographic_clients = []
-
-[smart.episode]
-enabled = false
+# [[authz.origin]] — the origins of data this deployment recognises.
+# EHDS Annex II 3.4: retention periods and access rights that take the origin
+# of the data into account. Every version records its origins at commit: each
+# FEEDER_AUDIT originating_system_audit system_id the body carries, or, for a
+# body with none, the registered origin of the committing client (a Basic user,
+# or an access token's client_id, failing that its azp), or this server's
+# system_id for any other caller. A retention period
+# (PUT /admin/retention/policy, `origin`) and an ABAC rule (the `origin`
+# resource attribute) name only a registered id. EMPTY by default. An id or a
+# client registered twice, a blank one, or a client in two origins refuses boot.
+#? [[authz.origin]]
+#? id = "lab.example"           # the system_id the origin's data carry, compared exactly
+#? clients = ["lab-gateway"]    # whose direct commits come from this origin
 
 # ── [management] — ops-introspection surface ───────────────────────────────────
 # Introspection (info / prometheus / metrics / env / loggers / flamegraph /
@@ -621,7 +704,7 @@ enabled = false
 [management]
 enabled = false
 base_path = "/management"
-#? port = 9100                # separate listener on every interface, plain HTTP; production: plaintext_listener
+#? listen = "0.0.0.0:9100"    # a listener of its own, plain HTTP; production: plaintext_listener
 # Span-timing flamegraph capture (tracing-flame): write folded stack samples
 # to this file for offline rendering (inferno-flamegraph < file > flame.svg).
 # Unset, the layer is not installed. Diagnostic sessions only.
@@ -643,101 +726,8 @@ status = "off"                # status document with licence, deployment gaps, s
 # Limits for the on-demand CPU profiler (endpoints.flamegraph). A request
 # asking beyond a cap is refused with 400, never silently clamped.
 [management.profiling]
-max_seconds = 30              # longest sample window one request may take
+max_duration = "30s"          # longest sample window one request may take
 max_frequency = 999           # highest sampling frequency (Hz) a request may ask
-
-# ── [signing] — VERSION signing (RM common master06 §Digital Signature) ───────
-[signing]
-enabled = true
-mode = "digest"              # digest | pgp
-#? key_path = "/etc/ferroehr/signing.asc"   # required for mode = pgp
-#? key_passphrase = "..."
-#? key_passphrase_file = "/run/secrets/pgp-pass"
-# PUBLIC keys retired from signing and kept for verification, so versions signed
-# before a key rotation keep verifying. A stored signature carries no key id and
-# is an immutable committed fact, so retaining the old key is the only way
-# history stays verifiable. Public keys: a retired key can never sign again.
-retired_key_paths = []       # e.g. ["/etc/ferroehr/signing-2025.pub.asc"]
-# Read-time verification of OUR OWN signatures. UNSET (the default) resolves to
-# `strict` when signing is enabled — a served version whose stored signature no
-# longer recomputes is a 5xx integrity fault. Set explicitly to opt out:
-# `warn` (log + meter, still serve) or `off` (never check). Client-supplied
-# signatures are always stored verbatim and never re-verified.
-#? verify_on_read = "strict" # off | warn | strict (unset ⇒ strict when enabled)
-
-# ── [licence] — the commercial licence token ──────────────────────────────────
-# FerroEHR is BUSL-1.1: production use in the course of a business needs a
-# commercial licence. The server runs identically with or without the token;
-# its state is logged once at boot and reported on GET /management/status.
-[licence]
-#? file = "/etc/ferroehr/licence.asc"
-
-# ── [query] — AQL execution knobs ─────────────────────────────────────────────
-[query]
-plan_cache_capacity = 256    # 0 disables the plan cache
-# The per-query execution budget, ON by default. It used to be off, which left
-# the HTTP request timeout as the only guard — and that answers the CLIENT
-# without cancelling the statement, so overrunning queries kept holding pooled
-# connections after their callers had been given up on. Kept TIGHTER than
-# db.statement_timeout_ms so an overrun surfaces as this engine's typed 408
-# rather than a driver error.
-timeout_ms = 30000           # 0 disables the per-query budget (408 on overrun)
-# The result-row ceiling for a query that neither the AQL nor the request bounds.
-# Without it, `SELECT c FROM COMPOSITION c` with no `fetch` generates SQL with no
-# LIMIT and materialises every matching row — one request, unbounded allocation.
-# ITS-REST leaves the `fetch` default to the implementation, so a ceiling is
-# spec-permitted. An explicit AQL LIMIT or a `fetch` parameter is honoured as
-# written; this only bounds the case where nothing else does.
-max_result_rows = 10000      # 0 = unbounded
-
-# ── [outbox] — the commit-event outbox and its cursor feed ───────────────────
-# Each reader pulls the PHI-free commit events over GET /admin/outbox/{reader}
-# (scope __ferroehr.outbox) and acknowledges them; FerroBRIDGE delivers them on
-# to a message broker. With no reader no commit writes an outbox row. Boot
-# registers every reader named here and marks every other one inactive, so a
-# removed reader no longer holds the prune back. Our own extension.
-[outbox]
-readers = []                 # e.g. ["ferrobridge"]; names match ^[a-z][a-z0-9-]{0,62}$
-retention_days = 7           # an acknowledged row is kept this long after its commit
-prune_interval_secs = 3600
-
-# ── [terminology] — terminology API + the terminology server ──────────────────
-[terminology]
-api_enabled = false
-
-# The one FHIR R4B terminology server (FerroTERM, or any server speaking the
-# FHIR terminology operations). The openEHR terminology is in-process and needs
-# none of this.
-[terminology.server]
-enabled = false              # on: composition ac-code binding resolution, ADL 2
-                             # VETDF, AQL TERMINOLOGY() and the /terminology/*
-                             # calls the bundled openEHR terminology cannot answer
-#? url = "http://ferroterm:8080/r4b"
-fail_on_error = false        # unresolvable binding: false = accept the
-                             # composition (fail-open), true = reject it (422)
-request_timeout_ms = 10000
-
-# OAuth2 client-credentials grant, only when the server sits behind an
-# authorization server (the same keys as [audit.fhir_feed.oauth]):
-#? [terminology.server.oauth]
-#? token_endpoint = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
-#? client_id = "ferroehr-cdr"
-#? client_secret = "..."
-#? client_secret_file = "/run/secrets/ts-client"   # instead of client_secret, a mounted file
-#? scope = "system/*.read"
-#? client_auth = "client_secret_basic"   # client_secret_basic | client_secret_post | private_key_jwt | tls_client_auth | self_signed_tls_client_auth
-
-# ── [multimedia] — DV_MULTIMEDIA externalization to S3-compatible storage ─────
-[multimedia]
-enabled = false
-threshold_bytes = 262144
-#? endpoint = "http://127.0.0.1:8333"   # unset ⇒ AWS default resolution
-bucket = "openehr-multimedia"
-region = "us-east-1"
-#? access_key_id = "..."
-#? secret_access_key = "..."
-#? secret_access_key_file = "/run/secrets/s3"
-allow_http = false           # PROD: false (HTTPS S3)
 
 # ── [audit] — IHE ATNA audit trail / System Log ──────────────────────────────
 # ON by default with only the local store active: every deployment gets a
@@ -772,35 +762,31 @@ emergency_purpose_codes = []   # e.g. ["ETREAT"]
 # The local Audit Record Repository (the durability anchor).
 [audit.store]
 enabled = true
-retention_days = 0           # 0 = keep forever; reaped hourly otherwise
-                             # Floors and ceilings are jurisdictional, written
-                             # in calendar years: three years in every EU
-                             # Member State (EHDS Art. 9(2)), five years NL,
-                             # one year CH, at most three years DE under
-                             # sgb_v_309_controller. Boot refuses a horizon
-                             # outside them. A day count is held to the most
-                             # (floor) or fewest (ceiling) days the years can
-                             # span, e.g. 1096 for the EU floor.
-# The horizon in calendar years instead, compared exactly against those bounds
-# and reaped with calendar arithmetic. Set it OR retention_days, never both. A
-# declared SGB V § 309 controller in Germany sets 3: no day count meets both the
-# three-year EHDS floor and the three-year § 309 ceiling.
-#? retention_years = 3
+# How long records are kept, a calendar period ("P3Y" or "P1096D"); unset
+# keeps them forever, reaped hourly otherwise. Floors and ceilings are
+# jurisdictional, written in calendar years: three years in every EU Member
+# State (EHDS Art. 9(2)), five years NL, one year CH, at most three years DE
+# under sgb_v_309_controller. Boot refuses a horizon outside them. Years are
+# compared exactly and reaped with calendar arithmetic; a day count is held to
+# the most (floor) or fewest (ceiling) days the years can span, e.g. 1096 for
+# the EU floor. A declared SGB V § 309 controller in Germany sets "P3Y": no day
+# count meets both the three-year EHDS floor and the three-year § 309 ceiling.
+#? retention = "P3Y"
 # Set this only if the deploying organisation is, or acts for, one of the
 # controllers SGB V § 307 names for a German telematics-infrastructure
-# application. It caps retention_days at the three-year period of § 309 Abs. 1,
+# application. It caps retention at the three-year period of § 309 Abs. 1,
 # after which Abs. 3 requires deletion unverzüglich — so a declared controller
 # cannot keep records forever.
 sgb_v_309_controller = false
-# Seconds between two scheduled verifications of the hash chain (one hour by
-# default; 0 = off). Each run verifies the records written since the last
+# The time between two scheduled verifications of the hash chain (one hour by
+# default; "0s" = off). Each run verifies the records written since the last
 # intact link. A finding is logged at ERROR, counted in
 # atna_audit_chain_findings and reported by the audit_chain readiness indicator.
-verify_interval_seconds = 3600
-# Seconds between two scheduled full passes over the hash chain (one week by
-# default; 0 = only on demand, SELECT * FROM audit.verify_audit_chain()). A run
+verify_interval = "1h"
+# The time between two scheduled full passes over the hash chain (one week by
+# default; "0s" = only on demand, SELECT * FROM audit.verify_audit_chain()). A run
 # that found damage is always followed by a full pass.
-full_verify_interval_seconds = 604800
+full_verify_interval = "7d"
 
 # The EHDS priority category of every access (Annex II 3.2(c)), classified by
 # ehds-logging (FerroAUDIT): which categories each template, and failing that
@@ -832,19 +818,17 @@ national = []                # e.g. ["urn:oid:2.16.840.1.113883.2.4.3.11.60.1|be
 #? "openEHR-EHR-COMPOSITION.encounter.v1" = "none"
 
 # Classic ATNA feed: DICOM PS3.15 audit XML as RFC 5424 syslog over RFC 5425
-# TLS (IHE ITI-20), sent through ihe-atna (FerroAUDIT).
-[audit.syslog]
-enabled = false
-host = "localhost"
-port = 6514
+# TLS (IHE ITI-20), sent through ihe-atna (FerroAUDIT). Absent, off.
+#? [audit.syslog]
+#? url = "tls://arr.example:6514"   # RFC 5425 §4.1 port 6514
 # Every frame is stored in ihe-atna's spool and delivered from it, retried with
 # backoff until the repository takes it. The local store keeps no syslog
 # frame, so the spool is syslog's outbox: set spool_dir (owner-only) for one
 # that survives a restart; unset, it is held in memory.
 #? spool_dir = "/var/lib/ferroehr/atna-spool"
-spool_max_messages = 100000
-spool_max_bytes = 268435456
-retry_max_ms = 60000         # the longest wait between two attempts
+#? spool_max_events = 100000
+#? spool_max_size = "256MiB"
+#? retry = { max_backoff = "1min" }   # the longest wait between two attempts
 
 # The TLS material of the connection to the repository: the trust roots beside
 # the platform's, and the client certificate chain with its private key in one
@@ -856,26 +840,11 @@ retry_max_ms = 60000         # the longest wait between two attempts
 #? min_version = "1.2"
 
 # RESTful ATNA feed: FHIR R4 AuditEvent POSTs (IHE ITI-20 ATX:FHIR Feed).
-[audit.fhir_feed]
-enabled = false
-url = "http://localhost:8080/fhir"   # POSTs {url}/AuditEvent; URL creds redacted
-poll_interval_ms = 2000      # how long the forwarder waits for a new record before reading the store again
-retry_max_ms = 60000         # the longest wait between two attempts
-
-# ── [origins] — the origins of data this deployment recognises ───────────────
-# EHDS Annex II 3.4: retention periods and access rights that take the origin
-# of the data into account. Every version records its origins at commit: each
-# FEEDER_AUDIT originating_system_audit system_id the body carries, or, for a
-# body with none, the registered origin of the committing client (a Basic user,
-# or an access token's client_id, failing that its azp), or this server's
-# system_id for any other caller. A retention period
-# (PUT /admin/retention/policy, `origin`) and an ABAC rule (the `origin`
-# resource attribute) name only a registered id. EMPTY by default. An id or a
-# client registered twice, a blank one, or a client in two origins refuses boot.
-[origins]
-#? [[origins.registered]]
-#? id = "lab.example"           # the system_id the origin's data carry, compared exactly
-#? clients = ["lab-gateway"]    # whose direct commits come from this origin
+# Absent, off.
+#? [audit.fhir_feed]
+#? url = "https://arr.example/fhir"   # POSTs {url}/AuditEvent; URL creds redacted
+#? poll_interval = "2s"         # how long the forwarder waits for a new record before reading the store again
+#? retry = { max_backoff = "1min" }   # the longest wait between two attempts
 
 # ── [privacy] — the clinical-side data-minimisation policy ────────────────────
 # GDPR Art. 4(5) + Art. 25(2); the openEHR RM leaves the subject reference open
@@ -918,13 +887,13 @@ rules = ["ch-ahvn13", "ch-epd-pid", "de-kvnr", "fi-hetu", "gb-nhs-number", "nl-b
 # to refuse a postcode paired with a house number.
 patterns = []
 
-# ── [cohort] — cross-domain cohort queries ────────────────────────────────────
+# [privacy.cohort] — cross-domain cohort queries.
 # Select a population in the demographic domain, resolve it to the EHRs whose
 # EHR_STATUS subject names it, and run AQL over exactly those EHRs. No openEHR spec governs
 # this — our own extension. OFF until a predicate is bound below: which
 # demographic leaf may be selected on is a deployment fact about the archetypes
 # in use, never something the server can infer.
-[cohort]
+[privacy.cohort]
 # The distinct-EHR floor a result set must reach to be served; below it the rows
 # are withheld and the response says so. 0 disables suppression.
 small_cell_threshold = 5
@@ -932,7 +901,7 @@ small_cell_threshold = 5
 # than truncated: a silently shortened cohort is a wrong denominator.
 max_cohort_size = 100000
 # Let a cohort name its subjects by identifier, in any identifier domain, each
-# resolved through the [ehr_index] provider (under the IHE provider, PIXm
+# resolved through the record.subject_index (under "pixm", PIXm
 # ITI-83 into this server's clinical domain). It turns the surface on without a
 # bound predicate, and it is the one cohort form the IHE provider serves: it
 # holds no party-to-EHR map, so a predicate is refused there.
@@ -948,16 +917,53 @@ subjects = false
 # nested in it, and any archetyped ITEM_TREE or CLUSTER under any of their
 # `details`. The bindings below are EXAMPLES of the shape — a deployment names
 # the archetypes and at-codes its own templates produce.
-[cohort.predicates]
+[privacy.cohort.predicates]
 #? city          = { archetype = "openEHR-DEMOGRAPHIC-ADDRESS.address.v1", node = "at0012", kind = "text" }
 #? postcode_area = { archetype = "openEHR-DEMOGRAPHIC-ADDRESS.address.v1", node = "at0014", kind = "text_prefix" }
 #? sex           = { archetype = "openEHR-DEMOGRAPHIC-PERSON.person.v1", node = "at0017", kind = "coded" }
 #? age_band      = { archetype = "openEHR-DEMOGRAPHIC-PERSON.person.v1", node = "at0010", kind = "birth_date" }
 #? organisation  = { archetype = "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1", node = "at0003", kind = "text" }
 
-# ── [ehr_index] — who holds the subject-to-EHR cross-reference ───────────────
-# Two supported postures, production included:
-#   ihe    an IHE patient identity source (the default): FerroEHR asks its PIX
+# [privacy.identifier_protection] — national-identifier protection: the value leaves the versioned body for
+# `party.national_identifier`, sealed under a per-domain AES-256-GCM key
+# with an HMAC-SHA-256 digest beside it for equality lookup. GDPR Art. 32(1)(a)
+# names encryption as an appropriate measure; UAVG Art. 46 and the Wabvpz bound
+# what a BSN may be used for at all.
+# Absent by default, and the table's presence turns it on: that makes the key
+# load-bearing for reading these identifiers back, which is a deployment
+# decision with a runbook attached.
+#? [privacy.identifier_protection]
+# The DV_IDENTIFIER `type` values to protect. Each must be registered in
+# `demographic.identifier_scheme`; an unregistered code is a boot error rather
+# than an identifier that silently stays in the clear.
+#? schemes = ["nl-bsn"]
+# The root key: 64 hex characters (32 bytes). Prefer `key_file`.
+#? key = "…64 hex characters…"
+#? key_file = "/run/secrets/ferroehr-identifier-key"
+
+# [privacy.access_delay] — EHDS Art. 3(3), the delay of the person's own access.
+# A Member State may delay a person's access to their data "for a limited
+# period of time until a health professional is able to properly communicate
+# and explain" it (Regulation (EU) 2025/327 Art. 3(3)). Absent by default, so
+# Art. 3(1) immediate access holds; write the table only where your Member
+# State's rule provides for the delay. While present, a new COMPOSITION of a listed category
+# reads as absent to a patient-context request (a SMART patient/ grant or the
+# ABAC patient claim) until a professional releases it through
+# POST /admin/access-delay/release or `max_delay` passes; professionals read it as
+# before. A professional also holds one by hand through POST /admin/access-delay.
+#? [privacy.access_delay]
+# The categories held at creation, named as [audit.categories] names one
+# (Laboratory-Reports, Medical-Imaging, …, <system>|<code>, or a national one).
+# EMPTY holds nothing at creation.
+#? categories = []
+# The limit of a hold, whole hours from "1h" to "8784h"; required.
+#? max_delay = "72h"
+
+# ── [record] — the record itself ─────────────────────────────────────────────
+[record]
+# Who holds the subject-to-EHR cross-reference. Two supported postures,
+# production included:
+#   pixm   an IHE patient identity source ([pixm] below): FerroEHR asks its PIX
 #          Manager over PIXm (ITI-83, the $ihe-pix operation) which identifier
 #          the clinical domain holds for a patient, and that identifier is the
 #          pseudonym EHR_STATUS.subject carries. Any conformant PIX Manager
@@ -969,25 +975,125 @@ subjects = false
 #          privacy.subject_namespaces declared no pseudonym namespace is in
 #          force, so a subject reference is stored as the client sends it;
 #          production accepts the open_subject_namespace gap by name to run it.
-# provider alone switches the index (FERROEHR__EHR_INDEX__PROVIDER=local): the
-# keys of the provider not chosen are kept, not used, and named at boot; the
-# declared privacy.subject_namespaces stay in force. The
-# server refuses to start until the endpoint below is set or provider is
-# "local". No silent fallback: a configured source that cannot be reached
-# refuses boot, and a request it fails is an error.
-[ehr_index]
-provider = "ihe"             # ihe | local
-#? pixm_url = "https://pix.example.org/fhir"   # the PIX Manager's FHIR base URL
-#? assigning_authority = "urn:oid:2.999.1"     # the clinical domain; must be one
+# subject_index alone switches the index (FERROEHR__RECORD__SUBJECT_INDEX=local):
+# a [pixm] table kept beside "local" is not used and is named at boot; the
+# declared privacy.subject_namespaces stay in force. The key has no default:
+# the server refuses to start until it is set. No silent fallback: a
+# configured source that cannot be reached refuses boot, and a request it
+# fails is an error.
+#? subject_index = "pixm"     # pixm | local; REQUIRED
+
+# [record.versioning] — what a repeated commit answers.
+# A version whose content equals the current version's is committed like any
+# other, with its own commit audit, contribution, version id and ETag, and the
+# content is stored once (the new version reads its predecessor's node rows);
+# that is not a setting. The one setting is the answer to a repeated send of
+# the same content. OFF by default: every committal is recorded (RM common
+# master06 §Committal and Audits). ON, a PUT whose content equals the current
+# version's commits nothing and answers like a successful update with the
+# existing version's ETag and Location; the access log keeps one `resend`
+# record naming the version matched and the content digest, and no commit
+# audit and no contribution record the send.
+[record.versioning]
+idempotent_resend = false     # RFC 9110 §9.2.2
+
+# [record.signing] — VERSION signing (RM common master06 §Digital Signature).
+[record.signing]
+enabled = true
+mode = "digest"              # digest | pgp
+#? key_file = "/etc/ferroehr/signing.asc"   # required for mode = pgp
+#? key_passphrase = "..."
+#? key_passphrase_file = "/run/secrets/pgp-pass"
+# PUBLIC keys retired from signing and kept for verification, so versions signed
+# before a key rotation keep verifying. A stored signature carries no key id and
+# is an immutable committed fact, so retaining the old key is the only way
+# history stays verifiable. Public keys: a retired key can never sign again.
+retired_key_files = []       # e.g. ["/etc/ferroehr/signing-2025.pub.asc"]
+# Read-time verification of OUR OWN signatures. UNSET (the default) resolves to
+# `strict` when signing is enabled — a served version whose stored signature no
+# longer recomputes is a 5xx integrity fault. Set explicitly to opt out:
+# `warn` (log + meter, still serve) or `off` (never check). Client-supplied
+# signatures are always stored verbatim and never re-verified.
+#? verify_on_read = "strict" # off | warn | strict (unset ⇒ strict when enabled)
+
+# [record.query] — AQL execution knobs.
+[record.query]
+plan_cache_capacity = 256    # 0 disables the plan cache
+# The per-query execution budget, ON by default. It used to be off, which left
+# the HTTP request timeout as the only guard — and that answers the CLIENT
+# without cancelling the statement, so overrunning queries kept holding pooled
+# connections after their callers had been given up on. Kept TIGHTER than
+# database.statement_timeout so an overrun surfaces as this engine's typed 408
+# rather than a driver error.
+timeout = "30s"              # "0s" disables the per-query budget (408 on overrun)
+# The result-row ceiling for a query that neither the AQL nor the request bounds.
+# Without it, `SELECT c FROM COMPOSITION c` with no `fetch` generates SQL with no
+# LIMIT and materialises every matching row — one request, unbounded allocation.
+# ITS-REST leaves the `fetch` default to the implementation, so a ceiling is
+# spec-permitted. An explicit AQL LIMIT or a `fetch` parameter is honoured as
+# written; this only bounds the case where nothing else does.
+max_result_rows = 10000      # 0 = unbounded
+
+# [record.change_feed] — the commit-event outbox and its cursor feed.
+# Each reader pulls the PHI-free commit events over GET /admin/outbox/{reader}
+# (scope __ferroehr.outbox) and acknowledges them; FerroBRIDGE delivers them on
+# to a message broker. With no reader no commit writes an outbox row. Boot
+# registers every reader named here and marks every other one inactive, so a
+# removed reader no longer holds the prune back. Our own extension.
+[record.change_feed]
+readers = []                 # e.g. ["ferrobridge"]; names match ^[a-z][a-z0-9-]{0,62}$
+retention = "7d"             # an acknowledged row is kept this long after its commit
+prune_interval = "1h"
+
+# [record.multimedia] — DV_MULTIMEDIA externalization to S3-compatible
+# storage. `enabled` stays here: blobs already offloaded are read back from
+# `url` while it is off. An http:// url is plain HTTP (a dev SeaweedFS), which
+# production names as the plaintext_object_store gap.
+[record.multimedia]
+enabled = false
+threshold = "256KiB"
+#? url = "https://s3.example"   # unset ⇒ AWS default resolution
+bucket = "openehr-multimedia"
+region = "us-east-1"
+#? access_key_id = "..."
+#? secret_access_key = "..."
+#? secret_access_key_file = "/run/secrets/s3"
+
+# ── [terminology] — the outbound FHIR terminology server ─────────────────────
+# The one FHIR R4B terminology server (FerroTERM, or any server speaking the
+# FHIR terminology operations). The openEHR terminology is in-process and needs
+# none of this. Absent, off; present, it serves composition ac-code binding
+# resolution, ADL 2 VETDF, AQL TERMINOLOGY() and the /terminology/* calls the
+# bundled openEHR terminology cannot answer.
+#? [terminology]
+#? url = "http://ferroterm:8080/r4b"   # REQUIRED
+#? on_error = "accept"         # unresolvable binding: accept (fail-open) | refuse (422)
+#? timeout = "10s"
+
+# OAuth2 client-credentials grant, only when the server sits behind an
+# authorization server (the same keys as [audit.fhir_feed.oauth]):
+#? [terminology.oauth]
+#? token_endpoint = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
+#? client_id = "ferroehr-cdr"
+#? client_secret = "..."
+#? client_secret_file = "/run/secrets/ts-client"   # instead of client_secret, a mounted file
+#? scope = "system/*.read"
+#? client_auth = "client_secret_basic"   # client_secret_basic | client_secret_post | private_key_jwt | tls_client_auth | self_signed_tls_client_auth
+
+# ── [pixm] — the IHE PIXm patient identity source (ITI-83) ───────────────────
+# Read under record.subject_index = "pixm".
+#? [pixm]
+#? url = "https://pix.example.org/fhir"   # the PIX Manager's FHIR base URL
+#? assigning_authority = "urn:oid:2.999.1"   # the clinical domain; must be one
                              # of privacy.subject_namespaces
-invocation = "post"          # post (keeps the identifier out of URLs) | get
+#? method = "post"             # post (keeps the identifier out of URLs) | get
                              # (the form ITI-83 prescribes)
-request_timeout_ms = 10000
+#? timeout = "10s"
 
 # The TLS material of the PIX Manager client: trust roots beside the
 # platform's, for a source behind a private PKI, and a client identity for
 # mutual TLS (one PEM holding the chain and its key).
-#? [ehr_index.tls]
+#? [pixm.tls]
 #? trust_roots_file = "/etc/ferroehr/pix-ca.pem"
 #? client_identity_file = "/run/secrets/pix-client.pem"
 #? min_version = "1.3"
@@ -996,30 +1102,12 @@ request_timeout_ms = 10000
 # (IUA ITI-72), when the PIX Manager requires one. The client id is the one
 # the identity source mints pseudonyms in the clinical domain for, and the
 # scope is the one its PIXm Manager takes from a Consumer:
-#? [ehr_index.oauth]
+#? [pixm.oauth]
 #? token_endpoint = "https://idp.example.org/realms/pix/protocol/openid-connect/token"
 #? client_id = "ferroehr-cdr"
 #? client_secret = "..."
 #? client_secret_file = "/run/secrets/pix-client"   # instead of client_secret, a mounted file
 #? scope = "system/Patient.rs"
-
-# ── [demographic] — the demographic domain ────────────────────────────────────
-# National-identifier protection: the value leaves the versioned body for
-# `party.national_identifier`, sealed under a per-domain AES-256-GCM key
-# with an HMAC-SHA-256 digest beside it for equality lookup. GDPR Art. 32(1)(a)
-# names encryption as an appropriate measure; UAVG Art. 46 and the Wabvpz bound
-# what a BSN may be used for at all.
-[demographic.identifier_protection]
-# OFF by default: turning it on makes the key load-bearing for reading these
-# identifiers back, which is a deployment decision with a runbook attached.
-enabled = false
-# The DV_IDENTIFIER `type` values to protect. Each must be registered in
-# `demographic.identifier_scheme`; an unregistered code is a boot error rather
-# than an identifier that silently stays in the clear.
-schemes = ["nl-bsn"]
-# The root key: 64 hex characters (32 bytes). Prefer `key_file`.
-#? key = "…64 hex characters…"
-#? key_file = "/run/secrets/ferroehr-identifier-key"
 
 # ── [usage_report] — the installation report to FerroPULSE ────────────────────
 # ON by default. At each process start and once a day the instance sends one
@@ -1041,70 +1129,3 @@ endpoint = "https://report.ferropulse.eu/v1/report"   # https only (http to a lo
 # chart and the compose files set it; leave it unset elsewhere.
 deployment = "unknown"
 
-# ── [access_delay] — EHDS Art. 3(3), the delay of the person's own access ─────
-# A Member State may delay a person's access to their data "for a limited
-# period of time until a health professional is able to properly communicate
-# and explain" it (Regulation (EU) 2025/327 Art. 3(3)). OFF by default, so
-# Art. 3(1) immediate access holds; turn it on only where your Member State's
-# rule provides for the delay. While on, a new COMPOSITION of a listed category
-# reads as absent to a patient-context request (a SMART patient/ grant or the
-# ABAC patient claim) until a professional releases it through
-# POST /admin/access-delay/release or `hours` pass; professionals read it as
-# before. A professional also holds one by hand through POST /admin/access-delay.
-[access_delay]
-enabled = false
-# The categories held at creation, named as [audit.categories] names one
-# (Laboratory-Reports, Medical-Imaging, …, <system>|<code>, or a national one).
-# EMPTY holds nothing at creation.
-categories = []
-# The limit of a hold, in hours, 1 to 8784; required while enabled.
-hours = 0
-
-# ── [versioning] — what a repeated commit answers ─────────────────────────────
-# A version whose content equals the current version's is committed like any
-# other, with its own commit audit, contribution, version id and ETag, and the
-# content is stored once (the new version reads its predecessor's node rows);
-# that is not a setting. The one setting is the answer to a repeated send of
-# the same content. OFF by default: every committal is recorded (RM common
-# master06 §Committal and Audits). ON, a PUT whose content equals the current
-# version's commits nothing and answers like a successful update with the
-# existing version's ETag and Location; the access log keeps one `resend`
-# record naming the version matched and the content digest, and no commit
-# audit and no contribution record the send.
-[versioning]
-skip_identical_resend = false
-
-# [scim] — the SCIM 2.0 service provider at /scim/v2/ (RFC 7644), through which
-# an identity provider provisions each professional as a demographic PERSON.
-# OFF by default. Each [[scim.client]] is an OAuth client-credentials client of
-# the deployment's own authorization server (an [[auth.issuer]] of kind
-# machines), acting for nobody, whose tokens must hold `scope`. It owns the
-# Users whose binding key its `binding_issuer` (the identifier_issuer of an
-# [[auth.party]] table) issues; no two clients share a binding_issuer.
-# `public_base_url` is the externally reachable origin every meta.location and
-# discovery document names, required when enabled. /scim/v2/ServiceProviderConfig
-# is readable without a token; every other path needs a client's token.
-# `max_deactivations` caps the Users one client deactivates or deletes per
-# `deactivation_window_minutes`, counted in the database so every replica
-# shares the bound; past it a deactivation or deletion is refused with 429.
-# `contact_erasure_minutes` after a User's deletion (0: in the deletion, at
-# most 43200) the contacts of every version of its PERSON are erased; the
-# name, the binding key and the identifiers stay.
-# /scim/v2/Groups is served when [authz.party_binding] names a group template
-# with its display_name and a membership archetype; a client's Groups carry
-# their externalId under the group_identifier_issuer of its [[auth.party]]
-# table. `max_group_members` caps one Group: every membership change stores
-# all of the Group's memberships again, and an add past the cap is refused.
-[scim]
-enabled = false
-max_results = 100
-max_deactivations = 100
-deactivation_window_minutes = 60
-contact_erasure_minutes = 0
-max_group_members = 5000
-#? public_base_url = "https://cdr.example.com"
-#? [[scim.client]]
-#? issuer = "https://as.example.com"
-#? client_id = "entra-provisioning"
-#? scope = "ferroehr/scim"
-#? binding_issuer = "urn:example:login"

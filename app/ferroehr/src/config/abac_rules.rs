@@ -1,11 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The boot rules of `[authz.abac]`: the policy kinds, the parameters each may
-//! carry, and what each engine needs. No openEHR spec governs RBAC or ABAC:
+//! The boot rules of `[authz.abac]` and the two engines' own tables.
+//!
+//! The policy kinds, the parameters each may carry, what each engine needs,
+//! and `[authz.abac.cedar]` and `[authz.abac.remote]`. No openEHR spec governs RBAC or ABAC:
 //! our own design.
 
+use std::path::PathBuf;
+
 use ferrohealth_secret::secret_url::{RedactedUrl, SecretUrl};
+use serde::{Deserialize, Serialize};
 
 use crate::config::authz::{AbacConfig, AbacEngineKind, AbacParam, AuthzConfigError};
 
@@ -71,7 +76,7 @@ impl AbacConfig {
     fn validate_remote_engine(&self) -> Result<(), AuthzConfigError> {
         let server = self
             .remote
-            .server
+            .url
             .as_ref()
             .map(SecretUrl::expose)
             .filter(|s| !s.trim().is_empty())
@@ -90,5 +95,61 @@ impl AbacConfig {
             return Err(AuthzConfigError::RemotePolicyMissing("directory"));
         }
         Ok(())
+    }
+}
+
+/// The embedded-Cedar engine settings.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct CedarConfig {
+    /// Directory of `*.cedar` policy files (required when `engine = cedar`).
+    pub policy_dir: Option<PathBuf>,
+    /// Optional periodic hot-reload interval; off when unset.
+    pub reload_interval: Option<ferrohealth_config::units::Duration>,
+    /// Retired in v5.7.0: refused at load, naming `reload_interval`.
+    #[serde(skip_serializing)]
+    pub reload_secs: ferrohealth_config::removed::Removed,
+}
+
+/// The remote-PDP client settings.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct RemoteConfig {
+    /// The PDP base URL; the policy name is appended, so it must end with `/`
+    /// (required when `engine = remote`). Any `userinfo` in it is masked in
+    /// every rendering.
+    pub url: Option<SecretUrl>,
+    /// TCP connect timeout (default `"2s"`): without one, a PDP that
+    /// blackholes packets parks the request until the OS TCP timeout.
+    pub connect_timeout: ferrohealth_config::units::Duration,
+    /// Whole-request timeout (default `"5s"`).
+    pub timeout: ferrohealth_config::units::Duration,
+    /// The OAuth 2.0 client-credentials grant the policy service is called
+    /// with (`[authz.abac.remote.oauth]`); absent, the calls carry the Basic
+    /// credentials of `url`, if any.
+    pub oauth: Option<ferrohealth_smart::config::credentials::OauthSection>,
+    /// Retired in v5.7.0: refused at load, naming `url`.
+    #[serde(skip_serializing)]
+    pub server: ferrohealth_config::removed::Removed,
+    /// Retired in v5.7.0: refused at load, naming `connect_timeout`.
+    #[serde(skip_serializing)]
+    pub connect_timeout_ms: ferrohealth_config::removed::Removed,
+    /// Retired in v5.7.0: refused at load, naming `timeout`.
+    #[serde(skip_serializing)]
+    pub request_timeout_ms: ferrohealth_config::removed::Removed,
+}
+
+impl Default for RemoteConfig {
+    fn default() -> Self {
+        Self {
+            url: None,
+            connect_timeout: ferrohealth_config::units::Duration::from_secs(2),
+            // 5 s, the whole-request budget the discovery and terminology clients use too.
+            timeout: ferrohealth_config::units::Duration::from_secs(5),
+            oauth: None,
+            server: ferrohealth_config::removed::Removed::default(),
+            connect_timeout_ms: ferrohealth_config::removed::Removed::default(),
+            request_timeout_ms: ferrohealth_config::removed::Removed::default(),
+        }
     }
 }

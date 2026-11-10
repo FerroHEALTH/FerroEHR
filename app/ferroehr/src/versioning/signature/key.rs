@@ -55,13 +55,13 @@ pub enum KeyError {
     /// shows can branch on secret values.
     ///
     /// The certificate still verifies the signatures it made when it is
-    /// listed in `signing.retired_key_paths`, since verification uses only
+    /// listed in `record.signing.retired_key_files`, since verification uses only
     /// public values.
     #[error(
         "the configured OpenPGP signing key is {algorithm:?}, which FerroEHR refuses to sign with: \
          its private-key arithmetic is not constant-time in the crypto-bigint 0.5 it runs on \
          (RUSTSEC-2026-0387, no fixed release). Rotate to an Ed25519 signing key and list this \
-         certificate in `signing.retired_key_paths` so versions already signed keep verifying"
+         certificate in `record.signing.retired_key_files` so versions already signed keep verifying"
     )]
     RefusedAlgorithm {
         /// The public-key algorithm of the signing component.
@@ -603,7 +603,7 @@ fn warn_rsa_signing_key(algorithm: PublicKeyAlgorithm) {
         "the configured OpenPGP signing key is RSA, so every signature is an RSA private-key \
          operation — the operation the Marvin timing sidechannel (RUSTSEC-2023-0071 / \
          CVE-2023-49092) concerns, and the `rsa` crate has no fixed release. Rotate to an Ed25519 \
-         signing key and keep this certificate in `signing.retired_key_paths` so versions \
+         signing key and keep this certificate in `record.signing.retired_key_files` so versions \
          already signed keep verifying."
     );
 }

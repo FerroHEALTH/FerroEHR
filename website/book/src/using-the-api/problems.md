@@ -26,7 +26,7 @@ the byte range of the query text a parse refusal points at.
 **Status:** `408 Request Timeout`. **Title:** The query ran longer than the
 server allows.
 
-The query ran past `query.timeout_ms` and the server aborted it. Narrow the
+The query ran past `record.query.timeout` and the server aborted it. Narrow the
 query (a tighter `WHERE`, a `LIMIT`, `fetch` and `offset`) or ask the operator
 to raise the limit.
 

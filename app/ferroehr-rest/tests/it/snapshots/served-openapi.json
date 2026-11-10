@@ -914,7 +914,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1003,7 +1003,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1092,7 +1092,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1181,7 +1181,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1209,7 +1209,7 @@
           "ADMIN"
         ],
         "summary": "The redacted effective configuration as a JSON tree (`GET /admin/config`).",
-        "description": "**Our own extension — no ITS-REST operation governs this.** The released\nAdmin API (`specifications/admin.openapi.yaml`) defines exactly two\noperations, both EHR deletes, and no openEHR specification models server\nconfiguration at all; this route is excluded from any conformance-profile\nclaim. Same admin gate as the sibling deletes (`AppConfig::admin.enabled` →\n`405` when off; RBAC Admin class by the `/admin/` path → `401`\nunauthenticated / `403` non-admin).\n\nEvery secret-bearing leaf is redacted STRUCTURALLY by its `Secret` /\n`SecretUrl` type before it ever reaches this handler — the binary builds the\nsnapshot once at boot with\n[`ferroehr::config::FerroEhrConfig::to_redacted_json`], so no secret substring\nis present here to leak.",
+        "description": "**Our own extension — no ITS-REST operation governs this.** The released\nAdmin API (`specifications/admin.openapi.yaml`) defines exactly two\noperations, both EHR deletes, and no openEHR specification models server\nconfiguration at all; this route is excluded from any conformance-profile\nclaim. Same admin gate as the sibling deletes (`AppConfig::api.admin` →\n`405` when off; RBAC Admin class by the `/admin/` path → `401`\nunauthenticated / `403` non-admin).\n\nEvery secret-bearing leaf is redacted STRUCTURALLY by its `Secret` /\n`SecretUrl` type before it ever reaches this handler — the binary builds the\nsnapshot once at boot with\n[`ferroehr::config::FerroEhrConfig::to_redacted_json`], so no secret substring\nis present here to leak.",
         "operationId": "admin_config",
         "parameters": [
           {
@@ -1269,7 +1269,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false). This route has no released file, so its ground is the cross-cutting overview rule — \"If a method is recognized but not allowed for the target resource, the response SHOULD be `405 Method Not Allowed` status code\" (`Requests_and_responses.md` §\"HTTP Methods\") — not the bulk-delete NOTE, which governs only that one operation.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false). This route has no released file, so its ground is the cross-cutting overview rule — \"If a method is recognized but not allowed for the target resource, the response SHOULD be `405 Method Not Allowed` status code\" (`Requests_and_responses.md` §\"HTTP Methods\") — not the bulk-delete NOTE, which governs only that one operation.",
             "headers": {
               "Allow": {
                 "schema": {
@@ -1356,7 +1356,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1600,7 +1600,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1704,7 +1704,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1787,7 +1787,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1831,7 +1831,7 @@
           {
             "name": "reader",
             "in": "path",
-            "description": "A reader `[outbox] readers` names.",
+            "description": "A reader `[record.change_feed] readers` names.",
             "required": true,
             "schema": {
               "type": "string"
@@ -1918,7 +1918,7 @@
             }
           },
           "404": {
-            "description": "The reader is unknown or inactive: `[outbox] readers` does not name it.",
+            "description": "The reader is unknown or inactive: `[record.change_feed] readers` does not name it.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1942,7 +1942,7 @@
           {
             "name": "reader",
             "in": "path",
-            "description": "A reader `[outbox] readers` names.",
+            "description": "A reader `[record.change_feed] readers` names.",
             "required": true,
             "schema": {
               "type": "string"
@@ -2302,7 +2302,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false). This route has no released file, so its ground is the cross-cutting overview rule — \"If a method is recognized but not allowed for the target resource, the response SHOULD be `405 Method Not Allowed` status code\" (`Requests_and_responses.md` §\"HTTP Methods\").",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false). This route has no released file, so its ground is the cross-cutting overview rule — \"If a method is recognized but not allowed for the target resource, the response SHOULD be `405 Method Not Allowed` status code\" (`Requests_and_responses.md` §\"HTTP Methods\").",
             "headers": {
               "Allow": {
                 "schema": {
@@ -2397,7 +2397,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false). This route has no released file, so its ground is the cross-cutting overview rule — \"If a method is recognized but not allowed for the target resource, the response SHOULD be `405 Method Not Allowed` status code\" (`Requests_and_responses.md` §\"HTTP Methods\") — not the bulk-delete NOTE, which governs only that one operation.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false). This route has no released file, so its ground is the cross-cutting overview rule — \"If a method is recognized but not allowed for the target resource, the response SHOULD be `405 Method Not Allowed` status code\" (`Requests_and_responses.md` §\"HTTP Methods\") — not the bulk-delete NOTE, which governs only that one operation.",
             "headers": {
               "Allow": {
                 "schema": {
@@ -2491,7 +2491,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2581,7 +2581,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2667,7 +2667,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2753,7 +2753,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false), answered with an empty `Allow` per RFC 9110 §10.2.1.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3414,7 +3414,7 @@
         "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
         "operationId": "admin_put_retention_policy",
         "requestBody": {
-          "description": "`{ \"kind\": …, \"jurisdiction\": …, \"category\": …?, \"origin\": …?, \"period\": …, \"anchor\": …, \"source\": … }`. `kind` is COMPOSITION | EHR_STATUS | FOLDER | EHR; `category`, when present, keys the period on one EHDS priority category as `[audit.categories]` names it (a priority category by its code: Patient-Summaries | Electronic-Prescriptions | Electronic-Dispensations | Medical-Imaging | Laboratory-Reports | Discharge-Reports, or as <system>|<code>; a national category as the <system>|<code> the map declares; or none), stored as its <system>|<code> token, and an object the map cannot classify takes the longest period configured for its kind; `origin`, when present, keys it on one origin `[[origins.registered]]` declares, by its id, matched against the origins each version recorded at commit; `period` is a PostgreSQL interval, `anchor` one of last_commit | death | majority, and `source` the legal citation the period rests on.",
+          "description": "`{ \"kind\": …, \"jurisdiction\": …, \"category\": …?, \"origin\": …?, \"period\": …, \"anchor\": …, \"source\": … }`. `kind` is COMPOSITION | EHR_STATUS | FOLDER | EHR; `category`, when present, keys the period on one EHDS priority category as `[audit.categories]` names it (a priority category by its code: Patient-Summaries | Electronic-Prescriptions | Electronic-Dispensations | Medical-Imaging | Laboratory-Reports | Discharge-Reports, or as <system>|<code>; a national category as the <system>|<code> the map declares; or none), stored as its <system>|<code> token, and an object the map cannot classify takes the longest period configured for its kind; `origin`, when present, keys it on one origin `[[authz.origin]]` declares, by its id, matched against the origins each version recorded at commit; `period` is a PostgreSQL interval, `anchor` one of last_commit | death | majority, and `source` the legal citation the period rests on.",
           "content": {
             "application/json": {
               "schema": {},
@@ -3541,7 +3541,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false). This route has no released file, so its ground is the cross-cutting overview rule — \"If a method is recognized but not allowed for the target resource, the response SHOULD be `405 Method Not Allowed` status code\" (`Requests_and_responses.md` §\"HTTP Methods\") — not the bulk-delete NOTE, which governs only that one operation.",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false). This route has no released file, so its ground is the cross-cutting overview rule — \"If a method is recognized but not allowed for the target resource, the response SHOULD be `405 Method Not Allowed` status code\" (`Requests_and_responses.md` §\"HTTP Methods\") — not the bulk-delete NOTE, which governs only that one operation.",
             "headers": {
               "Allow": {
                 "schema": {
@@ -6209,10 +6209,10 @@
           "Query"
         ],
         "summary": "Execute an AQL query over a cohort selected in the demographic domain\n(`POST /query/cohort`).",
-        "description": "OUR OWN EXTENSION — no openEHR spec governs this operation. ITS-REST 1.1.0\npublishes an ad-hoc and a stored query and nothing else, and AQL is defined\nover the clinical domain alone (QUERY `master03-syntax.adoc`), with no\ndemographic source. The operation runs in three steps: a predicate from the\ndeployment's `[cohort.predicates]` allow-list selects parties on the\ndemographic credential; the clinical domain resolves them to the EHRs whose\n`EHR_STATUS.subject` names one of them and runs the AQL over exactly those\nEHRs, both on the clinical credential. Only identifiers cross between the\nsteps — no name, address or national identifier leaves the demographic\ndomain, and the caller never receives a party id.\n\nThe result set carries a `meta.cohort` object with the cohort size, the\nnumber of EHRs served, whether small-cell suppression withheld the rows, and\na SHA-256 digest of the predicate list, which is also how the one access\nevent this execution records names the cohort.\n\nA request may instead, or as well, name its `subjects` by identifier in any\nidentifier domain, each resolved through the installed EHR index provider;\nunder an IHE patient identity source that is the only form served, since\nthe server holds no party-to-EHR map there.\n\nThe route answers `404` until the deployment binds at least one predicate\nor sets `[cohort] subjects = true`.",
+        "description": "OUR OWN EXTENSION — no openEHR spec governs this operation. ITS-REST 1.1.0\npublishes an ad-hoc and a stored query and nothing else, and AQL is defined\nover the clinical domain alone (QUERY `master03-syntax.adoc`), with no\ndemographic source. The operation runs in three steps: a predicate from the\ndeployment's `[privacy.cohort.predicates]` allow-list selects parties on the\ndemographic credential; the clinical domain resolves them to the EHRs whose\n`EHR_STATUS.subject` names one of them and runs the AQL over exactly those\nEHRs, both on the clinical credential. Only identifiers cross between the\nsteps — no name, address or national identifier leaves the demographic\ndomain, and the caller never receives a party id.\n\nThe result set carries a `meta.cohort` object with the cohort size, the\nnumber of EHRs served, whether small-cell suppression withheld the rows, and\na SHA-256 digest of the predicate list, which is also how the one access\nevent this execution records names the cohort.\n\nA request may instead, or as well, name its `subjects` by identifier in any\nidentifier domain, each resolved through the installed EHR index provider;\nunder an IHE patient identity source that is the only form served, since\nthe server holds no party-to-EHR map there.\n\nThe route answers `404` until the deployment binds at least one predicate\nor sets `[privacy.cohort] subjects = true`.",
         "operationId": "query_execute_cohort",
         "requestBody": {
-          "description": "`q` REQUIRED (the AQL), `cohort` (the predicates, intersected) and `subjects` (identifiers as `id`, `namespace` and an optional `type`, each resolved through the EHR index provider), at least one of the two non-empty, plus the OPTIONAL `purpose`, `query_parameters`, `offset` and `fetch`. The last four are spelled as on the released `AdhocQueryExecute` body, so a client that already speaks the query API needs no second vocabulary. There is no `ehr_id`: the cohort IS the scope. Each `cohort` entry names a key the deployment bound in `[cohort.predicates]`; several entries INTERSECT. An undeclared member is refused `400`.",
+          "description": "`q` REQUIRED (the AQL), `cohort` (the predicates, intersected) and `subjects` (identifiers as `id`, `namespace` and an optional `type`, each resolved through the EHR index provider), at least one of the two non-empty, plus the OPTIONAL `purpose`, `query_parameters`, `offset` and `fetch`. The last four are spelled as on the released `AdhocQueryExecute` body, so a client that already speaks the query API needs no second vocabulary. There is no `ehr_id`: the cohort IS the scope. Each `cohort` entry names a key the deployment bound in `[privacy.cohort.predicates]`; several entries INTERSECT. An undeclared member is refused `400`.",
           "content": {
             "application/json": {
               "schema": {},
@@ -6252,7 +6252,7 @@
             }
           },
           "404": {
-            "description": "The deployment binds no cohort predicate (`[cohort.predicates]` is empty) and leaves `[cohort] subjects` off, so the surface serves nothing. With authentication enabled, an unauthenticated request is answered `401` first — the gate sits behind authentication.",
+            "description": "The deployment binds no cohort predicate (`[privacy.cohort.predicates]` is empty) and leaves `[privacy.cohort] subjects` off, so the surface serves nothing. With authentication enabled, an unauthenticated request is answered `401` first — the gate sits behind authentication.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6272,7 +6272,7 @@
             }
           },
           "408": {
-            "description": "The inner AQL execution overran the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`).",
+            "description": "The inner AQL execution overran the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6292,7 +6292,7 @@
             }
           },
           "422": {
-            "description": "The predicate matched, or the request named, more parties than `FERROEHR__COHORT__MAX_COHORT_SIZE` allows. Refused rather than truncated: a silently shortened cohort is a wrong denominator with nothing on the wire to say so.",
+            "description": "The predicate matched, or the request named, more parties than `FERROEHR__PRIVACY__COHORT__MAX_COHORT_SIZE` allows. Refused rather than truncated: a silently shortened cohort is a wrong denominator with nothing on the wire to say so.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6310,7 +6310,7 @@
           "terminology"
         ],
         "summary": "Every terminology id the server knows\n(`GET /terminology`).",
-        "description": "Body: `{\"terminology_ids\": [..]}`. Config-gated: `404` when\n`terminology_api_enabled` is off (the route stays mounted but the backend is\nnever consulted).\n\nOUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST\ncontract defines a terminology API. The URL layout, the JSON envelopes, and\nthe existence-by-`404` convention are ours.",
+        "description": "Body: `{\"terminology_ids\": [..]}`. Config-gated: `404` when\n`api.terminology` is off (the route stays mounted but the backend is\nnever consulted).\n\nOUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST\ncontract defines a terminology API. The URL layout, the JSON envelopes, and\nthe existence-by-`404` convention are ours.",
         "operationId": "terminology_ids",
         "responses": {
           "200": {
@@ -6322,7 +6322,7 @@
             }
           },
           "404": {
-            "description": "The terminology extension is disabled (`terminology_api_enabled` off). With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).",
+            "description": "The terminology extension is disabled (`api.terminology` off). With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6884,7 +6884,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false). This is the ONE route in the group with its own released provenance: the operation's NOTE — \"may be disabled in **production** environments, in which case server may respond with `405 Method Not Allowed`\" — with `responses/405.yaml` enumerated: \"`405 Method Not Allowed` is returned when the service knows the request method, but the target resource doesn't support this method (e.g. due to security concerns).\"",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false). This is the ONE route in the group with its own released provenance: the operation's NOTE — \"may be disabled in **production** environments, in which case server may respond with `405 Method Not Allowed`\" — with `responses/405.yaml` enumerated: \"`405 Method Not Allowed` is returned when the service knows the request method, but the target resource doesn't support this method (e.g. due to security concerns).\"",
             "headers": {
               "Allow": {
                 "schema": {
@@ -6969,7 +6969,7 @@
             }
           },
           "405": {
-            "description": "The admin API is disabled on this server (`AppConfig::admin.enabled`, default false). The released operation enumerates no `405` and carries no disable-in-production NOTE — that NOTE belongs to `admin_ehr_delete_all` alone — so the ground here is the cross-cutting overview rule: \"If a method is recognized but not allowed for the target resource, the response SHOULD be `405 Method Not Allowed` status code\" (`Requests_and_responses.md` §\"HTTP Methods\").",
+            "description": "The admin API is disabled on this server (`AppConfig::api.admin`, default false). The released operation enumerates no `405` and carries no disable-in-production NOTE — that NOTE belongs to `admin_ehr_delete_all` alone — so the ground here is the cross-cutting overview rule: \"If a method is recognized but not allowed for the target resource, the response SHOULD be `405 Method Not Allowed` status code\" (`Requests_and_responses.md` §\"HTTP Methods\").",
             "headers": {
               "Allow": {
                 "schema": {
@@ -8647,7 +8647,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[demographic.identifier_protection]` on, the submitted AGENT carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted AGENT carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -9223,7 +9223,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[demographic.identifier_protection]` on, the submitted AGENT carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted AGENT carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -10532,7 +10532,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[demographic.identifier_protection]` on, the submitted GROUP carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted GROUP carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -11108,7 +11108,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[demographic.identifier_protection]` on, the submitted GROUP carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted GROUP carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -11980,7 +11980,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[demographic.identifier_protection]` on, the submitted ORGANISATION carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted ORGANISATION carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -12556,7 +12556,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[demographic.identifier_protection]` on, the submitted ORGANISATION carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted ORGANISATION carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -13428,7 +13428,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[demographic.identifier_protection]` on, the submitted PERSON carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted PERSON carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -14004,7 +14004,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[demographic.identifier_protection]` on, the submitted PERSON carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted PERSON carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -14876,7 +14876,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[demographic.identifier_protection]` on, the submitted ROLE carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted ROLE carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -15452,7 +15452,7 @@
             }
           },
           "409": {
-            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[demographic.identifier_protection]` on, the submitted ROLE carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
+            "description": "OUR OWN EXTENSION — no openEHR spec governs national-identifier protection. With `[privacy.identifier_protection]` on, the submitted ROLE carries a protected identifier whose value the latest version of another party already holds: one value identifies one party. The status is the released `409 Conflict` trigger, \"the request could not be processed because it might generate a duplicate or a conflict\" (`Requests_and_responses.md` §HTTP status codes); the released operation does not enumerate `409`. The body names the scheme, never the value.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -23777,7 +23777,7 @@
             }
           },
           "408": {
-            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`). The maximum here is the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`); with no budget configured only the global request timeout applies.",
+            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`). The maximum here is the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`); with no budget configured only the global request timeout applies.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -23969,7 +23969,7 @@
             }
           },
           "408": {
-            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`).",
+            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -24156,7 +24156,7 @@
             }
           },
           "408": {
-            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`).",
+            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -24349,7 +24349,7 @@
             }
           },
           "408": {
-            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`).",
+            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -24546,7 +24546,7 @@
             }
           },
           "408": {
-            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`).",
+            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -24749,7 +24749,7 @@
             }
           },
           "408": {
-            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__QUERY__TIMEOUT_MS`).",
+            "description": "The released trigger, verbatim: `408 Request Timeout` \"is returned when there is a query execution timeout (i.e. maximum query execution time reached, therefore the server aborted the execution of the query)\" (ITS-REST `specifications/responses/408_Query.yaml`) — here the configured per-query execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`).",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -25871,11 +25871,11 @@
     },
     {
       "name": "smart",
-      "description": "SMART App Launch service discovery (config-gated: FERROEHR_REST_SMART__ENABLED)."
+      "description": "SMART App Launch service discovery (config-gated: FERROEHR__AUTH__SMART__DISCOVERY)."
     },
     {
       "name": "openapi",
-      "description": "`OpenAPI` document + Swagger UI discoverability (config-gated: FERROEHR_REST_SWAGGER_UI)."
+      "description": "`OpenAPI` document + Swagger UI discoverability (config-gated: FERROEHR__API__OPENAPI_UI)."
     },
     {
       "name": "management",
@@ -25883,7 +25883,7 @@
     },
     {
       "name": "terminology",
-      "description": "Terminology extension wire (config-gated: FERROEHR_REST_TERMINOLOGY__ENABLED)."
+      "description": "Terminology extension wire (config-gated: FERROEHR__API__TERMINOLOGY)."
     },
     {
       "name": "demographic-relationship",
@@ -25907,7 +25907,7 @@
     },
     {
       "name": "admin-identifiers",
-      "description": "The audited read of a party's protected national identifiers: a party version with the identifiers `[demographic.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and `authz.rbac.identifier_reader_role`, and every read is an access record naming the reader, the party and the scheme, never the value."
+      "description": "The audited read of a party's protected national identifiers: a party version with the identifiers `[privacy.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and `authz.rbac.identifier_reader_role`, and every read is an access record naming the reader, the party and the scheme, never the value."
     },
     {
       "name": "admin-marks",

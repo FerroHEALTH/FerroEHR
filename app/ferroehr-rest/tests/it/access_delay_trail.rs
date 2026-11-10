@@ -61,9 +61,8 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         .compile()
         .expect("the shipped map compiles");
     let section = AccessDelayConfig {
-        enabled: true,
         categories: vec!["Patient-Summaries".to_owned()],
-        hours: 72,
+        max_delay: Some(ferrohealth_config::units::Duration::from_hours(72)),
     };
     let svc = Arc::new(
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
@@ -88,7 +87,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     authz.rbac.subject_audit_role = Some("PORTAL".to_owned());
     let handle = AuthzHandle::build(
         &authz,
-        &config.rest.base_path,
+        &config.api.base_path,
         None,
         common::null_resolvers(),
     )

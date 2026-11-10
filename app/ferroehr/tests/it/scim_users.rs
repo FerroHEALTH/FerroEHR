@@ -467,7 +467,7 @@ async fn a_user_whose_person_lacks_a_required_value_is_incomplete() {
     );
 }
 
-/// The bound of one hundred deactivations an hour, the `[scim]` default.
+/// The bound of one hundred deactivations an hour, the `[auth.scim]` default.
 const BOUND: Deactivations = Deactivations {
     max: 100,
     window_minutes: 60,

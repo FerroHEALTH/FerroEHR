@@ -22,7 +22,7 @@
 # terminology-backed surface: one reachable server serving the two seeded
 # namespaces, and the fail-open branch.
 #
-# WHY FAIL-OPEN HERE. `[terminology.server] fail_on_error` decides what a
+# WHY FAIL-OPEN HERE. `[terminology] on_error` decides what a
 # deployment does with a bound value set it cannot resolve, and a running
 # server realizes exactly ONE branch. This deployment realizes the shipped
 # default (accept), the arm the party statement selects for the
@@ -31,8 +31,8 @@
 services:
   ferroehr:
     environment:
-      FERROEHR__TERMINOLOGY__SERVER__ENABLED: "true"
-      FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR: "false"
+      FERROEHR__TERMINOLOGY__URL: http://terminology:8080/r4b
+      FERROEHR__TERMINOLOGY__ON_ERROR: accept
     depends_on:
       # FerroTERM reports healthy only once the mounted seed is served, so the
       # first binding a composition carries finds the value set

@@ -188,7 +188,7 @@ async fn an_unstamped_row_is_assessed_from_the_body_at_read() {
     );
 }
 
-/// A body with no `FEEDER_AUDIT`, committed by a client the `[origins]`
+/// A body with no `FEEDER_AUDIT`, committed by a client the `[[authz.origin]]`
 /// register names, is stamped with that client's origin; any other caller's
 /// direct commit keeps this server (EHDS Annex II 3.4).
 #[tokio::test]

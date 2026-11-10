@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The discovery documents FerroEHR's SCIM endpoint serves, built from
-//! `[scim]` and the shared party mapping.
+//! `[auth.scim]` and the shared party mapping.
 //!
 //! RFC 7644 §4: `/Schemas` returns "all supported schemas", so the User
 //! schema is the core User reduced to `userName`, `active` and the attributes
@@ -105,7 +105,7 @@ pub(crate) fn discovery(
         etag: true,
         filter: FilterConfig {
             supported: true,
-            max_results: scim.max_results,
+            max_results: scim.filter_max_results,
         },
         authentication_schemes: vec![AuthenticationScheme {
             primary: Some(true),
@@ -274,7 +274,6 @@ mod tests {
 
     fn enabled() -> ScimConfig {
         ScimConfig {
-            enabled: true,
             public_base_url: Some("https://cdr.example.com".to_owned()),
             ..ScimConfig::default()
         }

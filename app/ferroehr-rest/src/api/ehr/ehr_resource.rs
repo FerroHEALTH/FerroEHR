@@ -64,7 +64,7 @@ pub(crate) async fn get_by_subject(
 pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     // The configured base path, for building `Location` URLs.
-    let base = state.config().rest.base_path.clone();
+    let base = state.config().api.base_path.clone();
     // EHR / EHR_STATUS have no Simplified-Formats mapping (they are not
     // templated) — a simplified Content-Type/Accept is rejected uniformly.
     crate::formats::dispatch::guard_non_templated(h)?;
@@ -85,7 +85,7 @@ pub(crate) async fn create_with_id(
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     // The configured base path, for building `Location` URLs.
-    let base = state.config().rest.base_path.clone();
+    let base = state.config().api.base_path.clone();
     // EHR / EHR_STATUS have no Simplified-Formats mapping (they are not
     // templated) — a simplified Content-Type/Accept is rejected uniformly.
     crate::formats::dispatch::guard_non_templated(h)?;

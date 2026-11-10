@@ -80,9 +80,9 @@ impl Users {
                 listing,
                 limit: Deactivations {
                     max: scim.max_deactivations,
-                    window_minutes: scim.deactivation_window_minutes,
+                    window_minutes: scim.window_minutes(),
                 },
-                contact_erasure_minutes: scim.contact_erasure_minutes,
+                contact_erasure_minutes: scim.erasure_minutes(),
             }),
         })
     }

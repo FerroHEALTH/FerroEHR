@@ -17,7 +17,7 @@ deployment records a queryable audit trail with zero external dependencies.
 > an access under load can go unrecorded. A deployment that must never serve
 > an unrecorded access sets `fail_mode = "closed"`, which answers `503` and
 > `Retry-After` instead. A deployment declaring
-> [`deployment_profile = "production"`](installation/configuration.md#deployment_profile)
+> [`deployment.profile = "production"`](installation/configuration.md#deploymentprofile)
 > refuses to start with auditing off.
 
 <!-- toc -->
@@ -478,7 +478,7 @@ An emergency the caller does not declare is not marked.
 
 ### Retention, and who chooses it
 
-`[audit.store] retention_days` decides how long the repository keeps a record:
+`[audit.store] retention` decides how long the repository keeps a record:
 `0`, the default, keeps them forever, and any other value sets the horizon.
 Every record stores the first date it may be deleted on, and the reaper
 deletes each record hourly on or after that date and never before it. An
@@ -505,8 +505,8 @@ deployment answers to are the ones its `[privacy.identifier_scan]` rules name,
 and where one publishes a minimum retention for the access log the server
 refuses to boot with a shorter horizon, naming the configured value and the
 floor. `0` always passes. The floors are written in calendar years, as the law
-writes them: a horizon set as `[audit.store] retention_years` is compared
-against the years exactly, and one set as `retention_days` against the most
+writes them: a horizon set as `[audit.store] retention` is compared
+against the years exactly, and one set as `retention` against the most
 days those years can span (the day count in brackets below). The floors
 registered:
 
@@ -561,7 +561,7 @@ Records fan out to independently configured sinks (`[audit]` in
 
 | Sink | Default | What it does |
 |---|---|---|
-| `[audit.store]` | **on** | The local **Audit Record Repository**: records persist in the dedicated `audit` PostgreSQL schema (append-only and tamper-evident, strictly outside the EHR content), served back via the ITI-81 search below. `retention_days` prunes old records hourly (`0` = keep forever). |
+| `[audit.store]` | **on** | The local **Audit Record Repository**: records persist in the dedicated `audit` PostgreSQL schema (append-only and tamper-evident, strictly outside the EHR content), served back via the ITI-81 search below. `retention` prunes old records hourly (`0` = keep forever). |
 | `[audit.syslog]` | off | The classic ATNA feed: DICOM PS3.15 XML as RFC 5424 syslog over RFC 5425 TLS to an external ARR, per IHE ITI-20. |
 | `[audit.fhir_feed]` | off | The RESTful-ATNA feed (ITI-20 **ATX: FHIR Feed**): each FHIR `AuditEvent` is `POST`ed to an external FHIR ARR. With the local store on, delivery is **outbox-driven**: an ARR outage loses nothing, pending records ship on recovery. The outbox holds the records written while the feed is configured; with the feed off, no record is owed. Records stored before FerroEHR kept an outbox and never delivered ship once a feed runs. |
 
@@ -570,7 +570,7 @@ Emission never blocks the request path: a record is handed to a bounded queue
 
 ### While a composition is held from the person
 
-With [`[access_delay]`](security.md#delayed-access-by-the-person-ehds-art-33)
+With [`[privacy.access_delay]`](security.md#delayed-access-by-the-person-ehds-art-33)
 on, a new composition can be held from the person under
 [EHDS](https://eur-lex.europa.eu/eli/reg/2025/327/oj) Art. 3(3) until a
 professional releases it or its period passes. Only one route honours the
@@ -585,7 +585,7 @@ hold is in force:
 | `[audit.store]`, read without the `patient` scope | every record, the hold's own included | The unscoped ITI-81 read is the controller's, under the admin role |
 | `[audit.syslog]` | every record, sent as it is written: the commit, each read and the hold's own record name the composition, the last as `access-delay:<vo>` beside the patient | An ITI-20 feed goes to an Audit Record Repository, which "receives event audit reports and stores them" ([IHE ITI TF-1 §9.1.1.3](https://profiles.ihe.net/ITI/TF/Volume1/ch-9.html)) |
 | `[audit.fhir_feed]` | the same records as FHIR `AuditEvent` resources, `POST`ed as they are written, the hold's own record naming the same `access-delay:<vo>` | The same ITI-20 repository, over ATX: FHIR Feed; the reader of a BALP `AuditEvent` is an Audit Consumer ([BALP §1:52.1](https://profiles.ihe.net/ITI/BALP/volume-1.html)) |
-| [Change events](beyond-core/outbox-feed.md) (`[outbox]`) | the commit of the held composition: its `vo_id`, kind, change type and template | The feed serves the deployment's own readers; it withholds what binds them, a restriction or objection (GDPR Art. 18 and 21, EHDS Art. 8), and the Art. 3(3) hold binds only the person's access |
+| [Change events](beyond-core/outbox-feed.md) (`[record.change_feed]`) | the commit of the held composition: its `vo_id`, kind, change type and template | The feed serves the deployment's own readers; it withholds what binds them, a restriction or objection (GDPR Art. 18 and 21, EHDS Art. 8), and the Art. 3(3) hold binds only the person's access |
 
 EHDS Art. 9(2) gives the person the access information "through electronic
 health data access services", which are yours to run. A repository, a feed
@@ -654,7 +654,7 @@ Four controls sit on top of it, and they are separate on purpose:
 - **The privileges are narrow.** The runtime role may record an event, stamp it
   forwarded, and read the trail back. It holds nothing that can rewrite a
   record, remove one, or alter the chain's own bookkeeping. That posture is only
-  fully in force with `db.migrate = "verify"`; see
+  fully in force with `database.migrations = "verify"`; see
   [Operations](operations.md#database-roles-and-least-privilege), because a
   self-migrating server owns the schema and can therefore turn the enforcement
   off.
@@ -673,12 +673,12 @@ Four controls sit on top of it, and they are separate on purpose:
   noticed.
 - **The server runs the check itself, on a schedule.** With the local store on,
   the check runs one minute after boot and then every
-  `[audit.store] verify_interval_seconds` (default `3600`, one hour; `0` turns
+  `[audit.store] verify_interval` (default `3600`, one hour; `0` turns
   it off). Each run verifies the records written since the newest link an
   earlier run found intact, and the chain head, so its cost follows the
   records written since rather than the size of the trail
   (`audit.verify_audit_chain_incremental()`). A full pass
-  runs every `[audit.store] full_verify_interval_seconds` (default `604800`,
+  runs every `[audit.store] full_verify_interval` (default `604800`,
   one week; `0` leaves it to the query above) and after every run that found
   damage, so damage to an older record stays reported. A run that finds damage logs at `ERROR`, one summary line with the
   finding count and one line per finding (the first 20), and adds the count to
@@ -812,10 +812,10 @@ mutually-authenticated-node posture. Deployments terminating TLS at an
 ingress leave `[server.tls]` unset and enforce mTLS there instead.
 
 > [!WARNING]
-> The separate-port management listener (`management.port`) stays **plain HTTP**
+> The separate-port management listener (`management.listen`) stays **plain HTTP**
 > even with `[server.tls]` set, and it binds all interfaces. Treat it as an
 > internal surface and keep it off any publicly routed port. Under
-> `deployment_profile = "production"` setting it opens the `plaintext_listener`
+> `deployment.profile = "production"` setting it opens the `plaintext_listener`
 > gap, so the server refuses to start unless the gap is accepted by name.
 
 Complete the posture with time synchronisation (IHE Consistent Time): run

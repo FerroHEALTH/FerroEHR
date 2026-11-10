@@ -60,7 +60,7 @@ honour **refuses to boot** rather than degrading at the first request:
 | an `issuer` with no `audience` | error: a server with no declared audience cannot reject another server's token (RFC 9068 §4, RFC 8725 §3.9) |
 | an `issuer` not `https` (plain `http` is accepted on a loopback host only), carrying a query or fragment, or a user name or password | error: RFC 8414 §2, §6.2; OpenID Connect Core 1.0 §1.2 |
 | an issuer whose metadata or key set cannot be read | error: the start is refused rather than the first request |
-| `clock_skew_seconds` above `300` | error: leeway may be "no more than a few minutes" (RFC 7519 §4.1.4) |
+| `clock_skew` above `"5min"` | error: leeway may be "no more than a few minutes" (RFC 7519 §4.1.4) |
 | `algorithms` naming an `HS*` algorithm, or empty | error: the server accepts asymmetric algorithms only (RFC 8725 §3.1, §3.2) |
 | a `jwks_file` holding a symmetric key or a private-key member | error: a verifier holds public keys only |
 | a `product_scope` that is neither a full URI nor starts with `__` | error: SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility |
@@ -73,8 +73,8 @@ honour **refuses to boot** rather than degrading at the first request:
 | an `[authz.rbac] role_issuers` entry that is not a `persons` issuer | error: only a person holds an administrator or emergency role |
 
 Successfully verified Basic credentials are cached for
-`FERROEHR__AUTH__BASIC__CACHE_TTL_SECONDS` (default `0`, which checks every
-request) so a busy client pays the deliberately expensive Argon2 verification
+`FERROEHR__AUTH__BASIC__CACHE_TTL` (default `5min`; `0s` turns the cache off
+and checks every request) so a busy client pays the deliberately expensive Argon2 verification
 once per TTL instead of on every request. The cache names each entry by a keyed
 hash of the credential, never the password, and an entry exists only after a
 successful verification; the TTL bounds how long a removed user can still
@@ -90,11 +90,11 @@ The bearer settings:
 | `FERROEHR__AUTH__ISSUER__0__AUDIENCE` | unset (**required with an issuer**) | accepted `aud` values |
 | `FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS` | unset | the deployment's own clients, the only ones a `persons` token is admitted through beside `delegates` |
 | `FERROEHR__AUTH__ISSUER__0__ALGORITHMS` | `RS256,RS384,PS256,PS384,ES256,ES384` | accepted signing algorithms, asymmetric only |
-| `FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW_SECONDS` | `60` | leeway on `exp`, `nbf` and `iat`; capped at `300` |
+| `FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW` | `60s` | leeway on `exp`, `nbf` and `iat`; capped at `5min` |
 | `FERROEHR__AUTH__ISSUER__0__JWKS_FILE` | unset | a static JWK Set of public keys, read instead of the issuer's metadata |
-| `FERROEHR__AUTH__ISSUER__0__JWKS_MAX_AGE_SECONDS` | `600` | a key set older than this is read again |
-| `FERROEHR__AUTH__ISSUER__0__JWKS_REFRESH_INTERVAL_SECONDS` | `60` | an unknown `kid` reads the key set again at most once per interval |
-| `FERROEHR__AUTH__ISSUER__0__TIMEOUT_MS` | `10000` | one call to the authorization server |
+| `FERROEHR__AUTH__ISSUER__0__JWKS_MAX_AGE` | `10min` | a key set older than this is read again |
+| `FERROEHR__AUTH__ISSUER__0__JWKS_REFRESH_INTERVAL` | `1min` | an unknown `kid` reads the key set again at most once per interval |
+| `FERROEHR__AUTH__ISSUER__0__TIMEOUT` | `10s` | one call to the authorization server |
 | `FERROEHR__AUTH__REALM` | `ferroehr` | the realm every challenge names |
 | `FERROEHR__AUTH__PRODUCT_SCOPE` | `__ferroehr.platform` | the scope that admits the ADMIN and DEMOGRAPHIC APIs |
 
@@ -449,7 +449,7 @@ the marker is the RM's own.
 
 - **Who counts as the person.** A bearer token with a `patient/` scope and no
   `user/` or `system/` scope (for example `patient/composition-*.cruds`), from an
-  issuer in [`[smart] patient_issuers`](smart-app-launch.md#launch-context-binding-to-one-ehr).
+  issuer in [`[auth.smart] patient_issuers`](smart-app-launch.md#launch-context-binding-to-one-ehr).
   The SMART scope grammar reserves `patient/` for "applications acting in the
   context of a specific patient/EHR" and `user/` for those acting for a
   logged-in practitioner, so a clinician's app uses `user/` scopes and keeps
@@ -498,13 +498,13 @@ specification governs it; it is our own design.
 
 FerroEHR ships the software part. Whether the delay applies, to which data and
 for how long is the Member State's rule, and you configure it in
-[`[access_delay]`](installation/config-auth.md#access_delay). It is off by
+[`[privacy.access_delay]`](installation/config-auth.md#privacyaccess_delay). It is off by
 default, so the person's access stays immediate.
 
 - **What is held.** With the section on, every new COMPOSITION whose category
   (the [`[audit.categories]`](installation/config-audit.md) map, template first,
-  then the root archetype) is listed in `access_delay.categories` is held from
-  the moment it is committed, for `access_delay.hours`. Only the first version
+  then the root archetype) is listed in `privacy.access_delay.categories` is held from
+  the moment it is committed, for `privacy.access_delay.max_delay`. Only the first version
   is held: a composition the person has already seen stays visible when it is
   amended, and a professional holds an amendment by hand if it needs
   explaining. A composition the person commits is never held from them.
@@ -529,7 +529,7 @@ default, so the person's access stays immediate.
   controller releases with
   `POST /ferroehr/rest/extensions/v1/admin/access-delay/release`, and holds
   one by hand with `POST /ferroehr/rest/extensions/v1/admin/access-delay`, for
-  at most `access_delay.hours`
+  at most `privacy.access_delay.max_delay`
   ([the routes](operations-admin-apis.md#legal-marks-restriction-objection-and-retention)).
 - **The limit.** Every hold ends by itself when its period passes, released or
   not, because Art. 3(3) allows a delay "for a limited period of time" only.
@@ -646,10 +646,10 @@ without it.
 | `FERROEHR__AUTHZ__ABAC__PATIENT_CLAIM` | `patient_id` | JWT claim for the patient attribute (enables the subject gate) |
 | `FERROEHR__AUTHZ__ABAC__CHECK_DIRECTORY` | `false` | also submit DIRECTORY (FOLDER) operations to the policy engine |
 | `FERROEHR__AUTHZ__ABAC__CEDAR__POLICY_DIR` | — (required for `cedar`) | directory of `*.cedar` policy files |
-| `FERROEHR__AUTHZ__ABAC__CEDAR__RELOAD_SECS` | off | optional policy hot-reload interval |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__SERVER` | — (required for `remote`) | PDP base URL (must end with `/`) |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__CONNECT_TIMEOUT_MS` | `2000` | PDP connect timeout |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__REQUEST_TIMEOUT_MS` | `5000` | PDP request timeout |
+| `FERROEHR__AUTHZ__ABAC__CEDAR__RELOAD_INTERVAL` | off | optional policy hot-reload interval |
+| `FERROEHR__AUTHZ__ABAC__REMOTE__URL` | — (required for `remote`) | PDP base URL (must end with `/`) |
+| `FERROEHR__AUTHZ__ABAC__REMOTE__CONNECT_TIMEOUT` | `2000` | PDP connect timeout |
+| `FERROEHR__AUTHZ__ABAC__REMOTE__TIMEOUT` | `5000` | PDP request timeout |
 
 Two engines sit behind one interface. **Cedar** is the embedded default:
 policies live in `*.cedar` files, are schema-validated at boot against a
@@ -788,20 +788,20 @@ real web server should send the headers properly instead.
 Four different protections, four different statuses, and an operator should be
 able to tell them apart from the status alone.
 
-**Connection bounds:** `[server] header_read_timeout_ms`. The limit that applies
+**Connection bounds:** `[server] header_read_timeout`. The limit that applies
 *before* a request exists, because a client that opens a socket and trickles
 headers, or sends nothing at all, reaches none of the others: a client that has
 not sent its request head in time, counted from accept, is disconnected, on the
 plain and the TLS listener alike. On a kept-alive connection the bound counts
-from the first byte of each later request head, and `[server] idle_timeout_ms`
-(120 s by default) closes a connection that waits that long for its next request.
+from the first byte of each later request head, and `[server] idle_timeout`
+(two minutes by default) closes a connection that waits that long for its next request.
 Keep it longer than the idle timeout of your clients (90 s for a Go client) and
 of any load balancer in front, so they close an idle connection first.
 
-**Body size:** `[server] body_limit_bytes` and `[rest] body_limit_bytes`. Two
+**Body size:** `[server] body_limit` and `[api] body_limit`. Two
 tiers: the routes that accept bulk by design (template upload and
 `/message/import`) take the listener's limit, and the clinical surface the
-narrower `[rest]` one when it is set. Over-limit is `413`. The listener's
+narrower `[api]` one when it is set. Over-limit is `413`. The listener's
 default is the family's 1 MiB; a deployment that uploads operational
 templates raises it (the chart and the Compose files set 64 MiB), and one whose
 compositions embed large `DV_MULTIMEDIA` data raises the clinical tier
@@ -841,10 +841,10 @@ authenticated `/management` surface.
 | `{rest root}/status` | **always on, unauthenticated** | A documented client contract: status, server version, ITS-REST version, timestamp and the deployment profile. The licence, the deployment gaps and the support period are `/management/status`. |
 | `{rest root}/.well-known/smart-configuration` | mounted only with SMART on | SMART App Launch service discovery, read before the client holds any token (ITS-REST SMART App Launch, *Service Discovery*). |
 | `OPTIONS {base path}` | **always on, unauthenticated** | The ITS-REST System API's options manifest, which its released OpenAPI document declares without security. |
-| `{rest root}/swagger-ui`, `{rest root}/api-docs/*` | **`private`** (`rest.swagger_ui`) | Public only if you set `public`; `admin_only` and `off` are the other levels. |
+| `{rest root}/swagger-ui`, `{rest root}/api-docs/*` | **`private`** (`api.openapi_ui`) | Public only if you set `public`; `admin_only` and `off` are the other levels. |
 | `/management/*` | **not mounted at all** (`management.enabled = false`) | With the master switch off, every route is `404`. |
 | `/management/{info,metrics,prometheus,env,loggers,flamegraph,health,status}` | each **`off`** individually | Even with the master switch on, each endpoint stays unmounted until you name a level for it. There is no global fallback: silence means `off`, so a surface this privileged opens one endpoint at a time, by name. |
-| `management.port` | unset (shares the API listener) | Set it to serve ops introspection from **its own listener** on its own port. It binds all interfaces and always stays plain HTTP even with `[server.tls]` on, so treat it as an internal surface and keep it off any publicly routed port; the interface half of the separation is your network's, not this key's. Under `deployment_profile = "production"` setting it opens the `plaintext_listener` gap, so the server refuses to start unless the gap is accepted by name. |
+| `management.listen` | unset (shares the API listener) | Set it to serve ops introspection from **its own listener** on its own port. It binds all interfaces and always stays plain HTTP even with `[server.tls]` on, so treat it as an internal surface and keep it off any publicly routed port; the interface half of the separation is your network's, not this key's. Under `deployment.profile = "production"` setting it opens the `plaintext_listener` gap, so the server refuses to start unless the gap is accepted by name. |
 
 `env` and `flamegraph` deserve particular caution: `env` renders the
 effective configuration (redacted, but still configuration), and `flamegraph`
@@ -861,12 +861,12 @@ error naming the pair:
 
 | Secret | File sibling |
 |---|---|
-| the database DSN, per storage domain, and the credential that prepares the schema | `db.url_file`, `storage.<domain>.url_file`, `db.migrate_url_file` |
+| the database DSN, per storage domain, and the credential that prepares the schema | `database.url_file`, `database.<domain>.url_file`, `db.migrate_url_file` |
 | a Basic user's Argon2 hash | `auth.basic.users[].password_hash_file` |
-| the PGP signing-key passphrase | `signing.key_passphrase_file` |
-| a terminology OAuth2 client secret | `terminology.server.oauth.client_secret_file` |
+| the PGP signing-key passphrase | `record.signing.key_passphrase_file` |
+| a terminology OAuth2 client secret | `[terminology].oauth.client_secret_file` |
 | the object-store secret key | `multimedia.secret_access_key_file` |
-| the national-identifier root key | `demographic.identifier_protection.key_file` |
+| the national-identifier root key | `privacy.identifier_protection.key_file` |
 
 (The TLS `certificate_file` / `client_ca_file` settings and a static key
 set's `auth.jwks_file` are paths by nature and have no inline form at all,
@@ -881,7 +881,7 @@ services:
   ferroehr:
     environment:
       # Point the key at the mount path; the VALUE never appears anywhere.
-      FERROEHR__SIGNING__KEY_PASSPHRASE_FILE: /run/secrets/signing_passphrase
+      FERROEHR__RECORD__SIGNING__KEY_PASSPHRASE_FILE: /run/secrets/signing_passphrase
     secrets:
       - signing_passphrase
 
@@ -972,7 +972,7 @@ stored, and no schema split saves you from a national identifier written into
 the clinical side; see
 [Privacy and identifiers](installation/config-privacy.md). And the split is a
 schema split by default: giving the demographic domain its own
-`[storage.party] url` is what turns it into a credential split, which is the
+`[database.party] url` is what turns it into a credential split, which is the
 deployment step described in
 [Operations](operations.md#database-roles-and-least-privilege).
 
@@ -984,7 +984,7 @@ in the database. An EHR names its subject in its own
 `EHR_STATUS.subject.external_ref`, which the `ehr` relation copies into its
 subject columns on every EHR create and `EHR_STATUS` update. A cohort and the
 AQL demographic join read the parties on the `party` connection and the EHRs whose subject names them on the `clinical` connection,
-with a second search path and, when `[storage.party] url` is set, a second
+with a second search path and, when `[database.party] url` is set, a second
 database role. FerroEHR matches, links and merges no patients, and offers no
 lookup from a national identifier to its party.
 
@@ -1024,8 +1024,8 @@ patient identifier to an EHR without putting it in a FerroEHR URL.
 
 The separations above are each a configuration key, and a deployment that has
 made none of them is indistinguishable from one that has made all of them
-until something goes wrong. The top-level `deployment_profile` key
-([configuration](installation/configuration.md#deployment_profile)) makes the
+until something goes wrong. The top-level `deployment.profile` key
+([configuration](installation/configuration.md#deploymentprofile)) makes the
 posture explicit: `production` refuses to start while a separation is missing
 and not accepted by name, and reads the cluster each pool reached from
 `pg_control_system()` rather than trusting the DSN text; `sandbox`, the
@@ -1074,8 +1074,8 @@ The chapter **[Version signing](signing/index.md)** covers the mechanism in two
 pages: [Digest signing](signing/digest.md) (what is signed, when, what the
 stored value proves, and how to reproduce it yourself) and
 [PGP signing](signing/pgp.md) (key configuration and rotation, client-supplied
-signatures, and the signature an import wrapper carries). The `[signing]` keys
-are in the [configuration reference](installation/config-auth.md#signing).
+signatures, and the signature an import wrapper carries). The `[record.signing]` keys
+are in the [configuration reference](installation/config-auth.md#recordsigning).
 
 ## ATNA audit trail
 

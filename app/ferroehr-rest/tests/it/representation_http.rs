@@ -22,7 +22,7 @@ use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::state::AppState;
-use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::party::config::PartySection;
 use ferrohealth_smart::party::source::{Lookup, PartyRecord, PartySource, Query, SourceError};
 use ferrohealth_smart::party::{Markers, PartyRef, PartyState, Represented};
@@ -47,14 +47,14 @@ const STRANGER: &str = "8b2c3d4e-5f6a-4b7c-9d8e-0f1a2b3c4d5e";
 /// claim is `represents`, with its `patient/` grants honoured.
 fn config() -> AppConfig {
     let mut auth = common::auth(AuthSection {
-        issuer: IssuerKey::List(vec![IssuerEntry {
+        issuer: vec![IssuerEntry {
             jwks_file: common::jwks_file().display().to_string(),
             representation: Some(Representation {
                 claim: REPRESENTS.to_owned(),
                 ground_claim: None,
             }),
             ..common::entry(ISSUER, AUDIENCE)
-        }]),
+        }],
         party: vec![PartySection {
             issuer: ISSUER.to_owned(),
             identifier_issuer: LOGIN.to_owned(),
@@ -69,7 +69,7 @@ fn config() -> AppConfig {
         auth,
         ..AppConfig::default()
     };
-    config.smart.patient_issuers = vec![ISSUER.to_owned()];
+    config.auth.smart.patient_issuers = vec![ISSUER.to_owned()];
     config
 }
 

@@ -24,7 +24,7 @@ use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
 use ferrohealth_server::section::CallerRate;
-use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::federation::{FederationSection, Field, Mapping, Source};
 use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::sender::proof::DpopSection;
@@ -71,7 +71,7 @@ fn eprescription(hours: u32) -> Agreement {
         reads: vec![SCOPE.to_owned()],
         writes: vec![DISPENSATION.to_owned()],
         discard: true,
-        discard_window_hours: hours,
+        discard_window: ferrohealth_config::units::Duration::from_hours(u64::from(hours)),
         ehdsi_service: Some(EhdsiService::Eprescription),
         caller_rate: Some(CallerRate {
             requests_per_second: std::num::NonZeroU32::MIN.saturating_add(99),
@@ -99,14 +99,14 @@ async fn serve(agreement: Agreement) -> (testkit::TestDb, Arc<FerroEhrService>, 
     );
     let constant = |value: &str| vec![Source::Constant(value.to_owned())];
     let mut auth = common::auth(AuthSection {
-        issuer: IssuerKey::List(vec![IssuerEntry {
+        issuer: vec![IssuerEntry {
             issuer: CONTACT_POINT.to_owned(),
             kind: Some(IssuerKind::Federation),
             audience: vec![AUDIENCE.to_owned()],
             jwks_file: common::jwks_file().display().to_string(),
             sender_constraint: SenderConstraint::Required,
             ..IssuerEntry::default()
-        }]),
+        }],
         federation: vec![FederationSection {
             issuer: CONTACT_POINT.to_owned(),
             contact_point: Some(true),
@@ -134,7 +134,7 @@ async fn serve(agreement: Agreement) -> (testkit::TestDb, Arc<FerroEhrService>, 
         agreements: vec![agreement],
         ..common::api_config(true)
     };
-    config.smart.patient_issuers = vec![CONTACT_POINT.to_owned()];
+    config.auth.smart.patient_issuers = vec![CONTACT_POINT.to_owned()];
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
         .await
         .expect("build app");

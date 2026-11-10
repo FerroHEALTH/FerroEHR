@@ -30,7 +30,7 @@
 //!
 //! Gating: mounted under `/admin/`, so they inherit the group's RBAC Admin
 //! class (`401`/`403`, our own authorization design — the released admin
-//! operations carry `security: []`) and the `AppConfig::admin.enabled` config
+//! operations carry `security: []`) and the `AppConfig::api.admin` config
 //! gate (`405` with an empty `Allow` when off) unchanged.
 
 #![expect(

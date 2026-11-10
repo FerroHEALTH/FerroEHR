@@ -95,7 +95,7 @@ pub async fn run(
             config.validate()?;
             let pools = crate::connect_pool(&config).await?;
             let service = crate::attach_terminology(
-                FerroEhrService::new(&pools).with_spec_profile(config.spec_profile),
+                FerroEhrService::new(&pools).with_spec_profile(config.deployment.spec_profile),
                 &config,
             )?;
             load(&service, paths).await

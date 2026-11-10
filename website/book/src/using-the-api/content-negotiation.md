@@ -511,7 +511,7 @@ scope checks apply only to a served method. A request without a credential is
 still `401`.
 
 When a resource is switched off by configuration (the
-[admin API](../operations-admin-apis.md) with `FERROEHR__ADMIN__ENABLED=false`),
+[admin API](../operations-admin-apis.md) with `FERROEHR__API__ADMIN=false`),
 the header is present but **empty**, which
 [RFC 9110 §10.2.1](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.1)
 defines as "the resource allows no methods": nothing you can send to that path

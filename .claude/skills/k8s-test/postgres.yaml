@@ -13,7 +13,7 @@ metadata:
   name: ferroehr-db
 type: Opaque
 stringData:
-  FERROEHR__DB__URL: postgres://ferroehr:ferroehr@ferroehr-postgres:5432/ferroehr
+  FERROEHR__DATABASE__URL: postgres://ferroehr:ferroehr@ferroehr-postgres:5432/ferroehr
   POSTGRES_PASSWORD: postgres
   PG_INIT_PASSWORD: ferroehr
 ---

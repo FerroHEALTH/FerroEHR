@@ -30,7 +30,7 @@
 //!   produced and is not declared — the served document describes only what this
 //!   server emits.
 //!
-//! The group is config-gated (`AppConfig::admin.enabled`, default false), and
+//! The group is config-gated (`AppConfig::api.admin`, default false), and
 //! while off every route answers `405` with problem details before the
 //! backend is touched. The ground differs per route and each declaration cites
 //! its own: `admin_ehr_delete_all` has released provenance (its own NOTE plus
@@ -96,7 +96,7 @@ guarded_handler! {
     /// Admin API (`specifications/admin.openapi.yaml`) defines exactly two
     /// operations, both EHR deletes, and no openEHR specification models server
     /// configuration at all; this route is excluded from any conformance-profile
-    /// claim. Same admin gate as the sibling deletes (`AppConfig::admin.enabled` →
+    /// claim. Same admin gate as the sibling deletes (`AppConfig::api.admin` →
     /// `405` when off; RBAC Admin class by the `/admin/` path → `401`
     /// unauthenticated / `403` non-admin).
     ///
@@ -145,7 +145,7 @@ guarded_handler! {
              body = serde_json::Value,
              example = json!({ "error": "Forbidden", "message": "operation requires the 'ADMIN' role" })),
             (status = 405, description = "The admin API is disabled on this server \
-                                          (`AppConfig::admin.enabled`, default \
+                                          (`AppConfig::api.admin`, default \
                                           false). This route has no released file, \
                                           so its ground is the cross-cutting \
                                           overview rule — \"If a method is \
@@ -266,7 +266,7 @@ guarded_handler! {
              body = serde_json::Value,
              example = json!({ "error": "Forbidden", "message": "operation requires the 'ADMIN' role" })),
             (status = 405, description = "The admin API is disabled on this server \
-                                          (`AppConfig::admin.enabled`, default \
+                                          (`AppConfig::api.admin`, default \
                                           false). This is the ONE route in the \
                                           group with its own released provenance: \
                                           the operation's NOTE — \"may be disabled \
@@ -380,7 +380,7 @@ guarded_handler! {
                  "message": "EHR 7d44b88c-4199-4bad-97dc-d78268e01398"
              })),
             (status = 405, description = "The admin API is disabled on this server \
-                                          (`AppConfig::admin.enabled`, default \
+                                          (`AppConfig::api.admin`, default \
                                           false). The released operation enumerates \
                                           no `405` and carries no \
                                           disable-in-production NOTE — that NOTE \
@@ -484,7 +484,7 @@ guarded_handler! {
                  "message": "template 'openEHR-EHR-COMPOSITION.minimal.v1' is still referenced by 3 committed version(s); delete those compositions before deleting the template"
              })),
             (status = 405, description = "The admin API is disabled on this server \
-                                          (`AppConfig::admin.enabled`, default \
+                                          (`AppConfig::api.admin`, default \
                                           false). This route has no released file, \
                                           so its ground is the cross-cutting \
                                           overview rule — \"If a method is \
@@ -576,7 +576,7 @@ guarded_handler! {
                  "message": "party aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
              })),
             (status = 405, description = "The admin API is disabled on this server \
-                                          (`AppConfig::admin.enabled`, default \
+                                          (`AppConfig::api.admin`, default \
                                           false). This route has no released file, \
                                           so its ground is the cross-cutting \
                                           overview rule — \"If a method is \
@@ -677,7 +677,7 @@ guarded_handler! {
                  "message": "stored query org.openehr::compositions at version 1.0.2"
              })),
             (status = 405, description = "The admin API is disabled on this server \
-                                          (`AppConfig::admin.enabled`, default \
+                                          (`AppConfig::api.admin`, default \
                                           false). This route has no released file, \
                                           so its ground is the cross-cutting \
                                           overview rule — \"If a method is \

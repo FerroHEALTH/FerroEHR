@@ -117,7 +117,7 @@ fn typed_composition(value: &Value) -> Result<Composition, RestError> {
 pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
     let created = StatusCode::CREATED;
-    let base = state.config().rest.base_path.clone();
+    let base = state.config().api.base_path.clone();
     let p = parts.decode(
         CompositionCreateParams::from_request,
         CompositionCreateParams::PARAMS,
@@ -243,7 +243,7 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
     let h = &parts.headers;
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
-    let base = state.config().rest.base_path.clone();
+    let base = state.config().api.base_path.clone();
     let p = parts.decode(
         CompositionUpdateParams::from_request,
         CompositionUpdateParams::PARAMS,

@@ -14,15 +14,16 @@
 //! Every certificate and key is minted at run time with `rcgen` (`Pki`): an
 //! RSA CA and leaf (CN=localhost, SAN localhost/127.0.0.1), plus an EC P-256
 //! CA and leaf for the key-format cases and the certificate reload: a pair
-//! replaced on disk is presented once `reload_interval_s` passes, and a broken
+//! replaced on disk is presented once `reload_interval` passes, and a broken
 //! replacement leaves the pair in service untouched.
 
 use std::future::Future;
 use std::io::Write;
 use std::time::Duration;
 
+use ferrohealth_config::tls::TlsVersion;
 use ferrohealth_health::lifecycle::Lifecycle;
-use ferrohealth_server::section::{ClientAuth, ServerSection, TlsSection, TlsVersion};
+use ferrohealth_server::section::{ClientAuth, ServerSection, TlsSection};
 
 /// How many days past today the minted certificates stay valid: short, so a
 /// platform verifier (macOS caps a TLS server certificate at 825 days) never
@@ -805,7 +806,7 @@ where
 async fn a_renewed_certificate_is_served_without_a_restart_and_a_broken_one_is_not() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
     let tls = TlsSection {
-        reload_interval_s: std::num::NonZeroU64::new(1),
+        reload_interval: Some(ferrohealth_config::units::Duration::from_secs(1)),
         ..pair_files(&dir, PKI.leaf.as_bytes(), PKI.leaf_key.as_bytes())
     };
     let port = serve_tls(tls).await;
@@ -886,7 +887,7 @@ async fn served_with_client_certificate(port: u16) -> bool {
 async fn a_rotated_client_ca_verifies_without_a_restart() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
     let tls = TlsSection {
-        reload_interval_s: std::num::NonZeroU64::new(1),
+        reload_interval: Some(ferrohealth_config::units::Duration::from_secs(1)),
         ..tls_files(&dir, ClientAuth::Required)
     };
     let ca_path = tls.client_ca_file.clone().expect("client_ca_file");

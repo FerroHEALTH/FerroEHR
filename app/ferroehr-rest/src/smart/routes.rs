@@ -22,7 +22,7 @@
 //!   template is known ([`Need::Composition`]). A tag operation is metadata of
 //!   the EHR's data and is held to every template.
 //! - The DEMOGRAPHIC API has no family: a client listed in
-//!   `[smart] demographic_clients`, or a caller holding the product scope,
+//!   `[auth.smart] demographic_clients`, or a caller holding the product scope,
 //!   reaches it. The ADMIN API needs the product scope, except the outbox
 //!   feed, which needs [`OUTBOX_SCOPE`] alone, so a feed reader reaches no
 //!   other admin route and no admin caller reads the feed by default.
@@ -442,7 +442,7 @@ mod tests {
 
     fn routes() -> SmartRoutes {
         SmartRoutes::new(
-            &crate::api::Namespaces::of(&ferroehr::config::rest::RestConfig::default()),
+            &crate::api::Namespaces::of(&ferroehr::config::rest::ApiConfig::default()),
             "__ferroehr.platform",
             vec!["mpi".to_owned()],
         )
@@ -496,7 +496,7 @@ mod tests {
     fn every_mounted_route_has_a_requirement() {
         let table = routes();
         let document = crate::api::api_doc(&crate::api::Namespaces::of(
-            &ferroehr::config::rest::RestConfig::default(),
+            &ferroehr::config::rest::ApiConfig::default(),
         ));
         for (path, item) in &document.paths.paths {
             let template = path.clone();

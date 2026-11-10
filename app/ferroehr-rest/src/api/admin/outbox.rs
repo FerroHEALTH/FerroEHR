@@ -6,14 +6,14 @@
 //!
 //! No openEHR spec governs eventing: ITS-REST 1.1.0 defines no change
 //! notification, so the routes, payloads and status codes are our own design.
-//! A reader is one `[outbox] readers` names; the family's export server reads
+//! A reader is one `[record.change_feed] readers` names; the family's export server reads
 //! the feed and delivers the events on to a message broker. The clinical and the party
 //! outbox each keep their own `seq` and their own cursor, chosen by the
 //! `domain` parameter.
 //!
 //! Gating: mounted under `/admin/`, so the routes inherit the group's RBAC
 //! Admin class; the SMART route table holds both to the `__ferroehr.outbox`
-//! scope. The `[admin]` toggle does not reach them: a deployment that names a
+//! scope. The `[api] admin` toggle does not reach them: a deployment that names a
 //! reader serves its feed. Every read is one access record.
 
 #![expect(
@@ -77,7 +77,7 @@ guarded_handler! {
     #[utoipa::path(
         get, path = "/admin/outbox/{reader}", tag = "admin-outbox",
         params(
-            ("reader" = String, Path, description = "A reader `[outbox] readers` names."),
+            ("reader" = String, Path, description = "A reader `[record.change_feed] readers` names."),
             ("limit" = Option<i64>, Query, description = "The most events to return, 1 to 1000; 100 when absent."),
             ("domain" = Option<String>, Query, description = "The outbox to read: `clinical` (the default) or `party`. Each has its own `seq` and its own cursor.")
         ),
@@ -113,7 +113,7 @@ guarded_handler! {
                                           `__ferroehr.outbox` scope.",
              body = serde_json::Value),
             (status = 404, description = "The reader is unknown or inactive: \
-                                          `[outbox] readers` does not name it.",
+                                          `[record.change_feed] readers` does not name it.",
              body = serde_json::Value)
         )
     )]
@@ -128,7 +128,7 @@ guarded_handler! {
     #[utoipa::path(
         post, path = "/admin/outbox/{reader}/ack", tag = "admin-outbox",
         params(
-            ("reader" = String, Path, description = "A reader `[outbox] readers` names."),
+            ("reader" = String, Path, description = "A reader `[record.change_feed] readers` names."),
             ("domain" = Option<String>, Query, description = "The outbox whose cursor moves: `clinical` (the default) or `party`.")
         ),
         request_body(content = serde_json::Value,

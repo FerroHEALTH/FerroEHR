@@ -184,14 +184,14 @@ pub fn grouping(base_path: &str, route: Option<&str>) -> Option<Key> {
 /// The mounts FerroEHR's API route templates sit under.
 ///
 /// Each is `server.base_path`, where every route is served, followed by
-/// `rest.base_path` for the openEHR API or by the extensions root for
+/// `api.base_path` for the openEHR API or by the extensions root for
 /// FerroEHR's own extensions (#4330).
 #[must_use]
 pub fn api_mounts(config: &FerroEhrConfig) -> Vec<String> {
     let server = config.server.base_path.as_str();
     vec![
-        format!("{server}{}", config.rest.base_path),
-        format!("{server}{}", config.rest.extensions_path()),
+        format!("{server}{}", config.api.base_path),
+        format!("{server}{}", config.api.extensions_path()),
     ]
 }
 
@@ -425,7 +425,7 @@ mod tests {
         );
         config.server.base_path =
             ferrohealth_server::section::BasePath::new("/edge").expect("a base path");
-        config.rest.base_path = "/ferroehr/ehr/v1".to_owned();
+        config.api.base_path = "/ferroehr/ehr/v1".to_owned();
         assert_eq!(
             api_mounts(&config),
             [

@@ -64,7 +64,7 @@ impl RenderPolicy {
             enterprise_site_id: config.enterprise_site_id.clone().unwrap_or_default(),
             server_host: config.server_host.clone().unwrap_or_default(),
             value_if_missing: config.value_if_missing.clone(),
-            horizon: config.store.retention(),
+            horizon: config.store.horizon(),
             categories: config.categories.clone(),
             emergency_purpose_codes: config.emergency_purpose_codes.clone(),
         }
@@ -276,7 +276,7 @@ mod tests {
             purpose_codes = ["TREAT", "ETREAT"]
             emergency_purpose_codes = ["ETREAT"]
             [store]
-            retention_years = 10
+            retention = "P10Y"
             [categories.templates]
             "Lab Report" = ["Laboratory-Reports"]
             "#,

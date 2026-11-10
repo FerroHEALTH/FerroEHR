@@ -83,7 +83,7 @@ pub enum ServeError {
     /// The authentication configuration was invalid.
     #[error("authentication configuration error: {0}")]
     Auth(String),
-    /// The `[scim]` endpoint cannot be served: a mapped attribute is no
+    /// The `[auth.scim]` endpoint cannot be served: a mapped attribute is no
     /// attribute of its SCIM schema, or the party mapping lacks what a User
     /// is written with.
     #[error("scim configuration error")]
@@ -154,7 +154,7 @@ pub async fn build_full(
 /// reads whether or not an authorization gate is wired. A served SMART discovery document needs the issuer's
 /// metadata to name a `token_endpoint`, which the document requires (SMART App
 /// Launch 2.2.0, Conformance, §Metadata), so a `jwks_file` issuer refuses it
-/// unless `[smart] issuer_metadata_file` supplies that metadata.
+/// unless `[auth.smart] issuer_metadata_file` supplies that metadata.
 ///
 /// # Errors
 /// [`ServeError::Auth`] if `[auth]` is refused or an issuer cannot be read.
@@ -170,17 +170,18 @@ async fn build_authenticator(
     let authenticator = Authenticator::new(config, claim, source, replay)
         .await
         .map_err(ServeError::Auth)?;
-    if config.smart.enabled
+    if config.auth.smart.discovery
         && config.auth.shared.enabled
         && authenticator
             .smart_configuration(&smart::discovery::options(config))
             .is_none_or(|document| document.get("token_endpoint").is_none())
     {
         return Err(ServeError::Auth(
-            "smart.enabled = true needs an [auth] issuer whose metadata names a \
+            "auth.smart.discovery = true needs an [auth] issuer whose metadata names a \
              token_endpoint (SMART App Launch 2.2.0, Conformance, §Metadata); an issuer \
-             read from a jwks_file carries none unless smart.issuer_metadata_file supplies it"
-                .to_owned(),
+             read from a jwks_file carries none unless auth.smart.issuer_metadata_file supplies \
+             it"
+            .to_owned(),
         ));
     }
     scim::endpoint::check(config).map_err(ServeError::Scim)?;
@@ -201,7 +202,7 @@ fn party_source(config: &AppConfig, backend: &Arc<FerroEhrService>) -> Arc<dyn B
 /// Builds and serves the application with full observability until the
 /// process receives `SIGTERM` or `SIGINT`, then drains.
 ///
-/// Binds `server.listen` and, when `management.port` is set, the management
+/// Binds `server.listen` and, when `management.listen` is set, the management
 /// surface on its own internal listener (otherwise merged into the main app),
 /// and hands both to [`serve_on`]. ATNA auditing lives in the backend's
 /// `SystemLog` component.
@@ -217,10 +218,8 @@ pub async fn serve_full(
     observability: Observability,
 ) -> Result<Drained, ServeError> {
     let listener = TcpListener::bind(config.server.listen).await?;
-    let management = match observability.management.port {
-        Some(port) if observability.management.enabled => {
-            Some(TcpListener::bind(std::net::SocketAddr::from(([0, 0, 0, 0], port))).await?)
-        }
+    let management = match observability.management.listen {
+        Some(listen) if observability.management.enabled => Some(TcpListener::bind(listen).await?),
         _ => None,
     };
     serve_on(
@@ -239,8 +238,8 @@ pub async fn serve_full(
 /// surface on `management`, until `signal` completes, then drains both.
 ///
 /// Readiness turns `503` at once, the listeners keep accepting for
-/// `server.drain_delay_ms`, then close, and the requests in flight get
-/// `server.shutdown_timeout_ms` to finish; a connection still open then is
+/// `server.drain_delay`, then close, and the requests in flight get
+/// `server.shutdown_timeout` to finish; a connection still open then is
 /// dropped and the result is [`Drained::Cut`]. The main listener speaks the TLS
 /// `[server.tls]` configures; the management listener stays plain HTTP, and
 /// keeping it off a routed network is the deployment's (`production` refuses it
@@ -308,7 +307,7 @@ pub(crate) mod test_support {
     use std::sync::OnceLock;
 
     use ferroehr::config::auth_section::AuthConfig;
-    use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+    use ferrohealth_smart::config::{AuthSection, IssuerEntry};
     use ferrohealth_smart::kind::IssuerKind;
     use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 
@@ -354,7 +353,7 @@ pub(crate) mod test_support {
     pub(crate) fn trusting(entry: IssuerEntry) -> AuthConfig {
         AuthConfig {
             shared: Box::new(AuthSection {
-                issuer: IssuerKey::List(vec![entry]),
+                issuer: vec![entry],
                 ..AuthSection::default()
             }),
             ..AuthConfig::default()

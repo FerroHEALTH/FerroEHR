@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The outbox feed against a real `PostgreSQL` 18: the reader registry the
-//! boot reconciles from `[outbox] readers`, the cursor a reader moves by
+//! boot reconciles from `[record.change_feed] readers`, the cursor a reader moves by
 //! acknowledging, and the retention prune that every active cursor holds back
 //! (#4786, #4766, #3330).
 //!
@@ -15,6 +15,9 @@ use ferroehr::extensions::outbox::{
 };
 use ferroehr::service::FerroEhrService;
 use sqlx::{Connection as _, PgPool};
+
+/// The retention window the prune cases use.
+const SEVEN_DAYS: Duration = Duration::from_hours(7 * 24);
 
 /// The reader most of these tests register.
 const READER: &str = "omop";
@@ -133,7 +136,7 @@ async fn prune_stops_at_the_lowest_active_reader_cursor() {
     acknowledge(&pool, READER, seeded[1])
         .await
         .expect("acknowledge");
-    let pruned = prune(&pool, 7).await.expect("prune");
+    let pruned = prune(&pool, SEVEN_DAYS).await.expect("prune");
     assert_eq!(pruned, 2, "only the rows at or below the cursor are pruned");
     assert_eq!(
         seqs(&pool).await,
@@ -145,7 +148,7 @@ async fn prune_stops_at_the_lowest_active_reader_cursor() {
     acknowledge(&pool, READER, seeded[4])
         .await
         .expect("acknowledge the tail");
-    assert_eq!(prune(&pool, 7).await.expect("prune"), 3);
+    assert_eq!(prune(&pool, SEVEN_DAYS).await.expect("prune"), 3);
     assert_eq!(seqs(&pool).await, Vec::<i64>::new());
 }
 
@@ -160,7 +163,7 @@ async fn a_reader_the_configuration_dropped_holds_no_floor() {
         .expect("acknowledge");
 
     reconcile(&pool, &[]).await.expect("the reader is dropped");
-    assert_eq!(prune(&pool, 7).await.expect("prune"), 5);
+    assert_eq!(prune(&pool, SEVEN_DAYS).await.expect("prune"), 5);
     assert_eq!(seqs(&pool).await, Vec::<i64>::new());
 }
 
@@ -175,7 +178,7 @@ async fn a_row_inside_the_window_stays_whatever_the_cursor() {
     acknowledge(&pool, READER, fresh[0])
         .await
         .expect("acknowledge");
-    assert_eq!(prune(&pool, 7).await.expect("prune"), 0);
+    assert_eq!(prune(&pool, SEVEN_DAYS).await.expect("prune"), 0);
     assert_eq!(seqs(&pool).await, fresh);
 }
 

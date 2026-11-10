@@ -8,8 +8,9 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use ferroehr::config::authz::{AbacConfig, AbacEngineKind, AbacParam, PolicyRule, RemoteConfig};
-use ferroehr_rest::extensions::access::authz::remote_pdp;
+use ferroehr::config::abac_rules::RemoteConfig;
+use ferroehr::config::authz::{AbacConfig, AbacEngineKind, AbacParam, PolicyRule};
+use ferroehr_rest::extensions::access::authz::remote::remote_pdp;
 use ferroehr_rest::extensions::access::authz::request::{
     AccessMode, AuthzRequest, ResourceKind, model,
 };
@@ -162,13 +163,13 @@ async fn remote_permit_when_patient_ok() -> (MockServer, RemotePdp) {
         enabled: true,
         engine: AbacEngineKind::Remote,
         remote: RemoteConfig {
-            server: Some(ferrohealth_secret::secret_url::SecretUrl::new(format!(
+            url: Some(ferrohealth_secret::secret_url::SecretUrl::new(format!(
                 "{}/",
                 server.uri()
             ))),
-            connect_timeout_ms: 500,
-            request_timeout_ms: 1000,
-            oauth: None,
+            connect_timeout: ferrohealth_config::units::Duration::from_millis(500),
+            timeout: ferrohealth_config::units::Duration::from_millis(1000),
+            ..RemoteConfig::default()
         },
         policy,
         ..AbacConfig::default()

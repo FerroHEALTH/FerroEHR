@@ -27,11 +27,25 @@ impl FerroEhrConfig {
         self.validate_audit(&mut errors);
         self.validate_audit_syslog(&mut errors);
         self.validate_outbound_clients(&mut errors);
-        errors.extend(self.origins.errors().into_iter().map(ConfigError::semantic));
+        errors.extend(
+            self.origins()
+                .errors()
+                .into_iter()
+                .map(ConfigError::semantic),
+        );
         let categories = &self.audit.categories;
         errors.extend(categories.errors().into_iter().map(ConfigError::semantic));
-        let delay = self.access_delay.errors(categories);
-        errors.extend(delay.into_iter().map(ConfigError::semantic));
+        if let Some(delay) = &self.privacy.access_delay {
+            errors.extend(
+                delay
+                    .errors(categories)
+                    .into_iter()
+                    .map(ConfigError::semantic),
+            );
+        }
+        if let Some(cors) = &self.api.cors {
+            errors.extend(cors.errors().into_iter().map(ConfigError::semantic));
+        }
         self.validate_cohort(&mut errors);
         self.validate_ehr_index(&mut errors);
         self.validate_deployment(&mut errors);
@@ -45,18 +59,30 @@ impl FerroEhrConfig {
                     .to_owned(),
             ));
         }
-        errors.extend(multimedia_endpoint_errors(&self.multimedia));
-        errors.extend(self.outbox.errors().into_iter().map(ConfigError::semantic));
-        // management.port must differ from the server.listen port.
-        if let Some(port) = self.management.port
-            && self.server.listen.port() == port
+        errors.extend(multimedia_endpoint_errors(&self.record.multimedia));
+        errors.extend(
+            self.record
+                .change_feed
+                .errors()
+                .into_iter()
+                .map(ConfigError::semantic),
+        );
+        // management.listen must not be the server.listen address.
+        if let Some(listen) = self.management.listen
+            && self.server.listen.port() == listen.port()
+            && (self.server.listen.ip() == listen.ip()
+                || self.server.listen.ip().is_unspecified()
+                || listen.ip().is_unspecified())
         {
             errors.push(ConfigError::semantic(format!(
-                "management.port ({port}) must differ from the server.listen port"
+                "management.listen ({listen}) must differ from server.listen ({})",
+                self.server.listen
             )));
         }
         self.validate_body_tier(&mut errors);
-        validate_terminology(&self.terminology.server, &mut errors);
+        if let Some(terminology) = &self.terminology {
+            validate_terminology(terminology, &mut errors);
+        }
 
         if errors.is_empty() {
             Ok(())
@@ -66,38 +92,38 @@ impl FerroEhrConfig {
     }
 
     /// The client-credentials grants of the outbound connections that are in
-    /// use: the ITI-20 feed when it is enabled, the remote policy service when
-    /// ABAC runs on it, and the terminology server when it is enabled. A grant
+    /// use: the ITI-20 feed when it is configured, the remote policy service
+    /// when ABAC runs on it, and the terminology server when it is configured. A grant
     /// beside credentials in the URL's userinfo is refused: the upstream would
     /// receive two authorizations, and which one it honours is not ours to
     /// guess. No openEHR spec governs outbound authentication — our own design.
     fn validate_outbound_clients(&self, errors: &mut Vec<ConfigError>) {
-        let feed = &self.audit.fhir_feed;
+        let feed = self.audit.fhir_feed.as_ref();
         let remote = &self.authz.abac.remote;
         let remote_in_use =
             self.authz.abac.enabled && self.authz.abac.engine == authz::AbacEngineKind::Remote;
-        let terminology = &self.terminology.server;
+        let terminology = self.terminology.as_ref();
         let checks = [
             (
                 "audit.fhir_feed",
-                feed.enabled,
-                feed.oauth.as_ref(),
-                Some(feed.url.expose()),
+                feed.is_some(),
+                feed.and_then(|feed| feed.oauth.as_ref()),
+                feed.map(|feed| feed.url.expose()),
             ),
             (
                 "authz.abac.remote",
                 remote_in_use,
                 remote.oauth.as_ref(),
                 remote
-                    .server
+                    .url
                     .as_ref()
                     .map(ferrohealth_secret::secret_url::SecretUrl::expose),
             ),
             (
-                "terminology.server",
-                terminology.enabled,
-                terminology.oauth.as_ref(),
-                Some(terminology.url.expose()),
+                "terminology",
+                terminology.is_some(),
+                terminology.and_then(|terminology| terminology.oauth.as_ref()),
+                terminology.map(|terminology| terminology.url.expose()),
             ),
         ];
         for (key, in_use, oauth, url) in checks {
@@ -131,11 +157,11 @@ impl FerroEhrConfig {
     /// always does. The jurisdictions in force are the ones the active
     /// identifier rules name, and the German ceiling additionally waits for the
     /// deployment to declare itself one of the SGB V § 307 controllers. Bounds
-    /// are written in calendar years: `retention_years` is compared exactly, a
-    /// day count conservatively ([`crate::system_log::config::RetentionBound`]).
+    /// are written in calendar years: a retention in years is compared exactly,
+    /// a day count conservatively ([`crate::system_log::config::RetentionBound`]).
     /// Where a floor and a ceiling contradict each other in years, no horizon
     /// satisfies both and the refusal says so; where only the day rounding
-    /// leaves no day count between them, the refusal names `retention_years`.
+    /// leaves no day count between them, the refusal names the year form.
     /// Every emergency purpose code must also be an agreed purpose code.
     fn validate_audit(&self, errors: &mut Vec<ConfigError>) {
         use crate::system_log::config::{Retention, RetentionBound};
@@ -149,19 +175,6 @@ impl FerroEhrConfig {
             }
         }
         let store = &self.audit.store;
-        match store.retention_years {
-            Some(0) => errors.push(ConfigError::semantic(
-                "audit.store.retention_years = 0 keeps nothing; set retention_days = 0 to keep \
-                 records forever, or a year count of 1 or more"
-                    .to_owned(),
-            )),
-            Some(years) if store.retention_days > 0 => errors.push(ConfigError::semantic(format!(
-                "audit.store.retention_days = {} and audit.store.retention_years = {years} are \
-                 both set; state the horizon once, in days or in calendar years",
-                store.retention_days
-            ))),
-            _ => {}
-        }
         if !(self.audit.enabled && store.enabled) {
             return;
         }
@@ -186,13 +199,13 @@ impl FerroEhrConfig {
                 ceilings.push((jurisdiction, ceiling));
             }
         }
-        let retention = store.retention();
+        let retention = store.horizon();
         let hint = years_fix(&floors, &ceilings)
             .filter(|_| !matches!(retention, Retention::Years(_)))
             .map(|years| {
                 format!(
-                    "; no retention_days value satisfies both the floor and the ceiling, so set \
-                     retention_years = {years} instead"
+                    "; no day count satisfies both the floor and the ceiling, so set \
+                     retention = \"P{years}Y\" instead"
                 )
             })
             .unwrap_or_default();
@@ -218,8 +231,8 @@ impl FerroEhrConfig {
                 };
                 errors.push(ConfigError::semantic(format!(
                     "audit.store.{horizon} is below the {jurisdiction} access-log retention floor \
-                     of {bound} ({source}); keep records at least that long, or set \
-                     retention_days = 0 to keep them forever{hint}"
+                     of {bound} ({source}); keep records at least that long, or unset \
+                     retention to keep them forever{hint}"
                 )));
             }
         }
@@ -240,39 +253,43 @@ impl FerroEhrConfig {
         }
     }
 
-    /// `[audit.syslog]` sets none of its retired TLS keys, and its
-    /// `[audit.syslog.tls]` material reads when the sink is on (#5217).
+    /// `[audit.syslog]` names a `tls://` address, and its
+    /// `[audit.syslog.tls]` material reads (#5217).
     fn validate_audit_syslog(&self, errors: &mut Vec<ConfigError>) {
-        let syslog = &self.audit.syslog;
-        errors.extend(
-            syslog
-                .retired_tls_keys()
-                .into_iter()
-                .map(ConfigError::semantic),
-        );
-        if syslog.enabled
-            && let Err(e) =
-                ferrohealth_server::tls_client::TlsClient::read("audit.syslog.tls", &syslog.tls)
+        let Some(syslog) = &self.audit.syslog else {
+            return;
+        };
+        if let Err(e) = syslog.address() {
+            errors.push(ConfigError::semantic(e));
+        }
+        if syslog.spool_max_events == 0 || syslog.spool_max_size.is_zero() {
+            errors.push(ConfigError::semantic(
+                "audit.syslog.spool_max_events and spool_max_size must be above zero".to_owned(),
+            ));
+        }
+        if let Err(e) =
+            ferrohealth_server::tls_client::TlsClient::read("audit.syslog.tls", &syslog.tls)
         {
             errors.push(ConfigError::semantic(e.to_string()));
         }
     }
 
-    /// The `[ehr_index]` provider is chosen and complete: an IHE patient
-    /// identity source with its endpoint, its clinical domain among the
-    /// declared pseudonym namespaces and readable `[ehr_index.tls]` material, or an explicit
-    /// `provider = "local"`. With neither, the refusal names both choices.
+    /// The subject index is chosen and complete: an IHE patient identity
+    /// source (`"pixm"`) with its `[pixm]` endpoint, its clinical domain among
+    /// the declared pseudonym namespaces and readable `[pixm.tls]` material, or
+    /// an explicit `"local"`. Unset, the refusal names both choices.
     fn validate_ehr_index(&self, errors: &mut Vec<ConfigError>) {
-        let index = &self.ehr_index;
+        use crate::service::ehr_index::config::{SubjectIndex, problems};
+        let index = self.record.subject_index;
+        let pixm = self.pixm.as_ref();
         errors.extend(
-            index
-                .problems(&self.privacy.subject_namespaces)
+            problems(index, pixm, &self.privacy.subject_namespaces)
                 .into_iter()
                 .map(ConfigError::semantic),
         );
-        if index.provider == crate::service::ehr_index::config::ProviderKind::Ihe
-            && let Err(e) =
-                ferrohealth_server::tls_client::TlsClient::read("ehr_index.tls", &index.tls)
+        if index == Some(SubjectIndex::Pixm)
+            && let Some(pixm) = pixm
+            && let Err(e) = ferrohealth_server::tls_client::TlsClient::read("pixm.tls", &pixm.tls)
         {
             errors.push(ConfigError::semantic(e.to_string()));
         }
@@ -287,10 +304,10 @@ impl FerroEhrConfig {
     /// `master05-identification_package.adoc` §Archetype Identifiers.
     fn validate_cohort(&self, errors: &mut Vec<ConfigError>) {
         use crate::service::linkage::cohort::config as cohort;
-        for (key, binding) in &self.cohort.predicates {
+        for (key, binding) in &self.privacy.cohort.predicates {
             if !cohort::PREDICATE_KEYS.contains(&key.as_str()) {
                 errors.push(ConfigError::semantic(format!(
-                    "cohort.predicates names `{key}`, which is not a cohort predicate; the \
+                    "privacy.cohort.predicates names `{key}`, which is not a cohort predicate; the \
                      bindable keys are {}",
                     cohort::PREDICATE_KEYS.join(", ")
                 )));
@@ -299,7 +316,7 @@ impl FerroEhrConfig {
             let is_birth_date = binding.kind == PredicateKind::BirthDate;
             if (key == cohort::BIRTH_DATE_KEY) != is_birth_date {
                 errors.push(ConfigError::semantic(format!(
-                    "cohort.predicates.{key}.kind = \"{}\" — `{}` is the age-band predicate \
+                    "privacy.cohort.predicates.{key}.kind = \"{}\" — `{}` is the age-band predicate \
                      and takes kind \"birth_date\"; no other key does",
                     binding.kind.as_str(),
                     cohort::BIRTH_DATE_KEY
@@ -307,38 +324,38 @@ impl FerroEhrConfig {
             }
             if !cohort::is_demographic_archetype_hrid(&binding.archetype) {
                 errors.push(ConfigError::semantic(format!(
-                    "cohort.predicates.{key}.archetype = {:?} is not a demographic archetype \
+                    "privacy.cohort.predicates.{key}.archetype = {:?} is not a demographic archetype \
                      HRID (openEHR-DEMOGRAPHIC-<CLASS>.<concept>.v<n>)",
                     binding.archetype
                 )));
             }
             if !cohort::is_at_code(&binding.node) {
                 errors.push(ConfigError::semantic(format!(
-                    "cohort.predicates.{key}.node = {:?} is not an at-code (at0012)",
+                    "privacy.cohort.predicates.{key}.node = {:?} is not an at-code (at0012)",
                     binding.node
                 )));
             }
         }
     }
 
-    /// `deployment_accepts` names each gap once, and only means something
+    /// `deployment.accepts` names each gap once, and only means something
     /// under `production`: a sandbox that lists accepted gaps is describing a
     /// posture it does not enforce, which is the confusion the key exists to
     /// remove.
     fn validate_deployment(&self, errors: &mut Vec<ConfigError>) {
         let mut seen = std::collections::BTreeSet::new();
-        for gap in &self.deployment_accepts {
+        for gap in &self.deployment.accepts {
             if !seen.insert(gap.as_str()) {
                 errors.push(ConfigError::semantic(format!(
-                    "deployment_accepts names `{gap}` twice"
+                    "deployment.accepts names `{gap}` twice"
                 )));
             }
         }
-        if self.deployment_profile == deployment::DeploymentProfile::Sandbox
-            && !self.deployment_accepts.is_empty()
+        if self.deployment.profile == deployment::DeploymentProfile::Sandbox
+            && !self.deployment.accepts.is_empty()
         {
             errors.push(ConfigError::semantic(
-                "deployment_accepts is set under deployment_profile = \"sandbox\", which accepts \
+                "deployment.accepts is set under deployment.profile = \"sandbox\", which accepts \
                  every gap already; the key belongs to a production deployment that runs \
                  without a named separation"
                     .to_owned(),
@@ -392,23 +409,25 @@ impl FerroEhrConfig {
 
     /// The clinical body tier sits inside the listener's limit.
     ///
-    /// The listener refuses every body above `server.body_limit_bytes` before
+    /// The listener refuses every body above `server.body_limit` before
     /// a route is matched, so a clinical tier at or above it would never be
     /// the limit that applies. No openEHR spec bounds a request body — our own
     /// design.
     fn validate_body_tier(&self, errors: &mut Vec<ConfigError>) {
-        if let Some(tier) = self.rest.body_limit_bytes
-            && tier >= self.server.body_limit_bytes
+        if let Some(tier) = self.api.body_limit
+            && usize::try_from(tier.bytes())
+                .is_ok_and(|tier| tier >= self.server.body_limit_bytes())
+                | usize::try_from(tier.bytes()).is_err()
         {
             errors.push(ConfigError::semantic(format!(
-                "rest.body_limit_bytes ({tier}) must be below server.body_limit_bytes ({}), \
+                "api.body_limit (\"{tier}\") must be below server.body_limit (\"{}\"), \
                  the limit of the bulk routes and the ceiling of every route",
-                self.server.body_limit_bytes
+                self.server.body_limit
             )));
         }
     }
 
-    /// `rest.system_id` is judged by the SAME validating `UID` constructor
+    /// `api.system_id` is judged by the SAME validating `UID` constructor
     /// the reader uses.
     ///
     /// It is stamped into every `AUDIT_DETAILS` (`System_id_valid`: "not
@@ -419,20 +438,20 @@ impl FerroEhrConfig {
     /// `base_types/master05-identification_package.adoc` §Syntaxes).
     fn validate_system_id(&self, errors: &mut Vec<ConfigError>) {
         if let Err(source) =
-            openehr_base::v1_3::base_types::identification::uid::Uid::new(&self.rest.system_id)
+            openehr_base::v1_3::base_types::identification::uid::Uid::new(&self.api.system_id)
         {
             errors.push(ConfigError::semantic(format!(
-                "rest.system_id {:?} is not a legal openEHR `uid` \
+                "api.system_id {:?} is not a legal openEHR `uid` \
                  (iso_oid | uuid | internet_id — BASE master05 §Syntaxes): \
                  {source}. It is stamped into EHR.system_id, \
                  AUDIT_DETAILS.system_id, and the creating_system_id of every \
                  OBJECT_VERSION_ID",
-                self.rest.system_id
+                self.api.system_id
             )));
         }
     }
 
-    /// `rest.base_path` names this deployment's API root, and every rule it
+    /// `api.base_path` names this deployment's API root, and every rule it
     /// breaks is reported at once.
     ///
     /// The last segment is the ITS-REST API version `v1`: the overview locates
@@ -445,10 +464,10 @@ impl FerroEhrConfig {
     /// unreserved characters is free, with no trailing slash and no empty
     /// segment.
     fn validate_base_path(&self, errors: &mut Vec<ConfigError>) {
-        let path = self.rest.base_path.as_str();
+        let path = self.api.base_path.as_str();
         let mut refuse = |rule: &str| {
             errors.push(ConfigError::semantic(format!(
-                "rest.base_path {path:?} {rule}"
+                "api.base_path {path:?} {rule}"
             )));
         };
 
@@ -519,19 +538,20 @@ impl FerroEhrConfig {
                 .into_iter()
                 .map(ConfigError::semantic),
         );
-        if let Err(e) = self.smart.validate() {
-            errors.push(ConfigError::semantic(format!("smart: {e}")));
+        if let Err(e) = self.auth.smart.validate() {
+            errors.push(ConfigError::semantic(format!("auth.smart: {e}")));
         }
         let resolved = auth::resolve(&self.auth.shared).ok();
         errors.extend(
-            self.scim
-                .errors(resolved.as_ref())
-                .into_iter()
+            self.auth
+                .scim
+                .iter()
+                .flat_map(|scim| scim.errors(resolved.as_ref()))
                 .map(ConfigError::semantic),
         );
-        if self.smart.enabled && !auth::has_bearer(&self.auth.shared) {
+        if self.auth.smart.discovery && !auth::has_bearer(&self.auth.shared) {
             errors.push(ConfigError::semantic(
-                "smart.enabled = true requires an [auth] issuer: the discovery document is \
+                "auth.smart.discovery = true requires an [auth] issuer: the discovery document is \
                  built from the issuer's metadata, and it directs applications to an \
                  authorization server whose tokens this server must accept"
                     .to_owned(),
@@ -543,17 +563,19 @@ impl FerroEhrConfig {
     /// passphrase is given inline or by file, never both.
     fn validate_signing(&self, errors: &mut Vec<ConfigError>) {
         if matches!(
-            self.signing.mode,
+            self.record.signing.mode,
             crate::versioning::signature::config::Mode::Pgp
-        ) && self.signing.key_path.is_none()
+        ) && self.record.signing.key_file.is_none()
         {
             errors.push(ConfigError::semantic(
-                "signing.mode = \"pgp\" requires signing.key_path".to_owned(),
+                "record.signing.mode = \"pgp\" requires record.signing.key_file".to_owned(),
             ));
         }
-        if self.signing.key_passphrase.is_some() && self.signing.key_passphrase_file.is_some() {
+        if self.record.signing.key_passphrase.is_some()
+            && self.record.signing.key_passphrase_file.is_some()
+        {
             errors.push(ConfigError::semantic(
-                "set only one of signing.key_passphrase / signing.key_passphrase_file".to_owned(),
+                "set only one of record.signing.key_passphrase / key_passphrase_file".to_owned(),
             ));
         }
     }
@@ -561,12 +583,12 @@ impl FerroEhrConfig {
     /// Every secret that can be given inline or by file is given exactly one
     /// way.
     fn validate_key_sources(&self, errors: &mut Vec<ConfigError>) {
-        if self.multimedia.secret_access_key.is_some()
-            && self.multimedia.secret_access_key_file.is_some()
+        if self.record.multimedia.secret_access_key.is_some()
+            && self.record.multimedia.secret_access_key_file.is_some()
         {
             errors.push(ConfigError::semantic(
-                "set only one of multimedia.secret_access_key / \
-                 multimedia.secret_access_key_file"
+                "set only one of record.multimedia.secret_access_key / \
+                 secret_access_key_file"
                     .to_owned(),
             ));
         }
@@ -579,8 +601,8 @@ const fn is_unreserved(c: char) -> bool {
     c.is_ascii_alphanumeric() || matches!(c, '-' | '.' | '_' | '~')
 }
 
-/// Semantic check on `[terminology.server]`: enabling it needs the server's
-/// base URL, a boot error rather than a silent fall back to the bundle. The
+/// Semantic check on `[terminology]`: the table needs the server's base URL,
+/// a boot error rather than a silent fall back to the bundle. The
 /// `oauth` grant is checked with the other outbound grants
 /// (`FerroEhrConfig::validate_outbound_clients`). No openEHR spec governs
 /// configuration — our own design.
@@ -588,11 +610,16 @@ pub(super) fn validate_terminology(
     server: &crate::service::terminology::config::TerminologyServerConfig,
     errors: &mut Vec<ConfigError>,
 ) {
-    if server.enabled && server.url.expose().trim().is_empty() {
+    if server.url.expose().trim().is_empty() {
         errors.push(ConfigError::semantic(
-            "terminology.server.enabled = true requires terminology.server.url (the FHIR R4B 
-             base URL of the terminology server)"
+            "[terminology] requires terminology.url (the FHIR R4B base URL of the terminology \
+             server)"
                 .to_owned(),
+        ));
+    }
+    if server.timeout.is_zero() {
+        errors.push(ConfigError::semantic(
+            "terminology.timeout must be longer than \"0s\"".to_owned(),
         ));
     }
 }
@@ -620,7 +647,7 @@ fn years_fix(
     (floor.years <= ceiling.years && floor_days > ceiling_days).then_some(floor.years)
 }
 
-/// The `multimedia.endpoint` semantic checks of an enabled integration.
+/// The `record.multimedia.url` semantic checks of an enabled integration.
 ///
 /// An enabled integration with a blank or scheme-less endpoint would boot clean
 /// and then fail on the first `DV_MULTIMEDIA` commit. A `${VAR:-}` compose

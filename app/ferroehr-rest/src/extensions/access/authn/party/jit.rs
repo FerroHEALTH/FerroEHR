@@ -147,6 +147,10 @@ pub(super) fn tables(binding: &PartyBindingConfig, resolved: &Resolved) -> BTree
 impl Jit {
     /// Whether `caller` is one this issuer creates: a person or a delegated
     /// caller with a bearer token, and a guest of either under `guests_jit`.
+    #[expect(
+        clippy::match_same_arms,
+        reason = "each kind is named, so a kind ferrohealth-smart adds is read here"
+    )]
     pub(super) fn creates(&self, caller: &Caller) -> bool {
         if caller.via() == Via::Basic {
             return false;
@@ -160,6 +164,14 @@ impl Jit {
                         CallerKind::Person | CallerKind::Delegated { .. }
                     )
             }
+            CallerKind::Patient
+            | CallerKind::System
+            | CallerKind::Representative { .. }
+            | CallerKind::PatientRepresentative { .. }
+            | CallerKind::ExternalPerson(_)
+            | CallerKind::ExternalOrganisation(_) => false,
+            // NOTE: ferrohealth-smart `kind::CallerKind` is `#[non_exhaustive]`; a kind a
+            // later release adds is created by no issuer until it is matched above.
             _ => false,
         }
     }
@@ -275,7 +287,7 @@ impl Jit {
 mod tests {
     use ferroehr::config::binding::person::{PersonTemplate, RoleSection, Selector};
     use ferrohealth_smart::assurance::AssuranceLevel;
-    use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+    use ferrohealth_smart::config::{AuthSection, IssuerEntry};
     use ferrohealth_smart::kind::IssuerKind;
     use ferrohealth_smart::party::config::PartySection;
     use serde_json::json;
@@ -288,12 +300,12 @@ mod tests {
     fn resolved() -> Resolved {
         let section = AuthSection {
             enabled: true,
-            issuer: IssuerKey::List(vec![IssuerEntry {
+            issuer: vec![IssuerEntry {
                 issuer: ISSUER.to_owned(),
                 kind: Some(IssuerKind::Persons),
                 audience: vec!["ferroehr".to_owned()],
                 ..IssuerEntry::default()
-            }]),
+            }],
             party: vec![PartySection {
                 issuer: ISSUER.to_owned(),
                 identifier_issuer: "urn:login".to_owned(),

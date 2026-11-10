@@ -1146,10 +1146,10 @@ async fn attestations_round_trip_and_the_restored_signature_verifies() {
     let config = SigningConfig {
         enabled: true,
         mode: Mode::Digest,
-        key_path: None,
+        key_file: None,
         key_passphrase: None,
         key_passphrase_file: None,
-        retired_key_paths: Vec::new(),
+        retired_key_files: Vec::new(),
         verify_on_read: Some(VerifyOnRead::Strict),
     };
     let (_src_db, src_pool, source) = repository().await;

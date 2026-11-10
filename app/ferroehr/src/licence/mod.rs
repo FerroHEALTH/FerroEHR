@@ -7,7 +7,7 @@
 //!
 //! `FerroEHR` is BUSL-1.1. Every build embeds the licensor's `non-commercial`
 //! grant, what the licence gives everyone; production use in the course of a
-//! business needs a `commercial` grant, installed through `[licence] file`.
+//! business needs a `commercial` grant, installed through `[deployment] licence_file file`.
 //! The server behaves identically under either. Nothing here gates a
 //! feature, an endpoint, a limit or a message; the only effect of the licence
 //! in force is which [`stamp::StampKey`] the server mints identifiers with,
@@ -19,7 +19,7 @@
 //! - [`verify`]: the check of a token against the embedded master keys.
 //! - [`stamp`]: sixteen keyed bits in the last two bytes of every
 //!   server-minted `UUIDv7`.
-//! - [`config`] and [`state`]: the `[licence]` section and the boot outcome.
+//! - [`config`] and [`state`]: the `[deployment] licence_file` section and the boot outcome.
 //!
 //! No openEHR spec governs licensing or identifier entropy beyond RFC 9562's
 //! layout, which the stamp respects. Our own design.
@@ -90,7 +90,7 @@ WfHi1z2bYxIUhRN3SML4TVuTDA==
 ///
 /// A deployment without its own token runs under this explicit, signed
 /// licence (id `01a1175c-cd67-777d-bdc0-c95bf1c900d3`, valid to 2099-12-31)
-/// and stamps identifiers with its key; a configured `[licence] file` takes
+/// and stamps identifiers with its key; a configured `[deployment] licence_file file` takes
 /// precedence. A unit test proves it verifies against
 /// [`ANCHOR_CERTIFICATES`], so a release can never ship a token its own
 /// verifier refuses.

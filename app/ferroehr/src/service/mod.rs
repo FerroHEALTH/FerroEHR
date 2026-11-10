@@ -111,7 +111,7 @@ pub struct FerroEhrService {
     /// Signature). Defaults to server-side `digest` signing; the binary wires
     /// the configured [`Signer`].
     signer: Arc<Signer>,
-    /// The boot outcome of the `[licence]` section
+    /// The boot outcome of the `[deployment] licence_file` section
     /// ([`crate::licence::state::LicenceState`]); no licence by default. Read
     /// by `/management/status`; it changes nothing else.
     licence: crate::licence::state::LicenceState,
@@ -162,7 +162,7 @@ pub struct FerroEhrService {
     /// §Supporting Archetype-based Querying). Invalidated on every local ADL2 artefact
     /// write; the memo itself is spec-silent — our own performance design.
     pub(crate) archetype_lineage: ArchetypeLineageCache,
-    /// Per-query DB execution budget (`[query].timeout_ms`); `None` disables it
+    /// Per-query DB execution budget (`[record.query] timeout`); `None` disables it
     /// (the global request timeout is then the only guard). On overrun the
     /// query is reported as `408`. No openEHR spec governs a query timeout —
     /// our own extension.
@@ -172,17 +172,17 @@ pub struct FerroEhrService {
     /// [`QueryConfig::max_result_rows`](crate::service::query::config::QueryConfig::max_result_rows).
     query_result_ceiling: Option<i64>,
     /// Whether the transactional event outbox is written on every commit. The
-    /// outbox feeds the readers `[outbox] readers` names — no openEHR spec
+    /// outbox feeds the readers `[record.change_feed] readers` names — no openEHR spec
     /// governs eventing (our own extension). With no reader the per-commit
     /// `event_outbox` INSERT (and its envelope serialization) is pure overhead,
     /// so the binary gates it on that list. Defaults to `true` in
     /// [`Self::new`] so a bare service (tests, embeddings) never silently drops
     /// an event; the binary sets the real gate via [`Self::with_outbox_enabled`].
     outbox_enabled: bool,
-    /// `[versioning] skip_identical_resend` (#4415); the binary sets it via
+    /// `[record.versioning] idempotent_resend` (#4415); the binary sets it via
     /// [`Self::with_skip_identical_resend`].
     skip_identical_resend: bool,
-    /// The `[origins]` register: which origin a direct commit by a registered
+    /// The `[[authz.origin]]` register: which origin a direct commit by a registered
     /// client is stamped with, and which origins a retention period may name
     /// (EHDS Annex II 3.4). Empty in [`Self::new`]; the binary sets it via
     /// [`Self::with_origins`].
@@ -202,7 +202,7 @@ pub struct FerroEhrService {
     ///
     /// `None` leaves identifiers stored exactly as written, which is the
     /// default posture; the binary installs the compiled
-    /// `[demographic.identifier_protection]` section.
+    /// `[privacy.identifier_protection]` section.
     pub(in crate::service) identifiers:
         Option<Arc<crate::identifier_protection::engine::IdentifierProtection>>,
     /// The clinical-side data-minimisation policy
@@ -213,7 +213,7 @@ pub struct FerroEhrService {
     /// `[privacy]` section via [`Self::with_privacy`], and that section's own
     /// default refuses identified parties and scans in `strict`.
     pub(in crate::service) privacy: Arc<crate::privacy::PrivacyPolicy>,
-    /// The `[cohort]` allow-list and limits
+    /// The `[privacy.cohort]` allow-list and limits
     /// ([`crate::service::linkage::cohort::config::CohortConfig`]).
     ///
     /// Empty by default, which leaves the cross-domain cohort surface off: a
@@ -224,10 +224,10 @@ pub struct FerroEhrService {
     /// ([`ehr_index::provider::EhrIndexProvider`]).
     ///
     /// [`Self::new`] installs none, so every subject-scoped call refuses until
-    /// the binary installs the `[ehr_index]` provider or a test opts in to the
+    /// the binary installs the `[pixm]` provider or a test opts in to the
     /// local map.
     pub(in crate::service) ehr_index: ehr_index::provider::EhrIndexProvider,
-    /// The `[access_delay]` policy (EHDS Art. 3(3)); `None` in [`Self::new`],
+    /// The `[privacy.access_delay]` policy (EHDS Art. 3(3)); `None` in [`Self::new`],
     /// which leaves the person's access immediate.
     pub(in crate::service) access_delay:
         Option<Arc<crate::config::access_delay::AccessDelayPolicy>>,
@@ -309,7 +309,7 @@ impl FerroEhrService {
     ///
     /// Without it the demographic write path stores identifiers exactly as
     /// written, which is the default posture; the binary installs the compiled
-    /// `[demographic.identifier_protection]` section when it is enabled.
+    /// `[privacy.identifier_protection]` section when it is enabled.
     #[must_use]
     pub fn with_identifier_protection(
         mut self,
@@ -353,7 +353,7 @@ impl FerroEhrService {
         self
     }
 
-    /// Install the `[cohort]` allow-list and limits.
+    /// Install the `[privacy.cohort]` allow-list and limits.
     ///
     /// Without it the service binds no predicate, so
     /// [`Self::cohort_enabled`] is false and every cohort execution is refused
@@ -369,7 +369,7 @@ impl FerroEhrService {
     ///
     /// This is what makes the ROLE separation a deployment choice: the pool may
     /// authenticate as `ferroehr_party` on its own DSN
-    /// (`[db].demographic_url`), so neither runtime credential can read the
+    /// (`[database].demographic_url`), so neither runtime credential can read the
     /// other domain's relations. Without it, [`Self::new`]'s derived pool runs
     /// the same schema separation over the clinical credential.
     #[must_use]
@@ -395,7 +395,7 @@ impl FerroEhrService {
         self
     }
 
-    /// Install the boot outcome of the `[licence]` section. The stamp key
+    /// Install the boot outcome of the `[deployment] licence_file` section. The stamp key
     /// every server-minted identifier carries follows from it; nothing else
     /// does.
     #[must_use]
@@ -421,7 +421,7 @@ impl FerroEhrService {
         &self.deployment
     }
 
-    /// The boot outcome of the `[licence]` section.
+    /// The boot outcome of the `[deployment] licence_file` section.
     #[must_use]
     pub fn licence(&self) -> &crate::licence::state::LicenceState {
         &self.licence
@@ -483,20 +483,20 @@ impl FerroEhrService {
         self
     }
 
-    /// Set the `[origins]` register (EHDS Annex II 3.4).
+    /// Set the `[[authz.origin]]` register (EHDS Annex II 3.4).
     #[must_use]
     pub fn with_origins(mut self, origins: crate::origins::OriginsConfig) -> Self {
         self.origins = Arc::new(origins);
         self
     }
 
-    /// The `[origins]` register in force.
+    /// The `[[authz.origin]]` register in force.
     #[must_use]
     pub fn origins(&self) -> &crate::origins::OriginsConfig {
         &self.origins
     }
 
-    /// Sets `[versioning] skip_identical_resend` (#4415): an update whose
+    /// Sets `[record.versioning] idempotent_resend` (#4415): an update whose
     /// content equals the current version's answers with that version and
     /// commits nothing.
     #[must_use]
@@ -506,7 +506,7 @@ impl FerroEhrService {
     }
 
     /// Set whether the transactional event outbox is written on commit. The
-    /// binary calls this with whether `[outbox] readers` names a reader, so the
+    /// binary calls this with whether `[record.change_feed] readers` names a reader, so the
     /// `event_outbox` INSERT is skipped when no reader will ever read it. No
     /// openEHR spec governs eventing — our own extension.
     #[must_use]
@@ -515,13 +515,13 @@ impl FerroEhrService {
         self
     }
 
-    /// Apply the `[query]` tuning knobs — the plan-cache capacity and the
+    /// Apply the `[record.query]` tuning knobs — the plan-cache capacity and the
     /// per-query execution budget ([`QueryConfig`]). No openEHR spec governs
     /// these — our own operational extension.
     #[must_use]
     pub fn with_query_config(mut self, query: &QueryConfig) -> Self {
         self.plan_cache = PlanCache::new(query.plan_cache_capacity);
-        self.query_timeout = query.timeout();
+        self.query_timeout = query.budget();
         self.query_result_ceiling = query.result_ceiling();
         self
     }

@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment_profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
-![Version: 23.3.1](https://img.shields.io/badge/Version-23.3.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.6.3](https://img.shields.io/badge/AppVersion-5.6.3-informational?style=flat-square)
+![Version: 24.0.0](https://img.shields.io/badge/Version-24.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.6.3](https://img.shields.io/badge/AppVersion-5.6.3-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 23.3.1 \
+  --version 24.0.0 \
   --namespace ferroehr --create-namespace \
   --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
@@ -62,7 +62,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `23.3.1` |
+| the **chart** (templates, defaults, this document) | `--version` | `24.0.0` |
 | the **server image** | `image.tag` | `5.6.3` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -74,7 +74,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:23.3.1 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:24.0.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -82,7 +82,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:23.3.1 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:23.3.1 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:24.0.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.6.3 \
   -R FerroHEALTH/FerroEHR
@@ -198,7 +198,7 @@ Kubernetes: `>=1.36.0-0`
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` | Pod affinity/anti-affinity rules. Empty = none. |
-| auth.caExistingSecret | string | `""` | Name of an existing Secret holding a PEM bundle of the certificate authorities the server trusts for its `[auth]` issuer (the metadata, the key set and, under introspection, the introspection and token calls), beside the image's own roots: for an issuer behind a private PKI. The chart mounts the key as a file and points `[auth] ca_file` at it. Empty trusts the image's roots alone. |
+| auth.caExistingSecret | string | `""` | Name of an existing Secret holding a PEM bundle of the certificate authorities the server trusts for its `[auth]` issuer (the metadata and the key set), beside the image's own roots: for an issuer behind a private PKI. The chart mounts the key as a file and points `[auth.tls] trust_roots_file` at it. Empty trusts the image's roots alone. |
 | auth.caExistingSecretKey | string | `"ca.crt"` | Key within `caExistingSecret` carrying the PEM bundle. |
 | autoscaling.behavior | object | `{}` | Scaling behaviour, passed through verbatim to `spec.behavior`. Empty leaves the documented defaults, which are already asymmetric in the right direction for a clinical API: scale-up is immediate, scale-down waits out a 300-second stabilization window so a traffic trough cannot tear down capacity that is about to be needed. Set this only to make it MORE conservative — e.g. a `scaleDown.policies` entry capping how many pods may go per minute (https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#configurable-scaling-behavior). |
 | autoscaling.enabled | bool | `false` | Horizontal pod autoscaling. When on, the chart omits replicas and the HPA owns the count. |
@@ -208,12 +208,12 @@ Kubernetes: `>=1.36.0-0`
 | autoscaling.targetMemoryUtilizationPercentage | int | `0` | Target average memory. 0 removes the metric. A CDR is usually CPU-bound, so this is off by default. |
 | backup.activeDeadlineSeconds | int | `7200` | Hard ceiling on one dump, so a dump blocked on the database ends rather than overlapping the next schedule. |
 | backup.audit.existingSecret | string | `""` | REQUIRED when the audit domain has its own DSN: Secret holding the audit BACKUP DSN — a read-only role on the audit schema in the database `database.audit` points at. The clinical backup DSN is not it: that one names the clinical database, which is not where this trail lives. |
-| backup.audit.existingSecretKey | string | `"FERROEHR__STORAGE__AUDIT__URL"` | Key within `existingSecret` carrying that DSN. |
+| backup.audit.existingSecretKey | string | `"FERROEHR__DATABASE__AUDIT__URL"` | Key within `existingSecret` carrying that DSN. |
 | backup.audit.persistentVolumeClaim | string | `""` | REQUIRED when the audit domain has its own DSN: an EXISTING PersistentVolumeClaim for the audit dumps, and a DIFFERENT one from every other domain's. The trail names patients and principals; it is the record of who read what, so give its volume its own audience. |
 | backup.audit.schedule | string | `"45 2 * * *"` | Cron schedule for the audit dump (schema audit). Offset from the other two by default so no two dumps read a database in the same minute. Only read when `database.audit.existingSecret` is set; otherwise the trail travels with the clinical dump and no audit job renders. |
 | backup.backoffLimit | int | `2` | Retries before a dump is declared failed. |
 | backup.clinical.existingSecret | string | `""` | REQUIRED when enabled: Secret holding the clinical BACKUP DSN — a role read-only on the clinical schemas, and not the pool's credential: each domain's runtime role is revoked from the others, so a dump taken through it would be silently partial. |
-| backup.clinical.existingSecretKey | string | `"FERROEHR__DB__URL"` | Key within `existingSecret` carrying that DSN. |
+| backup.clinical.existingSecretKey | string | `"FERROEHR__DATABASE__URL"` | Key within `existingSecret` carrying that DSN. |
 | backup.clinical.persistentVolumeClaim | string | `""` | REQUIRED when enabled: the name of an EXISTING PersistentVolumeClaim the clinical dumps are written to, mounted at /backup. The chart creates no claim — its storage class, size, retention and who may read it are yours. |
 | backup.clinical.schedule | string | `"15 1 * * *"` | Cron schedule for the clinical dump (schemas clinical and ext, plus audit while the audit domain shares this database). |
 | backup.enabled | bool | `false` | Render the per-domain backup CronJobs: clinical, party, and audit when `database.audit.existingSecret` gives it a database of its own. Each rendered domain then needs its own `persistentVolumeClaim` below, or the render is refused. |
@@ -223,7 +223,7 @@ Kubernetes: `>=1.36.0-0`
 | backup.image.tag | string | `""` | Image tag. Empty falls back to .Chart.appVersion, as the server's does. |
 | backup.nodeSelector | object | `{}` | Node selector for the dump pods. |
 | backup.party.existingSecret | string | `""` | REQUIRED when enabled: Secret holding the party BACKUP DSN — a read-only role on the party schema, and a DIFFERENT role from the clinical one. This credential reads every identity the instance holds; treat it accordingly. |
-| backup.party.existingSecretKey | string | `"FERROEHR__STORAGE__PARTY__URL"` | Key within `existingSecret` carrying that DSN. |
+| backup.party.existingSecretKey | string | `"FERROEHR__DATABASE__PARTY__URL"` | Key within `existingSecret` carrying that DSN. |
 | backup.party.persistentVolumeClaim | string | `""` | REQUIRED when enabled: an EXISTING PersistentVolumeClaim for the party dumps, and a DIFFERENT one from every other domain's claim (two domains sharing a claim is refused at render). This is the volume that carries identifying data; give it the narrower audience. |
 | backup.party.schedule | string | `"45 1 * * *"` | Cron schedule for the party dump (schema party). Offset from the clinical one by default so no two dumps read the database in the same minute. |
 | backup.podAnnotations | object | `{}` | Extra annotations on the dump pods. |
@@ -262,17 +262,20 @@ Kubernetes: `>=1.36.0-0`
 | bridge.securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}}` | Container-level security context. Mirrors the server's. |
 | bridge.service.port | int | `8080` | Service port. The Service is always ClusterIP and the container always listens on 8080. |
 | bridge.strategy | object | `{}` | Deployment update strategy. Empty leaves the API default (`RollingUpdate`). Set `{type: Recreate}` when `extraVolumes` mounts a ReadWriteOnce claim (the FHIR facade's identity store): a rolling update surges a second pod that cannot attach it on another node. |
-| bridge.terminationGracePeriodSeconds | int | `20` | Termination grace period. FerroBRIDGE drains in-flight requests on SIGTERM for up to its own `server.shutdown_timeout_ms` (10 s by default). |
+| bridge.terminationGracePeriodSeconds | int | `20` | Termination grace period. FerroBRIDGE drains in-flight requests on SIGTERM for up to its own `server.shutdown_timeout` (10 s by default). |
 | bridge.tolerations | list | `[]` | Tolerations. |
 | bridge.topologySpreadConstraints | list | `[]` | Topology spread for FerroBRIDGE's pods. Empty uses the chart's default: one replica per node, `ScheduleAnyway`, scoped to the ReplicaSet being rolled. Set it to replace that wholesale. |
 | bridge.usageReport.enabled | string | `nil` | FerroBRIDGE's usage report. Empty follows the top-level `usageReport.enabled`; true or false decides for FerroBRIDGE alone. The chart writes it into `[usage_report]` of config.toml, with the deployment `helm`, for a FerroBRIDGE release from 0.0.7 on; a release before it sends no report and refuses the section, so it gets none. |
-| config.admin.enabled | bool | `false` |  |
+| config.api.admin | bool | `false` |  |
+| config.api.base_path | string | `"/ferroehr/rest/openehr/v1"` |  |
+| config.api.body_limit | string | `"16MiB"` |  |
+| config.api.openapi_ui | string | `"private"` |  |
+| config.api.terminology | bool | `false` |  |
 | config.audit.categories.archetypes | object | `{}` |  |
 | config.audit.categories.templates | object | `{}` |  |
 | config.audit.enabled | bool | `true` |  |
 | config.audit.store.enabled | bool | `true` |  |
-| config.audit.store.retention_days | int | `0` |  |
-| config.audit.store.retention_years | int | unset |  |
+| config.audit.store.retention | string | unset |  |
 | config.auth.enabled | bool | `true` |  |
 | config.authz.abac.enabled | bool | `false` |  |
 | config.authz.federation.agreement | list | `[]` |  |
@@ -281,12 +284,13 @@ Kubernetes: `>=1.36.0-0`
 | config.authz.rbac.enabled | bool | `true` |  |
 | config.authz.rbac.role_issuers | list | `[]` |  |
 | config.authz.system_client | list | `[]` |  |
-| config.db.acquire_timeout_secs | int | `30` |  |
-| config.db.max_connections | int | `10` |  |
-| config.db.migrate | string | `"apply"` |  |
-| config.db.min_connections | int | `0` |  |
-| config.db.statement_timeout_ms | int | `60000` |  |
-| config.deployment_profile | string | unset: the chart refuses to render |  |
+| config.database.acquire_timeout | string | `"30s"` |  |
+| config.database.max_connections | int | `10` |  |
+| config.database.migrations | string | `"apply"` |  |
+| config.database.min_connections | int | `0` |  |
+| config.database.statement_timeout | string | `"1min"` |  |
+| config.deployment.profile | string | unset: the chart refuses to render |  |
+| config.deployment.spec_profile | string | `"development"` |  |
 | config.files | object | `{}` |  |
 | config.management.base_path | string | `"/management"` |  |
 | config.management.enabled | bool | `true` |  |
@@ -296,45 +300,37 @@ Kubernetes: `>=1.36.0-0`
 | config.management.endpoints.loggers | string | `"off"` |  |
 | config.management.endpoints.metrics | string | `"off"` |  |
 | config.management.endpoints.prometheus | string | `"off"` |  |
-| config.multimedia.allow_http | bool | `false` |  |
-| config.multimedia.bucket | string | `"openehr-multimedia"` |  |
-| config.multimedia.enabled | bool | `false` |  |
-| config.multimedia.region | string | `"us-east-1"` |  |
-| config.rest.base_path | string | `"/ferroehr/rest/openehr/v1"` |  |
-| config.rest.body_limit_bytes | int | `16777216` |  |
-| config.rest.cors_permissive | bool | `false` |  |
-| config.rest.swagger_ui | string | `"private"` |  |
-| config.scim.enabled | bool | `false` |  |
+| config.record.multimedia.bucket | string | `"openehr-multimedia"` |  |
+| config.record.multimedia.enabled | bool | `false` |  |
+| config.record.multimedia.region | string | `"us-east-1"` |  |
+| config.record.signing.enabled | bool | `true` |  |
+| config.record.signing.mode | string | `"digest"` |  |
+| config.record.signing.verify_on_read | string | `"strict"` |  |
 | config.server.caller_rate.burst | int | `2048` |  |
 | config.server.caller_rate.requests_per_second | int | `1024` |  |
 | config.server.max_concurrent_requests | int | `256` |  |
-| config.signing.enabled | bool | `true` |  |
-| config.signing.mode | string | `"digest"` |  |
-| config.signing.verify_on_read | string | `"strict"` |  |
-| config.spec_profile | string | `"development"` |  |
 | config.telemetry.format | string | `"json"` |  |
-| config.terminology.api_enabled | bool | `false` |  |
 | database.audit.existingSecret | string | `""` | Reference an existing Secret holding the DSN the audit repository is written through. The audit trail is not a pseudonymisation domain — it is the node's security-surveillance record, strictly outside the EHR content — but it is the one domain a deployment most often wants on its own server, which DSV Art. 4 Abs. 5 asks for. |
-| database.audit.existingSecretKey | string | `"FERROEHR__STORAGE__AUDIT__URL"` | Key WITHIN it holding that DSN. Mounted as a file. |
+| database.audit.existingSecretKey | string | `"FERROEHR__DATABASE__AUDIT__URL"` | Key WITHIN it holding that DSN. Mounted as a file. |
 | database.audit.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the database this domain lives in, when it is not the database `database.migrateExistingSecret` reaches (a migrator of THAT database). Mounted into the migration Job, which applies the schema there, and into the server, which verifies it there under `config.db.migrate=verify`. Empty: such a database is prepared on this domain's own DSN, which a DML-only role cannot do. |
-| database.audit.migrateExistingSecretKey | string | `"FERROEHR__STORAGE__MIGRATE__AUDIT__URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file. |
+| database.audit.migrateExistingSecretKey | string | `"FERROEHR__DATABASE__AUDIT__MIGRATE_URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file. |
 | database.audit.url | string | `""` | Inline audit DSN (DEV/TEST ONLY). Ignored when `audit.existingSecret` is set. |
 | database.caConfigMap | string | `""` | An existing ConfigMap holding the CA certificate the database servers' certificates chain to, for DSNs carrying `?sslmode=verify-full&sslrootcert=/etc/ferroehr-db-ca/ca.crt`. Mounted read-only at `/etc/ferroehr-db-ca` into the server, the migration Job and the backup CronJobs, every pod that opens a database connection. Empty mounts nothing; a CA the image already trusts needs no ConfigMap. |
 | database.caConfigMapKey | string | `"ca.crt"` | Key WITHIN caConfigMap holding the PEM CA certificate; it lands as `/etc/ferroehr-db-ca/ca.crt`. |
 | database.clinical.existingSecret | string | `""` | Reference an existing Secret holding the CLINICAL-role DSN (`postgres://ferroehr_clinical:...@host:5432/ferroehr`). Empty uses `database.existingSecret` / `database.url`. |
-| database.clinical.existingSecretKey | string | `"FERROEHR__STORAGE__CLINICAL__URL"` | Key WITHIN it holding that DSN. Mounted as a file; only its PATH reaches the pod's environment. |
+| database.clinical.existingSecretKey | string | `"FERROEHR__DATABASE__CLINICAL__URL"` | Key WITHIN it holding that DSN. Mounted as a file; only its PATH reaches the pod's environment. |
 | database.clinical.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the database this domain lives in, when it is not the database `database.migrateExistingSecret` reaches (a migrator of THAT database). Mounted into the migration Job, which applies the schema there, and into the server, which verifies it there under `config.db.migrate=verify`. Empty: such a database is prepared on this domain's own DSN, which a DML-only role cannot do. |
-| database.clinical.migrateExistingSecretKey | string | `"FERROEHR__STORAGE__MIGRATE__CLINICAL__URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file. |
+| database.clinical.migrateExistingSecretKey | string | `"FERROEHR__DATABASE__CLINICAL__MIGRATE_URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file. |
 | database.clinical.url | string | `""` | Inline clinical DSN (DEV/TEST ONLY — lands in a chart-managed Secret). Ignored when `clinical.existingSecret` is set. |
 | database.existingSecret | string | `""` | Reference an existing Secret holding the app-role DSN (STRONGLY preferred for production — keeps the credential out of chart values and git). The secret's value must be a full `postgres://ferroehr_clinical:...@host:5432/ferroehr` (optionally `?sslmode=verify-full`). |
-| database.existingSecretKey | string | `"FERROEHR__DB__URL"` | Key WITHIN existingSecret that holds the DSN. This is a Secret key name, not an environment variable name: the chart mounts that key as a file and passes only its PATH as `FERROEHR__DB__URL_FILE`, so the DSN never enters the pod's environment. The default spelling is kept for compatibility with existing Secrets created for the older env-borne arrangement. |
+| database.existingSecretKey | string | `"FERROEHR__DATABASE__URL"` | Key WITHIN existingSecret that holds the DSN. This is a Secret key name, not an environment variable name: the chart mounts that key as a file and passes only its PATH as `FERROEHR__DATABASE__URL_FILE`, so the DSN never enters the pod's environment. The default spelling is kept for compatibility with existing Secrets created for the older env-borne arrangement. |
 | database.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the schema (`postgres://ferroehr_migrator:...@host:5432/ferroehr`). Required when the runtime DSNs are domain-scoped roles, including under `config.db.migrate=verify`. |
-| database.migrateExistingSecretKey | string | `"FERROEHR__DB__MIGRATE_URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file; only its PATH reaches the pod's environment. |
+| database.migrateExistingSecretKey | string | `"FERROEHR__DATABASE__MIGRATE_URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file; only its PATH reaches the pod's environment. |
 | database.migrateUrl | string | `""` | Inline schema-preparation DSN (DEV/TEST ONLY — lands in a chart-managed Secret). Ignored when migrateExistingSecret is set. |
 | database.party.existingSecret | string | `""` | Reference an existing Secret holding the PARTY-role DSN (`postgres://ferroehr_party:...@host:5432/ferroehr`), a different credential from `database.existingSecret`. |
-| database.party.existingSecretKey | string | `"FERROEHR__STORAGE__PARTY__URL"` | Key WITHIN it holding that DSN. Mounted as a file. |
+| database.party.existingSecretKey | string | `"FERROEHR__DATABASE__PARTY__URL"` | Key WITHIN it holding that DSN. Mounted as a file. |
 | database.party.migrateExistingSecret | string | `""` | Reference an existing Secret holding the DSN that PREPARES the database this domain lives in, when it is not the database `database.migrateExistingSecret` reaches (a migrator of THAT database). Mounted into the migration Job, which applies the schema there, and into the server, which verifies it there under `config.db.migrate=verify`. Empty: such a database is prepared on this domain's own DSN, which a DML-only role cannot do. |
-| database.party.migrateExistingSecretKey | string | `"FERROEHR__STORAGE__MIGRATE__PARTY__URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file. |
+| database.party.migrateExistingSecretKey | string | `"FERROEHR__DATABASE__PARTY__MIGRATE_URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file. |
 | database.party.url | string | `""` | Inline party DSN (DEV/TEST ONLY). Ignored when `party.existingSecret` is set. |
 | database.url | string | `""` | Inline DSN (DEV/TEST ONLY — lands in a chart-managed Secret). Leave empty and use existingSecret in production. Ignored when existingSecret is set. |
 | definitions.files | list | `[]` | The definitions to load, in order: each `name` a file name ending in `.opt` (an OPT 1.4 template) or `.adls` (an ADL 2 archetype or template, its parents and slot fillers first) and its `content`. |
@@ -375,7 +371,7 @@ Kubernetes: `>=1.36.0-0`
 | migrations.job.backoffLimit | int | `3` | Retries before the Job (and therefore the release) is declared failed. |
 | migrations.job.enabled | bool | `false` | Run the migrations as a pre-install/pre-upgrade hook Job under the migrator DSN. Pair it with config.db.migrate=verify and an app-role-only runtime DSN for the least-privilege posture. |
 | migrations.job.existingSecret | string | `""` | REQUIRED when enabled: an existing Secret holding the MIGRATOR DSN (`postgres://ferroehr_migrator:...@host:5432/ferroehr`). Deliberately a different credential from `database.*`, which carries the runtime app-role DSN — rendering fails if it is empty. |
-| migrations.job.existingSecretKey | string | `"FERROEHR__DB__URL"` | Key WITHIN existingSecret holding the migrator DSN. Mounted as a file; only its PATH reaches the pod's environment. |
+| migrations.job.existingSecretKey | string | `"FERROEHR__DATABASE__URL"` | Key WITHIN existingSecret holding the migrator DSN. Mounted as a file; only its PATH reaches the pod's environment. |
 | migrations.job.nodeSelector | object | `{}` | Node selector for the migration pod. |
 | migrations.job.podAnnotations | object | `{}` | Extra annotations on the migration pod. |
 | migrations.job.resources | object | `{}` | Resource requests/limits for the migration pod. |
@@ -421,7 +417,7 @@ Kubernetes: `>=1.36.0-0`
 | secrets.auditFhirFeedUrl | string | `""` | FHIR base URL of the external Audit Record Repository for [audit.fhir_feed] (may carry basic-auth credentials in its userinfo) → FERROEHR__AUDIT__FHIR_FEED__URL env: audit.fhir_feed.url has no `*_file` sibling either. |
 | secrets.basicUserPasswordHashes | object | `{}` | Argon2id password hashes for [[auth.basic.users]], keyed by user-id. Each is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<user>.password_hash and the chart injects the matching `password_hash_file` into the rendered TOML. Declare the user itself — `user`, `scopes`, `roles` — under config.auth.basic.users; a user-id with no matching entry is a render error. A hash under `config:` is refused: it would reach the ConfigMap. |
 | secrets.ehrIndexClientSecret | string | `""` | The client secret of the identity source's OAuth2 grant ([ehr_index.oauth]). MOUNTED as /etc/ferroehr-secrets/ehr_index.oauth.client_secret, and the chart injects the matching `client_secret_file` into the rendered TOML. Declare the grant itself (token_endpoint or issuer, client_id, scope) under config.ehr_index.oauth; a secret with no such declaration is a render error. |
-| secrets.multimediaAccessKeyId | string | `""` | S3 access key id for [multimedia] → FERROEHR__MULTIMEDIA__ACCESS_KEY_ID env. Not a secret in the server's own model (it is reported unredacted by /management/env); prefer IRSA/Workload-Identity (leave empty) on cloud. |
+| secrets.multimediaAccessKeyId | string | `""` | S3 access key id for [multimedia] → FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID env. Not a secret in the server's own model (it is reported unredacted by /management/env); prefer IRSA/Workload-Identity (leave empty) on cloud. |
 | secrets.multimediaSecretAccessKey | string | `""` | S3 secret access key for [multimedia]. MOUNTED as /etc/ferroehr-secrets/multimedia.secret_access_key (multimedia.secret_access_key_file). |
 | secrets.signingKeyPassphrase | string | `""` | PGP key passphrase (config.signing.mode=pgp). MOUNTED as /etc/ferroehr-secrets/signing.key_passphrase (signing.key_passphrase_file). |
 | secrets.terminologyClientSecret | string | `""` | The client secret of the terminology server's OAuth2 grant ([terminology.server.oauth]). MOUNTED as /etc/ferroehr-secrets/terminology.server.oauth.client_secret, and the chart injects the matching `client_secret_file` into the rendered TOML (a path is not sensitive). Declare the grant itself — token_endpoint or issuer, client_id, scope — under config.terminology.server.oauth; a secret with no such declaration is a render error. |
@@ -482,7 +478,7 @@ Kubernetes: `>=1.36.0-0`
 | topologySpreadConstraints | list | `[]` | Spread replicas across nodes. Empty does NOT mean "no spreading": it means the chart's own default constraint applies — one soft `maxSkew: 1` over `kubernetes.io/hostname`, so two replicas prefer two nodes and a node failure does not take the whole CDR with it. It is `ScheduleAnyway`, not `DoNotSchedule`, so a single-node or capacity-constrained cluster still schedules rather than leaving a pod Pending forever.  A non-empty list REPLACES that default entirely — give the full constraint, including its own `labelSelector`. Add a `topology.kubernetes.io/zone` constraint here if your cluster spans zones; the chart does not assume one (https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/). |
 | usageReport.enabled | bool | `true` | Send the usage report (on by default). false sends nothing. |
 | viewer.affinity | object | `{}` | Affinity. |
-| viewer.auth.oidc.caExistingSecret | string | `""` | Name of an existing Secret holding a PEM bundle of the certificate authorities the viewer trusts for the issuer, beside the image's own roots: for an issuer behind a private PKI. The chart mounts the key as a file and points `[oidc] ca_file` at it. Empty trusts the image's roots alone. |
+| viewer.auth.oidc.caExistingSecret | string | `""` | Name of an existing Secret holding a PEM bundle of the certificate authorities the viewer trusts for the issuer, beside the image's own roots: for an issuer behind a private PKI. The chart mounts the key as a file and points `[oidc.tls] trust_roots_file` at it. Empty trusts the image's roots alone. |
 | viewer.auth.oidc.caExistingSecretKey | string | `"ca.crt"` | Key within `caExistingSecret` carrying the PEM bundle. |
 | viewer.auth.oidc.clientId | string | `""` | OAuth2 client id. |
 | viewer.auth.oidc.enabled | bool | `false` | Authenticate viewer users through OIDC. Off means the viewer's own session auth is whatever its defaults provide — acceptable for a private cluster, not for anything reachable by a person who should not see PHI. |

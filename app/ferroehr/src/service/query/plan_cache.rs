@@ -74,7 +74,7 @@ impl Default for PlanCache {
     /// Holds up to 256 distinct plans — bounded so a churn of one-off ad-hoc
     /// queries cannot grow the cache without limit.
     ///
-    /// The effective capacity comes from `[query].plan_cache_capacity`
+    /// The effective capacity comes from `[record.query].plan_cache_capacity`
     /// ([`super::config::QueryConfig`]), applied when the binary builds the service; a
     /// bare service (tests/embeddings) uses this default. No openEHR spec
     /// governs this — our own tuning knob.

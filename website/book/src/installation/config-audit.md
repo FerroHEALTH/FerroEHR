@@ -50,7 +50,7 @@ emergency_purpose_codes = []
 > The local store renders a FHIR R4 `AuditEvent` from each record when it is
 > read, and the ATX:FHIR Feed sends one, so both need the `fhir` build feature, on in the published binary
 > and container images. A binary built with `--no-default-features` refuses at
-> startup if `audit.store.enabled` or `audit.fhir_feed.enabled` is set; the
+> startup if `audit.store.enabled` is set or `[audit.fhir_feed]` is configured; the
 > DICOM/syslog feed needs no FHIR and stays available.
 
 > [!NOTE]
@@ -63,11 +63,10 @@ emergency_purpose_codes = []
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `true` | Persist every record in the `audit` schema, served through the ITI-81 `GET /fhir/r4/AuditEvent` search. |
-| `retention_days` | int | `0` | Days to keep records; `0` keeps them forever. Applied hourly by the retention reaper. A non-zero value below the retention floor of a jurisdiction the active `[privacy.identifier_scan]` rules name is a boot error naming both numbers; see [Audit trail](../audit.md#retention-and-who-chooses-it). |
-| `retention_years` | int | unset | Calendar years to keep records, in place of `retention_days`. Compared exactly against the floors and ceilings, which are written in years, and reaped with calendar arithmetic. Setting it together with a non-zero `retention_days`, or to `0`, is a boot error. |
+| `retention` | calendar period | unset (keep forever) | How long records are kept, an ISO 8601 period of whole years (`"P3Y"`) or days (`"P1830D"`); unset keeps them forever. Applied hourly by the retention reaper. Years are compared exactly against the floors and ceilings, which are written in years, and reaped with calendar arithmetic. A value below the retention floor of a jurisdiction the active `[privacy.identifier_scan]` rules name is a boot error naming both bounds; see [Audit trail](../audit.md#retention-and-who-chooses-it). The name is EHDS Annex II's. |
 | `sgb_v_309_controller` | bool | `false` | Set only if the deploying organisation is, or acts for, one of the controllers SGB V § 307 names for a German telematics-infrastructure application. It caps the horizon at the three-year period of SGB V § 309 Abs. 1, after which Abs. 3 requires deletion without delay, so a declared controller cannot keep records forever. |
-| `verify_interval_seconds` | int | `3600` | Seconds between two scheduled verifications of the store's hash chain; `0` turns the schedule off. Each run verifies the records written since the newest link an earlier run found intact. A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` and reported by the `audit_chain` indicator on `GET /health/readiness`. See [Tamper evidence](../audit.md#tamper-evidence). |
-| `full_verify_interval_seconds` | int | `604800` | Seconds between two scheduled full passes over the hash chain, which also recompute the records before the checkpoint; `0` leaves the full pass to `SELECT * FROM audit.verify_audit_chain()` on demand. A run that found damage is always followed by a full pass. |
+| `verify_interval` | duration | `"1h"` | The time between two scheduled verifications of the store's hash chain; `"0s"` turns the schedule off. Each run verifies the records written since the newest link an earlier run found intact. A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` and reported by the `audit_chain` indicator on `GET /health/readiness`. See [Tamper evidence](../audit.md#tamper-evidence). |
+| `full_verify_interval` | duration | `"7d"` | The time between two scheduled full passes over the hash chain, which also recompute the records before the checkpoint; `"0s"` leaves the full pass to `SELECT * FROM audit.verify_audit_chain()` on demand. A run that found damage is always followed by a full pass. |
 
 The local store is the durability anchor of the whole subsystem: with it on, the
 FHIR feed drains from it, so a down repository loses nothing.
@@ -75,16 +74,16 @@ FHIR feed drains from it, so a down repository loses nothing.
 The floors and ceilings are written in calendar years. In every EU Member State
 the floor is three years (EHDS Art. 9(2)), and a longer national floor wins:
 five years in the Netherlands. Switzerland keeps its one-year floor. A
-`retention_years` value is compared against them exactly. A `retention_days`
+`retention` value is compared against them exactly. A `retention`
 value is held to the most days the years can span for a floor (`1096` for three
 years, `1830` for the Dutch five, `366` for one) and to the fewest for a ceiling
 (`1095` for the German three). A declared § 309 controller in Germany therefore
-has no `retention_days` value that passes both the EHDS floor and the § 309
-ceiling, and sets `retention_years = 3`:
+has no `retention` value that passes both the EHDS floor and the § 309
+ceiling, and sets `retention = 3`:
 
 ```toml
 [audit.store]
-retention_years = 3
+retention = 3
 sgb_v_309_controller = true
 ```
 
@@ -120,8 +119,8 @@ an electronic dispensation. A deployment that declares any template or
 archetype replaces the shipped map whole, so copy its entries into your own
 map to keep them. A national category declared alone keeps the shipped map.
 `shipped_map = false` with nothing declared leaves no map: every access is then
-recorded `unclassified`, and `deployment_profile = "production"` refuses to
-start on the `no_category_map` gap unless `deployment_accepts` names it.
+recorded `unclassified`, and `deployment.profile = "production"` refuses to
+start on the `no_category_map` gap unless `deployment.accepts` names it.
 
 ```toml
 [audit.categories]
@@ -157,7 +156,7 @@ The map's SHA-256 digest is on the boot line, on `GET /management/info` under
 mirrored into the retention register, so a retention period can be keyed on a
 category through the [admin marks API](../operations-admin-apis.md).
 
-### `[origins]`: the origins a deployment recognises
+### `[[authz.origin]]`: the origins a deployment recognises
 
 Every version records where its data came from at commit: each `FEEDER_AUDIT`
 originating-system id its body carries, and the access log reports them (EHDS
@@ -169,7 +168,7 @@ and an [ABAC rule](../security.md#abac-attribute-based-fine-grained) may then
 name. A top-level table, not part of `[audit]`.
 
 ```toml
-[[origins.registered]]
+[[authz.origin]]
 id = "lab.example"
 clients = ["lab-gateway"]
 ```
@@ -182,7 +181,7 @@ clients = ["lab-gateway"]
 
 A body that carries no `FEEDER_AUDIT`, committed by a listed client, is stamped
 with that client's origin; a direct commit by any other caller keeps this
-server's `[rest] system_id`, as before. A blank id or one with whitespace, an
+server's `[api] system_id`, as before. A blank id or one with whitespace, an
 id registered twice, a blank client, or a client listed under two origins
 refuses boot.
 
@@ -194,23 +193,19 @@ audit message names a patient (ITI TF-2 §3.20.4.1.2.1.1).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | Ship DICOM PS3.15 audit records to an external repository over syslog. |
-| `host` | string | `localhost` | Repository host. |
-| `port` | int | `6514` | Repository port, the RFC 5425 port by default. |
+| `url` | string | `tls://localhost:6514` | The repository, `tls://host:port`; RFC 5425 §4.1 names port 6514. The table's presence ships records; absent, nothing is sent. |
 | `tls.trust_roots_file` | path | unset | PEM bundle of trust roots for the repository, beside the platform's. |
 | `tls.client_identity_file` | path | unset | The client certificate chain and its private key in one PEM, for mutual TLS. |
 | `tls.client_identity` | secret | unset | The same PEM inline, in place of `client_identity_file`. |
 | `tls.min_version` | string | `"1.3"` | The oldest TLS version the client speaks; set `"1.2"` for a repository that offers no TLS 1.3. |
 | `spool_dir` | path | unset | The directory of the spool every frame is stored in before it is sent. It must give no access to the group or to other users. Unset, the spool is held in memory, and a restart loses the frames not yet delivered. |
-| `spool_max_messages` | int | `100000` | The most frames the spool holds; a frame past it is refused and counted in `atna_audit_dropped`. |
-| `spool_max_bytes` | int | `268435456` | The most bytes the spool holds. |
-| `retry_max_ms` | int | `60000` | The longest wait between two delivery attempts after a failure. |
+| `spool_max_events` | int | `100000` | The most frames the spool holds; a frame past it is refused and counted in `atna_audit_dropped`. |
+| `spool_max_size` | size | `"256MiB"` | The most the spool holds in size. |
+| `retry.max_backoff` | duration | `"1min"` | The longest wait between two delivery attempts after a failure. |
 
 `[audit.syslog.tls]` is the outbound TLS table every FerroHEALTH product
-takes, as `[ehr_index.tls]` is. The keys `tls_ca_file`,
-`tls_identity_cert_file` and `tls_identity_key_file` are retired: each is a
-boot error naming its replacement. Concatenate the certificate chain and the
-private key into the one PEM `client_identity_file` names.
+takes, as `[pixm.tls]` is. Concatenate the certificate chain and the private
+key into the one PEM `client_identity_file` names.
 
 The drain stores each frame in `ihe-atna`'s spool, and the crate's forwarder
 delivers it: one connection held open, a failed send retried with an
@@ -224,10 +219,9 @@ outbox. `delivered_syslog_at` is no longer written.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | `POST` each FHIR `AuditEvent` to an external FHIR Audit Record Repository. |
-| `url` | secret URL | `http://localhost:8080/fhir` | The repository's FHIR base; records go to `{url}/AuditEvent`. Credentials embedded in the URL are redacted from every rendering. |
-| `poll_interval_ms` | int | `2000` | How long the forwarder waits for a new record before it reads the store again. |
-| `retry_max_ms` | int | `60000` | The longest wait between two delivery attempts after a failure. |
+| `url` | secret URL | `http://localhost:8080/fhir` | The repository's FHIR base; records go to `{url}/AuditEvent`. The table's presence turns the feed on. Credentials embedded in the URL are redacted from every rendering. |
+| `poll_interval` | duration | `"2s"` | How long the forwarder waits for a new record before it reads the store again. |
+| `retry.max_backoff` | duration | `"1min"` | The longest wait between two delivery attempts after a failure. |
 
 `ihe-atna`'s forwarder delivers the feed. With the local store on, it
 delivers from the store, oldest record first: a record not yet delivered has
@@ -263,10 +257,9 @@ startup.
 | `kid` | string | the RFC 7638 thumbprint | The `kid` the client assertion names. |
 | `assertion_alg` | string | by key type | The algorithm the client assertion is signed with. |
 | `assertion_audience` | enum{token_endpoint,issuer} | `token_endpoint` | The `aud` of the client assertion; `issuer` needs `issuer` set. |
-| `client_certificate_file` / `client_key_file` | path | unset | The client certificate chain and its key presented over mutual TLS (RFC 8705); set together. |
-| `ca_file` | path | unset | PEM trust roots added to the built-in ones, for a token endpoint behind a private certificate authority. |
-| `refresh_margin_ms` | int | `30000` | How long before the token expires a new one is fetched. |
-| `timeout_ms` | int | `10000` | How long one call to the authorization server may take. |
+| `tls` | table | platform roots | The family's outbound TLS table: `trust_roots_file`, PEM trust roots added to the platform's for a token endpoint behind a private certificate authority; `client_identity_file`, one PEM holding the client certificate chain and its key presented over mutual TLS (RFC 8705); and `min_version`. |
+| `refresh_margin` | duration | `"30s"` | How long before the token expires a new one is fetched. |
+| `timeout` | duration | `"10s"` | How long one call to the authorization server may take. |
 
 With the local store on, the feed delivers from the store and loses nothing
 across a repository outage. With the store off it delivers from an in-memory

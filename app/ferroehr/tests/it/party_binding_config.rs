@@ -21,8 +21,8 @@ const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoa
 fn full() -> String {
     format!(
         r#"
-[ehr_index]
-provider = "local"
+[record]
+subject_index = "local"
 
 [[auth.issuer]]
 issuer = "https://idp.example/realms/staff"
@@ -305,7 +305,7 @@ fn a_removed_key_is_refused_naming_the_new_shape() {
         "[authz.party_binding]\nenabled = true\n",
     ));
     assert!(
-        text.contains("authz.party_binding.enabled is removed"),
+        text.contains("authz.party_binding.enabled was removed"),
         "{text}"
     );
     let text = refusal("[auth]\nissuer = \"https://idp.example\"\n");
@@ -319,13 +319,13 @@ fn a_removed_key_is_refused_naming_the_new_shape() {
             "first_party_clients = [\"ferroehr-viewer\"]",
             &format!("first_party_clients = [\"ferroehr-viewer\"]\n{key}"),
         ));
-        assert!(text.contains("is removed"), "{key}: {text}");
+        assert!(text.contains("was replaced by"), "{key}: {text}");
     }
     let text = refusal(&format!(
         "{}\n[authz.professional]\nclaim = \"sub\"\n",
         full()
     ));
-    assert!(text.contains("authz.professional is removed"), "{text}");
+    assert!(text.contains("authz.professional was removed"), "{text}");
 }
 
 #[test]
@@ -379,13 +379,15 @@ fn a_party_claim_and_a_token_profile_are_refused() {
         "identifier_type = \"guid\"",
         "identifier_type = \"guid\"\nclaim = \"oid\"",
     ));
-    assert!(text.contains("auth.party.claim"), "{text}");
-    assert!(text.contains("is removed"), "{text}");
+    assert!(text.contains("auth.party[0].claim was removed"), "{text}");
     let text = refusal(&with(
         "first_party_clients = [\"ferroehr-viewer\"]",
         "first_party_clients = [\"ferroehr-viewer\"]\ntoken_profile = \"jwt\"",
     ));
-    assert!(text.contains("token_profile is removed"), "{text}");
+    assert!(
+        text.contains("token_profile was replaced by profile"),
+        "{text}"
+    );
 }
 
 #[test]
@@ -430,7 +432,7 @@ fn every_organisation_agreement_refusal_is_named() {
         (
             "access_class = \"automated\"",
             "access_class = \"chained\"",
-            "is chained and needs chained_log_retention_years",
+            "is chained and needs chained_log_retention",
         ),
     ] {
         let base = full();
@@ -442,10 +444,10 @@ fn every_organisation_agreement_refusal_is_named() {
     }
     let chained = with(
         "access_class = \"automated\"",
-        "access_class = \"chained\"\nchained_log_retention_years = 2\n\n[audit.store]\nretention_years = 5",
+        "access_class = \"chained\"\nchained_log_retention = \"P2Y\"\n\n[audit.store]\nretention = \"P5Y\"",
     );
     assert!(
-        refusal(&chained).contains("keeps the requester's log 2 years, shorter than"),
+        refusal(&chained).contains("keeps the requester's log for \"P2Y\", shorter than"),
         "{chained}"
     );
     let contact = full()
@@ -533,7 +535,7 @@ fn a_contact_points_person_agreement_names_its_ehdsi_service() {
 fn a_chained_agreement_needs_its_issuer_to_map_the_correlation_id() {
     let chained = with(
         "access_class = \"automated\"",
-        "access_class = \"chained\"\nchained_log_retention_years = 30\n\n[audit.store]\nretention_years = 5",
+        "access_class = \"chained\"\nchained_log_retention = \"P30Y\"\n\n[audit.store]\nretention = \"P5Y\"",
     );
     let text = refusal(&chained);
     assert!(
@@ -621,7 +623,7 @@ fn a_trusted_system_that_is_this_node_is_refused() {
         "trusted_systems = [\"legacy.example\"]",
         "trusted_systems = [\"ferroehr.local\"]",
     ));
-    assert!(text.contains("this node's own rest.system_id"), "{text}");
+    assert!(text.contains("this node's own api.system_id"), "{text}");
 }
 
 #[tokio::test]
@@ -760,7 +762,7 @@ fn two_equal_selectors_are_refused() {
 #[test]
 fn a_key_of_a_protected_scheme_is_refused() {
     let toml = format!(
-        "{}\n[demographic.identifier_protection]\nenabled = true\nschemes = [\"guid\"]\nkey = \"{}\"\n",
+        "{}\n[privacy.identifier_protection]\nschemes = [\"guid\"]\nkey = \"{}\"\n",
         mapped("", ""),
         "00".repeat(32)
     );
@@ -826,8 +828,8 @@ fn a_relationship_code_outside_subject_relationship_is_refused() {
 /// `binding_issuer`, followed by `extra`.
 fn scim(issuer: &str, binding_issuer: &str, extra: &str) -> String {
     format!(
-        "{}\n[scim]\nenabled = true\npublic_base_url = \"https://cdr.example.com\"\n\n\
-         [[scim.client]]\nissuer = \"{issuer}\"\nclient_id = \"entra\"\nscope = \"ferroehr/scim\"\n\
+        "{}\n[auth.scim]\npublic_base_url = \"https://cdr.example.com\"\n\n\
+         [[auth.scim.client]]\nissuer = \"{issuer}\"\nclient_id = \"entra\"\nscope = \"ferroehr/scim\"\n\
          binding_issuer = \"{binding_issuer}\"\n{extra}",
         full()
     )
@@ -842,8 +844,7 @@ fn a_scim_client_of_the_machines_issuer_binding_a_party_issuer_loads() {
     )))
     .expect("assembles");
     config.validate().expect("validates");
-    assert!(config.scim.enabled);
-    assert_eq!(config.scim.client.len(), 1);
+    assert_eq!(config.auth.scim.expect("the scim table").client.len(), 1);
 }
 
 #[test]
@@ -869,14 +870,11 @@ fn every_scim_client_refusal_is_named() {
     let shared = refusal(&scim(
         "https://idp.example/realms/machines",
         "urn:example:staff-login",
-        "\n[[scim.client]]\nissuer = \"https://idp.example/realms/machines\"\n\
+        "\n[[auth.scim.client]]\nissuer = \"https://idp.example/realms/machines\"\n\
          client_id = \"okta\"\nscope = \"ferroehr/scim\"\n\
          binding_issuer = \"urn:example:staff-login\"\n",
     ));
     assert!(shared.contains("shares binding_issuer"), "{shared}");
-    let unknown = refusal(&format!(
-        "{}\n[scim]\nenabled = true\nmax_deactivation = 3\n",
-        full()
-    ));
+    let unknown = refusal(&format!("{}\n[auth.scim]\nmax_deactivation = 3\n", full()));
     assert!(unknown.contains("max_deactivation"), "{unknown}");
 }

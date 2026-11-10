@@ -1,38 +1,38 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[query]` section — AQL execution knobs.
+//! The `[record.query]` section — AQL execution knobs.
 //!
 //! No openEHR spec governs these tuning knobs — our own operational extension. A field of the one config tree
 //! ([`crate::config::FerroEhrConfig`]); no loader of its own. These replace the
-//! two former raw-env reads (`FERROEHR__QUERY__PLAN_CACHE_CAPACITY` /
-//! `FERROEHR__QUERY__TIMEOUT_MS`) whose parse failures were silently swallowed —
+//! two former raw-env reads whose parse failures were silently swallowed —
 //! they are now ordinary typed fields, so a bad value is a boot error like
 //! everywhere else.
 
 use std::time::Duration;
 
+use ferrohealth_config::units;
 use serde::{Deserialize, Serialize};
 
-/// AQL execution configuration (`[query]`).
+/// AQL execution configuration (`[record.query]`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct QueryConfig {
     /// Max distinct cached query plans; `0` disables the plan cache (every
     /// lookup misses and the full parse→lower path runs).
     pub plan_cache_capacity: u64,
-    /// Per-query DB execution budget in milliseconds; `0` disables it. Overrun
+    /// Per-query DB execution budget; `"0s"` disables it. Overrun
     /// reports `408` (ITS-REST `Requests_and_responses` §HTTP status codes).
     ///
     /// On by default. It was off, which left the HTTP request timeout as the
     /// only guard — and that one answers the CLIENT without cancelling the
     /// statement, so overrunning queries kept holding pooled connections after
     /// their callers had been given up on. The database-side
-    /// [`statement_timeout`](crate::db::DbConfig::statement_timeout_ms) is the
+    /// [`statement_timeout`](crate::db::DbConfig::statement_timeout) is the
     /// outer backstop; this budget is deliberately the tighter of the two so an
     /// overrun surfaces as this engine's typed refusal rather than a driver
     /// error.
-    pub timeout_ms: u64,
+    pub timeout: units::Duration,
     /// The largest page of rows one query execution serves; `0` means
     /// unbounded.
     ///
@@ -61,7 +61,7 @@ impl Default for QueryConfig {
             // record), so no legitimate query is cut short, while an unbounded
             // one is still bounded. A deployment with heavier queries raises it
             // deliberately rather than discovering there was no limit.
-            timeout_ms: 30_000,
+            timeout: units::Duration::from_secs(30),
             // The largest example composition set the conformance corpus holds
             // is thousands of rows, and a clinical UI pages; 10_000 is far above
             // any interactive answer while keeping one request's worst case
@@ -85,10 +85,10 @@ impl QueryConfig {
     }
 
     /// The per-query execution budget as a [`Duration`], or `None` when
-    /// disabled (`timeout_ms == 0`).
+    /// disabled (`timeout = "0s"`).
     #[must_use]
-    pub fn timeout(&self) -> Option<Duration> {
-        (self.timeout_ms > 0).then(|| Duration::from_millis(self.timeout_ms))
+    pub fn budget(&self) -> Option<Duration> {
+        (!self.timeout.is_zero()).then(|| self.timeout.get())
     }
 }
 
@@ -122,12 +122,12 @@ mod tests {
     fn the_execution_budget_is_on_and_tighter_than_the_database_backstop() {
         let query = QueryConfig::default();
         let db = crate::db::DbConfig::default();
-        assert!(query.timeout().is_some());
+        assert!(query.budget().is_some());
         assert!(
-            query.timeout_ms < db.statement_timeout_ms,
-            "the engine budget ({}ms) must fire before the database backstop ({}ms)",
-            query.timeout_ms,
-            db.statement_timeout_ms
+            query.timeout < db.statement_timeout,
+            "the engine budget ({}) must fire before the database backstop ({})",
+            query.timeout,
+            db.statement_timeout
         );
     }
 
@@ -142,8 +142,8 @@ mod tests {
         // only guard, and that answers the client without cancelling the
         // statement — so overrunning queries kept holding pooled connections
         // after their callers had been given up on.
-        assert!(c.timeout_ms > 0);
-        assert!(c.timeout().is_some());
+        assert!(!c.timeout.is_zero());
+        assert!(c.budget().is_some());
     }
 
     /// Zero still means off, and must keep meaning off: an operator who wants no
@@ -151,18 +151,18 @@ mod tests {
     #[test]
     fn zero_still_disables_the_budget() {
         let c = QueryConfig {
-            timeout_ms: 0,
+            timeout: units::Duration::ZERO,
             ..QueryConfig::default()
         };
-        assert!(c.timeout().is_none());
+        assert!(c.budget().is_none());
     }
 
     #[test]
     fn positive_timeout_maps_to_duration() {
         let c = QueryConfig {
-            timeout_ms: 1500,
+            timeout: units::Duration::from_millis(1500),
             ..QueryConfig::default()
         };
-        assert_eq!(c.timeout(), Some(Duration::from_millis(1500)));
+        assert_eq!(c.budget(), Some(Duration::from_millis(1500)));
     }
 }

@@ -123,7 +123,7 @@ pub(super) async fn upload(state: &AppState, parts: &RequestParts) -> Result<Res
         .to_owned();
     let location = format!(
         "{}/definition/template/adl1.4/{}",
-        state.config().rest.base_path,
+        state.config().api.base_path,
         urlencoding::encode(&template_id)
     );
     // The template is stored from here on, so the answer is `201` whatever

@@ -60,10 +60,10 @@ services:
       - $dir/signing.asc:/etc/ferroehr/signing.asc:ro
       - $dir/passphrase:/run/secrets/pgp-pass:ro
     environment:
-      FERROEHR__SIGNING__ENABLED: "true"
-      FERROEHR__SIGNING__MODE: pgp
-      FERROEHR__SIGNING__KEY_PATH: /etc/ferroehr/signing.asc
-      FERROEHR__SIGNING__KEY_PASSPHRASE_FILE: /run/secrets/pgp-pass
+      FERROEHR__RECORD__SIGNING__ENABLED: "true"
+      FERROEHR__RECORD__SIGNING__MODE: pgp
+      FERROEHR__RECORD__SIGNING__KEY_FILE: /etc/ferroehr/signing.asc
+      FERROEHR__RECORD__SIGNING__KEY_PASSPHRASE_FILE: /run/secrets/pgp-pass
 YAML
   printf '%s' "$out"
 }
@@ -157,11 +157,11 @@ services:
       - $signer/passphrase:/run/secrets/pgp-pass:ro
       - $retired/public.asc:/etc/ferroehr/retired.pub.asc:ro
     environment:
-      FERROEHR__SIGNING__ENABLED: "true"
-      FERROEHR__SIGNING__MODE: pgp
-      FERROEHR__SIGNING__KEY_PATH: /etc/ferroehr/signing.asc
-      FERROEHR__SIGNING__KEY_PASSPHRASE_FILE: /run/secrets/pgp-pass
-      FERROEHR__SIGNING__RETIRED_KEY_PATHS: /etc/ferroehr/retired.pub.asc
+      FERROEHR__RECORD__SIGNING__ENABLED: "true"
+      FERROEHR__RECORD__SIGNING__MODE: pgp
+      FERROEHR__RECORD__SIGNING__KEY_FILE: /etc/ferroehr/signing.asc
+      FERROEHR__RECORD__SIGNING__KEY_PASSPHRASE_FILE: /run/secrets/pgp-pass
+      FERROEHR__RECORD__SIGNING__RETIRED_KEY_FILES: /etc/ferroehr/retired.pub.asc
 YAML
   printf '%s' "$out"
 }

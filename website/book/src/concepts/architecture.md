@@ -72,7 +72,7 @@ that talks to the server strictly over the public REST API.
 
 The Reference Model is not pinned to a single version. The generated layer emits
 **two generations side by side** (the latest released one and the development
-one), and a single configuration key, `spec_profile`, picks which set the server
+one), and a single configuration key, `deployment.spec_profile`, picks which set the server
 runs: `development` (Reference Model 1.2.0 with BASE 1.3.0, the default) or
 `stable` (Reference Model 1.1.0 with BASE 1.2.0). Because openEHR's minor
 releases are additive supersets, everything valid under `stable` is valid under
@@ -88,7 +88,7 @@ releases are additive supersets, everything valid under `stable` is valid under
   (the server recomputes it) rather than stored.
 
 Stored content is never silently rewritten to fit another generation. See
-[`spec_profile`](../installation/configuration.md#spec_profile) for the direction
+[`deployment.spec_profile`](../installation/configuration.md#deploymentspec_profile) for the direction
 contract and how to change it on an existing deployment.
 
 ## The native service API
@@ -141,11 +141,11 @@ Each selects parties on the demographic pool, then finds the EHRs whose
 two connections in the application. No statement performs the join, and under
 separated credentials no role could issue one.
 
-Each pool takes its own DSN from `[storage.<domain>] url`, defaulting to
-`[db] url`. Leave every domain unset and all three pools
+Each pool takes its own DSN from `[database.<domain>] url`, defaulting to
+`[database] url`. Leave every domain unset and all three pools
 authenticate as the first, which keeps the schema separation and drops the
 credential separation. Preparing the schema spans every schema at once, so it
-runs on `[db] migrate_url` rather than on any of them. The local Audit Record
+runs on `[database] migrate_url` rather than on any of them. The local Audit Record
 Repository is written on the clinical pool, into its own `audit` schema. See
 [Operations](../operations.md#database-roles-and-least-privilege) for the
 roles and [the threat model](../threat-model.md#what-each-database-credential-can-reach)

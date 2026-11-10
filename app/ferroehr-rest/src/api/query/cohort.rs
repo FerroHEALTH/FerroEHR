@@ -45,7 +45,7 @@ pub(super) struct CohortExecute {
     /// The AQL to run over the cohort.
     q: String,
     /// The demographic predicates, intersected. Each names a key the
-    /// deployment bound in `[cohort.predicates]`.
+    /// deployment bound in `[privacy.cohort.predicates]`.
     #[serde(default)]
     cohort: Vec<CohortSelector>,
     /// The subjects the cohort names by identifier, in any identifier domain,
@@ -72,7 +72,7 @@ pub(super) struct CohortExecute {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct CohortSelector {
-    /// The `[cohort.predicates]` key.
+    /// The `[privacy.cohort.predicates]` key.
     name: String,
     /// The value to match, interpreted by the binding's configured kind.
     value: String,

@@ -35,7 +35,7 @@ interfaces sit beside it, under the same REST root:
 Every path in these chapters is relative to the openEHR base unless the page
 says otherwise. So "`POST /ehr`" means
 `POST http://your-host:8080/ferroehr/rest/openehr/v1/ehr`. The base path is set
-with `FERROEHR__REST__BASE_PATH`, and it may be shortened as far as
+with `FERROEHR__API__BASE_PATH`, and it may be shortened as far as
 `/ferroehr/v1` (see
 [Shortening the REST base path](../installation/config-server.md#base_path-shortening-the-rest-base-path)).
 
@@ -43,7 +43,7 @@ The status and documentation routes hang off the **REST root**, which the server
 derives from the base path by dropping the segments that name the openEHR API:
 `/ferroehr/rest` by default. The public, unauthenticated status probe is at
 `/ferroehr/rest/status` and interactive docs at `/ferroehr/rest/swagger-ui` at
-the access level `swagger_ui` names (by default any authenticated principal, so
+the access level `openapi_ui` names (by default any authenticated principal, so
 a browser prompts for the API credential; the documents list the whole enabled
 operation surface). Every deployment serves that UI from its own routes, so your
 own server always documents its own surface. The health probes stay at the
@@ -82,8 +82,8 @@ Two things to know before you build discovery on it:
   FerroEHR's own extension families (health, management, messaging, item tags,
   the archetype-source routes) declare themselves through the served OpenAPI
   document instead.
-- **The identity fields are configurable** (`[rest.identity]`, see
-  [Server, database & telemetry](../installation/config-server.md#restidentity));
+- **The identity fields are configurable** (`[api.options]`, see
+  [Server, database & telemetry](../installation/config-server.md#apioptions));
   their defaults are the build's own provenance.
 - **`conformance_profile` is derived from the conformance record.** The build
   reads the committed Veredictum summary (`docs/conformance/ferroehr/summary.md`

@@ -17,7 +17,7 @@
 //! own design, with the IETF OAuth and JOSE RFCs as the authority for every
 //! rule enforced here.
 
-use ferrohealth_smart::config::{AuthSection, ConfigError, IssuerKey, Resolved};
+use ferrohealth_smart::config::{AuthSection, ConfigError, Resolved};
 
 /// The protection space every challenge names when `[auth] realm` is empty
 /// (RFC 6750 §3, RFC 7617 §2).
@@ -30,14 +30,10 @@ pub const DEFAULT_REALM: &str = "ferroehr";
 /// extension scope the form "any string starting with `__`".
 pub const DEFAULT_PRODUCT_SCOPE: &str = "__ferroehr.platform";
 
-/// Returns whether `[auth]` names at least one token issuer, in the table
-/// form or the removed flat form the crate refuses.
+/// Returns whether `[auth]` names at least one token issuer.
 #[must_use]
 pub fn has_bearer(section: &AuthSection) -> bool {
-    match &section.issuer {
-        IssuerKey::Flat(issuer) => !issuer.trim().is_empty(),
-        IssuerKey::List(entries) => !entries.is_empty(),
-    }
+    !section.issuer.is_empty()
 }
 
 /// Returns whether `[auth]` admits at least one Basic user.
@@ -98,7 +94,7 @@ pub fn product_scope(section: &AuthSection) -> &str {
 /// [`AuthConfigError::Section`] when the crate refuses the section.
 pub fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
     section
-        .resolve()
+        .resolve_with_tls(&ferrohealth_smart::config::ServerTls)
         .map_err(|source| AuthConfigError::Section { source })
 }
 
@@ -161,22 +157,19 @@ mod tests {
     /// `ferroehr` audience.
     fn section(issuer: &str) -> AuthSection {
         AuthSection {
-            issuer: IssuerKey::List(vec![IssuerEntry {
+            issuer: vec![IssuerEntry {
                 issuer: issuer.to_owned(),
                 kind: Some(IssuerKind::Machines),
                 audience: vec!["ferroehr".to_owned()],
                 ..IssuerEntry::default()
-            }]),
+            }],
             ..AuthSection::default()
         }
     }
 
     /// The one issuer table of a section [`section`] built.
     fn entry(cfg: &mut AuthSection) -> &mut IssuerEntry {
-        match &mut cfg.issuer {
-            IssuerKey::List(entries) => entries.first_mut().expect("one issuer"),
-            IssuerKey::Flat(_) => panic!("the table form"),
-        }
+        cfg.issuer.first_mut().expect("one issuer")
     }
 
     /// The `[[auth.issuer]]` table head of the parsed cases.
@@ -361,7 +354,7 @@ mod tests {
                     scopes: vec!["user/composition-*.cruds".to_owned()],
                     roles: Vec::new(),
                 }],
-                cache_ttl_seconds: 0,
+                cache_ttl: ferrohealth_config::units::Duration::ZERO,
             }),
             ..AuthSection::default()
         }
@@ -422,14 +415,17 @@ mod tests {
     #[test]
     fn a_clock_skew_above_the_cap_is_a_boot_error() {
         let mut cfg = valid();
-        entry(&mut cfg).clock_skew_seconds = 301;
+        entry(&mut cfg).clock_skew = ferrohealth_config::units::Duration::from_secs(301);
         assert!(matches!(
             validate(&cfg),
             Err(AuthConfigError::Section { .. })
         ));
-        entry(&mut cfg).clock_skew_seconds = 300;
+        entry(&mut cfg).clock_skew = ferrohealth_config::units::Duration::from_secs(300);
         assert!(validate(&cfg).is_ok(), "the cap itself is accepted");
-        assert_eq!(IssuerEntry::default().clock_skew_seconds, 60);
+        assert_eq!(
+            IssuerEntry::default().clock_skew,
+            ferrohealth_config::units::Duration::from_secs(60)
+        );
     }
 
     /// RFC 8414 §2 + §6.2: the issuer identifier is an `https` URL. Plain HTTP
@@ -567,15 +563,14 @@ mod tests {
     #[test]
     fn a_scopeless_subject_allowlist_boots() {
         let mut cfg = valid();
-        cfg.scopeless_subjects = vec![ScopelessSubject::Qualified {
+        cfg.scopeless_subjects = vec![ScopelessSubject {
             issuer: "https://idp.example/realms/ferroehr".to_owned(),
             sub: "svc".to_owned(),
         }];
         assert!(validate(&cfg).is_ok(), "{:?}", validate(&cfg));
-        cfg.scopeless_subjects = vec![ScopelessSubject::Text("svc".to_owned())];
         assert!(
-            matches!(validate(&cfg), Err(AuthConfigError::Section { .. })),
-            "the bare string form is removed"
+            toml::from_str::<AuthSection>("scopeless_subjects = [\"svc\"]").is_err(),
+            "the bare string form is not an entry"
         );
     }
 

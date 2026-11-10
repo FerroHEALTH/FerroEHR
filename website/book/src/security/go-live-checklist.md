@@ -17,11 +17,11 @@ Create the four domain roles, give each login role membership of exactly one,
 and point each pool at its own DSN:
 
 ```toml
-[db]
+[database]
 url             = "postgres://app_ehr:***@pg:5432/ferroehr"
 migrate_url     = "postgres://ferroehr_migrator:***@pg:5432/ferroehr"
 
-[storage.party]
+[database.party]
 url = "postgres://app_party:***@pg:5432/ferroehr"
 ```
 
@@ -55,7 +55,8 @@ and [the threat model](../threat-model.md#what-each-database-credential-can-reac
 ## 2. The deployment profile is `production`, and the server boots
 
 ```toml
-deployment_profile = "production"
+[deployment]
+profile = "production"
 ```
 
 Under `production` the server refuses to start while a separation is open and
@@ -63,9 +64,9 @@ not accepted by name. The refusal lists every open gap with its finding and its
 remedy, so one boot tells you the whole list:
 
 ```text
-deployment_profile = "production" refuses to start: this deployment has not
+deployment.profile = "production" refuses to start: this deployment has not
 made the separations production asserts. Make them, or accept each one by name
-in deployment_accepts (which is then stated on every boot and on /management/status):
+in deployment.accepts (which is then stated on every boot and on /management/status):
   - shared_credential: ...
 ```
 
@@ -79,13 +80,13 @@ rather than from the DSN text, so two names for one cluster do not pass it.
 Two of them are the shipped compatibility defaults, kept as they are because
 the conformance instrument and the development stacks need them: the
 `EHR_ACCESS` default is `open`, and the audit trail fails open. A production
-deployment either changes both, or names each in `deployment_accepts` and
+deployment either changes both, or names each in `deployment.accepts` and
 carries the decision.
 
 `plaintext_listener` opens whenever the main listener speaks plain HTTP on an
 address reachable off the host. Behind a TLS-terminating ingress, accept it by
 name: the entry records that the ingress carries the encryption. It also opens
-when a separate management listener (`management.port`) is set, because that
+when a separate management listener (`management.listen`) is set, because that
 listener binds every interface and never speaks TLS: unset the port so the
 surface shares the main listener, or accept the gap by name and keep that port
 off any network clinical clients or the internet reach.
@@ -95,17 +96,17 @@ The syslog feed has no gap of its own: it sends over RFC 5425 TLS only.
 
 `plaintext_audit_feed` opens when the audit FHIR feed (`[audit.fhir_feed]`) is on
 with an `http://` URL, and `plaintext_object_store` when the multimedia store is
-on with `allow_http = true`. Use `https://` for both, or accept the gap by name
+on with `an http:// url = true`. Use `https://` for both, or accept the gap by name
 where the repository or the store is reached on a trusted segment.
 
-A gap you have decided to run with goes in `deployment_accepts` by name. It is
+A gap you have decided to run with goes in `deployment.accepts` by name. It is
 then stated on every boot and on `GET /management/status`, so it is run
 rather than hidden.
 
-- [ ] `deployment_profile = "production"` and the server starts.
+- [ ] `deployment.profile = "production"` and the server starts.
 - [ ] `[authz.rbac] ehr_access_default` and `[audit] fail_mode` are the values
       this deployment intends, not the ones it inherited.
-- [ ] Every entry in `deployment_accepts` is a decision someone recorded, not a
+- [ ] Every entry in `deployment.accepts` is a decision someone recorded, not a
       leftover.
 - [ ] `GET /management/status` shows the profile and an accepted-gap list you
       recognise.
@@ -153,7 +154,7 @@ and a database trigger refuses a non-UUID subject whichever session writes it.
 The name is a deployment fact: it identifies the service that mints your
 pseudonyms, and no server can invent it for you. FerroEHR mints none; under
 the IHE patient identity source it is the clinical domain's assigning
-authority, `ehr_index.assigning_authority`.
+authority, `pixm.assigning_authority`.
 
 - [ ] `subject_namespaces` names at least one namespace.
 - [ ] The `open_subject_namespace` gap no longer appears on
@@ -200,7 +201,7 @@ purpose_header = "x-purpose-of-use"
 
 [audit.store]
 enabled = true
-retention_days = 0    # or a value at or above your jurisdiction's floor
+retention = 0    # or a value at or above your jurisdiction's floor
 ```
 
 Auditing is on by default with the local store as the sink. What a production
@@ -209,11 +210,11 @@ blast radius of the database it audits:
 
 ```toml
 [audit.syslog]
-enabled = true
+url = "tls://arr.example:6514"
 
 # or, for a RESTful ARR
 [audit.fhir_feed]
-enabled = true
+url = "https://arr.example/fhir"
 ```
 
 Decide `fail_mode` deliberately. `open` logs a dropped record and serves the
@@ -226,8 +227,8 @@ naming the floor. Every EU Member State carries three years from each date of
 access (EHDS Art. 9(2)); the Netherlands five years, from the
 [Besluit vaststelling bewaartermijn logging](https://wetten.overheid.nl/BWBR0042391);
 Switzerland one year (DSV Art. 4 Abs. 5). The floors are in calendar years, so
-state the horizon as `[audit.store] retention_years`, which is compared
-exactly; a `retention_days` is held to the most days those years can span
+state the horizon as `[audit.store] retention`, which is compared
+exactly; a `retention` is held to the most days those years can span
 (1096, 1830 and 366). The [audit trail page](../audit.md#retention-and-who-chooses-it)
 lists the floors with their sources. A deployment in a jurisdiction with no
 floor registered sets its own horizon and records why.
@@ -242,20 +243,20 @@ SELECT * FROM audit.verify_audit_chain();
 - [ ] A copy is forwarded off the box, to a sink the server's own identity
       cannot rewrite.
 - [ ] `fail_mode` is a decision, not a default.
-- [ ] `retention_years` (or `retention_days`) is `0` or at or above the floor
+- [ ] `retention` (or `retention`) is `0` or at or above the floor
       that applies to you.
 - [ ] `audit.verify_audit_chain()` returns no rows on a healthy trail.
 
 ## 7. Schema preparation runs on its own credential
 
 Preparing the schema spans every schema at once: the DDL of all four migration
-sets under `migrate = "apply"`, all four `_sqlx_migrations` bookkeeping tables
+sets under `migrations = "apply"`, all four `_sqlx_migrations` bookkeeping tables
 under `"verify"`. No least-privilege runtime role can do either, `ferroehr_clinical`
-included, so `[db] migrate_url` names the credential that can. Unset, it falls
-back to `[db] url`, which is the single-credential posture.
+included, so `[database] migrate_url` names the credential that can. Unset, it falls
+back to `[database] url`, which is the single-credential posture.
 
-- [ ] `[db] migrate_url` (or `migrate_url_file`) is set.
-- [ ] `migrate = "verify"` if the schema is applied out of band, with
+- [ ] `[database] migrate_url` (or `migrate_url_file`) is set.
+- [ ] `migrations = "verify"` if the schema is applied out of band, with
       `ferroehr db migrate` run under the migrator DSN first.
 
 ## 8. The paperwork exists

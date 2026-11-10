@@ -8,13 +8,13 @@
 //! access to their data "for a limited period of time until a health
 //! professional is able to properly communicate and explain" it
 //! (`docs/law/eu/ehds/text.html`, recital 10). A deployment that enables
-//! `[access_delay]` holds new compositions of the configured categories at
+//! `[privacy.access_delay]` holds new compositions of the configured categories at
 //! creation; these routes let a health professional hold a composition,
 //! release it early, and read the register. No openEHR ITS-REST operation
 //! governs any of it.
 //!
 //! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::admin.enabled` config gate
+//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
 //! (`405` with an empty `Allow` when off) unchanged.
 
 #![expect(

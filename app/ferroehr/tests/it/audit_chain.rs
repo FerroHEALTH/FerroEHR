@@ -359,7 +359,7 @@ async fn the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail() {
     assert_eq!(findings, 0);
 }
 
-/// `[db].migrate = "verify"` issues no DDL: it accepts a database migrated to
+/// `[database] migrations = "verify"` issues no DDL: it accepts a database migrated to
 /// exactly this build and refuses one that is not, naming the schema.
 #[tokio::test]
 async fn verify_mode_accepts_a_migrated_database_and_refuses_a_stale_one() {
@@ -367,10 +367,9 @@ async fn verify_mode_accepts_a_migrated_database_and_refuses_a_stale_one() {
     let pool = testdb.pool();
 
     let mut settings = db::DbConfig::new(testdb.url());
-    settings.migrate = db::MigrationMode::Verify;
+    settings.migrations = db::MigrationMode::Verify;
     db::prepare(
         &settings,
-        &db::domain::StorageConfig::default(),
         &crate::fixtures::shared_pools(&pool),
         ferroehr::config::deployment::DeploymentProfile::Sandbox,
     )
@@ -385,7 +384,6 @@ async fn verify_mode_accepts_a_migrated_database_and_refuses_a_stale_one() {
 
     let error = db::prepare(
         &settings,
-        &db::domain::StorageConfig::default(),
         &crate::fixtures::shared_pools(&pool),
         ferroehr::config::deployment::DeploymentProfile::Sandbox,
     )
@@ -407,10 +405,9 @@ async fn verify_mode_accepts_a_migrated_database_and_refuses_a_stale_one() {
     );
 
     // Apply mode is the zero-config path, and it repairs what verify refused.
-    settings.migrate = db::MigrationMode::Apply;
+    settings.migrations = db::MigrationMode::Apply;
     db::prepare(
         &settings,
-        &db::domain::StorageConfig::default(),
         &crate::fixtures::shared_pools(&pool),
         ferroehr::config::deployment::DeploymentProfile::Sandbox,
     )
@@ -538,7 +535,7 @@ async fn the_audit_subsystem_schedules_the_chain_check() {
     let config = AuditConfig {
         enabled: true,
         store: StoreConfig {
-            verify_interval_seconds: 1,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(1),
             ..StoreConfig::default()
         },
         ..AuditConfig::default()
@@ -567,7 +564,7 @@ async fn the_audit_subsystem_schedules_the_chain_check() {
     let off = AuditConfig {
         enabled: true,
         store: StoreConfig {
-            verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             ..StoreConfig::default()
         },
         ..AuditConfig::default()

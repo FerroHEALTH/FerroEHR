@@ -7,7 +7,8 @@
 # refuse the render naming it. Not a deployment, so boot-check.sh skips it.
 config:
   # The chart has no default posture and refuses to render without one.
-  deployment_profile: sandbox
+  deployment:
+    profile: sandbox
   audit:
     syslog:
       transport: tls

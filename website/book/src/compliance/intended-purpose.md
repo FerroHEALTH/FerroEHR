@@ -42,7 +42,7 @@ Its essential functions, in the sense of CRA Annex II point 4:
 
 - storing EHRs, compositions, EHR status and folders with an append-only
   version history and contribution-atomic commits
-  ([storage](../concepts/storage.md));
+  ([database.<domain>](../concepts/storage.md));
 - answering AQL queries over the stored records ([querying](../querying-aql.md));
 - validating every write against the operational template it claims and the
   Reference Model invariants ([templates and validation](../templates-validation.md));
@@ -113,7 +113,7 @@ data, wiped nightly.
   (amd64 or arm64) ([installation](../installation/index.md)).
 - **Database.** A PostgreSQL 18 cluster the deploying organisation provisions;
   the Helm chart deploys none.
-- **Profile.** `deployment_profile = "production"`, which refuses to start
+- **Profile.** `deployment.profile = "production"`, which refuses to start
   while a separation is open and not accepted by name
   ([go-live checklist](../security/go-live-checklist.md#2-the-deployment-profile-is-production-and-the-server-boots)).
   The shipped default is `sandbox`, which must not hold real personal data and
@@ -187,7 +187,7 @@ Foreseeable misuse, and what FerroEHR does about it:
 | Real patient data in an instance running the shipped `sandbox` profile | states the profile on the banner, in the log, on `GET /rest/status` and in the viewer | nothing refuses it; the Helm chart and the Compose files declare `sandbox` explicitly, and the chart's values say what a deployment holding patient data sets |
 | The quickstart Compose file in production, with its development user and RBAC off | the README and the Compose file call these development defaults; `production` refuses RBAC off unless `rbac_off` is accepted by name | nothing refuses it under `sandbox`; the [go-live checklist](../security/go-live-checklist.md) is the control |
 | `auth.enabled = false` on a reachable network | `production` refuses it at boot unless `auth_off` is accepted by name (#3638) | an accepted gap is stated on every boot; the `sandbox` profile does not refuse it |
-| A plaintext listener on a routable address with no TLS ingress in front | `production` refuses it at boot unless `plaintext_listener` is accepted by name; a loopback bind is exempt (#3638); a separate management listener (`management.port`), which binds every interface in plain HTTP, opens the same gap (#3668) | a deployment behind a TLS-terminating ingress accepts `plaintext_listener`, and nothing checks that the ingress exists or that the management port is unreachable off the host |
+| A plaintext listener on a routable address with no TLS ingress in front | `production` refuses it at boot unless `plaintext_listener` is accepted by name; a loopback bind is exempt (#3638); a separate management listener (`management.listen`), which binds every interface in plain HTTP, opens the same gap (#3668) | a deployment behind a TLS-terminating ingress accepts `plaintext_listener`, and nothing checks that the ingress exists or that the management port is unreachable off the host |
 | Several organisations in one instance | no tenant model exists to misconfigure; one instance per organisation is documented | nothing in the software can detect it ([B5](../threat-model.md#b5--instance-separation)) |
 | Real patient data on the public sandbox | the sandbox is labelled as demo data and wiped nightly | nothing refuses it |
 | The access log switched off, or failing open, in production | `production` refuses `audit_off` and `audit_fails_open` unless each is accepted by name | an accepted gap is stated on every boot, and the organisation owns it |

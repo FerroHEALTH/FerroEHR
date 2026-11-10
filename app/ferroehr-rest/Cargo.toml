@@ -13,6 +13,7 @@ categories.workspace = true
 publish = false
 
 [dependencies]
+ferrohealth-config.workspace = true
 ferrohealth-secret = { workspace = true }
 ferrohealth-health = { workspace = true, features = ["registry"] }
 ferrohealth-telemetry.workspace = true
@@ -76,7 +77,7 @@ opentelemetry = { workspace = true }
 # crate checks every bearer token and Basic credential and enforces the route
 # table's `Requirement`s (`extensions::access::authn`, `smart`), and re-exports
 # the SMART on openEHR scope grammar those requirements are typed over.
-ferrohealth-smart = { workspace = true, features = ["axum", "openehr"] }
+ferrohealth-smart = { workspace = true, features = ["axum", "openehr", "server-tls"] }
 sha2 = { workspace = true }
 # The SCIM protocol layer (`scim::protocol`) checks a `binary` attribute value
 # is base64 (RFC 7643 §2.3.6).

@@ -15,7 +15,7 @@ Two flags are global: they apply to the server and to every subcommand:
 | Flag | Description |
 |---|---|
 | `--config <path>` | The configuration file to load, overriding `FERROEHR_CONFIG`. Fatal if missing or unreadable. |
-| `--set <key>=<value>` | A dotted-path override, repeatable, highest precedence of all layers (e.g. `--set db.max_connections=40`). |
+| `--set <key>=<value>` | A dotted-path override, repeatable, highest precedence of all layers (e.g. `--set database.max_connections=40`). |
 
 With no subcommand, or with `serve`, the binary boots the server. `ferroehr --version` prints
 the version and the manufacturer of the release:
@@ -56,7 +56,7 @@ unknown-key sweep, the type pass, the aggregated semantic rules, and the
 "authentication enabled needs a mechanism" rule) and **touches no database**,
 so it is safe in CI and before a rollout. It exits 0 when the configuration is
 valid and 78 otherwise; on success it prints the effective configuration as TOML
-with every secret redacted, and notes on stderr when `db.url` is still the
+with every secret redacted, and notes on stderr when `database.url` is still the
 built-in development default.
 
 ### `ferroehr db …`
@@ -69,9 +69,9 @@ ferroehr db verify    # verify, issuing no DDL, that the schema matches this bui
 These exist so a least-privilege deployment can separate the two database
 identities: run `db migrate` once under a DSN that holds DDL rights (a
 Kubernetes Job, an init container, a CI/CD stage), then boot the server with
-[`db.migrate = "verify"`](config-server.md#db) under a DSN with no DDL rights at
+[`database.migrations = "verify"`](config-server.md#database) under a DSN with no DDL rights at
 all. `verify` still reads all five `_sqlx_migrations` bookkeeping tables, which
-no least-privilege role can do, so point `[db] migrate_url` at the credential
+no least-privilege role can do, so point `[database] migrate_url` at the credential
 that prepares the schema. See
 [Operations](../operations.md#which-credential-prepares-the-schema).
 
@@ -136,7 +136,7 @@ The report is a JSON document on stdout:
   `800|inactive|` or `801|abandoned|`;
 - `side_table.provisional`: the provisional `PERSON`s that
   [just-in-time creation](config-auth.md#just-in-time-creation) created more
-  than `[authz.party_binding] provisional_report_days` days ago (default 30)
+  than `[authz.party_binding] provisional_report_after` days ago (default 30)
   and that SCIM or an administrator has not completed, by container id and
   creation time, oldest first, with no name or other personal data;
 - `side_table.unadopted`: the key-bearing `PERSON`s that perform no
@@ -149,7 +149,7 @@ The report is a JSON document on stdout:
   no live `PERSON` carries.
 
 A key passes the provenance rule when the version that introduced it was
-committed by a `[[scim.client]]` (its client identifier under its token
+committed by a `[[auth.scim.client]]` (its client identifier under its token
 issuer), by an administrator, by a declared migration, or by just-in-time
 creation at a first login of an `[[authz.party_binding.issuer]]` with
 `jit = true` (a `249|creation|` version carrying its description, committed
@@ -235,7 +235,7 @@ the databases and writes nothing to them.
 | Part | What it holds |
 |---|---|
 | `manifest` | every part below with its status (`included`, `partial` or `unavailable`) and, for the last two, the reason |
-| `build` | version, commit, build date, `rustc`, the active `spec_profile` and the specification versions it selects, the PostgreSQL target, the audit posture, and the manufacturer |
+| `build` | version, commit, build date, `rustc`, the active `deployment.spec_profile` and the specification versions it selects, the PostgreSQL target, the audit posture, and the manufacturer |
 | `image` | named in the manifest only: a running binary cannot read the digest of the image it was started from, so attach `docker inspect --format '{{index .RepoDigests 0}}' <image>` or the pod's `status.containerStatuses[].imageID` |
 | `target` | the CPU architecture and operating system the binary was built for, and whether it is a debug build |
 | `features` | the optional integrations compiled in (`fhir`, `multimedia`) |
@@ -286,26 +286,26 @@ downloadable Compose quickstart boots because it ships a user.
 
 For production, set at least:
 
-- **`db.url`:** the real DSN, via `FERROEHR__DB__URL` from a secret or a
+- **`database.url`:** the real DSN, via `FERROEHR__DATABASE__URL` from a secret or a
   `url_file`-mounted value, never inline in a world-readable file. Leaving the
   development default in place is warned about loudly at every boot.
-- **`db.migrate = "verify"`** with the schema applied out of band, so the
-  serving role needs no DDL rights, plus **`db.migrate_url`** naming the
+- **`database.migrations = "verify"`** with the schema applied out of band, so the
+  serving role needs no DDL rights, plus **`database.migrate_url`** naming the
   credential that reads every schema's migration state at boot. The serving
   credential cannot.
-- **`deployment_profile = "production"`** once the deployment holds real
+- **`deployment.profile = "production"`** once the deployment holds real
   personal data. The server then refuses to start while a separation is open
   and not accepted by name, instead of running as a sandbox that looks
   identical.
 - **an authentication mechanism:** a Basic user store and/or an `[auth]` issuer.
 - **`telemetry.format = "json"`** for cluster log collectors.
-- **`rest.cors_permissive`** stays `false`; **`rest.swagger_ui`** per
+- **`api.cors`** stays `false`; **`api.openapi_ui`** per
   posture.
-- **`rest.system_id`:** this deployment's own openEHR system identifier.
+- **`api.system_id`:** this deployment's own openEHR system identifier.
   Choose it before the first EHR is created: it is stored with every EHR, audit
   entry and version identifier, and changing it later never rewrites what is
   already committed.
-- **`management.*`** per posture. A dedicated `management.port` is recommended
+- **`management.*`** per posture. A dedicated `management.listen` is recommended
   so the introspection surface is never reachable on the clinical listener, and
   every endpoint stays `off` until you name a level for it.
 - **TLS everywhere a transport supports it:** `server.tls` (or a

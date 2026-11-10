@@ -847,7 +847,7 @@ async fn every_response_carries_the_security_headers() {
 /// these two tests are about the page it serves.
 async fn app_with_swagger() -> (testkit::TestDb, Router) {
     let mut cfg = config(false);
-    cfg.rest.swagger_ui = ferroehr::config::management::AccessLevel::Public;
+    cfg.api.openapi_ui = ferroehr::config::management::AccessLevel::Public;
     common::app(cfg).await
 }
 
@@ -856,7 +856,7 @@ async fn app_with_swagger() -> (testkit::TestDb, Router) {
 /// The API's `default-src 'none'` is right for JSON and fatal for the one surface
 /// on this origin that is rendered: the vendored bundle's own same-origin scripts
 /// and styles would be blocked and the page would come up blank. Under the
-/// default configuration `swagger_ui` is ON, so this was a shipped regression
+/// default configuration `openapi_ui` is ON, so this was a shipped regression
 /// waiting to be reported as "the docs are broken".
 #[tokio::test]
 async fn swagger_ui_gets_a_policy_it_can_run_under() {
@@ -990,7 +990,7 @@ async fn hsts_is_deliberately_absent() {
 async fn an_over_limit_chunked_body_is_413_not_400() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.body_limit_bytes = 1024;
+    cfg.server.body_limit = ferrohealth_config::units::ByteSize::from_bytes(1024);
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
@@ -1014,14 +1014,14 @@ async fn an_over_limit_chunked_body_is_413_not_400() {
     );
 }
 
-/// A declared body over the listener's `server.body_limit_bytes` is refused
+/// A declared body over the listener's `server.body_limit` is refused
 /// `413` by the family stack before any route reads it, in the openEHR
 /// problem details every other refusal carries.
 #[tokio::test]
 async fn a_declared_body_over_the_ceiling_is_413_in_the_openehr_body() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.body_limit_bytes = 1024;
+    cfg.server.body_limit = ferrohealth_config::units::ByteSize::from_bytes(1024);
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
@@ -1049,7 +1049,7 @@ async fn a_refusal_names_the_server_id_when_the_client_sends_its_own() {
     const CLIENT_ID: &str = "7d2c41e8-93b0-4f6a-8e15-c0a9b3d7e254";
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.body_limit_bytes = 1024;
+    cfg.server.body_limit = ferrohealth_config::units::ByteSize::from_bytes(1024);
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
@@ -1090,8 +1090,8 @@ async fn a_refusal_names_the_server_id_when_the_client_sends_its_own() {
 async fn the_bulk_tier_accepts_what_the_clinical_tier_refuses() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.server.body_limit_bytes = 65536;
-    cfg.rest.body_limit_bytes = Some(512);
+    cfg.server.body_limit = ferrohealth_config::units::ByteSize::from_bytes(65536);
+    cfg.api.body_limit = Some(ferrohealth_config::units::ByteSize::from_bytes(512));
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 
@@ -1209,8 +1209,8 @@ async fn subject_lookup_by_query_parameter_still_answers() {
 async fn the_served_document_omits_paths_whose_features_are_off() {
     let (pg, service) = common::test_service().await;
     let mut cfg = config(false);
-    cfg.rest.swagger_ui = ferroehr::config::management::AccessLevel::Off;
-    cfg.smart.enabled = false;
+    cfg.api.openapi_ui = ferroehr::config::management::AccessLevel::Off;
+    cfg.auth.smart.discovery = false;
     let app = common::router_with(cfg, service).await;
     let _keep = pg;
 

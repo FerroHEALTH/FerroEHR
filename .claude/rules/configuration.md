@@ -40,7 +40,7 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
   `LazyLock` env reads).
 - **One env grammar (P-4).** `FERROEHR` + the TOML path, `__` between *every*
   segment boundary — including after the `FERROEHR` prefix
-  (`FERROEHR__DB__MAX_CONNECTIONS`, `FERROEHR__AUTH__OIDC__ISSUER`) — with single
+  (`FERROEHR__DATABASE__MAX_CONNECTIONS`, `FERROEHR__AUTH__OIDC__ISSUER`) — with single
   `_` only inside a key word. This is mechanical and reversible; never add a
   bespoke env mapping. List-typed keys are comma-separated and registered
   in `alias::LIST_KEYS`. `DATABASE_URL`/`RUST_LOG` are the only non-`FERROEHR_`
@@ -54,7 +54,7 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
   by the loader. Redaction is a property of the type — never a per-endpoint
   redactor list. A new secret field MUST use these types + add a `*_file` sibling.
 - **Zero-config boot (P-2).** An empty file and empty env must boot with
-  dev-appropriate defaults; the dev-default `db.url` is announced with a boot
+  dev-appropriate defaults; the dev-default `database.url` is announced with a boot
   `warn` (never a silent production trap).
 
 ## When you change the schema
@@ -63,12 +63,14 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
    deny_unknown_fields)]`, `Default` is the source of truth).
 2. If you add/rename a key, update the annotated template
    `app/ferroehr/assets/ferroehr.default.toml` **in the same change** — the
-   template-sync tests (`config::tests`) fail otherwise. There is NO legacy
-   alias layer (greenfield, owner ruling 2026-07-15): renamed/removed keys
-   simply fail at boot via the strict sweep's did-you-mean; never add a
-   remapping table. A named refusal of a removed key, where one is added,
-   lives exactly the one release that removes it and is deleted in the next
-   (owner hard rule, 2026-11-09, `.claude/memory/no-compat-shims.md`).
+   template-sync tests (`config::tests`) fail otherwise. A key is never read
+   under two names: no alias layer, no remapping table. A renamed or removed
+   key keeps a `ferrohealth_config::removed::Removed` field that
+   `config::retired::removals` refuses at load naming its replacement, for ONE
+   release only (owner hard rule 2026-11-09, `.claude/memory/no-compat-shims.md`):
+   the refusal records the release that introduced it, ships in that release
+   with the upgrade step in the changelog fragment, and the next release
+   deletes it so `deny_unknown_fields` takes over.
 3. If the change is user-visible, update
    `website/book/src/installation/configuration.md`, the Helm `values.yaml`
    `config:` block + golden renders (`deploy/helm/validate.sh --update`), and

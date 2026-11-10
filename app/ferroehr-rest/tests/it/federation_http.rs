@@ -29,7 +29,7 @@ use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
 use ferrohealth_server::section::CallerRate;
 use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection};
-use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::federation::{FederationSection, Field, Mapping, Source};
 use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::sender::proof::DpopSection;
@@ -171,7 +171,7 @@ async fn serve_also(
         dpop = Some(proof);
     }
     let mut auth = common::auth(AuthSection {
-        issuer: IssuerKey::List(entries),
+        issuer: entries,
         federation: tables,
         dpop,
         ..AuthSection::default()
@@ -182,7 +182,7 @@ async fn serve_also(
         agreements,
         ..common::api_config(true)
     };
-    config.smart.patient_issuers = vec![FEDERATION.to_owned()];
+    config.auth.smart.patient_issuers = vec![FEDERATION.to_owned()];
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
         .await
         .expect("build app");
@@ -542,7 +542,7 @@ const CORRELATION: &str = "5f0c6a1e-correlation-1";
 fn chained() -> Agreement {
     Agreement {
         access_class: Some(AccessClass::Chained),
-        chained_log_retention_years: Some(30),
+        chained_log_retention: Some(ferroehr::config::retention::RetentionPeriod::Years(30)),
         ..agreement(Accessor::Organisation)
     }
 }

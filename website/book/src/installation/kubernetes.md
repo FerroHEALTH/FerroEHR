@@ -35,17 +35,17 @@ deploys. Create a Secret holding the app-role connection string, then install:
 ```shell
 kubectl create namespace ferroehr
 kubectl -n ferroehr create secret generic ferroehr-db \
-  --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
+  --from-literal=FERROEHR__DATABASE__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 23.3.1 -n ferroehr \
-  --set config.deployment_profile=sandbox \
+  --version 24.0.0 -n ferroehr \
+  --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.6.3 \
-  --set ferropix.enabled=false --set config.ehr_index.provider=local
+  --set ferropix.enabled=false --set config.record.subject_index=local
 ```
 
-`config.deployment_profile=sandbox` names the posture of a trial install,
+`config.deployment.profile=sandbox` names the posture of a trial install,
 which must not hold real patient data; the chart has no default and refuses to
 render without one. A deployment holding patient data starts from the
 [production overlay](#the-production-overlay) instead. The last line opts in to
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 23.3.1
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 24.0.0
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 23.3.1` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 24.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.6.3` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,12 +181,12 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 23.3.1 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 24.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
 >   -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml \
->   -e FERROEHR__DB__URL=postgres://u:p@db:5432/ferroehr \
+>   -e FERROEHR__DATABASE__URL=postgres://u:p@db:5432/ferroehr \
 >   --entrypoint /usr/local/bin/ferroehr ghcr.io/ferrohealth/ferroehr:<tag> config check
 > ```
 >
@@ -211,7 +211,7 @@ The chart carries the server's whole configuration under one key, **`config`**,
 rendered into a `ferroehr.toml` ConfigMap mounted at
 `/etc/ferroehr/ferroehr.toml`. Its keys are therefore exactly the TOML keys of
 the [configuration reference](configuration.md) (`config.server.listen`,
-`config.authz.rbac.enabled`, `config.spec_profile`, and so on) so anything
+`config.authz.rbac.enabled`, `config.deployment.spec_profile`, and so on) so anything
 that reference documents can be set without waiting for a bespoke chart key.
 
 **Secret-bearing keys are the one exception: a credential never reaches that
@@ -220,9 +220,9 @@ read, quoted wholesale into issues and support tickets, collected by backup tool
 that skips Secrets, and not covered by Secret encryption at rest. The chart
 therefore classifies every key it renders and takes one of two actions.
 
-**A secret the chart routes:** `signing.key_passphrase`,
-`multimedia.secret_access_key`, a Basic user's `password_hash`, a terminology
-`client_secret`, and the two URL-shaped ones (`db.url` and
+**A secret the chart routes:** `record.signing.key_passphrase`,
+`record.multimedia.secret_access_key`, a Basic user's `password_hash`, a terminology
+`client_secret`, and the two URL-shaped ones (`database.url` and
 `audit.fhir_feed.url`) has a `secrets:` key of its own, so
 a value under `config:` is a mistake and fails the render, naming the key that
 belongs there:
@@ -230,7 +230,7 @@ belongs there:
 ```text
 Error: execution error at (ferroehr/templates/deployment.yaml:…):
   refusing to render a secret into the ConfigMap (a ConfigMap is not a sensitive object …):
-  - config.signing.key_passphrase: set `secrets.signingKeyPassphrase` instead
+  - config.record.signing.key_passphrase: set `secrets.signingKeyPassphrase` instead
 ```
 
 **A secret the chart cannot route** moves the **whole rendered `ferroehr.toml` into
@@ -261,7 +261,7 @@ anything neither `config:` nor `secrets:` surfaces.
 The chart's values declare three keys, so a rendered `ferroehr.toml` always
 says what it runs:
 
-- **`config.deployment_profile`:** no default; the chart refuses to render
+- **`config.deployment.profile`:** no default; the chart refuses to render
   until it names `sandbox` or `production`, so an installation that follows a
   quickstart instead of the instructions for use does not end up in the sandbox
   posture by omission (EHDS Annex II 1.2). `sandbox` must not hold real
@@ -269,15 +269,15 @@ says what it runs:
   banner and on `/management/status`, and reports the profile on
   `GET /ferroehr/rest/status`. A deployment holding patient data sets
   `production`, which refuses to start while a separation is missing and not
-  named in `config.deployment_accepts`. The chart defaults leave several open:
+  named in `config.deployment.accepts`. The chart defaults leave several open:
   one DSN for every domain, an empty `config.privacy.subject_namespaces`, the
   server's `open` defaults for `config.audit.fail_mode` and
-  `config.authz.rbac.ehr_access_default`, `config.db.migrate: apply` on the
-  runtime credential, and a plaintext listener behind the ingress; see [`deployment_profile`](configuration.md#deployment_profile).
+  `config.authz.rbac.ehr_access_default`, `config.database.migrations: apply` on the
+  runtime credential, and a plaintext listener behind the ingress; see [`deployment.profile`](configuration.md#deploymentprofile).
   The chart's [production overlay](#the-production-overlay) closes them and
   accepts the plaintext listener by name.
-- **`config.audit.store.retention_years`:** unset. Set it in place of
-  `config.audit.store.retention_days` when the horizon must be exact in
+- **`config.audit.store.retention`:** unset. Set it in place of
+  `config.audit.store.retention` when the horizon must be exact in
   calendar years, such as `3` for a German SGB V § 309 controller with
   `config.audit.store.sgb_v_309_controller: true`.
 - **`config.audit.categories`:** an empty `templates` and `archetypes` map,
@@ -303,14 +303,14 @@ retention floors and ceilings the server enforces at boot.
 ### The production overlay
 
 The chart ships `values-production.yaml` beside `values.yaml`. Layered over
-the defaults, it runs `config.deployment_profile: production` with every
+the defaults, it runs `config.deployment.profile: production` with every
 separation that profile checks made, except one it accepts by name:
 
 | Gap | In the overlay |
 |---|---|
 | `shared_credential` | the clinical and party domains each read their own Secret (`database.existingSecret`, `database.party.existingSecret`), and the audit domain reads `database.audit.existingSecret` |
 | `shared_cluster` | yours to make: the server compares the cluster each domain pool reaches, so the separation is three DSNs on three PostgreSQL clusters. Each cluster is prepared on its own migrator: the migration Job applies the schema in every cluster, and the server verifies it there, on `database.<domain>.migrateExistingSecret` (`database.migrateExistingSecret` for the clinical cluster) |
-| `migrate_on_runtime_credential` | `config.db.migrate: verify`, with `migrations.job.enabled` preparing the schema on `database.migrateExistingSecret` |
+| `migrate_on_runtime_credential` | `config.database.migrations: verify`, with `migrations.job.enabled` preparing the schema on `database.migrateExistingSecret` |
 | `open_subject_namespace` | `config.privacy.subject_namespaces` declared |
 | `audit_off`, `audit_fails_open` | the audit trail on with its local store, `config.audit.fail_mode: closed` |
 | `no_category_map` | the shipped category map (the default), or `config.audit.categories` templates and archetypes of your own |
@@ -334,7 +334,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 23.3.1 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 24.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -366,13 +366,13 @@ superuser. Four roles cover the single-domain posture:
 | `ferroehr_clinical_reader` | read-only, for replicas and reporting |
 
 Migrations are DDL, so whoever applies them can rewrite the schema. Two flows,
-and `config.db.migrate` is where you choose:
+and `config.database.migrations` is where you choose:
 
-- **(a) The pod migrates itself** (`config.db.migrate: apply`, the default).
+- **(a) The pod migrates itself** (`config.database.migrations: apply`, the default).
   Simplest for single-tenant or small deployments, and the runtime DSN must
   then be a member of `ferroehr_migrator`, so the serving process holds DDL
   rights on the clinical schema for its whole life.
-- **(b) A separate migration step** (`config.db.migrate: verify`) under a
+- **(b) A separate migration step** (`config.database.migrations: verify`) under a
   migrator DSN, with the pods on a narrow runtime DSN. The server issues no DDL
   at all and refuses to boot against a database that has not been migrated to
   its build, so the two versions cannot race the schema. Recommended for
@@ -423,7 +423,7 @@ the statements and what `ferroehr db verify` reports.
 `database.migrateExistingSecret` is what the pod prepares the schema with, and
 it is required as soon as `database.existingSecret` is anything narrower than a
 credential reaching every schema. Preparation spans them all at once: the DDL
-of all four migration sets under `config.db.migrate: apply`, all four
+of all four migration sets under `config.database.migrations: apply`, all four
 `_sqlx_migrations` bookkeeping tables under `verify`. So **`verify` is not the
 exception**, and this is not only about the domain roles. `ferroehr_clinical` holds
 one pseudonymisation domain, `ferroehr_clinical` holds the clinical schemas, and
@@ -447,7 +447,7 @@ database:
 ```
 
 The migration Job mounts it and applies the schema in that database; the server
-mounts it and verifies the schema there under `config.db.migrate: verify`. The
+mounts it and verifies the schema there under `config.database.migrations: verify`. The
 domain's own role cannot do either, because it holds one domain and cannot read
 the `ext` set's bookkeeping. The server refuses to start when the two DSNs of
 one domain reach different databases.
@@ -457,7 +457,7 @@ Give the migrator DSN a short `lock_timeout`
 fast instead of queueing; `migrations.job.activeDeadlineSeconds` is the hard
 ceiling on the step either way. `migrations.runByMigratorRole` remains an
 informational marker surfaced in the install notes, which also tell you when
-the Job is enabled but `config.db.migrate` is still `apply`, a combination
+the Job is enabled but `config.database.migrations` is still `apply`, a combination
 that buys nothing, because the server would migrate itself anyway.
 
 You can check the posture from outside the cluster at any time: `ferroehr db
@@ -473,7 +473,7 @@ whose entries the chart mounts read-only from a Secret at `/etc/ferroehr/<key>`
 (and which is deliberately *not* part of the rendered TOML); point the matching
 in-TOML `*_file` / `*_path` key at the mounted path. A commercial licence goes
 the same way: put the token the licensor issued under `config.files` as
-`licence.asc` and set `config.licence.file` to `/etc/ferroehr/licence.asc`;
+`licence.asc` and set `config.deployment.licence_file` to `/etc/ferroehr/licence.asc`;
 `GET /management/status` then reports `licence.use = "commercial"`. Without
 it the pod runs under the `non-commercial` grant every build embeds (see
 [Licensing & legal](../licensing.md#installing-a-commercial-licence)). Secret-bearing scalar values go under
@@ -482,7 +482,7 @@ it the pod runs under the `non-commercial` grant every build embeds (see
 `multimediaAccessKeyId`, `multimediaSecretAccessKey`,
 `terminologyClientSecret`, and the database DSN comes from
 `database.existingSecret` (key `database.existingSecretKey`, default
-`FERROEHR__DB__URL`). None of these ever reach the ConfigMap, and all but two are
+`FERROEHR__DATABASE__URL`). None of these ever reach the ConfigMap, and all but two are
 delivered as mounted files rather than environment values.
 
 How a secret reaches the process differs by whether the configuration key has a
@@ -494,11 +494,11 @@ asks for a read-only volume instead.
 
 | Secret | How the chart delivers it |
 |---|---|
-| the database DSN | mounted at `/etc/ferroehr-secrets/db.url`, reached through `FERROEHR__DB__URL_FILE`, projected from `database.existingSecret` when you supply one, so **the credential that reaches patient data never enters the pod's environment** |
-| `secrets.signingKeyPassphrase` | mounted at `/etc/ferroehr-secrets/signing.key_passphrase` |
-| `secrets.multimediaSecretAccessKey` | mounted at `/etc/ferroehr-secrets/multimedia.secret_access_key` |
+| the database DSN | mounted at `/etc/ferroehr-secrets/database.url`, reached through `FERROEHR__DATABASE__URL_FILE`, projected from `database.existingSecret` when you supply one, so **the credential that reaches patient data never enters the pod's environment** |
+| `secrets.signingKeyPassphrase` | mounted at `/etc/ferroehr-secrets/record.signing.key_passphrase` |
+| `secrets.multimediaSecretAccessKey` | mounted at `/etc/ferroehr-secrets/record.multimedia.secret_access_key` |
 | `secrets.basicUserPasswordHashes` (per user-id) | mounted at `/etc/ferroehr-secrets/auth.basic.users.<user>.password_hash`; the chart injects the matching `password_hash_file` |
-| `secrets.terminologyClientSecret` | mounted at `/etc/ferroehr-secrets/terminology.server.oauth.client_secret`; the chart injects the matching `client_secret_file` into `config.terminology.server.oauth`, which must declare the grant |
+| `secrets.terminologyClientSecret` | mounted at `/etc/ferroehr-secrets/[terminology].oauth.client_secret`; the chart injects the matching `client_secret_file` into `config.[terminology].oauth`, which must declare the grant |
 | `secrets.auditFhirFeedUrl` | env; `audit.fhir_feed.url` is the only credential-bearing key with no `*_file` sibling |
 | `secrets.multimediaAccessKeyId` | env; an access key *id* is not secret (it is reported unredacted by the management surface's `env` endpoint) |
 
@@ -621,12 +621,12 @@ the chart refuses to render the Ingress with server TLS on until
 
 ```yaml
 config:
-  deployment_accepts: []          # nothing left to accept for the listener
+  deployment.accepts: []          # nothing left to accept for the listener
   server:
     tls:
       certificate_file: /etc/ferroehr-tls/tls.crt
       key_file: /etc/ferroehr-tls/tls.key
-      reload_interval_s: 60
+      reload_interval: 1min
 extraVolumes:
   - name: server-tls
     secret:
@@ -647,7 +647,7 @@ ingress:
 
 When cert-manager renews the certificate, the kubelet updates the mounted
 files and the server serves the new pair within
-`config.server.tls.reload_interval_s` (60 seconds above; unset, only `SIGHUP`
+`config.server.tls.reload_interval` (a minute above; unset, only `SIGHUP`
 reads the files again), with no restart; a renewed pair that fails to load is logged and the old one stays in
 service. A rotated client CA (`client_ca_file`, for `client_auth`) is picked up
 on the same interval, and the connections already open keep the trust anchor
@@ -660,15 +660,15 @@ peers that verify through the platform verifier stay trusted. For an OIDC
 issuer whose certificate comes from a private CA, name a Secret holding that
 CA in `viewer.auth.oidc.caExistingSecret` (key `viewer.auth.oidc.caExistingSecretKey`,
 `ca.crt` by default): the chart mounts it and points the viewer's
-`[oidc] ca_file` at it. For the server's own `[auth]`
+`[oidc.tls] trust_roots_file` at it. For the server's own `[auth]`
 issuer behind a private CA, name the Secret in `auth.caExistingSecret` (key
 `auth.caExistingSecretKey`, `ca.crt` by default): the chart mounts it and points
-the server's `[auth] ca_file` at it. The ServiceMonitor reads the Secret from its own namespace, and
+the server's `[auth.tls] trust_roots_file` at it. The ServiceMonitor reads the Secret from its own namespace, and
 the `prometheus.io/scheme: https` pod annotation follows the listener when
 `metrics.enabled` is set. With `config.server.tls.client_auth: required` the
 kubelet probes cannot present a client certificate, so the chart refuses to
 render it; keep it at `none` or `optional`.
-`config.management.port` stays plain HTTP on its own listener.
+`config.management.listen` stays plain HTTP on its own listener.
 
 ## Health probes
 
@@ -736,7 +736,7 @@ The management surface is independent of the probes and stays ops-only
 `config.management.enabled: true` with **every endpoint off**, so nothing is
 exposed until you opt one in. Set
 `config.management.endpoints.prometheus: public` plus `metrics.enabled=true`
-to add the `prometheus.io/*` scrape annotations; set `config.management.port`
+to add the `prometheus.io/*` scrape annotations; set `config.management.listen`
 to serve the surface on its own internal listener, so `/management` is never
 reachable on the clinical API port. The health probes stay on the main port
 regardless of all of this, and the install notes warn you if you add the scrape
@@ -805,7 +805,7 @@ definition already stored with the same text is left alone, so the step runs
 at every pod start, and one stored under its id with other text fails the
 pod. `deploy/helm/ci/basic-auth-values.yaml` loads the professional PERSON
 and ROLE pair of `deploy/definitions/professional/` and provisions its user
-through `/scim/v2/Users` (see [`[scim]`](config-auth.md#scim)).
+through `/scim/v2/Users` (see [`[auth.scim]`](config-auth.md#authscim)).
 
 A `persons` issuer with `sender_constraint: required` runs on any number of
 replicas: each records the DPoP proofs it accepts in the database they all
@@ -829,7 +829,7 @@ The chart renders its `config` tree **verbatim** into `ferroehr.toml`. So
 release to wait for:
 
 ```yaml
-# values.yaml — [query] plan_cache_capacity, which values.yaml never names
+# values.yaml — [record.query] plan_cache_capacity, which values.yaml never names
 config:
   query:
     plan_cache_capacity: 512
@@ -837,8 +837,8 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 23.3.1 -n ferroehr --reuse-values \
-  --set config.query.plan_cache_capacity=512
+  --version 24.0.0 -n ferroehr --reuse-values \
+  --set config.record.query.plan_cache_capacity=512
 ```
 
 Turning something off is the same edit in reverse: remove the key (or set the
@@ -867,18 +867,18 @@ is an explicit, auditable decision:
 
 | Integration | Chart key | Default | Notes |
 |---|---|---|---|
-| Specification generation | `config.spec_profile` | `development` | One coupled choice; `stable` runs the released generations. |
-| ADMIN API | `config.admin.enabled` | off | Physical, irreversible delete. Gate behind admin RBAC. |
-| Terminology extension API | `config.terminology.api_enabled` | off | 404 when off. |
-| Outbox feed | `config.outbox.readers` | none | The commit-event feed for the readers named; FerroBRIDGE delivers it to a broker. See [Change events](../beyond-core/outbox-feed.md). |
+| Specification generation | `config.deployment.spec_profile` | `development` | One coupled choice; `stable` runs the released generations. |
+| ADMIN API | `config.api.admin` | off | Physical, irreversible delete. Gate behind admin RBAC. |
+| Terminology extension API | `config.api.terminology` | off | 404 when off. |
+| Outbox feed | `config.record.change_feed.readers` | none | The commit-event feed for the readers named; FerroBRIDGE delivers it to a broker. See [Change events](../beyond-core/outbox-feed.md). |
 | Bearer tokens | `config.auth.issuer` | unset | A list of issuer tables, each with its `kind`, `profile` and `audience`, and a `config.auth.party` table for a `persons` issuer; the issuer's metadata and key set are read at boot, asymmetric algorithms only. |
 | Party binding | `config.authz.party_binding.provider` | unset | Required once authentication admits a credential: the healthcare provider the deployment acts for. Each Basic user maps to its binding key under `config.authz.party_binding.basic_user`. |
 | RBAC | `config.authz.rbac.enabled` | **on** | The coarse role gate (active while `config.auth.enabled`). |
 | ABAC | `config.authz.abac.enabled` | off | Cedar (policies via a `config.files` mount) or a remote policy decision point. |
-| S3 multimedia | `config.multimedia.enabled` | off | ⚠ Offloaded blobs are PHI. Private, encrypted, HTTPS bucket; keys via `secrets.multimediaAccessKeyId` and `secrets.multimediaSecretAccessKey`. |
-| Terminology server | `config.terminology.server.enabled` | off | The one FHIR terminology server, at `config.terminology.server.url`. To run FerroTERM in the cluster instead, use `terminology.enabled` ([FerroTERM](#ferroterm-a-terminology-server-beside-the-cdr-off-by-default)), which sets these keys for you. |
+| S3 multimedia | `config.record.multimedia.enabled` | off | ⚠ Offloaded blobs are PHI. Private, encrypted, HTTPS bucket; keys via `secrets.multimediaAccessKeyId` and `secrets.multimediaSecretAccessKey`. |
+| Terminology server | `config.the [terminology] table` | off | The one FHIR terminology server, at `config.terminology.url`. To run FerroTERM in the cluster instead, use `terminology.enabled` ([FerroTERM](#ferroterm-a-terminology-server-beside-the-cdr-off-by-default)), which sets these keys for you. |
 | ATNA audit trail | `config.audit.enabled` | **on** | On with the local store only; forwarding (`config.audit.syslog`, `config.audit.fhir_feed`) is opt-in per sink. |
-| Version signing | `config.signing.enabled` | **on** (`config.signing.mode: digest`) | `pgp` mode needs a `config.files` key plus `secrets.signingKeyPassphrase`, and fails closed at boot without a usable key. |
+| Version signing | `config.record.signing.enabled` | **on** (`config.record.signing.mode: digest`) | `pgp` mode needs a `config.files` key plus `secrets.signingKeyPassphrase`, and fails closed at boot without a usable key. |
 | OTLP telemetry | `config.telemetry.otlp.endpoint` | unset | Setting the endpoint is all it takes; without a `config.telemetry.otlp` table nothing is exported. With `networkPolicy.egress.enabled`, add a rule for the collector, since a blocked exporter drops spans without an error. |
 
 Full detail on each is in [Beyond the core](../beyond-core/index.md),
@@ -933,13 +933,13 @@ CNI enforces the viewer's NetworkPolicy. Its screens are documented in the
 The CDR keeps no patient-to-record cross-reference of its own by default: it
 asks an IHE patient identity source over PIXm (ITI-83) which pseudonym the
 clinical domain holds for a patient
-([`[ehr_index]`](config-integrations.md#ehr_index)). The chart takes
+([`[pixm]`](config-integrations.md#pixm)). The chart takes
 [FerroPIX](https://github.com/FerroHEALTH/FerroPIX) as the chart dependency
 `ferropix` (`oci://ghcr.io/ferrohealth/charts`, pinned in `Chart.lock`), so
 its Deployment, Service, NetworkPolicy and configuration are its own chart's,
 and every key under `ferropix:` is that chart's value. With
 `ferropix.enabled` (the default) the chart writes
-`config.ehr_index.provider = "ihe"` and `config.ehr_index.pixm_url` at the
+`config.ehr_index.subject_index = "pixm"` and `config.pixm.url` at the
 FerroPIX Service, and refuses a values file that sets either too. With the
 egress policy on, it adds the rule to FerroPIX's pods.
 
@@ -974,11 +974,11 @@ secrets:
 ```
 
 `secrets.ehrIndexClientSecret` is mounted at
-`/etc/ferroehr-secrets/ehr_index.oauth.client_secret`, and the chart injects
+`/etc/ferroehr-secrets/pixm.oauth.client_secret`, and the chart injects
 the matching `client_secret_file`; the production overlay reads it from a
 Secret you own through `extraEnv` instead. Another PIX Manager:
-`ferropix.enabled: false` and `config.ehr_index.pixm_url`. A CDR run on its
-own: `ferropix.enabled: false` and `config.ehr_index.provider: local`.
+`ferropix.enabled: false` and `config.pixm.url`. A CDR run on its
+own: `ferropix.enabled: false` and `config.record.subject_index: local`.
 
 The chart pins FerroPIX 0.0.18 by digest (`ferropix.image`) with the
 FerroPIX chart built for it. Since FerroPIX 0.0.8, `public_base_url` is a
@@ -1002,32 +1002,32 @@ JVM, no database, one distroless image. `terminology.enabled` renders it as a
 third workload beside the CDR and the viewer, and points the CDR at it, so
 archetype value-set bindings resolve at commit and AQL `TERMINOLOGY()` expands
 through it. The CDR's own `/terminology/*` extension routes are a separate
-switch: they answer only with `config.terminology.api_enabled=true`, which is
+switch: they answer only with `config.api.terminology=true`, which is
 `false` by default, and return `404` otherwise whether or not FerroTERM is
 running. It is the Helm equivalent of the
 [compose terminology overlay](compose.md#the-terminology-overlay-ferroterm).
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 23.3.1 -n ferroehr --reuse-values \
+  --version 24.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
 That renders a Deployment, a ClusterIP Service, its own ServiceAccount, a
 ConfigMap holding the code systems, and a NetworkPolicy. It also writes three
-things into the CDR's `ferroehr.toml`: `config.terminology.server.enabled`,
-`config.terminology.server.fail_on_error` from `terminology.failOnError`, and
-`config.terminology.server.url` at the Service address.
+things into the CDR's `ferroehr.toml`: `config.the [terminology] table`,
+`config.terminology.on_error` from `terminology.failOnError`, and
+`config.terminology.url` at the Service address.
 
 Because the chart writes those three, a values file that contradicts any of them
 is refused at render rather than silently overwritten. Three shapes are refused
 while `terminology.wireCdr` is on:
 
-- **`config.terminology.server.url`** — two answers to "which server resolves a
+- **`config.terminology.url`** — two answers to "which server resolves a
   binding" is how resolution ends up pointed somewhere nobody chose.
-- **`config.terminology.server.enabled: false`** — the rendered
+- **`config.the [terminology] table: false`** — the rendered
   `ferroehr.toml` would say the opposite of your values file.
-- **`config.terminology.server.fail_on_error`** disagreeing with
+- **`config.terminology.on_error`** disagreeing with
   `terminology.failOnError` — same reason, for the posture that decides whether
   an unresolvable binding is a `422`.
 
@@ -1140,7 +1140,7 @@ holding its configuration file, and a NetworkPolicy.
 The chart writes three sections of that file for you:
 
 - **`[cdr]`:** `base_url` is this release's CDR Service with its REST base path
-  (`http://<release>:<service.port><config.rest.base_path>`), and
+  (`http://<release>:<service.port><config.api.base_path>`), and
   `[cdr.credentials.oauth]` names the client of `bridge.cdr.oauth` and its
   secret, a file mounted from your Secret.
 - **`[terminology]`:** with `terminology.enabled` on, `base_url` is the chart's
@@ -1346,8 +1346,8 @@ disruption, so ordinary cluster maintenance during a release cannot exhaust
 anywhere in the logs.
 
 **A reused connection is not closed under a client.** The server closes a
-kept-alive connection only after `config.server.idle_timeout_ms` (120 s by
-default) with no request, and counts `config.server.header_read_timeout_ms`
+kept-alive connection only after `config.server.idle_timeout` (two minutes by
+default) with no request, and counts `config.server.header_read_timeout`
 from the first byte of each request. Keep the idle limit longer than the idle
 timeout of your clients (90 s for a Go client) and of the ingress controller or
 load balancer in front, so they close an idle connection first. A client that
@@ -1386,7 +1386,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 23.3.1 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 24.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

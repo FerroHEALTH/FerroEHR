@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[licence]` configuration section.
+//! The licence token the deployment names (`deployment.licence_file`).
 
 use std::path::PathBuf;
 

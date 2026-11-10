@@ -11,7 +11,7 @@
 //! openEHR specification governs FerroEHR's access-control scheme.
 //!
 //! Gating: mounted under `/admin/`, so the route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::admin.enabled` config gate
+//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
 //! (`405` with an empty `Allow` when off). The repair commits a new
 //! `EHR_ACCESS` version with its commit audit and writes an access record
 //! (`ferroehr::service::admin::access_repair`).

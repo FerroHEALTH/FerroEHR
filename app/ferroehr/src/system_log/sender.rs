@@ -500,9 +500,9 @@ pub async fn start(
     pool: Option<PgPool>,
 ) -> Result<(AuditSender, AuditHandle), AuditError> {
     let mut deliveries = Vec::new();
-    let syslog = if config.syslog.enabled {
+    let syslog = if let Some(syslog) = &config.syslog {
         let route = SyslogRoute::new(
-            &config.syslog,
+            syslog,
             config.server_host.as_deref().unwrap_or_default(),
             &config.source_id,
         )
@@ -518,7 +518,7 @@ pub async fn start(
         if let Some(pool) = pool {
             Some(
                 AuditStore::new(pool)
-                    .with_fhir_feed(config.fhir_feed.enabled)
+                    .with_fhir_feed(config.fhir_feed.is_some())
                     .with_render_policy(policy.clone()),
             )
         } else {
@@ -540,7 +540,7 @@ pub async fn start(
         .as_ref()
         .and_then(|store| spawn_store_upkeep(store, &config.store, &mut workers));
 
-    if store.is_none() && syslog.is_none() && !config.fhir_feed.enabled {
+    if store.is_none() && syslog.is_none() && config.fhir_feed.is_none() {
         tracing::warn!(
             "ATNA auditing is enabled with no active sink — records will be rendered and discarded"
         );
@@ -617,11 +617,11 @@ fn start_feed(
     deliveries: &mut Vec<Delivery>,
 ) -> Result<FeedStart, AuditError> {
     use crate::system_log::feed::{StoreOutbox, repository};
-    if !config.fhir_feed.enabled {
+    let Some(fhir_feed) = &config.fhir_feed else {
         return Ok((None, None));
-    }
-    let feed = repository(&config.fhir_feed)?;
-    let retry_max = Duration::from_millis(config.fhir_feed.retry_max_ms);
+    };
+    let feed = repository(fhir_feed)?;
+    let retry_max = fhir_feed.retry.max_backoff.get();
     let Some(store) = store else {
         // NOTE: no specification governs the bounds of the store-off feed's
         // spool: our own design, about a day of records at a modest rate.
@@ -638,7 +638,10 @@ fn start_feed(
     let outbox = StoreOutbox::new(
         store.clone(),
         Arc::clone(&notify),
-        Duration::from_millis(config.fhir_feed.poll_interval_ms.max(100)),
+        fhir_feed
+            .poll_interval
+            .get()
+            .max(Duration::from_millis(100)),
     );
     deliveries.push(deliver(
         "fhir_feed",
@@ -649,24 +652,23 @@ fn start_feed(
 
 /// Spawns the local store's upkeep workers onto `workers`: the retention
 /// reaper, which deletes each record at its own end, and the scheduled hash-chain
-/// verification unless `verify_interval_seconds` is `0`, whose shared result is
+/// verification unless `verify_interval` is `"0s"`, whose shared result is
 /// returned.
 fn spawn_store_upkeep(
     store: &AuditStore,
     config: &StoreConfig,
     workers: &mut Vec<JoinHandle<()>>,
 ) -> Option<ChainCheck> {
-    workers.push(tokio::spawn(reaper(store.clone(), config.retention())));
-    if config.verify_interval_seconds == 0 {
+    workers.push(tokio::spawn(reaper(store.clone(), config.horizon())));
+    if config.verify_interval.is_zero() {
         return None;
     }
     let check = ChainCheck::default();
     workers.push(tokio::spawn(crate::system_log::chain_check::scheduled(
         store.clone(),
         check.clone(),
-        Duration::from_secs(config.verify_interval_seconds),
-        (config.full_verify_interval_seconds != 0)
-            .then(|| Duration::from_secs(config.full_verify_interval_seconds)),
+        config.verify_interval.get(),
+        (!config.full_verify_interval.is_zero()).then(|| config.full_verify_interval.get()),
     )));
     Some(check)
 }
@@ -1027,20 +1029,18 @@ mod tests {
             // No DB pool in these tests — exercise the transport path alone.
             store: StoreConfig {
                 enabled: false,
-                retention_days: 0,
-                retention_years: None,
+                retention: None,
                 sgb_v_309_controller: false,
-                verify_interval_seconds: 0,
-                full_verify_interval_seconds: 0,
+                verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+                full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+                ..StoreConfig::default()
             },
-            syslog: SyslogConfig {
-                enabled: true,
+            syslog: Some(SyslogConfig {
                 // A port nothing listens on is fine: the sink connects on the
                 // first send, which fails and is metered.
-                host: "127.0.0.1".to_owned(),
-                port: 1,
+                url: format!("tls://{}:{}", "127.0.0.1".to_owned(), 1),
                 ..SyslogConfig::default()
-            },
+            }),
             queue_capacity: 8,
             ..AuditConfig::default()
         }

@@ -9,8 +9,9 @@
 
 use std::collections::BTreeMap;
 
-use ferroehr::config::authz::{AbacConfig, AbacEngineKind, AbacParam, PolicyRule, RemoteConfig};
-use ferroehr_rest::extensions::access::authz::remote_pdp;
+use ferroehr::config::abac_rules::RemoteConfig;
+use ferroehr::config::authz::{AbacConfig, AbacEngineKind, AbacParam, PolicyRule};
+use ferroehr_rest::extensions::access::authz::remote::remote_pdp;
 use ferroehr_rest::extensions::access::authz::request::{AccessMode, AuthzRequest, ResourceKind};
 use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
 use ferrohealth_authz::remote::RemotePdp;
@@ -34,10 +35,10 @@ fn config(server: &str, name: &str, parameters: Vec<AbacParam>) -> AbacConfig {
         enabled: true,
         engine: AbacEngineKind::Remote,
         remote: RemoteConfig {
-            server: Some(ferrohealth_secret::secret_url::SecretUrl::new(server)),
-            connect_timeout_ms: 500,
-            request_timeout_ms: 1000,
-            oauth: None,
+            url: Some(ferrohealth_secret::secret_url::SecretUrl::new(server)),
+            connect_timeout: ferrohealth_config::units::Duration::from_millis(500),
+            timeout: ferrohealth_config::units::Duration::from_millis(1000),
+            ..RemoteConfig::default()
         },
         policy,
         ..AbacConfig::default()

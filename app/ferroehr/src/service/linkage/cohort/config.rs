@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[cohort]` section — the allow-list of demographic predicates a cohort
+//! The `[privacy.cohort]` section — the allow-list of demographic predicates a cohort
 //! query may select on, and the two limits that bound what it may serve.
 //!
 //! **No openEHR spec governs this — our own design/extension.** openEHR defines
@@ -54,12 +54,12 @@ pub struct PredicateBinding {
     pub kind: PredicateKind,
 }
 
-/// The `[cohort]` section.
+/// The `[privacy.cohort]` section.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct CohortConfig {
     /// The distinct-EHR floor a result set must reach to be served
-    /// (`FERROEHR__COHORT__SMALL_CELL_THRESHOLD`); `0` disables suppression.
+    /// (`FERROEHR__PRIVACY__COHORT__SMALL_CELL_THRESHOLD`); `0` disables suppression.
     ///
     /// Below it the rows are withheld and the response says so, because a
     /// cohort narrow enough to name one person re-identifies that person out
@@ -67,18 +67,18 @@ pub struct CohortConfig {
     /// record.
     pub small_cell_threshold: u32,
     /// The largest cohort a predicate may select
-    /// (`FERROEHR__COHORT__MAX_COHORT_SIZE`).
+    /// (`FERROEHR__PRIVACY__COHORT__MAX_COHORT_SIZE`).
     ///
     /// A predicate matching more parties is refused rather than truncated: a
     /// silently shortened cohort is a wrong denominator, and a denominator
     /// nobody can see is worse than a refusal.
     pub max_cohort_size: u32,
     /// The bound predicates, keyed by the name a caller uses
-    /// (`[cohort.predicates]`). Empty — the default — leaves the predicate
+    /// (`[privacy.cohort.predicates]`). Empty — the default — leaves the predicate
     /// half of the surface off.
     pub predicates: BTreeMap<String, PredicateBinding>,
     /// Whether a cohort may name its subjects by identifier
-    /// (`FERROEHR__COHORT__SUBJECTS`), each resolved through the installed
+    /// (`FERROEHR__PRIVACY__COHORT__SUBJECTS`), each resolved through the installed
     /// EHR index provider. The one cohort form an IHE patient identity source
     /// serves, so it turns the surface on without a bound predicate.
     pub subjects: bool,

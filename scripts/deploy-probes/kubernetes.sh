@@ -221,7 +221,7 @@ k8s_namespace() {
   kubectl create namespace "$K8S_NS" >/dev/null 2>&1 || true
   kc delete secret ferroehr-db >/dev/null 2>&1 || true
   kc create secret generic ferroehr-db \
-    --from-literal=FERROEHR__DB__URL="postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@${K8S_DB_HOST}:${K8S_DB_PORT}/${PG_INIT_DB:-ferroehr}" \
+    --from-literal=FERROEHR__DATABASE__URL="postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@${K8S_DB_HOST}:${K8S_DB_PORT}/${PG_INIT_DB:-ferroehr}" \
     >/dev/null 2>&1
 }
 
@@ -391,7 +391,7 @@ probes_k8s_boot() {
   # templates are reached, so both are named, as an operator must, and the
   # refusal read here is the CDR's own on the default install (#5103).
   guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
-             --set config.deployment_profile=sandbox \
+             --set config.deployment.profile=sandbox \
              --set database.existingSecret=ferroehr-db \
              --set ferropix.database.existingSecret=ferropix-db \
              --set ferropix.dataKey.existingSecret=ferropix-data-key 2>&1)"
@@ -582,7 +582,7 @@ probes_k8s_secrets() {
   local env_dump cm_dump
   env_dump="$(kc get pod "$(k8s_pod)" \
     -o jsonpath='{range .spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' 2>/dev/null)"
-  assert_contains "$env_dump" "FERROEHR__DB__URL_FILE=" \
+  assert_contains "$env_dump" "FERROEHR__DATABASE__URL_FILE=" \
     "the DSN must arrive as a file path the server reads, not as an environment value"
   assert_not_contains "$env_dump" "postgres://" \
     "a DSN in the pod spec is readable by anyone who can describe the pod"

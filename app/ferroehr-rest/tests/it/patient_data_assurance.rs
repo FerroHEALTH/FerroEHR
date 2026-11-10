@@ -16,7 +16,7 @@ use std::time::Duration;
 
 use axum::Router;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
+use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig};
 use ferroehr::system_log::sender::start;
 use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection};
 use ferrohealth_smart::config::IssuerEntry;
@@ -65,10 +65,7 @@ async fn app(delegates: Vec<Delegate>, audited: bool) -> (testkit::TestDb, PgPoo
                 enabled: true,
                 ..StoreConfig::default()
             },
-            syslog: SyslogConfig {
-                enabled: false,
-                ..SyslogConfig::default()
-            },
+            syslog: None,
             suppress_login_events: true,
             fail_mode: FailMode::Open,
             ..AuditConfig::default()

@@ -9,8 +9,8 @@ the same configuration (`ferroehr definitions load`).
 - name: FERROEHR_CONFIG
   value: /etc/ferroehr/ferroehr.toml
 {{- if .Values.auth.caExistingSecret }}
-# The issuer's CA, beside the image's own roots (`[auth] ca_file`).
-- name: FERROEHR__AUTH__CA_FILE
+# The issuer's CA, beside the image's own roots (`[auth.tls] trust_roots_file`).
+- name: FERROEHR__AUTH__TLS__TRUST_ROOTS_FILE
   value: /etc/ferroehr-issuer-ca/ca.crt
 {{- end }}
 {{- if or .Values.database.existingSecret .Values.database.url }}
@@ -20,7 +20,7 @@ the same configuration (`ferroehr definitions load`).
        child process. `DATABASE_URL` is deliberately NOT set — the
        server recognises it as a lower-priority alias, and setting both
        it and a file path would work but read ambiguously. */}}
-- name: FERROEHR__DB__URL_FILE
+- name: FERROEHR__DATABASE__URL_FILE
   value: {{ printf "%s/db.url" (include "ferroehr.secretMountPath" .) | quote }}
 {{- end }}
 {{- range $domain := list "clinical" "party" "audit" }}
@@ -33,7 +33,7 @@ the same configuration (`ferroehr definitions load`).
        reaches one domain rather than all of them. Unset, the domain
        shares the DSN above and the separation is schema-only, which
        the boot self-check still enforces. */}}
-- name: FERROEHR__STORAGE__{{ upper $domain }}__URL_FILE
+- name: FERROEHR__DATABASE__{{ upper $domain }}__URL_FILE
   value: {{ printf "%s/storage.%s.url" (include "ferroehr.secretMountPath" $) $domain | quote }}
 {{- end }}
 {{- if $dsn.migrateExistingSecret }}
@@ -42,7 +42,7 @@ the same configuration (`ferroehr definitions load`).
        reaches: preparation runs per database, and under
        migrate=verify it reads that database's ext and domain
        bookkeeping, which the domain's DML-only role cannot. */}}
-- name: FERROEHR__STORAGE__MIGRATE__{{ upper $domain }}__URL_FILE
+- name: FERROEHR__DATABASE__{{ upper $domain }}__MIGRATE_URL_FILE
   value: {{ printf "%s/storage.migrate.%s.url" (include "ferroehr.secretMountPath" $) $domain | quote }}
 {{- end }}
 {{- end }}
@@ -53,11 +53,11 @@ the same configuration (`ferroehr definitions load`).
        bookkeeping tables under verify — so a pod whose runtime DSNs
        are domain-scoped roles cannot do it on either of them. Unset,
        preparation falls back to the clinical DSN. */}}
-- name: FERROEHR__DB__MIGRATE_URL_FILE
+- name: FERROEHR__DATABASE__MIGRATE_URL_FILE
   value: {{ printf "%s/db.migrate_url" (include "ferroehr.secretMountPath" .) | quote }}
 {{- end }}
 {{- if .Values.secrets.signingKeyPassphrase }}
-- name: FERROEHR__SIGNING__KEY_PASSPHRASE_FILE
+- name: FERROEHR__RECORD__SIGNING__KEY_PASSPHRASE_FILE
   value: {{ printf "%s/signing.key_passphrase" (include "ferroehr.secretMountPath" .) | quote }}
 {{- end }}
 {{- if .Values.secrets.auditFhirFeedUrl }}
@@ -68,14 +68,14 @@ the same configuration (`ferroehr definitions load`).
       key: FERROEHR__AUDIT__FHIR_FEED__URL
 {{- end }}
 {{- if .Values.secrets.multimediaAccessKeyId }}
-- name: FERROEHR__MULTIMEDIA__ACCESS_KEY_ID
+- name: FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID
   valueFrom:
     secretKeyRef:
       name: {{ include "ferroehr.secretName" . }}
-      key: FERROEHR__MULTIMEDIA__ACCESS_KEY_ID
+      key: FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID
 {{- end }}
 {{- if .Values.secrets.multimediaSecretAccessKey }}
-- name: FERROEHR__MULTIMEDIA__SECRET_ACCESS_KEY_FILE
+- name: FERROEHR__RECORD__MULTIMEDIA__SECRET_ACCESS_KEY_FILE
   value: {{ printf "%s/multimedia.secret_access_key" (include "ferroehr.secretMountPath" .) | quote }}
 {{- end }}
 {{- with .Values.extraEnv }}

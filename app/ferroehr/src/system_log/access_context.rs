@@ -173,7 +173,7 @@ where
 ///
 /// The protocol adapter publishes `true` for a patient-context request (a
 /// SMART `patient/` grant or the configured patient claim) on a deployment
-/// that enables `[access_delay]`, and `false` for every other caller, so a
+/// that enables `[privacy.access_delay]`, and `false` for every other caller, so a
 /// professional reads the record as before. Outside a request scope it is
 /// `false` (`docs/law/eu/ehds/text.html` Art. 3(3)). No openEHR spec governs a
 /// delay of the person's access: our own design/extension.

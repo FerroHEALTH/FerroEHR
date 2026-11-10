@@ -5,7 +5,7 @@
 //!
 //! [`loader`] names what is FerroEHR's own: the `FERROEHR` namespace, the
 //! fallbacks below the canonical `FERROEHR__` forms (`DATABASE_URL_UNPOOLED`,
-//! `DATABASE_URL` and the libpq set for `db.url`, `RUST_LOG` for
+//! `DATABASE_URL` and the libpq set for `database.url`, `RUST_LOG` for
 //! `telemetry.filter`, `PORT` for `server.listen`), and the names under the prefix
 //! that set no key. [`load_process`] and [`assemble_from`] then resolve every `*_file`
 //! secret sibling. No openEHR spec governs configuration — our own design.
@@ -62,6 +62,9 @@ pub enum ConfigError {
     /// A semantic (cross-field) validation failure.
     #[error("{0}")]
     Semantic(String),
+    /// A key the tree no longer reads, named with what replaced it.
+    #[error("{0}")]
+    Removed(ferrohealth_config::removed::Removal),
 }
 
 impl ConfigError {
@@ -111,7 +114,7 @@ impl From<ConfigError> for ConfigErrors {
 /// product's value for each key it does not name.
 ///
 /// The fallbacks sit below the canonical `FERROEHR__` form of their key, and
-/// a later fallback of the same key wins over an earlier one: for `db.url`
+/// a later fallback of the same key wins over an earlier one: for `database.url`
 /// the direct `DATABASE_URL_UNPOOLED` wins over `DATABASE_URL`, which wins
 /// over the URL composed from the libpq set, because a transaction pooler
 /// drops the session `search_path`.
@@ -122,9 +125,9 @@ impl From<ConfigError> for ConfigErrors {
 pub fn loader() -> Result<Loader, ConfigError> {
     let loader = Loader::new("FERROEHR")?
         .defaults("server", &FerroEhrConfig::default().server)?
-        .fallback_composed(libpq::VARIABLES, "db.url", libpq::url)
-        .fallback("DATABASE_URL", "db.url", None)
-        .fallback("DATABASE_URL_UNPOOLED", "db.url", None)
+        .fallback_composed(libpq::VARIABLES, "database.url", libpq::url)
+        .fallback("DATABASE_URL", "database.url", None)
+        .fallback("DATABASE_URL_UNPOOLED", "database.url", None)
         .fallback("RUST_LOG", "telemetry.filter", None)
         .fallback("PORT", "server.listen", Some(all_interfaces));
     Ok(RESERVED
@@ -147,7 +150,9 @@ pub fn load_process(
     cli_config: Option<&Path>,
     overrides: &[(String, String)],
 ) -> Result<(Loaded<FerroEhrConfig>, FerroEhrConfig), ConfigErrors> {
-    let loaded = loader()?
+    let sources = loader()?;
+    refuse_shared(sources.load_with::<toml::Table>(cli_config, overrides))?;
+    let loaded = sources
         .load_with::<FerroEhrConfig>(cli_config, overrides)
         .map_err(ConfigError::from)?;
     let config = finish(loaded.settings().clone())?;
@@ -192,15 +197,58 @@ pub fn assemble_from<S: std::hash::BuildHasher>(
         .iter()
         .map(|(name, value)| (name.clone(), value.clone()))
         .collect();
-    let loaded = loader()?
+    let sources = loader()?;
+    refuse_shared(sources.load_sources_with::<toml::Table>(
+        text.as_deref(),
+        file,
+        &environment,
+        overrides,
+    ))?;
+    let loaded = sources
         .load_sources_with::<FerroEhrConfig>(text.as_deref(), file, &environment, overrides)
         .map_err(ConfigError::from)?;
     let config = finish(loaded.settings().clone())?;
     Ok((loaded, config))
 }
 
-/// Resolves every `*_file` secret sibling of `config`.
+/// Refuses every retired key of a family section the merged tree sets, which
+/// the typed load would refuse only as unknown.
+fn refuse_shared(
+    tree: Result<Loaded<toml::Table>, ferrohealth_config::error::ConfigError>,
+) -> Result<(), ConfigErrors> {
+    // NOTE: no specification governs this: our own design; a tree that does not
+    // merge is refused by the typed load that follows, with its position.
+    let Ok(tree) = tree else {
+        return Ok(());
+    };
+    let removals = super::retired_shared::removals(tree.settings());
+    if removals.is_empty() {
+        return Ok(());
+    }
+    Err(ConfigErrors(
+        removals
+            .removals()
+            .iter()
+            .cloned()
+            .map(ConfigError::Removed)
+            .collect(),
+    ))
+}
+
+/// Refuses every retired key `config` sets, then resolves every `*_file`
+/// secret sibling of it.
 fn finish(mut config: FerroEhrConfig) -> Result<FerroEhrConfig, ConfigErrors> {
+    let removals = super::retired::removals(&config);
+    if !removals.is_empty() {
+        return Err(ConfigErrors(
+            removals
+                .removals()
+                .iter()
+                .cloned()
+                .map(ConfigError::Removed)
+                .collect(),
+        ));
+    }
     let mut errors = Vec::new();
     resolve_secret_files(&mut config, &mut errors);
     if errors.is_empty() {
@@ -215,27 +263,26 @@ fn finish(mut config: FerroEhrConfig) -> Result<FerroEhrConfig, ConfigErrors> {
 /// The key-or-file rule is `ferrohealth-secret`'s: a file's trailing line
 /// ending is removed, an empty file is refused, and both set is refused.
 fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigError>) {
+    let signing = &mut config.record.signing;
     resolve(
-        "signing.key_passphrase",
-        &mut config.signing.key_passphrase,
-        config.signing.key_passphrase_file.take().as_deref(),
+        "record.signing.key_passphrase",
+        &mut signing.key_passphrase,
+        signing.key_passphrase_file.take().as_deref(),
         errors,
     );
+    if let Some(protection) = config.privacy.identifier_protection.as_mut() {
+        resolve(
+            "privacy.identifier_protection.key",
+            &mut protection.key,
+            protection.key_file.take().as_deref(),
+            errors,
+        );
+    }
+    let multimedia = &mut config.record.multimedia;
     resolve(
-        "demographic.identifier_protection.key",
-        &mut config.demographic.identifier_protection.key,
-        config
-            .demographic
-            .identifier_protection
-            .key_file
-            .take()
-            .as_deref(),
-        errors,
-    );
-    resolve(
-        "multimedia.secret_access_key",
-        &mut config.multimedia.secret_access_key,
-        config.multimedia.secret_access_key_file.take().as_deref(),
+        "record.multimedia.secret_access_key",
+        &mut multimedia.secret_access_key,
+        multimedia.secret_access_key_file.take().as_deref(),
         errors,
     );
     if let Some(basic) = config.auth.shared.basic.as_mut() {
@@ -249,36 +296,36 @@ fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigErro
     // The credential-bearing URLs with a non-empty dev default: "the operator
     // set it" means "it differs from that default".
     let default_dsn = DbConfig::default().url;
-    let file = config.db.url_file.take();
+    let database = &mut config.database;
+    let file = database.url_file.take();
     resolve_defaulted(
-        "db.url",
-        &mut config.db.url,
+        "database.url",
+        &mut database.url,
         &default_dsn,
         file.as_deref(),
         errors,
     );
     for domain in Domain::ALL {
-        let settings = config.storage.domain_mut(domain);
+        let settings = database.domain_mut(domain);
         let file = settings.url_file.take();
         resolve(
-            &format!("storage.{domain}.url"),
+            &format!("database.{domain}.url"),
             &mut settings.url,
             file.as_deref(),
             errors,
         );
-        let migrator = config.storage.migrate.domain_mut(domain);
-        let file = migrator.url_file.take();
+        let file = settings.migrate_url_file.take();
         resolve(
-            &format!("storage.migrate.{domain}.url"),
-            &mut migrator.url,
+            &format!("database.{domain}.migrate_url"),
+            &mut settings.migrate_url,
             file.as_deref(),
             errors,
         );
     }
     resolve(
-        "db.migrate_url",
-        &mut config.db.migrate_url,
-        config.db.migrate_url_file.take().as_deref(),
+        "database.migrate_url",
+        &mut database.migrate_url,
+        database.migrate_url_file.take().as_deref(),
         errors,
     );
 }
@@ -340,9 +387,9 @@ mod tests {
     fn the_server_defaults_are_the_products() {
         let (loaded, config) = assemble_from(None, &env(&[]), &[]).expect("zero-config load");
         assert_eq!(config.server.listen.to_string(), "0.0.0.0:8080");
-        assert_eq!(config.server.body_limit_bytes, 64 * 1024 * 1024);
+        assert_eq!(config.server.body_limit_bytes(), 64 * 1024 * 1024);
         assert_eq!(
-            loaded.provenance().source("server.body_limit_bytes"),
+            loaded.provenance().source("server.body_limit"),
             ferrohealth_config::provenance::Source::Default
         );
     }
@@ -354,22 +401,25 @@ mod tests {
         let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp");
         assert_fs::prelude::FileWriteStr::write_str(
             &file,
-            "[server]\nlisten = \"10.0.0.5:9090\"\nrequest_timeout_ms = 5000\n",
+            "[server]\nlisten = \"10.0.0.5:9090\"\nrequest_timeout = \"5s\"\n",
         )
         .expect("write");
         let (_, config) =
             assemble_from(Some(file.path()), &env(&[]), &[]).expect("a partial table loads");
         assert_eq!(config.server.listen.to_string(), "10.0.0.5:9090");
-        assert_eq!(config.server.request_timeout_ms, 5000);
-        assert_eq!(config.server.body_limit_bytes, 64 * 1024 * 1024);
+        assert_eq!(
+            config.server.request_timeout,
+            ferrohealth_config::units::Duration::from_secs(5)
+        );
+        assert_eq!(config.server.body_limit_bytes(), 64 * 1024 * 1024);
 
         let (_, config) = assemble_from(
             Some(file.path()),
-            &env(&[("FERROEHR__SERVER__BODY_LIMIT_BYTES", "1048576")]),
+            &env(&[("FERROEHR__SERVER__BODY_LIMIT", "1MiB")]),
             &[],
         )
         .expect("an override loads");
-        assert_eq!(config.server.body_limit_bytes, 1_048_576);
+        assert_eq!(config.server.body_limit_bytes(), 1_048_576);
     }
 
     /// An unknown key set from the environment names its full dotted path and
@@ -410,11 +460,7 @@ mod tests {
     #[test]
     fn an_unknown_file_key_is_named_as_itself() {
         for (text, key, doubled) in [
-            (
-                "[rest]\nno_such_key = true\n",
-                "rest.no_such_key",
-                "rest.rest",
-            ),
+            ("[api]\nno_such_key = true\n", "api.no_such_key", "api.api"),
             (
                 "[server.no_such_table]\nx = 1\n",
                 "server.no_such_table",
@@ -601,7 +647,7 @@ mod tests {
         assert!(
             cdr_entries
                 .iter()
-                .any(|(_, _, name)| name == "FERROEHR__DB__URL"),
+                .any(|(_, _, name)| name == "FERROEHR__DATABASE__URL"),
             "the CDR service's DSN variable was not extracted — the guard is \
              blind (Compose layout or service name drift): {cdr_entries:?}"
         );
@@ -682,52 +728,57 @@ mod tests {
     /// the pseudonym namespaces alone (#4379).
     #[test]
     fn the_quickstart_local_index_differs_in_the_ehr_index_alone() {
-        use crate::service::ehr_index::config::{EhrIndexConfig, ProviderKind};
+        use crate::service::ehr_index::config::SubjectIndex;
 
         let mut ihe = quickstart_config("ferroehr-config");
         let mut local = quickstart_config("ferroehr-config-local");
-        assert_eq!(ihe.ehr_index.provider, ProviderKind::Ihe);
+        assert_eq!(ihe.record.subject_index, Some(SubjectIndex::Pixm));
         assert_eq!(ihe.privacy.subject_namespaces, ["urn:oid:2.999.7.1"]);
-        assert_eq!(local.ehr_index.provider, ProviderKind::Local);
+        assert_eq!(local.record.subject_index, Some(SubjectIndex::Local));
         assert!(
             local.privacy.subject_namespaces.is_empty(),
             "no pseudonym namespace is declared on the local index"
         );
         for config in [&mut ihe, &mut local] {
-            config.ehr_index = EhrIndexConfig::default();
+            config.record.subject_index = None;
+            config.pixm = None;
             config.privacy.subject_namespaces.clear();
         }
         assert_eq!(
             serde_json::to_value(&ihe).expect("render"),
             serde_json::to_value(&local).expect("render"),
-            "the two quickstart configurations differ beyond [ehr_index] and \
+            "the two quickstart configurations differ beyond [pixm] and \
              [privacy] subject_namespaces"
         );
     }
 
-    /// `FERROEHR__EHR_INDEX__PROVIDER=local` alone switches a configuration
-    /// written for an IHE patient identity source to the local index: the IHE
-    /// keys are kept and named as unused (#4379).
+    /// `FERROEHR__RECORD__SUBJECT_INDEX=local` alone switches a configuration
+    /// written for an IHE patient identity source to the local index: the
+    /// `[pixm]` keys are kept and named as unused (#4379).
     #[test]
-    fn the_provider_variable_alone_switches_the_ehr_index() {
+    fn the_subject_index_variable_alone_switches_the_index() {
         let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp file");
         assert_fs::prelude::FileWriteStr::write_str(
             &file,
             "[privacy]\nsubject_namespaces = [\"urn:oid:2.999.7.1\"]\n\n\
-             [ehr_index]\nprovider = \"ihe\"\npixm_url = \"http://localhost:8090/fhir\"\n\
+             [record]\nsubject_index = \"pixm\"\n\n\
+             [pixm]\nurl = \"http://localhost:8090/fhir\"\n\
              assigning_authority = \"urn:oid:2.999.7.1\"\n",
         )
         .expect("write the config");
         let (_, config) = assemble_from(
             Some(file.path()),
-            &env(&[("FERROEHR__EHR_INDEX__PROVIDER", "local")]),
+            &env(&[("FERROEHR__RECORD__SUBJECT_INDEX", "local")]),
             &[],
         )
         .expect("the switched config assembles");
         config.validate().expect("the switched config validates");
         assert_eq!(
-            config.ehr_index.unused_keys(),
-            ["ehr_index.pixm_url", "ehr_index.assigning_authority"]
+            crate::service::ehr_index::config::unused_keys(
+                config.record.subject_index,
+                config.pixm.as_ref()
+            ),
+            ["pixm.url", "pixm.assigning_authority"]
         );
         // The declared namespace stays in force under the local index, so every
         // subject reference is still a pseudonym (no mixed mode, #4379).

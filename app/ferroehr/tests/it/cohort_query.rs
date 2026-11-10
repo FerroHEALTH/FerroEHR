@@ -499,11 +499,11 @@ async fn every_execution_is_recorded_as_a_linkage_access() {
         enabled: true,
         store: StoreConfig {
             enabled: true,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
         ..AuditConfig::default()
     };
@@ -671,14 +671,14 @@ async fn the_crossing_runs_on_separated_credentials() {
         url: SecretUrl::new(crate::fixtures::dsn_as(&db, "cohclin", "ferroehr_clinical").await),
         ..DbConfig::default()
     };
-    let storage = ferroehr::db::domain::StorageConfig {
+    let storage = DbConfig {
         party: ferroehr::db::domain::DomainDsn {
             url: Some(SecretUrl::new(
                 crate::fixtures::dsn_as(&db, "cohdemo", "ferroehr_party").await,
             )),
-            url_file: None,
+            ..Default::default()
         },
-        ..ferroehr::db::domain::StorageConfig::default()
+        ..settings.clone()
     };
     assert!(
         storage.is_separated(ferroehr::db::domain::Domain::Party),
@@ -686,7 +686,7 @@ async fn the_crossing_runs_on_separated_credentials() {
          the shared-credential path again"
     );
 
-    let pools = ferroehr::db::connect_domains(&settings, &storage)
+    let pools = ferroehr::db::connect_domains(&storage)
         .await
         .expect("each pool connects on its own credential");
 

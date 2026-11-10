@@ -65,7 +65,7 @@ pub struct CommitterIdentity {
     /// for a subject minted by an identity provider that authority is the
     /// provider, not this CDR, and which concrete string names it is spec-silent.
     pub issuer: Option<String>,
-    /// The client the request came through, which the `[origins]` register
+    /// The client the request came through, which the `[[authz.origin]]` register
     /// maps to the origin a direct commit is stamped with: the Basic user, or
     /// an access token's `client_id`, failing that its `azp` (RFC 9068 §2.2).
     pub client: Option<String>,

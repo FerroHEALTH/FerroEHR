@@ -20,7 +20,7 @@
 //!
 //! While the database is down, the pool keeps retrying a refused connect
 //! until its acquire deadline (sqlx 0.9 `PoolInner::connect`), so a request
-//! would wait the whole `acquire_timeout_secs` for an answer the server could
+//! would wait the whole `acquire_timeout` for an answer the server could
 //! give at once. [`acquire`] therefore probes the database itself once an
 //! acquire has waited one second: only a probe whose connect is refused or
 //! reset, or that the server turns away as shutting down, marks the database

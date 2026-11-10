@@ -38,9 +38,9 @@ spec:
       port: {{ .Values.service.port }}
       targetPort: http
       appProtocol: {{ ternary "https" "http" (eq (include "ferroehr.serverTls" .) "true") }}
-    {{- if and .Values.config.management.enabled .Values.config.management.port }}
+    {{- if and .Values.config.management.enabled (include "ferroehr.managementOwnPort" .) }}
     - name: management
-      port: {{ .Values.config.management.port }}
+      port: {{ include "ferroehr.managementOwnPort" . }}
       targetPort: management
       appProtocol: http
     {{- end }}

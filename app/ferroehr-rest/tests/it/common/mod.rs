@@ -18,13 +18,13 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::auth_section::AuthConfig;
-use ferroehr::config::rest::{AdminConfig, RestConfig};
+use ferroehr::config::rest::ApiConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
 use ferroehr_rest::extensions::access::authz::{AuthzResolvers, ResolveError};
 use ferroehr_rest::state::AppState;
-use ferrohealth_smart::config::{AuthSection, BasicSection, BasicUser, IssuerEntry, IssuerKey};
+use ferrohealth_smart::config::{AuthSection, BasicSection, BasicUser, IssuerEntry};
 use ferrohealth_smart::kind::IssuerKind;
 use http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
@@ -178,11 +178,11 @@ pub(crate) async fn unauthenticated_router(service: Arc<FerroEhrService>) -> Rou
 
 /// The `[server]` section the wire suites serve under: the family defaults with
 /// a body ceiling that admits the operational templates they upload, which a
-/// deployment raises the same way (`server.body_limit_bytes`); the IPS template
+/// deployment raises the same way (`server.body_limit`); the IPS template
 /// alone is larger than the family's 1 MiB default.
 pub(crate) fn server() -> ferrohealth_server::section::ServerSection {
     ferrohealth_server::section::ServerSection {
-        body_limit_bytes: 64 * 1024 * 1024,
+        body_limit: ferrohealth_config::units::ByteSize::from_mib(64),
         ..ferrohealth_server::section::ServerSection::default()
     }
 }
@@ -191,19 +191,19 @@ pub(crate) fn server() -> ferrohealth_server::section::ServerSection {
 /// base path, no Swagger UI, no permissive CORS, and the ADMIN group gated by
 /// `admin_enabled`.
 pub(crate) fn api_config(admin_enabled: bool) -> AppConfig {
-    AppConfig {
-        server: server(),
-        rest: RestConfig {
-            base_path: BASE.to_owned(),
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
-            cors_permissive: false,
+    {
+        let mut c = AppConfig {
+            server: server(),
+            api: ApiConfig {
+                base_path: BASE.to_owned(),
+                openapi_ui: ferroehr::config::management::AccessLevel::Off,
+                ..Default::default()
+            },
+            auth: auth_off(),
             ..Default::default()
-        },
-        auth: auth_off(),
-        admin: AdminConfig {
-            enabled: admin_enabled,
-        },
-        ..Default::default()
+        };
+        c.api.admin = admin_enabled;
+        c
     }
 }
 
@@ -261,7 +261,7 @@ pub(crate) fn auth(section: AuthSection) -> AuthConfig {
 /// The `[auth]` table trusting the issuers `entries`.
 pub(crate) fn trusting(entries: Vec<IssuerEntry>) -> AuthConfig {
     auth(AuthSection {
-        issuer: IssuerKey::List(entries),
+        issuer: entries,
         ..AuthSection::default()
     })
 }
@@ -372,7 +372,7 @@ pub(crate) fn basic_auth(users: &[(&str, &str, &str)]) -> AuthConfig {
                     roles: Vec::new(),
                 })
                 .collect(),
-            cache_ttl_seconds: 60,
+            cache_ttl: ferrohealth_config::units::Duration::from_secs(60),
         }),
         ..AuthSection::default()
     })
@@ -520,11 +520,11 @@ pub(crate) fn local_audit() -> ferroehr::system_log::config::AuditConfig {
         enabled: true,
         store: ferroehr::system_log::config::StoreConfig {
             enabled: true,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            ..ferroehr::system_log::config::StoreConfig::default()
         },
         ..ferroehr::system_log::config::AuditConfig::default()
     }

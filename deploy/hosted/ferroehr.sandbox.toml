@@ -16,21 +16,22 @@
 
 # The public sandbox holds no real patient data and resets nightly; the
 # declaration is explicit so the posture it runs under is read from this file.
-deployment_profile = "sandbox"
+[deployment]
+profile = "sandbox"
 
 [server]
 # The image's own port; Caddy terminates TLS in front of it.
 listen = "0.0.0.0:8080"
 # Template uploads and the /message imports, up to 64 MiB.
-body_limit_bytes = 67108864
+body_limit = "64MiB"
 
-[rest]
-# Browser tinkering against the demo is the point.
-cors_permissive = true
+[api]
 # The public API reference the documentation links to; the default asks for the
 # API credential.
-swagger_ui = "public"
+openapi_ui = "public"
 
+admin = true
+terminology = true
 [auth]
 enabled = true
 
@@ -53,8 +54,6 @@ identifier_type = "login"
 
 # The whole admin group behind the demo credential — no partial enablement,
 # no separate admin user (owner ruling, #2965).
-[admin]
-enabled = true
 
 # The demo user: ferroehr / ferroehr (the hash is Argon2id of "ferroehr").
 # Public by design; the sandbox holds demo data only and is wiped on a
@@ -130,13 +129,10 @@ enabled = false
 # shipped default and the posture this sandbox declares (register AMB-172): a
 # binding the server cannot resolve is accepted, a binding it resolves as a
 # non-member is refused with 422.
-[terminology]
-api_enabled = true
 
-[terminology.server]
-enabled = true
+[terminology]
 url = "http://ferroterm:8080/r4b"
-fail_on_error = false
+on_error = "accept"
 
 # The pseudonym namespace of the clinical domain (#4242): EHR_STATUS.subject
 # names a demo patient by the UUID FerroPIX minted for it there.
@@ -149,12 +145,14 @@ subject_namespaces = ["urn:oid:2.999.7.1"]
 # The client id is the consumer FerroPIX's [[pseudonym_domain]] names, and
 # system/Patient.rs the scope its PIXm Manager takes from a Consumer. The
 # development issuer checks no client secret, so the one below is no credential.
-[ehr_index]
-provider = "ihe"
-pixm_url = "http://localhost:8090/fhir"
+[record]
+subject_index = "pixm"
+
+[pixm]
+url = "http://localhost:8090/fhir"
 assigning_authority = "urn:oid:2.999.7.1"
 
-[ehr_index.oauth]
+[pixm.oauth]
 token_endpoint = "http://localhost:8180/sandbox/token"
 client_id = "ferroehr"
 client_secret = "sandbox"
@@ -163,5 +161,9 @@ scope = "system/Patient.rs"
 # A cohort may name its patients by identifier in any domain, each resolved
 # through FerroPIX: the visible path from a hospital identifier to an EHR.
 # The small-cell floor stays at its default of 5.
-[cohort]
+[privacy.cohort]
 subjects = true
+
+# Any origin may read responses: development and the demo only.
+[api.cors]
+allow_origins = ["*"]

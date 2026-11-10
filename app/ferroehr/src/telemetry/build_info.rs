@@ -145,7 +145,7 @@ impl BuildInfo {
     /// its audit posture and its party binding.
     #[must_use]
     pub fn for_config(config: &crate::config::FerroEhrConfig) -> Self {
-        let mut info = Self::for_profile(config.spec_profile)
+        let mut info = Self::for_profile(config.deployment.spec_profile)
             .with_audit(crate::system_log::config::AuditPosture::of(&config.audit));
         info.binding = Some(crate::config::binding::BindingPosture::of(config));
         info

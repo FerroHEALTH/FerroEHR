@@ -38,9 +38,9 @@ The reset has two halves, and you need both:
   ([Recovering a partially wiped database](operations.md#recovering-a-partially-wiped-database)
   explains why).
 
-The `deployment_profile` the release ships is `sandbox`, so a reset instance
+The `deployment.profile` the release ships is `sandbox`, so a reset instance
 says on its boot banner and on `GET /ferroehr/rest/status` that it must not
-hold real patient data. Set `deployment_profile = "production"` again before
+hold real patient data. Set `deployment.profile = "production"` again before
 it does.
 
 ## Docker Compose
@@ -110,7 +110,7 @@ The chart deploys no database, so the two halves are separate operations.
    `WITH (FORCE)` terminates the sessions still connected
    ([DROP DATABASE](https://www.postgresql.org/docs/18/sql-dropdatabase.html)).
    Use the owner your deployment provisioned the database with. If
-   `[storage.party]` or `[storage.audit]` name databases
+   `[database.party]` or `[database.audit]` name databases
    of their own, drop and recreate each of those too. The domain roles are
    cluster-wide objects, so they survive the drop, and the migrations reuse
    them.
@@ -126,7 +126,7 @@ The chart deploys no database, so the two halves are separate operations.
      -f minimal-values.yaml
    ```
 
-   The schema is applied at boot (`config.db.migrate: apply`, the chart
+   The schema is applied at boot (`config.database.migrations: apply`, the chart
    default), or by the migration Job when you enabled it.
 
 The Kubernetes deployment probes run these three steps against a real
@@ -144,7 +144,7 @@ reset.
    built-in defaults), and unset every `FERROEHR__…`, `DATABASE_URL` and
    `RUST_LOG` variable except the database DSN.
 4. Prepare the schema with `ferroehr db migrate`, or start the server with the
-   default `db.migrate = "apply"`.
+   default `database.migrations = "apply"`.
 5. Check the effective configuration with `ferroehr config check`.
 
 ## How the procedure is tested

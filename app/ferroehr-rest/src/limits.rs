@@ -3,12 +3,12 @@
 
 //! Per-route-family request-body limits.
 //!
-//! The family stack's `server.body_limit_bytes` is a single ceiling for the
+//! The family stack's `server.body_limit` is a single ceiling for the
 //! whole tree. This module adds the tier the ceiling cannot express: the
 //! routes that accept bulk by design (operational-template upload and EHR-Extract
 //! import) accept the ceiling, while the ordinary clinical surface
 //! accepts the narrower
-//! [`RestConfig::body_limit_bytes`](ferroehr::config::rest::RestConfig::body_limit_bytes)
+//! [`ApiConfig::body_limit`](ferroehr::config::rest::ApiConfig::body_limit)
 //! when one is set. Nesting cannot do this: an outer layer's tighter limit
 //! would already have refused the request before an inner, more permissive one
 //! saw it. So the ceiling stays outermost at the widest tier, and this
@@ -71,8 +71,12 @@ pub(crate) async fn middleware(
     let config = state.config();
     let limit = limit_for(
         request.uri().path(),
-        config.rest.body_limit_bytes,
-        config.server.body_limit_bytes,
+        // NOTE: `FerroEhrConfig::validate` refuses a tier that does not fit `usize`.
+        config
+            .api
+            .body_limit
+            .and_then(|tier| usize::try_from(tier.bytes()).ok()),
+        config.server.body_limit_bytes(),
     );
 
     let declared = request
@@ -129,7 +133,7 @@ fn too_large(limit: usize) -> Response {
         StatusCode::PAYLOAD_TOO_LARGE,
         &format!(
             "request body exceeds the {limit}-byte limit for this route \
-             (raise `rest.body_limit_bytes` or `server.body_limit_bytes`)"
+             (raise `api.body_limit` or `server.body_limit`)"
         ),
     )
 }

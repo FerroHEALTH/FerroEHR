@@ -3,7 +3,7 @@
 # as the "all-features" golden render and to exercise every template branch.
 database:
   existingSecret: ferroehr-db
-  existingSecretKey: FERROEHR__DB__URL
+  existingSecretKey: FERROEHR__DATABASE__URL
   # One credential per storage domain (#3343): the party pool, and the party
   # backup CronJob, read a secret the clinical side never mounts; the audit
   # domain is the one a deployment most often moves
@@ -11,15 +11,15 @@ database:
   # is a branch no golden and no boot check ever sees.
   party:
     existingSecret: ferroehr-db-party
-    existingSecretKey: FERROEHR__STORAGE__PARTY__URL
+    existingSecretKey: FERROEHR__DATABASE__PARTY__URL
   audit:
     existingSecret: ferroehr-db-audit
-    existingSecretKey: FERROEHR__STORAGE__AUDIT__URL
+    existingSecretKey: FERROEHR__DATABASE__AUDIT__URL
   # Schema preparation spans every schema of a database, so a pod whose runtime
   # DSNs are domain-scoped roles cannot perform it on any of them. Same reason
   # as above — an unrendered branch is an unchecked one.
   migrateExistingSecret: ferroehr-db-migrate
-  migrateExistingSecretKey: FERROEHR__DB__MIGRATE_URL
+  migrateExistingSecretKey: FERROEHR__DATABASE__MIGRATE_URL
 
 secrets:
   # 40 bytes of obvious filler. RFC 8725 §3.5 puts a 32-byte floor under a
@@ -44,28 +44,15 @@ metrics:
 
 config:
   # The chart has no default posture and refuses to render without one.
-  deployment_profile: sandbox
+  deployment:
+    profile: sandbox
   # The clinical domain FerroPIX mints pseudonyms in, and the grant the EHR
   # index asks it with; the chart injects the provider and the in-cluster
   # PIXm URL. The client secret is secrets.ehrIndexClientSecret.
   privacy:
     subject_namespaces: [urn:oid:2.999.7.1]
-  ehr_index:
-    assigning_authority: urn:oid:2.999.7.1
-    oauth:
-      token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token
-      client_id: ferroehr
-      scope: system/Patient.rs
   server:
     listen: "0.0.0.0:8080"
-  rest:
-    base_path: /ferroehr/rest/openehr/v1
-    swagger_ui: public
-    cors_permissive: false
-  db:
-    max_connections: 10
-    min_connections: 0
-    acquire_timeout_secs: 30
   telemetry:
     format: json
     filter: info,ferroehr=debug
@@ -101,6 +88,23 @@ config:
         identifier_type: uuid
     # FerroEHR's product scope, which admits the ADMIN and DEMOGRAPHIC APIs.
     product_scope: __ferroehr.platform
+    smart:
+      # Serves the discovery document, built at boot from the [auth] issuer's
+      # metadata, so it needs no endpoint list of its own.
+      discovery: true
+      # Required whenever SMART is on: the launch context's service URLs are
+      # absolute, so the server has to be told the origin clients reach it at;
+      # it cannot infer one from a request. Matches the ingress host below.
+      public_base_url: https://ferroehr.example.com
+      demographic_clients: [ferroehr-mpi]
+      patient_issuers: [https://keycloak.example.com/realms/ferroehr]
+    scim:
+      public_base_url: https://ferroehr.example.com
+      client:
+        - issuer: https://machines.example.org/realms/ferroehr
+          client_id: entra-provisioning
+          scope: ferroehr/scim
+          binding_issuer: urn:example:ferroehr-login
   authz:
     party_binding:
       # The healthcare provider this deployment acts for (an example id
@@ -147,44 +151,16 @@ config:
   # Microsoft Entra ID provisions the professionals through SCIM with a
   # token of the machines issuer; the logins of the persons issuer then bind
   # to the PERSON carrying their key under the same identifier issuer.
-  scim:
-    enabled: true
-    public_base_url: https://ferroehr.example.com
-    client:
-      - issuer: https://machines.example.org/realms/ferroehr
-        client_id: entra-provisioning
-        scope: ferroehr/scim
-        binding_issuer: urn:example:ferroehr-login
-  admin:
-    enabled: true
-  smart:
-    # Serves the discovery document, built at boot from the [auth] issuer's
-    # metadata, so it needs no endpoint list of its own.
-    enabled: true
-    # Required whenever SMART is on: the launch context's service URLs are
-    # absolute, so the server has to be told the origin clients reach it at;
-    # it cannot infer one from a request. Matches the ingress host below.
-    public_base_url: https://ferroehr.example.com
-    demographic_clients: [ferroehr-mpi]
-    patient_issuers: [https://keycloak.example.com/realms/ferroehr]
   management:
     enabled: true
     base_path: /management
-    port: 9100
+    listen: "0.0.0.0:9100"
     endpoints:
       info: admin_only
       metrics: admin_only
       prometheus: public
       env: admin_only
       loggers: admin_only
-  query:
-    plan_cache_capacity: 256
-    timeout_ms: 30000
-  signing:
-    enabled: true
-    mode: pgp
-    key_path: /etc/ferroehr/signing.asc
-    verify_on_read: strict
   audit:
     enabled: true
     source_id: ferroehr-prod
@@ -195,44 +171,62 @@ config:
       # Five years in days: the default identifier rules name NL, whose
       # access-log floor is five years (Besluit vaststelling bewaartermijn
       # logging), and the server refuses a shorter retention at boot.
-      retention_days: 1830
+      retention: P1830D
     syslog:
-      enabled: true
-      host: arr.example.com
-      port: 6514
-    fhir_feed:
-      enabled: true
+      url: tls://arr.example.com:6514
+    fhir_feed: {}
       # url is a SecretUrl (its userinfo may carry ARR basic-auth credentials),
       # so it arrives as secrets.auditFhirFeedUrl, never through the ConfigMap.
-  outbox:
-    readers: [ferrobridge]
-  terminology:
-    api_enabled: true
-    server:
-      # `enabled`, `url` and `fail_on_error` are INJECTED by the chart from the
-      # `terminology:` block below, which is why they are not declared here:
-      # declaring the URL beside the in-cluster one is refused at render,
-      # because two answers to "which server resolves a binding" is exactly the
-      # state that silently points resolution somewhere the operator did not
-      # choose. The grant is the operator's, so the OAuth2 shape still reaches
-      # a golden render; its client secret is secrets.terminologyClientSecret,
-      # and the chart injects client_secret_file pointing at the mounted file.
-      oauth:
-        token_endpoint: https://idp.example.org/realms/ts/protocol/openid-connect/token
-        client_id: ferroehr
-        scope: tx.read
-  multimedia:
-    enabled: true
-    threshold_bytes: 262144
-    endpoint: https://s3.example.com
-    bucket: openehr-multimedia
-    region: eu-west-1
-    allow_http: false
   files:
     signing.asc: |
       -----BEGIN PGP PRIVATE KEY BLOCK-----
       (dev placeholder)
       -----END PGP PRIVATE KEY BLOCK-----
+  pixm:
+    assigning_authority: urn:oid:2.999.7.1
+    oauth:
+      token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token
+      client_id: ferroehr
+      scope: system/Patient.rs
+  api:
+    base_path: /ferroehr/rest/openehr/v1
+    openapi_ui: public
+    admin: true
+    terminology: true
+  database:
+    max_connections: 10
+    min_connections: 0
+    acquire_timeout: "30s"
+  record:
+    signing:
+      enabled: true
+      mode: pgp
+      key_file: /etc/ferroehr/signing.asc
+      verify_on_read: strict
+    query:
+      plan_cache_capacity: 256
+      timeout: "30000ms"
+    change_feed:
+      readers: [ferrobridge]
+    multimedia:
+      enabled: true
+      threshold: "262144B"
+      url: https://s3.example.com
+      bucket: openehr-multimedia
+      region: eu-west-1
+  terminology:
+    # `url` and `on_error` are INJECTED by the chart from the
+    # `terminology:` block below, which is why they are not declared here:
+    # declaring the URL beside the in-cluster one is refused at render,
+    # because two answers to "which server resolves a binding" is exactly the
+    # state that silently points resolution somewhere the operator did not
+    # choose. The grant is the operator's, so the OAuth2 shape still reaches
+    # a golden render; its client secret is secrets.terminologyClientSecret,
+    # and the chart injects client_secret_file pointing at the mounted file.
+    oauth:
+      token_endpoint: https://idp.example.org/realms/ts/protocol/openid-connect/token
+      client_id: ferroehr
+      scope: tx.read
 
 ingress:
   enabled: true

@@ -53,6 +53,9 @@ const KEPT_HEADERS: [&str; 5] = [
 /// in their order, and every instant of the reads is this one plus an hour.
 const STAND_IN_EPOCH: &str = "2026-10-01T09:00:00Z";
 
+/// What the checkout's own path becomes, so a recording names no machine.
+const STAND_IN_CHECKOUT: &str = "/ferroehr";
+
 /// A recording run: the live CDR and the directory it writes to.
 #[derive(Debug, Clone)]
 pub(crate) struct Recording {
@@ -371,6 +374,14 @@ impl StandIns {
     }
 }
 
+/// The checkout the recorded CDR read its relative configuration paths from.
+fn checkout() -> &'static str {
+    let viewer = env!("CARGO_MANIFEST_DIR");
+    viewer
+        .strip_suffix("/app/ferroehr-viewer")
+        .unwrap_or(viewer)
+}
+
 impl Replacements {
     /// Replaces every UUID and every run instant in the strings of `value`.
     fn apply(&self, value: &mut Value) {
@@ -392,7 +403,7 @@ impl Replacements {
             }
             return text.to_owned();
         }
-        let mut out = text.to_owned();
+        let mut out = text.replace(checkout(), STAND_IN_CHECKOUT);
         for (id, stand_in) in self.ids.iter().chain(&self.digests) {
             if out.contains(id.as_str()) {
                 out = out.replace(id.as_str(), stand_in);

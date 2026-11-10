@@ -17,7 +17,6 @@ use std::time::{Duration, Instant};
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::config::rest::AdminConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::sender::start;
 use ferroehr::system_log::store::AuditStore;
@@ -40,12 +39,15 @@ const UNKNOWN_PARTY: &str = "11111111-2222-4333-8444-555555555555";
 
 /// Bearer authentication, the admin group mounted, the default RBAC gate.
 fn config() -> AppConfig {
-    AppConfig {
-        server: common::server(),
-        auth: common::issuer_auth(ISSUER, AUDIENCE),
-        rbac: common::rbac_trusting(ISSUER),
-        admin: AdminConfig { enabled: true },
-        ..Default::default()
+    {
+        let mut c = AppConfig {
+            server: common::server(),
+            auth: common::issuer_auth(ISSUER, AUDIENCE),
+            rbac: common::rbac_trusting(ISSUER),
+            ..Default::default()
+        };
+        c.api.admin = true;
+        c
     }
 }
 
@@ -61,7 +63,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         .with_audit_store(AuditStore::new(pool.clone()));
     let authz = AuthzHandle::build(
         &AuthzConfig::default(),
-        &config().rest.base_path,
+        &config().api.base_path,
         None,
         common::null_resolvers(),
     )

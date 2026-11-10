@@ -25,7 +25,7 @@ terminology server.
 You can also expose these lookups over a small read-only REST surface. It is a
 FerroEHR extension (no openEHR REST contract defines a terminology API) and it
 is **off by default**; while disabled, every route answers `404` as if it were
-not mounted. Turn it on with `FERROEHR__TERMINOLOGY__API_ENABLED=true` and it
+not mounted. Turn it on with `FERROEHR__API__TERMINOLOGY=true` and it
 serves:
 
 | Method | Path | Purpose |
@@ -54,13 +54,12 @@ is a `400`.
 
 The terminology server is off by default, and while it is off nothing is
 requested: validation uses the in-process bundle alone. The keys live under
-`[terminology.server]`; the full table, including the timeout and OAuth2, is on
+`[terminology]`; the full table, including the timeout and OAuth2, is on
 [Integrations](../installation/config-integrations.md#terminology). The minimum
 is the switch and the server's FHIR R4B base URL:
 
 ```toml
-[terminology.server]
-enabled = true
+[terminology]
 url = "http://ferroterm:8080/r4b"
 ```
 
@@ -87,9 +86,9 @@ bindings for every bound coded value the instance actually carries:
 
 - The code **is** in the value set → the commit proceeds.
 - The code is **not** in the value set → `422`, naming the path, the code, and
-  the bound query. That is a real constraint violation, so `fail_on_error` does
+  the bound query. That is a real constraint violation, so `on_error` does
   not change it.
-- The value set **could not be resolved** → `fail_on_error` decides, see
+- The value set **could not be resolved** → `on_error` decides, see
   [below](#when-the-terminology-server-cannot-answer).
 
 Only bound external queries leave the process. openEHR and the bundle's own
@@ -140,7 +139,7 @@ FHIR terminology client, over the FHIR R4B operation definitions. Each
 operation is a `POST` of a `Parameters` resource to the operation's path under
 the configured base URL, so a code never travels in a URL. The `at_date` of a
 term lookup or a membership test is sent as the operation's `date` input. Each
-call is made once, without a retry, so `request_timeout_ms` bounds the whole
+call is made once, without a retry, so `[terminology] timeout` bounds the whole
 call on the commit path.
 
 A response that does not fit the operation's R4B definition is treated as an
@@ -156,7 +155,7 @@ thing asked about is unknown.
 ### Authenticating to the server
 
 A server behind an authorization server takes an OAuth2 client-credentials
-grant under `[terminology.server.oauth]`; the token is cached and renewed shortly
+grant under `[terminology.oauth]`; the token is cached and renewed shortly
 before it expires. The client secret should come from a mounted file rather than
 an inline value, `client_secret_file`. The keys are on
 [Integrations](../installation/config-integrations.md#authenticating-to-the-terminology-server).
@@ -166,7 +165,7 @@ hostname verification are always on against the platform's trust store.
 
 ### When the terminology server cannot answer
 
-`fail_on_error` decides what happens when a bound value set cannot be resolved at
+`on_error` decides what happens when a bound value set cannot be resolved at
 all, whether the server is unreachable, answers an error, or does not know the
 value set:
 
@@ -187,7 +186,7 @@ that gives you both.
 
 [FerroTERM](https://github.com/FerroHEALTH/FerroTERM) is the terminology server
 FerroEHR ships with: the `docker-compose.terminology.yml` overlay of the
-quickstart starts it beside the CDR and points `[terminology.server]` at
+quickstart starts it beside the CDR and points `[terminology]` at
 `http://ferroterm:8080/r4b`, the [compose page](../installation/compose.md#the-terminology-overlay-ferroterm)
 has the commands. The hosted sandbox at <https://sandbox.ferroehr.eu> runs the
 same pair on one machine, so the coded-text binding you see resolving there is a
@@ -283,7 +282,7 @@ docker compose -p ferroehr-cnf --project-directory . --profile terminology \
 The profile starts FerroTERM (host port `8090` by default,
 `FERROEHR_TERMINOLOGY_PORT`), which reports healthy only once the mounted code
 systems and value sets are served, and the CDR waits on that. The overlay file
-is what points the CDR at it, by switching on the `[terminology.server]` the
+is what points the CDR at it, by switching on the `[terminology]` the
 development configuration already carries in the disabled state.
 
 None of this touches the downloadable quickstart Compose file on its own, which
@@ -301,7 +300,7 @@ opt-in that adds FerroTERM to it.
 > Serving your own content is the same shape: FerroTERM loads every FHIR
 > `CodeSystem` and `ValueSet` in the directory
 > `FERROTERM__TERMINOLOGY__CODE_SYSTEMS` names, and serves them read-only. A value set it does not hold is an unresolved
-> binding, which your `fail_on_error` setting then decides the fate of.
+> binding, which your `on_error` setting then decides the fate of.
 
 ## On Kubernetes
 
@@ -315,21 +314,21 @@ renders the keys verbatim into the server's configuration file
 # values.yaml
 config:
   terminology:
-    api_enabled: true
+    api.terminology: true
     server:
       enabled: true
       url: https://tx.example.org/fhir
-      fail_on_error: true      # fail-closed: an unresolvable binding rejects the commit
+      on_error: true      # fail-closed: an unresolvable binding rejects the commit
 secrets:
   # only when the server sits behind an authorization server; the grant itself
-  # goes under config.terminology.server.oauth
+  # goes under config.[terminology].oauth
   terminologyClientSecret: ""
 ```
 
 **Before you enable it:** a reachable terminology server, a decision on
-`fail_on_error`, and (if the chart's default-deny egress policy is on) an
+`on_error`, and (if the chart's default-deny egress policy is on) an
 egress rule that admits the server, or every call fails as a timeout.
-**To turn it off**, set `config.terminology.server.enabled: false`; validation
+**To turn it off**, set `config.the [terminology] table: false`; validation
 falls back to the in-process bundle and no external call is made.
 
 ## Terminology in AQL

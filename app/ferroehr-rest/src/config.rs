@@ -9,33 +9,27 @@
 
 use ferroehr::config::auth_section::AuthConfig;
 use ferroehr::config::authz::RbacConfig;
-use ferroehr::config::rest::{AdminConfig, RestConfig};
-use ferroehr::config::smart::SmartConfig;
+use ferroehr::config::rest::ApiConfig;
 use ferrohealth_server::section::ServerSection;
 use ferrohealth_smart::assurance::AssuranceSection;
 
 /// The REST adapter's runtime configuration view, assembled by the binary
 /// from the root [`ferroehr::config::FerroEhrConfig`].
 ///
-/// Not a serde root — it is built in code, so extension-group toggles are
-/// plain `bool`s lifted from their owning sections
-/// (`[terminology].api_enabled`).
+/// Not a serde root — it is built in code, holding the tables the router
+/// reads under their names in the tree.
 #[derive(Debug, Clone, Default)]
 pub struct AppConfig {
     /// `[server]` — the listener and the stack around the routes: the
     /// family's section.
     pub server: ServerSection,
-    /// `[rest]` — the REST surface and the System-Options identity.
-    pub rest: RestConfig,
+    /// `[api]` — the REST API, the System-Options identity and the ADMIN and
+    /// terminology groups.
+    pub api: ApiConfig,
     /// `[auth]` — authentication: the `ferrohealth-smart` section (issuers,
-    /// Basic users, product scope) and the vendor adapter tables.
+    /// Basic users, product scope), the vendor adapter tables, the SMART App
+    /// Launch posture and the SCIM service provider.
     pub auth: AuthConfig,
-    /// `[admin]` — the ADMIN API group toggle.
-    pub admin: AdminConfig,
-    /// `[smart]` — SMART App Launch resource-server posture.
-    pub smart: SmartConfig,
-    /// `[terminology].api_enabled` — mount the terminology extension API.
-    pub terminology_api_enabled: bool,
     /// `[authz.abac] organization_claim` — the access-token claim naming the
     /// organisation a caller acts for, lifted here because the access log
     /// records it whether or not the ABAC gate that shares the setting is
@@ -45,8 +39,8 @@ pub struct AppConfig {
     pub rbac: RbacConfig,
     /// `[authz.assurance]` — the assurance a patient-data request must carry.
     pub assurance: AssuranceSection,
-    /// `spec_profile` — the openEHR specification generation set the server
-    /// runs; the demographic ingress boundary reads it (the stable
+    /// `deployment.spec_profile` — the openEHR specification generation set
+    /// the server runs; the demographic ingress boundary reads it (the stable
     /// generation's released surface differs from the typed core's).
     pub spec_profile: ferroehr::config::profile::SpecProfile,
     /// `[authz.party_binding]` — the namespace a bound party is named under
@@ -57,8 +51,6 @@ pub struct AppConfig {
     /// `[[authz.federation.agreement]]` — what each `federation` issuer's
     /// external callers may do.
     pub agreements: Vec<ferroehr::config::agreement::Agreement>,
-    /// `[scim]` — the SCIM 2.0 service provider and its provisioning clients.
-    pub scim: ferroehr::config::scim::ScimConfig,
 }
 
 impl From<&ferroehr::config::FerroEhrConfig> for AppConfig {
@@ -66,19 +58,15 @@ impl From<&ferroehr::config::FerroEhrConfig> for AppConfig {
     fn from(config: &ferroehr::config::FerroEhrConfig) -> Self {
         Self {
             server: config.server.clone(),
-            rest: config.rest.clone(),
+            api: config.api.clone(),
             auth: config.auth.clone(),
-            admin: config.admin.clone(),
-            smart: config.smart.clone(),
-            terminology_api_enabled: config.terminology.api_enabled,
             audit_organization_claim: config.authz.abac.organization_claim().map(str::to_owned),
             rbac: config.authz.rbac.clone(),
             assurance: config.authz.assurance.clone(),
-            spec_profile: config.spec_profile,
+            spec_profile: config.deployment.spec_profile,
             party_binding: config.authz.party_binding.clone(),
             system_clients: config.authz.system_client.clone(),
             agreements: config.authz.federation.agreement.clone(),
-            scim: config.scim.clone(),
         }
     }
 }
@@ -88,15 +76,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn rest_defaults_are_sane() {
-        let c = RestConfig::default();
+    fn api_defaults_are_sane() {
+        let c = ApiConfig::default();
         assert_eq!(c.base_path, "/ferroehr/rest/openehr/v1");
-        assert_eq!(c.body_limit_bytes, None);
+        assert_eq!(c.body_limit, None);
         assert_eq!(
-            c.swagger_ui,
+            c.openapi_ui,
             ferroehr::config::management::AccessLevel::Private
         );
-        assert!(!c.cors_permissive);
+        assert!(c.cors.is_none());
         assert_eq!(c.swagger_ui_path(), "/ferroehr/rest/swagger-ui");
         assert_eq!(
             c.openapi_json_path(),
@@ -105,7 +93,7 @@ mod tests {
         // The System-Options identity carries the released ITS-REST contract
         // version (shared provenance).
         assert_eq!(
-            c.identity.restapi_specs_version,
+            ferroehr::config::rest::SystemOptionsConfig::restapi_specs_version(),
             ferroehr::telemetry::provenance::ITS_REST
         );
     }
@@ -114,8 +102,9 @@ mod tests {
     fn app_config_defaults_off() {
         let c = AppConfig::default();
         assert!(c.auth.shared.enabled);
-        assert!(!c.admin.enabled);
-        assert!(!c.smart.enabled);
-        assert!(!c.terminology_api_enabled);
+        assert!(!c.api.admin);
+        assert!(!c.auth.smart.discovery);
+        assert!(c.auth.scim.is_none());
+        assert!(!c.api.terminology);
     }
 }

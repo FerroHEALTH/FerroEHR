@@ -183,7 +183,7 @@ bash scripts/scim-provision.sh "$CDR_URL" keycloak-dev \
 wait_http "$KEYCLOAK_URL/auth/realms/ferroehr/.well-known/openid-configuration" 90
 
 # The development CA Keycloak's TLS certificate chains to (docker-compose.dev.yml
-# `keycloak-tls`), for the host-mode viewer: `[oidc] ca_file`
+# `keycloak-tls`), for the host-mode viewer: `[oidc.tls] trust_roots_file`
 # adds it beside the platform's roots, on Linux and macOS alike. The composed
 # CDR and viewer mount the same CA (docker/viewer/e2e-env.yml).
 DEV_CA_DIR="$ROOT/target/ui-e2e/dev-ca"
@@ -335,7 +335,7 @@ else
   FERROEHR_VIEWER__OIDC__CLIENT_ID="ferroehr-viewer" \
   FERROEHR_VIEWER__OIDC__CLIENT_SECRET="dev-viewer-Qm7xT2vK9pLw4sNc" \
   FERROEHR_VIEWER__AUTH__PUBLIC_BASE_URL="$VIEWER_URL" \
-  FERROEHR_VIEWER__OIDC__CA_FILE="$DEV_CA_DIR/ca.crt" \
+  FERROEHR_VIEWER__OIDC__TLS__TRUST_ROOTS_FILE="$DEV_CA_DIR/ca.crt" \
     "$ROOT/target/debug/ferroehr-viewer" &
   VIEWER_PID=$!
 fi

@@ -158,7 +158,7 @@ impl RequestParts {
 /// `{rest_root}/fhir/r4`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Namespaces {
-    /// The openEHR base path (`[rest] base_path`).
+    /// The openEHR base path (`[api] base_path`).
     pub(crate) openehr: String,
     /// The root of FerroEHR's own extensions.
     pub(crate) extensions: String,
@@ -169,7 +169,7 @@ pub(crate) struct Namespaces {
 
 impl Namespaces {
     /// The namespaces of the REST configuration `rest`.
-    pub(crate) fn of(rest: &ferroehr::config::rest::RestConfig) -> Self {
+    pub(crate) fn of(rest: &ferroehr::config::rest::ApiConfig) -> Self {
         Self {
             openehr: rest.base_path.clone(),
             extensions: rest.extensions_path(),
@@ -574,7 +574,7 @@ mod tests {
     /// A route mounted in the wrong namespace fails here.
     #[test]
     fn each_namespace_holds_only_its_own_routes() {
-        let namespaces = Namespaces::of(&ferroehr::config::rest::RestConfig::default());
+        let namespaces = Namespaces::of(&ferroehr::config::rest::ApiConfig::default());
         let its: std::collections::BTreeSet<(String, String)> = [
             openehr_its::rest::generated::ehr::ROUTES,
             openehr_its::rest::generated::definition::ROUTES,

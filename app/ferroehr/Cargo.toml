@@ -26,7 +26,7 @@ multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 
 [dependencies]
 ferrohealth-secret = { workspace = true }
-ferrohealth-server = { workspace = true, features = ["platform-verifier", "reqwest"] }
+ferrohealth-server = { workspace = true, features = ["otlp", "platform-verifier", "reqwest"] }
 ferrohealth-health = { workspace = true, features = ["registry"] }
 ferroehr-ext = { path = "../ferroehr-ext", optional = true }
 http.workspace = true
@@ -35,7 +35,7 @@ urlencoding.workspace = true
 unicode-normalization.workspace = true
 # `[auth]` is the `ferrohealth-smart` section (`config::auth`), and the
 # terminology lane's client credentials grant runs on its client.
-ferrohealth-smart.workspace = true
+ferrohealth-smart = { workspace = true, features = ["server-tls"] }
 # The client of the one FHIR terminology server (`service::terminology::fhir`),
 # behind `fhir`: a slim build refuses a configured server at boot.
 ferrobridge-term = { workspace = true, optional = true }

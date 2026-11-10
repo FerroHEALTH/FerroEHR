@@ -19,7 +19,7 @@ use std::sync::Arc;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::service::ehr_index::IndexError;
-use crate::service::ehr_index::config::{EhrIndexConfig, ProviderKind};
+use crate::service::ehr_index::config::{PixmConfig, SubjectIndex};
 use crate::service::ehr_index::ihe::{IdentitySourceError, IheIdentitySource};
 use crate::service::ehr_index::types::SubjectRef;
 
@@ -40,16 +40,24 @@ pub enum EhrIndexProvider {
 }
 
 impl EhrIndexProvider {
-    /// The provider `[ehr_index]` names. Validation has already refused a
-    /// section that names neither a complete identity source nor
-    /// `provider = "local"`.
+    /// The provider `record.subject_index` names, asking `[pixm]` when it
+    /// is `"pixm"`. Validation has already refused an unset index and one
+    /// that names `"pixm"` with no `[pixm]` table; `None` reaches here only
+    /// from a configuration no validation ran over, and stays
+    /// [`Self::Unconfigured`].
     ///
     /// # Errors
     /// [`IdentitySourceError`] when the identity source cannot be built.
-    pub fn from_config(config: &EhrIndexConfig) -> Result<Self, IdentitySourceError> {
-        match config.provider {
-            ProviderKind::Local => Ok(Self::Local),
-            ProviderKind::Ihe => Ok(Self::Ihe(Arc::new(IheIdentitySource::new(config)?))),
+    pub fn from_config(
+        index: Option<SubjectIndex>,
+        pixm: Option<&PixmConfig>,
+    ) -> Result<Self, IdentitySourceError> {
+        match (index, pixm) {
+            (Some(SubjectIndex::Local), _) => Ok(Self::Local),
+            (Some(SubjectIndex::Pixm), Some(pixm)) => {
+                Ok(Self::Ihe(Arc::new(IheIdentitySource::new(pixm)?)))
+            }
+            (Some(SubjectIndex::Pixm), None) | (None, _) => Ok(Self::Unconfigured),
         }
     }
 
@@ -83,7 +91,7 @@ impl FerroEhrService {
     ///
     /// Without it the service refuses every subject-scoped call; the binary
     /// installs the one
-    /// `[ehr_index]` names, and a test opts in to [`EhrIndexProvider::Local`]
+    /// `[pixm]` names, and a test opts in to [`EhrIndexProvider::Local`]
     /// explicitly.
     #[must_use]
     pub fn with_ehr_index(mut self, provider: EhrIndexProvider) -> Self {

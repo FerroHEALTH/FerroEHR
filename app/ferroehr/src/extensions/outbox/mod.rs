@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The commit-event outbox: the reader registry `[outbox]` reconciles at
+//! The commit-event outbox: the reader registry `[record.change_feed]` reconciles at
 //! boot, the cursor feed each reader pulls, and the retention prune.
 //!
 //! **No openEHR spec governs eventing: our own design/extension.** While a
@@ -180,7 +180,7 @@ pub async fn reconcile_domains(pools: &DomainPools, readers: &[String]) -> Resul
                 domain = domain.as_str(),
                 registered = ?reconciled.registered,
                 deactivated = ?reconciled.deactivated,
-                "outbox readers reconciled with [outbox] readers"
+                "outbox readers reconciled with [record.change_feed] readers"
             );
         }
     }
@@ -347,8 +347,8 @@ pub async fn acknowledge(
 ///
 /// [`OutboxError::Acquire`] when no connection can be obtained, and
 /// [`OutboxError::Database`] when the delete fails.
-pub async fn prune(pool: &PgPool, retention_days: i64) -> Result<u64, OutboxError> {
-    let cutoff = format!("{retention_days} days");
+pub async fn prune(pool: &PgPool, retention: Duration) -> Result<u64, OutboxError> {
+    let cutoff = format!("{} milliseconds", retention.as_millis());
     let result = sqlx::query(
         "DELETE FROM event_outbox \
          WHERE committed_at < now() - $1::interval \
@@ -373,13 +373,13 @@ pub async fn prune(pool: &PgPool, retention_days: i64) -> Result<u64, OutboxErro
     reason = "a detached background task with no shutdown channel: the binary aborts it \
               at exit, as it does the planner-statistics refresh"
 )]
-pub async fn scheduled_prune(pools: DomainPools, retention_days: i64, interval: Duration) {
+pub async fn scheduled_prune(pools: DomainPools, retention: Duration, interval: Duration) {
     let mut ticker = tokio::time::interval(interval);
     ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
     loop {
         ticker.tick().await;
         for domain in OutboxDomain::ALL {
-            if let Err(error) = prune(domain.pool(&pools), retention_days).await {
+            if let Err(error) = prune(domain.pool(&pools), retention).await {
                 tracing::warn!(
                     domain = domain.as_str(),
                     error = %ErrorChain::new(&error),
@@ -449,6 +449,8 @@ impl FerroEhrService {
 fn unknown_reader(reader: &str) -> ServiceError {
     ServiceError::not_found(
         Missing::VersionedObject,
-        format!("no active outbox reader {reader:?}; readers come from [outbox] readers"),
+        format!(
+            "no active outbox reader {reader:?}; readers come from [record.change_feed] readers"
+        ),
     )
 }

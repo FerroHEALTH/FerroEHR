@@ -9,7 +9,7 @@
 //! `docs/law/eu/cra/text.html` Annex I Part I(2)(m).
 
 use ferroehr::db::DbConfig;
-use ferroehr::db::domain::{DomainPools, StorageConfig};
+use ferroehr::db::domain::DomainPools;
 use ferroehr::decommission::{Decommission, DecommissionError, Erasure};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
@@ -27,13 +27,10 @@ const SCHEMAS: [&str; 4] = ["audit", "party", "clinical", "ext"];
 
 /// A decommissioning over the testkit clone, every domain on its one DSN.
 fn decommission(db: &testkit::TestDb) -> Decommission {
-    Decommission::new(
-        DbConfig {
-            url: SecretUrl::new(db.url().to_owned()),
-            ..DbConfig::default()
-        },
-        StorageConfig::default(),
-    )
+    Decommission::new(DbConfig {
+        url: SecretUrl::new(db.url().to_owned()),
+        ..DbConfig::default()
+    })
 }
 
 /// Writes one record into every domain: an EHR with a composition, a party

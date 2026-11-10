@@ -1,33 +1,33 @@
 # Integrations
 
 Query execution, the patient identity source and the three optional
-integrations: `[query]`, `[ehr_index]`, `[outbox]`, `[terminology]`,
-`[multimedia]`. Everything except the query knobs and the identity source is
+integrations: `[record.query]`, `[pixm]`, `[record.change_feed]`, `[terminology]`,
+`[record.multimedia]`. Everything except the query knobs and the identity source is
 off by default, and a disabled integration contacts nothing and mounts no
 routes. Precedence, the environment-name grammar, and file discovery are on the
 [Configuration reference](configuration.md) index.
 
 <!-- toc -->
 
-## `[query]`
+## `[record.query]`
 
 AQL execution bounds.
 
 ```toml
-[query]
+[record.query]
 plan_cache_capacity = 256
-timeout_ms = 30000
+timeout = "30s"
 max_result_rows = 10000
 ```
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `plan_cache_capacity` | int | `256` | Maximum distinct cached query plans; `0` disables the cache and every lookup runs the full parse-and-lower path. Cache activity is reported by the `aql_plan_cache_events` counter. |
-| `timeout_ms` | int | `30000` | Per-query database execution budget; `0` disables it. Overrun is refused `408`. |
+| `timeout` | duration | `"30s"` | Per-query database execution budget; `"0s"` disables it. Overrun is refused `408`. |
 | `max_result_rows` | int | `10000` | The largest page one query execution serves: the page of a query nothing else bounds, and the maximum an explicit `LIMIT` or `fetch` may ask for (a larger page is refused `400`); `0` means unbounded. |
 
-**`timeout_ms` is on by default, and deliberately tighter than
-[`db.statement_timeout_ms`](config-server.md#db).** Keeping this budget the
+**`timeout` is on by default, and deliberately tighter than
+[`database.statement_timeout`](config-server.md#database).** Keeping this budget the
 tighter of the two means an overrun surfaces as the engine's own typed `408`
 rather than a driver error. When it fires, or when the client disconnects or
 the HTTP request timeout gives up first, the query's connection is closed
@@ -47,7 +47,7 @@ stride skip the rows between the shortened page and its next `offset`, and the
 its maximum to the implementation. A bulk consumer pages with `offset` and a
 `fetch` at or below the ceiling, or the operator raises the ceiling deliberately.
 
-## `[ehr_index]`
+## `[pixm]`
 
 Who translates a patient identifier into the clinical domain, so the EHR that
 records the patient can be found (the EHR index). The EHR itself always says
@@ -58,7 +58,7 @@ specification governs where the patient's other identifiers live: the RM's
 `PARTY_SELF` section says the association "may be done elsewhere for security
 reasons", and FerroEHR's design puts it in an IHE patient identity source.
 
-**The IHE patient identity source is the default.** FerroEHR asks a PIX
+**`record.subject_index = "pixm"` asks an IHE patient identity source.** FerroEHR asks a PIX
 Manager, as a PIXm Patient Identifier Cross-reference Consumer
 ([IHE ITI TF-2 §3.83](https://profiles.ihe.net/ITI/PIXm/ITI-83.html),
 `$ihe-pix`), which identifier the clinical domain holds for a patient that
@@ -67,7 +67,7 @@ another domain's identifier names. That identifier is the pseudonym
 conformant PIX Manager serves; FerroPIX is the one the compose quickstart and
 the Helm chart run.
 
-**`provider = "local"`, with no identity source, is the other supported
+**`subject_index = "local"`, with no identity source, is the other supported
 posture**, for production as much as for development, tests and the
 conformance suites: the subject-id and subject-namespace model. A client names
 a patient in `EHR_STATUS.subject.external_ref` by any namespace and identifier
@@ -77,8 +77,8 @@ API's `GET /ehr?subject_id=…&subject_namespace=…` lookup and a cohort that
 names its subjects both find the EHR whose `EHR_STATUS` names the subject,
 matching namespace and identifier exactly. An EHR created over `POST /ehr` or
 `PUT /ehr/{ehr_id}` is found from the moment it is created, and an
-`EHR_STATUS` update that changes the subject moves it. **With neither**
-provider configured, the server refuses to start and the refusal names both
+`EHR_STATUS` update that changes the subject moves it. The key has no
+default: **unset**, the server refuses to start and the refusal names both
 choices.
 
 What the local posture means for pseudonymisation: with no
@@ -90,47 +90,49 @@ namespaces keeps the rule in force under `local` too, so every subject
 reference must name a declared namespace and carry a UUID, and no other
 namespace is accepted beside them. A `production` deployment runs the
 subject-id posture by accepting the `open_subject_namespace` gap by name
-([`deployment_profile`](configuration.md#deployment_profile)), which boot and
+([`deployment.profile`](configuration.md#deploymentprofile)), which boot and
 `GET /management/status` then state.
 
-**`provider` alone switches the index**, in the file or as
-`FERROEHR__EHR_INDEX__PROVIDER`. The keys of the provider not chosen are kept
-and not used, and boot names them, so a configuration written for the IHE
-source runs locally with `FERROEHR__EHR_INDEX__PROVIDER=local` and no
+**`subject_index` alone switches the index**, in the file or as
+`FERROEHR__RECORD__SUBJECT_INDEX`. A `[pixm]` table kept beside `"local"` is not
+used, and boot names its keys, so a configuration written for the IHE
+source runs locally with `FERROEHR__RECORD__SUBJECT_INDEX=local` and no
 other change; its declared pseudonym namespaces stay in force. The compose
 quickstart selects its local configuration with one variable
 ([The local EHR index](compose.md#the-local-ehr-index)).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `provider` | enum{ihe,local} | `ihe` | Who translates a subject into the clinical domain. |
-| `pixm_url` | secret URL | required for `ihe` | The PIX Manager's FHIR base, `[base]` of `[base]/Patient/$ihe-pix`. Credentials embedded in it are masked in every rendering. |
-| `assigning_authority` | URI | required for `ihe` | The clinical domain, such as `urn:oid:2.999.7.1`: the `targetSystem` of every ITI-83 query and the namespace the answered pseudonym is stored under. It must be one of `privacy.subject_namespaces`. |
-| `invocation` | enum{post,get} | `post` | `post` sends a `Parameters` body, so a patient identifier never appears in a URL or an access log; `get` is the form ITI-83 prescribes, for a PIX Manager that accepts no `POST`. |
-| `request_timeout_ms` | int | `10000` | How long one ITI-83 exchange may take, connection included. |
+| `record.subject_index` | enum{pixm,local} | required | Who translates a subject into the clinical domain. |
+| `pixm.url` | secret URL | required for `pixm` | The PIX Manager's FHIR base, `[base]` of `[base]/Patient/$ihe-pix`. Credentials embedded in it are masked in every rendering. |
+| `pixm.assigning_authority` | URI | required for `pixm` | The clinical domain, such as `urn:oid:2.999.7.1`: the `targetSystem` of every ITI-83 query and the namespace the answered pseudonym is stored under. It must be one of `privacy.subject_namespaces`. |
+| `pixm.method` | enum{post,get} | `post` | `post` sends a `Parameters` body, so a patient identifier never appears in a URL or an access log; `get` is the form ITI-83 prescribes, for a PIX Manager that accepts no `POST`. |
+| `pixm.timeout` | duration | `"10s"` | How long one ITI-83 exchange may take, connection included. |
 
 ```toml
 [privacy]
 subject_namespaces = ["urn:oid:2.999.7.1"]
 
-[ehr_index]
-provider = "ihe"
-pixm_url = "https://pix.example.org/fhir"
+[record]
+subject_index = "pixm"
+
+[pixm]
+url = "https://pix.example.org/fhir"
 assigning_authority = "urn:oid:2.999.7.1"
 
-[ehr_index.oauth]
+[pixm.oauth]
 token_endpoint = "https://idp.example.org/realms/pix/protocol/openid-connect/token"
 client_id = "ferroehr"
 client_secret_file = "/run/secrets/pix-client"
 scope = "system/Patient.rs"
 ```
 
-`[ehr_index.oauth]` is the client credentials grant every ITI-83 request
+`[pixm.oauth]` is the client credentials grant every ITI-83 request
 carries, with the keys of the
 [terminology server's grant](#authenticating-to-the-terminology-server); a
 `401` is answered once more under a new token. The client id is the one the
 identity source mints pseudonyms in the clinical domain for, and the scope is
-the one its PIX Manager takes from a Consumer. `[ehr_index.tls]` holds the
+the one its PIX Manager takes from a Consumer. `[pixm.tls]` holds the
 client's TLS material: `trust_roots_file`, a PEM bundle trusted beside the
 platform roots for a PIX Manager behind a private PKI, `client_identity_file`
 (or `client_identity` inline), the chain and key presented for mutual TLS, and
@@ -163,7 +165,7 @@ discard, so asking for it breaks data minimisation
 ([GDPR Art. 5(1)(c)](https://eur-lex.europa.eu/eli/reg/2016/679/oj)), and its
 `$match` is patient matching.
 
-## `[outbox]`
+## `[record.change_feed]`
 
 The commit-event outbox and its cursor feed. Off until a reader is named; the
 envelopes are PHI-free by design. The feed, its routes and its scope are on
@@ -172,36 +174,29 @@ envelopes are PHI-free by design. The feed, its routes and its scope are on
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `readers` | list of strings | `[]` | The readers of the feed, each matching `^[a-z][a-z0-9-]{0,62}$`. With none, no commit writes an outbox row. Boot registers each one and marks every reader the list no longer names inactive, so it holds the prune back no longer. |
-| `retention_days` | int | `7` | How long an acknowledged row is kept after its commit; at least `1`. |
-| `prune_interval_secs` | int | `3600` | How often the retention prune runs; at least `1`. |
+| `retention` | duration | `"7d"` | How long an acknowledged row is kept after its commit; at least a second. |
+| `prune_interval` | duration | `"1h"` | How often the retention prune runs; never `"0s"`. |
 
 ## `[terminology]`
 
-The terminology extension API and the one FHIR terminology server the CDR asks.
-
-`[terminology]`: `api_enabled` (bool, `false`) mounts the terminology extension
-API.
-
-`[terminology.server]`:
+The one FHIR terminology server the CDR asks; the table's presence turns it
+on. The terminology extension API is `api.terminology` (bool, `false`).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `false` | Build the client. With it off, nothing is requested and validation stays on the in-process openEHR terminology bundle. |
-| `url` | secret URL | required when enabled | The server's FHIR R4B base URL, for FerroTERM `http://ferroterm:8080/r4b`. Empty while `enabled` is a boot error. Credentials embedded in it are redacted from every rendering. |
-| `fail_on_error` | bool | `false` | What an unresolvable binding does to a commit: `false` accepts it (fail-open), `true` rejects it. |
-| `request_timeout_ms` | int | `10000` | How long one request may take, connection included. |
+| `url` | secret URL | required | The server's FHIR R4B base URL, for FerroTERM `http://ferroterm:8080/r4b`. A `[terminology]` table without it is a boot error. Credentials embedded in it are redacted from every rendering. |
+| `on_error` | enum{accept,refuse} | `accept` | What an unresolvable binding does to a commit: `accept` accepts it (fail-open), `refuse` rejects it. |
+| `timeout` | duration | `"10s"` | How long one request may take, connection included. |
 
 Every key is a scalar, so the whole section is reachable through the
-environment: `FERROEHR__TERMINOLOGY__SERVER__ENABLED`,
-`FERROEHR__TERMINOLOGY__SERVER__URL`,
-`FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR`,
-`FERROEHR__TERMINOLOGY__SERVER__REQUEST_TIMEOUT_MS`.
+environment: `FERROEHR__TERMINOLOGY__URL`,
+`FERROEHR__TERMINOLOGY__ON_ERROR`,
+`FERROEHR__TERMINOLOGY__TIMEOUT`.
 
 ```toml
-[terminology.server]
-enabled = true
+[terminology]
 url = "http://ferroterm:8080/r4b"
-fail_on_error = false
+on_error = "accept"
 ```
 
 The server answers every terminology the bundled openEHR terminology does not
@@ -210,19 +205,19 @@ ADL 2 binding check and the composition-commit binding checks below. A response
 that is not a valid FHIR R4B `Parameters` or `ValueSet` resource (for example an
 `$expand` result missing the required `ValueSet.status` or
 `expansion.timestamp`) is treated as an upstream fault rather than partially
-read, so it takes the same path as an unreachable server and `fail_on_error`
+read, so it takes the same path as an unreachable server and `on_error`
 decides what the commit does.
 
 > [!NOTE]
 > The terminology server needs the `fhir` build feature, which is on in the
 > published binary and container images. A binary built with
-> `--no-default-features` refuses at startup if `terminology.server` is enabled;
+> `--no-default-features` refuses at startup if `[terminology]` is configured;
 > the in-process openEHR terminology bundle remains available.
 
 ### Authenticating to the terminology server
 
 A server behind an authorization server takes the OAuth2 client-credentials
-grant under `[terminology.server.oauth]`, with the same keys as
+grant under `[terminology.oauth]`, with the same keys as
 `[audit.fhir_feed.oauth]` and `[authz.abac.remote.oauth]`. The access token is
 cached and re-requested shortly before it expires, and a request the server
 answers with `401` is sent once more under a new token.
@@ -241,13 +236,12 @@ answers with `401` is sent once more under a new token.
 | `kid` | string | the RFC 7638 thumbprint | The `kid` the client assertion names. |
 | `assertion_alg` | string | by key type | The algorithm the client assertion is signed with. |
 | `assertion_audience` | enum{token_endpoint,issuer} | `token_endpoint` | The `aud` of the client assertion; `issuer` needs `issuer` set. |
-| `client_certificate_file` / `client_key_file` | path | unset | The client certificate chain and its key presented over mutual TLS (RFC 8705); set together. |
-| `ca_file` | path | unset | PEM trust roots added to the built-in ones, for a token endpoint behind a private certificate authority. |
-| `refresh_margin_ms` | int | `30000` | How long before the token expires a new one is fetched. |
-| `timeout_ms` | int | `10000` | How long one call to the authorization server may take. |
+| `tls` | table | platform roots | The family's outbound TLS table: `trust_roots_file`, PEM trust roots added to the platform's for a token endpoint behind a private certificate authority; `client_identity_file`, one PEM holding the client certificate chain and its key presented over mutual TLS (RFC 8705); and `min_version`. |
+| `refresh_margin` | duration | `"30s"` | How long before the token expires a new one is fetched. |
+| `timeout` | duration | `"10s"` | How long one call to the authorization server may take. |
 
 ```toml
-[terminology.server.oauth]
+[terminology.oauth]
 token_endpoint = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
 client_id = "ferroehr-cdr"
 client_secret_file = "/run/secrets/ts-client"
@@ -259,7 +253,7 @@ server would receive two authorizations.
 
 ### Archetype value-set bindings at commit
 
-With `[terminology.server]` enabled, committing a COMPOSITION also resolves
+With `[terminology]` enabled, committing a COMPOSITION also resolves
 the archetype **constraint bindings** its template declares: where a template
 binds an `ac` code to an external terminology query, the coded value in the
 composition must be a member of the value set that query returns.
@@ -267,12 +261,12 @@ composition must be a member of the value set that query returns.
 - The code is in the value set → the commit proceeds.
 - The code is **not** in the value set → `422` naming the path, the code, and
   the bound query. That is a real constraint violation, not a service failure,
-  so `fail_on_error` does not change it.
+  so `on_error` does not change it.
 - The value set could **not be resolved** (server down, error response, unknown
-  value set) → `fail_on_error` decides: `false` (the default) accepts the
+  value set) → `on_error` decides: `false` (the default) accepts the
   commit and logs a warning; `true` rejects it with `422`.
 
-With `[terminology.server]` disabled (the default) no binding is resolved
+With `[terminology]` disabled (the default) no binding is resolved
 and no request is made, so commit behaviour is exactly as if this section did
 not exist.
 
@@ -284,24 +278,25 @@ not exist.
 > disagree, align them in the terminology-server configuration; the CDR does
 > not rewrite the value.
 
-## `[multimedia]`
+## `[record.multimedia]`
 
 `DV_MULTIMEDIA` externalization to an S3-compatible object store. Off by
 default: blobs stay inline, byte-identical, and no object store is built or
-contacted.
+contacted. The table keeps `enabled` where other optional features use the
+table's presence, because `url` applies while it is off: the blobs already
+offloaded are read back from it.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `false` | Externalize large multimedia data. |
-| `threshold_bytes` | int | `262144` (256 KiB) | Decoded size strictly above which data is offloaded; at or below it stays inline. |
-| `endpoint` | secret URL | unset ⇒ default AWS endpoint resolution | S3-compatible endpoint. Must be an absolute `http`/`https` URL when set. Credentials embedded in it are redacted from every rendering. |
+| `threshold` | size | `"256KiB"` | Decoded size strictly above which data is offloaded; at or below it stays inline. |
+| `url` | secret URL | unset ⇒ default AWS endpoint resolution | S3-compatible endpoint. Must be an absolute `http`/`https` URL when set; an `http://` URL is plain HTTP, development only, which `production` names as the `plaintext_object_store` gap. Credentials embedded in it are redacted from every rendering. |
 | `bucket` | string | `openehr-multimedia` | Target bucket for content-addressed blobs. |
 | `region` | string | `us-east-1` | AWS region; S3 requires one even for non-AWS endpoints. |
 | `access_key_id` | string | unset | S3 access key id. Unset, with no secret key either, runs the client anonymously. |
 | `secret_access_key` / `secret_access_key_file` | secret / path | unset | S3 secret access key. At most one of the pair. |
-| `allow_http` | bool | `false` | Allow plain-HTTP endpoints, development only; production S3 is HTTPS. |
 
-An enabled integration whose `endpoint` is set but blank, not an absolute URL,
+An enabled integration whose `url` is set but blank, not an absolute URL,
 or carries a scheme other than `http`/`https` is a **boot error**. That case is
 easy to reach by accident (an unset Compose variable expanding to nothing, or
 an empty Helm value) and used to boot cleanly and then fail on the first

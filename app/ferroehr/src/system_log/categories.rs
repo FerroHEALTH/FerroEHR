@@ -57,7 +57,7 @@ pub struct CategoryMapConfig {
     /// Whether the map FerroEHR ships applies while this section declares no
     /// template and no archetype (`shipped_map`, on by default). Off with
     /// nothing declared, no map applies and every access is recorded
-    /// `unclassified`, which `deployment_profile = "production"` refuses as
+    /// `unclassified`, which `deployment.profile = "production"` refuses as
     /// the `no_category_map` gap.
     pub shipped_map: bool,
     /// The national categories (Art. 14(1) third subparagraph), each

@@ -24,7 +24,7 @@ use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::state::AppState;
-use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::party::config::PartySection;
 use ferrohealth_smart::profile::{Delegate, Marker, Preset};
@@ -128,13 +128,13 @@ fn config_marked(
         ..machines(KEYCLOAK, Preset::Keycloak)
     };
     let mut auth = common::auth(AuthSection {
-        issuer: IssuerKey::List(vec![
+        issuer: vec![
             persons,
             machines(MACHINES, Preset::Rfc9068),
             machines(ENTRA, Preset::Entra),
             keycloak,
             keycloak_staff(impersonation_marker),
-        ]),
+        ],
         party: vec![
             PartySection {
                 issuer: ISSUER.to_owned(),
@@ -463,6 +463,42 @@ async fn an_undeclared_or_marked_keycloak_impersonation_is_refused() {
     assert_eq!(status, StatusCode::OK, "without the marker claim: {body}");
 }
 
+/// Someone acting for a patient (RFC 8693 §4.1 `act` on a `patients` token)
+/// is refused `403` where the issuer sets `act_represents_patient`, since
+/// FerroEHR binds the representative to no party, and such a token is refused
+/// `401` by `ferrohealth-smart` on an issuer that does not set it.
+#[tokio::test]
+async fn a_token_acting_for_a_patient_is_refused() {
+    const PATIENTS: &str = "https://patients.example";
+    let (_db, svc) = service().await;
+    for (represents, expected) in [
+        (Some(true), StatusCode::FORBIDDEN),
+        (None, StatusCode::UNAUTHORIZED),
+    ] {
+        let mut config = config(false, Vec::new());
+        config.auth.shared.issuer.push(IssuerEntry {
+            kind: Some(IssuerKind::Patients),
+            jwks_file: common::jwks_file().display().to_string(),
+            act_represents_patient: represents,
+            ..common::entry(PATIENTS, AUDIENCE)
+        });
+        let app = router(Arc::clone(&svc), config).await;
+        let token = bearer(
+            PATIENTS,
+            AUDIENCE,
+            &json!({ "sub": "patient-1", "act": { "sub": "carer-7" }, "scope": "patient/template-*.r" }),
+        );
+        let (status, body) = list(&app, &token).await;
+        assert_eq!(
+            status, expected,
+            "act_represents_patient {represents:?}: {body}"
+        );
+        if represents.is_some() {
+            assert!(body.contains("acting for a patient"), "{body}");
+        }
+    }
+}
+
 /// A system caller refused for a personal scope is recorded under
 /// `refused-system-personal-scope`, once per refused request (#5140).
 #[tokio::test]
@@ -571,9 +607,7 @@ async fn a_jwt_bearer_onward_token_commits_as_the_person_and_records_its_client(
     let key = "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e";
     professional(&svc, key, "532").await;
     let mut config = config(false, Vec::new());
-    if let IssuerKey::List(entries) = &mut config.auth.shared.issuer
-        && let Some(persons) = entries.first_mut()
-    {
+    if let Some(persons) = config.auth.shared.issuer.first_mut() {
         persons.delegates = Some(vec![Delegate::Client("bridge".to_owned())]);
     }
     let app = router(Arc::clone(&svc), config).await;

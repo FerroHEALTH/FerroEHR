@@ -21,7 +21,7 @@
 //!   isolated in one spec-cited place.
 //! - [`plan_cache`] — the bounded cache of lowered AQL plans keyed on query
 //!   text (no openEHR spec governs it — our own performance design).
-//! - [`config`] — the `[query]` tuning knobs (no openEHR spec governs
+//! - [`config`] — the `[record.query]` tuning knobs (no openEHR spec governs
 //!   configuration — our own design).
 
 pub mod config;

@@ -44,7 +44,7 @@
 //!   carries a weak `W/"…"` `ETag` — a deterministic content digest of the
 //!   assembled `RESULT_SET` (the schema carries no `id`), set only on success.
 //! - **`408`** (`408_Query.yaml`): a query that overruns the configured
-//!   execution budget (`FERROEHR__QUERY__TIMEOUT_MS`) is a `408 Request Timeout`.
+//!   execution budget (`FERROEHR__RECORD__QUERY__TIMEOUT`) is a `408 Request Timeout`.
 //! - **POST body** (`AdhocQueryExecute` / `Query` schemas): the POST forms carry
 //!   `offset`/`fetch`/`query_parameters` (and `q` for ad-hoc) in the JSON body;
 //!   the `ehr_id` scope still comes from the query string or header. Every
@@ -369,7 +369,7 @@ guarded_handler! {
                                           `specifications/responses/408_Query.yaml`). \
                                           The maximum here is the configured \
                                           per-query execution budget \
-                                          (`FERROEHR__QUERY__TIMEOUT_MS`); with no \
+                                          (`FERROEHR__RECORD__QUERY__TIMEOUT`); with no \
                                           budget configured only the global request \
                                           timeout applies.",
              body = serde_json::Value),
@@ -1683,7 +1683,7 @@ guarded_handler! {
     /// publishes an ad-hoc and a stored query and nothing else, and AQL is defined
     /// over the clinical domain alone (QUERY `master03-syntax.adoc`), with no
     /// demographic source. The operation runs in three steps: a predicate from the
-    /// deployment's `[cohort.predicates]` allow-list selects parties on the
+    /// deployment's `[privacy.cohort.predicates]` allow-list selects parties on the
     /// demographic credential; the clinical domain resolves them to the EHRs whose
     /// `EHR_STATUS.subject` names one of them and runs the AQL over exactly those
     /// EHRs, both on the clinical credential. Only identifiers cross between the
@@ -1701,7 +1701,7 @@ guarded_handler! {
     /// the server holds no party-to-EHR map there.
     ///
     /// The route answers `404` until the deployment binds at least one predicate
-    /// or sets `[cohort] subjects = true`.
+    /// or sets `[privacy.cohort] subjects = true`.
     #[utoipa::path(
         post, path = "/query/cohort", tag = "Query",
         request_body(
@@ -1722,7 +1722,7 @@ guarded_handler! {
                            so a client that already speaks the query API needs no \
                            second vocabulary. There is no `ehr_id`: the cohort IS \
                            the scope. Each `cohort` entry names a key the \
-                           deployment bound in `[cohort.predicates]`; several \
+                           deployment bound in `[privacy.cohort.predicates]`; several \
                            entries INTERSECT. An undeclared member is refused \
                            `400`."
         ),
@@ -1751,8 +1751,8 @@ guarded_handler! {
                                           type-check.",
              body = serde_json::Value),
             (status = 404, description = "The deployment binds no cohort predicate \
-                                          (`[cohort.predicates]` is empty) and \
-                                          leaves `[cohort] subjects` off, so the \
+                                          (`[privacy.cohort.predicates]` is empty) and \
+                                          leaves `[privacy.cohort] subjects` off, so the \
                                           surface serves nothing. With \
                                           authentication enabled, an \
                                           unauthenticated request is answered `401` \
@@ -1766,7 +1766,7 @@ guarded_handler! {
              body = serde_json::Value),
             (status = 408, description = "The inner AQL execution overran the \
                                           configured per-query execution budget \
-                                          (`FERROEHR__QUERY__TIMEOUT_MS`).",
+                                          (`FERROEHR__RECORD__QUERY__TIMEOUT`).",
              body = serde_json::Value),
             (status = 415, description = "The body is JSON only; any other request \
                                           `Content-Type` is refused \
@@ -1774,7 +1774,7 @@ guarded_handler! {
              body = serde_json::Value),
             (status = 422, description = "The predicate matched, or the request \
                                           named, more parties than \
-                                          `FERROEHR__COHORT__MAX_COHORT_SIZE` \
+                                          `FERROEHR__PRIVACY__COHORT__MAX_COHORT_SIZE` \
                                           allows. Refused rather than truncated: a \
                                           silently shortened cohort is a wrong \
                                           denominator with nothing on the wire to \
@@ -1828,7 +1828,7 @@ mod refusals {
                       execution of the query)\" (ITS-REST \
                       `specifications/responses/408_Query.yaml`) \
                       — here the configured per-query execution \
-                      budget (`FERROEHR__QUERY__TIMEOUT_MS`)."
+                      budget (`FERROEHR__RECORD__QUERY__TIMEOUT`)."
     )]
     pub(super) struct QueryTimeout;
 

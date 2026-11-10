@@ -63,7 +63,7 @@ The binary is configured entirely through `FERROEHR_*` environment variables
 database URL:
 
 ```shell
-export FERROEHR__DB__URL='postgres://ferroehr:ferroehr@localhost:5432/ferroehr'
+export FERROEHR__DATABASE__URL='postgres://ferroehr:ferroehr@localhost:5432/ferroehr'
 target/release/ferroehr
 ```
 

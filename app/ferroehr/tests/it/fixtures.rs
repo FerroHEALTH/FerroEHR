@@ -321,7 +321,7 @@ pub(crate) fn shared_pools(pool: &sqlx::PgPool) -> ferroehr::db::domain::DomainP
 
 /// The domain layout of that same co-located database: four domains, one DSN.
 pub(crate) fn shared_layout() -> ferroehr::db::domain::DomainLayout {
-    ferroehr::db::domain::StorageConfig::default().layout(&ferroehr::db::DbConfig::default())
+    ferroehr::db::DbConfig::default().layout()
 }
 
 /// Sets `EHR_STATUS.is_queryable` of `ehr` to `false` through the canonical
@@ -607,9 +607,8 @@ pub(crate) fn provider(
     use ferroehr::service::terminology::config::TerminologyServerConfig;
     use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
     let cfg = TerminologyServerConfig {
-        enabled: true,
         url: ferrohealth_secret::secret_url::SecretUrl::new(base),
-        request_timeout_ms: 800,
+        timeout: ferrohealth_config::units::Duration::from_millis(800),
         ..TerminologyServerConfig::default()
     };
     FhirTerminologyProvider::new(&cfg).expect("build provider")

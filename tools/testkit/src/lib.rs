@@ -43,8 +43,7 @@ use testcontainers::{ContainerAsync, ImageExt, ReuseDirective};
 use testcontainers_modules::postgres::Postgres;
 use tokio::sync::OnceCell;
 
-use ferroehr::db;
-use ferroehr::db::DbConfig;
+use ferroehr::db::{self, DbConfig, domain::Domain};
 
 /// Prefix for every database the harness creates (templates + clones), so a
 /// sweep can never touch anything else.
@@ -284,7 +283,7 @@ async fn provision(server: &str, template: Option<&str>) -> Result<TestDb, Testk
     // server's accept path is briefly saturable, which is load, not a defect.
     let start = Instant::now();
     let pool = loop {
-        match db::connect(&config).await {
+        match db::connect_domain(&config, Domain::Clinical).await {
             Ok(pool) => break pool,
             Err(error) => {
                 if start.elapsed() >= POOL_DEADLINE {
@@ -667,7 +666,8 @@ async fn migrate_and_rename(
     staging: &str,
     template: &str,
 ) -> Result<(), TestkitError> {
-    let pool = db::connect(&DbConfig::new(clone_url(admin_url, staging))).await?;
+    let staged = DbConfig::new(clone_url(admin_url, staging));
+    let pool = db::connect_domain(&staged, Domain::Clinical).await?;
     let migrated = db::run_migrations(&pool).await;
     pool.close().await;
     migrated?;

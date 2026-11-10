@@ -206,7 +206,7 @@ mod tests {
             availability_of(&manifest(&["/ehr", "/query", "/admin"])),
             AdminAvailability::Available
         );
-        // The CDR omits it while `admin.enabled` is false.
+        // The CDR omits it while `api.admin` is false.
         assert_eq!(
             availability_of(&manifest(&[
                 "/ehr",
@@ -223,7 +223,7 @@ mod tests {
     fn only_an_available_admin_api_renders_destructive_affordances() {
         // The hidden-when-off contract, asserted on the one predicate every
         // gated view calls: with the admin group absent from the manifest (the
-        // CDR runs `admin.enabled = false`) no delete button is rendered at all
+        // CDR runs `api.admin = false`) no delete button is rendered at all
         // — nor when the probe itself failed.
         assert!(renders_admin_ops(&Ok(AdminAvailability::Available)));
         assert!(!renders_admin_ops(&Ok(AdminAvailability::Disabled)));

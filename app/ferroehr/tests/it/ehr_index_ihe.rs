@@ -25,14 +25,14 @@ use ferroehr::error::ServiceError;
 use ferroehr::privacy::PrivacyPolicy;
 use ferroehr::privacy::config::PrivacyConfig;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::ehr_index::config::EhrIndexConfig;
+use ferroehr::service::ehr_index::config::PixmConfig;
 use ferroehr::service::ehr_index::ihe::{IdentitySourceError, IheIdentitySource};
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::linkage::cohort::CohortQueryRequest;
 use ferroehr::service::linkage::cohort::config::CohortConfig;
+use ferrohealth_config::tls::TlsClientSection;
 use ferrohealth_secret::secret_url::SecretUrl;
-use ferrohealth_server::tls_client::TlsClientSection;
 use ihe_iti::pixm::capabilities::CapabilitiesError;
 
 /// The IG's clinical ("blue") domain, the one the stub answers for.
@@ -77,12 +77,12 @@ pub(crate) fn answer(status: u16, body: &Value) -> ResponseTemplate {
     ResponseTemplate::new(status).set_body_raw(body.to_string(), FHIR_JSON)
 }
 
-fn config(base: &str) -> EhrIndexConfig {
-    EhrIndexConfig {
-        pixm_url: SecretUrl::new(base),
+fn config(base: &str) -> PixmConfig {
+    PixmConfig {
+        url: SecretUrl::new(base),
         assigning_authority: CLINICAL.to_owned(),
-        request_timeout_ms: 2_000,
-        ..EhrIndexConfig::default()
+        timeout: ferrohealth_config::units::Duration::from_secs(2),
+        ..PixmConfig::default()
     }
 }
 
@@ -269,10 +269,10 @@ async fn a_service_without_a_provider_refuses_naming_both_choices() {
         .await
         .expect_err("no provider installed");
     assert!(
-        refused.message().contains("provider = \"local\""),
+        refused.message().contains("subject_index = \"local\""),
         "{refused}"
     );
-    assert!(refused.message().contains("pixm_url"), "{refused}");
+    assert!(refused.message().contains("[pixm] url"), "{refused}");
 }
 
 /// The boot check reads the PIX Manager's `CapabilityStatement`; a refusal and
@@ -331,7 +331,7 @@ async fn the_probe_reads_the_capability_statement() {
     );
 }
 
-/// A PIX Manager behind a private CA is reached with `[ehr_index.tls]
+/// A PIX Manager behind a private CA is reached with `[pixm.tls]
 /// trust_roots_file` naming that CA, beside the platform roots, and not
 /// without it.
 #[tokio::test]
@@ -342,7 +342,7 @@ async fn a_private_ca_is_trusted_through_the_tls_roots() {
         .await
         .expect("the HTTPS stub starts");
 
-    let trusting = EhrIndexConfig {
+    let trusting = PixmConfig {
         tls: TlsClientSection {
             trust_roots_file: Some(server.ca_file.clone()),
             ..TlsClientSection::default()
@@ -368,7 +368,7 @@ async fn a_private_ca_is_trusted_through_the_tls_roots() {
         "{error:?}"
     );
 
-    let missing = EhrIndexConfig {
+    let missing = PixmConfig {
         tls: TlsClientSection {
             trust_roots_file: Some(server.ca_file.with_extension("absent")),
             ..TlsClientSection::default()

@@ -9,7 +9,7 @@
 # and out of the environment.
 database:
   existingSecret: ferroehr-db
-  existingSecretKey: FERROEHR__DB__URL
+  existingSecretKey: FERROEHR__DATABASE__URL
 
 secrets:
   basicUserPasswordHashes:
@@ -17,11 +17,10 @@ secrets:
 
 config:
   # The chart has no default posture and refuses to render without one.
-  deployment_profile: sandbox
+  deployment:
+    profile: sandbox
   # The in-instance EHR index, the opt-in of a FerroEHR run on its own:
   # this overlay renders another surface and runs no identity source.
-  ehr_index:
-    provider: local
   auth:
     enabled: true
     # The issuer the Basic users bind under. It signs nothing: its key set,
@@ -64,6 +63,8 @@ config:
         - user: clinician
           key_issuer: urn:ferroehr:basic-user
           key: clinician
+  record:
+    subject_index: local
 
 viewer:
   enabled: true

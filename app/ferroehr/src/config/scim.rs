@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `[scim]`: the SCIM 2.0 service provider at `/scim/v2/` (RFC 7644) and the
-//! provisioning clients it serves (`[[scim.client]]`).
+//! `[auth.scim]`: the SCIM 2.0 service provider at `/scim/v2/` (RFC 7644) and
+//! the provisioning clients it serves (`[[auth.scim.client]]`).
 //!
-//! A deployment chooses SCIM: it is off by default. Each client is an OAuth
+//! A deployment chooses SCIM: it is off by default, and the table's presence
+//! turns it on. Each client is an OAuth
 //! client-credentials client of the deployment's own authorization server
 //! (RFC 6749 §4.4), acting for nobody, holding the FerroEHR-defined `scope`
 //! (SMART on openEHR `master08-scopes.adoc` defines none for SCIM), and owning
@@ -13,38 +14,38 @@
 
 use std::collections::BTreeSet;
 
+use ferrohealth_config::removed::Removed;
+use ferrohealth_config::units::Duration;
 use ferrohealth_smart::config::Resolved;
 use ferrohealth_smart::kind::IssuerKind;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-/// The longest `contact_erasure_minutes` a deployment may configure: 30
-/// days.
-const MAX_CONTACT_ERASURE_MINUTES: u32 = 43_200;
+/// The longest `contact_erasure_delay` a deployment may configure: 30 days.
+const MAX_CONTACT_ERASURE_DELAY: Duration = Duration::from_days(30);
 
-/// The `[scim]` section.
+/// The `[auth.scim]` section.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ScimConfig {
-    /// Whether `/scim/v2/` is served.
-    pub enabled: bool,
     /// The externally reachable origin the SCIM base URL hangs off, such as
     /// `https://cdr.example.com`; every `meta.location` and discovery document
     /// names `<public_base_url>/scim/v2` (RFC 7643 §3.1: `location` is "The
-    /// URI of the resource being returned"). Required when enabled.
+    /// URI of the resource being returned"). Required.
     pub public_base_url: Option<String>,
-    /// The most resources one list response returns (RFC 7643 §5,
-    /// `filter.maxResults`).
-    pub max_results: u64,
+    /// The most resources one list response returns (RFC 7643 §5, the
+    /// `ServiceProviderConfig` `filter.maxResults`).
+    pub filter_max_results: u64,
     /// The most Users one client deactivates or deletes in one window; past
     /// it, a deactivation or a deletion is refused with `429`.
     pub max_deactivations: u32,
-    /// The length of that window, in minutes.
-    pub deactivation_window_minutes: u32,
+    /// The length of that window.
+    pub deactivation_window: Duration,
     /// How long after a User's deletion the contacts of every version of its
-    /// `PERSON` are erased, in minutes; `0` erases them in the deletion
-    /// itself. The name, the binding key and the identifiers stay.
-    pub contact_erasure_minutes: u32,
+    /// `PERSON` are erased (GDPR Art. 17), at most 30 days; `"0s"` erases them
+    /// in the deletion itself. The name, the binding key and the identifiers
+    /// stay.
+    pub contact_erasure_delay: Duration,
     /// The most members one Group holds; an add past it is refused with
     /// `400`. Each membership change stores every membership of the Group
     /// again (RM demographic master02 §Versioning Semantics), so the cap bounds
@@ -52,24 +53,39 @@ pub struct ScimConfig {
     pub max_group_members: u32,
     /// The provisioning clients.
     pub client: Vec<ScimClient>,
+    /// Retired in v5.7.0: refused at load, naming the table's presence.
+    #[serde(skip_serializing)]
+    pub enabled: Removed,
+    /// Retired in v5.7.0: refused at load, naming `filter_max_results`.
+    #[serde(skip_serializing)]
+    pub max_results: Removed,
+    /// Retired in v5.7.0: refused at load, naming `deactivation_window`.
+    #[serde(skip_serializing)]
+    pub deactivation_window_minutes: Removed,
+    /// Retired in v5.7.0: refused at load, naming `contact_erasure_delay`.
+    #[serde(skip_serializing)]
+    pub contact_erasure_minutes: Removed,
 }
 
 impl Default for ScimConfig {
     fn default() -> Self {
         Self {
-            enabled: false,
             public_base_url: None,
-            max_results: 100,
+            filter_max_results: 100,
             max_deactivations: 100,
-            deactivation_window_minutes: 60,
-            contact_erasure_minutes: 0,
+            deactivation_window: Duration::from_hours(1),
+            contact_erasure_delay: Duration::ZERO,
             max_group_members: 5_000,
             client: Vec::new(),
+            enabled: Removed::default(),
+            max_results: Removed::default(),
+            deactivation_window_minutes: Removed::default(),
+            contact_erasure_minutes: Removed::default(),
         }
     }
 }
 
-/// One `[[scim.client]]` table.
+/// One `[[auth.scim.client]]` table.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ScimClient {
@@ -95,6 +111,27 @@ impl ScimConfig {
             .map(|origin| format!("{}/scim/v2", origin.trim().trim_end_matches('/')))
     }
 
+    /// The deactivation window in whole minutes, a part minute rounded down.
+    #[must_use]
+    pub fn window_minutes(&self) -> u32 {
+        u32::try_from(
+            self.deactivation_window
+                .as_secs()
+                .checked_div(60)
+                .unwrap_or(0),
+        )
+        .unwrap_or(u32::MAX)
+    }
+
+    /// The contact erasure delay in whole minutes, a part minute rounded up,
+    /// so a delay above `"0s"` never erases in the deletion itself.
+    #[must_use]
+    pub fn erasure_minutes(&self) -> u32 {
+        let millis = self.contact_erasure_delay.as_millis();
+        let minutes = millis.div_ceil(60_000);
+        u32::try_from(minutes).unwrap_or(u32::MAX)
+    }
+
     /// The `binding_issuer` of every client: the issuers whose deleted Users
     /// the contact erasure reaches.
     #[must_use]
@@ -105,13 +142,10 @@ impl ScimConfig {
             .collect()
     }
 
-    /// The boot refusals of `[scim]`, each naming its key; `resolved` is the
-    /// resolved `[auth]` section, absent when it does not resolve.
+    /// The boot refusals of `[auth.scim]`, each naming its key; `resolved` is
+    /// the resolved `[auth]` section, absent when it does not resolve.
     #[must_use]
     pub fn errors(&self, resolved: Option<&Resolved>) -> Vec<String> {
-        if !self.enabled {
-            return Vec::new();
-        }
         let mut errors = Vec::new();
         let origin = self.public_base_url.as_deref().map(str::trim);
         let parsed = origin.and_then(|origin| Url::parse(origin).ok());
@@ -125,34 +159,34 @@ impl ScimConfig {
         });
         if !absolute {
             errors.push(
-                "scim.public_base_url (an absolute http(s) origin with no userinfo, query or \
-                 fragment, e.g. 'https://cdr.example.com') is required when scim.enabled = true: \
-                 every meta.location names the resource by its URI (RFC 7643 §3.1)"
+                "auth.scim.public_base_url (an absolute http(s) origin with no userinfo, query \
+                 or fragment, e.g. 'https://cdr.example.com') is required: every meta.location \
+                 names the resource by its URI (RFC 7643 §3.1)"
                     .to_owned(),
             );
         }
-        if self.max_results == 0 {
-            errors.push("scim.max_results must be at least 1".to_owned());
+        if self.filter_max_results == 0 {
+            errors.push("auth.scim.filter_max_results must be at least 1".to_owned());
         }
         if self.max_deactivations == 0 {
-            errors.push("scim.max_deactivations must be at least 1".to_owned());
+            errors.push("auth.scim.max_deactivations must be at least 1".to_owned());
         }
         if self.max_group_members == 0 {
-            errors.push("scim.max_group_members must be at least 1".to_owned());
+            errors.push("auth.scim.max_group_members must be at least 1".to_owned());
         }
-        if self.deactivation_window_minutes == 0 {
-            errors.push("scim.deactivation_window_minutes must be at least 1".to_owned());
+        if self.deactivation_window.as_millis() < 60_000 {
+            errors.push("auth.scim.deactivation_window must be at least \"1min\"".to_owned());
         }
-        if self.contact_erasure_minutes > MAX_CONTACT_ERASURE_MINUTES {
+        if self.contact_erasure_delay > MAX_CONTACT_ERASURE_DELAY {
             errors.push(format!(
-                "scim.contact_erasure_minutes must be at most {MAX_CONTACT_ERASURE_MINUTES} (30 \
-                 days): a deleted User's contacts serve no attribution and are kept no longer \
-                 than necessary (GDPR Art. 5(1)(e))"
+                "auth.scim.contact_erasure_delay must be at most \"{MAX_CONTACT_ERASURE_DELAY}\": \
+                 a deleted User's contacts serve no attribution and are kept no longer than \
+                 necessary (GDPR Art. 5(1)(e))"
             ));
         }
         if self.client.is_empty() {
             errors.push(
-                "scim.enabled = true needs at least one [[scim.client]] table: the endpoint \
+                "[auth.scim] needs at least one [[auth.scim.client]] table: the endpoint \
                  serves only declared provisioning clients"
                     .to_owned(),
             );
@@ -161,7 +195,7 @@ impl ScimConfig {
         let mut binding_issuers = BTreeSet::new();
         for client in &self.client {
             let name = format!(
-                "the [[scim.client]] table of {:?} and {:?}",
+                "the [[auth.scim.client]] table of {:?} and {:?}",
                 client.issuer, client.client_id
             );
             for (key, value) in [
@@ -237,7 +271,6 @@ mod tests {
 
     fn enabled(clients: Vec<ScimClient>) -> ScimConfig {
         ScimConfig {
-            enabled: true,
             public_base_url: Some("https://cdr.example.com".to_owned()),
             client: clients,
             ..ScimConfig::default()
@@ -245,10 +278,12 @@ mod tests {
     }
 
     #[test]
-    fn off_by_default_and_judged_only_when_enabled() {
-        let config = ScimConfig::default();
-        assert!(!config.enabled);
-        assert_eq!(config.errors(None), Vec::<String>::new());
+    fn off_by_default() {
+        assert!(crate::config::FerroEhrConfig::default().auth.scim.is_none());
+        assert_eq!(
+            enabled(vec![client("https://as.example", "entra", "urn:a")]).errors(None),
+            Vec::<String>::new()
+        );
     }
 
     #[test]
@@ -287,7 +322,7 @@ mod tests {
         };
         let errors = config.errors(None);
         for needed in [
-            "scim.public_base_url",
+            "auth.scim.public_base_url",
             "needs issuer",
             "needs client_id",
             "needs scope",
@@ -305,7 +340,7 @@ mod tests {
         assert!(
             none.errors(None)
                 .iter()
-                .any(|e| e.contains("at least one [[scim.client]]"))
+                .any(|e| e.contains("at least one [[auth.scim.client]]"))
         );
     }
 
@@ -326,9 +361,8 @@ mod tests {
     #[test]
     fn a_contact_erasure_period_past_thirty_days_is_refused() {
         let config = ScimConfig {
-            enabled: true,
             public_base_url: Some("https://cdr.example.com".to_owned()),
-            contact_erasure_minutes: 43_201,
+            contact_erasure_delay: Duration::from_millis(30 * 86_400_000 + 1),
             client: vec![client(
                 "https://as.example",
                 "provisioning",
@@ -340,11 +374,11 @@ mod tests {
             config
                 .errors(None)
                 .iter()
-                .any(|error| error.contains("scim.contact_erasure_minutes"))
+                .any(|error| error.contains("auth.scim.contact_erasure_delay"))
         };
         assert!(refused(&config), "{:?}", config.errors(None));
         let config = ScimConfig {
-            contact_erasure_minutes: 43_200,
+            contact_erasure_delay: Duration::from_days(30),
             ..config
         };
         assert!(!refused(&config), "{:?}", config.errors(None));

@@ -58,7 +58,7 @@ struct PublicDeployment {
 /// posture and the support period. `openehr_rest_api_version` is the single
 /// shared provenance identity ([`provenance::ITS_REST`]), the released
 /// ITS-REST contract version that management `/info` and the System Options
-/// manifest also report. `licence` is the summary of the `[licence]` boot
+/// manifest also report. `licence` is the summary of the `[deployment] licence_file` boot
 /// outcome ([`LicenceStatus`]): its state, use class, licensee and last valid
 /// day, never a refusal reason.
 #[derive(Debug, Clone, Serialize)]

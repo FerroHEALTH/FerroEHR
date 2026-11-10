@@ -23,7 +23,7 @@
 //! answer what has fallen due and leave the decision where it belongs.
 //!
 //! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::admin.enabled` config gate
+//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
 //! (`405` with an empty `Allow` when off) unchanged.
 
 #![expect(
@@ -269,7 +269,7 @@ guarded_handler! {
                                     and an object the map cannot classify takes \
                                     the longest period configured for its kind; \
                                     `origin`, when present, keys it on one origin \
-                                    `[[origins.registered]]` declares, by its id, \
+                                    `[[authz.origin]]` declares, by its id, \
                                     matched against the origins each version \
                                     recorded at commit; \
                                     `period` is a PostgreSQL interval, `anchor` one \

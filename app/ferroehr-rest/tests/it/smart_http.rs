@@ -65,10 +65,10 @@ fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
         auth: common::trusting(vec![common::entry(issuer, AUDIENCE)]),
         ..common::api_config(false)
     };
-    cfg.smart.enabled = smart_enabled;
-    cfg.smart.public_base_url = Some("https://cdr.example.com".to_owned());
+    cfg.auth.smart.discovery = smart_enabled;
+    cfg.auth.smart.public_base_url = Some("https://cdr.example.com".to_owned());
     if patient_bound {
-        cfg.smart.patient_issuers = vec![issuer.to_owned()];
+        cfg.auth.smart.patient_issuers = vec![issuer.to_owned()];
     }
     cfg
 }
@@ -76,7 +76,7 @@ fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
 /// A server with authentication off.
 async fn open_app() -> (testkit::TestDb, Router) {
     let mut cfg = common::api_config(false);
-    BASE.clone_into(&mut cfg.rest.base_path);
+    BASE.clone_into(&mut cfg.api.base_path);
     common::app(cfg).await
 }
 
@@ -394,7 +394,7 @@ async fn rbac_app(issuer: &str) -> (testkit::TestDb, Router) {
     authz.rbac.enabled = true;
     let authz = ferroehr_rest::extensions::access::authz::AuthzHandle::build(
         &authz,
-        &cfg.rest.base_path,
+        &cfg.api.base_path,
         None,
         common::null_resolvers(),
     )

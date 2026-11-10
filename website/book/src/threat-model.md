@@ -220,7 +220,7 @@ from the specification's meta-model rather than hand-written) and terminology
 bindings. Canonical JSON is read by a **strict** reader that refuses undeclared
 and duplicate keys. Outbound terminology and object-store calls go only
 to operator-configured endpoints: terminology goes to the one configured FHIR
-terminology server (`[terminology.server]`, FerroTERM in every shipped
+terminology server (`[terminology]`, FerroTERM in every shipped
 deployment), authenticated with an OAuth 2.0 client-credentials token when it
 sits behind an authorization server, and verified against the platform trust
 store. The one outbound call that is on by default is
@@ -385,7 +385,7 @@ of no other, so a privilege cannot arrive through a membership.
 | `ferroehr_clinical_reader` | `SELECT` on `clinical`; `USAGE` on `ext`; read the `audit` repository and verify the chain | `party` |
 | `ferroehr_party` | `party`, archival partitions included, with `SELECT`, `INSERT`, `UPDATE` and `DELETE`, the sealed `national_identifier` rows included; `MAINTAIN` on the partitioned `node`, `version` and `vo_attestation`, to keep their planner statistics | `clinical`, revoked explicitly and in both directions |
 | `ferroehr_party_reader` | `SELECT` on `party`. On `national_identifier` the table-level grant is revoked and re-granted column by column, so it reads `id`, `party_id`, `scheme`, `created_at` and `retired_at` and never `lookup_digest`, `nonce` or `ciphertext` | `clinical` |
-| The schema-preparation credential (`[db] migrate_url`, normally a member of `ferroehr_migrator`) | every schema: it issues the DDL of all four migration sets and reads all four `_sqlx_migrations` tables, and it owns the objects it created | nothing. The server opens it for that one boot step and closes it again, so no pool is held on it and no request is served through it |
+| The schema-preparation credential (`[database] migrate_url`, normally a member of `ferroehr_migrator`) | every schema: it issues the DDL of all four migration sets and reads all four `_sqlx_migrations` tables, and it owns the objects it created | nothing. The server opens it for that one boot step and closes it again, so no pool is held on it and no request is served through it |
 
 A schema's `_sqlx_migrations` bookkeeping, the record of which migrations ran
 that the boot check compares, is read-only to every runtime role, the writer
@@ -413,9 +413,9 @@ the same check from outside the deployment.
 **Residual risk.**
 
 - **The grants are only a boundary once the credentials are separated.** With
-  every `[storage.<domain>] url` unset, all three pools
-  authenticate as `[db] url` and the split is a schema split. The
-  `shared_credential` gap of `deployment_profile` is what names that.
+  every `[database.<domain>] url` unset, all three pools
+  authenticate as `[database] url` and the split is a schema split. The
+  `shared_credential` gap of `deployment.profile` is what names that.
 - **A login role can be a member of several domain roles.** The compose stacks
   do exactly that, deliberately, and say so. The boot self-check measures the
   group roles, so it reports a boundary that a membership then crosses.
@@ -438,7 +438,7 @@ one.
 - **Each dump is plaintext of its own domain.** The clinical one holds every
   composition. The demographic one holds every party and the sealed identifier
   columns with them, which stay sealed only while
-  `[demographic.identifier_protection] key` lives somewhere the dump does not.
+  `[privacy.identifier_protection] key` lives somewhere the dump does not.
 - **Two dumps together are worth more than twice one.** The demographic dump
   beside the clinical one says which person each record belongs to: the
   record is re-identified. Who may read each claim is the control, and it
@@ -481,7 +481,7 @@ writes it.
   every shipped rule.
 - **`subject_namespaces` is empty by default**, and with it empty the subject
   rule and the database trigger are both out of force. The
-  `open_subject_namespace` gap of `deployment_profile` is what names that.
+  `open_subject_namespace` gap of `deployment.profile` is what names that.
 - **A finding names the RM path and the rule, never the value.** That is
   deliberate, and it means a refusal tells an operator where to look rather
   than what was there.
@@ -495,7 +495,7 @@ subject pseudonym, and AQL returns the rows it was asked for.
 treatment identifies a person with no identifier field involved. Small-cell
 suppression applies to the [cohort query](querying-aql.md#cohort-queries-across-the-pseudonymisation-boundary)
 only: a cohort result serving fewer distinct EHRs than
-`cohort.small_cell_threshold` has its rows withheld and is marked suppressed.
+`privacy.cohort.small_cell_threshold` has its rows withheld and is marked suppressed.
 An ordinary AQL execution takes no threshold at all, so nothing counts how
 small a population a plain `POST /query/aql` returned. For that surface, who
 may run AQL, for what purpose, and over which EHRs are the controls, and they
@@ -595,7 +595,7 @@ parties to their EHRs.
 what they read, which is sensitive in its own right and is a disclosure
 surface like any other. Retention makes it durable on purpose: where one of
 the deployment's active identifier rules names a jurisdiction with a
-registered retention floor, a shorter `audit.store.retention_days` is a boot
+registered retention floor, a shorter `audit.store.retention` is a boot
 error rather than a silent trim. The Netherlands is the one registered floor
 today, at 1830 days.
 

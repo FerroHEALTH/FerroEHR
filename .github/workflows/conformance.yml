@@ -304,7 +304,7 @@ jobs:
         env:
           FERROEHR_IMAGE: ferroehr:conformance
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:conformance
-          FERROEHR__SPEC_PROFILE: stable
+          FERROEHR__DEPLOYMENT__SPEC_PROFILE: stable
           SKIP_BUILD: "1"
         run: bash scripts/conformance.sh up
       # The Basic users of docker/ferroehr.dev.toml and the SMART test issuer
@@ -349,7 +349,7 @@ jobs:
         env:
           FERROEHR_IMAGE: ferroehr:conformance
           FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:conformance
-          FERROEHR__SPEC_PROFILE: development
+          FERROEHR__DEPLOYMENT__SPEC_PROFILE: development
           SKIP_BUILD: "1"
         run: bash scripts/conformance.sh up
       - name: Head the development run's job summary

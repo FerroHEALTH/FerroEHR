@@ -7,7 +7,7 @@
 //! the record-keeping duties that need the professional's identification
 //! (GDPR Art. 6(1)(c)). Only that attribution minimum waits for the national
 //! retention horizon: the name, the binding key and the identifiers. The
-//! contacts serve no attribution, so `[scim] contact_erasure_minutes` after
+//! contacts serve no attribution, so `[auth.scim] contact_erasure_minutes` after
 //! the deletion the `contacts` of every version is removed (GDPR Art.
 //! 5(1)(e), "no longer than is necessary"), at the deletion itself when the
 //! period is zero.

@@ -30,9 +30,9 @@ use ferroehr_server::{Cli, write_report};
 /// A `--set key=value` pair parses into the override list.
 #[test]
 fn set_override_accepts_a_key_value_pair() -> Result<(), clap::Error> {
-    let cli = Cli::try_parse_from(["ferroehr", "--set", "db.max_connections=40"])?;
+    let cli = Cli::try_parse_from(["ferroehr", "--set", "database.max_connections=40"])?;
     assert!(
-        format!("{cli:?}").contains(r#"("db.max_connections", "40")"#),
+        format!("{cli:?}").contains(r#"("database.max_connections", "40")"#),
         "parsed override missing: {cli:?}"
     );
     Ok(())
@@ -45,12 +45,12 @@ fn set_override_is_repeatable_and_ordered() -> Result<(), clap::Error> {
     let cli = Cli::try_parse_from([
         "ferroehr",
         "--set",
-        "db.max_connections=40",
+        "database.max_connections=40",
         "--set",
         "server.listen=0.0.0.0:9000",
     ])?;
     let rendered = format!("{cli:?}");
-    let first = rendered.find(r#"("db.max_connections", "40")"#);
+    let first = rendered.find(r#"("database.max_connections", "40")"#);
     let second = rendered.find(r#"("server.listen", "0.0.0.0:9000")"#);
     assert!(
         matches!((first, second), (Some(a), Some(b)) if a < b),
@@ -63,9 +63,9 @@ fn set_override_is_repeatable_and_ordered() -> Result<(), clap::Error> {
 /// value may itself contain `=` (a DSN query string, a base64 tail).
 #[test]
 fn set_override_splits_on_the_first_equals_and_trims_the_key() -> Result<(), clap::Error> {
-    let cli = Cli::try_parse_from(["ferroehr", "--set", "  db.url =postgres://h/db?a=b"])?;
+    let cli = Cli::try_parse_from(["ferroehr", "--set", "  database.url =postgres://h/db?a=b"])?;
     assert!(
-        format!("{cli:?}").contains(r#"("db.url", "postgres://h/db?a=b")"#),
+        format!("{cli:?}").contains(r#"("database.url", "postgres://h/db?a=b")"#),
         "unexpected split: {cli:?}"
     );
     Ok(())
@@ -74,7 +74,7 @@ fn set_override_splits_on_the_first_equals_and_trims_the_key() -> Result<(), cla
 /// A `--set` argument without `=` is rejected, naming the expected form.
 #[test]
 fn set_override_rejects_a_pair_without_an_equals() {
-    let err = Cli::try_parse_from(["ferroehr", "--set", "db.max_connections"])
+    let err = Cli::try_parse_from(["ferroehr", "--set", "database.max_connections"])
         .expect_err("a bare key must not parse");
     let rendered = err.to_string();
     assert!(
@@ -283,13 +283,13 @@ async fn run_report_writes_a_redacted_file_naming_an_unreachable_database() -> a
     let dir = assert_fs::TempDir::new()?;
     let config = dir.child("ferroehr.toml");
     config.write_str(&format!(
-        "[db]\n\
+        "[database]\n\
          url = \"postgres://reportuser:{DB_PW}@127.0.0.1:1/ferroehr\"\n\
          migrate_url = \"postgres://migrator:{MIGRATE_PW}@127.0.0.1:1/ferroehr\"\n\
          [audit.fhir_feed]\n\
          url = \"https://feed:{FEED_PW}@arr.example/fhir\"\n\
-         [ehr_index]\n\
-         provider = \"local\"\n"
+         [record]\n\
+         subject_index = \"local\"\n"
     ))?;
     let output = dir.child("report.json");
     // Assembled with no environment, so a runner's own `FERROEHR_*` variables
@@ -350,46 +350,40 @@ fn config_check_prints_no_url_userinfo() {
 [auth]
 enabled = false
 
-[db]
+[database]
 url = "postgres://u1:URL_PW_SENTINEL_1@h1:5432/p1"
 
 [telemetry.otlp]
 endpoint = "https://u2:URL_PW_SENTINEL_2@h2:4317/p2"
 
-[multimedia]
-endpoint = "https://u3:URL_PW_SENTINEL_3@h3:8333/p3"
+[record.multimedia]
+url = "https://u3:URL_PW_SENTINEL_3@h3:8333/p3"
 
 [authz.abac.remote]
-server = "https://u4:URL_PW_SENTINEL_4@h4:3001/p4/"
+url = "https://u4:URL_PW_SENTINEL_4@h4:3001/p4/"
 
-[terminology.server]
+[terminology]
 url = "https://u5:URL_PW_SENTINEL_5@h5:443/p5"
-
-[terminology.server.oauth]
-token_endpoint = "https://u6:URL_PW_SENTINEL_6@h6:8443/p6"
-client_id = "client"
-client_secret = "CLIENT_SECRET_SENTINEL"
 
 [privacy]
 subject_namespaces = ["urn:oid:2.999.7.1"]
 
-[ehr_index]
-pixm_url = "https://u7:URL_PW_SENTINEL_7@h7:8443/p7"
+[record]
+subject_index = "pixm"
+
+[pixm]
+url = "https://u7:URL_PW_SENTINEL_7@h7:8443/p7"
 assigning_authority = "urn:oid:2.999.7.1"
 "#,
     );
     assert!(ok, "the configuration checks: {text}");
     assert!(!text.contains("URL_PW_SENTINEL"), "{text}");
-    assert!(!text.contains("CLIENT_SECRET_SENTINEL"), "{text}");
     for (n, port) in [
         (1, 5432),
         (2, 4317),
         (3, 8333),
         (4, 3001),
         (5, 443),
-        // NOTE: WHATWG URL Standard §4.5 (URL serializing) omits a scheme's
-        // default port, so the grant table's URL 6 names a port that stays.
-        (6, 8443),
         (7, 8443),
     ] {
         assert!(
@@ -400,18 +394,29 @@ assigning_authority = "urn:oid:2.999.7.1"
 
     let (ok, text) = config_check(
         r#"
-[auth]
+[[auth.issuer]]
 issuer = "https://u7:URL_PW_SENTINEL_7@idp.example/realms/r"
+kind = "machines"
 audience = ["ferroehr"]
 
-[smart]
+[auth.smart]
 public_base_url = "https://u9:URL_PW_SENTINEL_9@cdr.example"
+
+[terminology]
+url = "https://h5:443/p5"
+
+[terminology.oauth]
+token_endpoint = "https://u6:URL_PW_SENTINEL_6@h6:8443/p6"
+client_id = "client"
+client_secret = "CLIENT_SECRET_SENTINEL"
 "#,
     );
     assert!(!ok, "userinfo in these keys is refused: {text}");
     assert!(!text.contains("URL_PW_SENTINEL"), "{text}");
+    assert!(!text.contains("CLIENT_SECRET_SENTINEL"), "{text}");
+    assert!(text.contains("terminology.oauth.token_endpoint"), "{text}");
     assert!(text.contains("auth.issuer"), "{text}");
-    assert!(text.contains("smart.public_base_url"), "{text}");
+    assert!(text.contains("auth.smart.public_base_url"), "{text}");
 
     // The usage report endpoint is refused when the configuration is read.
     let (ok, text) = config_check(
@@ -500,7 +505,7 @@ fn the_shipped_privacy_default_accepts_this_servers_own_example_composition() {
     }
 }
 
-/// `config check` refuses a `[scim]` the person mapping cannot serve, as
+/// `config check` refuses a `[auth.scim]` the person mapping cannot serve, as
 /// `serve` does, so the chart-boot lane catches it before a pod starts.
 #[test]
 fn config_check_refuses_a_scim_endpoint_without_its_mapping() {
@@ -526,14 +531,13 @@ identifier_type = "guid"
 [authz.party_binding]
 provider = { issuer = "urn:oid:2.999.1", id = "1" }
 
-[ehr_index]
-provider = "local"
+[record]
+subject_index = "local"
 
-[scim]
-enabled = true
+[auth.scim]
 public_base_url = "https://cdr.example.com"
 
-[[scim.client]]
+[[auth.scim.client]]
 issuer = "https://as.example"
 client_id = "entra-provisioning"
 scope = "ferroehr/scim"

@@ -19,7 +19,7 @@ use ferroehr::config::binding::jit::IssuerBinding;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::{IssuerEntry, IssuerKey};
+use ferrohealth_smart::config::IssuerEntry;
 use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::profile::Marker;
 use http::StatusCode;
@@ -162,7 +162,7 @@ async fn user_named(app: &Router, user_name: &str) -> Value {
 /// the email, whose mapping does not set `jit`, is not written.
 #[tokio::test]
 async fn a_first_login_creates_one_provisional_person_and_binds_to_it() {
-    let (_db, pool, _service, app) = jit_app(jit_config()).await;
+    let (_db, pool, _service, app) = Box::pin(jit_app(jit_config())).await;
     let key = "6a1f6c1e-0000-4000-8000-00000000a001";
     let token = login(key, &named());
     let (status, body) = request(&app, &token).await;
@@ -225,7 +225,7 @@ async fn an_attribute_marked_jit_is_written() {
     if let Some(email) = config.party_binding.person.attribute.get_mut(3) {
         email.jit = true;
     }
-    let (_db, _pool, _service, app) = jit_app(config).await;
+    let (_db, _pool, _service, app) = Box::pin(jit_app(config)).await;
     let key = "6a1f6c1e-0000-4000-8000-00000000a002";
     let (status, body) = request(&app, &login(key, &named())).await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -238,7 +238,7 @@ async fn an_attribute_marked_jit_is_written() {
 /// deactivated are each refused, and none creates a `PERSON`.
 #[tokio::test]
 async fn each_case_jit_never_runs_for_is_refused_and_creates_nothing() {
-    let (_db, pool, _service, app) = jit_app(jit_config()).await;
+    let (_db, pool, _service, app) = Box::pin(jit_app(jit_config())).await;
     let mut other_idp = named();
     other_idp["idp"] = json!("https://elsewhere.example/");
     for (key, claims) in [
@@ -288,7 +288,7 @@ async fn each_case_jit_never_runs_for_is_refused_and_creates_nothing() {
 
     let mut off = jit_config();
     off.party_binding.issuer.clear();
-    let (_db, pool, _service, app) = jit_app(off).await;
+    let (_db, pool, _service, app) = Box::pin(jit_app(off)).await;
     let key = "6a1f6c1e-0000-4000-8000-00000000b005";
     let (status, body) = request(&app, &login(key, &named())).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "off by default: {body}");
@@ -301,7 +301,7 @@ async fn each_case_jit_never_runs_for_is_refused_and_creates_nothing() {
 async fn concurrent_first_requests_commit_one_person_and_a_taken_user_name_is_refused() {
     let mut config = jit_config();
     config.party_binding.issuer[0].user_name_claim = Some("login_name".to_owned());
-    let (_db, pool, _service, app) = jit_app(config).await;
+    let (_db, pool, _service, app) = Box::pin(jit_app(config)).await;
     let key = "6a1f6c1e-0000-4000-8000-00000000c001";
     let mut claims = named();
     claims["login_name"] = json!("ajansen");
@@ -328,7 +328,7 @@ async fn concurrent_first_requests_commit_one_person_and_a_taken_user_name_is_re
 /// reports the old ones.
 #[tokio::test]
 async fn scim_completes_a_provisional_person_that_a_later_login_leaves_alone() {
-    let (_db, pool, service, app) = jit_app(jit_config()).await;
+    let (_db, pool, service, app) = Box::pin(jit_app(jit_config())).await;
     let key = "6a1f6c1e-0000-4000-8000-00000000d001";
     let (status, body) = request(&app, &login(key, &named())).await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -417,8 +417,12 @@ const SERVICE_ACCOUNT: &str = "service-account-lab";
 /// and its just-in-time table creating guests when `guests_jit`.
 fn callers_config(guests_jit: bool) -> AppConfig {
     let mut config = jit_config();
-    if let IssuerKey::List(entries) = &mut config.auth.shared.issuer
-        && let Some(persons) = entries.iter_mut().find(|entry| entry.issuer == PERSONS)
+    if let Some(persons) = config
+        .auth
+        .shared
+        .issuer
+        .iter_mut()
+        .find(|entry| entry.issuer == PERSONS)
     {
         persons.guest = Some(vec![Marker::Claim {
             claim: "acct".to_owned(),
@@ -426,7 +430,8 @@ fn callers_config(guests_jit: bool) -> AppConfig {
         }]);
         persons.app_only = Some(vec![Marker::Subjects(vec![SERVICE_ACCOUNT.to_owned()])]);
     }
-    if let IssuerKey::List(entries) = &mut config.auth.shared.issuer {
+    {
+        let entries = &mut config.auth.shared.issuer;
         entries.push(IssuerEntry {
             issuer: PATIENTS.to_owned(),
             kind: Some(IssuerKind::Patients),
@@ -454,7 +459,7 @@ fn callers_config(guests_jit: bool) -> AppConfig {
 /// while `guests_jit` is off.
 #[tokio::test]
 async fn a_patient_a_system_caller_and_a_guest_without_guests_jit_create_nothing() {
-    let (_db, pool, _service, app) = jit_app(callers_config(false)).await;
+    let (_db, pool, _service, app) = Box::pin(jit_app(callers_config(false))).await;
     let exp = jiff::Timestamp::now().as_second() + 3600;
     let patient = common::bearer(&json!({ "iss": PATIENTS, "aud": AUDIENCE, "exp": exp,
         "sub": "6a1f6c1e-0000-4000-8000-00000000e001", "name": "A. Patient",
@@ -492,7 +497,7 @@ async fn a_patient_a_system_caller_and_a_guest_without_guests_jit_create_nothing
 /// provisional `PERSON` and is served bound to it.
 #[tokio::test]
 async fn a_guest_under_guests_jit_is_created() {
-    let (_db, pool, _service, app) = jit_app(callers_config(true)).await;
+    let (_db, pool, _service, app) = Box::pin(jit_app(callers_config(true))).await;
     let key = "6a1f6c1e-0000-4000-8000-00000000e004";
     let mut guest = named();
     guest["acct"] = json!("1");
@@ -506,7 +511,7 @@ async fn a_guest_under_guests_jit_is_created() {
 /// the marker, and a representative login on it is refused.
 #[tokio::test]
 async fn the_provisional_person_carries_the_professional_marker() {
-    let (_db, pool, _service, app) = jit_app(jit_config()).await;
+    let (_db, pool, _service, app) = Box::pin(jit_app(jit_config())).await;
     let key = "6a1f6c1e-0000-4000-8000-00000000e005";
     let (status, body) = request(&app, &login(key, &named())).await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -526,7 +531,7 @@ async fn the_provisional_person_carries_the_professional_marker() {
 /// another key, is refused, and the provisional `PERSON` keeps its key.
 #[tokio::test]
 async fn a_scim_user_taking_a_provisional_user_name_with_another_key_is_refused() {
-    let (_db, pool, _service, app) = jit_app(jit_config()).await;
+    let (_db, pool, _service, app) = Box::pin(jit_app(jit_config())).await;
     let key = "6a1f6c1e-0000-4000-8000-00000000e006";
     let (status, body) = request(&app, &login(key, &named())).await;
     assert_eq!(status, StatusCode::OK, "{body}");

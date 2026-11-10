@@ -160,7 +160,7 @@ pub fn settings() -> Settings {
     state()
         .map(|state| Settings {
             cdr_address: state.config.cdr.base_url.clone(),
-            idle_minutes: state.config.session.idle_timeout_s.div_euclid(60),
+            idle_minutes: state.config.session.idle_timeout.as_secs().div_euclid(60),
             oidc_issuer: state.config.oidc.issuer.clone(),
         })
         .unwrap_or_default()

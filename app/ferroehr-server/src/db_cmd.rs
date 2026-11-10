@@ -17,7 +17,7 @@ use ferroehr::telemetry::{self, build_info::BuildInfo};
 /// These exist so a least-privilege deployment can separate the two database
 /// identities: `migrate` runs under the migrator DSN as a one-shot step
 /// (a Kubernetes Job, an init container, a CI/CD stage), and the server then
-/// boots with `[db].migrate = "verify"` under a DSN with no DDL rights at all.
+/// boots with `[database] migrations = "verify"` under a DSN with no DDL rights at all.
 #[derive(Debug, Subcommand)]
 pub enum DbCmd {
     /// Apply the embedded migrations and exit; the DSN must hold DDL rights.
@@ -52,7 +52,7 @@ pub async fn run(
 ) -> anyhow::Result<()> {
     let config = ferroehr::config::load(config_path, overrides)?;
     config.validate()?;
-    let build_info = BuildInfo::for_profile(config.spec_profile);
+    let build_info = BuildInfo::for_profile(config.deployment.spec_profile);
     let telemetry = telemetry::init(
         &config.telemetry,
         config.management.flame_file.as_deref(),
@@ -61,11 +61,11 @@ pub async fn run(
     .context("initialising telemetry")?;
 
     // Every subcommand reads the schema on the migration DSN
-    // (`[db].migrate_url`, falling back to `[db].url`), which is the
+    // (`[database] migrate_url`, falling back to `[database] url`), which is the
     // credential that can reach every schema when the runtime ones each hold
     // one pseudonymisation domain.
     let outcome = match cmd {
-        DbCmd::Migrate => db::apply_schema(&config.db, &config.storage)
+        DbCmd::Migrate => db::apply_schema(&config.database)
             .await
             .context("applying migrations"),
         DbCmd::Verify => crate::verify_schema_and_isolation(&config).await,

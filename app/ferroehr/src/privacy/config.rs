@@ -127,4 +127,14 @@ pub struct PrivacyConfig {
     pub allow_identified_parties_in_ehr: bool,
     /// `[privacy.identifier_scan]` — the identifier scanner.
     pub identifier_scan: IdentifierScanConfig,
+    /// `[privacy.identifier_protection]` — the national-identifier
+    /// protection of the demographic domain; absent, off.
+    pub identifier_protection:
+        Option<crate::identifier_protection::config::IdentifierProtectionConfig>,
+    /// `[privacy.cohort]` — the cross-domain cohort-query allow-list and
+    /// limits.
+    pub cohort: crate::service::linkage::cohort::config::CohortConfig,
+    /// `[privacy.access_delay]` — the EHDS Art. 3(3) delay of the person's
+    /// own access; absent, off.
+    pub access_delay: Option<crate::config::access_delay::AccessDelayConfig>,
 }

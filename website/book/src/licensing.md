@@ -21,8 +21,8 @@ evaluators and deployers, not legal advice.
 ## Installing a commercial licence
 
 A commercial licence is a signed token file the licensor issues to you. Place
-it where the server can read it and point `[licence] file` (or
-`FERROEHR__LICENCE__FILE`) at it; `GET /management/status` then
+it where the server can read it and point `[deployment] file` (or
+`FERROEHR__DEPLOYMENT__LICENCE_FILE`) at it; `GET /management/status` then
 reports `licence.use = "commercial"` with your organisation as `licensee`. Without a
 token the same field reports the `non-commercial` grant every build embeds.
 The server behaves identically under either; identifiers it mints carry a

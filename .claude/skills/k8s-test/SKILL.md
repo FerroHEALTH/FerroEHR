@@ -77,7 +77,7 @@ output.
      | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/rendered.toml
    docker run --rm -v /tmp/rendered.toml:/etc/ferroehr/ferroehr.toml:ro \
      -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml \
-     -e FERROEHR__DB__URL=postgres://u:p@db:5432/ferroehr \
+     -e FERROEHR__DATABASE__URL=postgres://u:p@db:5432/ferroehr \
      --entrypoint /usr/local/bin/ferroehr ghcr.io/ferrohealth/ferroehr:3.17.3 config check
    # 3.17.3, 2026-08-06: `unknown configuration key statement_timeout_ms` (default
    # overlay) and `limits` (all-features) — i.e. the chart on main currently
@@ -199,7 +199,7 @@ kubectl -n ferroehr-test wait --for=condition=Ready pod \
 ```
 
 That manifest also creates the `ferroehr-db` Secret holding
-`FERROEHR__DB__URL`, which is what `database.existingSecret` points at.
+`FERROEHR__DATABASE__URL`, which is what `database.existingSecret` points at.
 
 ## 3. Install
 
@@ -304,7 +304,7 @@ kubectl -n ferroehr-test get configmap,secret
 kubectl -n ferroehr-test get configmap -o yaml | grep -c argon2id     # 0
 # the DSN is a PATH in the env, never a value:
 kubectl -n ferroehr-test get pod $P -o jsonpath='{range .spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}'
-#   FERROEHR__DB__URL_FILE=/etc/ferroehr-secrets/db.url
+#   FERROEHR__DATABASE__URL_FILE=/etc/ferroehr-secrets/db.url
 kubectl -n ferroehr-test get pod $P -o jsonpath='{.spec.volumes}'     # projected: the operator's Secret + the chart's
 ```
 

@@ -45,7 +45,7 @@ what you query and what you read back.
   `development` (Reference Model 1.2.0 with BASE 1.3.0, the default) or
   `stable` (the latest *released* generations, Reference Model 1.1.0 with
   BASE 1.2.0). See
-  [`spec_profile`](installation/configuration.md#spec_profile).
+  [`spec_profile`](installation/configuration.md#deploymentspec_profile).
 - **One self-contained binary.** No JVM, no language runtime, and a pure-Rust
   TLS stack, so there is nothing to provision beside PostgreSQL. The container
   image is shell-less and runs as non-root.

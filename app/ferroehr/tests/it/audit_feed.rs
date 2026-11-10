@@ -24,19 +24,20 @@ fn config(arr_url: &str) -> AuditConfig {
         enabled: true,
         store: StoreConfig {
             enabled: true,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
-        fhir_feed: FhirFeedConfig {
-            enabled: true,
+        fhir_feed: Some(FhirFeedConfig {
             url: ferrohealth_secret::secret_url::SecretUrl::new(arr_url),
-            poll_interval_ms: 100,
-            retry_max_ms: 500,
-            oauth: None,
-        },
+            poll_interval: ferrohealth_config::units::Duration::from_millis(100),
+            retry: ferroehr::system_log::config::SinkRetry {
+                max_backoff: ferrohealth_config::units::Duration::from_millis(500),
+            },
+            ..FhirFeedConfig::default()
+        }),
         ..AuditConfig::default()
     }
 }
@@ -209,12 +210,13 @@ async fn the_feed_authenticates_with_a_client_credentials_token() {
         .await;
 
     let mut cfg = config(&format!("{}/fhir", arr.uri()));
-    cfg.fhir_feed.oauth = Some(ferrohealth_smart::config::credentials::OauthSection {
-        token_endpoint: format!("{}/token", auth.uri()),
-        client_id: "ferroehr-feed".to_owned(),
-        client_secret: Some(secrecy::SecretString::from("s3cret")),
-        ..Default::default()
-    });
+    cfg.fhir_feed.as_mut().expect("the feed").oauth =
+        Some(ferrohealth_smart::config::credentials::OauthSection {
+            token_endpoint: format!("{}/token", auth.uri()),
+            client_id: "ferroehr-feed".to_owned(),
+            client_secret: Some(secrecy::SecretString::from("s3cret")),
+            ..Default::default()
+        });
     let (sender, handle) = sender::start(cfg, None, Some(pool.clone()))
         .await
         .expect("start");
@@ -242,7 +244,7 @@ async fn the_feed_authenticates_with_a_client_credentials_token() {
 /// The store with no FHIR Feed configured: the records it writes.
 fn store_only() -> AuditConfig {
     let mut config = config("http://127.0.0.1:9/fhir");
-    config.fhir_feed.enabled = false;
+    config.fhir_feed = None;
     config
 }
 

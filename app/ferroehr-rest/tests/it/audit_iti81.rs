@@ -61,7 +61,7 @@ fn authz(enabled: bool) -> Option<Arc<AuthzHandle>> {
         content_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
         content: Arc::default(),
     };
-    AuthzHandle::build(&cfg, &rest_config().rest.base_path, None, resolvers).map(Arc::new)
+    AuthzHandle::build(&cfg, &rest_config().api.base_path, None, resolvers).map(Arc::new)
 }
 
 fn basic(name: &str) -> String {

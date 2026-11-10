@@ -16,8 +16,8 @@
 //! identity cross-reference "could be located on different machines" (BASE
 //! `architecture_overview/master07-security.adoc` §Anonymity).
 //!
-//! So each domain carries its own `[storage.<domain>]` DSN, defaulting to the
-//! shared `[db].url`. The default is the co-located deployment, unchanged: one
+//! So each domain carries its own `[database.<domain>]` DSN, defaulting to the
+//! shared `[database] url`. The default is the co-located deployment, unchanged: one
 //! database, three schemas, the reciprocal grants and the boot gate
 //! ([`crate::db::verify_domain_isolation`]). A regulated deployment moves a
 //! domain to its own database or cluster by editing one URL.
@@ -55,7 +55,7 @@ impl Domain {
     /// Every domain, in the order their migration sets apply.
     pub const ALL: [Self; 3] = [Self::Clinical, Self::Party, Self::Audit];
 
-    /// The configuration token, the `[storage.<domain>]` table name, and the
+    /// The configuration token, the `[database.<domain>]` table name, and the
     /// `PostgreSQL` schema this domain owns, which the migration set and the
     /// `search_path` are built from.
     #[must_use]
@@ -146,15 +146,16 @@ impl std::fmt::Display for Domain {
     }
 }
 
-/// One domain's connection settings — the `[storage.<domain>]` table.
+/// One domain's connection settings: the `[database.<domain>]` table.
 ///
-/// Both keys are unset by default, which is what makes the co-located
+/// Every key is unset by default, which is what makes the co-located
 /// deployment the zero-configuration one: the domain then connects on the
-/// shared `[db].url`.
+/// shared `[database] url`, and its database is prepared on `[database]
+/// migrate_url`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct DomainDsn {
-    /// This domain's `PostgreSQL` DSN. Unset reuses `[db].url`.
+    /// This domain's `PostgreSQL` DSN. Unset reuses `[database] url`.
     ///
     /// Credentials are redacted from every rendering ([`SecretUrl`]).
     pub url: Option<SecretUrl>,
@@ -164,81 +165,30 @@ pub struct DomainDsn {
     /// through `/proc/<pid>/environ` and inherited by every child process.
     /// Setting both is a boot error.
     pub url_file: Option<PathBuf>,
+    /// The credential that prepares the database this domain lives in when
+    /// that is not the database `[database] migrate_url` reaches.
+    ///
+    /// `[database] migrate_url` names ONE database. A domain relocated to
+    /// another one is prepared there, and its runtime DSN is the wrong
+    /// credential for that: under the separated posture it is a DML-only role
+    /// that can neither issue the DDL `apply` runs nor read the `ext`
+    /// bookkeeping `verify` compares. Unset, the relocated domain's database
+    /// is prepared on the domain's runtime DSN, which is what a single-role
+    /// sandbox runs. No openEHR spec governs migration mechanics or database
+    /// roles — our own design/extension.
+    pub migrate_url: Option<SecretUrl>,
+    /// Path to a file holding [`Self::migrate_url`], read at boot in place of
+    /// it. Setting both is a boot error.
+    pub migrate_url_file: Option<PathBuf>,
 }
 
-/// The `[storage.migrate]` section: per domain, the credential that prepares
-/// the database the domain lives in when that is not the database
-/// `[db].migrate_url` reaches.
-///
-/// `[db].migrate_url` names ONE database. A domain relocated to another one
-/// is prepared there, and its runtime DSN is the wrong credential for that:
-/// under the separated posture it is a DML-only role that can neither issue
-/// the DDL `apply` runs nor read the `ext` bookkeeping `verify` compares. Each
-/// key here names that database's migration credential instead; unset, the
-/// relocated domain's database is prepared on the domain's runtime DSN, which
-/// is what a single-role sandbox runs. No openEHR spec governs migration
-/// mechanics or database roles — our own design/extension.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct MigrateDsns {
-    /// `[storage.migrate.clinical]` — prepares the clinical domain's database.
-    pub clinical: DomainDsn,
-    /// `[storage.migrate.party]` — prepares the party domain's database.
-    pub party: DomainDsn,
-    /// `[storage.migrate.audit]` — prepares the audit domain's database.
-    pub audit: DomainDsn,
-}
-
-impl MigrateDsns {
-    /// One domain's migration credential settings.
-    #[must_use]
-    pub const fn domain(&self, domain: Domain) -> &DomainDsn {
-        match domain {
-            Domain::Clinical => &self.clinical,
-            Domain::Party => &self.party,
-            Domain::Audit => &self.audit,
-        }
-    }
-
-    /// One domain's migration credential settings, mutably — the loader's seam
-    /// for resolving `url_file` into `url`.
-    pub const fn domain_mut(&mut self, domain: Domain) -> &mut DomainDsn {
-        match domain {
-            Domain::Clinical => &mut self.clinical,
-            Domain::Party => &mut self.party,
-            Domain::Audit => &mut self.audit,
-        }
-    }
-}
-
-/// The `[storage]` section: one DSN per domain, and per domain the credential
-/// that prepares a relocated domain's database.
-///
-/// Every field defaults to unset, so a configuration file that names no
-/// `[storage]` table at all runs the three domains on `[db].url` — the compose
-/// quickstart and every existing configuration, unchanged.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct StorageConfig {
-    /// `[storage.clinical]` — the clinical record's DSN.
-    pub clinical: DomainDsn,
-    /// `[storage.party]` — the identities' DSN.
-    pub party: DomainDsn,
-    /// `[storage.audit]` — the audit repository's DSN.
-    pub audit: DomainDsn,
-    /// `[storage.migrate.<domain>]` — the migration credential of a relocated
-    /// domain's database.
-    pub migrate: MigrateDsns,
-}
-
-impl StorageConfig {
+impl DbConfig {
     /// The migration credential configured for the database `domain` lives
-    /// in, when `[storage.migrate.<domain>].url` names one.
+    /// in, when `[database.<domain>] migrate_url` names one.
     #[must_use]
-    pub fn migrate_dsn(&self, domain: Domain) -> Option<&str> {
-        self.migrate
-            .domain(domain)
-            .url
+    pub fn domain_migrate_dsn(&self, domain: Domain) -> Option<&str> {
+        self.domain(domain)
+            .migrate_url
             .as_ref()
             .map(SecretUrl::expose)
     }
@@ -264,13 +214,13 @@ impl StorageConfig {
     }
 
     /// The DSN a domain connects on: its own when the deployment named one,
-    /// the shared `[db].url` otherwise.
+    /// the shared `[database] url` otherwise.
     #[must_use]
-    pub fn dsn<'a>(&'a self, domain: Domain, db: &'a DbConfig) -> &'a str {
+    pub fn dsn(&self, domain: Domain) -> &str {
         self.domain(domain)
             .url
             .as_ref()
-            .map_or_else(|| db.url.expose(), SecretUrl::expose)
+            .map_or_else(|| self.url.expose(), SecretUrl::expose)
     }
 
     /// Whether this domain connects on a DSN of its own rather than the shared
@@ -290,8 +240,8 @@ impl StorageConfig {
     /// not a pseudonymisation domain, and requiring a fourth credential for it
     /// would make the check say something other than what it means.
     #[must_use]
-    pub fn pseudonymisation_domains_are_separated(&self, db: &DbConfig) -> bool {
-        let layout = self.layout(db);
+    pub fn pseudonymisation_domains_are_separated(&self) -> bool {
+        let layout = self.layout();
         !layout
             .placement(Domain::Clinical)
             .shares_dsn_with(layout.placement(Domain::Party))
@@ -300,10 +250,10 @@ impl StorageConfig {
     /// The resolved layout: which DSN each domain connects on, and which
     /// domains share one.
     #[must_use]
-    pub fn layout(&self, db: &DbConfig) -> DomainLayout {
+    pub fn layout(&self) -> DomainLayout {
         let place = |domain: Domain| DomainPlacement {
             domain,
-            dsn: self.dsn(domain, db).to_owned(),
+            dsn: self.dsn(domain).to_owned(),
             separated: self.is_separated(domain),
         };
         DomainLayout {
@@ -323,7 +273,7 @@ pub struct DomainPlacement {
     /// The DSN it connects on, shared or its own. Never rendered: it carries a
     /// credential.
     dsn: String,
-    /// Whether `[storage.<domain>].url` named this DSN, rather than `[db].url`.
+    /// Whether `[database.<domain>] url` named this DSN, rather than `[database] url`.
     pub separated: bool,
 }
 
@@ -410,11 +360,14 @@ impl DomainLayout {
                 .is_some_and(|domain| self.placement(*domain).separated);
             out.push_str("\n  - ");
             out.push_str(&names.join(", "));
-            out.push_str(if separated {
-                ": its own [storage] DSN"
-            } else {
-                ": [db].url"
-            });
+            match group.domains.first() {
+                Some(domain) if separated => {
+                    out.push_str(": its own [database.");
+                    out.push_str(domain.as_str());
+                    out.push_str("] DSN");
+                }
+                _ => out.push_str(": [database] url"),
+            }
             if group.domains.len() > 1 {
                 out.push_str(" (one connection, shared)");
             }
@@ -444,7 +397,7 @@ impl DomainGroup<'_> {
 /// The three connection pools the server runs on, one per storage domain.
 ///
 /// They differ in `search_path` always, and in credential when the deployment
-/// gives a domain its own `[storage.<domain>].url`. Holding them in one value
+/// gives a domain its own `[database.<domain>] url`. Holding them in one value
 /// is what makes "no statement joins two domains" structural: a caller reaches
 /// for a domain, never for a connection.
 #[derive(Debug, Clone)]
@@ -513,7 +466,7 @@ mod tests {
 
     #[test]
     fn the_default_layout_places_every_domain_on_the_shared_dsn() {
-        let layout = StorageConfig::default().layout(&DbConfig::default());
+        let layout = DbConfig::default().layout();
         let groups = layout.groups();
         assert_eq!(groups.len(), 1, "{groups:?}");
         assert_eq!(groups[0].domains, Domain::ALL);
@@ -524,51 +477,48 @@ mod tests {
 
     #[test]
     fn a_relocated_domain_is_its_own_group() {
-        let storage = StorageConfig {
+        let storage = DbConfig {
             party: DomainDsn {
                 url: Some(SecretUrl::new("postgres://p@party-host/party")),
-                url_file: None,
+                ..DomainDsn::default()
             },
-            ..StorageConfig::default()
+            ..DbConfig::default()
         };
-        let layout = storage.layout(&DbConfig::default());
+        let layout = storage.layout();
         let groups = layout.groups();
         assert_eq!(groups.len(), 2, "{groups:?}");
         assert_eq!(groups[0].domains, vec![Domain::Clinical, Domain::Audit]);
         assert_eq!(groups[1].domains, vec![Domain::Party]);
         assert!(layout.placement(Domain::Party).separated);
         assert!(
-            layout.describe().contains("its own [storage] DSN"),
+            layout.describe().contains("its own [database.party] DSN"),
             "{}",
             layout.describe()
         );
     }
 
-    /// The linkage domain is gone (#4684): a configuration that still names it
-    /// is refused like any unknown key, never run without the separation it
+    /// The linkage domain is gone (#4684): a configuration that names it is
+    /// refused like any unknown key, never run without the separation it
     /// asked for.
     #[test]
-    fn the_retired_linkage_storage_keys_are_refused() {
-        for body in [
-            "[storage.linkage]\nurl = \"postgres://u:p@h:5432/d\"\n",
-            "[storage.migrate.linkage]\nurl = \"postgres://u:p@h:5432/d\"\n",
-        ] {
-            let err =
-                toml::from_str::<crate::config::FerroEhrConfig>(body).expect_err("an unknown key");
-            assert!(err.to_string().contains("linkage"), "{body}: {err}");
-        }
+    fn a_linkage_domain_is_refused() {
+        let err = toml::from_str::<crate::config::FerroEhrConfig>(
+            "[database.linkage]\nurl = \"postgres://u:p@h:5432/d\"\n",
+        )
+        .expect_err("an unknown key");
+        assert!(err.to_string().contains("linkage"), "{err}");
     }
 
     #[test]
     fn the_layout_description_never_carries_a_dsn() {
-        let storage = StorageConfig {
+        let storage = DbConfig {
             party: DomainDsn {
                 url: Some(SecretUrl::new("postgres://secret:pw@host/party")),
-                url_file: None,
+                ..DomainDsn::default()
             },
-            ..StorageConfig::default()
+            ..DbConfig::default()
         };
-        let described = storage.layout(&DbConfig::default()).describe();
+        let described = storage.layout().describe();
         assert!(!described.contains("pw"), "{described}");
         assert!(!described.contains("postgres://"), "{described}");
     }

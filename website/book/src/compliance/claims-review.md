@@ -66,7 +66,7 @@ Read on the tree after commit `d6539d470`, before FerroEHR 4.3.5.
 | 3 | README, licence paragraph and "Security & operations" | "Multi-tenancy \[…\] fully integrated: each tenant is an isolated logical openEHR system, enforced by PostgreSQL row-level security" | (a) | FerroEHR is single-tenant, with no tenant column, row policy or tenancy configuration ([one instance, one organisation](../security.md#one-instance-one-organisation)) | "One instance per organisation: FerroEHR is single-tenant \[…\]"; multi-tenancy removed from the feature list |
 | 4 | README, "Security & operations" | national identifiers "sealed under a per-tenant key" | (a), (b) | there are no tenants, and the sealing is off by default | "sealed under a key the deployment holds \[…\] (off by default)" |
 | 5 | README, "Security & operations" | "IHE ATNA-compliant system log (DICOM audit messages over TLS syslog)" | (a), (b) | "compliant" claims a property nobody assessed; the syslog sink is off by default and ships with UDP; the default sink is the local hash-chained store | the access log, its two renderings, the local store and the optional forwarding, described as they ship |
-| 6 | README, "Security & operations" | "Hardened by default" | (b) | TLS is off by default, and the shipped `deployment_profile` is `sandbox`, which must not hold real patient data | "Hardening built in", with both limitations stated |
+| 6 | README, "Security & operations" | "Hardened by default" | (b) | TLS is off by default, and the shipped `deployment.profile` is `sandbox`, which must not hold real patient data | "Hardening built in", with both limitations stated |
 | 7 | README, "Integration" | the FHIR R4B connectors, with no limitation | (b) | the in-tree connector was removed in favour of FerroBRIDGE in v4.3.6 (#3080) | the removal is stated |
 | 8 | Landing page, title, `og:` and `twitter:` descriptions, structured data | "Spec-compliant and measured", "spec-conformant and measured" | (a) | states conformity as a property; what exists is a measured openEHR conformance record | "openEHR conformance, measured" |
 | 9 | Landing page, hero note | "every compliance claim machine-verified" | (a) | as row 1 | "every conformance number machine-verified" |
@@ -111,7 +111,7 @@ Read on the tree after commit `d6539d470`, before FerroEHR 4.3.5.
   helm-docs generates from it) says "hardened-by-default security posture"
   and lists the workload hardening, which is accurate, but does not say that
   a stock install runs the `sandbox` profile. The chart now declares
-  `config.deployment_profile: sandbox` in its values, and the chart README
+  `config.deployment.profile: sandbox` in its values, and the chart README
   says so under "Before you install"; the `Chart.yaml` description still does
   not.
 
@@ -127,7 +127,7 @@ text in scope.
 | # | Text | Claim | Art. 28 | Finding | Now reads |
 |---|---|---|---|---|---|
 | 1 | Landing page, "Fits your stack" | "FHIR R4B" | (a) | FerroEHR maps no FHIR resources; it reaches FHIR R4B terminology servers and renders its access log as FHIR R4 `AuditEvent` | "FHIR R4B terminology" |
-| 2 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), [CRA user information](cra-user-information.md), [configuration](../installation/configuration.md#deployment_profile), [go-live checklist](../security/go-live-checklist.md) | an accepted deployment gap is stated "on `GET /ferroehr/rest/status`" | (a) | the gaps moved to the authenticated `GET /management/status` (#3671); the public status document carries the profile only | "on `GET /management/status`" |
+| 2 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), [CRA user information](cra-user-information.md), [configuration](../installation/configuration.md#deploymentprofile), [go-live checklist](../security/go-live-checklist.md) | an accepted deployment gap is stated "on `GET /ferroehr/rest/status`" | (a) | the gaps moved to the authenticated `GET /management/status` (#3671); the public status document carries the profile only | "on `GET /management/status`" |
 | 3 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the deployment profile | the list of what `production` refuses | (b) | omitted the plaintext audit feed and the plaintext object store (#3676, #3689) | both named |
 | 4 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), limitations | none on FHIR | (b) | an operator of an earlier release may rely on the removed connector | FerroEHR maps no FHIR resources, and `[fhir]` is refused at boot |
 | 5 | Book, [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), (e) | the standards table | (b) | omitted the FHIR terminology operations and RFC 9470, which this release uses | both listed |
@@ -166,11 +166,11 @@ re-checked on every page, and eleven pages still named the public document.
 
 | # | Text | Claim | Art. 28 | Finding | Now reads |
 |---|---|---|---|---|---|
-| 1 | Book, [licensing](../licensing.md), [security](../security.md), [go-live checklist](../security/go-live-checklist.md) (two items), [Kubernetes](../installation/kubernetes.md), [authentication configuration](../installation/config-auth.md) (two places), [Compose](../installation/compose.md) (two places), [installation](../installation/index.md), [configuration](../installation/configuration.md#deployment_profile), [command line](../installation/config-cli.md), [DPIA](../security/dpia.md) R9, [compliance overview](index.md) (GDPR Art. 25, DSV Art. 4) | an open or accepted deployment gap, or the licence in force, is reported on `GET /ferroehr/rest/status` (or `/rest/status`) | (a) | the public document carries `status`, the versions, the timestamp and the profile only; the gaps, the licence and the support period are on `GET /management/status` (#3671) | "on `GET /management/status`"; the configuration page adds that the public document carries the profile only |
+| 1 | Book, [licensing](../licensing.md), [security](../security.md), [go-live checklist](../security/go-live-checklist.md) (two items), [Kubernetes](../installation/kubernetes.md), [authentication configuration](../installation/config-auth.md) (two places), [Compose](../installation/compose.md) (two places), [installation](../installation/index.md), [configuration](../installation/configuration.md#deploymentprofile), [command line](../installation/config-cli.md), [DPIA](../security/dpia.md) R9, [compliance overview](index.md) (GDPR Art. 25, DSV Art. 4) | an open or accepted deployment gap, or the licence in force, is reported on `GET /ferroehr/rest/status` (or `/rest/status`) | (a) | the public document carries `status`, the versions, the timestamp and the profile only; the gaps, the licence and the support period are on `GET /management/status` (#3671) | "on `GET /management/status`"; the configuration page adds that the public document carries the profile only |
 | 2 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the deployment profile | the list of what `production` refuses | (b) | omitted the role gate off while authentication is on, the `rbac_off` gap this release adds (#3742) | named |
 | 3 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), limitations | none on how AQL reads repeated nodes | (b) | AQL 1.1.0 does not define the rows of a path through a repeated node; this release changed them (#3733), so another server, or a client written for an earlier release, may count differently | the limitation is stated, with the regrouping a client needs |
 | 4 | Book, [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), limitations | none on the audit chain's coverage | (b) | records written before the upgrade keep digest version 1, which leaves out the columns added after the chain was introduced (#3686) | stated, with the columns and the trigger that alone protects them |
-| 5 | Book, [configuration](../installation/configuration.md#deployment_profile), `migrate_on_runtime_credential` | a domain relocated to its own database "is prepared on that domain's runtime DSN" | (a) | `[storage.migrate.<domain>] url` now prepares it on its own migration credential (#3756); only without it does the runtime DSN prepare it and open the gap | both cases stated |
+| 5 | Book, [configuration](../installation/configuration.md#deploymentprofile), `migrate_on_runtime_credential` | a domain relocated to its own database "is prepared on that domain's runtime DSN" | (a) | `[database.<domain>]` migrate_url` now prepares it on its own migration credential (#3756); only without it does the runtime DSN prepare it and open the gap | both cases stated |
 | 6 | Book, [records of processing](../security/records-of-processing.md), categories of personal data | clinical content "in the `ehr` schema"; parties "in the `demographic` schema" | (a) | the schemas are `clinical` and `party` since the storage rewrite | `clinical` and `party` |
 | 7 | Book, [Kubernetes](../installation/kubernetes.md), server TLS | the viewer's OIDC client "trusts the public roots it is built with", so a private-CA issuer is not trusted | (a) | the viewer's OIDC client verifies against the platform trust store (#3767) | a private-CA issuer is trusted once its CA is in the store or under `SSL_CERT_DIR` |
 | 8 | Book, [querying with AQL](../querying-aql.md), the URL form | how a parameter value binds | (b) | silent on a quoted value, which now binds the JSON string it denotes (#3781) | the quoted form and the malformed case stated |
@@ -408,7 +408,7 @@ accepted by name.
   restriction the organisation decides on, not one the software imposes
   ([retention, restriction and objection](retention.md)).
 - **Small-cell suppression.** A cohort query that would serve fewer distinct
-  EHRs than `cohort.small_cell_threshold` (default 5) withholds its rows and
+  EHRs than `privacy.cohort.small_cell_threshold` (default 5) withholds its rows and
   says so. It applies only to population queries across the pseudonymisation
   boundary, and the deployment sets the threshold.
 - **Rate limits and the admission limit.** On by default, set above the
@@ -455,7 +455,7 @@ Read on the tree after commit `e5aa1902b`, for FerroEHR 5.2.0. The facts of this
 release checked in every text in scope: authentication runs on
 `ferrohealth-smart` 0.3.1, with `[auth.basic] cache_ttl_seconds` in place of
 `[authz] basic_cache_ttl_seconds`, `scopeless_subjects` accepted and a
-malformed bearer token answered `401` (#3875); `[smart] issuer_metadata_file`
+malformed bearer token answered `401` (#3875); `[auth.smart] issuer_metadata_file`
 (#3875); the EHDS Art. 8 restriction of access with its emergency override
 (#3682); the audited read of a party's protected identifiers (#3776); an EHR
 extract never carries a sealed identifier (#3777); the FLAT history origin from
@@ -567,7 +567,7 @@ Nothing.
 
 Read on the tree after commit `9fdd36091`, for FerroEHR 5.4.1. The facts of this
 release checked in every text in scope: the CDR asks one terminology server
-under `[terminology.server]` through `ferrobridge-term`, and chart 14.0.0 wires
+under `[terminology]` through `ferrobridge-term`, and chart 14.0.0 wires
 it (#3085); an unserved method is `405` with `Allow` under SMART (#3987);
 the conformance statement declares `unmatched-member-refused` (#3988); a ROLE
 template whose single attributes state `0..*` uploads, and a demographic
@@ -577,7 +577,7 @@ templates only where they work (#3997); the nine `openehr-*` crates at `0.0.98`.
 ### Changed on 2026-10-24, for 5.4.1
 
 - **The compliance index** (SGB V § 355 row) named `[terminology.external]`
-  and "the terminology route"; it now names `[terminology.server]` and its
+  and "the terminology route"; it now names `[terminology]` and its
   `url`.
 - **The crates page** pinned the `openehr-*` crates at `0.0.97`; this release
   publishes `0.0.98`.
@@ -587,7 +587,7 @@ templates only where they work (#3997); the nine `openehr-*` crates at `0.0.98`.
 - **The terminology statements**: the
   [integrations configuration](../installation/config-integrations.md), the
   [Kubernetes installation](../installation/kubernetes.md) and the chart README
-  describe the one `[terminology.server]` and `secrets.terminologyClientSecret`,
+  describe the one `[terminology]` and `secrets.terminologyClientSecret`,
   as the code and the chart do.
 - **The template statements**: the
   [templates page](../templates-validation.md) and
@@ -747,7 +747,7 @@ accesses through the map FerroEHR ships (#4298); chart 20.0.1-rc1 with
 Read on the tree after commit `40982f374`, for the FerroEHR release candidate
 5.6.0-rc2; 5.6.0-rc1 was tagged at `61d5d1ff7` and not published. The review of
 2026-10-28 stands for everything 5.6.0-rc1 carried. The facts added since and
-checked in every text in scope: the `[origins]` register stamps a direct commit
+checked in every text in scope: the `[[authz.origin]]` register stamps a direct commit
 from a registered client with that client's origin, a retention period may be
 keyed on a registered origin, and the ABAC request carries `category` and
 `origin` attributes (#4299); a client CA under `client_auth = "none"` is
@@ -769,13 +769,13 @@ record's FHIR rendering carries the BALP `entity:data` slice (#4353); chart
 
 - **The retention and access pages**: [retention](retention.md), the
   [audit configuration](../installation/config-audit.md) and
-  [security](../security.md) describe the `[origins]` register, the
+  [security](../security.md) describe the `[[authz.origin]]` register, the
   origin-keyed retention policy and the two ABAC attributes as the code
   implements them.
 - **The installation pins**: the [Kubernetes installation](../installation/kubernetes.md),
   the chart README and [verifying releases](../verifying-releases.md) name chart
   21.0.0-rc2 and image 5.6.0-rc2 in the book of main, and the Kubernetes page
-  sets `config.deployment_profile` in its install example (#4294).
+  sets `config.deployment.profile` in its install example (#4294).
 - **The TLS and performance pages**: [the server configuration](../installation/config-server.md)
   says `client_ca_file` is refused under `client_auth = "none"`, and
   [logging performance](logging-performance.md) states the claims
@@ -943,7 +943,7 @@ Read on the tree after commit `df911334d`, for the FerroEHR release candidate
 the CONTRIBUTION commit reads the body through the released `NewContribution`
 schema and refuses the shapes it does not define with `400` (#3595, #4543);
 the EHDS Art. 3(3) delay of the person's own access, off by default under
-`[access_delay]` (#4351); the EHDS Art. 5 mark of what a person inserts and the
+`[privacy.access_delay]` (#4351); the EHDS Art. 5 mark of what a person inserts and the
 `403` on their change of a professional's version (#4350); the ADL 2
 validation fixes (#4505, #4513, #4522, #4529, #4536, #4540, #4567); the FLAT
 and STRUCTURED reads under an ADL 2 template (#4551, #4559); the node header
@@ -1060,7 +1060,7 @@ versions (#4565); the response texts without the Service Model vocabulary
 Read on the tree after commit `97265816d`, for the FerroEHR release candidate
 5.6.0-rc8. The facts added since 5.6.0-rc7 and checked in every text in scope:
 the published Veredictum 0.4.0 record of a released-profile run against
-FerroEHR on `spec_profile = "stable"` with no failed and no errored row, the
+FerroEHR on `deployment.spec_profile = "stable"` with no failed and no errored row, the
 Veredictum 0.1.6 documents removed, and the released-profile verdict required
 in the merge queue and the release (#4451, #4455, #4771); `conformance_profile` derived from that record (#4672); the read-only
 ADL 1.4 to ADL 2 conversion routes (#4655); a template upload that answers
@@ -1095,7 +1095,7 @@ in a stable-profile canonical-JSON party read (#4775); chart 21.0.0-rc8 with
   #4684 there are two, the clinical and the demographic.
 - **[Conformance](../conformance.md)**: the page said the instrument judges
   FerroEHR on its default `development` profile. Since #4775 the released run
-  judges it on `spec_profile = "stable"`, as the workflow sets; the page now
+  judges it on `deployment.spec_profile = "stable"`, as the workflow sets; the page now
   names the profile of each run.
 
 ### Read and kept on 2026-11-02, for 5.6.0-rc8
@@ -1220,7 +1220,7 @@ read on every route as RFC 7240 §2 defines it (#4722); chart
 ### Read and kept on 2026-11-02, for 5.6.0-rc10
 
 - **The configuration, integrations, administration API, audit and privacy
-  pages** describe `[outbox] readers`, the feed's scope and its access
+  pages** describe `[record.change_feed] readers`, the feed's scope and its access
   records, and the change-events page the removed `[events]`,
   `secrets.eventsUrl` and `plaintext_broker`, which the server refuses at
   boot.
@@ -1257,7 +1257,7 @@ pre-check, and an Art. 10(2) override export recorded (#4864, #4869, #4872,
 #4870); the viewer's sign-in through `ferrohealth-session`, its absolute
 session lifetime and session watch, and its CDR requests confined to the
 configured CDR (#4873, #3057, #4223, #4954); a version equal to its predecessor
-stored once, and `[versioning] skip_identical_resend` (#4415); storage
+stored once, and `[record.versioning] record.versioning.idempotent_resend` (#4415); storage
 generation 5 (#4904); the family pins, FerroTERM 0.4.1, FerroPIX 0.0.15 and
 FerroBRIDGE 0.0.19 by digest, and the newest family crates (#4933, #4981, #4968); the
 conformance record of Veredictum 0.4.1 (#4971); chart 21.0.0 with `appVersion`

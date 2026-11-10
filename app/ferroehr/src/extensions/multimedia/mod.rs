@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[multimedia]` config section + the feature-gated glue onto the
+//! The `[record.multimedia]` config section + the feature-gated glue onto the
 //! extension crate's externalization engine.
 //!
 //! **No openEHR spec governs this — our own design/extension.** The engine,
@@ -16,8 +16,8 @@ use crate::extensions::multimedia::config::MultimediaConfig;
 
 /// Builds the externalization engine from configuration.
 ///
-/// The engine is built whenever a store is REACHABLE — `multimedia.enabled`,
-/// or an explicit `endpoint` — and `enabled` then governs only whether NEW
+/// The engine is built whenever a store is REACHABLE — `record.multimedia.enabled`,
+/// or an explicit `url` — and `enabled` then governs only whether NEW
 /// content is externalized. Switching the integration off therefore stops
 /// offloading without stranding the blobs already offloaded: a stored record
 /// referencing one is clinical content this server put there, and a read that
@@ -41,7 +41,7 @@ pub fn engine_from_config(
     Option<ferroehr_ext::multimedia::MultimediaEngine>,
     ferroehr_ext::multimedia::MultimediaError,
 > {
-    if !cfg.enabled && cfg.endpoint.is_none() {
+    if !cfg.enabled && cfg.url.is_none() {
         return Ok(None);
     }
     let params = ferroehr_ext::multimedia::store::BlobStoreParams {
@@ -55,9 +55,16 @@ pub fn engine_from_config(
             .secret_access_key
             .as_ref()
             .map(|s| secrecy::SecretString::from(s.expose().to_owned())),
-        allow_http: cfg.allow_http,
+        allow_http: cfg.allows_http(),
     };
-    ferroehr_ext::multimedia::MultimediaEngine::from_params(params, cfg.threshold_bytes)
+    let threshold = usize::try_from(cfg.threshold.bytes()).map_err(|error| {
+        ferroehr_ext::multimedia::MultimediaError::Config(format!(
+            "record.multimedia.threshold = \"{}\" is larger than this platform can address: \
+             {error}",
+            cfg.threshold
+        ))
+    })?;
+    ferroehr_ext::multimedia::MultimediaEngine::from_params(params, threshold)
         .map(|engine| Some(engine.with_offload_enabled(cfg.enabled)))
 }
 
@@ -66,12 +73,12 @@ pub fn engine_from_config(
 /// never a silent ignore.
 ///
 /// # Errors
-/// The refusal message when `multimedia.enabled` is set.
+/// The refusal message when `record.multimedia.enabled` is set.
 #[cfg(not(feature = "multimedia"))]
 pub fn require_disabled(cfg: &MultimediaConfig) -> Result<(), String> {
     if cfg.enabled {
         return Err(
-            "multimedia.enabled = true, but this binary was built without the \
+            "record.multimedia.enabled = true, but this binary was built without the \
              `multimedia` cargo feature"
                 .to_owned(),
         );

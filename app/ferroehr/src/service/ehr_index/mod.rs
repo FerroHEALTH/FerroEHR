@@ -47,8 +47,8 @@ pub enum IndexError {
 
 /// What a service without an EHR index provider answers.
 const UNCONFIGURED: &str = "no EHR index provider is installed: configure an IHE patient \
-    identity source ([ehr_index] pixm_url and assigning_authority) or opt in to provider = \
-    \"local\"";
+    identity source (record.subject_index = \"pixm\" with a [pixm] url and \
+    assigning_authority) or opt in to record.subject_index = \"local\"";
 
 /// What a failed identity source answers.
 const SOURCE_FAILED: &str = "the IHE patient identity source failed";

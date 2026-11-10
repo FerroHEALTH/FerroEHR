@@ -54,13 +54,13 @@ flowchart LR
 
 ## Naming the readers
 
-The feed is off until you name a reader. The keys live under `[outbox]`:
+The feed is off until you name a reader. The keys live under `[record.change_feed]`:
 
 | Key | Environment variable | Default | Meaning |
 |---|---|---|---|
-| `readers` | `FERROEHR__OUTBOX__READERS` | `[]` | the readers of the feed, each matching `^[a-z][a-z0-9-]{0,62}$` |
-| `retention_days` | `FERROEHR__OUTBOX__RETENTION_DAYS` | `7` | how long an acknowledged row is kept after its commit |
-| `prune_interval_secs` | `FERROEHR__OUTBOX__PRUNE_INTERVAL_SECS` | `3600` | how often the prune runs |
+| `readers` | `FERROEHR__RECORD__CHANGE_FEED__READERS` | `[]` | the readers of the feed, each matching `^[a-z][a-z0-9-]{0,62}$` |
+| `retention` | `FERROEHR__RECORD__CHANGE_FEED__RETENTION` | `"7d"` | how long an acknowledged row is kept after its commit |
+| `prune_interval` | `FERROEHR__RECORD__CHANGE_FEED__PRUNE_INTERVAL` | `"1h"` | how often the prune runs |
 
 With no reader named, no commit writes an outbox row. At every boot the server
 registers each named reader and marks every reader the list no longer names
@@ -68,7 +68,7 @@ inactive. An inactive reader keeps its cursor, so naming it again resumes where
 it stopped, and it holds the prune back no longer.
 
 ```toml
-[outbox]
+[record.change_feed]
 readers = ["ferrobridge"]
 ```
 
@@ -170,12 +170,12 @@ Earlier releases of FerroEHR published to RabbitMQ themselves, under
 gone. To keep the events flowing to the same broker through FerroBRIDGE 0.0.15
 or later:
 
-1. Name FerroBRIDGE's reader in `[outbox] readers` and give its client the
+1. Name FerroBRIDGE's reader in `[record.change_feed] readers` and give its client the
    `__ferroehr.outbox` scope.
 2. Configure FerroBRIDGE's events lane with the broker URL, the exchange and
    the queues your subscriptions used to declare.
 3. Remove `[events]` from FerroEHR's configuration, `secrets.eventsUrl` from the
-   chart values, and `plaintext_broker` from `deployment_accepts`: the server
+   chart values, and `plaintext_broker` from `deployment.accepts`: the server
    refuses to start on any of them.
 
 A new reader starts at cursor `0`, so FerroBRIDGE delivers every row still in

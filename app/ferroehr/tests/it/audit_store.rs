@@ -288,7 +288,7 @@ async fn reap_deletes_only_rows_past_the_horizon() {
     assert_eq!(remaining, 1);
 }
 
-/// A horizon in calendar years (`retention_years`, #3625) reaps what is older
+/// A horizon in calendar years (`retention = "PnY"`, #3625) reaps what is older
 /// than the same calendar date that many years ago, and keeps the chain
 /// verifiable across the reaped span.
 #[tokio::test]
@@ -853,7 +853,7 @@ fn classifying_policy() -> RenderPolicy {
         purpose_codes = ["TREAT", "ETREAT"]
         emergency_purpose_codes = ["ETREAT"]
         [store]
-        retention_years = 10
+        retention = "P10Y"
         [categories.templates]
         "Lab Report" = ["Laboratory-Reports"]
         "#,

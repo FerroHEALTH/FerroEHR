@@ -4,7 +4,7 @@
 //! [`FhirTerminologyProvider`], the terminology calls answered against the one
 //! FHIR R4B terminology server through the published `ferrobridge-term` client.
 //!
-//! The one terminology server (`[terminology.server]`) is what the routing
+//! The one terminology server (`[terminology]`) is what the routing
 //! layer (`super::routing`) asks for every terminology the in-process
 //! `openehr-term` bundle (`super::bundle`) does not carry. BASE
 //! `architecture_overview/master12-terminology.adoc` models this backend as an
@@ -39,7 +39,7 @@
 //! or `$validate-code result=false`) is an unknown-entity refusal
 //! ([`ServiceError::NotFound`]) and a transport fault is a curated
 //! [`ServiceError::Fault`]; the fail-open choice belongs to the caller
-//! ([`config::TerminologyServerConfig::fail_on_error`](super::config::TerminologyServerConfig::fail_on_error)).
+//! ([`config::TerminologyServerConfig::on_error`](super::config::TerminologyServerConfig::on_error)).
 
 use std::collections::BTreeMap;
 
@@ -54,7 +54,7 @@ use super::config::TerminologyServerConfig;
 /// The refusal of the client-credentials grant, naming the configuration key
 /// it sits under.
 #[cfg(feature = "fhir")]
-const GRANT_REFUSED: &str = "terminology.server.oauth: the grant is refused";
+const GRANT_REFUSED: &str = "terminology.oauth: the grant is refused";
 
 /// The `Term_relationship.relation_name` under which a FHIR `$expand`
 /// parent→child `contains` nesting is preserved.
@@ -84,7 +84,7 @@ pub struct FhirTerminologyProvider {
     /// record.
     endpoint: String,
     /// Whether a binding this server cannot resolve refuses the composition
-    /// ([`TerminologyServerConfig::fail_on_error`]).
+    /// ([`TerminologyServerConfig::on_error`]).
     fail_on_error: bool,
 }
 
@@ -121,7 +121,7 @@ pub enum TermExistence {
 }
 
 impl FhirTerminologyProvider {
-    /// Build the client from `[terminology.server]`, with the
+    /// Build the client from `[terminology]`, with the
     /// client-credentials token source attached when `oauth` is set.
     ///
     /// # Errors
@@ -141,14 +141,14 @@ impl FhirTerminologyProvider {
         // refused loudly rather than silently ignored.
         #[cfg(not(feature = "fhir"))]
         return Err(ServiceError::fault(
-            "terminology.server is enabled, but this binary was built without the `fhir` cargo \
+            "[terminology] is configured, but this binary was built without the `fhir` cargo \
              feature (the in-process bundle remains the terminology)",
         ));
         #[cfg(feature = "fhir")]
         Ok(Self {
             wire: wire::connect(cfg)?,
             endpoint: cfg.url.redacted(),
-            fail_on_error: cfg.fail_on_error,
+            fail_on_error: cfg.refuses_on_error(),
         })
     }
 
@@ -442,7 +442,6 @@ impl Expansion {
 #[cfg(feature = "fhir")]
 mod wire {
     use std::sync::Arc;
-    use std::time::Duration;
 
     use ferrobridge_term::client::Client;
     use ferrobridge_term::config::{Config, Credentials, RetryPolicy, WireVersion};
@@ -473,23 +472,21 @@ mod wire {
     pub(super) fn connect(cfg: &TerminologyServerConfig) -> Result<Client, ServiceError> {
         let raw = cfg.url.expose().trim();
         if raw.is_empty() {
-            return Err(ServiceError::fault(
-                "terminology.server.url must not be empty",
-            ));
+            return Err(ServiceError::fault("terminology.url must not be empty"));
         }
         let base = url::Url::parse(raw)
-            .map_err(|e| ServiceError::fault_caused("terminology.server.url is not a URL", e))?;
+            .map_err(|e| ServiceError::fault_caused("terminology.url is not a URL", e))?;
         // NOTE: no openEHR spec governs retrying — our own design: one attempt,
-        // so `request_timeout_ms` bounds the whole call on the commit path.
+        // so `timeout` bounds the whole call on the commit path.
         let mut config = Config::new(base, WireVersion::R4B)
-            .with_timeout(Duration::from_millis(cfg.request_timeout_ms))
+            .with_timeout(cfg.timeout.get())
             .with_retry(RetryPolicy {
                 max_attempts: 1,
                 ..RetryPolicy::default()
             });
         if let Some(oauth) = &cfg.oauth {
             let grant = oauth
-                .resolve()
+                .resolve_with_tls(&ferrohealth_smart::config::ServerTls)
                 .map_err(|e| ServiceError::fault_caused(GRANT_REFUSED, e))?;
             let source = TokenSource::new(grant)
                 .map_err(|e| ServiceError::fault_caused(GRANT_REFUSED, e))?;
@@ -755,7 +752,6 @@ mod tests {
     #[test]
     fn empty_url_rejected() {
         let cfg = TerminologyServerConfig {
-            enabled: true,
             url: ferrohealth_secret::secret_url::SecretUrl::new("  "),
             ..TerminologyServerConfig::default()
         };

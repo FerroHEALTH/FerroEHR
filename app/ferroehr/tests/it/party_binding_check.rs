@@ -252,7 +252,7 @@ fn input() -> CheckInput {
         key_types: BTreeMap::from([(LOGIN.to_owned(), "guid".to_owned())]),
         scim_clients: vec![(MACHINES.to_owned(), CLIENT.to_owned())],
         migrations: vec![MIGRATION.to_owned()],
-        provisional_report_days: 30,
+        provisional_report_after: ferrohealth_config::units::Duration::from_days(30),
         today: ferroehr::support::today_utc().to_string(),
         ..CheckInput::default()
     }
@@ -289,7 +289,7 @@ async fn the_check_reports_every_category_and_writes_nothing() {
         issuer: LOGIN.to_owned(),
         key: ADMIN_KEY.to_uppercase(),
     }];
-    input.provisional_report_days = 0;
+    input.provisional_report_after = ferrohealth_config::units::Duration::ZERO;
     input.basic_users = vec![
         BasicUser {
             user: "ferroehr".to_owned(),
@@ -500,7 +500,7 @@ async fn a_key_just_in_time_creation_introduced_passes_on_a_jit_issuer() {
     );
     input.jit_issuers = vec![JIT_ISSUER.to_owned()];
     assert_eq!(verdict(&svc, &input).await, Some(Origin::Jit));
-    input.provisional_report_days = 0;
+    input.provisional_report_after = ferrohealth_config::units::Duration::ZERO;
     let report = svc.check_binding(&input).await.expect("the check runs");
     let table = report.side_table.expect("no duplicate stands");
     assert_eq!(table.provisional.len(), 1, "{table:?}");

@@ -69,7 +69,7 @@ impl Authenticator {
     /// and key set are read here, so an authorization server that cannot be
     /// reached refuses the start rather than the first request.
     ///
-    /// `[smart] issuer_metadata_file` is the metadata of the issuer it names,
+    /// `[auth.smart] issuer_metadata_file` is the metadata of the issuer it names,
     /// whose key set is a `jwks_file`, so its discovery document can name a
     /// `token_endpoint`. The SMART discovery document describes the first
     /// introspected issuer, else the issuer the metadata file names, else the
@@ -120,7 +120,7 @@ impl Authenticator {
                 primary.get_or_insert_with(|| Primary::Introspection(Arc::clone(&introspector)));
                 issuers = issuers.with_introspector(introspector);
             }
-            let mut supplied = match config.smart.issuer_metadata_file.as_deref() {
+            let mut supplied = match config.auth.smart.issuer_metadata_file.as_deref() {
                 Some(path) => Some(issuer::issuer_metadata(path).await?),
                 None => None,
             };
@@ -135,7 +135,7 @@ impl Authenticator {
                 if let Some(metadata) = supplied.take_if(|_| named) {
                     server = server.with_metadata(metadata).map_err(|e| {
                         format!(
-                            "smart.issuer_metadata_file does not fit the [auth] issuer \
+                            "auth.smart.issuer_metadata_file does not fit the [auth] issuer \
                              {issuer}: {}",
                             ferroehr::error::ErrorChain::new(&e)
                         )
@@ -150,7 +150,7 @@ impl Authenticator {
             }
             if let Some(metadata) = supplied {
                 return Err(format!(
-                    "smart.issuer_metadata_file names the issuer {}, which is no [auth] issuer",
+                    "auth.smart.issuer_metadata_file names the issuer {}, which is no [auth] issuer",
                     metadata.issuer
                 ));
             }
@@ -189,11 +189,11 @@ impl Authenticator {
     }
 }
 
-/// Returns what `[smart]` honours for a caller: a `backend_clients` client
+/// Returns what `[auth.smart]` honours for a caller: a `backend_clients` client
 /// and a `patient_issuers` issuer.
 fn honoured(config: &AppConfig) -> impl Fn(&Caller) -> Honoured + Send + Sync + 'static {
-    let backend = config.smart.backend_clients.clone();
-    let patient = config.smart.patient_issuers.clone();
+    let backend = config.auth.smart.backend_clients.clone();
+    let patient = config.auth.smart.patient_issuers.clone();
     move |caller| Honoured {
         backend: caller
             .client_id()
@@ -205,7 +205,7 @@ fn honoured(config: &AppConfig) -> impl Fn(&Caller) -> Honoured + Send + Sync + 
 }
 
 /// The JWT issuer the SMART discovery document describes: the one
-/// `[smart] issuer_metadata_file` names, else the first whose metadata was
+/// `[auth.smart] issuer_metadata_file` names, else the first whose metadata was
 /// read from it, else the first. No specification governs the choice: our
 /// own design.
 #[derive(Debug, Default)]

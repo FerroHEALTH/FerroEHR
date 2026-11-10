@@ -50,7 +50,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), and only from the networkPolicy.ingressFrom peers.
   labels:
-    helm.sh/chart: ferroehr-23.3.1
+    helm.sh/chart: ferroehr-24.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -103,7 +103,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-23.3.1
+    helm.sh/chart: ferroehr-24.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -138,7 +138,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-23.3.1
+    helm.sh/chart: ferroehr-24.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -211,7 +211,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-23.3.1
+    helm.sh/chart: ferroehr-24.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -228,12 +228,12 @@ data:
   # a float64; `ferroehr.integers` turns each whole number back into an integer,
   # since the server refuses a TOML float on an integer key.
   ferroehr.toml: |
-    deployment_accepts = ["plaintext_listener"]
-    deployment_profile = "production"
-    spec_profile = "development"
-    
-    [admin]
-      enabled = false
+    [api]
+      admin = false
+      base_path = "/ferroehr/rest/openehr/v1"
+      body_limit = "16MiB"
+      openapi_ui = "private"
+      terminology = false
     
     [audit]
       enabled = true
@@ -243,7 +243,6 @@ data:
         [audit.categories.templates]
       [audit.store]
         enabled = true
-        retention_days = 0
     
     [auth]
       enabled = true
@@ -293,21 +292,17 @@ data:
         enabled = true
         role_issuers = ["https://idp.example.com/realms/ferroehr"]
     
-    [db]
-      acquire_timeout_secs = 30
+    [database]
+      acquire_timeout = "30s"
       max_connections = 10
-      migrate = "verify"
+      migrations = "verify"
       min_connections = 0
-      statement_timeout_ms = 60000
+      statement_timeout = "1min"
     
-    [ehr_index]
-      assigning_authority = "urn:oid:2.999.7.1"
-      pixm_url = "http://ferroehr-ferropix.ferroehr.svc:8080/fhir"
-      provider = "ihe"
-      [ehr_index.oauth]
-        client_id = "ferroehr"
-        scope = "system/Patient.rs"
-        token_endpoint = "https://idp.example.com/realms/pix/protocol/openid-connect/token"
+    [deployment]
+      accepts = ["plaintext_listener"]
+      profile = "production"
+      spec_profile = "development"
     
     [management]
       base_path = "/management"
@@ -320,23 +315,27 @@ data:
         metrics = "off"
         prometheus = "off"
     
-    [multimedia]
-      allow_http = false
-      bucket = "openehr-multimedia"
-      enabled = false
-      region = "us-east-1"
+    [pixm]
+      assigning_authority = "urn:oid:2.999.7.1"
+      url = "http://ferroehr-ferropix.ferroehr.svc:8080/fhir"
+      [pixm.oauth]
+        client_id = "ferroehr"
+        scope = "system/Patient.rs"
+        token_endpoint = "https://idp.example.com/realms/pix/protocol/openid-connect/token"
     
     [privacy]
       subject_namespaces = ["urn:oid:2.999.7.1"]
     
-    [rest]
-      base_path = "/ferroehr/rest/openehr/v1"
-      body_limit_bytes = 16777216
-      cors_permissive = false
-      swagger_ui = "private"
-    
-    [scim]
-      enabled = false
+    [record]
+      subject_index = "pixm"
+      [record.multimedia]
+        bucket = "openehr-multimedia"
+        enabled = false
+        region = "us-east-1"
+      [record.signing]
+        enabled = true
+        mode = "digest"
+        verify_on_read = "strict"
     
     [server]
       max_concurrent_requests = 256
@@ -344,16 +343,8 @@ data:
         burst = 2048
         requests_per_second = 1024
     
-    [signing]
-      enabled = true
-      mode = "digest"
-      verify_on_read = "strict"
-    
     [telemetry]
       format = "json"
-    
-    [terminology]
-      api_enabled = false
     
     [usage_report]
       deployment = "helm"
@@ -391,7 +382,7 @@ kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-23.3.1
+    helm.sh/chart: ferroehr-24.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -544,7 +535,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-23.3.1
+    helm.sh/chart: ferroehr-24.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -569,7 +560,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: e897268c8f96ebb9f27c38762e1a63b231fc523d83bda76a7479c13e954bc77d
+        checksum/config: 26fc6319aa37ea3b9f8fa978f0bf4e12e1ed0e056f6841cb509cb14cf1c8c0b2
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr
@@ -624,19 +615,19 @@ spec:
             # none, so the mounted ferroehr.toml is named here.
             - name: FERROEHR_CONFIG
               value: /etc/ferroehr/ferroehr.toml
-            - name: FERROEHR__DB__URL_FILE
+            - name: FERROEHR__DATABASE__URL_FILE
               value: "/etc/ferroehr-secrets/db.url"
-            - name: FERROEHR__STORAGE__PARTY__URL_FILE
+            - name: FERROEHR__DATABASE__PARTY__URL_FILE
               value: "/etc/ferroehr-secrets/storage.party.url"
-            - name: FERROEHR__STORAGE__MIGRATE__PARTY__URL_FILE
+            - name: FERROEHR__DATABASE__PARTY__MIGRATE_URL_FILE
               value: "/etc/ferroehr-secrets/storage.migrate.party.url"
-            - name: FERROEHR__STORAGE__AUDIT__URL_FILE
+            - name: FERROEHR__DATABASE__AUDIT__URL_FILE
               value: "/etc/ferroehr-secrets/storage.audit.url"
-            - name: FERROEHR__STORAGE__MIGRATE__AUDIT__URL_FILE
+            - name: FERROEHR__DATABASE__AUDIT__MIGRATE_URL_FILE
               value: "/etc/ferroehr-secrets/storage.migrate.audit.url"
-            - name: FERROEHR__DB__MIGRATE_URL_FILE
+            - name: FERROEHR__DATABASE__MIGRATE_URL_FILE
               value: "/etc/ferroehr-secrets/db.migrate_url"
-            - name: FERROEHR__EHR_INDEX__OAUTH__CLIENT_SECRET
+            - name: FERROEHR__PIXM__OAUTH__CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   key: client-secret
@@ -703,7 +694,7 @@ spec:
             # Same 0440 as the secrets volume, for the same reason: this volume
             # is not only ferroehr.toml. Every `config.files` entry lands here,
             # and that key's documented use includes the PGP signing PRIVATE key
-            # (signing.key_path), mutual-TLS PEMs and a JWKS blob; when the
+            # (record.signing.key_file), mutual-TLS PEMs and a JWKS blob; when the
             # configuration holds a secret the chart cannot route out of it,
             # ferroehr.toml itself arrives from a Secret too. Without a mode the
             # projection defaults to 0644 — world-readable inside the container.
@@ -728,39 +719,39 @@ spec:
             # (https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
             defaultMode: 0440
             sources:
-              # The operator's Secret, projected as the file FERROEHR__DB__URL_FILE
+              # The operator's Secret, projected as the file FERROEHR__DATABASE__URL_FILE
               # points at. Its key name is theirs (database.existingSecretKey);
               # only the mounted PATH is fixed.
               - secret:
                   name: ferroehr-db-clinical
                   items:
-                    - key: FERROEHR__DB__URL
+                    - key: FERROEHR__DATABASE__URL
                       path: db.url
               # One storage domain's own Secret, a different credential from the
               # shared DSN above and projected as its own file.
               - secret:
                   name: ferroehr-db-party
                   items:
-                    - key: FERROEHR__STORAGE__PARTY__URL
+                    - key: FERROEHR__DATABASE__PARTY__URL
                       path: storage.party.url
               # The migration credential of the database this domain lives in.
               - secret:
                   name: ferroehr-db-party-migrate
                   items:
-                    - key: FERROEHR__STORAGE__MIGRATE__PARTY__URL
+                    - key: FERROEHR__DATABASE__PARTY__MIGRATE_URL
                       path: storage.migrate.party.url
               # One storage domain's own Secret, a different credential from the
               # shared DSN above and projected as its own file.
               - secret:
                   name: ferroehr-db-audit
                   items:
-                    - key: FERROEHR__STORAGE__AUDIT__URL
+                    - key: FERROEHR__DATABASE__AUDIT__URL
                       path: storage.audit.url
               # The migration credential of the database this domain lives in.
               - secret:
                   name: ferroehr-db-audit-migrate
                   items:
-                    - key: FERROEHR__STORAGE__MIGRATE__AUDIT__URL
+                    - key: FERROEHR__DATABASE__AUDIT__MIGRATE_URL
                       path: storage.migrate.audit.url
               # The schema-preparation Secret — usually the same credential the
               # migration Job carries, which is why it is a third source rather
@@ -768,7 +759,7 @@ spec:
               - secret:
                   name: ferroehr-db-migrate
                   items:
-                    - key: FERROEHR__DB__MIGRATE_URL
+                    - key: FERROEHR__DATABASE__MIGRATE_URL
                       path: db.migrate_url
         - name: db-ca
           configMap:
@@ -795,7 +786,7 @@ kind: Ingress
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-23.3.1
+    helm.sh/chart: ferroehr-24.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -854,7 +845,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr-migrate
   labels:
-    helm.sh/chart: ferroehr-23.3.1
+    helm.sh/chart: ferroehr-24.0.0
     app.kubernetes.io/name: ferroehr-migration
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -873,7 +864,7 @@ kind: Job
 metadata:
   name: ferroehr-migrate
   labels:
-    helm.sh/chart: ferroehr-23.3.1
+    helm.sh/chart: ferroehr-24.0.0
     app.kubernetes.io/name: ferroehr-migration
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.3"
@@ -898,7 +889,7 @@ spec:
   template:
     metadata:
       labels:
-        helm.sh/chart: ferroehr-23.3.1
+        helm.sh/chart: ferroehr-24.0.0
         app.kubernetes.io/name: ferroehr-migration
         app.kubernetes.io/instance: ferroehr
         app.kubernetes.io/version: "5.6.3"
@@ -943,18 +934,18 @@ spec:
             # The migrator DSN, as a mounted file rather than an environment
             # value (readable through /proc/<pid>/environ and inherited by every
             # child process — OWASP Kubernetes Security Cheat Sheet).
-            - name: FERROEHR__DB__URL_FILE
+            - name: FERROEHR__DATABASE__URL_FILE
               value: "/etc/ferroehr-secrets/db.url"
             # The migrator of the database this domain lives in: the Job applies
             # the schema in every database the configuration places a domain in.
-            - name: FERROEHR__STORAGE__MIGRATE__PARTY__URL_FILE
+            - name: FERROEHR__DATABASE__PARTY__MIGRATE_URL_FILE
               value: "/etc/ferroehr-secrets/storage.migrate.party.url"
             # The migrator of the database this domain lives in: the Job applies
             # the schema in every database the configuration places a domain in.
-            - name: FERROEHR__STORAGE__MIGRATE__AUDIT__URL_FILE
+            - name: FERROEHR__DATABASE__AUDIT__MIGRATE_URL_FILE
               value: "/etc/ferroehr-secrets/storage.migrate.audit.url"
             # This pod's job IS the DDL, whatever the server's posture is.
-            - name: FERROEHR__DB__MIGRATE
+            - name: FERROEHR__DATABASE__MIGRATIONS
               value: apply
           volumeMounts:
             - name: tmp
@@ -977,17 +968,17 @@ spec:
               - secret:
                   name: ferroehr-db-migrate
                   items:
-                    - key: FERROEHR__DB__MIGRATE_URL
+                    - key: FERROEHR__DATABASE__MIGRATE_URL
                       path: db.url
               - secret:
                   name: ferroehr-db-party-migrate
                   items:
-                    - key: FERROEHR__STORAGE__MIGRATE__PARTY__URL
+                    - key: FERROEHR__DATABASE__PARTY__MIGRATE_URL
                       path: storage.migrate.party.url
               - secret:
                   name: ferroehr-db-audit-migrate
                   items:
-                    - key: FERROEHR__STORAGE__MIGRATE__AUDIT__URL
+                    - key: FERROEHR__DATABASE__AUDIT__MIGRATE_URL
                       path: storage.migrate.audit.url
         - name: db-ca
           configMap:

@@ -6,12 +6,12 @@
 //! No openEHR ITS-REST operation governs this route. The
 //! RM models an identifier as a plain `DV_IDENTIFIER` (RM `data_types`
 //! `UML/classes/org.openehr.rm.data_types.dv_identifier.adoc`) and says nothing
-//! about protecting its value; `[demographic.identifier_protection]` seals the
+//! about protecting its value; `[privacy.identifier_protection]` seals the
 //! national identifiers of the configured schemes, and this route is the one
 //! supported way to see one again (#3776).
 //!
 //! Gating: mounted under `/admin/`, so the route inherits the group's RBAC
-//! Admin class (`401`/`403`) and the `AppConfig::admin.enabled` config gate
+//! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
 //! (`405` with an empty `Allow` when off). Beside that it needs its own
 //! permission, `[authz.rbac] identifier_reader_role`, so holding the admin role
 //! alone reveals no national identifier. Every read writes an access record

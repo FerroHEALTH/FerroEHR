@@ -27,7 +27,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::body::Body;
-use ferroehr::config::rest::RestConfig;
+use ferroehr::config::rest::ApiConfig;
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
@@ -46,8 +46,8 @@ const EHR_ID: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 fn rest_config(auth_enabled: bool) -> AppConfig {
     let mut config = AppConfig {
         server: common::server(),
-        rest: RestConfig {
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
+        api: ApiConfig {
+            openapi_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
         ..Default::default()
@@ -593,7 +593,7 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
     authz.rbac.admin_role = "SUPERADMIN".to_owned();
     let handle = ferroehr_rest::extensions::access::authz::AuthzHandle::build(
         &authz,
-        &config.rest.base_path,
+        &config.api.base_path,
         None,
         common::null_resolvers(),
     )

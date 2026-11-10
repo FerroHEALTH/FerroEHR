@@ -20,7 +20,7 @@
 //! separate endpoints: the bundle provider maps an unknown terminology, term or
 //! value set to `versioned_object_does_not_exist`.
 //!
-//! The group is config-gated (`AppConfig::terminology_api_enabled`, default
+//! The group is config-gated (`api.terminology`, default
 //! `false`), answering `404` on every route when disabled.
 
 #![expect(
@@ -70,7 +70,7 @@ guarded_handler! {
     /// (`GET /terminology`).
     ///
     /// Body: `{"terminology_ids": [..]}`. Config-gated: `404` when
-    /// `terminology_api_enabled` is off (the route stays mounted but the backend is
+    /// `api.terminology` is off (the route stays mounted but the backend is
     /// never consulted).
     ///
     /// OUR OWN EXTENSION — no openEHR spec governs this wire shape: no ITS-REST
@@ -80,7 +80,7 @@ guarded_handler! {
         get, path = "/terminology", tag = "terminology",
         responses(
             (status = 200, description = "The known terminology ids.", body = serde_json::Value),
-            (status = 404, description = "The terminology extension is disabled (`terminology_api_enabled` off). With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
+            (status = 404, description = "The terminology extension is disabled (`api.terminology` off). With authentication enabled, an unauthenticated request to a disabled group is answered `401` first (the group gate sits behind authentication).", body = serde_json::Value)
         )
     )]
     terminology_ids => |state, parts| async move {
@@ -213,7 +213,7 @@ guarded_handler! {
 /// # Errors
 /// The `404` while the extension is disabled.
 fn enabled(state: &AppState) -> Result<(), RestError> {
-    if state.config().terminology_api_enabled {
+    if state.config().api.terminology {
         return Ok(());
     }
     Err(RestError::from(ApiError::NotFound(

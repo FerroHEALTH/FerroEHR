@@ -21,7 +21,7 @@ async fn small_pool(url: &str) -> PgPool {
     let mut config = DbConfig::new(url);
     config.max_connections = 2;
     config.min_connections = 0;
-    ferroehr::db::connect(&config)
+    ferroehr::db::connect_domain(&config, ferroehr::db::domain::Domain::Clinical)
         .await
         .expect("the pool connects")
 }

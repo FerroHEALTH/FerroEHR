@@ -93,20 +93,19 @@ refuse the expansion. Do not read externalized records with a slim binary.
 
 ## Enabling it
 
-Offload is off by default. The keys live under `[multimedia]`; the full table with
+Offload is off by default. The keys live under `[record.multimedia]`; the full table with
 every default and its meaning is on
-[Integrations](../installation/config-integrations.md#multimedia). The essentials:
+[Integrations](../installation/config-integrations.md#recordmultimedia). The essentials:
 
 | Environment variable | Default | Meaning |
 |---|---|---|
-| `FERROEHR__MULTIMEDIA__ENABLED` | `false` | master switch |
-| `FERROEHR__MULTIMEDIA__THRESHOLD_BYTES` | `262144` (256 KiB) | offload blobs larger than this; smaller stay inline |
-| `FERROEHR__MULTIMEDIA__ENDPOINT` | unset | S3 endpoint URL; unset uses default AWS endpoint resolution |
-| `FERROEHR__MULTIMEDIA__BUCKET` | `openehr-multimedia` | target bucket |
-| `FERROEHR__MULTIMEDIA__REGION` | `us-east-1` | S3 region, required even for non-AWS endpoints |
-| `FERROEHR__MULTIMEDIA__ACCESS_KEY_ID` | unset | access key id |
-| `FERROEHR__MULTIMEDIA__SECRET_ACCESS_KEY` | unset | secret key (or `…__SECRET_ACCESS_KEY_FILE` for a mounted secret) |
-| `FERROEHR__MULTIMEDIA__ALLOW_HTTP` | `false` | permit plain-HTTP endpoints, development only |
+| `FERROEHR__RECORD__MULTIMEDIA__ENABLED` | `false` | master switch |
+| `FERROEHR__RECORD__MULTIMEDIA__THRESHOLD` | `262144` (256 KiB) | offload blobs larger than this; smaller stay inline |
+| `FERROEHR__RECORD__MULTIMEDIA__URL` | unset | S3 endpoint URL; unset uses default AWS endpoint resolution |
+| `FERROEHR__RECORD__MULTIMEDIA__BUCKET` | `openehr-multimedia` | target bucket |
+| `FERROEHR__RECORD__MULTIMEDIA__REGION` | `us-east-1` | S3 region, required even for non-AWS endpoints |
+| `FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID` | unset | access key id |
+| `FERROEHR__RECORD__MULTIMEDIA__SECRET_ACCESS_KEY` | unset | secret key (or `…__SECRET_ACCESS_KEY_FILE` for a mounted secret) |
 
 With both the access key and the secret unset, the client runs unsigned
 (anonymous), the mode a local development SeaweedFS gateway accepts with no
@@ -128,14 +127,14 @@ still act on it, rather than at the first multimedia commit.
 
 > [!WARNING]
 > Offloaded blobs are PHI. In production the bucket must be private, encrypted,
-> and reached over HTTPS (`FERROEHR__MULTIMEDIA__ALLOW_HTTP=false`). Prefer
+> and reached over HTTPS (an `https://` `url`). Prefer
 > instance or workload identity over static keys where your platform supports it.
 > See [Operations](../operations.md) for the deployment-side security posture.
 
 > [!NOTE]
 > Externalization is also a **cargo feature** (`multimedia`), on in the published
 > images and any default build. A slim `--no-default-features` build contains none
-> of the object-store code and **refuses to boot** with `multimedia.enabled = true`
+> of the object-store code and **refuses to boot** with `record.multimedia.enabled = true`
 > rather than silently storing every blob inline; see
 > [From source → Build features](../installation/from-source.md#build-features).
 
@@ -152,7 +151,7 @@ config:
     enabled: true
     endpoint: https://s3.example.com
     bucket: openehr-multimedia
-    threshold_bytes: 262144
+    threshold: 262144
 secrets:
   multimediaAccessKeyId: "AKIA…"
   multimediaSecretAccessKey: "…"
@@ -160,7 +159,7 @@ secrets:
 
 **Before you enable it:** the bucket must exist (nothing in the chart creates it)
 and, if the chart's default-deny egress policy is on, an egress rule must admit
-the endpoint. **To turn it off**, set `config.multimedia.enabled: false` and leave
+the endpoint. **To turn it off**, set `config.record.multimedia.enabled: false` and leave
 the `endpoint` in place so already-externalized content stays readable (see
 [Turning it back off](#turning-it-back-off)).
 
@@ -187,14 +186,13 @@ run yourself.
 **Step 2, point the server at the gateway** and allow plain HTTP for local use:
 
 ```bash
-export FERROEHR__MULTIMEDIA__ENABLED=true
-export FERROEHR__MULTIMEDIA__ENDPOINT=http://127.0.0.1:8333
-export FERROEHR__MULTIMEDIA__BUCKET=openehr-multimedia
-export FERROEHR__MULTIMEDIA__ALLOW_HTTP=true
+export FERROEHR__RECORD__MULTIMEDIA__ENABLED=true
+export FERROEHR__RECORD__MULTIMEDIA__URL=http://127.0.0.1:8333
+export FERROEHR__RECORD__MULTIMEDIA__BUCKET=openehr-multimedia
 ```
 
 The same exports drive the Compose stack, which passes the whole
-`FERROEHR__MULTIMEDIA__*` set through from your shell; only the endpoint changes,
+`FERROEHR__RECORD__MULTIMEDIA__*` set through from your shell; only the endpoint changes,
 to the in-network hostname `http://seaweedfs:8333`.
 
 **Step 3, check what the server actually took.** `/management/env` reports the
@@ -217,7 +215,7 @@ the database.
 
 > [!NOTE]
 > Base64 inflates a blob by about a third on the wire, and the whole request body
-> is still subject to the request-body limit (`rest.body_limit_bytes` on the
-> clinical surface, `server.body_limit_bytes` everywhere); a
+> is still subject to the request-body limit (`api.body_limit` on the
+> clinical surface, `server.body_limit` everywhere); a
 > composition that exceeds it is refused `413` before offload is ever considered.
 > See [`[server]`](../installation/config-server.md#server).

@@ -129,7 +129,7 @@ up() { # <image> <pg-image>
   local -a process=(--network "$NETWORK" --read-only --tmpfs /tmp --cap-drop ALL
     --security-opt no-new-privileges:true
     -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml
-    -e "FERROEHR__DB__URL=postgres://ferroehr:${PG_SECRET}@${PG}:5432/ferroehr"
+    -e "FERROEHR__DATABASE__URL=postgres://ferroehr:${PG_SECRET}@${PG}:5432/ferroehr"
     -e FERROEHR__USAGE_REPORT__ENABLED=false
     -v "$ROOT/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro"
     -v "$ROOT/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"

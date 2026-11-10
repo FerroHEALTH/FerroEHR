@@ -27,7 +27,7 @@ use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::state::AppState;
-use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::party::config::PartySection;
 use ferrohealth_smart::party::source::{Lookup, PartyRecord, PartySource, Query, SourceError};
 use ferrohealth_smart::party::{Markers, PartyRef, PartyState};
@@ -61,11 +61,11 @@ pub(crate) fn mapping() -> BindingMapping {
 /// table binds by `person_key`, reading groups from `groups`.
 pub(crate) fn config(person_key: Option<&str>) -> AppConfig {
     let mut auth = common::auth(AuthSection {
-        issuer: IssuerKey::List(vec![IssuerEntry {
+        issuer: vec![IssuerEntry {
             jwks_file: common::jwks_file().display().to_string(),
             person_key: person_key.map(str::to_owned),
             ..common::entry(ISSUER, AUDIENCE)
-        }]),
+        }],
         party: vec![PartySection {
             issuer: ISSUER.to_owned(),
             identifier_issuer: LOGIN.to_owned(),
@@ -462,9 +462,7 @@ async fn an_overage_the_identity_provider_throttles_is_unavailable_with_its_retr
     let key = "7d8e9f0a-1b2c-4d3e-9f4a-5b6c7d8e9f0a";
     professional(&svc, key, "532").await;
     let mut config = config(None);
-    if let IssuerKey::List(entries) = &mut config.auth.shared.issuer
-        && let Some(entry) = entries.first_mut()
-    {
+    if let Some(entry) = config.auth.shared.issuer.first_mut() {
         entry.adapter = Some(ferrohealth_smart::idp::entra::NAME.to_owned());
     }
     config.auth.idp.entra = Some(Box::new(ferrohealth_smart::idp::entra::GraphSection {

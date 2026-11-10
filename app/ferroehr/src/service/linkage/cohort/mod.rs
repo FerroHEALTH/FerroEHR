@@ -15,7 +15,7 @@
 //! ## Three steps, two credentials, identifiers only
 //!
 //! 1. **The predicate** ([`predicate`]) runs on the demographic pool against a
-//!    binding the deployment declared in `[cohort.predicates]`. It selects
+//!    binding the deployment declared in `[privacy.cohort.predicates]`. It selects
 //!    party ids and nothing else — no name, no address, no identifier leaves
 //!    the domain.
 //! 2. **The crossing** runs on the clinical pool: those party ids in, the ids
@@ -32,7 +32,7 @@
 //!    paging and the access columns apply unchanged.
 //!
 //! The demographic and the clinical statements never meet: under
-//! `[db].demographic_url` each pool authenticates as its own role, and
+//! `[database].demographic_url` each pool authenticates as its own role, and
 //! [`crate::db::verify_domain_isolation`] refuses to boot a database where one
 //! can read another's schema. The caller never learns a party id either — the
 //! result set carries whatever the AQL projected, and the cohort metadata
@@ -53,7 +53,7 @@
 //!
 //! ## Under an IHE patient identity source
 //!
-//! With `[ehr_index] provider = "ihe"` an `EHR_STATUS` names its patient only
+//! With `[pixm] provider = "ihe"` an `EHR_STATUS` names its patient only
 //! by the pseudonym of its own clinical domain, never by a party of this
 //! server: the server translates a real identifier forward through the PIX
 //! Manager (ITI-83 with `targetSystem` set to that domain), never a pseudonym
@@ -105,7 +105,7 @@ use crate::system_log::event::{
 /// One predicate a caller applies, by the name the deployment bound it under.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CohortPredicate {
-    /// The `[cohort.predicates]` key.
+    /// The `[privacy.cohort.predicates]` key.
     pub name: String,
     /// The value to match, interpreted by the binding's
     /// [`crate::storage::cohort_predicate::PredicateKind`].
@@ -153,7 +153,7 @@ pub struct CohortOutcome {
 pub enum CohortError {
     /// This deployment binds no predicate, so the surface is off.
     #[error(
-        "no cohort predicate is bound ([cohort.predicates]), so this deployment serves no \
+        "no cohort predicate is bound ([privacy.cohort.predicates]), so this deployment serves no \
          cohort queries"
     )]
     NotConfigured,

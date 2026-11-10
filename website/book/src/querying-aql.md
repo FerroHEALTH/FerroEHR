@@ -369,25 +369,25 @@ query and nothing else.
 3. Your AQL runs on the clinical pool, scoped to exactly those EHRs.
 
 The demographic and the clinical statements never meet. With
-`[storage.party] url` set, each pool authenticates as a role revoked from the
+`[database.party] url` set, each pool authenticates as a role revoked from the
 other, and the server refuses to boot if one can read across. You never receive a party
 identifier: the response carries what your AQL projected, plus counts.
 
 **The allow-list.** A cohort predicate can only name something the deployment
-declared, under `[cohort.predicates]` — the surface is off until at least one is
+declared, under `[privacy.cohort.predicates]` — the surface is off until at least one is
 bound, and the route answers `404` until then. Five keys are bindable:
 `city`, `postcode_area`, `sex`, `age_band` and `organisation`. Each binding
 names the archetype of the leaf's nearest archetyped ancestor, the leaf's
 at-code, and how a value is matched. See
-[Privacy & data minimisation](installation/config-privacy.md#cohort) for the
+[Privacy & data minimisation](installation/config-privacy.md#privacycohort) for the
 keys and their defaults.
 
-**Naming subjects by identifier.** With `[cohort] subjects = true` a request
+**Naming subjects by identifier.** With `[privacy.cohort] subjects = true` a request
 may carry `subjects`, a list of `{ "id": …, "namespace": … }` identifiers in
 any identifier domain (an optional `type` defaults to `PERSON`). Each one
 resolves to the EHR whose `EHR_STATUS.subject.external_ref` names it, after the
-`[ehr_index]` provider has put it in the clinical domain, and the result
-intersects with what `cohort` selects. Under `provider = "local"` the
+`[pixm]` provider has put it in the clinical domain, and the result
+intersects with what `cohort` selects. Under `subject_index = "local"` the
 identifier names itself, so an EHR created over `POST /ehr` with that subject
 in its `EHR_STATUS` is found. Under an IHE patient identity source FerroEHR
 asks the PIX Manager to translate the identifier forward into its own clinical
@@ -447,7 +447,7 @@ the cohort's identity, carrying none of its values.
 
 **Small-cell suppression.** A result set narrow enough to name one person
 re-identifies that person out of content you hold no individual entitlement to.
-When fewer EHRs are served than `cohort.small_cell_threshold` (default `5`), the
+When fewer EHRs are served than `privacy.cohort.small_cell_threshold` (default `5`), the
 rows are withheld and `suppressed` is `true`. The response says so rather than
 looking like an empty cohort: a caller who cannot tell the two apart will keep
 widening the predicate until the boundary leaks. Set the threshold to `0` to
@@ -460,7 +460,7 @@ that nobody can reconstruct afterwards is what the access log exists to prevent.
 The predicate values are never recorded: they *are* the cohort, and a trail
 carrying them would be a second copy of it.
 
-**Limits.** A predicate matching more than `cohort.max_cohort_size` parties
+**Limits.** A predicate matching more than `privacy.cohort.max_cohort_size` parties
 (default `100000`) is refused `422` rather than truncated — a silently shortened
 cohort is a wrong denominator with nothing on the wire to say so. More named
 subjects than that ceiling are refused the same way. An unbound predicate
@@ -567,7 +567,7 @@ then joins, orders and pages the rows. The rules that follow:
   reads one side only, the party or the EHR; a condition comparing the two, or
   an `OR` across them, is a **400**;
 - aggregates and `SELECT DISTINCT` are a **400**;
-- each half, and the joined rows, may hold at most `query.max_result_rows`
+- each half, and the joined rows, may hold at most `record.query.max_result_rows`
   rows; above that the query is a **400** asking you to narrow it, never a
   shortened answer;
 - the clinical half carries your per-EHR access decision and patient scope as
@@ -731,8 +731,8 @@ which one you hit:
 | Bound | Where it comes from | Effect |
 |---|---|---|
 | `LIMIT`/`OFFSET`, or `fetch`/`offset` | your query or request | Exactly the window you asked for. |
-| [`query.max_result_rows`](installation/config-integrations.md#query) | server config, default `10000` | The largest page one execution serves: the page of a query nothing else bounds, and the maximum a `LIMIT` or `fetch` may ask for. `0` means unbounded. |
-| [`query.timeout_ms`](installation/config-integrations.md#query) | server config, default `30000` | Per-query database execution budget. **On by default**; `0` disables it. |
+| [`record.query.max_result_rows`](installation/config-integrations.md#recordquery) | server config, default `10000` | The largest page one execution serves: the page of a query nothing else bounds, and the maximum a `LIMIT` or `fetch` may ask for. `0` means unbounded. |
+| [`record.query.timeout`](installation/config-integrations.md#recordquery) | server config, default `30000` | Per-query database execution budget. **On by default**; `0` disables it. |
 
 Two bounds on the shape of the query text are fixed in the server. Brackets
 and `CONTAINS` may nest at most 64 levels, and a `WHERE` expression may be at
@@ -845,7 +845,7 @@ silently incorrect answer:
 ### The specification generation is an acceptance boundary
 
 Which Reference Model classes and attributes a query may name depends on the
-deployment's [`spec_profile`](installation/configuration.md#spec_profile). On the
+deployment's [`deployment.spec_profile`](installation/configuration.md#deploymentspec_profile). On the
 default `development` profile the query surface is the full RM 1.2.0 model. On
 `stable` (RM 1.1.0), a `FROM` class or a path attribute that only a newer
 generation defines is refused with **400 Bad Request**, and the message names

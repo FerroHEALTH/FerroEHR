@@ -63,27 +63,27 @@ database:
   caConfigMap: ferroehr-db-ca
   # The clinical domain's DSN (role ferroehr_clinical). It is also [db].url.
   existingSecret: ferroehr-db-clinical
-  existingSecretKey: FERROEHR__DB__URL
+  existingSecretKey: FERROEHR__DATABASE__URL
   party:
     # Role ferroehr_party: every identity the instance holds.
     existingSecret: ferroehr-db-party
-    existingSecretKey: FERROEHR__STORAGE__PARTY__URL
+    existingSecretKey: FERROEHR__DATABASE__PARTY__URL
     # The migrator of the party cluster: the Job prepares it, the server
     # verifies it. Drop it only when party shares the clinical cluster.
     migrateExistingSecret: ferroehr-db-party-migrate
-    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__PARTY__URL
+    migrateExistingSecretKey: FERROEHR__DATABASE__PARTY__MIGRATE_URL
   audit:
     # The audit repository, kept apart from the system that processes the data.
     existingSecret: ferroehr-db-audit
-    existingSecretKey: FERROEHR__STORAGE__AUDIT__URL
+    existingSecretKey: FERROEHR__DATABASE__AUDIT__URL
     # The migrator of the audit cluster.
     migrateExistingSecret: ferroehr-db-audit-migrate
-    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__AUDIT__URL
+    migrateExistingSecretKey: FERROEHR__DATABASE__AUDIT__MIGRATE_URL
   # The migrator DSN of the clinical cluster (role ferroehr_migrator). The
   # server opens it, and each domain's migrateExistingSecret above, for the
   # verify step at boot and holds no pool on any of them.
   migrateExistingSecret: ferroehr-db-migrate
-  migrateExistingSecretKey: FERROEHR__DB__MIGRATE_URL
+  migrateExistingSecretKey: FERROEHR__DATABASE__MIGRATE_URL
 
 # The schema is applied by a pre-install/pre-upgrade Job on the migrator
 # credential; the server itself issues no DDL (config.db.migrate below).
@@ -91,15 +91,14 @@ migrations:
   job:
     enabled: true
     existingSecret: ferroehr-db-migrate
-    existingSecretKey: FERROEHR__DB__MIGRATE_URL
+    existingSecretKey: FERROEHR__DATABASE__MIGRATE_URL
 
 config:
-  deployment_profile: production
-  # The one gap this overlay accepts, and why: see plaintext_listener above.
-  deployment_accepts: [plaintext_listener]
+  deployment:
+    profile: production
+    # The one gap this overlay accepts, and why: see plaintext_listener above.
+    accepts: [plaintext_listener]
 
-  db:
-    migrate: verify
 
   auth:
     enabled: true
@@ -156,12 +155,6 @@ config:
   # chart injects the provider and its in-cluster URL. Name the clinical domain
   # and the client credentials grant; the client secret comes from a Secret you
   # own (extraEnv below).
-  ehr_index:
-    assigning_authority: urn:oid:2.999.7.1
-    oauth:
-      token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token
-      client_id: ferroehr
-      scope: system/Patient.rs
 
   audit:
     enabled: true
@@ -169,6 +162,14 @@ config:
     fail_mode: closed
     store:
       enabled: true
+  pixm:
+    assigning_authority: urn:oid:2.999.7.1
+    oauth:
+      token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token
+      client_id: ferroehr
+      scope: system/Patient.rs
+  database:
+    migrations: verify
 
 # ── Network: TLS at the Ingress, and only the controller reaches the pods ─────
 ingress:
@@ -237,7 +238,7 @@ ferropix:
 # The client secret of the EHR index's grant, from a Secret you own, as the
 # database URLs above are.
 extraEnv:
-  - name: FERROEHR__EHR_INDEX__OAUTH__CLIENT_SECRET
+  - name: FERROEHR__PIXM__OAUTH__CLIENT_SECRET
     valueFrom:
       secretKeyRef:
         name: ferroehr-pix-client

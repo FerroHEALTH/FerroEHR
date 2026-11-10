@@ -28,16 +28,16 @@ from a Secret, as a mounted file where the config key has a *_file sibling.
   ferroehr.toml source: ConfigMap "{{ include "ferroehr.fullname" . }}"
 {{ end -}}
 
-API base path: {{ .Values.config.rest.base_path }}
+API base path: {{ .Values.config.api.base_path }}
 Service:       {{ include "ferroehr.fullname" . }}:{{ .Values.service.port }} ({{ .Values.service.type }})
 
 Reach it locally:
   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "ferroehr.fullname" . }} 8080:{{ .Values.service.port }}
 {{- if eq (include "ferroehr.serverTls" .) "true" }}
-  curl -i --cacert ca.crt --resolve {{ include "ferroehr.fullname" . }}:8080:127.0.0.1 https://{{ include "ferroehr.fullname" . }}:8080{{ .Values.config.rest.base_path | trimSuffix "/openehr/v1" }}/status
+  curl -i --cacert ca.crt --resolve {{ include "ferroehr.fullname" . }}:8080:127.0.0.1 https://{{ include "ferroehr.fullname" . }}:8080{{ .Values.config.api.base_path | trimSuffix "/openehr/v1" }}/status
      (ca.crt: the CA from Secret "{{ .Values.service.tls.caExistingSecret }}"; the certificate names the Service)
 {{- else }}
-  curl -i http://127.0.0.1:8080{{ .Values.config.rest.base_path | trimSuffix "/openehr/v1" }}/status
+  curl -i http://127.0.0.1:8080{{ .Values.config.api.base_path | trimSuffix "/openehr/v1" }}/status
 {{- end }}
 
 Health probes (public, always on):  /health | /health/liveness | /health/readiness
@@ -82,19 +82,19 @@ role, NOT the runtime app role.
 {{ if .Values.migrations.job.enabled -}}
   Migration step: pre-install/pre-upgrade Job, DSN from Secret
   "{{ .Values.migrations.job.existingSecret }}" key "{{ .Values.migrations.job.existingSecretKey }}"  [OK]
-  {{ if eq (.Values.config.db.migrate | default "apply") "verify" -}}
-  Server posture: config.db.migrate=verify — the server issues no DDL, so its
+  {{ if eq (dig "database" "migrations" "apply" .Values.config) "verify" -}}
+  Server posture: config.database.migrations=verify — the server issues no DDL, so its
   own DSN can be ferroehr_clinical only.  [least privilege]
   {{ else -}}
-  ⚠  config.db.migrate is "apply": the server still migrates itself at boot, so
+  ⚠  config.database.migrations is "apply": the server still migrates itself at boot, so
      its DSN must hold DDL rights and the Job buys you nothing. Set
-     config.db.migrate=verify and give the server an app-role-only DSN.
+     config.database.migrations=verify and give the server an app-role-only DSN.
   {{ end -}}
 {{ else -}}
   ⚠  No migration Job. The server migrates itself at boot, so the runtime DSN
      must be a member of ferroehr_migrator — a process holding DDL rights on
      the clinical schema. For production set migrations.job.enabled=true with a
-     migrator DSN and config.db.migrate=verify.
+     migrator DSN and config.database.migrations=verify.
 {{ end }}
 Wrap the migration step in a short lock_timeout so DDL blocked behind live
 traffic fails fast instead of queueing, and pin the image by digest so a
@@ -165,12 +165,12 @@ SECURITY POSTURE
      you hold a licence for.
 {{- end }}
 {{- if .Values.terminology.wireCdr }}
-  CDR wiring: config.terminology.server is pointed at that Service, fail_on_error={{ .Values.terminology.failOnError }}
+  CDR wiring: config.terminology is pointed at that Service, on_error={{ ternary "refuse" "accept" .Values.terminology.failOnError }}
      {{ if .Values.terminology.failOnError }}— a binding the server cannot resolve is REFUSED with 422.{{ else }}— a binding the server cannot resolve is ACCEPTED (the shipped posture). Set
      terminology.failOnError=true to refuse it with 422 instead.{{ end }}
 {{- else }}
   ⚠  terminology.wireCdr=false — FerroTERM is running, and this CDR resolves
-     nothing against it. Wire config.terminology.server yourself, or set
+     nothing against it. Wire config.terminology yourself, or set
      terminology.wireCdr=true.
 {{- end }}
 {{- end }}
@@ -198,19 +198,19 @@ SECURITY POSTURE
      request 401s — add config.auth.issuer, an [[auth.basic.users]] entry
      under config.auth.basic.users, or supply material via config.files.
 {{ end -}}
-{{ if and .Values.config.multimedia.enabled .Values.config.multimedia.allow_http }}
-  ⚠  config.multimedia.allow_http=true — plain-HTTP object store. Dev only; prod S3 is HTTPS.
+{{ if and (dig "record" "multimedia" "enabled" false .Values.config) (hasPrefix "http://" (toString (dig "record" "multimedia" "url" "" .Values.config))) }}
+  ⚠  config.record.multimedia.url is http:// — plain-HTTP object store. Dev only; prod S3 is HTTPS.
 {{ end }}
 Optional integrations currently ON:
-  admin API:        {{ .Values.config.admin.enabled }}
-  outbox readers:   {{ dig "outbox" "readers" list .Values.config | join ", " | default "none" }}
-  S3 multimedia:    {{ .Values.config.multimedia.enabled }}
+  admin API:        {{ dig "api" "admin" false .Values.config }}
+  outbox readers:   {{ dig "record" "change_feed" "readers" list .Values.config | join ", " | default "none" }}
+  S3 multimedia:    {{ dig "record" "multimedia" "enabled" false .Values.config }}
   ATNA audit:       {{ .Values.config.audit.enabled }}
   {{- /* The INJECTED state, not the values one: terminology.enabled writes
-         config.terminology.server.enabled for the operator, so reading the
+         config.terminology for the operator, so reading the
          values tree here would report "false" for a release that resolves
          every binding against the FerroTERM beside it. Read through `dig`
          because the chart defaults that key away — a defaulted one could not
          be told apart from one the operator typed, which is what the wiring
          refusals turn on. */}}
-  ext terminology:  {{ if and .Values.terminology.enabled .Values.terminology.wireCdr }}true (in-cluster FerroTERM){{ else }}{{ dig "terminology" "server" "enabled" false .Values.config }}{{ end }}
+  ext terminology:  {{ if and .Values.terminology.enabled .Values.terminology.wireCdr }}true (in-cluster FerroTERM){{ else }}{{ hasKey .Values.config "terminology" }}{{ end }}

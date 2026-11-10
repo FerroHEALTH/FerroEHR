@@ -16,11 +16,10 @@
 //! enforced by the per-route guard in `ferroehr-rest`.
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use ferrohealth_secret::secret_url::SecretUrl;
+use crate::config::abac_rules::{CedarConfig, RemoteConfig};
 
 /// The server-wide disposition for an EHR that carries no
 /// `ACCESS_CONTROL_SETTINGS` of its own — the `ehr_access_default` tri-state's
@@ -59,10 +58,6 @@ pub struct RbacConfig {
     pub enabled: bool,
     /// The role required for Admin-class operations (default `ADMIN`).
     pub admin_role: String,
-    /// The retired `user_role` key, held only so its presence is refused by
-    /// name with a pointer to where a Basic user's roles live now.
-    #[serde(default, skip_serializing)]
-    pub user_role: Option<serde::de::IgnoredAny>,
     /// The role marking a principal as read-only (default `READONLY`): a caller
     /// carrying it is refused on every write operation even when it also holds
     /// granting roles (a restriction overrides a grant). Supports the
@@ -99,7 +94,7 @@ pub struct RbacConfig {
     /// (`FERROEHR__AUTHZ__RBAC__IDENTIFIER_READER_ROLE`, default unset).
     ///
     /// `GET /admin/party/identifiers` expands the identifiers
-    /// `[demographic.identifier_protection]` seals, and every read is an
+    /// `[privacy.identifier_protection]` seals, and every read is an
     /// access record. The route sits in the ADMIN API and also needs this
     /// role, so holding `admin_role` alone does not reveal a national
     /// identifier. Unset, nobody may call it (#3776). No openEHR spec governs
@@ -135,7 +130,6 @@ impl Default for RbacConfig {
         Self {
             enabled: true,
             admin_role: "ADMIN".to_owned(),
-            user_role: None,
             readonly_role: "READONLY".to_owned(),
             subject_audit_role: None,
             emergency_access_role: None,
@@ -156,7 +150,7 @@ pub enum AbacEngineKind {
     /// Embedded Cedar (`cedar-policy`), policies from `abac.cedar.policy_dir`.
     #[default]
     Cedar,
-    /// The remote policy-decision-point (`abac.remote.server`).
+    /// The remote policy-decision-point (`abac.remote.url`).
     Remote,
 }
 
@@ -174,7 +168,7 @@ pub enum AbacParam {
     Template,
     /// The EHDS categories of the resource's data (EHDS Annex II 3.4).
     Category,
-    /// The origins of the resource's data (EHDS Annex II 3.4, `[origins]`).
+    /// The origins of the resource's data (EHDS Annex II 3.4, `[[authz.origin]]`).
     Origin,
 }
 
@@ -199,59 +193,20 @@ impl AbacParam {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PolicyRule {
-    /// The policy name (the path segment appended to `abac.remote.server`).
+    /// The policy name (the path segment appended to `abac.remote.url`).
     pub name: String,
     /// The parameters the PDP body carries; empty = an unparameterized policy.
     #[serde(default)]
     pub parameters: Vec<AbacParam>,
 }
 
-/// The embedded-Cedar engine settings.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct CedarConfig {
-    /// Directory of `*.cedar` policy files (required when `engine = cedar`).
-    pub policy_dir: Option<PathBuf>,
-    /// Optional periodic hot-reload interval (seconds); off when unset.
-    pub reload_secs: Option<u64>,
-}
-
-/// The remote-PDP client settings.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct RemoteConfig {
-    /// The PDP base URL; the policy name is appended, so it must end with `/`
-    /// (required when `engine = remote`). Any `userinfo` in it is masked in
-    /// every rendering.
-    pub server: Option<SecretUrl>,
-    /// TCP connect timeout in milliseconds (default 2000): without one, a PDP
-    /// that blackholes packets parks the request until the OS TCP timeout.
-    pub connect_timeout_ms: u64,
-    /// Whole-request timeout in milliseconds (default 5000).
-    pub request_timeout_ms: u64,
-    /// The OAuth 2.0 client-credentials grant the policy service is called
-    /// with (`[authz.abac.remote.oauth]`); absent, the calls carry the Basic
-    /// credentials of `server`, if any.
-    pub oauth: Option<ferrohealth_smart::config::credentials::OauthSection>,
-}
-
-impl Default for RemoteConfig {
-    fn default() -> Self {
-        Self {
-            server: None,
-            connect_timeout_ms: 2_000,
-            // 5 s, the whole-request budget the discovery and terminology clients use too.
-            request_timeout_ms: 5_000,
-            oauth: None,
-        }
-    }
-}
-
 /// The fine-grained attribute-based access-control settings.
 ///
 /// Master switch `enabled` defaults to `false`, so an all-defaults config
 /// preserves today's authentication-plus-RBAC behaviour until an operator
-/// opts in.
+/// opts in. The table keeps `enabled` where other optional features use the
+/// table's presence, because `organization_claim` applies while it is off:
+/// the access log records the organisation a caller acts for.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct AbacConfig {
@@ -360,10 +315,13 @@ pub struct AuthzConfig {
     pub system_client: Vec<crate::config::clients::SystemClient>,
     /// The federation agreements (`[authz.federation]`).
     pub federation: crate::config::agreement::FederationConfig,
-    /// The removed `[authz.professional]` table, held only so its presence is
-    /// refused by name.
-    #[serde(default, skip_serializing)]
-    pub professional: Option<serde::de::IgnoredAny>,
+    /// The origins of data this deployment recognises, which a retention
+    /// period and an access rule may name (`[[authz.origin]]`, EHDS Annex II
+    /// 3.4).
+    pub origin: Vec<crate::origins::RegisteredOrigin>,
+    /// Retired in v5.7.0: the `[authz.professional]` table, refused at load.
+    #[serde(skip_serializing)]
+    pub professional: ferrohealth_config::removed::Removed,
 }
 
 /// A boot-time authorization-configuration error — a hard error that must
@@ -384,11 +342,11 @@ pub enum AuthzConfigError {
     #[error("authz.abac.policy.{0} must not take the `template` parameter")]
     TemplateParamIllegal(&'static str),
     /// `engine = remote` without a configured base URL.
-    #[error("authz.abac.remote.server is required when abac.engine = remote")]
+    #[error("authz.abac.remote.url is required when abac.engine = remote")]
     RemoteServerMissing,
     /// The remote base URL does not end with `/` (the policy name is appended);
     /// carries the URL with its `userinfo` masked.
-    #[error("authz.abac.remote.server must end with '/' (got {0:?})")]
+    #[error("authz.abac.remote.url must end with '/' (got {0:?})")]
     RemoteServerTrailingSlash(String),
     /// `engine = cedar` without a configured policy directory.
     #[error("authz.abac.cedar.policy_dir is required when abac.engine = cedar")]
@@ -400,13 +358,6 @@ pub enum AuthzConfigError {
          enforcement point consults must name a policy, or its requests can only be denied"
     )]
     RemotePolicyMissing(&'static str),
-    /// The retired `user_role` key is set.
-    #[error(
-        "authz.rbac.user_role is retired: a Basic user holds the roles its \
-         [[auth.basic.users]] roles list names, and a token the roles of [auth] role_claims; \
-         remove the key"
-    )]
-    UserRoleRetired,
 }
 
 impl AuthzConfig {
@@ -418,9 +369,6 @@ impl AuthzConfig {
     pub fn validate(&self) -> Result<(), AuthzConfigError> {
         if self.rbac.admin_role.trim().is_empty() {
             return Err(AuthzConfigError::EmptyRole("admin_role"));
-        }
-        if self.rbac.user_role.is_some() {
-            return Err(AuthzConfigError::UserRoleRetired);
         }
         if self.rbac.readonly_role.trim().is_empty() {
             return Err(AuthzConfigError::EmptyRole("readonly_role"));
@@ -434,6 +382,10 @@ impl AuthzConfig {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
+    use ferrohealth_secret::secret_url::SecretUrl;
+
     use super::*;
     use crate::config::abac_rules::REQUIRED_REMOTE_POLICY_KINDS;
 
@@ -442,28 +394,17 @@ mod tests {
         let c = AuthzConfig::default();
         assert!(c.rbac.enabled);
         assert_eq!(c.rbac.admin_role, "ADMIN");
-        assert!(c.rbac.user_role.is_none());
         assert_eq!(c.rbac.readonly_role, "READONLY");
         assert!(c.validate().is_ok());
     }
 
-    /// The retired `user_role` is refused by name, from a file and from the
-    /// environment, with the place a Basic user's roles live now.
+    /// `user_role`, retired in v5.6 and past its one release, is an unknown
+    /// key.
     #[test]
-    fn the_retired_user_role_is_refused_by_name() {
-        let parsed: AuthzConfig = toml::from_str("[rbac]\nuser_role = \"USER\"\n").expect("parses");
-        let err = parsed.validate().expect_err("retired");
-        assert_eq!(err, AuthzConfigError::UserRoleRetired);
-        let text = err.to_string();
-        assert!(text.contains("authz.rbac.user_role"), "{text}");
-        assert!(text.contains("[[auth.basic.users]] roles"), "{text}");
-        assert!(
-            serde_json::to_value(&parsed)
-                .expect("serializes")
-                .pointer("/rbac/user_role")
-                .is_none(),
-            "the retired key is never rendered"
-        );
+    fn user_role_is_an_unknown_key() {
+        let err = toml::from_str::<AuthzConfig>("[rbac]\nuser_role = \"USER\"\n")
+            .expect_err("an unknown key");
+        assert!(err.to_string().contains("user_role"), "{err}");
     }
 
     #[test]
@@ -504,7 +445,6 @@ mod tests {
                 enabled: false,
                 engine: AbacEngineKind::Remote,
                 remote: RemoteConfig {
-                    server: None,
                     ..RemoteConfig::default()
                 },
                 ..AbacConfig::default()
@@ -531,7 +471,7 @@ mod tests {
                     engine: AbacEngineKind::Cedar,
                     cedar: CedarConfig {
                         policy_dir: Some(PathBuf::from("/tmp/policies")),
-                        reload_secs: None,
+                        ..CedarConfig::default()
                     },
                     policy,
                     ..AbacConfig::default()
@@ -560,7 +500,7 @@ mod tests {
                 enabled: true,
                 cedar: CedarConfig {
                     policy_dir: Some(PathBuf::from("/tmp/p")),
-                    reload_secs: None,
+                    ..CedarConfig::default()
                 },
                 policy,
                 ..AbacConfig::default()
@@ -609,7 +549,7 @@ mod tests {
         let no_slash = AuthzConfig {
             abac: AbacConfig {
                 remote: RemoteConfig {
-                    server: Some(SecretUrl::new("http://pdp:3001/exec")),
+                    url: Some(SecretUrl::new("http://pdp:3001/exec")),
                     ..RemoteConfig::default()
                 },
                 ..base.clone()
@@ -624,7 +564,7 @@ mod tests {
         let ok = AuthzConfig {
             abac: AbacConfig {
                 remote: RemoteConfig {
-                    server: Some(SecretUrl::new("http://pdp:3001/exec/")),
+                    url: Some(SecretUrl::new("http://pdp:3001/exec/")),
                     ..RemoteConfig::default()
                 },
                 ..base
@@ -645,7 +585,7 @@ mod tests {
                 enabled: true,
                 engine: AbacEngineKind::Remote,
                 remote: RemoteConfig {
-                    server: Some(SecretUrl::new("http://pdp:3001/exec/")),
+                    url: Some(SecretUrl::new("http://pdp:3001/exec/")),
                     ..RemoteConfig::default()
                 },
                 policy,
@@ -690,7 +630,7 @@ mod tests {
                 engine: AbacEngineKind::Cedar,
                 cedar: CedarConfig {
                     policy_dir: Some(PathBuf::from("/etc/ferroehr/policies")),
-                    reload_secs: None,
+                    ..CedarConfig::default()
                 },
                 ..AbacConfig::default()
             },
@@ -710,7 +650,7 @@ mod tests {
                 engine: AbacEngineKind::Cedar,
                 cedar: CedarConfig {
                     policy_dir: Some(PathBuf::from("/etc/ferroehr/policies")),
-                    reload_secs: None,
+                    ..CedarConfig::default()
                 },
                 check_directory: true,
                 ..AbacConfig::default()
@@ -739,8 +679,14 @@ mod tests {
     #[test]
     fn remote_timeouts_default() {
         let c = AbacConfig::default();
-        assert_eq!(c.remote.connect_timeout_ms, 2000);
-        assert_eq!(c.remote.request_timeout_ms, 5000);
+        assert_eq!(
+            c.remote.connect_timeout,
+            ferrohealth_config::units::Duration::from_secs(2)
+        );
+        assert_eq!(
+            c.remote.timeout,
+            ferrohealth_config::units::Duration::from_secs(5)
+        );
     }
 
     /// Every section here carries a container-level `#[serde(default)]`, which
@@ -752,7 +698,7 @@ mod tests {
     fn a_partial_table_falls_back_to_the_default_impl() {
         let parsed: AuthzConfig = toml::from_str(
             "[rbac]\nadmin_role = \"OPERATOR\"\n\n[abac]\nenabled = true\n\n\
-             [abac.remote]\nconnect_timeout_ms = 750\n",
+             [abac.remote]\nconnect_timeout = \"750ms\"\n",
         )
         .expect("partial authz table");
 
@@ -760,7 +706,10 @@ mod tests {
         // The specified keys took the file's values.
         assert_eq!(parsed.rbac.admin_role, "OPERATOR");
         assert!(parsed.abac.enabled);
-        assert_eq!(parsed.abac.remote.connect_timeout_ms, 750);
+        assert_eq!(
+            parsed.abac.remote.connect_timeout,
+            ferrohealth_config::units::Duration::from_millis(750)
+        );
         // Every unmentioned key came from the Default impl, not from
         // `<field type>::default()` (which would be `false`/`0`/empty).
         assert_eq!(parsed.rbac.enabled, default.rbac.enabled);

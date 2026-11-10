@@ -1,17 +1,19 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[outbox]` section: who reads the commit-event outbox, and how long it
-//! keeps a row.
+//! The `[record.change_feed]` section: who reads the commit-event outbox,
+//! and how long it keeps a row.
 //!
 //! **No openEHR spec governs this — our own design/extension.** A field of the
 //! one config tree ([`crate::config::FerroEhrConfig`]); no loader of its own.
 //! With no reader named, no commit writes an outbox row and the feed answers
 //! `404` for every name.
 
+use ferrohealth_config::units::Duration;
 use serde::{Deserialize, Serialize};
 
-/// The commit-event outbox configuration (`[outbox]`), our own extension.
+/// The commit-event outbox configuration (`[record.change_feed]`), our own
+/// extension.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct OutboxConfig {
@@ -20,19 +22,19 @@ pub struct OutboxConfig {
     /// one and marks every reader the list no longer names inactive. Empty by
     /// default: no commit writes an outbox row.
     pub readers: Vec<String>,
-    /// How many days a row is kept once every active reader has acknowledged
-    /// it, counted from its commit instant.
-    pub retention_days: i64,
-    /// How often the retention prune runs, in seconds.
-    pub prune_interval_secs: u64,
+    /// How long a row is kept once every active reader has acknowledged it,
+    /// counted from its commit instant.
+    pub retention: Duration,
+    /// How often the retention prune runs.
+    pub prune_interval: Duration,
 }
 
 impl Default for OutboxConfig {
     fn default() -> Self {
         Self {
             readers: Vec::new(),
-            retention_days: 7,
-            prune_interval_secs: 3_600,
+            retention: Duration::from_days(7),
+            prune_interval: Duration::from_hours(1),
         }
     }
 }
@@ -53,7 +55,7 @@ impl OutboxConfig {
         for (index, name) in self.readers.iter().enumerate() {
             if !is_reader_name(name) {
                 errors.push(format!(
-                    "outbox.readers names {name:?}, which is not a reader name: use 1 to 63 \
+                    "record.change_feed.readers names {name:?}, which is not a reader name: use 1 to 63 \
                      lowercase letters, digits and `-`, starting with a letter"
                 ));
             }
@@ -63,19 +65,20 @@ impl OutboxConfig {
                 .take(index)
                 .any(|earlier| earlier == name)
             {
-                errors.push(format!("outbox.readers names {name:?} twice"));
+                errors.push(format!("record.change_feed.readers names {name:?} twice"));
             }
         }
-        if self.retention_days < 1 {
+        if self.retention.as_millis() < 1_000 {
             errors.push(format!(
-                "outbox.retention_days = {} keeps no acknowledged row for a reader to read \
-                 again; set 1 or more",
-                self.retention_days
+                "record.change_feed.retention = \"{}\" keeps no acknowledged row for a reader \
+                 to read again; set a second or more, such as \"7d\"",
+                self.retention
             ));
         }
-        if self.prune_interval_secs == 0 {
+        if self.prune_interval.is_zero() {
             errors.push(
-                "outbox.prune_interval_secs = 0 would prune without pause; set 1 or more"
+                "record.change_feed.prune_interval = \"0s\" would prune without pause; set a \
+                 duration such as \"1h\""
                     .to_owned(),
             );
         }
@@ -102,8 +105,8 @@ mod tests {
         let config = OutboxConfig::default();
         assert!(!config.enabled());
         assert_eq!(config.errors(), Vec::<String>::new());
-        assert_eq!(config.retention_days, 7);
-        assert_eq!(config.prune_interval_secs, 3_600);
+        assert_eq!(config.retention, Duration::from_days(7));
+        assert_eq!(config.prune_interval, Duration::from_hours(1));
     }
 
     #[test]
@@ -134,14 +137,14 @@ mod tests {
                 "Bad Name".to_owned(),
                 "ferrobridge".to_owned(),
             ],
-            retention_days: 0,
-            prune_interval_secs: 0,
+            retention: Duration::ZERO,
+            prune_interval: Duration::ZERO,
         };
         let errors = config.errors();
         assert_eq!(errors.len(), 4, "{errors:?}");
         assert!(errors.iter().any(|e| e.contains("\"Bad Name\"")));
         assert!(errors.iter().any(|e| e.contains("twice")));
-        assert!(errors.iter().any(|e| e.contains("retention_days")));
-        assert!(errors.iter().any(|e| e.contains("prune_interval_secs")));
+        assert!(errors.iter().any(|e| e.contains("retention")));
+        assert!(errors.iter().any(|e| e.contains("prune_interval")));
     }
 }

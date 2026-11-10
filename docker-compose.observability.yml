@@ -52,7 +52,7 @@ services:
       # (The health probes need none of this — /health, /health/liveness and
       # /health/readiness are always served on the main API port.)
       FERROEHR__MANAGEMENT__ENABLED: "true"
-      FERROEHR__MANAGEMENT__PORT: "9464"
+      FERROEHR__MANAGEMENT__LISTEN: "0.0.0.0:9464"
       FERROEHR__MANAGEMENT__ENDPOINTS__INFO: "public"
       FERROEHR__MANAGEMENT__ENDPOINTS__METRICS: "public"
       FERROEHR__MANAGEMENT__ENDPOINTS__PROMETHEUS: "public"

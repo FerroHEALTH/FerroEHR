@@ -250,7 +250,7 @@ impl Sections<'_> {
     ///
     /// `key_issuers` are the `identifier_issuer`s of the `[[auth.party]]`
     /// tables, and `protected_schemes` the identifier schemes whose value
-    /// leaves the body (`[demographic.identifier_protection] schemes` while
+    /// leaves the body (`[privacy.identifier_protection] schemes` while
     /// it is enabled).
     #[must_use]
     pub fn errors(&self, key_issuers: &[String], protected_schemes: &[String]) -> Vec<String> {
@@ -344,7 +344,7 @@ impl Sections<'_> {
             if protected_schemes.contains(&template.key.identifier_type) {
                 errors.push(format!(
                     "{at} key: the scheme {:?} is protected \
-                     ([demographic.identifier_protection]), so its value leaves the body and \
+                     ([privacy.identifier_protection]), so its value leaves the body and \
                      cannot be a binding key",
                     template.key.identifier_type
                 ));

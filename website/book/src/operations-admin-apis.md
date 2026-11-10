@@ -12,7 +12,7 @@ answers.
 ## Where these routes live, and what gates them
 
 The routes ITS-REST defines (the two EHR deletes) sit under the openEHR base
-path, `{base}`: with the default `rest.base_path` it reads
+path, `{base}`: with the default `api.base_path` it reads
 `/ferroehr/rest/openehr/v1`. Every other route on this page is FerroEHR's own
 extension and sits beside it under `{ext}`, which reads
 `/ferroehr/rest/extensions/v1`; so `{ext}/admin/dump` is
@@ -24,7 +24,7 @@ operationally:
 
 | Group | Switch | Authorization class | While switched off |
 |---|---|---|---|
-| `{base}/admin/…` and `{ext}/admin/…` | `admin.enabled` (`FERROEHR__ADMIN__ENABLED`), default `false` | admin: the configured `authz.rbac.admin_role` (`ADMIN` by default) | every route answers **405 Method Not Allowed** with an **empty** `Allow` header: the resource exists but currently serves no method |
+| `{base}/admin/…` and `{ext}/admin/…` | `api.admin` (`FERROEHR__API__ADMIN`), default `false` | admin: the configured `authz.rbac.admin_role` (`ADMIN` by default) | every route answers **405 Method Not Allowed** with an **empty** `Allow` header: the resource exists but currently serves no method |
 | `{ext}/message/…` | none (always mounted) | ordinary clinical, exactly like the composition API | n/a |
 
 Two consequences worth planning around:
@@ -47,7 +47,7 @@ API off, that entry is absent.
 
 > [!WARNING]
 > `DELETE {base}/admin/ehr/all` with no parameter empties the repository. There
-> is no confirmation step and no undo. Keep `admin.enabled` off unless a
+> is no confirmation step and no undo. Keep `api.admin` off unless a
 > workflow needs it, and gate the admin role tightly.
 
 ## Physical deletion
@@ -220,7 +220,7 @@ anything.
 | `GET {ext}/admin/restriction` | `?ehr_id=…` | **200**: the register, newest request first, lifts included |
 | `POST {ext}/admin/restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force restriction at that grain is lifted |
 | `POST {ext}/admin/research-objection` | `{"ehr_id": "…", "objected": true, "ground": "…"?}` | **204**: the objection, its override, or its withdrawal is recorded |
-| `PUT {ext}/admin/retention/policy` | `{"kind": "…", "jurisdiction": "…", "category": "…"?, "origin": "…"?, "period": "…", "anchor": "…", "source": "…"}` | **204**: the period is declared, keyed on one EHDS priority category when `category` is set and on one registered origin (`[origins]`) when `origin` is set |
+| `PUT {ext}/admin/retention/policy` | `{"kind": "…", "jurisdiction": "…", "category": "…"?, "origin": "…"?, "period": "…", "anchor": "…", "source": "…"}` | **204**: the period is declared, keyed on one EHDS priority category when `category` is set and on one registered origin (`[[authz.origin]]`) when `origin` is set |
 | `GET {ext}/admin/retention/policy` | — | **200**: the whole retention register, each period with its `category` and `origin` (`null` for every object of the kind, or every origin) |
 | `PUT {ext}/admin/retention/anchor` | `{"ehr_id": "…", "jurisdiction": "…", "anchored_at": "…"?, "hold_at": "…"?, "hold_ground": "…"?}` | **204**: the EHR's anchor and any whole-record hold |
 | `POST {ext}/admin/retention/hold` | `{"vo_id": "…", "held": true}` | **204**: the per-object exemption is placed or released |
@@ -228,7 +228,7 @@ anything.
 | `POST {ext}/admin/access-restriction` | `{"ehr_id": "…", "vo_id": "…"?, "note": "…"?}` | **204**: the EHDS Art. 8 restriction of access by health professionals is recorded and in force |
 | `GET {ext}/admin/access-restriction` | `?ehr_id=…` | **200**: the access-restriction register, newest request first, lifts included |
 | `POST {ext}/admin/access-restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force access restriction at that grain is lifted |
-| `POST {ext}/admin/access-delay` | `{"ehr_id": "…", "vo_id": "…", "until": "…"?, "note": "…"?}` | **204**: the composition is withheld from the person under EHDS Art. 3(3) until `until` (an RFC 3339 instant within `access_delay.hours` of now) or for `access_delay.hours`; **400** while `[access_delay]` is off |
+| `POST {ext}/admin/access-delay` | `{"ehr_id": "…", "vo_id": "…", "until": "…"?, "note": "…"?}` | **204**: the composition is withheld from the person under EHDS Art. 3(3) until `until` (an RFC 3339 instant within `privacy.access_delay.max_delay` of now) or for `privacy.access_delay.max_delay`; **400** while `[privacy.access_delay]` is off |
 | `GET {ext}/admin/access-delay` | `?ehr_id=…` | **200**: the access-delay register, newest hold first, each with its `basis` (`category` or `professional`), its end and its release |
 | `POST {ext}/admin/access-delay/release` | `{"ehr_id": "…", "vo_id": "…"}` | **204**: every hold of the composition still in force is released, and the person reads it |
 | `POST {ext}/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release` | none | **204**: the treating professional's release from the clinical surface, with the checks of a write to that EHR; **403** to a request that may be the person's |
@@ -320,7 +320,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 }
 ```
 
-- **Two gates.** The route is in the admin group, so it needs `admin.enabled`
+- **Two gates.** The route is in the admin group, so it needs `api.admin`
   and the admin role, and it also needs the role
   [`authz.rbac.identifier_reader_role`](installation/config-auth.md#authzrbac)
   names. Holding the admin role alone reveals no national identifier, and with
@@ -630,7 +630,7 @@ With [national-identifier protection](installation/config-privacy.md) on, a
 party's demographic record also carries its sealed identifier rows, live and
 retired, as base64 ciphertext, nonce and lookup digest. The archive never holds
 a protected value in plaintext. The rows open again only under the same
-`[demographic.identifier_protection]` root key, so restore a dump into a
+`[privacy.identifier_protection]` root key, so restore a dump into a
 deployment configured with the key it was taken under. A load reports a
 demographic container in the response array and restores none of it when:
 
@@ -713,12 +713,12 @@ other `Content-Type` is **415**.
 ## Other routes under `{base}/admin`
 
 The outbox feed shares the `/admin` path prefix but **not** the
-`admin.enabled` switch: it answers for the readers `[outbox] readers` names,
-and **404** for any other name, whatever `admin.enabled` says:
+`api.admin` switch: it answers for the readers `[record.change_feed] readers` names,
+and **404** for any other name, whatever `api.admin` says:
 
 | Routes | Gate | Documented in |
 |---|---|---|
-| `{base}/admin/outbox/{reader}`, `{base}/admin/outbox/{reader}/ack` | `outbox.readers` and the `__ferroehr.outbox` scope | [Change events (outbox feed)](beyond-core/outbox-feed.md) |
+| `{base}/admin/outbox/{reader}`, `{base}/admin/outbox/{reader}/ack` | `record.change_feed.readers` and the `__ferroehr.outbox` scope | [Change events (outbox feed)](beyond-core/outbox-feed.md) |
 
 They are still admin-class routes for authorization, so the same **401** /
 **403** split applies.

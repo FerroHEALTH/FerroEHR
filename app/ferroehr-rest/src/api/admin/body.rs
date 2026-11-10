@@ -156,7 +156,7 @@ pub(super) struct NotAdminClass;
 #[response(
     status = 405,
     description = "The admin API is disabled on this server \
-                  (`AppConfig::admin.enabled`, default \
+                  (`AppConfig::api.admin`, default \
                   false), answered with an empty `Allow` \
                   per RFC 9110 §10.2.1."
 )]

@@ -299,17 +299,26 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["name", "content"],
+            "required": [
+              "name",
+              "content"
+            ],
             "properties": {
-              "name": { "type": "string", "pattern": "^[A-Za-z0-9._-]+\\.(adls|opt)$" },
-              "content": { "type": "string", "minLength": 1 }
+              "name": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9._-]+\\.(adls|opt)$"
+              },
+              "content": {
+                "type": "string",
+                "minLength": 1
+              }
             }
           }
         }
       }
     },
     "backup": {
-      "description": "Per-domain logical backups: one CronJob per pseudonymisation domain (clinical, party), plus audit when database.audit gives that domain a database of its own. Off by default, and enabling it requires a DISTINCT existing PersistentVolumeClaim per rendered domain \u2014 the render is refused otherwise.",
+      "description": "Per-domain logical backups: one CronJob per pseudonymisation domain (clinical, party), plus audit when database.audit gives that domain a database of its own. Off by default, and enabling it requires a DISTINCT existing PersistentVolumeClaim per rendered domain — the render is refused otherwise.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -474,18 +483,26 @@
       }
     },
     "config": {
-      "description": "Rendered into ferroehr.toml, so its vocabulary is the SERVER's config tree and this schema deliberately does not fork it: unknown keys are accepted here and adjudicated by the server at boot. Only the keys the chart's own templates branch on, and the keys the chart documents with their shipped defaults (deployment_profile, audit.store, audit.categories), are typed, by shape and never by the server's vocabulary, and each accepts null \u2014 setting a key to null is how an overlay deletes it when a pinned older image does not know it yet.",
+      "description": "Rendered into ferroehr.toml, so its vocabulary is the SERVER's config tree and this schema deliberately does not fork it: unknown keys are accepted here and adjudicated by the server at boot. Only the keys the chart's own templates branch on, and the keys the chart documents with their shipped defaults (deployment.profile, audit.store, audit.categories), are typed, by shape and never by the server's vocabulary, and each accepts null — setting a key to null is how an overlay deletes it when a pinned older image does not know it yet.",
       "type": "object",
       "properties": {
-        "deployment_profile": {
-          "description": "The declared deployment posture, which the chart refuses to render without: sandbox (must not hold real patient data) or production (refuses to boot while a separation is missing and not named in deployment_accepts). The vocabulary is the server's and is judged at boot.",
+        "deployment": {
           "type": [
-            "string",
+            "object",
             "null"
           ],
-          "default": null
+          "properties": {
+            "profile": {
+              "description": "The declared deployment posture, which the chart refuses to render without: sandbox (must not hold real patient data) or production (refuses to boot while a separation is missing and not named in deployment.accepts). The vocabulary is the server's and is judged at boot.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            }
+          }
         },
-        "rest": {
+        "api": {
           "type": [
             "object",
             "null"
@@ -496,16 +513,22 @@
                 "string",
                 "null"
               ]
+            },
+            "admin": {
+              "type": [
+                "boolean",
+                "null"
+              ]
             }
           }
         },
-        "db": {
+        "database": {
           "type": [
             "object",
             "null"
           ],
           "properties": {
-            "migrate": {
+            "migrations": {
               "type": [
                 "string",
                 "null"
@@ -514,20 +537,6 @@
           }
         },
         "auth": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "enabled": {
-              "type": [
-                "boolean",
-                "null"
-              ]
-            }
-          }
-        },
-        "admin": {
           "type": [
             "object",
             "null"
@@ -559,14 +568,13 @@
                 "null"
               ]
             },
-            "port": {
-              "description": "Unset serves the management surface on the API port; set, it becomes a second container port.",
+            "listen": {
+              "description": "Unset serves the management surface on the API port; set (an address:port), it becomes a second container port.",
               "type": [
-                "integer",
+                "string",
                 "null"
               ],
-              "minimum": 1,
-              "maximum": 65535
+              "pattern": "^.+:[0-9]{1,5}$"
             }
           }
         },
@@ -588,18 +596,10 @@
                 "null"
               ],
               "properties": {
-                "retention_days": {
-                  "description": "Days to keep access-log records; 0 keeps them forever. The server judges it against the jurisdictional floors and ceilings at boot.",
+                "retention": {
+                  "description": "How long access-log records are kept, an ISO 8601 calendar period of years or days (P3Y, P1830D); unset keeps them forever. The server judges it against the jurisdictional floors and ceilings at boot.",
                   "type": [
-                    "integer",
-                    "null"
-                  ],
-                  "default": 0
-                },
-                "retention_years": {
-                  "description": "The horizon in calendar years, in place of a non-zero retention_days. Unset by default; the server refuses 0, and a value outside the jurisdictional bounds, at boot.",
-                  "type": [
-                    "integer",
+                    "string",
                     "null"
                   ],
                   "default": null
@@ -663,13 +663,13 @@
             }
           }
         },
-        "terminology": {
+        "record": {
           "type": [
             "object",
             "null"
           ],
           "properties": {
-            "external": {
+            "multimedia": {
               "type": [
                 "object",
                 "null"
@@ -680,30 +680,23 @@
                     "boolean",
                     "null"
                   ]
+                },
+                "url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               }
             }
           }
         },
-        "multimedia": {
+        "terminology": {
           "type": [
             "object",
             "null"
           ],
-          "properties": {
-            "enabled": {
-              "type": [
-                "boolean",
-                "null"
-              ]
-            },
-            "allow_http": {
-              "type": [
-                "boolean",
-                "null"
-              ]
-            }
-          }
+          "description": "[terminology]: the outbound FHIR terminology server; absent, none is asked."
         },
         "files": {
           "description": "NOT part of the TOML: each key becomes /etc/ferroehr/<key> from a chart Secret. Values are file contents, so they are strings.",
@@ -896,7 +889,7 @@
           }
         },
         "ingressAllowAll": {
-          "description": "Whether an empty `ingressFrom` may render an ingress rule with no `from` \u2014 which admits every source. true (the shipped default) renders it; false refuses the render while `ingressFrom` is empty. A non-empty `ingressFrom` narrows the sources regardless.",
+          "description": "Whether an empty `ingressFrom` may render an ingress rule with no `from` — which admits every source. true (the shipped default) renders it; false refuses the render while `ingressFrom` is empty. A non-empty `ingressFrom` narrows the sources regardless.",
           "type": "boolean"
         },
         "egress": {
@@ -1240,7 +1233,7 @@
               "type": "array"
             },
             "ingressAllowAll": {
-              "description": "Whether an empty `ingressFrom` may render an ingress rule with no `from` \u2014 which admits every source to the viewer. true (the shipped default) renders it; false refuses the render while `ingressFrom` is empty. A non-empty `ingressFrom` narrows the sources regardless.",
+              "description": "Whether an empty `ingressFrom` may render an ingress rule with no `from` — which admits every source to the viewer. true (the shipped default) renders it; false refuses the render while `ingressFrom` is empty. A non-empty `ingressFrom` narrows the sources regardless.",
               "type": "boolean"
             }
           }
@@ -1424,7 +1417,7 @@
               "type": "boolean"
             },
             "extraIngressFrom": {
-              "description": "Further peers admitted beside the CDR's pods. There is deliberately no admit-everything BOOLEAN here, and each peer is admitted exactly as written \u2014 so the peer itself is constrained: an empty peer, or an empty podSelector/namespaceSelector inside one, selects every pod in the namespace or in every namespace and is refused.",
+              "description": "Further peers admitted beside the CDR's pods. There is deliberately no admit-everything BOOLEAN here, and each peer is admitted exactly as written — so the peer itself is constrained: an empty peer, or an empty podSelector/namespaceSelector inside one, selects every pod in the namespace or in every namespace and is refused.",
               "type": "array",
               "items": {
                 "$ref": "#/definitions/narrowingNetworkPolicyPeer"
@@ -1489,7 +1482,10 @@
           "description": "FerroTERM's usage report, passed as FERROTERM__USAGE_REPORT__ENABLED with the deployment helm.",
           "properties": {
             "enabled": {
-              "type": ["boolean", "null"],
+              "type": [
+                "boolean",
+                "null"
+              ],
               "description": "Empty follows the top-level usageReport.enabled; true or false decides for FerroTERM alone."
             }
           }
@@ -1731,7 +1727,10 @@
           "description": "FerroBRIDGE's usage report, written into [usage_report] of config.toml with the deployment helm for a release from 0.0.7 on.",
           "properties": {
             "enabled": {
-              "type": ["boolean", "null"],
+              "type": [
+                "boolean",
+                "null"
+              ],
               "description": "Empty follows the top-level usageReport.enabled; true or false decides for FerroBRIDGE alone."
             }
           }
@@ -1812,7 +1811,7 @@
       "pattern": "^([0-9]+(ms|[smhdwy]))+$"
     },
     "quantity": {
-      "description": "A Kubernetes quantity \u2014 \"250m\", \"1Gi\", or a bare number.",
+      "description": "A Kubernetes quantity — \"250m\", \"1Gi\", or a bare number.",
       "type": [
         "string",
         "number"

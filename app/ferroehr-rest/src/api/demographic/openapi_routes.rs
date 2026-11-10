@@ -416,7 +416,7 @@ macro_rules! party_kind_handlers {
                      body = serde_json::Value),
                     (status = 409, description = concat!("OUR OWN EXTENSION — no openEHR spec \
                                                   governs national-identifier protection. \
-                                                  With `[demographic.identifier_protection]` \
+                                                  With `[privacy.identifier_protection]` \
                                                   on, the submitted ", $upper, " carries a \
                                                   protected identifier whose value the \
                                                   latest version of another party already \
@@ -969,7 +969,7 @@ macro_rules! party_kind_handlers {
                      body = serde_json::Value),
                     (status = 409, description = concat!("OUR OWN EXTENSION — no openEHR spec \
                                                   governs national-identifier protection. \
-                                                  With `[demographic.identifier_protection]` \
+                                                  With `[privacy.identifier_protection]` \
                                                   on, the submitted ", $upper, " carries a \
                                                   protected identifier whose value the \
                                                   latest version of another party already \

@@ -27,7 +27,7 @@ use ferroehr::service::response::ServiceResponse;
 /// The `contribution_create` operation.
 pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let base = state.config().rest.base_path.clone();
+    let base = state.config().api.base_path.clone();
     // A CONTRIBUTION commit is a `NewContribution` wrapper DTO, JSON only.
     let body = negotiate::decode::json_value(h, &parts.body)?;
     let resp = state

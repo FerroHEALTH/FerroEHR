@@ -103,6 +103,38 @@ impl std::str::FromStr for SpecProfile {
     }
 }
 
+/// The `[deployment]` table: what this deployment is.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct DeploymentConfig {
+    /// `profile` — the declared posture (`sandbox` | `production`; default
+    /// `sandbox`). `production` refuses to start while a separation it
+    /// asserts is missing and not accepted by name (#3226).
+    pub profile: crate::config::deployment::DeploymentProfile,
+    /// `accepts` — the [`DeploymentGap`](crate::config::deployment::DeploymentGap)s a `production` deployment runs
+    /// without, each stated on every boot and on `/management/status`.
+    /// Ignored under `sandbox`, which accepts everything.
+    pub accepts: Vec<crate::config::deployment::DeploymentGap>,
+    /// `spec_profile` — the openEHR specification generation set the server
+    /// runs (`development` | `stable`; default `development`).
+    pub spec_profile: SpecProfile,
+    /// `licence_file` — the commercial licence token file the licensor
+    /// issued. Optional in every respect: an unset, missing, malformed or
+    /// expired token is logged once at boot and the server runs unlicensed,
+    /// identically in every other way.
+    pub licence_file: Option<std::path::PathBuf>,
+}
+
+impl DeploymentConfig {
+    /// The licence configuration `licence_file` names.
+    #[must_use]
+    pub fn licence(&self) -> crate::licence::config::LicenceConfig {
+        crate::licence::config::LicenceConfig {
+            file: self.licence_file.clone(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

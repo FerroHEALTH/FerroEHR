@@ -15,12 +15,12 @@
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 
+use ferrohealth_config::tls::TlsClientSection;
 use ferrohealth_health::lifecycle::Lifecycle;
 use ferrohealth_health::registry::Registry;
 use ferrohealth_server::health::Health;
 use ferrohealth_server::healthcheck::Outcome;
 use ferrohealth_server::section::{ServerSection, TlsSection};
-use ferrohealth_server::tls_client::TlsClientSection;
 use ferrohealth_session::config::OidcSection;
 use rcgen::{BasicConstraints, CertificateParams, IsCa, Issuer, KeyPair};
 
@@ -239,23 +239,26 @@ async fn the_provider_client_trusts_the_ca_its_section_names() {
     .await;
     let url = format!("https://localhost:{}", address.port());
     issuer.set(url.clone()).expect("set once");
-    let section = |ca_file: Option<PathBuf>| OidcSection {
+    let section = |trust_roots_file: Option<PathBuf>| OidcSection {
         issuer: url.clone(),
         client_id: "ferroehr-viewer".to_owned(),
         redirect_uri: "http://localhost:3000/auth/callback".to_owned(),
-        ca_file,
+        tls: TlsClientSection {
+            trust_roots_file,
+            ..TlsClientSection::default()
+        },
         ..OidcSection::default()
     };
 
     section(Some(dir.join("ca.pem")))
-        .check()
+        .check_with_tls(&ferrohealth_smart::config::ServerTls)
         .expect("the section reads")
         .relying_party()
         .await
         .expect("the CA the section names is trusted");
     assert!(
         section(None)
-            .check()
+            .check_with_tls(&ferrohealth_smart::config::ServerTls)
             .expect("the section reads")
             .relying_party()
             .await
@@ -289,13 +292,16 @@ fn an_unreadable_or_empty_roots_file_refuses_the_client() {
         issuer: "https://idp.example.org".to_owned(),
         client_id: "ferroehr-viewer".to_owned(),
         redirect_uri: "http://localhost:3000/auth/callback".to_owned(),
-        ca_file: Some(dir.join("absent.pem")),
+        tls: TlsClientSection {
+            trust_roots_file: Some(dir.join("absent.pem")),
+            ..TlsClientSection::default()
+        },
         ..OidcSection::default()
     }
-    .check();
+    .check_with_tls(&ferrohealth_smart::config::ServerTls);
     let Err(error) = refused else {
-        panic!("an absent oidc.ca_file must refuse the section");
+        panic!("an absent oidc.tls.trust_roots_file must refuse the section");
     };
     let chain = ferroehr_viewer::error::error_chain(&error);
-    assert!(chain.contains("oidc.ca_file"), "{chain}");
+    assert!(chain.contains("oidc.tls"), "{chain}");
 }

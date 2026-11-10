@@ -65,7 +65,7 @@ route.
 | operational templates, archetypes and artefacts | `template-<template>` with the operation's permission, the template from the `{template_id}` path parameter |
 | query execution | `aql-<query>` with `s`, the query from the `{qualified_query_name}` path parameter |
 | stored-query definitions | `aql-<query>` with the operation's permission |
-| the DEMOGRAPHIC API | a client listed in `[smart] demographic_clients`, or the `[auth] product_scope`: no SMART on openEHR scope covers demographic data |
+| the DEMOGRAPHIC API | a client listed in `[auth.smart] demographic_clients`, or the `[auth] product_scope`: no SMART on openEHR scope covers demographic data |
 | the ADMIN API | the `[auth] product_scope` |
 | the terminology API, the ITI-81 audit retrieval | an authenticated caller |
 
@@ -77,7 +77,7 @@ route.
 
 A `system/aql-*` grant "would grant access to all registered and ad-hoc AQL
 queries system-wide" (master08 §Resource Scopes), so it counts only for a
-backend client listed in `[smart] backend_clients`.
+backend client listed in `[auth.smart] backend_clients`.
 
 ## Launch context: binding to one EHR
 
@@ -85,7 +85,7 @@ When an app is launched for a patient, your authorization server puts the
 openEHR EHR id of the launch context in the token's `ehrId` claim
 (master07 §Context Selection). A `patient/` grant then reaches that one EHR:
 
-- it counts only for an issuer listed in `[smart] patient_issuers`, because an
+- it counts only for an issuer listed in `[auth.smart] patient_issuers`, because an
   `ehrId` names an EHR of the platform that issued it;
 - an EHR route whose `{ehr_id}` names another EHR is refused, and so is an
   operation that names no EHR, such as creating an EHR;
@@ -108,16 +108,16 @@ stands behind it. Such a client commits only as a declared
 
 ## The discovery document
 
-With `[smart] enabled = true`, the server serves the SMART configuration
+With `[auth.smart] discovery = true`, the server serves the SMART configuration
 document, **unauthenticated**, at:
 
 ```text
 GET /ferroehr/rest/.well-known/smart-configuration
 ```
 
-(relative to the REST root, or to `[smart] platform_base_url` when set). The
+(relative to the REST root, or to `[auth.smart] platform_base_url` when set). The
 document is built from the metadata of one `[auth]` issuer, read at boot: the
-first introspected issuer, else the issuer `[smart] issuer_metadata_file`
+first introspected issuer, else the issuer `[auth.smart] issuer_metadata_file`
 names, else the first issuer whose metadata is read from it, else the first
 issuer. It carries the
 authorization, token, registration, introspection and revocation endpoints,
@@ -125,7 +125,7 @@ the grant types and client authentication methods it supports, and its
 `jwks_uri`. It therefore needs an issuer whose metadata names a
 `token_endpoint`, which the document requires (SMART App Launch 2.2.0,
 Conformance, §Metadata). An issuer read from a `jwks_file` has no metadata of
-its own: `[smart] issuer_metadata_file` names a JSON file with its RFC 8414 §2
+its own: `[auth.smart] issuer_metadata_file` names a JSON file with its RFC 8414 §2
 metadata, which must name an `[auth]` issuer read from a `jwks_file` and hold
 every endpoint to `https` (a loopback host excepted). The issuer it names may
 stand anywhere in the list, beside a Basic users' issuer listed first. Without
@@ -136,9 +136,9 @@ export FERROEHR__AUTH__ISSUER__0__ISSUER=https://as.example/realms/ferroehr
 export FERROEHR__AUTH__ISSUER__0__KIND=persons
 export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
 export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=my-smart-app
-export FERROEHR__SMART__ENABLED=true
+export FERROEHR__AUTH__SMART__DISCOVERY=true
 # The external origin absolute service URLs are built from; required.
-export FERROEHR__SMART__PUBLIC_BASE_URL=https://cdr.example.com
+export FERROEHR__AUTH__SMART__PUBLIC_BASE_URL=https://cdr.example.com
 ```
 
 A document looks like:
@@ -180,8 +180,9 @@ A document looks like:
   `permission-patient` only when `patient_issuers` binds an issuer; the client
   types and launch modes the issuer supports; `sso-openid-connect`, with the
   `issuer` member it requires, when the issuer's metadata lists the `openid`
-  scope; `context-openehr-episode` and `launch-base64-json` when their switches
-  are on; and your `[auth] capabilities`.
+  scope; `context-openehr-episode` when `episode_launch` is on;
+  and your `[auth] capabilities`, where `launch-base64-json` goes if your apps
+  read it.
 - **`grant_types_supported`** names only `authorization_code` and
   `client_credentials`, whatever else the issuer advertises: the implicit and
   password grants are deprecated (master06 §Deprecated Flows).
@@ -196,19 +197,18 @@ With `enabled = false` the path is not mounted at all (404).
 
 ## Configuration keys
 
-The keys live in `[auth]` and `[smart]`; see the
-[configuration reference](installation/config-auth.md#smart).
+The keys live in `[auth]` and `[auth.smart]`; see the
+[configuration reference](installation/config-auth.md#authsmart).
 
 | Key | Default | Meaning |
 |---|---|---|
-| `FERROEHR__SMART__ENABLED` | `false` | Serve the discovery document. |
-| `FERROEHR__SMART__PUBLIC_BASE_URL` | unset (**required when enabled**) | The external origin absolute `services.*.baseUrl` values are built from, e.g. `https://cdr.example.com`. |
-| `FERROEHR__SMART__PLATFORM_BASE_URL` | unset | Base the discovery document hangs off. Unset = the REST root (`/ferroehr/rest`). A leading path is honoured (`/gateway/v1` → `/gateway/v1/.well-known/smart-configuration`). |
-| `FERROEHR__SMART__BACKEND_CLIENTS` | `[]` | The `client_id`s a `system/aql-*` grant counts for. |
-| `FERROEHR__SMART__PATIENT_ISSUERS` | `[]` | The issuers whose `patient/` grants count. |
-| `FERROEHR__SMART__DEMOGRAPHIC_CLIENTS` | `[]` | The `client_id`s that reach the DEMOGRAPHIC API. |
-| `FERROEHR__SMART__LAUNCH_BASE64_JSON` | `false` | Advertise the base64 JSON launch-parameter capability (experimental; consumed by the app, not the CDR). |
-| `FERROEHR__SMART__EPISODE__ENABLED` | `false` | Advertise and accept episode launch context (experimental; advisory only, no episode filtering). |
+| `FERROEHR__AUTH__SMART__DISCOVERY` | `false` | Serve the discovery document. |
+| `FERROEHR__AUTH__SMART__PUBLIC_BASE_URL` | unset (**required when enabled**) | The external origin absolute `services.*.baseUrl` values are built from, e.g. `https://cdr.example.com`. |
+| `FERROEHR__AUTH__SMART__PLATFORM_BASE_URL` | unset | Base the discovery document hangs off. Unset = the REST root (`/ferroehr/rest`). A leading path is honoured (`/gateway/v1` → `/gateway/v1/.well-known/smart-configuration`). |
+| `FERROEHR__AUTH__SMART__BACKEND_CLIENTS` | `[]` | The `client_id`s a `system/aql-*` grant counts for. |
+| `FERROEHR__AUTH__SMART__PATIENT_ISSUERS` | `[]` | The issuers whose `patient/` grants count. |
+| `FERROEHR__AUTH__SMART__DEMOGRAPHIC_CLIENTS` | `[]` | The `client_id`s that reach the DEMOGRAPHIC API. |
+| `FERROEHR__AUTH__SMART__EPISODE_LAUNCH` | `false` | Advertise and accept episode launch context (experimental; advisory only, no episode filtering). |
 | `FERROEHR__AUTH__PRODUCT_SCOPE` | `__ferroehr.platform` | The scope that admits the ADMIN API and the DEMOGRAPHIC API. |
 | `FERROEHR__AUTH__CAPABILITIES` | `[]` | Capabilities the discovery document adds. |
 | `FERROEHR__AUTH__SCOPES_SUPPORTED` | `[]` | The scopes the discovery document lists. |

@@ -104,7 +104,7 @@ _are_ ours**, and an operator hardening
   deployment: `env` renders the effective configuration and `flamegraph` profiles
   the live process. The chart ships the master switch on and **every endpoint
   `off`**, so nothing is exposed until you name an endpoint and a level. Set
-  `config.management.port` to move the whole surface onto its own listener so it
+  `config.management.listen` to move the whole surface onto its own listener so it
   is never reachable on the clinical API port.
 - **The viewer:** a separate image with its own Deployment, which this
   chart can render but leaves off (`viewer.enabled`). It consumes the CDR
@@ -154,8 +154,8 @@ port:
 
 | Port | Serves | Who should reach it |
 |---|---|---|
-| `8080` (`service.port`) | the openEHR REST API, the always-on `/health` family, and `/management/*` when `config.management.port` is unset | your ingress controller or gateway, not the internet directly |
-| `config.management.port` (unset by default) | `/management/*` on its own listener when set | operators and your Prometheus, never clinical clients |
+| `8080` (`service.port`) | the openEHR REST API, the always-on `/health` family, and `/management/*` when `config.management.listen` is unset | your ingress controller or gateway, not the internet directly |
+| `config.management.listen` (unset by default) | `/management/*` on its own listener when set | operators and your Prometheus, never clinical clients |
 | `3000` (`viewer.service.port`) | the viewer, only when `viewer.enabled` | your ingress controller, in front of an authenticating edge |
 
 Read off the running pod rather than the template, from the listening sockets in

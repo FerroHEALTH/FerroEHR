@@ -281,11 +281,11 @@ secret_leak_gate() {
   # under `config:` is an operator mistake and must be refused BY NAME. The
   # value is the SENTINEL_PROBE literal, which no release can carry.
   local -a routed_paths=(
-    "db.url"
+    "database.url"
     "audit.fhir_feed.url"
-    "signing.key_passphrase"
-    "multimedia.secret_access_key"
-    "terminology.server.oauth.client_secret"
+    "record.signing.key_passphrase"
+    "record.multimedia.secret_access_key"
+    "terminology.oauth.client_secret"
     "auth.basic.users[0].password_hash"
   )
   local refused=0
@@ -595,17 +595,15 @@ refusal_registry_gate() {
     "deployment.yaml|server.tls.client_auth is|${tls}|--set config.server.tls.client_auth=required|config.server.tls.client_auth;optional"
     "ingress.yaml|ingress.backendTlsAnnotations is empty|${tls}|--set ingress.backendTlsAnnotations=null|ingress.backendTlsAnnotations;nginx.ingress.kubernetes.io/backend-protocol"
     "hpa.yaml|with every target utilisation at 0|${base}|--set autoscaling.enabled=true --set autoscaling.targetCPUUtilizationPercentage=0 --set autoscaling.targetMemoryUtilizationPercentage=0|autoscaling.targetCPUUtilizationPercentage;autoscaling.targetMemoryUtilizationPercentage"
-    "_helpers.tpl|multi-tenancy no longer exists|${base}|--set-string config.tenancy.enabled=true|config.tenancy;separate instances"
-    "_helpers.tpl|config.deployment_profile is unset, and the chart has no default|${base}|--set config.deployment_profile=null|config.deployment_profile;sandbox;production;values-production.yaml"
-    "_helpers.tpl|refusing to render a secret into the ConfigMap|${base}|--set-string config.db.url=SENTINEL_PROBE|config.db.url;database.existingSecret"
+    "_helpers.tpl|config.deployment.profile is unset, and the chart has no default|${base}|--set config.deployment.profile=null|config.deployment.profile;sandbox;production;values-production.yaml"
+    "_helpers.tpl|refusing to render a secret into the ConfigMap|${base}|--set-string config.database.url=SENTINEL_PROBE|config.database.url;database.existingSecret"
     "_helpers.tpl|has no matching entry at config.auth.basic.users[]|${basic}|--set-string secrets.basicUserPasswordHashes.ghost=SENTINEL_PROBE|secrets.basicUserPasswordHashes.ghost"
-    "_helpers.tpl|declares no grant|${base}|--set-string secrets.terminologyClientSecret=SENTINEL_PROBE|secrets.terminologyClientSecret;config.terminology.server.oauth"
-    "_helpers.tpl|config.ehr_index.oauth holds no grant|${base}|--set-string secrets.ehrIndexClientSecret=SENTINEL_PROBE --set config.ehr_index.oauth=null|secrets.ehrIndexClientSecret;config.ehr_index.oauth"
-    "_helpers.tpl|already points config.ehr_index at the in-cluster FerroPIX|${base}|--set config.ehr_index.provider=local|config.ehr_index.provider;ferropix.enabled=false"
-    "_helpers.tpl|config.ehr_index names no patient identity source|${base}|--set ferropix.enabled=false|config.ehr_index.pixm_url;config.ehr_index.provider=local"
-    "_helpers.tpl|already points config.terminology.server.url|${base}|--set terminology.enabled=true --set config.terminology.server.url=https://tx.example.com/fhir|config.terminology.server.url;terminology.wireCdr"
-    "_helpers.tpl|which inject enabled=true|${base}|--set terminology.enabled=true --set config.terminology.server.enabled=false|config.terminology.server.enabled;terminology.wireCdr"
-    "_helpers.tpl|contradicts terminology.failOnError|${base}|--set terminology.enabled=true --set config.terminology.server.fail_on_error=true|config.terminology.server.fail_on_error;terminology.failOnError"
+    "_helpers.tpl|declares no grant|${base}|--set-string secrets.terminologyClientSecret=SENTINEL_PROBE|secrets.terminologyClientSecret;config.terminology.oauth"
+    "_helpers.tpl|config.pixm.oauth holds no grant|${base}|--set-string secrets.ehrIndexClientSecret=SENTINEL_PROBE --set config.pixm.oauth=null|secrets.ehrIndexClientSecret;config.pixm.oauth"
+    "_helpers.tpl|already points the subject index at the in-cluster FerroPIX|${base}|--set config.record.subject_index=local|config.record.subject_index;ferropix.enabled=false"
+    "_helpers.tpl|the configuration names no patient identity source|${base}|--set ferropix.enabled=false|config.pixm.url;config.record.subject_index=local"
+    "_helpers.tpl|already points config.terminology.url|${base}|--set terminology.enabled=true --set config.terminology.url=https://tx.example.com/fhir|config.terminology.url;terminology.wireCdr"
+    "_helpers.tpl|contradicts terminology.failOnError|${base}|--set terminology.enabled=true --set config.terminology.on_error=refuse|config.terminology.on_error;terminology.failOnError"
     "_helpers.tpl|while terminology.image.digest is non-empty|${base}|--set terminology.enabled=true --set terminology.image.tag=never-a-release|terminology.image.tag;terminology.image.digest"
     "_helpers.tpl|the chart injects both|${base}|--set config.usage_report.enabled=false|config.usage_report.enabled;usageReport.enabled"
     "_helpers.tpl|a dependency chart cannot read this chart's switch|${CI_DIR}/all-features-values.yaml|--set usageReport.enabled=false|ferropix.usageReport.enabled=false;ferropix.enabled=false"
@@ -788,8 +786,8 @@ schema_gate() {
     "backup.party.schedule=daily|/backup/party/schedule"
     "backup.audit.schedule=nightly|/backup/audit/schedule"
     "backup.backoffLimit=-1|/backup/backoffLimit"
-    "config.audit.store.retention_years=three|/config/audit/store/retention_years"
-    "config.deployment_profile=true|/config/deployment_profile"
+    "config.audit.store.retention=3|/config/audit/store/retention"
+    "config.deployment.profile=true|/config/deployment/profile"
   )
   local refused=0 probe want out
   for case in "${refusals[@]}"; do
@@ -882,8 +880,8 @@ schema_gate() {
     "config.server.future_api_key=probe"
     "config.telemetry.otlp.endpoint=http://otel-collector:4317"
     "global.imageRegistry=registry.example.com"
-    "config.deployment_profile=production"
-    "config.audit.store.retention_years=5"
+    "config.deployment.profile=production"
+    "config.audit.store.retention=P5Y"
   )
   local accepted=0
   for probe in "${acceptances[@]}"; do
@@ -976,11 +974,11 @@ config_keys_gate() {
   bold "── declared posture + audit horizon ─────────────────────"
   local toml missing=0 want
   toml="$(rendered_toml "${CI_DIR}/default-values.yaml")"
-  grep -qx 'deployment_profile = "sandbox"' <<<"$toml" \
-    || { red "  the default render does not declare deployment_profile = \"sandbox\""; missing=1; }
+  grep -qE '^ *profile = "sandbox"$' <<<"$toml" \
+    || { red "  the default render does not declare [deployment] profile = \"sandbox\""; missing=1; }
   toml="$(rendered_toml "${CI_DIR}/audit-categories-values.yaml")"
   for want in \
-    '^ *retention_years = 3(\.0)?$' \
+    '^ *retention = "P3Y"$' \
     '^ *sgb_v_309_controller = true$' \
     '^ *\[audit\.categories\.templates\]$' \
     '^ *"International Patient Summary" = \["Patient-Summaries"\]$' \
@@ -1060,9 +1058,9 @@ production_overlay_gate() {
     [[ "$got" == "$want" ]] \
       || { red "  [${section}] ${key} renders '${got}', the overlay claims ${want:-the key absent}"; missing=1; }
   done <<'CLAIMS'
-|deployment_profile|"production"
-|deployment_accepts|["plaintext_listener"]
-db|migrate|"verify"
+deployment|profile|"production"
+deployment|accepts|["plaintext_listener"]
+database|migrations|"verify"
 audit|enabled|true
 audit|fail_mode|"closed"
 audit.store|enabled|true
@@ -1070,13 +1068,13 @@ authz.rbac|ehr_access_default|"restricted"
 authz.rbac|enabled|true
 auth|enabled|true
 server.tls|certificate_file|
-management|port|
+management|listen|
 CLAIMS
   grep -qE '^ *subject_namespaces = \[".+"' <<<"$toml" \
     || { red "  privacy.subject_namespaces is empty: open_subject_namespace would refuse the boot"; missing=1; }
   local file
-  for file in DB__URL_FILE STORAGE__PARTY__URL_FILE STORAGE__AUDIT__URL_FILE DB__MIGRATE_URL_FILE \
-    STORAGE__MIGRATE__PARTY__URL_FILE STORAGE__MIGRATE__AUDIT__URL_FILE; do
+  for file in DATABASE__URL_FILE DATABASE__PARTY__URL_FILE DATABASE__AUDIT__URL_FILE \
+    DATABASE__MIGRATE_URL_FILE DATABASE__PARTY__MIGRATE_URL_FILE DATABASE__AUDIT__MIGRATE_URL_FILE; do
     [[ "$(yq -r "select(.kind == \"Deployment\" and .metadata.name == \"${RELEASE_NAME}\") | .spec.template.spec.containers[0].env[] | select(.name == \"FERROEHR__${file}\") | .name" <<<"$rendered")" == "FERROEHR__${file}" ]] \
       || { red "  the Deployment does not carry FERROEHR__${file}: a domain or the migrator shares a credential"; missing=1; }
   done
@@ -1178,8 +1176,8 @@ migration_job_gate() {
   [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.serviceAccountName' <<<"$rendered")" == "${RELEASE_NAME}-migrate" ]] \
     || { red "  with serviceAccount.create the Job does not run under the hook account"; missing=1; }
   for domain in PARTY AUDIT; do
-    [[ "$(yq -r "select(.kind == \"Job\") | .spec.template.spec.containers[0].env[] | select(.name == \"FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE\") | .name" <<<"$rendered")" == "FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE" ]] \
-      || { red "  the Job lacks FERROEHR__STORAGE__MIGRATE__${domain}__URL_FILE: it cannot prepare that domain's cluster"; missing=1; }
+    [[ "$(yq -r "select(.kind == \"Job\") | .spec.template.spec.containers[0].env[] | select(.name == \"FERROEHR__DATABASE__${domain}__MIGRATE_URL_FILE\") | .name" <<<"$rendered")" == "FERROEHR__DATABASE__${domain}__MIGRATE_URL_FILE" ]] \
+      || { red "  the Job lacks FERROEHR__DATABASE__${domain}__MIGRATE_URL_FILE: it cannot prepare that domain's cluster"; missing=1; }
   done
   [[ "$(yq -r 'select(.kind == "Job") | .spec.template.spec.volumes[] | select(.name == "migrator-secret") | .projected.sources | length' <<<"$rendered")" -eq 3 ]] \
     || { red "  the Job's migrator volume does not project three Secrets (the shared migrator and two domain migrators)"; missing=1; }
@@ -1271,7 +1269,7 @@ server_tls_gate
 
 # ── The viewer reaches the management surface where the CDR serves it ────────
 # The viewer derives `{base_url}/management` when it is told nothing, which is
-# wrong twice over once config.management.port moves the surface to its own
+# wrong twice over once config.management.listen moves the surface to its own
 # listener: another port, and an egress policy admitting only the API port.
 # Both halves are read from the render, with and without the separate port.
 viewer_management_gate() {
@@ -1280,10 +1278,10 @@ viewer_management_gate() {
   local -a extra
   for port in "" 9464; do
     extra=()
-    [[ -z "$port" ]] || extra=(--set "config.management.port=${port}")
+    [[ -z "$port" ]] || extra=(--set-string "config.management.listen=0.0.0.0:${port}")
     if ! render="$(helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$viewer" \
                    ${extra[@]+"${extra[@]}"} -s templates/viewer.yaml 2>&1)"; then
-      red "  viewer: the viewer overlay no longer renders${port:+ with config.management.port=$port}:"
+      red "  viewer: the viewer overlay no longer renders${port:+ with config.management.listen=0.0.0.0:$port}:"
       printf '%s\n' "$render" | sed -n 1,4p
       FAIL=1
       return
@@ -1312,7 +1310,7 @@ viewer_management_gate
 
 # ── The viewer trusts a private issuer CA only when one is named ────────────
 # viewer.auth.oidc.caExistingSecret mounts the Secret's key as a file and names
-# it in `[oidc] ca_file`; unset, neither the variable nor the
+# it in `[oidc.tls] trust_roots_file`; unset, neither the variable nor the
 # volume renders. Both halves are read from the render.
 viewer_oidc_ca_gate() {
   bold "── viewer: the issuer's CA when one is named ───────────"
@@ -1331,7 +1329,7 @@ viewer_oidc_ca_gate() {
       FAIL=1
       return
     fi
-    roots="$(printf '%s' "$render" | yq -r 'select(.kind == "Deployment") | .spec.template.spec.containers[0].env[] | select(.name == "FERROEHR_VIEWER__OIDC__CA_FILE") | .value')"
+    roots="$(printf '%s' "$render" | yq -r 'select(.kind == "Deployment") | .spec.template.spec.containers[0].env[] | select(.name == "FERROEHR_VIEWER__OIDC__TLS__TRUST_ROOTS_FILE") | .value')"
     volume="$(printf '%s' "$render" | yq -r 'select(.kind == "Deployment") | .spec.template.spec.volumes[] | select(.name == "oidc-ca") | .secret.secretName')"
     if [[ -z "$secret" ]]; then
       [[ -z "$roots" && -z "$volume" ]] \
@@ -1353,7 +1351,7 @@ viewer_oidc_ca_gate
 
 # ── The server trusts a private issuer CA only when one is named ────────────
 # auth.caExistingSecret mounts the Secret's key as a file and names it in
-# `[auth] ca_file`; unset, neither the variable nor the volume renders.
+# `[auth.tls] trust_roots_file`; unset, neither the variable nor the volume renders.
 server_issuer_ca_gate() {
   bold "── server: the issuer's CA when one is named ───────────"
   local render wrong=0 ca_file volume secret
@@ -1368,7 +1366,7 @@ server_issuer_ca_gate() {
       FAIL=1
       return
     fi
-    ca_file="$(printf '%s' "$render" | yq -r '.spec.template.spec.containers[0].env[] | select(.name == "FERROEHR__AUTH__CA_FILE") | .value')"
+    ca_file="$(printf '%s' "$render" | yq -r '.spec.template.spec.containers[0].env[] | select(.name == "FERROEHR__AUTH__TLS__TRUST_ROOTS_FILE") | .value')"
     volume="$(printf '%s' "$render" | yq -r '.spec.template.spec.volumes[] | select(.name == "issuer-ca") | .secret.secretName')"
     if [[ -z "$secret" ]]; then
       [[ -z "$ca_file" && -z "$volume" ]] \

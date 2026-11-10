@@ -32,7 +32,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use axum::extract::ConnectInfo;
-use ferroehr::config::rest::RestConfig;
+use ferroehr::config::rest::ApiConfig;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, SubjectLookup, SubjectResolver, start};
@@ -100,8 +100,8 @@ fn rest_config() -> AppConfig {
             forwarded_header: ForwardedHeader::XForwardedFor,
             ..common::server()
         },
-        rest: RestConfig {
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
+        api: ApiConfig {
+            openapi_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
         ..Default::default()
@@ -113,8 +113,8 @@ fn rest_config() -> AppConfig {
 fn auth_off_config() -> AppConfig {
     AppConfig {
         server: common::server(),
-        rest: RestConfig {
-            swagger_ui: ferroehr::config::management::AccessLevel::Off,
+        api: ApiConfig {
+            openapi_ui: ferroehr::config::management::AccessLevel::Off,
             ..Default::default()
         },
         auth: common::auth_off(),
@@ -133,22 +133,20 @@ async fn audit_capture(suppress_login: bool) -> (SyslogTlsListener, AuditSender)
         enabled: true,
         store: StoreConfig {
             enabled: false,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
-        syslog: SyslogConfig {
-            enabled: true,
-            host: "127.0.0.1".to_owned(),
-            port,
-            tls: ferrohealth_server::tls_client::TlsClientSection {
+        syslog: Some(SyslogConfig {
+            url: format!("tls://127.0.0.1:{port}"),
+            tls: ferrohealth_config::tls::TlsClientSection {
                 trust_roots_file: Some(socket.ca_file.clone()),
-                ..ferrohealth_server::tls_client::TlsClientSection::default()
+                ..ferrohealth_config::tls::TlsClientSection::default()
             },
             ..SyslogConfig::default()
-        },
+        }),
         suppress_login_events: suppress_login,
         fail_mode: FailMode::Open,
         queue_capacity: 64,
@@ -169,18 +167,16 @@ async fn audit_capture_fail_closed() -> AuditSender {
         enabled: true,
         store: StoreConfig {
             enabled: false,
-            retention_days: 0,
-            retention_years: None,
+            retention: None,
             sgb_v_309_controller: false,
-            verify_interval_seconds: 0,
-            full_verify_interval_seconds: 0,
+            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            ..StoreConfig::default()
         },
-        syslog: SyslogConfig {
-            enabled: true,
-            host: "127.0.0.1".to_owned(),
-            port,
+        syslog: Some(SyslogConfig {
+            url: format!("tls://127.0.0.1:{port}"),
             ..SyslogConfig::default()
-        },
+        }),
         suppress_login_events: true,
         fail_mode: FailMode::Closed,
         resolve_subject: true,

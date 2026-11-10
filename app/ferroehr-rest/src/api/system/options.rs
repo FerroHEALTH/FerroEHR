@@ -71,8 +71,8 @@ pub const SPEC_ENDPOINTS: &[&str] = &["/ehr", "/demographic", "/definition", "/q
 /// [`ferroehr::telemetry::provenance::CONFORMANCE_PROFILE`], which the build
 /// derives from the committed conformance record, and configuration cannot
 /// set it.
-/// [`ferroehr::config::rest::RestConfig`] carries a
-/// `SystemOptionsConfig` as its `identity` field (the `[rest.identity]`
+/// [`ferroehr::config::rest::ApiConfig`] carries a
+/// `SystemOptionsConfig` as its `options` field (the `[api.options]`
 /// section of the one config tree), so an operator MAY override any identity
 /// field while the defaults stay measured.
 use ferroehr::config::rest::SystemOptionsConfig;
@@ -157,9 +157,9 @@ impl SystemManifest {
     fn body(&self) -> openehr_its::rest::generated::system::Options {
         openehr_its::rest::generated::system::Options {
             solution: Some(self.config.solution.clone()),
-            solution_version: Some(self.config.solution_version.clone()),
+            solution_version: Some(SystemOptionsConfig::solution_version().to_owned()),
             vendor: Some(self.config.vendor.clone()),
-            restapi_specs_version: Some(self.config.restapi_specs_version.clone()),
+            restapi_specs_version: Some(SystemOptionsConfig::restapi_specs_version().to_owned()),
             conformance_profile: ferroehr::telemetry::provenance::CONFORMANCE_PROFILE
                 .map(str::to_owned),
             endpoints: Some(self.endpoints.clone()),
@@ -309,16 +309,14 @@ mod tests {
     fn options_doc_matches_the_generated_dto() {
         let config = SystemOptionsConfig {
             solution: "s".to_owned(),
-            solution_version: "v".to_owned(),
             vendor: "o".to_owned(),
-            restapi_specs_version: "r".to_owned(),
         };
         let endpoints = vec!["/ehr".to_owned()];
         let doc = serde_json::to_value(OptionsDoc {
             solution: "s",
-            solution_version: "v",
+            solution_version: SystemOptionsConfig::solution_version(),
             vendor: "o",
-            restapi_specs_version: "r",
+            restapi_specs_version: SystemOptionsConfig::restapi_specs_version(),
             conformance_profile: ferroehr::telemetry::provenance::CONFORMANCE_PROFILE,
             endpoints: &endpoints,
         })
@@ -399,7 +397,6 @@ mod tests {
         let cfg = SystemOptionsConfig {
             solution: "MySolution".to_owned(),
             vendor: "MyOrg".to_owned(),
-            ..SystemOptionsConfig::default()
         };
         let m = SystemManifest::new(cfg, SPEC_ENDPOINTS.iter().map(|s| (*s).to_owned()));
         let v = body_json(m.respond(&HeaderMap::new())).await;

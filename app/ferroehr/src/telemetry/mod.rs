@@ -48,7 +48,10 @@ type FlameFlush = tracing_flame::FlushGuard<BufWriter<File>>;
 /// The telemetry could not be started.
 #[derive(Debug, thiserror::Error)]
 pub enum TelemetryError {
-    /// The shared provider, the console or the subscriber could not be built.
+    /// The shared provider or its collector's TLS could not be built.
+    #[error(transparent)]
+    Build(#[from] ferrohealth_server::telemetry::TelemetryBuildError),
+    /// The console or the subscriber could not be built.
     #[error(transparent)]
     Init(#[from] ferrohealth_telemetry::telemetry::InitError),
     /// The span-timing capture file could not be created.
@@ -72,15 +75,19 @@ pub fn service(build: &BuildInfo) -> Service {
 ///
 /// # Errors
 ///
-/// Returns [`TelemetryError::Init`] when the provider or the console cannot be
-/// built, [`TelemetryError::Flame`] when the capture file cannot be created,
-/// and [`TelemetryError::Subscriber`] when a subscriber is already installed.
+/// Returns [`TelemetryError::Build`] when the provider or the collector's TLS
+/// cannot be built, [`TelemetryError::Init`] when the console cannot be built,
+/// [`TelemetryError::Flame`] when the capture file cannot be created, and
+/// [`TelemetryError::Subscriber`] when a subscriber is already installed.
 pub fn init(
     section: &TelemetrySection,
     flame_file: Option<&Path>,
     build: &BuildInfo,
 ) -> Result<TelemetryGuard, TelemetryError> {
-    let telemetry = Arc::new(Telemetry::new(section, service(build))?);
+    let telemetry = Arc::new(ferrohealth_server::telemetry::build(
+        section,
+        service(build),
+    )?);
     let Layers { mut layers, filter } =
         telemetry.layers::<Registry, _>(section, &Console::detect(), std::io::stdout)?;
     let mut flame = None;

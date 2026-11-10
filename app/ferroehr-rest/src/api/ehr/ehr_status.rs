@@ -110,7 +110,7 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
     let h = &parts.headers;
     let ok = StatusCode::OK;
     let no_content = StatusCode::NO_CONTENT;
-    let base = state.config().rest.base_path.clone();
+    let base = state.config().api.base_path.clone();
     // EHR_STATUS is not templated → no Simplified-Formats mapping; reject a
     // simplified Content-Type/Accept uniformly (see `formats::dispatch`).
     crate::formats::dispatch::guard_non_templated(h)?;

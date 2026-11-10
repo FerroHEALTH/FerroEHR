@@ -44,7 +44,7 @@ the Art. 30 fields, in
 5. **Access logging**: one record per access, in DICOM PS3.15 and FHIR
    `AuditEvent` renderings.
 6. **Change-event feed**: a PHI-free envelope per commit, served to the
-   readers `[outbox] readers` names.
+   readers `[record.change_feed] readers` names.
 
 Everything else the server does (templates, terminology lookup, conformance
 reporting) operates on definitions rather than on people.
@@ -110,12 +110,12 @@ the controller's judgement rather than a default.
 |---|---|---|
 | Clinical content and its versions | Kept until an administrator deletes it. Archiving moves a record to the cold tier without expiring it | the admin API |
 | Demographic parties | The same | the admin API |
-| Access records | Kept forever by default; reaped hourly when a retention is set | `[audit.store] retention_days` |
-| Change-event envelopes | Pruned seven days after their commit by default, once every active reader has acknowledged them | `[outbox] retention_days` |
+| Access records | Kept forever by default; reaped hourly when a retention is set | `[audit.store] retention` |
+| Change-event envelopes | Pruned seven days after their commit by default, once every active reader has acknowledged them | `[record.change_feed] retention` |
 
 **The access log carries a jurisdictional floor.** Where one of the active
 identifier-scan rules names a jurisdiction with a registered retention floor, a
-shorter `audit.store.retention_days` is a boot error naming the floor rather
+shorter `audit.store.retention` is a boot error naming the floor rather
 than a silent trim. The Netherlands is the one registered floor today: five
 years from the moment the entry is written, under the
 [Besluit vaststelling bewaartermijn logging](https://wetten.overheid.nl/BWBR0042391),
@@ -131,15 +131,15 @@ assessment has to size.
 
 | # | Risk | Shipped control | What remains |
 |---|---|---|---|
-| R1 | A clinical record and the identity of its subject are held together, so one credential re-identifies everyone | Two schemas, four `NOINHERIT` roles, explicit revokes in both directions, and a boot self-check that refuses to serve when a role can read across | With every `[storage.<domain>] url` unset, all three pools use one credential and the split is a schema split. A superuser and a cluster-wide restore span everything |
+| R1 | A clinical record and the identity of its subject are held together, so one credential re-identifies everyone | Two schemas, four `NOINHERIT` roles, explicit revokes in both directions, and a boot self-check that refuses to serve when a role can read across | With every `[database.<domain>] url` unset, all three pools use one credential and the split is a schema split. A superuser and a cluster-wide restore span everything |
 | R2 | A national identifier is written into clinical content | The identifier scanner over every string leaf of every clinical write, `strict` by default, with all eight shipped rules active; the subject rule; the refusal of identifying party proxies; and a database trigger on `ehr` once the namespaces are declared | A rule matches a checksummed number, not a name, an address or a local record number. `subject_namespaces` is empty by default, which leaves the subject rule and the trigger out of force |
 | R3 | A national identifier is readable in the party store, in a backup or on a replica | AES-256-GCM per record with the scheme bound in, a keyed HMAC-SHA-256 digest for lookup, per-domain subkeys, and a `SECURITY DEFINER` resolve function only the party role may execute | Protection is off by default. An identifier whose scheme is not configured stays in the versioned body. The root key held beside a dump defeats all of it |
 | R4 | Someone re-identifies a record and nobody can tell afterwards | Every resolution of a party or a subject to its EHRs writes a `linkage`-domain access record naming the actor, purpose and outcome, including a miss | Recording is not prevention. An actor entitled to the crossing re-identifies by design |
-| R5 | Content identifies a person without carrying an identifier | Small-cell suppression on the cohort query: a result serving fewer distinct EHRs than `cohort.small_cell_threshold` (default `5`) withholds its rows and says so | A rare diagnosis with a date and a place identifies without any identifier field. The threshold covers the cohort query alone; an ordinary AQL execution takes none |
+| R5 | Content identifies a person without carrying an identifier | Small-cell suppression on the cohort query: a result serving fewer distinct EHRs than `privacy.cohort.small_cell_threshold` (default `5`) withholds its rows and says so | A rare diagnosis with a date and a place identifies without any identifier field. The threshold covers the cohort query alone; an ordinary AQL execution takes none |
 | R6 | One organisation reads another's rows | One instance per organisation: its own database, its own domain roles, and no relation, policy or session setting that two organisations could share. openEHR puts multi-tenancy at the layer hosting several systems rather than inside one (BASE `architecture_overview` `master06-design_of_the_ehr.adoc` §The EHR System) | The separation is now a deployment property, so two organisations pointed at one instance share everything and nothing in the software will catch it |
 | R7 | Access records are altered or lost | Records are hash-chained and `audit.verify_audit_chain()` names any that changed; the runtime role can insert and stamp delivery and nothing more; syslog and FHIR-feed forwarding put copies off the box | The chain is evidence, not prevention. A local repository shares the blast radius of the database it audits, and a read made straight against the database appears nowhere |
 | R8 | A backup carries what the grants withheld | One dump per domain, each under its own read-only role and its own claim, and the chart refuses to render when two domains name the same claim | Each dump is plaintext of its own domain. Two of them together rebuild the join. Nothing prunes old dumps |
-| R9 | A deployment has made none of the separations and looks like one that has | `deployment_profile = "production"` refuses to start while a separation is open and not accepted by name; `sandbox` names every open one on the banner, in the log and on `GET /management/status` | The default is `sandbox`, so an operator who sets nothing gets the loud version rather than the enforced one |
+| R9 | A deployment has made none of the separations and looks like one that has | `deployment.profile = "production"` refuses to start while a separation is open and not accepted by name; `sandbox` names every open one on the banner, in the log and on `GET /management/status` | The default is `sandbox`, so an operator who sets nothing gets the loud version rather than the enforced one |
 | R10 | Anyone with a database connection is past every API control | Least-privilege roles revoked from each other's domains, and a version table that is appended to rather than overwritten | This is inherent. Authorization is enforced at the API, so protecting the credentials and the network path is yours |
 
 ## 7. Controls, by issue and legal source

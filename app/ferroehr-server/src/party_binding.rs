@@ -41,7 +41,7 @@ pub enum PartyBindingCmd {
     /// will make of them: the keys per issuer, duplicates, inactive and
     /// abandoned persons, the provisional persons just-in-time creation
     /// left incomplete for longer than `[authz.party_binding]
-    /// provisional_report_days`, key-bearing persons with no
+    /// provisional_report_after`, key-bearing persons with no
     /// professional `ROLE`, the mapped Basic users, and the committer that
     /// introduced each key. It exits non-zero on a duplicate, a missing
     /// person or a key whose committer fails the provenance rule.
@@ -290,7 +290,7 @@ pub async fn check(args: &CheckArgs, config: &FerroEhrConfig) -> anyhow::Result<
                 .collect(),
         });
     }
-    let pools = ferroehr::db::connect_domains(&config.db, &config.storage)
+    let pools = ferroehr::db::connect_domains(&config.database)
         .await
         .context("connecting to PostgreSQL")?;
     judged(&pools, config)
@@ -361,9 +361,10 @@ fn provenance_input(args: &ProvenanceArgs, config: &FerroEhrConfig) -> anyhow::R
             })
             .collect(),
         scim_clients: config
+            .auth
             .scim
-            .client
             .iter()
+            .flat_map(|scim| &scim.client)
             .map(|client| (client.issuer.clone(), client.client_id.clone()))
             .collect(),
         administrators: args
@@ -380,7 +381,7 @@ fn provenance_input(args: &ProvenanceArgs, config: &FerroEhrConfig) -> anyhow::R
             .collect(),
         migrations: args.migrations.clone(),
         expected: None,
-        provisional_report_days: config.authz.party_binding.provisional_report_days,
+        provisional_report_after: config.authz.party_binding.provisional_report_after,
         jit_issuers: config
             .authz
             .party_binding

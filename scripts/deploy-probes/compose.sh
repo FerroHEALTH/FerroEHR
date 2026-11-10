@@ -242,12 +242,12 @@ probes_bootstrap() {
 probes_multimedia() {
   bold "multimedia (S3 externalization)"
 
-  # #2169: the documented recipe exports FERROEHR__MULTIMEDIA__* in a shell.
+  # #2169: the documented recipe exports FERROEHR__RECORD__MULTIMEDIA__* in a shell.
   # Far end: the SERVER's own effective configuration, not the compose file.
   probe "P-MM-ENV" "$PROBE_WORKING" "compose" "#2169" \
-    "exported FERROEHR__MULTIMEDIA__* reaches the server"
+    "exported FERROEHR__RECORD__MULTIMEDIA__* reaches the server"
   local env_doc; env_doc="$(curl -s -u "$BASIC" "$CDR/management/env")"
-  assert_contains "$env_doc" '"endpoint":"http://seaweedfs:8333"' \
+  assert_contains "$env_doc" '"url":"http://seaweedfs:8333"' \
     "the compose file must pass the multimedia keys through from the shell"
   assert_contains "$env_doc" '"enabled":true'
   probe_done
@@ -372,7 +372,7 @@ probes_multimedia_off() {
   # difference here is the switch and nothing else.
   probe "P-MM-OFF" "$PROBE_OFF" "server" "-" \
     "with externalization off, a large DV_MULTIMEDIA is stored inline"
-  FERROEHR__MULTIMEDIA__ENABLED=false compose_up ferroehr ferroehr-provision
+  FERROEHR__RECORD__MULTIMEDIA__ENABLED=false compose_up ferroehr ferroehr-provision
   if ! wait_http "$CDR/health/readiness" 90; then
     probe_fail "a serving CDR with multimedia off" "readiness never returned" \
       "turning an integration off must not stop the server starting"
@@ -498,7 +498,7 @@ probes_management_separate_listener() {
 services:
   ferroehr:
     environment:
-      FERROEHR__MANAGEMENT__PORT: "9090"
+      FERROEHR__MANAGEMENT__LISTEN: "0.0.0.0:9090"
   mgmt-probe:
     image: curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
     network_mode: service:identity-issuer
@@ -730,7 +730,7 @@ probes_domain_roles() {
      both domains through the wire, and asserts that each of the server's own pools is
      refused the other domain's relations with SQLSTATE 42501. What remains uncovered by
      any probe is a real DEPLOYMENT on two DSNs: a container booting with
-     FERROEHR__STORAGE__PARTY__URL_FILE mounted, schema preparation by a role that is
+     FERROEHR__DATABASE__PARTY__URL_FILE mounted, schema preparation by a role that is
      neither runtime credential, and the chart's database.party.existingSecret
      wiring the two. The server opens three pools (db::connect_domains over
      [storage.clinical], [storage.party] and [storage.audit], each defaulting to
@@ -883,9 +883,9 @@ probes_backup_restore() {
   # and no credential literal lives in this harness.
   local restored_dsn verify_out
   restored_dsn="$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' \
-    "$(dc ps -q ferroehr)" 2>/dev/null | sed -n 's/^FERROEHR__DB__URL=//p')"
+    "$(dc ps -q ferroehr)" 2>/dev/null | sed -n 's/^FERROEHR__DATABASE__URL=//p')"
   if [[ -z "$restored_dsn" ]]; then
-    probe_fail "the server container's FERROEHR__DB__URL" "(empty)" \
+    probe_fail "the server container's FERROEHR__DATABASE__URL" "(empty)" \
       "without it this probe would build a DSN of its own and measure that instead"
     probe_done
     return
@@ -915,7 +915,7 @@ probes_backup_restore() {
   restore_log="$(docker run --rm --network "$network" -v "$dumps:/dumps:ro" \
     "${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:4.1.1}" \
     sh -c "$restore_script" 2>&1)"
-  if verify_out="$(dc exec -T -e FERROEHR__DB__URL="$restored_dsn" -e FERROEHR__DB__MIGRATE=verify \
+  if verify_out="$(dc exec -T -e FERROEHR__DATABASE__URL="$restored_dsn" -e FERROEHR__DATABASE__MIGRATIONS=verify \
       ferroehr /usr/local/bin/ferroehr db verify 2>&1)"; then
     :
   else
@@ -935,8 +935,8 @@ probes_backup_restore() {
     "GRANT USAGE ON SCHEMA party TO ferroehr_clinical_reader;
      GRANT SELECT ON ALL TABLES IN SCHEMA party TO ferroehr_clinical_reader" >/dev/null 2>&1
   local breach_out
-  if breach_out="$(dc exec -T -e FERROEHR__DB__URL="$restored_dsn" \
-      -e FERROEHR__DB__MIGRATE=verify \
+  if breach_out="$(dc exec -T -e FERROEHR__DATABASE__URL="$restored_dsn" \
+      -e FERROEHR__DATABASE__MIGRATIONS=verify \
       ferroehr /usr/local/bin/ferroehr db verify 2>&1)"; then
     probe_fail "\`ferroehr db verify\` refusing a cross-domain grant" \
       "it accepted a database where ferroehr_clinical_reader can read party tables" \

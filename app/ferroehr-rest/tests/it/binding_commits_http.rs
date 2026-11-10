@@ -18,7 +18,7 @@ use ferroehr::config::clients::{Facility, Origin, SystemClient};
 use ferroehr::party_binding::source::BindingSource;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::{IssuerEntry, IssuerKey};
+use ferrohealth_smart::config::IssuerEntry;
 use ferrohealth_smart::kind::IssuerKind;
 use http::StatusCode;
 use serde_json::{Value, json};
@@ -56,7 +56,8 @@ const ADMINISTRATOR: &str = "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f";
 fn deployment() -> AppConfig {
     let mut config = config(None);
     let jwks_file = common::jwks_file().display().to_string();
-    if let IssuerKey::List(entries) = &mut config.auth.shared.issuer {
+    {
+        let entries = &mut config.auth.shared.issuer;
         entries.push(IssuerEntry {
             issuer: MACHINES.to_owned(),
             kind: Some(IssuerKind::Machines),
@@ -86,7 +87,7 @@ fn deployment() -> AppConfig {
         }],
         ..SystemClient::default()
     }];
-    config.smart.patient_issuers = vec![PATIENTS.to_owned()];
+    config.auth.smart.patient_issuers = vec![PATIENTS.to_owned()];
     config
 }
 

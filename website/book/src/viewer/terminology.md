@@ -22,11 +22,12 @@ its terminology routes as if they were not mounted, and the screen says so in
 one card instead of pretending to work:
 
 ```toml
-[terminology]
-api_enabled = true
-```
 
-or, as an environment override, `FERROEHR__TERMINOLOGY__API_ENABLED=true`.
+
+[api]
+terminology = true```
+
+or, as an environment override, `FERROEHR__API__TERMINOLOGY=true`.
 
 Turning it on exposes only lookups over terminologies the server already holds:
 the bundled openEHR terminology plus the external code sets beside it. Wiring

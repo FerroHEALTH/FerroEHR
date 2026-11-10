@@ -27,9 +27,9 @@
 //! - Resolved and the code is a member: accepted.
 //! - Resolved and the code is not a member: a [`ValidationKind::Terminology`]
 //!   violation, `422`. It is a constraint violation rather than a service
-//!   failure, so `fail_on_error` does not apply.
+//!   failure, so `on_error` does not apply.
 //! - Unresolvable (server down, `5xx`, unknown value set): governed by
-//!   `[terminology.server] fail_on_error` — fail-closed rejects the composition, fail-open (the
+//!   `[terminology] on_error` — fail-closed rejects the composition, fail-open (the
 //!   default) accepts it and logs a warning.
 //!
 //! NOTE: no openEHR spec maps `CODE_PHRASE.terminology_id` values to FHIR system
@@ -94,7 +94,7 @@ impl FerroEhrService {
                             path: check.path.clone(),
                             message: format!(
                                 "the value set bound to constraint code '{}' ({}) could not be \
-                                 resolved and terminology.server.fail_on_error is set: {}",
+                                 resolved and terminology.on_error is `refuse`: {}",
                                 check.ac_code,
                                 check.query_uri,
                                 e.message(),
@@ -108,7 +108,7 @@ impl FerroEhrService {
                             terminology = %check.binding_terminology,
                             error = %e.message(),
                             "constraint-binding value set unresolved; accepting the composition \
-                             (terminology.server.fail_on_error is not set)"
+                             (terminology.on_error is `accept`)"
                         );
                     }
                 }
@@ -224,11 +224,14 @@ mod tests {
     /// fail-closed posture.
     async fn service(base: &str, fail_on_error: bool) -> FerroEhrService {
         let cfg = TerminologyServerConfig {
-            enabled: true,
             url: ferrohealth_secret::secret_url::SecretUrl::new(base),
-            fail_on_error,
-            request_timeout_ms: 800,
-            oauth: None,
+            on_error: if fail_on_error {
+                crate::service::terminology::config::OnError::Refuse
+            } else {
+                crate::service::terminology::config::OnError::Accept
+            },
+            timeout: ferrohealth_config::units::Duration::from_millis(800),
+            ..TerminologyServerConfig::default()
         };
         let server = FhirTerminologyProvider::new(&cfg).expect("build the terminology client");
         let db = testkit::db().await.expect("testkit database");
@@ -282,7 +285,7 @@ mod tests {
 
     /// Terminology server unreachable: fail-open (the default) accepts the
     /// composition, fail-closed rejects it. The observable difference is the
-    /// whole point of `[terminology.server] fail_on_error`.
+    /// whole point of `[terminology] on_error`.
     #[tokio::test]
     async fn an_unresolvable_binding_follows_fail_on_error() {
         // TEST-NET-1 (RFC 5737 §3: 192.0.2.0/24 "for use in documentation",
@@ -312,7 +315,7 @@ mod tests {
             "fail-closed must reject an unresolvable binding"
         );
         assert!(
-            violations[0].message.contains("fail_on_error"),
+            violations[0].message.contains("on_error"),
             "the refusal names the posture that caused it, got {}",
             violations[0].message
         );
@@ -334,7 +337,7 @@ mod tests {
             .await;
         assert!(
             violations.is_empty(),
-            "no binding is resolved without [terminology.server]"
+            "no binding is resolved without [terminology]"
         );
         assert_eq!(
             ts.received_requests().await.unwrap().len(),

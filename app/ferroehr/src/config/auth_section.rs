@@ -1,16 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[auth]` table: the shared `ferrohealth-smart` section and the vendor
-//! adapter tables FerroEHR keeps beside it under `[auth.idp]`.
+//! The `[auth]` table: the shared `ferrohealth-smart` section and the tables
+//! FerroEHR keeps beside it: `[auth.idp]`, `[auth.smart]` and `[auth.scim]`.
 //!
-//! `ferrohealth-smart` owns every key of `[auth]` and reads it with
+//! `ferrohealth-smart` owns every other key of `[auth]` and reads it with
 //! `deny_unknown_fields`; its `idp::entra::GraphSection` is a table "a product
 //! embeds where its configuration keeps the party binding", and FerroEHR keeps
 //! it at `[auth.idp.entra]`, beside the crate's `[[auth.party]]` tables. The
-//! loader takes the `idp` key out of the table and hands every other key to the
-//! crate's section, so an unknown key is still refused with the crate's field
-//! list. No openEHR spec governs configuration: our own design.
+//! loader takes FerroEHR's keys out of the table and hands every other key to
+//! the crate's section, so an unknown key is still refused with the crate's
+//! field list. No openEHR spec governs configuration: our own design.
 
 use std::fmt;
 
@@ -20,8 +20,15 @@ use serde::de::value::{MapAccessDeserializer, StringDeserializer};
 use serde::de::{DeserializeSeed, Error as _, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::config::scim::ScimConfig;
+use crate::config::smart::SmartConfig;
+
 /// The key of the vendor adapter tables inside `[auth]`.
 const IDP: &str = "idp";
+/// The key of the SMART App Launch table inside `[auth]`.
+const SMART: &str = "smart";
+/// The key of the SCIM service provider table inside `[auth]`.
+const SCIM: &str = "scim";
 
 /// The `[auth]` table.
 #[derive(Debug, Clone, Default, Serialize)]
@@ -34,6 +41,12 @@ pub struct AuthConfig {
     /// The vendor adapter tables (`[auth.idp]`).
     #[serde(skip_serializing_if = "IdpSection::is_empty")]
     pub idp: IdpSection,
+    /// `[auth.smart]` — the SMART App Launch resource-server posture.
+    pub smart: SmartConfig,
+    /// `[auth.scim]` — the SCIM 2.0 service provider and its provisioning
+    /// clients; absent, `/scim/v2/` is not served.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scim: Option<ScimConfig>,
 }
 
 /// The `[auth.idp]` table: one table per vendor adapter a profile may name.
@@ -59,7 +72,7 @@ impl<'de> Deserialize<'de> for AuthConfig {
     }
 }
 
-/// Reads `[auth]`, splitting `idp` from the crate's keys.
+/// Reads `[auth]`, splitting FerroEHR's tables from the crate's keys.
 struct AuthVisitor;
 
 impl<'de> Visitor<'de> for AuthVisitor {
@@ -70,27 +83,40 @@ impl<'de> Visitor<'de> for AuthVisitor {
     }
 
     fn visit_map<A: MapAccess<'de>>(self, map: A) -> Result<AuthConfig, A::Error> {
-        let mut idp = None;
-        let shared = AuthSection::deserialize(MapAccessDeserializer::new(WithoutIdp {
+        let mut own = Own::default();
+        let shared = AuthSection::deserialize(MapAccessDeserializer::new(WithoutOwn {
             inner: map,
-            idp: &mut idp,
+            own: &mut own,
         }))?;
         Ok(AuthConfig {
             shared: Box::new(shared),
-            idp: idp.unwrap_or_default(),
+            idp: own.idp.unwrap_or_default(),
+            smart: own.smart.unwrap_or_default(),
+            scim: own.scim,
         })
     }
 }
 
-/// The entries of `[auth]` with `idp` taken out into `idp`.
-struct WithoutIdp<'a, A> {
-    /// The table's entries.
-    inner: A,
-    /// Where the `idp` table goes.
-    idp: &'a mut Option<IdpSection>,
+/// FerroEHR's own tables of `[auth]`, as read.
+#[derive(Default)]
+struct Own {
+    /// `[auth.idp]`.
+    idp: Option<IdpSection>,
+    /// `[auth.smart]`.
+    smart: Option<SmartConfig>,
+    /// `[auth.scim]`.
+    scim: Option<ScimConfig>,
 }
 
-impl<'de, A: MapAccess<'de>> MapAccess<'de> for WithoutIdp<'_, A> {
+/// The entries of `[auth]` with FerroEHR's tables taken out into `own`.
+struct WithoutOwn<'a, A> {
+    /// The table's entries.
+    inner: A,
+    /// Where FerroEHR's tables go.
+    own: &'a mut Own,
+}
+
+impl<'de, A: MapAccess<'de>> MapAccess<'de> for WithoutOwn<'_, A> {
     type Error = A::Error;
 
     fn next_key_seed<K: DeserializeSeed<'de>>(
@@ -99,13 +125,12 @@ impl<'de, A: MapAccess<'de>> MapAccess<'de> for WithoutIdp<'_, A> {
     ) -> Result<Option<K::Value>, A::Error> {
         let mut seed = Some(seed);
         loop {
-            match self.inner.next_key_seed(KeyOrIdp(&mut seed))? {
+            match self.inner.next_key_seed(KeyOrOwn(&mut seed))? {
                 None => return Ok(None),
                 Some(Key::Shared(value)) => return Ok(Some(value)),
-                Some(Key::Idp) if self.idp.is_some() => {
-                    return Err(A::Error::duplicate_field(IDP));
-                }
-                Some(Key::Idp) => *self.idp = Some(self.inner.next_value()?),
+                Some(Key::Idp) => read_once(&mut self.inner, &mut self.own.idp, IDP)?,
+                Some(Key::Smart) => read_once(&mut self.inner, &mut self.own.smart, SMART)?,
+                Some(Key::Scim) => read_once(&mut self.inner, &mut self.own.scim, SCIM)?,
             }
         }
     }
@@ -115,20 +140,38 @@ impl<'de, A: MapAccess<'de>> MapAccess<'de> for WithoutIdp<'_, A> {
     }
 }
 
-/// A key of `[auth]`: one of the crate's, read by its seed, or `idp`.
+/// Reads the value of the own table `key` into `slot`, refusing it twice.
+fn read_once<'de, A: MapAccess<'de>, T: Deserialize<'de>>(
+    map: &mut A,
+    slot: &mut Option<T>,
+    key: &'static str,
+) -> Result<(), A::Error> {
+    if slot.is_some() {
+        return Err(A::Error::duplicate_field(key));
+    }
+    *slot = Some(map.next_value()?);
+    Ok(())
+}
+
+/// A key of `[auth]`: one of the crate's, read by its seed, or one of
+/// FerroEHR's tables.
 enum Key<T> {
     /// A key the crate's section reads.
     Shared(T),
     /// The `idp` key.
     Idp,
+    /// The `smart` key.
+    Smart,
+    /// The `scim` key.
+    Scim,
 }
 
 /// Reads a key of `[auth]` inside the table's own key read, so a refused key
 /// is reported at its path; the seed is taken by the first key that is not
-/// `idp`.
-struct KeyOrIdp<'s, K>(&'s mut Option<K>);
+/// one of FerroEHR's.
+struct KeyOrOwn<'s, K>(&'s mut Option<K>);
 
-impl<'de, K: DeserializeSeed<'de>> DeserializeSeed<'de> for KeyOrIdp<'_, K> {
+impl<'de, K: DeserializeSeed<'de>> DeserializeSeed<'de> for KeyOrOwn<'_, K> {
     type Value = Key<K::Value>;
 
     fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<Self::Value, D::Error> {
@@ -136,7 +179,7 @@ impl<'de, K: DeserializeSeed<'de>> DeserializeSeed<'de> for KeyOrIdp<'_, K> {
     }
 }
 
-impl<'de, K: DeserializeSeed<'de>> Visitor<'de> for KeyOrIdp<'_, K> {
+impl<'de, K: DeserializeSeed<'de>> Visitor<'de> for KeyOrOwn<'_, K> {
     type Value = Key<K::Value>;
 
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -144,8 +187,11 @@ impl<'de, K: DeserializeSeed<'de>> Visitor<'de> for KeyOrIdp<'_, K> {
     }
 
     fn visit_str<E: serde::de::Error>(self, key: &str) -> Result<Self::Value, E> {
-        if key == IDP {
-            return Ok(Key::Idp);
+        match key {
+            IDP => return Ok(Key::Idp),
+            SMART => return Ok(Key::Smart),
+            SCIM => return Ok(Key::Scim),
+            _ => {}
         }
         let seed = self
             .0
@@ -159,28 +205,13 @@ impl<'de, K: DeserializeSeed<'de>> Visitor<'de> for KeyOrIdp<'_, K> {
 /// Returns the issuer key of one `machines` issuer `issuer` for the
 /// `ferroehr` audience, the table the configuration tests trust.
 #[cfg(test)]
-pub(crate) fn machines(issuer: &str) -> ferrohealth_smart::config::IssuerKey {
-    ferrohealth_smart::config::IssuerKey::List(vec![ferrohealth_smart::config::IssuerEntry {
+pub(crate) fn machines(issuer: &str) -> Vec<ferrohealth_smart::config::IssuerEntry> {
+    vec![ferrohealth_smart::config::IssuerEntry {
         issuer: issuer.to_owned(),
         kind: Some(ferrohealth_smart::kind::IssuerKind::Machines),
         audience: vec!["ferroehr".to_owned()],
         ..ferrohealth_smart::config::IssuerEntry::default()
-    }])
-}
-
-/// Returns `fields` without the keys the crate keeps only to refuse them
-/// ([`ferrohealth_smart::config::ConfigError::Removed`]).
-#[cfg(test)]
-pub(crate) fn live_fields(fields: Vec<String>) -> Vec<String> {
-    let removed = |field: &str| {
-        toml::from_str::<AuthSection>(&format!("{field} = 1")).is_ok_and(|section| {
-            matches!(
-                section.resolve(),
-                Err(ferrohealth_smart::config::ConfigError::Removed { .. })
-            )
-        })
-    };
-    fields.into_iter().filter(|field| !removed(field)).collect()
+    }]
 }
 
 #[cfg(test)]
@@ -215,5 +246,19 @@ mod tests {
         let rendered = serde_json::to_value(AuthConfig::default()).expect("renders");
         assert!(rendered.get("enabled").is_some(), "{rendered}");
         assert!(rendered.get("idp").is_none(), "{rendered}");
+        assert!(rendered.get("scim").is_none(), "{rendered}");
+    }
+
+    #[test]
+    fn the_smart_and_scim_tables_are_read_beside_the_crate_s_keys() {
+        let auth: AuthConfig = toml::from_str(
+            "realm = \"r\"\n[smart]\ndiscovery = true\n[scim]\nfilter_max_results = 7\n",
+        )
+        .expect("parses");
+        assert_eq!(auth.shared.realm, "r");
+        assert!(auth.smart.discovery);
+        assert_eq!(auth.scim.expect("the scim table").filter_max_results, 7);
+        let twice = toml::from_str::<AuthConfig>("[smart]\n[smart]\n");
+        assert!(twice.is_err());
     }
 }

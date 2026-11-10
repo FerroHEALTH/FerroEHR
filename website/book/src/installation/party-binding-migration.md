@@ -118,7 +118,7 @@ ferroehr party-binding check --admin <ADMIN_PARTY_ID> \
 `ferroehr party-binding check` reads the party versions and writes
 nothing, so it runs before any boot fill. Per key issuer it reports the
 persons that carry a key, duplicates, inactive and abandoned persons, the
-provisional persons older than `provisional_report_days`, the key-bearing
+provisional persons older than `provisional_report_after`, the key-bearing
 persons that perform no professional `ROLE` (which `adopt` has not
 reached), and every mapped Basic user with the `PERSON` it binds.
 

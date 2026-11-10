@@ -15,7 +15,7 @@ use ferroehr::config::binding::person::{PersonSection, PersonTemplate, RoleSecti
 use ferroehr::config::scim::{ScimClient, ScimConfig};
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_server::section::CallerRate;
-use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::party::config::PartySection;
 use ferrohealth_smart::profile::Preset;
@@ -77,7 +77,7 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
         ..common::entry(PERSONS, AUDIENCE)
     };
     let mut auth = common::auth(AuthSection {
-        issuer: IssuerKey::List(vec![machines, persons]),
+        issuer: vec![machines, persons],
         party: vec![PartySection {
             issuer: PERSONS.to_owned(),
             identifier_issuer: LOGIN.to_owned(),
@@ -89,12 +89,14 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
     auth.shared.enabled = true;
     let mut server = common::server();
     server.caller_rate = rate;
-    AppConfig {
-        server,
-        auth,
-        party_binding: binding(),
-        scim: ScimConfig {
-            enabled: true,
+    {
+        let mut c = AppConfig {
+            server,
+            auth,
+            party_binding: binding(),
+            ..AppConfig::default()
+        };
+        c.auth.scim = Some(ScimConfig {
             public_base_url: Some("https://cdr.example.com".to_owned()),
             client: vec![ScimClient {
                 issuer: MACHINES.to_owned(),
@@ -103,8 +105,8 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
                 binding_issuer: LOGIN.to_owned(),
             }],
             ..ScimConfig::default()
-        },
-        ..AppConfig::default()
+        });
+        c
     }
 }
 
@@ -112,7 +114,11 @@ async fn app(rate: Option<CallerRate>) -> (testkit::TestDb, Router) {
     let (db, service) = common::test_service().await;
     let config = config(rate);
     assert!(
-        config.scim.errors(None).is_empty(),
+        config
+            .auth
+            .scim
+            .as_ref()
+            .is_some_and(|scim| scim.errors(None).is_empty()),
         "the test configuration is valid"
     );
     (db, common::router_with(config, service).await)
@@ -276,9 +282,10 @@ async fn past_its_rate_a_client_is_429() {
 #[tokio::test]
 async fn off_by_default_nothing_is_served() {
     let (db, service) = common::test_service().await;
-    let config = AppConfig {
-        scim: ScimConfig::default(),
-        ..config(None)
+    let config = {
+        let mut c = AppConfig { ..config(None) };
+        c.auth.scim = Some(ScimConfig::default());
+        c
     };
     let app = common::router_with(config, service).await;
     let _keep = db;

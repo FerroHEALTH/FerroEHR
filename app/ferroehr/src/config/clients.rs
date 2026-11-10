@@ -139,7 +139,7 @@ pub fn import_errors(import: &ImportConfig, system_id: &str) -> Vec<String> {
         .map(|system| {
             format!(
                 "authz.import.trusted_systems names {system:?}, which is empty or this node's own \
-                 rest.system_id"
+                 api.system_id"
             )
         })
         .collect()

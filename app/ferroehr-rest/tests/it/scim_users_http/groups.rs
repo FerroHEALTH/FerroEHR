@@ -485,7 +485,9 @@ async fn both_remove_forms_remove_only_the_named_members() {
 #[tokio::test]
 async fn the_group_refusals_answer_their_status() {
     let mut capped = config();
-    capped.scim.max_group_members = 2;
+    if let Some(scim) = capped.auth.scim.as_mut() {
+        scim.max_group_members = 2;
+    }
     let (_db, _pool, _service, app) = app_of(capped, false).await;
     let ours = [
         user(&app, CLIENT, 1).await,

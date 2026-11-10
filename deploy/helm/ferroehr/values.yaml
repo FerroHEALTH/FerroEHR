@@ -21,7 +21,7 @@
 #
 # The env-mapping grammar for overrides is FERROEHR_ + the TOML path upper-cased
 # with `__` between segments (e.g. config.db.max_connections ⇔
-# FERROEHR__DB__MAX_CONNECTIONS). app/ferroehr/assets/ferroehr.default.toml is the
+# FERROEHR__DATABASE__MAX_CONNECTIONS). app/ferroehr/assets/ferroehr.default.toml is the
 # complete TOML schema with every key and its default.
 #
 # The database role architecture, the pgaudit/TLS/PITR posture, and the
@@ -101,10 +101,10 @@ serviceAccount:
 # docs, "Database Roles": https://www.postgresql.org/docs/18/user-manag.html).
 # The DSN is a SECRET, and the credential that reaches patient data: it is MOUNTED
 # from a Secret as /etc/ferroehr-secrets/db.url and reached through
-# `FERROEHR__DB__URL_FILE`, so it never enters the pod's environment (an env value
+# `FERROEHR__DATABASE__URL_FILE`, so it never enters the pod's environment (an env value
 # is readable through /proc/<pid>/environ and inherited by every child process).
 # Never the ConfigMap. The non-secret pool bounds live in
-# config.db.{max_connections,min_connections,acquire_timeout_secs}.
+# config.database.{max_connections,min_connections,acquire_timeout}.
 # ─────────────────────────────────────────────────────────────────────────────
 database:
   # -- Reference an existing Secret holding the app-role DSN (STRONGLY preferred
@@ -114,10 +114,10 @@ database:
   existingSecret: ""
   # -- Key WITHIN existingSecret that holds the DSN. This is a Secret key name,
   # not an environment variable name: the chart mounts that key as a file and
-  # passes only its PATH as `FERROEHR__DB__URL_FILE`, so the DSN never enters the
+  # passes only its PATH as `FERROEHR__DATABASE__URL_FILE`, so the DSN never enters the
   # pod's environment. The default spelling is kept for compatibility with
   # existing Secrets created for the older env-borne arrangement.
-  existingSecretKey: FERROEHR__DB__URL
+  existingSecretKey: FERROEHR__DATABASE__URL
   # -- Inline DSN (DEV/TEST ONLY — lands in a chart-managed Secret). Leave empty
   # and use existingSecret in production. Ignored when existingSecret is set.
   url: ""
@@ -177,7 +177,7 @@ database:
     existingSecret: ""
     # -- Key WITHIN it holding that DSN. Mounted as a file; only its PATH
     # reaches the pod's environment.
-    existingSecretKey: FERROEHR__STORAGE__CLINICAL__URL
+    existingSecretKey: FERROEHR__DATABASE__CLINICAL__URL
     # -- Inline clinical DSN (DEV/TEST ONLY — lands in a chart-managed Secret).
     # Ignored when `clinical.existingSecret` is set.
     url: ""
@@ -190,7 +190,7 @@ database:
     # DML-only role cannot do.
     migrateExistingSecret: ""
     # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file.
-    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__CLINICAL__URL
+    migrateExistingSecretKey: FERROEHR__DATABASE__CLINICAL__MIGRATE_URL
 
   party:
     # -- Reference an existing Secret holding the PARTY-role DSN
@@ -198,7 +198,7 @@ database:
     # credential from `database.existingSecret`.
     existingSecret: ""
     # -- Key WITHIN it holding that DSN. Mounted as a file.
-    existingSecretKey: FERROEHR__STORAGE__PARTY__URL
+    existingSecretKey: FERROEHR__DATABASE__PARTY__URL
     # -- Inline party DSN (DEV/TEST ONLY). Ignored when
     # `party.existingSecret` is set.
     url: ""
@@ -211,7 +211,7 @@ database:
     # DML-only role cannot do.
     migrateExistingSecret: ""
     # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file.
-    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__PARTY__URL
+    migrateExistingSecretKey: FERROEHR__DATABASE__PARTY__MIGRATE_URL
 
   audit:
     # -- Reference an existing Secret holding the DSN the audit repository is
@@ -221,7 +221,7 @@ database:
     # server, which DSV Art. 4 Abs. 5 asks for.
     existingSecret: ""
     # -- Key WITHIN it holding that DSN. Mounted as a file.
-    existingSecretKey: FERROEHR__STORAGE__AUDIT__URL
+    existingSecretKey: FERROEHR__DATABASE__AUDIT__URL
     # -- Inline audit DSN (DEV/TEST ONLY). Ignored when
     # `audit.existingSecret` is set.
     url: ""
@@ -234,7 +234,7 @@ database:
     # DML-only role cannot do.
     migrateExistingSecret: ""
     # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file.
-    migrateExistingSecretKey: FERROEHR__STORAGE__MIGRATE__AUDIT__URL
+    migrateExistingSecretKey: FERROEHR__DATABASE__AUDIT__MIGRATE_URL
 
   # ── the credential that prepares the schema ────────────────────────────────
   # No domain DSN above can do it. Preparing spans every schema of a database —
@@ -262,7 +262,7 @@ database:
   migrateExistingSecret: ""
   # -- Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file;
   # only its PATH reaches the pod's environment.
-  migrateExistingSecretKey: FERROEHR__DB__MIGRATE_URL
+  migrateExistingSecretKey: FERROEHR__DATABASE__MIGRATE_URL
   # -- Inline schema-preparation DSN (DEV/TEST ONLY — lands in a chart-managed
   # Secret). Ignored when migrateExistingSecret is set.
   migrateUrl: ""
@@ -301,7 +301,7 @@ migrations:
     existingSecret: ""
     # -- Key WITHIN existingSecret holding the migrator DSN. Mounted as a file;
     # only its PATH reaches the pod's environment.
-    existingSecretKey: FERROEHR__DB__URL
+    existingSecretKey: FERROEHR__DATABASE__URL
     # -- Retries before the Job (and therefore the release) is declared failed.
     backoffLimit: 3
     # -- How long the finished Job's pod is kept for its logs.
@@ -429,7 +429,7 @@ backup:
     # it would be silently partial.
     existingSecret: ""
     # -- Key within `existingSecret` carrying that DSN.
-    existingSecretKey: FERROEHR__DB__URL
+    existingSecretKey: FERROEHR__DATABASE__URL
     # -- REQUIRED when enabled: the name of an EXISTING PersistentVolumeClaim the
     # clinical dumps are written to, mounted at /backup. The chart creates no
     # claim — its storage class, size, retention and who may read it are yours.
@@ -445,7 +445,7 @@ backup:
     # accordingly.
     existingSecret: ""
     # -- Key within `existingSecret` carrying that DSN.
-    existingSecretKey: FERROEHR__STORAGE__PARTY__URL
+    existingSecretKey: FERROEHR__DATABASE__PARTY__URL
     # -- REQUIRED when enabled: an EXISTING PersistentVolumeClaim for the
     # party dumps, and a DIFFERENT one from every other domain's claim
     # (two domains sharing a claim is refused at render). This is the volume
@@ -463,7 +463,7 @@ backup:
     # names the clinical database, which is not where this trail lives.
     existingSecret: ""
     # -- Key within `existingSecret` carrying that DSN.
-    existingSecretKey: FERROEHR__STORAGE__AUDIT__URL
+    existingSecretKey: FERROEHR__DATABASE__AUDIT__URL
     # -- REQUIRED when the audit domain has its own DSN: an EXISTING
     # PersistentVolumeClaim for the audit dumps, and a DIFFERENT one from every
     # other domain's. The trail names patients and principals; it is the record
@@ -522,7 +522,7 @@ secrets:
   # itself (token_endpoint or issuer, client_id, scope) under
   # config.ehr_index.oauth; a secret with no such declaration is a render error.
   ehrIndexClientSecret: ""
-  # -- S3 access key id for [multimedia] → FERROEHR__MULTIMEDIA__ACCESS_KEY_ID
+  # -- S3 access key id for [multimedia] → FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID
   # env. Not a secret in the server's own model (it is reported unredacted by
   # /management/env); prefer IRSA/Workload-Identity (leave empty) on cloud.
   multimediaAccessKeyId: ""
@@ -594,13 +594,15 @@ metrics:
 # The `files:` key is NOT part of the TOML (see below); it is mounted separately.
 # ═════════════════════════════════════════════════════════════════════════════
 config:
-  # The openEHR specification generation set the server runs — one coupled
-  # choice: "development" (RM 1.2.0 + BASE 1.3.0 + LANG 1.1.0, the default)
-  # or "stable" (the released generations: RM 1.1.0 + BASE 1.2.0 +
-  # LANG 1.0.0). stable → development is always safe; development → stable
-  # only for data that never used development-only constructs (refused
-  # loudly at read otherwise).
-  spec_profile: development
+  # [deployment] — what this deployment is.
+  deployment:
+    # The openEHR specification generation set the server runs — one coupled
+    # choice: "development" (RM 1.2.0 + BASE 1.3.0 + LANG 1.1.0, the default)
+    # or "stable" (the released generations: RM 1.1.0 + BASE 1.2.0 +
+    # LANG 1.0.0). stable → development is always safe; development → stable
+    # only for data that never used development-only constructs (refused
+    # loudly at read otherwise).
+    spec_profile: development
 
   # The declared deployment posture, which the chart REFUSES to render
   # without: there is no default, so every installation says which posture it
@@ -608,28 +610,30 @@ config:
   # instructions without affecting the product's characteristics).
   # `sandbox` must not hold real patient data: the server names every missing
   # separation on its boot banner, in the log and on /management/status, and
-  # GET /ferroehr/rest/status reports the profile. `production` refuses to boot
-  # while a separation is missing and not named in `deployment_accepts`. These
-  # chart defaults leave several open (one DSN for every domain, an empty
-  # privacy.subject_namespaces, audit.fail_mode open, the open
-  # authz.rbac.ehr_access_default, db.migrate apply on the runtime credential,
-  # a plaintext listener behind the ingress), so a deployment holding patient
-  # data starts from values-production.yaml, or sets `production` and closes or
-  # accepts each one by name, e.g.
-  #   deployment_profile: production
-  #   deployment_accepts: [plaintext_listener]   # TLS terminates at the ingress
-  # A trial install sets `deployment_profile: sandbox`. No openEHR spec governs
-  # this; the reasoning is in the book's CRA risk assessment, Annex I Part
-  # I(2)(b).
-  # -- (string)
-  # @default -- unset: the chart refuses to render
-  deployment_profile: null
+    # GET /ferroehr/rest/status reports the profile. `production` refuses to
+    # boot while a separation is missing and not named in `accepts`. These
+    # chart defaults leave several open (one DSN for every domain, an empty
+    # privacy.subject_namespaces, audit.fail_mode open, the open
+    # authz.rbac.ehr_access_default, database.migrations apply on the runtime
+    # credential, a plaintext listener behind the ingress), so a deployment
+    # holding patient data starts from values-production.yaml, or sets
+    # `production` and closes or accepts each one by name, e.g.
+    #   profile: production
+    #   accepts: [plaintext_listener]   # TLS terminates at the ingress
+    # A trial install sets `profile: sandbox`. No openEHR spec governs this;
+    # the reasoning is in the book's CRA risk assessment, Annex I Part I(2)(b).
+    # The commercial licence token is a signed text file: it travels as a
+    # `config.files` entry and `licence_file` names the mounted path.
+    #   licence_file: /etc/ferroehr/licence.asc
+    # -- (string)
+    # @default -- unset: the chart refuses to render
+    profile: null
 
   # [server] — the HTTP listener: the FerroHEALTH family's section, the same
   # keys in every product (the configuration reference lists them all).
   # The server's own defaults are `listen = "0.0.0.0:8080"`, the port the
   # Service, the probes and the NetworkPolicy name, and a 64 MiB
-  # `body_limit_bytes` for the bulk routes (template upload, the /message
+  # `body_limit` for the bulk routes (template upload, the /message
   # imports); the largest operational template in the vendored CKM corpus is
   # 5.4 MB.
   server:
@@ -646,34 +650,39 @@ config:
       requests_per_second: 1024
       burst: 2048
 
-  # [rest] — the openEHR REST surface.
-  rest:
+  # [api] — the openEHR REST API.
+  api:
     base_path: /ferroehr/rest/openehr/v1
     # Who may read the Swagger UI + the OpenAPI JSON: off, admin_only, private
     # (any authenticated principal) or public. The documents list the whole
     # enabled operation surface, so public discloses it anonymously.
-    swagger_ui: private
-    # Permissive CORS — DEV ONLY. Production configures explicit origins.
-    cors_permissive: false
+    openapi_ui: private
     # The largest body the clinical surface accepts, below
-    # server.body_limit_bytes, which the bulk routes keep. Raise it if
+    # server.body_limit, which the bulk routes keep. Raise it if
     # compositions embed large DV_MULTIMEDIA data. Over-limit is 413.
-    body_limit_bytes: 16777216
+    body_limit: 16MiB
+    # The ADMIN API group (physical, irreversible delete). Off ⇒ routes 405.
+    admin: false
+    # The terminology extension API; the server it asks is config.terminology.
+    terminology: false
+    # [api.cors] — absent sends no CORS header. Production lists its origins:
+    #   cors:
+    #     allow_origins: [https://app.example.com]
 
-  # [db] — pool bounds (the DSN itself is the FERROEHR__DB__URL secret, above).
-  db:
+  # [database] — pool bounds (the DSN itself is the FERROEHR__DATABASE__URL secret, above).
+  database:
     # apply | verify — whether the server runs its embedded migrations at boot.
     # `verify` issues no DDL and refuses to boot against a database that has not
     # been migrated, which is what lets the runtime DSN be ferroehr_clinical only.
     # Pair it with migrations.job.enabled (see the Migrations section above).
-    migrate: apply
+    migrations: apply
     max_connections: 10
     min_connections: 0
-    acquire_timeout_secs: 30
+    acquire_timeout: 30s
     # The backstop the HTTP request timeout cannot be: dropping a handler future
-    # does not cancel the statement PostgreSQL is running. Above query.timeout_ms
-    # so the engine's typed 408 fires first.
-    statement_timeout_ms: 60000
+    # does not cancel the statement PostgreSQL is running. Above
+    # record.query.timeout so the engine's typed 408 fires first.
+    statement_timeout: 1min
 
   # [telemetry]: the console, the request log and the OpenTelemetry export
   # (the family's shared section). json is correct for cluster log collectors;
@@ -715,7 +724,7 @@ config:
   # Every route enforces SMART on openEHR scopes: a Basic user's `scopes` and a
   # token's `scope` claim must grant what it calls; a subject listed in
   # `scopeless_subjects` whose token carries no resource scope meets every
-  # SMART on openEHR requirement. `basic.cache_ttl_seconds` (default 300) keeps a
+  # SMART on openEHR requirement. `basic.cache_ttl` (default "5min") keeps a
   # verified Basic credential for that long, so a repeat request skips the
   # Argon2id derivation; 0 checks every request.
   # `mode: introspection` checks opaque tokens at the issuer's RFC 7662
@@ -761,28 +770,24 @@ config:
     federation:
       agreement: []
 
-  # [scim] — the SCIM 2.0 service provider at /scim/v2 (RFC 7644), through
-  # which an identity provider such as Microsoft Entra ID provisions each
-  # professional as a demographic PERSON. Off by default. It needs a machines
-  # [[auth.issuer]] (the deployment's own authorization server), an
-  # [[auth.party]] whose identifier_issuer each client's binding_issuer names,
-  # and the person template, attributes and professional_role under
-  # authz.party_binding. public_base_url is required once enabled, and the
-  # Ingress then routes /scim/v2 on every host.
-  #   public_base_url: https://ferroehr.example.com
-  #   max_deactivations: 100           # per client per window, else 429
-  #   deactivation_window_minutes: 60
-  #   client:
-  #     - issuer: https://as.example.com
-  #       client_id: entra-provisioning
-  #       scope: ferroehr/scim
-  #       binding_issuer: urn:example:login
-  scim:
-    enabled: false
-
-  # [admin] — ADMIN API group (physical, irreversible delete). Off ⇒ routes 404.
-  admin:
-    enabled: false
+  # [auth.scim] — the SCIM 2.0 service provider at /scim/v2 (RFC 7644),
+  # through which an identity provider such as Microsoft Entra ID provisions
+  # each professional as a demographic PERSON. Absent by default, and the
+  # table's presence serves it. It needs a machines [[auth.issuer]] (the
+  # deployment's own authorization server), an [[auth.party]] whose
+  # identifier_issuer each client's binding_issuer names, and the person
+  # template, attributes and professional_role under authz.party_binding.
+  # public_base_url is required, and the Ingress then routes /scim/v2 on every
+  # host. Under config.auth:
+  #   scim:
+  #     public_base_url: https://ferroehr.example.com
+  #     max_deactivations: 100           # per client per window, else 429
+  #     deactivation_window: 1h
+  #     client:
+  #       - issuer: https://as.example.com
+  #         client_id: entra-provisioning
+  #         scope: ferroehr/scim
+  #         binding_issuer: urn:example:login
 
   # [management] — ops-introspection surface (info / prometheus / metrics / env /
   # loggers / flamegraph). The master switch is ON here (unlike the bare binary)
@@ -805,28 +810,56 @@ config:
       # under [management.profiling] — see the configuration reference).
       flamegraph: "off"
 
-  # [signing] — VERSION signing. On/digest by default (the STANDARD "Signing"
-  # capability). pgp mode requires signing.key_path (a mounted config.files key)
-  # + the secrets.signingKeyPassphrase secret, and FAILS CLOSED at boot.
-  signing:
-    enabled: true
-    # digest | pgp
-    mode: digest
-    # off | warn | strict — read-time verification of OUR OWN signatures.
-    # Defaults to strict when signing is enabled (a served version whose stored
-    # signature no longer recomputes is a 5xx integrity fault); set warn (log +
-    # meter, still serve) or off (never check) to opt out. Client-supplied
-    # signatures are always stored verbatim and never re-verified.
-    verify_on_read: "strict"
-
-  # [licence] — the commercial licence token. FerroEHR is BUSL-1.1: every build
-  # embeds the licensor's non-commercial grant, and production use in the
-  # course of a business needs a commercial token. The token is a signed text
-  # file, so it travels as a `config.files` entry and `licence.file` names the
-  # mounted path; the server runs identically either way and reports the grant
-  # in force on GET /rest/status (`licence.use`, `licence.licensee`).
-  # licence:
-  #   file: /etc/ferroehr/licence.asc
+  # [record] — the record itself: the subject index, signing, the query
+  # engine, the change feed and multimedia.
+  record:
+    # [record.signing] — VERSION signing. On/digest by default (the STANDARD
+    # "Signing" capability). pgp mode requires key_file (a mounted
+    # config.files key) + the secrets.signingKeyPassphrase secret, and FAILS
+    # CLOSED at boot.
+    signing:
+      enabled: true
+      # digest | pgp
+      mode: digest
+      # off | warn | strict — read-time verification of OUR OWN signatures.
+      # Defaults to strict when signing is enabled (a served version whose
+      # stored signature no longer recomputes is a 5xx integrity fault); set
+      # warn (log + meter, still serve) or off (never check) to opt out.
+      # Client-supplied signatures are always stored verbatim and never
+      # re-verified.
+      verify_on_read: "strict"
+    # [record.multimedia] — DV_MULTIMEDIA externalization → S3. Our own
+    # extension; no openEHR spec governs it. Off by default (inline behaviour
+    # byte-identical). WARNING: offloaded blobs are PHI — bucket must be
+    # private, encrypted, HTTPS (an http:// url is plain HTTP, dev only).
+    # Credentials are the secrets.multimedia* secrets.
+    multimedia:
+      enabled: false
+      bucket: openehr-multimedia
+      region: us-east-1
+    # [record.change_feed] — the commit-event outbox and its cursor feed. Our
+    # own extension; no openEHR spec governs it. Off until a reader is named:
+    # FerroBRIDGE reads the feed (scope __ferroehr.outbox) and delivers the
+    # PHI-free events to a message broker.
+    #   change_feed:
+    #     readers: [ferrobridge]
+    # subject_index — who holds the subject-to-EHR cross-reference: "pixm",
+    # an IHE patient identity source asked over PIXm (ITI-83, config.pixm), or
+    # "local", the in-instance map. With `ferropix.enabled` the chart INJECTS
+    # subject_index = "pixm" and config.pixm.url (the in-cluster FerroPIX
+    # Service), so declaring either is refused while it is on. You still name
+    # the clinical domain and the grant:
+    #   pixm:                                    # beside record:, under config
+    #     assigning_authority: urn:oid:2.999.7.1   # also in privacy.subject_namespaces
+    #     oauth:
+    #       token_endpoint: https://idp.example.org/token
+    #       client_id: ferroehr                    # FerroPIX's consumer_client_id
+    #       scope: system/Patient.rs
+    # with the client secret in `secrets.ehrIndexClientSecret`. Another PIX
+    # Manager: `ferropix.enabled: false`, subject_index "pixm" and pixm.url.
+    # A FerroEHR run on its own: `ferropix.enabled: false` and subject_index
+    # "local". With neither the render is refused, as the server's boot would
+    # be.
 
   # [audit] — the IHE ATNA audit trail. ON by default with only the local
   # store active (records stay in PostgreSQL, queryable via the ITI-81 FHIR
@@ -836,18 +869,14 @@ config:
     enabled: true
     store:
       enabled: true
-      # Keep forever (0), or a day count. The server refuses a horizon outside
-      # the floors and ceilings of the jurisdictions its identifier rules name
+      # How long records are kept, a calendar period (P3Y, P1096D); unset
+      # (null) keeps them forever. The server refuses a horizon outside the
+      # floors and ceilings of the jurisdictions its identifier rules name
       # (three years EU-wide, five NL, one CH, at most three DE for a declared
-      # SGB V § 309 controller).
-      retention_days: 0
-      # The horizon in calendar years instead, compared exactly against those
-      # bounds; set it OR a non-zero retention_days, never both. Unset (null)
-      # by default. A German SGB V § 309 controller sets 3, with
-      # sgb_v_309_controller: true.
-      # -- (int)
+      # SGB V § 309 controller, who sets P3Y with sgb_v_309_controller: true).
+      # -- (string)
       # @default -- unset
-      retention_years: null
+      retention: null
     # [audit.categories] — the EHDS priority category of every access,
     # classified by ehds-logging (FerroAUDIT): which categories each template
     # id, and failing that each root archetype id, holds. A priority category
@@ -866,59 +895,19 @@ config:
       templates: {}
       archetypes: {}
 
-  # [outbox] — the commit-event outbox and its cursor feed. Our own extension;
-  # no openEHR spec governs it. Off until a reader is named: FerroBRIDGE reads
-  # the feed (scope __ferroehr.outbox) and delivers the PHI-free events to a
-  # message broker.
-  #   outbox:
-  #     readers: [ferrobridge]
-
-  # [terminology] — terminology extension API + the FHIR terminology server.
-  #
-  # `server.enabled`, `server.url` and `server.fail_on_error` are deliberately NOT
-  # defaulted here. With `terminology.enabled` + `terminology.wireCdr` the chart
-  # INJECTS all three, and a defaulted key is indistinguishable from one an operator
-  # typed — so the render could not tell an agreement from an overwrite, and
-  # would silently ship a ferroehr.toml contradicting the values file. Left out,
-  # a declaration of any is visibly the operator's and is refused. The
-  # server's own defaults (off, no URL, fail-open) are what an install without
-  # FerroTERM gets either way.
-  terminology:
-    api_enabled: false
-
-  # [ehr_index] — who holds the subject-to-EHR cross-reference. An IHE patient
-  # identity source asked over PIXm (ITI-83) is the binary's default; with
-  # `ferropix.enabled` the chart INJECTS `provider = "ihe"` and `pixm_url` (the
-  # in-cluster FerroPIX Service), so declaring either here is refused while it
-  # is on. You still name the clinical domain and the grant:
-  #   ehr_index:
-  #     assigning_authority: urn:oid:2.999.7.1   # also in privacy.subject_namespaces
-  #     oauth:
-  #       token_endpoint: https://idp.example.org/token
-  #       client_id: ferroehr                    # FerroPIX's consumer_client_id
-  #       scope: system/Patient.rs
-  # with the client secret in `secrets.ehrIndexClientSecret`. Another PIX
-  # Manager: `ferropix.enabled: false` and `pixm_url` here. A FerroEHR run on
-  # its own: `ferropix.enabled: false` and `provider: local`. With neither the
-  # render is refused, as the server's boot would be.
-
-  # [multimedia] — DV_MULTIMEDIA externalization → S3. Our own extension; no
-  # openEHR spec governs it. Off by default
-  # (inline behaviour byte-identical). WARNING: offloaded blobs are PHI — bucket
-  # must be private, encrypted, HTTPS. Credentials are the secrets.multimedia* secrets.
-  multimedia:
-    enabled: false
-    bucket: openehr-multimedia
-    region: us-east-1
-    # Allow plain HTTP — DEV ONLY; prod S3 is HTTPS.
-    allow_http: false
+  # [terminology] — the outbound FHIR terminology server; absent, none is
+  # asked. Not defaulted here: with `terminology.enabled` +
+  # `terminology.wireCdr` the chart INJECTS its `url` and `on_error`, and a
+  # defaulted key is indistinguishable from one an operator typed — so the
+  # render could not tell an agreement from an overwrite. Left out, a
+  # declaration of either is visibly the operator's and is refused.
 
   # ── Mounted config files (NOT part of the TOML above) ──────────────────────
   # Each key becomes /etc/ferroehr/<key> from a chart Secret (opaque, read-only),
-  # alongside ferroehr.toml. Use for file-shaped material an in-TOML `*_path`/
-  # `*_file` key points at: the PGP key (signing.key_path), Cedar policies
+  # alongside ferroehr.toml. Use for file-shaped material an in-TOML `*_file`
+  # key points at: the PGP key (record.signing.key_file), Cedar policies
   # (authz.abac.cedar.policy_dir), ATNA PEMs, a JWKS file (auth.jwks_file), the commercial
-  # licence token (licence.file).
+  # licence token (deployment.licence_file).
   files: {}
   # signing.asc: |
   #   -----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -930,11 +919,10 @@ config:
 # The server's trust in its `[auth]` issuer, beside the image's own roots.
 auth:
   # -- Name of an existing Secret holding a PEM bundle of the certificate
-  # authorities the server trusts for its `[auth]` issuer (the metadata, the
-  # key set and, under introspection, the introspection and token calls),
-  # beside the image's own roots: for an issuer behind a private PKI. The chart
-  # mounts the key as a file and points `[auth] ca_file` at it. Empty trusts the
-  # image's roots alone.
+  # authorities the server trusts for its `[auth]` issuer (the metadata and
+  # the key set), beside the image's own roots: for an issuer behind a private
+  # PKI. The chart mounts the key as a file and points
+  # `[auth.tls] trust_roots_file` at it. Empty trusts the image's roots alone.
   caExistingSecret: ""
   # -- Key within `caExistingSecret` carrying the PEM bundle.
   caExistingSecretKey: ca.crt
@@ -1352,7 +1340,7 @@ viewer:
       # -- Name of an existing Secret holding a PEM bundle of the certificate
       # authorities the viewer trusts for the issuer, beside the image's own
       # roots: for an issuer behind a private PKI. The chart mounts the key as
-      # a file and points `[oidc] ca_file` at it. Empty
+      # a file and points `[oidc.tls] trust_roots_file` at it. Empty
       # trusts the image's roots alone.
       caExistingSecret: ""
       # -- Key within `caExistingSecret` carrying the PEM bundle.
@@ -1784,7 +1772,7 @@ bridge:
     seccompProfile:
       type: RuntimeDefault
   # -- Termination grace period. FerroBRIDGE drains in-flight requests on
-  # SIGTERM for up to its own `server.shutdown_timeout_ms` (10 s by default).
+  # SIGTERM for up to its own `server.shutdown_timeout` (10 s by default).
   terminationGracePeriodSeconds: 20
   # -- Lame-duck pause before SIGTERM, in seconds (0 disables): the same
   # endpoint-propagation race the server's `preStopSleepSeconds` covers.

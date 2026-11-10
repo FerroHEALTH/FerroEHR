@@ -36,8 +36,12 @@ pub mod clients;
 pub mod deployment;
 pub mod management;
 pub mod profile;
+pub mod record;
 pub mod redact;
 pub mod rest;
+pub mod retention;
+pub mod retired;
+pub mod retired_shared;
 pub mod scim;
 pub mod smart;
 mod validate;
@@ -47,6 +51,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use ferrohealth_config::loader::Loaded;
+use ferrohealth_config::removed::Removed;
 use serde::{Deserialize, Serialize};
 
 use crate::config::loader::{ConfigError, ConfigErrors};
@@ -55,86 +60,119 @@ use crate::config::loader::{ConfigError, ConfigErrors};
 ///
 /// Every section has a `Default`, so the file may be empty or absent
 /// (zero-config boot). `deny_unknown_fields` makes a misspelled top-level
-/// table a boot error.
+/// table a boot error. One table per concern: what the deployment is, the
+/// family's shared sections (`[server]`, `[telemetry]`, `[usage_report]`,
+/// `[auth]`), FerroEHR's own surfaces and policies, and one table per outbound
+/// integration (`[terminology]`, `[pixm]`). Every table a release before
+/// v5.7.0 read is kept only to be refused at load, naming its replacement
+/// ([`retired`]).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct FerroEhrConfig {
-    /// `spec_profile` — the openEHR specification generation set the server
-    /// runs (`development` | `stable`; default `development`).
-    pub spec_profile: profile::SpecProfile,
-    /// `deployment_profile` — the declared posture (`sandbox` | `production`;
-    /// default `sandbox`). `production` refuses to start while a separation it
-    /// asserts is missing and not accepted by name (#3226).
-    pub deployment_profile: deployment::DeploymentProfile,
-    /// `deployment_accepts` — the [`deployment::DeploymentGap`]s a `production`
-    /// deployment runs without, each stated on every boot and on
-    /// `/management/status`. Ignored under `sandbox`, which accepts everything.
-    pub deployment_accepts: Vec<deployment::DeploymentGap>,
+    /// `[deployment]`: the declared posture, the openEHR specification set
+    /// and the licence token.
+    pub deployment: profile::DeploymentConfig,
     /// `[server]` — the HTTP listener: the family's section (the listen
     /// address, the timeouts, the body limit, the overload bound, the drain,
     /// TLS, the trusted proxies, the caller rate and compression).
     pub server: ferrohealth_server::section::ServerSection,
-    /// `[rest]` — the openEHR REST surface: the API base path, the system
-    /// identifier, the System-Options identity, the Swagger UI, CORS and the
-    /// clinical body tier.
-    pub rest: rest::RestConfig,
-    /// `[db]` — the shared `PostgreSQL` DSN, pool tuning and migration mode.
-    pub db: crate::db::DbConfig,
-    /// `[storage]` — one DSN per storage domain (`clinical`, `party`,
-    /// `audit`), each defaulting to `[db].url`.
-    pub storage: crate::db::domain::StorageConfig,
     /// `[telemetry]`: the console, the request log and the OpenTelemetry
     /// export, the family's shared section.
     pub telemetry: ferrohealth_telemetry::section::TelemetrySection,
+    /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
+    pub usage_report: ferrohealth_usage_report::section::UsageReportSection,
     /// `[auth]` — authentication: the `ferrohealth-smart` section, whose
-    /// serialization writes every secret as `***`, and `[auth.idp]`.
+    /// serialization writes every secret as `***`, `[auth.idp]`,
+    /// `[auth.smart]` and `[auth.scim]`.
     pub auth: auth_section::AuthConfig,
-    /// `[authz]` — RBAC + ABAC.
+    /// `[authz]` — RBAC, ABAC, assurance, the party binding, the system
+    /// clients, the federation agreements and the registered origins.
     pub authz: authz::AuthzConfig,
-    /// `[admin]` — the ADMIN API group.
-    pub admin: rest::AdminConfig,
-    /// `[smart]` — SMART App Launch.
-    pub smart: smart::SmartConfig,
+    /// `[api]` — the openEHR REST API: the base path, the system identifier,
+    /// the `OPTIONS` identity, the `OpenAPI` UI, CORS, the clinical body tier
+    /// and the ADMIN and terminology groups.
+    pub api: rest::ApiConfig,
+    /// `[database]` — the shared `PostgreSQL` DSN, pool tuning, migrations
+    /// and one table per storage domain.
+    pub database: crate::db::DbConfig,
     /// `[management]` — the management/observability surface.
     pub management: management::ManagementConfig,
-    /// `[signing]` — VERSION signing.
-    pub signing: crate::versioning::signature::config::SigningConfig,
-    /// `[licence]` — the commercial licence token (optional; the server runs
-    /// identically without one).
-    pub licence: crate::licence::config::LicenceConfig,
-    /// `[query]` — AQL execution knobs.
-    pub query: crate::service::query::config::QueryConfig,
-    /// `[outbox]` — the commit-event outbox readers and its retention.
-    pub outbox: crate::extensions::outbox::config::OutboxConfig,
-    /// `[terminology]` — terminology API + the terminology server.
-    pub terminology: crate::service::terminology::config::TerminologyConfig,
-    /// `[multimedia]` — `DV_MULTIMEDIA` externalization.
-    pub multimedia: crate::extensions::multimedia::config::MultimediaConfig,
     /// `[audit]` — the IHE ATNA audit trail / System Log (local Audit Record
     /// Repository + the syslog and FHIR-feed forwarding sinks).
     pub audit: crate::system_log::config::AuditConfig,
-    /// `[origins]` — the origins of data this deployment recognises, which a
-    /// retention period and an access rule may name (EHDS Annex II 3.4).
-    pub origins: crate::origins::OriginsConfig,
-    /// `[privacy]` — the clinical-side data-minimisation policy.
+    /// `[privacy]` — the data-minimisation policy: the subject namespaces,
+    /// the identifier scan and protection, the cohort query and the access
+    /// delay.
     pub privacy: crate::privacy::config::PrivacyConfig,
-    /// `[demographic]` — the demographic domain, including national-identifier
-    /// protection.
-    pub demographic: crate::identifier_protection::config::DemographicConfig,
-    /// `[cohort]` — the cross-domain cohort-query allow-list and limits.
-    pub cohort: crate::service::linkage::cohort::config::CohortConfig,
-    /// `[ehr_index]` — who holds the subject-to-EHR cross-reference: an IHE
-    /// patient identity source (the default) or the in-instance map.
-    pub ehr_index: crate::service::ehr_index::config::EhrIndexConfig,
-    /// `[usage_report]` — the installation report to `FerroPULSE` (on by default).
-    pub usage_report: ferrohealth_usage_report::section::UsageReportSection,
-    /// `[access_delay]` — the EHDS Art. 3(3) delay of the person's own access.
-    pub access_delay: access_delay::AccessDelayConfig,
-    /// `[versioning]` — the opt-in answer to an identical re-send (#4415).
-    pub versioning: versioning::VersioningConfig,
-    /// `[scim]` — the SCIM 2.0 service provider and its provisioning clients
-    /// (off by default).
-    pub scim: scim::ScimConfig,
+    /// `[record]` — the record itself: the subject index, versioning,
+    /// signing, the query engine, the change feed and multimedia.
+    pub record: record::RecordConfig,
+    /// `[terminology]` — the outbound FHIR terminology server; absent, none
+    /// is asked.
+    pub terminology: Option<crate::service::terminology::config::TerminologyServerConfig>,
+    /// `[pixm]` — the IHE PIXm patient identity source the subject index asks
+    /// (ITI-83) under `record.subject_index = "pixm"`.
+    pub pixm: Option<crate::service::ehr_index::config::PixmConfig>,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub spec_profile: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub deployment_profile: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub deployment_accepts: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub rest: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub db: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub storage: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub admin: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub smart: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub signing: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub licence: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub query: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub outbox: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub multimedia: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub origins: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub demographic: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub cohort: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub ehr_index: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub access_delay: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub versioning: Removed,
+    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
+    #[serde(skip_serializing)]
+    pub scim: Removed,
 }
 
 impl Default for FerroEhrConfig {
@@ -146,39 +184,44 @@ impl Default for FerroEhrConfig {
     /// keeps both. No openEHR spec governs configuration: our own design.
     fn default() -> Self {
         Self {
-            spec_profile: profile::SpecProfile::default(),
-            deployment_profile: deployment::DeploymentProfile::default(),
-            deployment_accepts: Vec::new(),
+            deployment: profile::DeploymentConfig::default(),
             server: ferrohealth_server::section::ServerSection {
                 listen: std::net::SocketAddr::from(([0, 0, 0, 0], 8080)),
-                body_limit_bytes: 64 * 1024 * 1024,
+                body_limit: ferrohealth_config::units::ByteSize::from_mib(64),
                 ..ferrohealth_server::section::ServerSection::default()
             },
-            rest: rest::RestConfig::default(),
-            db: crate::db::DbConfig::default(),
-            storage: crate::db::domain::StorageConfig::default(),
             telemetry: ferrohealth_telemetry::section::TelemetrySection::default(),
+            usage_report: ferrohealth_usage_report::section::UsageReportSection::default(),
             auth: auth_section::AuthConfig::default(),
             authz: authz::AuthzConfig::default(),
-            admin: rest::AdminConfig::default(),
-            smart: smart::SmartConfig::default(),
+            api: rest::ApiConfig::default(),
+            database: crate::db::DbConfig::default(),
             management: management::ManagementConfig::default(),
-            signing: crate::versioning::signature::config::SigningConfig::default(),
-            licence: crate::licence::config::LicenceConfig::default(),
-            query: crate::service::query::config::QueryConfig::default(),
-            outbox: crate::extensions::outbox::config::OutboxConfig::default(),
-            terminology: crate::service::terminology::config::TerminologyConfig::default(),
-            multimedia: crate::extensions::multimedia::config::MultimediaConfig::default(),
             audit: crate::system_log::config::AuditConfig::default(),
-            origins: crate::origins::OriginsConfig::default(),
             privacy: crate::privacy::config::PrivacyConfig::default(),
-            demographic: crate::identifier_protection::config::DemographicConfig::default(),
-            cohort: crate::service::linkage::cohort::config::CohortConfig::default(),
-            ehr_index: crate::service::ehr_index::config::EhrIndexConfig::default(),
-            usage_report: ferrohealth_usage_report::section::UsageReportSection::default(),
-            access_delay: access_delay::AccessDelayConfig::default(),
-            versioning: versioning::VersioningConfig::default(),
-            scim: scim::ScimConfig::default(),
+            record: record::RecordConfig::default(),
+            terminology: None,
+            pixm: None,
+            spec_profile: Removed::default(),
+            deployment_profile: Removed::default(),
+            deployment_accepts: Removed::default(),
+            rest: Removed::default(),
+            db: Removed::default(),
+            storage: Removed::default(),
+            admin: Removed::default(),
+            smart: Removed::default(),
+            signing: Removed::default(),
+            licence: Removed::default(),
+            query: Removed::default(),
+            outbox: Removed::default(),
+            multimedia: Removed::default(),
+            origins: Removed::default(),
+            demographic: Removed::default(),
+            cohort: Removed::default(),
+            ehr_index: Removed::default(),
+            access_delay: Removed::default(),
+            versioning: Removed::default(),
+            scim: Removed::default(),
         }
     }
 }
@@ -189,6 +232,14 @@ impl Default for FerroEhrConfig {
 pub const DEFAULT_TEMPLATE: &str = include_str!("../../assets/ferroehr.default.toml");
 
 impl FerroEhrConfig {
+    /// The registered origins `[[authz.origin]]` declares.
+    #[must_use]
+    pub fn origins(&self) -> crate::origins::OriginsConfig {
+        crate::origins::OriginsConfig {
+            registered: self.authz.origin.clone(),
+        }
+    }
+
     /// Returns the redacted configuration as a TOML table, the tree
     /// `ferroehr report` records.
     ///
@@ -288,12 +339,12 @@ pub fn load_with_provenance(
 
     // The dev default DSN is announced prominently at boot so it is never a
     // silent production trap.
-    if config.db.is_dev_default() {
+    if config.database.is_dev_default() {
         tracing::warn!(
             url = crate::db::DEFAULT_URL,
-            "[db].url is the built-in DEVELOPMENT DEFAULT ({}); no file/env/CLI value was \
-             supplied. Set db.url (or FERROEHR__DB__URL / DATABASE_URL) for any non-dev \
-             deployment — production MUST override it.",
+            "database.url is the built-in DEVELOPMENT DEFAULT ({}); no file/env/CLI value \
+             was supplied. Set database.url (or FERROEHR__DATABASE__URL / DATABASE_URL) for \
+             any non-dev deployment — production MUST override it.",
             crate::db::DEFAULT_URL,
         );
     }
@@ -304,6 +355,8 @@ pub fn load_with_provenance(
 #[cfg(test)]
 mod audit_tests;
 #[cfg(test)]
+mod secret_tests;
+#[cfg(test)]
 mod tests {
     use assert_fs::prelude::*;
 
@@ -311,18 +364,17 @@ mod tests {
 
     use super::*;
     use crate::config::authz::AbacParam;
-    use crate::service::ehr_index::config::EhrIndexConfig;
+    use crate::service::ehr_index::config::SubjectIndex;
     use crate::storage::cohort_predicate::PredicateKind;
     use ferrohealth_secret::secret_url::SecretUrl;
 
     /// The shipped defaults of a FerroEHR run on its own: the explicit
-    /// `[ehr_index] provider = "local"` opt-in, without which the default IHE
-    /// provider refuses for want of an endpoint.
+    /// `record.subject_index = "local"` opt-in, without which the unset index
+    /// refuses the start.
     pub(super) fn standalone() -> FerroEhrConfig {
-        FerroEhrConfig {
-            ehr_index: EhrIndexConfig::local(),
-            ..FerroEhrConfig::default()
-        }
+        let mut config = FerroEhrConfig::default();
+        config.record.subject_index = Some(SubjectIndex::Local);
+        config
     }
 
     /// The shipped defaults, with no identity source and no opt-in, are
@@ -333,14 +385,14 @@ mod tests {
             .validate()
             .expect_err("no identity source and no opt-in");
         let text = refused.to_string();
-        assert!(text.contains("ehr_index.pixm_url"), "{text}");
-        assert!(text.contains("provider = \"local\""), "{text}");
+        assert!(text.contains("subject_index = \"pixm\""), "{text}");
+        assert!(text.contains("subject_index = \"local\""), "{text}");
         assert!(standalone().validate().is_ok());
     }
 
     /// `c` serialized as the TOML table `ferroehr config check` renders
     /// (`ferrohealth_config::report::check_report` writes the same table).
-    fn rendered(c: &FerroEhrConfig) -> String {
+    pub(super) fn rendered(c: &FerroEhrConfig) -> String {
         toml::Table::try_from(c)
             .expect("the tree renders as TOML")
             .to_string()
@@ -361,7 +413,7 @@ mod tests {
         f
     }
 
-    fn assemble_ok(
+    pub(super) fn assemble_ok(
         file: Option<&Path>,
         env: &HashMap<String, String>,
         overrides: &[(String, String)],
@@ -372,7 +424,7 @@ mod tests {
         }
     }
 
-    fn json(c: &FerroEhrConfig) -> serde_json::Value {
+    pub(super) fn json(c: &FerroEhrConfig) -> serde_json::Value {
         serde_json::to_value(c).expect("serialize")
     }
 
@@ -386,37 +438,37 @@ mod tests {
 
     #[test]
     fn layering_file_env_set() {
-        let file = toml_file("[db]\nmax_connections = 5\n");
+        let file = toml_file("[database]\nmax_connections = 5\n");
         // file overrides default (20).
         let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
-        assert_eq!(c.db.max_connections, 5);
+        assert_eq!(c.database.max_connections, 5);
         let c = assemble_ok(
             Some(file.path()),
-            &env(&[("FERROEHR__DB__MAX_CONNECTIONS", "9")]),
+            &env(&[("FERROEHR__DATABASE__MAX_CONNECTIONS", "9")]),
             &[],
         );
-        assert_eq!(c.db.max_connections, 9);
+        assert_eq!(c.database.max_connections, 9);
         let c = assemble_ok(
             Some(file.path()),
-            &env(&[("FERROEHR__DB__MAX_CONNECTIONS", "9")]),
-            &[("db.max_connections".to_owned(), "11".to_owned())],
+            &env(&[("FERROEHR__DATABASE__MAX_CONNECTIONS", "9")]),
+            &[("database.max_connections".to_owned(), "11".to_owned())],
         );
-        assert_eq!(c.db.max_connections, 11);
+        assert_eq!(c.database.max_connections, 11);
     }
 
     #[test]
     fn conventional_aliases_lose_to_ferroehr_forms() {
         let c = assemble_ok(None, &env(&[("DATABASE_URL", "postgres://a@h/x")]), &[]);
-        assert_eq!(c.db.url.expose(), "postgres://a@h/x");
+        assert_eq!(c.database.url.expose(), "postgres://a@h/x");
         let c = assemble_ok(
             None,
             &env(&[
                 ("DATABASE_URL", "postgres://a@h/x"),
-                ("FERROEHR__DB__URL", "postgres://b@h/y"),
+                ("FERROEHR__DATABASE__URL", "postgres://b@h/y"),
             ]),
             &[],
         );
-        assert_eq!(c.db.url.expose(), "postgres://b@h/y");
+        assert_eq!(c.database.url.expose(), "postgres://b@h/y");
     }
 
     #[test]
@@ -436,7 +488,7 @@ mod tests {
             &[],
         );
         assert_eq!(
-            c.db.url.expose(),
+            c.database.url.expose(),
             "postgres://demo:p%40ss%2Fw@db.example.neon.tech/ferroehr?sslmode=require"
         );
         let c = assemble_ok(
@@ -448,17 +500,17 @@ mod tests {
             ]),
             &[],
         );
-        assert_eq!(c.db.url.expose(), "postgres://a@h/x");
+        assert_eq!(c.database.url.expose(), "postgres://a@h/x");
         let c = assemble_ok(
             None,
             &env(&[
                 ("PGHOST", "db.example.neon.tech"),
                 ("DATABASE_URL", "postgres://a@h/x"),
-                ("FERROEHR__DB__URL", "postgres://b@h/y"),
+                ("FERROEHR__DATABASE__URL", "postgres://b@h/y"),
             ]),
             &[],
         );
-        assert_eq!(c.db.url.expose(), "postgres://b@h/y");
+        assert_eq!(c.database.url.expose(), "postgres://b@h/y");
     }
 
     #[test]
@@ -473,7 +525,7 @@ mod tests {
             ]),
             &[],
         );
-        assert_eq!(c.db.url.expose(), "postgres://direct@h/x");
+        assert_eq!(c.database.url.expose(), "postgres://direct@h/x");
         let c = assemble_ok(
             None,
             &env(&[
@@ -485,7 +537,7 @@ mod tests {
             &[],
         );
         assert_eq!(
-            c.db.url.expose(),
+            c.database.url.expose(),
             "postgres://demo@direct.neon.tech/ferroehr"
         );
     }
@@ -518,7 +570,7 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER__0__ISSUER", "https://idp"),
                 ("FERROEHR__AUTH__ISSUER__0__KIND", "persons"),
                 ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr,other"),
-                ("FERROEHR__AUTH__ISSUER__0__TIMEOUT_MS", "1500"),
+                ("FERROEHR__AUTH__ISSUER__0__TIMEOUT", "1500ms"),
                 ("FERROEHR__AUTHZ__ABAC__POLICY__EHR__NAME", "ehr-policy"),
             ]),
             &[],
@@ -541,9 +593,18 @@ mod tests {
         );
         // The key-set client keys: one overridden from the env, the other two at
         // their documented defaults.
-        assert_eq!(issuer.timeout_ms, 1_500);
-        assert_eq!(issuer.jwks_max_age_seconds, 600);
-        assert_eq!(issuer.jwks_refresh_interval_seconds, 60);
+        assert_eq!(
+            issuer.timeout,
+            ferrohealth_config::units::Duration::from_millis(1_500)
+        );
+        assert_eq!(
+            issuer.jwks_max_age,
+            ferrohealth_config::units::Duration::from_mins(10)
+        );
+        assert_eq!(
+            issuer.jwks_refresh_interval,
+            ferrohealth_config::units::Duration::from_mins(1)
+        );
         assert_eq!(
             c.authz
                 .abac
@@ -560,7 +621,7 @@ mod tests {
     /// A list-typed key missing from `alias::LIST_KEYS` is not mis-split — it is
     /// REFUSED, `invalid type: string …, expected a sequence`, so its documented
     /// env spelling is dead on arrival. Two shipped keys were in exactly that
-    /// state (`signing.retired_key_paths`, the former `smart.endpoints.capabilities`) and
+    /// state (`signing.retired_key_files`, the former `smart.endpoints.capabilities`) and
     /// neither was noticed until a live deployment probe hit the boot refusal:
     /// the value that carries a whole feature is only reachable from a TOML
     /// file, which no test asserted and no reader could tell.
@@ -574,7 +635,7 @@ mod tests {
             &env(&[
                 // The key the signing rotation keyring depends on.
                 (
-                    "FERROEHR__SIGNING__RETIRED_KEY_PATHS",
+                    "FERROEHR__RECORD__SIGNING__RETIRED_KEY_FILES",
                     "/etc/ferroehr/retired-2025.pub.asc",
                 ),
                 ("FERROEHR__AUTH__CAPABILITIES", "launch-ehr"),
@@ -582,15 +643,18 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr"),
                 ("FERROEHR__AUTH__ISSUER__0__ALGORITHMS", "ES256"),
                 ("FERROEHR__AUTH__SCOPES_SUPPORTED", "openid"),
-                ("FERROEHR__SMART__BACKEND_CLIENTS", "etl"),
-                ("FERROEHR__SMART__PATIENT_ISSUERS", "https://as.example"),
-                ("FERROEHR__SMART__DEMOGRAPHIC_CLIENTS", "mpi"),
-                ("FERROEHR__OUTBOX__READERS", "ferrobridge"),
+                ("FERROEHR__AUTH__SMART__BACKEND_CLIENTS", "etl"),
+                (
+                    "FERROEHR__AUTH__SMART__PATIENT_ISSUERS",
+                    "https://as.example",
+                ),
+                ("FERROEHR__AUTH__SMART__DEMOGRAPHIC_CLIENTS", "mpi"),
+                ("FERROEHR__RECORD__CHANGE_FEED__READERS", "ferrobridge"),
             ]),
             &[],
         );
         assert_eq!(
-            c.signing.retired_key_paths,
+            c.record.signing.retired_key_files,
             vec![PathBuf::from("/etc/ferroehr/retired-2025.pub.asc")],
             "a single retired key path must parse as a one-element list"
         );
@@ -601,13 +665,13 @@ mod tests {
         assert_eq!(issuer.audience, vec!["ferroehr".to_owned()]);
         assert_eq!(issuer.algorithms.len(), 1);
         assert_eq!(c.auth.shared.scopes_supported, vec!["openid".to_owned()]);
-        assert_eq!(c.smart.backend_clients, vec!["etl".to_owned()]);
+        assert_eq!(c.auth.smart.backend_clients, vec!["etl".to_owned()]);
         assert_eq!(
-            c.smart.patient_issuers,
+            c.auth.smart.patient_issuers,
             vec!["https://as.example".to_owned()]
         );
-        assert_eq!(c.smart.demographic_clients, vec!["mpi".to_owned()]);
-        assert_eq!(c.outbox.readers, vec!["ferrobridge".to_owned()]);
+        assert_eq!(c.auth.smart.demographic_clients, vec!["mpi".to_owned()]);
+        assert_eq!(c.record.change_feed.readers, vec!["ferrobridge".to_owned()]);
     }
 
     /// A list nested under a MAP key is addressable from the environment too,
@@ -644,7 +708,7 @@ mod tests {
             None,
             &env(&[
                 (
-                    "FERROEHR__SIGNING__RETIRED_KEY_PATHS",
+                    "FERROEHR__RECORD__SIGNING__RETIRED_KEY_FILES",
                     "/keys/a.pub.asc,/keys/b.pub.asc",
                 ),
                 (
@@ -655,7 +719,7 @@ mod tests {
             &[],
         );
         assert_eq!(
-            c.signing.retired_key_paths,
+            c.record.signing.retired_key_files,
             vec![
                 PathBuf::from("/keys/a.pub.asc"),
                 PathBuf::from("/keys/b.pub.asc")
@@ -677,7 +741,7 @@ mod tests {
             &env(&[
                 ("FERROEHR__AUTH__ISSUER__0__ISSUER", "https://idp"),
                 ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr"),
-                ("FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW_SECONDS", "120"),
+                ("FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW", "2min"),
                 ("FERROEHR__AUTH__ISSUER__0__PROFILE", "keycloak"),
                 ("FERROEHR__AUTHZ__ABAC__CHECK_DIRECTORY", "true"),
                 (
@@ -690,7 +754,10 @@ mod tests {
         let [issuer] = c.auth.shared.issuers() else {
             panic!("one issuer table from the env");
         };
-        assert_eq!(issuer.clock_skew_seconds, 120);
+        assert_eq!(
+            issuer.clock_skew,
+            ferrohealth_config::units::Duration::from_mins(2)
+        );
         assert_eq!(issuer.profile, ferrohealth_smart::profile::Preset::Keycloak);
         assert!(c.authz.abac.check_directory);
         assert_eq!(
@@ -705,13 +772,14 @@ mod tests {
         assert!(d.auth.shared.issuers().is_empty());
         let entry = ferrohealth_smart::config::IssuerEntry::default();
         assert_eq!(
-            entry.clock_skew_seconds, 60,
+            entry.clock_skew,
+            ferrohealth_config::units::Duration::from_secs(60),
             "the default leeway is the conventional 60 s"
         );
         assert_eq!(entry.profile, ferrohealth_smart::profile::Preset::Rfc9068);
     }
 
-    /// `[rest] system_id` — the CDR's own openEHR system identifier (stamped
+    /// `[api] system_id` — the CDR's own openEHR system identifier (stamped
     /// into `EHR.system_id`, the `AUDIT_DETAILS.system_id` server default, and
     /// every `OBJECT_VERSION_ID.creating_system_id`). Pins all three layers:
     /// the compatibility default, the file value, and the `FERROEHR__` env form.
@@ -719,22 +787,22 @@ mod tests {
     fn rest_system_id_default_file_and_env() {
         // Unset, the default is the service-layer constant.
         let c = assemble_ok(None, &env(&[]), &[]);
-        assert_eq!(c.rest.system_id, crate::service::DEFAULT_SYSTEM_ID);
+        assert_eq!(c.api.system_id, crate::service::DEFAULT_SYSTEM_ID);
 
-        let file = toml_file("[rest]\nsystem_id = \"cdr.hospital.example\"\n");
+        let file = toml_file("[api]\nsystem_id = \"cdr.hospital.example\"\n");
         let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
-        assert_eq!(c.rest.system_id, "cdr.hospital.example");
+        assert_eq!(c.api.system_id, "cdr.hospital.example");
 
         let c = assemble_ok(
             Some(file.path()),
-            &env(&[("FERROEHR__REST__SYSTEM_ID", "cdr.env.example")]),
+            &env(&[("FERROEHR__API__SYSTEM_ID", "cdr.env.example")]),
             &[],
         );
-        assert_eq!(c.rest.system_id, "cdr.env.example");
+        assert_eq!(c.api.system_id, "cdr.env.example");
 
-        // `system_id` and the `[rest.identity]` display identity are
+        // `system_id` and the `[api.options]` display identity are
         // independent knobs — setting one must not disturb the other.
-        assert_eq!(c.rest.identity.solution, "FerroEHR");
+        assert_eq!(c.api.options.solution, "FerroEHR");
     }
 
     // ── 3. Strictness ─────────────────────────────────────────────────────────
@@ -779,7 +847,7 @@ mod tests {
 
     #[test]
     fn unknown_file_key_is_rejected() {
-        let file = toml_file("[db]\nmax_conections = 5\n");
+        let file = toml_file("[database]\nmax_conections = 5\n");
         let err = assemble(Some(file.path()), &env(&[]), &[]).expect_err("unknown key");
         assert!(err.to_string().contains("max_conections"), "{err}");
     }
@@ -815,7 +883,7 @@ mod tests {
     /// (RFC 8996).
     #[test]
     fn the_listener_refuses_a_zero_head_bound_and_a_deprecated_tls_minimum() {
-        let zero = toml_file("[server]\nheader_read_timeout_ms = 0\n");
+        let zero = toml_file("[server]\nheader_read_timeout = \"0s\"\n");
         assert!(assemble(Some(zero.path()), &env(&[]), &[]).is_err());
         let old_tls = toml_file(
             "[server.tls]\ncertificate_file = \"a\"\nkey_file = \"b\"\nmin_version = \"1.1\"\n",
@@ -870,352 +938,15 @@ mod tests {
         // since `FERROEHR_VIEWER` nests under `FERROEHR`; a single `_` sets nothing.
         let c = assemble_ok(None, &env(&[("FERROEHR_DB_MAX_CONNECTIONS", "7")]), &[]);
         assert_eq!(
-            c.db.max_connections,
-            FerroEhrConfig::default().db.max_connections
+            c.database.max_connections,
+            FerroEhrConfig::default().database.max_connections
         );
-        let c = assemble_ok(None, &env(&[("FERROEHR__DB__MAX_CONNECTIONS", "7")]), &[]);
-        assert_eq!(c.db.max_connections, 7);
-    }
-
-    // ── 5. Secrets ──────────────────────────────────────────────────────────
-
-    #[test]
-    fn secrets_never_render_and_file_resolves() {
-        let file =
-            toml_file("[[auth.basic.users]]\nuser = \"alice\"\npassword_hash = \"topsecret\"\n");
-        let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
-        let rendered = rendered(&c);
-        assert!(!rendered.contains("topsecret"), "secret leaked: {rendered}");
-        assert!(
-            rendered.contains("password_hash = \"***\""),
-            "the hash renders masked: {rendered}"
-        );
-        assert!(!serde_json::to_string(&c).unwrap().contains("topsecret"));
-        let secret = assert_fs::NamedTempFile::new("pass").expect("temp");
-        secret.write_str("s3cret\n").expect("write");
-        let file = toml_file(&format!(
-            "[signing]\nkey_passphrase_file = \"{}\"\n",
-            secret.path().display()
-        ));
-        let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
-        assert_eq!(
-            c.signing
-                .key_passphrase
-                .as_ref()
-                .expect("resolved")
-                .expose(),
-            "s3cret"
-        );
-    }
-
-    #[test]
-    fn secret_and_file_both_set_is_rejected() {
-        let file =
-            toml_file("[signing]\nkey_passphrase = \"a\"\nkey_passphrase_file = \"/dev/null\"\n");
-        assert!(assemble(Some(file.path()), &env(&[]), &[]).is_err());
-    }
-
-    /// Every credential-bearing key reaches the same configuration through its
-    /// `*_file` sibling as it does inline.
-    ///
-    /// These had no file route at all, so the most valuable secret in the
-    /// deployment — the database DSN — could only travel as an environment value,
-    /// readable through `/proc/<pid>/environ` and inherited by every child
-    /// process. The assertion is equivalence: the file route is an additional
-    /// delivery mechanism, not a second configuration path that might differ.
-    #[test]
-    fn the_credential_keys_resolve_identically_from_a_file_and_inline() {
-        const DSN: &str = "postgres://u:p@db.internal:5432/ferroehr";
-        const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2g";
-
-        let secret_file = |name: &str, contents: &str| {
-            let f = assert_fs::NamedTempFile::new(name).expect("temp");
-            // A trailing newline is what `echo >` and a Kubernetes secret editor
-            // both produce, so the reader must trim it.
-            f.write_str(&format!("{contents}\n")).expect("write");
-            f
-        };
-
-        let dsn = secret_file("dsn", DSN);
-        let hash = secret_file("hash", HASH);
-
-        let from_files = toml_file(&format!(
-            "[db]\nurl_file = \"{}\"\n\
-             [[auth.basic.users]]\nuser = \"alice\"\npassword_hash_file = \"{}\"\n",
-            dsn.path().display(),
-            hash.path().display(),
-        ));
-        let via_file = assemble_ok(Some(from_files.path()), &env(&[]), &[]);
-
-        let inline = toml_file(&format!(
-            "[db]\nurl = \"{DSN}\"\n\
-             [[auth.basic.users]]\nuser = \"alice\"\npassword_hash = \"{HASH}\"\n"
-        ));
-        let via_inline = assemble_ok(Some(inline.path()), &env(&[]), &[]);
-
-        assert_eq!(via_file.db.url.expose(), DSN);
-        assert_eq!(via_file.db.url.expose(), via_inline.db.url.expose());
-        let user = &via_file.auth.shared.basic.as_ref().expect("basic").users[0];
-        assert_eq!(
-            user.password_hash
-                .as_ref()
-                .map(secrecy::ExposeSecret::expose_secret),
-            Some(HASH)
-        );
-
-        // And a file-delivered DSN redacts exactly like an inline one — the
-        // whole point of the `SecretUrl` type is that redaction is a property of
-        // the type rather than of how the value arrived.
-        let rendered = rendered(&via_file);
-        assert!(
-            !rendered.contains("u:p@"),
-            "a file-loaded DSN must redact its credentials: {rendered}"
-        );
-        assert!(
-            !serde_json::to_string(&via_file)
-                .expect("json")
-                .contains(HASH),
-            "a file-loaded password hash must not render"
-        );
-    }
-
-    /// Setting a credential both inline and as a file is refused for each of the
-    /// six, rather than one silently winning.
-    ///
-    /// Each of these fields has a non-empty dev default, so "the operator set it"
-    /// means "it differs from that default" — the default itself must NOT count
-    /// as a conflicting value, or the file route would be unusable.
-    #[test]
-    fn a_credential_set_both_inline_and_as_a_file_is_refused() {
-        let cases = [
-            "[db]\nurl = \"postgres://u:p@h:5432/d\"\nurl_file = \"/dev/null\"\n",
-            "[db]\nmigrate_url = \"postgres://u:p@h:5432/d\"\n\
-             migrate_url_file = \"/dev/null\"\n",
-            "[storage.party]\nurl = \"postgres://u:p@h:5432/d\"\n\
-             url_file = \"/dev/null\"\n",
-            "[storage.audit]\nurl = \"postgres://u:p@h:5432/d\"\n\
-             url_file = \"/dev/null\"\n",
-            "[storage.migrate.party]\nurl = \"postgres://u:p@h:5432/d\"\n\
-             url_file = \"/dev/null\"\n",
-            "[[auth.basic.users]]\nuser = \"a\"\npassword_hash = \"x\"\n\
-             password_hash_file = \"/dev/null\"\n",
-        ];
-        for case in cases {
-            let file = toml_file(case);
-            let outcome = assemble(Some(file.path()), &env(&[]), &[]);
-            assert!(
-                outcome.is_err(),
-                "both-set must be refused, but this was accepted: {case}"
-            );
-        }
-    }
-
-    /// The URL file routes are reachable through the environment grammar too,
-    /// which is how a container passes a mount path without a config file.
-    ///
-    /// Without this the documented env form could ship dead — the whole reason
-    /// every section carries an env-mapping test.
-    #[test]
-    fn the_url_file_keys_are_reachable_through_the_env_grammar() {
-        let dsn = assert_fs::NamedTempFile::new("dsn").expect("temp");
-        dsn.write_str("postgres://u:p@h:5432/d\n").expect("write");
-        // A DIFFERENT DSN, so the assertion below cannot pass by falling back
-        // to `db.url` — which is what an unwired `migrate_url_file` would do.
-        let migrate = assert_fs::NamedTempFile::new("migrate-dsn").expect("temp");
-        migrate
-            .write_str("postgres://m:p@h:5432/d\n")
-            .expect("write");
-
         let c = assemble_ok(
             None,
-            &env(&[
-                ("FERROEHR__DB__URL_FILE", &dsn.path().display().to_string()),
-                (
-                    "FERROEHR__DB__MIGRATE_URL_FILE",
-                    &migrate.path().display().to_string(),
-                ),
-                (
-                    "FERROEHR__STORAGE__PARTY__URL_FILE",
-                    &migrate.path().display().to_string(),
-                ),
-                (
-                    "FERROEHR__STORAGE__MIGRATE__AUDIT__URL_FILE",
-                    &migrate.path().display().to_string(),
-                ),
-            ]),
+            &env(&[("FERROEHR__DATABASE__MAX_CONNECTIONS", "7")]),
             &[],
         );
-        assert_eq!(c.db.url.expose(), "postgres://u:p@h:5432/d");
-        assert_eq!(c.db.migrate_dsn(), "postgres://m:p@h:5432/d");
-        assert_eq!(
-            c.storage.dsn(crate::db::domain::Domain::Party, &c.db),
-            "postgres://m:p@h:5432/d",
-            "the party domain's own DSN arrives through the env grammar, rather than \
-             falling back to db.url as an unwired key would"
-        );
-        assert_eq!(
-            c.storage.migrate_dsn(crate::db::domain::Domain::Audit),
-            Some("postgres://m:p@h:5432/d"),
-            "a relocated domain's migration credential arrives through the env grammar"
-        );
-    }
-
-    /// The dev default is not a setting, so a `*_file` alone works without the
-    /// operator having to blank the default first.
-    #[test]
-    fn a_file_route_works_against_the_untouched_default() {
-        let dsn = assert_fs::NamedTempFile::new("dsn").expect("temp");
-        dsn.write_str("postgres://u:p@h:5432/d").expect("write");
-        let file = toml_file(&format!(
-            "[db]\nurl_file = \"{}\"\nmax_connections = 7\n",
-            dsn.path().display()
-        ));
-        let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
-        assert_eq!(c.db.url.expose(), "postgres://u:p@h:5432/d");
-        assert_eq!(c.db.max_connections, 7);
-    }
-
-    /// Userinfo written into ANY URL key reaches neither the TOML rendering
-    /// (`ferroehr config check`), the TOML table (`ferroehr report`), the JSON
-    /// tree (`/management/env`, `GET /admin/config`) nor `Debug`; each URL
-    /// keeps its host and path with the userinfo masked.
-    #[test]
-    fn url_userinfo_reaches_no_rendering() {
-        use ferrohealth_smart::config::credentials::OauthSection;
-
-        let leaky =
-            |n: u32| SecretUrl::new(format!("https://u{n}:URL_PW_SENTINEL_{n}@h{n}:1/p{n}"));
-        let mut c = standalone();
-        c.db.url = leaky(1);
-        c.db.migrate_url = Some(leaky(2));
-        c.storage.clinical.url = Some(leaky(3));
-        c.storage.party.url = Some(leaky(4));
-        c.storage.migrate.clinical.url = Some(leaky(5));
-        c.storage.audit.url = Some(leaky(6));
-        c.storage.migrate.party.url = Some(leaky(15));
-        c.audit.fhir_feed.url = leaky(8);
-        c.terminology.server.url = leaky(9);
-        c.terminology.server.oauth = Some(OauthSection {
-            token_endpoint: "https://u10:URL_PW_SENTINEL_10@h10:1/p10".to_owned(),
-            ..OauthSection::default()
-        });
-        c.authz.abac.remote.server = Some(leaky(12));
-        c.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
-            endpoint: leaky(13),
-            ..ferrohealth_telemetry::section::OtlpSection::default()
-        });
-        c.multimedia.endpoint = Some(leaky(14));
-        // URL 11 was the usage report endpoint, whose type refuses userinfo, so it
-        // can hold no sentinel; URL 7 was the removed event broker.
-        assert!(
-            ferrohealth_usage_report::section::Endpoint::new(
-                "https://u11:URL_PW_SENTINEL_11@h11:1/p11"
-            )
-            .is_err(),
-            "the usage report endpoint refuses userinfo"
-        );
-
-        let toml = rendered(&c);
-        let table = c.to_redacted_table().expect("table").to_string();
-        let json = serde_json::to_string(&c.to_redacted_json().expect("json")).expect("json");
-        let debug = format!("{c:?}");
-        for (surface, rendered) in [
-            ("toml", &toml),
-            ("table", &table),
-            ("json", &json),
-            ("debug", &debug),
-        ] {
-            assert!(
-                !rendered.contains("URL_PW_SENTINEL"),
-                "URL userinfo leaked into the {surface} rendering: {rendered}"
-            );
-            for n in (1..=15).filter(|n| *n != 7 && *n != 11) {
-                assert!(
-                    rendered.contains(&format!("https://***@h{n}:1/p{n}")),
-                    "URL {n} lost its host and path in the {surface} rendering: {rendered}"
-                );
-            }
-        }
-    }
-
-    /// A refusal of an issuer or a published SMART URL never prints the
-    /// userinfo it carries.
-    #[test]
-    fn an_issuer_refusal_masks_userinfo() {
-        let mut c = standalone();
-        c.smart.enabled = true;
-        c.smart.public_base_url = Some("https://a:SMART_PW_SENTINEL@cdr.example".to_owned());
-        c.auth.shared.issuer = auth_section::machines("https://b:OIDC_PW_SENTINEL@idp.example/r");
-        let text = c.validate().expect_err("refused").to_string();
-        assert!(!text.contains("SMART_PW_SENTINEL"), "{text}");
-        assert!(!text.contains("OIDC_PW_SENTINEL"), "{text}");
-    }
-
-    /// `to_redacted_json` masks EVERY secret-bearing leaf in the whole config
-    /// tree — the body `GET /admin/config` returns. Each secret is populated
-    /// with a unique high-entropy sentinel; none may appear in the rendered
-    /// JSON, while non-secret siblings (a Basic user's `user`/`scopes`) stay
-    /// visible. This is the standing enumeration of the current secret set: a
-    /// new secret field added without redaction is caught here once wired
-    /// into the fixture.
-    #[test]
-    fn redacted_json_masks_every_secret_field() {
-        use ferrohealth_secret::secret::Secret;
-        use ferrohealth_secret::secret_url::SecretUrl;
-        use ferrohealth_smart::config::{BasicSection, BasicUser};
-
-        // Each sentinel is unique so a leak is unambiguously attributable.
-        const DB_PW: &str = "DB_PW_SENTINEL_9a1c";
-        const BASIC_HASH: &str = "$argon2id$BASIC_HASH_SENTINEL_7b2d";
-        const PASSPHRASE: &str = "PASSPHRASE_SENTINEL_1d5a";
-        const S3_KEY: &str = "S3_SECRET_SENTINEL_8c6b";
-
-        let mut c = standalone();
-        c.db.url = SecretUrl::new(format!(
-            "postgres://dbuser:{DB_PW}@db.internal:5432/ferroehr"
-        ));
-        c.auth.shared.basic = Some(BasicSection {
-            users: vec![BasicUser {
-                user: "alice".to_owned(),
-                password_hash: Some(secrecy::SecretString::from(BASIC_HASH)),
-                password_hash_file: None,
-                scopes: vec!["user/composition-*.r".to_owned()],
-                roles: Vec::new(),
-            }],
-            cache_ttl_seconds: 0,
-        });
-        c.auth.shared.issuer = auth_section::machines("https://idp.example");
-        c.signing.key_passphrase = Some(Secret::new(PASSPHRASE));
-        c.multimedia.secret_access_key = Some(Secret::new(S3_KEY));
-        c.multimedia.access_key_id = Some("AKIA_PUBLIC_ID".to_owned());
-
-        let value = c.to_redacted_json().expect("render redacted json");
-        let rendered = serde_json::to_string(&value).expect("stringify");
-
-        for sentinel in [DB_PW, BASIC_HASH, PASSPHRASE, S3_KEY] {
-            assert!(
-                !rendered.contains(sentinel),
-                "secret leaked into GET /admin/config body: {sentinel} in {rendered}"
-            );
-        }
-
-        // Structural placeholders present where a secret was set.
-        assert_eq!(value["auth"]["basic"]["users"][0]["password_hash"], "***");
-        assert_eq!(value["signing"]["key_passphrase"], "***");
-        assert_eq!(value["multimedia"]["secret_access_key"], "***");
-        assert_eq!(
-            value["db"]["url"],
-            "postgres://***@db.internal:5432/ferroehr"
-        );
-
-        // Non-secret identifiers stay visible (they are not credentials).
-        assert_eq!(value["auth"]["basic"]["users"][0]["user"], "alice");
-        assert_eq!(
-            value["auth"]["basic"]["users"][0]["scopes"][0],
-            "user/composition-*.r"
-        );
-        assert_eq!(value["auth"]["issuer"][0]["issuer"], "https://idp.example");
-        assert_eq!(value["multimedia"]["access_key_id"], "AKIA_PUBLIC_ID");
+        assert_eq!(c.database.max_connections, 7);
     }
 
     /// The `[privacy]` section is reachable from the environment, both scalars
@@ -1233,7 +964,7 @@ mod tests {
                 ("FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE", "warn"),
                 // The explicit standalone opt-in, without which the default
                 // IHE provider refuses for want of an endpoint.
-                ("FERROEHR__EHR_INDEX__PROVIDER", "local"),
+                ("FERROEHR__RECORD__SUBJECT_INDEX", "local"),
                 (
                     "FERROEHR__PRIVACY__IDENTIFIER_SCAN__RULES",
                     "nl-bsn,gb-nhs-number",
@@ -1278,7 +1009,7 @@ mod tests {
             &env(&[
                 ("FERROEHR__AUDIT__PURPOSE_CODES", "TREAT,ETREAT"),
                 ("FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES", "ETREAT"),
-                ("FERROEHR__EHR_INDEX__PROVIDER", "local"),
+                ("FERROEHR__RECORD__SUBJECT_INDEX", "local"),
             ]),
             &[],
         );
@@ -1359,7 +1090,7 @@ mod tests {
                     "https://collector.example/v1/report",
                 ),
                 ("FERROEHR__USAGE_REPORT__DEPLOYMENT", "compose"),
-                ("FERROEHR__EHR_INDEX__PROVIDER", "local"),
+                ("FERROEHR__RECORD__SUBJECT_INDEX", "local"),
             ]),
             &[],
         );
@@ -1422,22 +1153,21 @@ mod tests {
             None,
             &env(&[
                 (
-                    "FERROEHR__DEMOGRAPHIC__IDENTIFIER_PROTECTION__ENABLED",
-                    "true",
-                ),
-                (
-                    "FERROEHR__DEMOGRAPHIC__IDENTIFIER_PROTECTION__SCHEMES",
+                    "FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__SCHEMES",
                     "nl-bsn,se-personnummer",
                 ),
                 (
-                    "FERROEHR__DEMOGRAPHIC__IDENTIFIER_PROTECTION__KEY",
+                    "FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__KEY",
                     "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
                 ),
             ]),
             &[],
         );
-        let protection = &c.demographic.identifier_protection;
-        assert!(protection.enabled);
+        let protection = c
+            .privacy
+            .identifier_protection
+            .as_ref()
+            .expect("the table is present");
         assert_eq!(
             protection.schemes,
             vec!["nl-bsn".to_owned(), "se-personnummer".to_owned()]
@@ -1533,7 +1263,7 @@ mod tests {
 
         let with = |key: &str, binding: PredicateBinding| {
             let mut c = standalone();
-            c.cohort.predicates.insert(key.to_owned(), binding);
+            c.privacy.cohort.predicates.insert(key.to_owned(), binding);
             c
         };
         let good = || PredicateBinding {
@@ -1598,7 +1328,7 @@ mod tests {
                 .expect_err("an unreachable predicate must refuse boot");
             let rendered = errors.to_string();
             assert!(
-                rendered.contains("cohort.predicates") && rendered.contains(expected),
+                rendered.contains("privacy.cohort.predicates") && rendered.contains(expected),
                 "the refusal must name the key and the defect: {rendered}"
             );
         }
@@ -1722,9 +1452,7 @@ mod tests {
         let sections = [
             (
                 "auth",
-                auth_section::live_fields(
-                    accepted_fields::<ferrohealth_smart::config::AuthSection>("auth"),
-                ),
+                accepted_fields::<ferrohealth_smart::config::AuthSection>("auth"),
             ),
             (
                 "authz.assurance",
@@ -1734,18 +1462,32 @@ mod tests {
             ),
             (
                 "authz.party_binding",
-                accepted_fields::<binding::PartyBindingConfig>("authz.party_binding"),
-            ),
-            ("db", accepted_fields::<crate::db::DbConfig>("db")),
-            ("ehr_index", accepted_fields::<EhrIndexConfig>("ehr_index")),
-            (
-                "signing",
-                accepted_fields::<crate::versioning::signature::config::SigningConfig>("signing"),
+                retired::live(
+                    accepted_fields::<binding::PartyBindingConfig>("authz.party_binding"),
+                    &["enabled", "provisional_report_days"],
+                ),
             ),
             (
-                "multimedia",
-                accepted_fields::<crate::extensions::multimedia::config::MultimediaConfig>(
-                    "multimedia",
+                "database",
+                accepted_fields::<crate::db::DbConfig>("database"),
+            ),
+            (
+                "pixm",
+                accepted_fields::<crate::service::ehr_index::config::PixmConfig>("pixm"),
+            ),
+            (
+                "record.signing",
+                accepted_fields::<crate::versioning::signature::config::SigningConfig>(
+                    "record.signing",
+                ),
+            ),
+            (
+                "record.multimedia",
+                retired::live(
+                    accepted_fields::<crate::extensions::multimedia::config::MultimediaConfig>(
+                        "record.multimedia",
+                    ),
+                    &["allow_http"],
                 ),
             ),
         ];
@@ -1778,11 +1520,11 @@ mod tests {
     fn an_enabled_multimedia_integration_refuses_a_blank_or_relative_endpoint() {
         for bad in ["", "   ", "seaweedfs:8333", "/bucket"] {
             let mut c = standalone();
-            c.multimedia.enabled = true;
-            c.multimedia.endpoint = Some(SecretUrl::new(bad));
+            c.record.multimedia.enabled = true;
+            c.record.multimedia.url = Some(SecretUrl::new(bad));
             let errors = c.validate().expect_err("a bad endpoint must be refused");
             assert!(
-                format!("{errors:?}").contains("multimedia.endpoint"),
+                format!("{errors:?}").contains("record.multimedia.url"),
                 "the refusal must name the key so an operator can act on it, got: {errors:?}"
             );
         }
@@ -1793,10 +1535,10 @@ mod tests {
     #[test]
     fn an_absent_or_absolute_multimedia_endpoint_is_accepted() {
         let mut c = standalone();
-        c.multimedia.enabled = true;
-        c.multimedia.endpoint = None;
+        c.record.multimedia.enabled = true;
+        c.record.multimedia.url = None;
         assert!(c.validate().is_ok(), "an absent endpoint is legitimate");
-        c.multimedia.endpoint = Some(SecretUrl::new("http://seaweedfs:8333"));
+        c.record.multimedia.url = Some(SecretUrl::new("http://seaweedfs:8333"));
         assert!(c.validate().is_ok(), "an absolute endpoint is accepted");
     }
 
@@ -1805,9 +1547,9 @@ mod tests {
     #[test]
     fn validate_pgp_requires_key_path() {
         let mut c = standalone();
-        c.signing.mode = crate::versioning::signature::config::Mode::Pgp;
+        c.record.signing.mode = crate::versioning::signature::config::Mode::Pgp;
         assert!(c.validate().is_err());
-        c.signing.key_path = Some(PathBuf::from("/k.asc"));
+        c.record.signing.key_file = Some(PathBuf::from("/k.asc"));
         assert!(c.validate().is_ok());
     }
 
@@ -1817,8 +1559,8 @@ mod tests {
     #[test]
     fn a_served_smart_document_needs_an_issuer() {
         let mut c = standalone();
-        c.smart.enabled = true;
-        c.smart.public_base_url = Some("https://cdr.example.com".to_owned());
+        c.auth.smart.discovery = true;
+        c.auth.smart.public_base_url = Some("https://cdr.example.com".to_owned());
         let err = c
             .validate()
             .expect_err("SMART without an [auth] issuer must refuse");
@@ -1857,9 +1599,7 @@ mod tests {
             .expect("write");
         let mut c = standalone();
         let mut issuer = auth_section::machines("https://idp.example.test");
-        if let ferrohealth_smart::config::IssuerKey::List(entries) = &mut issuer {
-            entries[0].jwks_file = jwks.path().display().to_string();
-        }
+        issuer[0].jwks_file = jwks.path().display().to_string();
         c.auth.shared.issuer = issuer;
         let err = c.validate().expect_err("an oct key must refuse the tree");
         let text = err.to_string();
@@ -1881,9 +1621,7 @@ mod tests {
         assert!(err.to_string().contains("auth:"), "{err}");
 
         let mut issuer = auth_section::machines("https://idp.example.test");
-        if let ferrohealth_smart::config::IssuerKey::List(entries) = &mut issuer {
-            entries[0].audience = Vec::new();
-        }
+        issuer[0].audience = Vec::new();
         c.auth.shared.issuer = issuer;
         let err = c.validate().expect_err("no audience must refuse");
         assert!(err.to_string().contains("audience"), "{err}");
@@ -1897,9 +1635,14 @@ mod tests {
     fn validate_management_port_must_differ_from_the_listen_port() {
         let mut c = standalone();
         c.server.listen = "0.0.0.0:8080".parse().expect("an address");
-        c.management.port = Some(8080);
+        c.management.listen = Some("0.0.0.0:8080".parse().expect("an address"));
         assert!(c.validate().is_err());
-        c.management.port = Some(9100);
+        c.management.listen = Some("127.0.0.1:8080".parse().expect("an address"));
+        assert!(
+            c.validate().is_err(),
+            "every interface includes the loopback one"
+        );
+        c.management.listen = Some("0.0.0.0:9100".parse().expect("an address"));
         assert!(c.validate().is_ok());
     }
 
@@ -1908,11 +1651,11 @@ mod tests {
     #[test]
     fn validate_keeps_the_clinical_body_tier_below_the_listener_limit() {
         let mut c = standalone();
-        c.server.body_limit_bytes = 64;
-        c.rest.body_limit_bytes = Some(64);
+        c.server.body_limit = ferrohealth_config::units::ByteSize::from_bytes(64);
+        c.api.body_limit = Some(ferrohealth_config::units::ByteSize::from_bytes(64));
         let err = c.validate().expect_err("a tier at the ceiling").to_string();
-        assert!(err.contains("rest.body_limit_bytes"), "{err}");
-        c.rest.body_limit_bytes = Some(16);
+        assert!(err.contains("api.body_limit"), "{err}");
+        c.api.body_limit = Some(ferrohealth_config::units::ByteSize::from_bytes(16));
         assert!(c.validate().is_ok());
     }
 
@@ -1928,7 +1671,7 @@ mod tests {
             "/ferroehr/rest-api/openehr-1.2.0/v1",
         ] {
             let mut c = standalone();
-            c.rest.base_path = base_path.to_owned();
+            c.api.base_path = base_path.to_owned();
             assert!(c.validate().is_ok(), "{base_path} must be accepted");
         }
     }
@@ -1953,12 +1696,12 @@ mod tests {
             ("/ferroehr/re st/v1", "RFC 3986 unreserved characters"),
         ] {
             let mut c = standalone();
-            c.rest.base_path = base_path.to_owned();
+            c.api.base_path = base_path.to_owned();
             let err = c
                 .validate()
                 .expect_err("a malformed base path must be refused")
                 .to_string();
-            assert!(err.contains("rest.base_path"), "{base_path}: {err}");
+            assert!(err.contains("api.base_path"), "{base_path}: {err}");
             assert!(err.contains(expected), "{base_path}: {err}");
         }
     }
@@ -1968,7 +1711,7 @@ mod tests {
     #[test]
     fn validate_reports_every_broken_base_path_rule_at_once() {
         let mut c = standalone();
-        c.rest.base_path = "cdr//api/".to_owned();
+        c.api.base_path = "cdr//api/".to_owned();
         let err = c
             .validate()
             .expect_err("a multiply-malformed base path must be refused")
@@ -1984,7 +1727,7 @@ mod tests {
         }
     }
 
-    /// `rest.system_id` is judged by the openEHR `uid` grammar itself.
+    /// `api.system_id` is judged by the openEHR `uid` grammar itself.
     ///
     /// It occupies the `creating_system_id` position of every
     /// `OBJECT_VERSION_ID` this CDR mints — "`creating_system_id` = `uid`" with
@@ -2009,7 +1752,7 @@ mod tests {
             "trailing-hyphen-", // and ends with a letter or digit
             "1.2.840.",         // an iso_oid group may not be empty
         ] {
-            c.rest.system_id = refused.to_owned();
+            c.api.system_id = refused.to_owned();
             assert!(
                 c.validate().is_err(),
                 "system_id {refused:?} is not a legal openEHR uid and must be refused at boot"
@@ -2022,7 +1765,7 @@ mod tests {
             "1.2.840.113554",                       // iso_oid
             "8849182c-82ad-4088-a07f-48ead4180515", // uuid
         ] {
-            c.rest.system_id = accepted.to_owned();
+            c.api.system_id = accepted.to_owned();
             assert!(
                 c.validate().is_ok(),
                 "system_id {accepted:?} is a legal openEHR uid and must boot"
@@ -2030,23 +1773,24 @@ mod tests {
         }
     }
 
-    /// Enabling the terminology server with no URL fails to boot, naming the
-    /// key. The section reads its defaults from one `Default` impl, so serde
-    /// cannot report the missing key itself — the semantic pass owns it, which
-    /// is also what lets every configuration error surface at once.
+    /// A `[terminology]` table with no URL fails to boot, naming the key. The
+    /// section reads its defaults from one `Default` impl, so serde cannot
+    /// report the missing key itself — the semantic pass owns it, which is
+    /// also what lets every configuration error surface at once.
     #[test]
     fn validate_terminology_server_needs_a_url() {
+        use crate::service::terminology::config::TerminologyServerConfig;
         let mut c = standalone();
-        c.terminology.server.enabled = true;
+        c.terminology = Some(TerminologyServerConfig::default());
         let err = c
             .validate()
-            .expect_err("an enabled server with no url must be rejected");
-        assert!(
-            err.to_string().contains("terminology.server.url"),
-            "got {err}"
-        );
+            .expect_err("a server with no url must be rejected");
+        assert!(err.to_string().contains("terminology.url"), "got {err}");
 
-        c.terminology.server.url = SecretUrl::new("https://ts.example/fhir");
+        c.terminology = Some(TerminologyServerConfig {
+            url: SecretUrl::new("https://ts.example/fhir"),
+            ..TerminologyServerConfig::default()
+        });
         assert!(c.validate().is_ok());
     }
 
@@ -2055,17 +1799,23 @@ mod tests {
     /// keys, never a silently unauthenticated terminology request.
     #[test]
     fn validate_terminology_server_oauth_shape() {
+        use crate::service::terminology::config::TerminologyServerConfig;
         use ferrohealth_smart::config::credentials::OauthSection;
 
-        let mut c = standalone();
-        c.terminology.server.enabled = true;
-        c.terminology.server.url = SecretUrl::new("https://ts.example/fhir");
-        c.terminology.server.oauth = Some(OauthSection::default());
-        let err = c
+        let with = |url: &str, oauth: OauthSection| {
+            let mut c = standalone();
+            c.terminology = Some(TerminologyServerConfig {
+                url: SecretUrl::new(url),
+                oauth: Some(oauth),
+                ..TerminologyServerConfig::default()
+            });
+            c
+        };
+        let err = with("https://ts.example/fhir", OauthSection::default())
             .validate()
             .expect_err("a grant with no token endpoint, client id or secret is rejected");
         for key in [
-            "terminology.server.oauth",
+            "terminology.oauth",
             "token_endpoint",
             "client_id",
             "client_secret",
@@ -2073,30 +1823,27 @@ mod tests {
             assert!(err.to_string().contains(key), "{key} unnamed in {err}");
         }
 
-        c.terminology.server.oauth = Some(OauthSection {
+        let complete = || OauthSection {
             token_endpoint: "https://idp.example/token".to_owned(),
             client_id: "cdr".to_owned(),
             client_secret: Some(secrecy::SecretString::from("s3cret")),
             ..OauthSection::default()
-        });
-        assert!(c.validate().is_ok());
+        };
+        assert!(
+            with("https://ts.example/fhir", complete())
+                .validate()
+                .is_ok()
+        );
 
         // A grant beside userinfo in the server URL would send two
         // authorizations.
-        c.terminology.server.url = SecretUrl::new("https://u:p@ts.example/fhir");
-        let err = c
+        let err = with("https://u:p@ts.example/fhir", complete())
             .validate()
             .expect_err("userinfo beside a grant is rejected");
         assert!(
-            err.to_string()
-                .contains("terminology.server carries credentials"),
+            err.to_string().contains("terminology carries credentials"),
             "got {err}"
         );
-
-        // A disabled server's grant is not in use, so it is not checked.
-        c.terminology.server.enabled = false;
-        c.terminology.server.oauth = Some(OauthSection::default());
-        assert!(c.validate().is_ok());
     }
 
     /// Every terminology key is a scalar, so the whole section, its grant
@@ -2106,34 +1853,26 @@ mod tests {
         let c = assemble_ok(
             None,
             &env(&[
-                ("FERROEHR__TERMINOLOGY__SERVER__ENABLED", "true"),
+                ("FERROEHR__TERMINOLOGY__URL", "http://ferroterm:8080/r4b"),
+                ("FERROEHR__TERMINOLOGY__ON_ERROR", "refuse"),
+                ("FERROEHR__TERMINOLOGY__TIMEOUT", "2500ms"),
                 (
-                    "FERROEHR__TERMINOLOGY__SERVER__URL",
-                    "http://ferroterm:8080/r4b",
-                ),
-                ("FERROEHR__TERMINOLOGY__SERVER__FAIL_ON_ERROR", "true"),
-                ("FERROEHR__TERMINOLOGY__SERVER__REQUEST_TIMEOUT_MS", "2500"),
-                (
-                    "FERROEHR__TERMINOLOGY__SERVER__OAUTH__TOKEN_ENDPOINT",
+                    "FERROEHR__TERMINOLOGY__OAUTH__TOKEN_ENDPOINT",
                     "https://idp/token",
                 ),
-                ("FERROEHR__TERMINOLOGY__SERVER__OAUTH__CLIENT_ID", "cdr"),
-                (
-                    "FERROEHR__TERMINOLOGY__SERVER__OAUTH__CLIENT_SECRET",
-                    "s3cret",
-                ),
-                (
-                    "FERROEHR__TERMINOLOGY__SERVER__OAUTH__SCOPE",
-                    "system/*.read",
-                ),
+                ("FERROEHR__TERMINOLOGY__OAUTH__CLIENT_ID", "cdr"),
+                ("FERROEHR__TERMINOLOGY__OAUTH__CLIENT_SECRET", "s3cret"),
+                ("FERROEHR__TERMINOLOGY__OAUTH__SCOPE", "system/*.read"),
             ]),
             &[],
         );
-        let server = &c.terminology.server;
-        assert!(server.enabled);
-        assert!(server.fail_on_error);
+        let server = c.terminology.as_ref().expect("the table from env");
+        assert!(server.refuses_on_error());
         assert_eq!(server.url.expose(), "http://ferroterm:8080/r4b");
-        assert_eq!(server.request_timeout_ms, 2_500);
+        assert_eq!(
+            server.timeout,
+            ferrohealth_config::units::Duration::from_millis(2_500)
+        );
         let oauth = server.oauth.as_ref().expect("the grant from env");
         assert_eq!(oauth.token_endpoint, "https://idp/token");
         assert_eq!(oauth.client_id, "cdr");
@@ -2193,7 +1932,7 @@ mod tests {
     #[test]
     fn the_old_token_url_key_is_refused_in_every_grant() {
         for table in [
-            "terminology.server.oauth",
+            "terminology.oauth",
             "audit.fhir_feed.oauth",
             "authz.abac.remote.oauth",
         ] {
