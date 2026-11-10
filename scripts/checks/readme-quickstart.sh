@@ -8,7 +8,10 @@
 # `# ANCHOR_END: <name>` lines. GitHub renders no include, so README.md
 # carries a copy of each, a fenced block under a `<!-- smoke:<name> -->` line,
 # and this guard refuses a copy that differs from its anchor by a byte, an
-# anchor with no copy, and a copy of an anchor the script lacks.
+# anchor with no copy, and a copy of an anchor the script lacks. It also
+# refuses a host path docker-compose.yml would read from the repository
+# beyond the backup directories, since the file a release attaches is the
+# whole quickstart.
 #
 #   scripts/checks/readme-quickstart.sh               check README.md
 #   scripts/checks/readme-quickstart.sh --self-test   prove each refusal
@@ -82,6 +85,14 @@ case "${1:-}" in
   "")
     cd "$(dirname "${BASH_SOURCE[0]}")/../.."
     check docker/smoke-test.sh README.md
+    # docker-compose.yml is the whole quickstart a release attaches, so the
+    # only host paths it reads are the backup directories a reader supplies.
+    stray="$(sed -E 's/#.*//' docker-compose.yml | grep -oE '(^|[[:space:]:-])\./[A-Za-z0-9._/-]+|:-\./[A-Za-z0-9._/-]+' \
+      | sed -E 's/^[[:space:]:-]*//' | grep -vE '^\./backups(/|$)' || true)"
+    if [[ -n "$stray" ]]; then
+      echo "readme-quickstart: docker-compose.yml reads $stray from the repository; inline it as a config." >&2
+      exit 1
+    fi
     echo "readme-quickstart: README.md shows every step of docker/smoke-test.sh's quick start as CI runs it."
     ;;
   *) echo "usage: $0 [--self-test]" >&2; exit 2 ;;

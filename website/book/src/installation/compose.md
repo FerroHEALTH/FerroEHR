@@ -94,7 +94,8 @@ in the repository pulls the `:main` images built from `main` and carries
 `main`'s configuration, for running `main`:
 
 ```shell
-docker compose up
+curl -fsSLO https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/docker-compose.yml
+docker compose up --wait
 ```
 
 This pulls and starts the core services (no profile needed): the database
