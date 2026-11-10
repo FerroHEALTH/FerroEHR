@@ -364,8 +364,9 @@ or actor, `external` for a verified external accessor and `system` for a client
 acting for nobody (`client` remains on records written before). The FHIR
 `AuditEvent` writes each mode as the person's `agent.role`. A record of a
 request with no authenticated caller carries no binding. The columns are in the
-chain digest: a record written from this release is digest version 2, which
-hashes them, and a record written before keeps verifying under version 1.
+chain digest: version 2 hashes them, version 3 adds `token_attributes`, a new
+record is version 3, and a record written before keeps verifying under its own
+version.
 
 #### The binding fields in the renderings
 
