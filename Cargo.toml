@@ -281,12 +281,13 @@ ferrohealth-usage-report = { version = "=0.4.0", features = ["telemetry"] }
 # `$expand`, `$subsumes` and the `CodeSystem?url=&_summary=count` search over
 # the generated `fhir-types` operation contracts, every refusal a typed error
 # carrying the upstream status and its `tx-issue-type` coding. The same
-# Licensor's BUSL-1.1 code (deny.toml). Its crate line moves one patch per
-# change, a breaking one included, so it is pinned exactly. Verified on
+# Licensor's BUSL-1.1 code (deny.toml). FerroBRIDGE's published crates follow
+# Cargo SemVer (a breaking change moves the minor while 0.x), so it is required
+# by a caret range (The Cargo Book, "Specifying Dependencies"). Verified on
 # crates.io 2026-11-09, on ferrohealth-smart 0.13; `smart` is its
 # ferrohealth-smart token provider, and `r4b` the one wire release the
 # terminology client speaks.
-ferrobridge-term = { version = "=0.2.0", default-features = false, features = ["r4b", "smart"] }
+ferrobridge-term = { version = "0.2.0", default-features = false, features = ["r4b", "smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
@@ -302,13 +303,16 @@ ihe-atna = { version = "=0.9.1", default-features = false }
 ehds-logging = { version = "=0.9.1", default-features = false }
 # The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
 # the viewer reads the ITI-81 searchset, each BALP `AuditEvent` and a refusal's
-# `OperationOutcome` through it. Verified on crates.io 2026-11-08.
-fhir-types = { version = "=0.1.130", default-features = false, features = ["r4", "resources"] }
+# `OperationOutcome` through it. `r4-resources` compiles R4's resources alone;
+# R4B is enabled only by `ferrobridge-term`'s `r4b`, the terminology wire,
+# without its resources. A caret range, as `ferrobridge-term`. Verified on
+# crates.io 2026-11-10.
+fhir-types = { version = "0.1.130", default-features = false, features = ["r4-resources"] }
 # FerroBRIDGE's FHIR R4 search value grammar (the same Licensor's BUSL-1.1
-# code), whose token `ihe-atna` hands the ITI-81 route. Its crate line moves
-# one patch per change, so it is pinned exactly at the version `ihe-atna` and
-# `ihe-iti` require. Verified on crates.io 2026-11-09.
-fhir-search = { version = "=0.1.130", default-features = false }
+# code), whose token `ihe-atna` hands the ITI-81 route. A caret range, as
+# `ferrobridge-term`, with its floor at the version `ihe-atna` and `ihe-iti`
+# require. Verified on crates.io 2026-11-10.
+fhir-search = { version = "0.1.130", default-features = false }
 
 # ── Patient identity (the shared IHE ITI client library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly. `pixm` is the

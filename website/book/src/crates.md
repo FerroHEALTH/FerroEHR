@@ -73,9 +73,14 @@ notation.
 
 The package version is the crates' **own independent SemVer line**: it tracks
 this implementation's code and moves freely with fixes and improvements, never
-with the vendored openEHR specification versions. While the line is `0.0.x`,
-expect breaking changes between releases, which always ship in lockstep across
-all nine crates.
+with the vendored openEHR specification versions. All nine crates always
+release in lockstep, and each release follows The Cargo Book, "SemVer
+Compatibility": `cargo-semver-checks` compares the public API of each crate
+with its newest release, and a breaking change moves the minor version
+(`0.1.4` to `0.2.0`) while a compatible one moves the patch (`0.1.4` to
+`0.1.5`). The line moves from `0.0.x`, where every release is a breaking
+release by the Cargo rule, to `0.1.0` at its next publish, so a caret
+requirement such as `openehr-rm = "0.1"` takes every compatible release.
 
 The implemented specification version is therefore a **separate datum, per
 generation**. Each generated crate emits a `Generation` enum that is the only
@@ -144,8 +149,8 @@ long-lived token anywhere) and publish the crates **one at a time in
 dependency order**, treating "already exists on the index" as done, so a run
 interrupted halfway can be re-run to finish the set. The lane then reads the
 registry back and refuses to report success unless all nine resolve at the
-same version, because while the line is `0.0.x` a straggler makes its
-siblings' internal requirements unresolvable for every consumer.
+same version, because a straggler makes its siblings' internal requirements
+unresolvable for every consumer.
 
 ## Information for integrators (CRA Annex II point 8(f))
 
@@ -174,9 +179,9 @@ the manufacturer and the reporting channels there apply to the crates too.
   least five years after each version (CRA Art 13(8)), and the fix ships only
   in the newest published version, never as a backport (Art 13(10))
   ([`SECURITY.md` § Supported versions](https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md#supported-versions)).
-  While the line is `0.0.x`, the version that carries a fix may also carry a
-  breaking change (see [Versioning](#versioning)), so plan for the work of
-  taking the newest version when you set the support period of your own
+  The version that carries a fix may also carry a breaking change, which
+  then moves the minor (see [Versioning](#versioning)), so plan for the work
+  of taking the newest version when you set the support period of your own
   product.
 - **Software bill of materials:** each release publishes a CycloneDX SBOM per
   crate, listing its normal and build dependencies, attested against the

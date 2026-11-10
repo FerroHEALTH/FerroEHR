@@ -169,6 +169,19 @@ jobs:
         with:
           tag: ${{ steps.tag.outputs.tag }}
 
+      # The SemVer judge of the openehr-* crates (scripts/checks/semver.sh,
+      # #5353): `plan` takes the version from it, and the release plan checks
+      # the stamped version with it. No cache: the judge builds the crates
+      # from this checkout and from crates.io.
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - id: semver-pin
+        name: Read the cargo-semver-checks pin
+        run: echo "version=$(bash scripts/checks/semver.sh --pin)" >> "$GITHUB_OUTPUT"
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        with:
+          tool: cargo-semver-checks@${{ steps.semver-pin.outputs.version }}
       # The crates the crates.io leg publishes, for the per-crate SBOM matrix:
       # the one list publish-crates.sh keeps, so the two cannot disagree. The
       # lockstep version is planned here, once per run (#4555): pull requests
@@ -200,6 +213,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.tag }}
+          CRATE_VERSION: ${{ steps.crates.outputs.version }}
         run: bash scripts/release/plan.sh checks "$TAG" --notes release-notes.md
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

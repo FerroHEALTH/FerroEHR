@@ -30,11 +30,15 @@ generation): the generated crates carry an emitted `Generation` enum
 (per-variant `spec_version()` — a `const fn`, so const contexts need no
 constant — with derived `Default` marking the current generation, from the
 codegen composition table); no version CONSTANT exists anywhere in them; the hand-written single-spec crates keep a literal
-crate-level `SPEC_VERSION`. The crates release in lockstep — while the line is
-`0.0.x`, a bump bumps all nine plus their internal version requirements
-(cargo treats every `0.0.x` as its own compatibility set), and the publish
-step makes that bump, never a pull request (#4555). Spec-crate
-releases never ride the product version.
+crate-level `SPEC_VERSION`. The crates release in lockstep: a bump bumps all
+nine plus their internal version requirements, and the publish step makes
+that bump, never a pull request (#4555). The step follows The Cargo Book,
+"SemVer Compatibility", judged by `cargo-semver-checks` against crates.io
+(`scripts/checks/semver.sh`, #5353): a compatible change takes the next
+patch, a break the next minor at patch 0. The line leaves `0.0.z` for
+`0.1.0` at its next publish (owner decision 2026-11-10, #5353), since every
+`0.0.z` release is a break by the Cargo rule. Spec-crate releases never ride
+the product version.
 
 ## Language and runtime
 
@@ -347,3 +351,14 @@ runs in CI and on a developer machine too, so its pin lives here and
 | Tool | Pin | Read by |
 |---|---|---|
 | `ferrohealth-perf` | `0.8.0` (crates.io, 2026-11-09) | `scripts/perf/gate.sh` |
+
+The SemVer judge of the published `openehr-*` crates (#5353) runs on a pull
+request, in the merge queue, in the release plan and on a developer machine,
+so its pin lives here too: `scripts/checks/semver.sh --pin` reads it, CI
+installs that version through `taiki-e/install-action`, and the judge refuses
+an installed binary that answers another. FerroBRIDGE, FerroSYS, FerroAUTH and
+FerroAUDIT pin the same release.
+
+| Tool | Pin | Read by |
+|---|---|---|
+| `cargo-semver-checks` | `0.51.0` (crates.io) | `scripts/checks/semver.sh` |

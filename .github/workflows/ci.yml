@@ -192,6 +192,7 @@ jobs:
       conformance: ${{ steps.filter.outputs.conformance }}
       msrv: ${{ steps.filter.outputs.msrv }}
       fuzz: ${{ steps.filter.outputs.fuzz }}
+      semver: ${{ steps.filter.outputs.semver }}
       queue_verified: ${{ steps.push.outputs.queue_verified }}
       cache_refresh: ${{ steps.push.outputs.cache_refresh }}
       test_shards: ${{ steps.shards.outputs.test_list }}
@@ -269,6 +270,7 @@ jobs:
               echo "cache=true"
               echo "conformance=true"
               echo "fuzz=true"
+              echo "semver=true"
             } >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -2660,7 +2662,7 @@ jobs:
           bash scripts/checks/ui-screenshot.sh --self-test
           bash scripts/checks/ui-screenshot.sh "$BASE" "$HEAD"
 
-  # Crate-version guard: a PR never edits the lockstep 0.0.x version of the
+  # Crate-version guard: a PR never edits the lockstep version of the
   # published crates/* members or their internal requirements, because the
   # publish step stamps it from crates.io (#4555,
   # .claude/rules/crates-publishing.md; local twin:
@@ -2704,6 +2706,42 @@ jobs:
           # The guard reads the pull request's own change, from its merge base
           # with main (#4129).
           bash scripts/checks/crate-version-guard.sh "$BASE" "$HEAD"
+
+  # The SemVer judge of the nine openehr-* crates (#5353,
+  # .claude/rules/crates-publishing.md): cargo-semver-checks compares each
+  # crate's public API with its newest release on crates.io, the baseline,
+  # since main holds the manifests at a floor below the published line
+  # (#4555). The judge says which release the change needs (The Cargo Book,
+  # "SemVer Compatibility") and refuses nothing the publish step's stamp can
+  # still answer; it fails only when it cannot judge a crate. It runs on a
+  # pull request and again in the merge queue, over the merged tree.
+  crate-semver:
+    name: crate-semver (cargo-semver-checks)
+    needs: changes
+    if: (github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.changes.outputs.semver == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The judge builds rustdoc JSON in its own target directory, which no
+      # other lane shares, so it restores and writes no cache.
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - id: semver-pin
+        name: Read the cargo-semver-checks pin
+        run: echo "version=$(bash scripts/checks/semver.sh --pin)" >> "$GITHUB_OUTPUT"
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        with:
+          tool: cargo-semver-checks@${{ steps.semver-pin.outputs.version }}
+      - name: The judge's own arithmetic
+        run: bash scripts/checks/semver.sh --self-test
+      - name: The release the change needs (cargo-semver-checks against crates.io)
+        run: bash scripts/checks/semver.sh report
 
   # Chart-version guard (the crate-version-guard pattern, issue #2108): a PR that
   # changes PACKAGED chart content must bump `Chart.yaml` version in the same PR.
@@ -3136,6 +3174,7 @@ jobs:
       - vulnerability-record
       - conformance
       - crate-version
+      - crate-semver
       - chart-version
       - chart-boot
       - conflict-markers
