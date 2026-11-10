@@ -178,7 +178,7 @@ Kubernetes: `>=1.36.0-0`
 
 | Repository | Name | Version |
 |------------|------|---------|
-| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.18 |
+| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.19 |
 
 > [!NOTE]
 > Rows under `config.*` carry no description here on purpose. Those keys are the
@@ -340,8 +340,8 @@ Kubernetes: `>=1.36.0-0`
 | extraVolumes | list | `[]` | Extra volumes / volumeMounts (e.g. an external secret store for the PGP key). |
 | ferropix.config.server.base_path | string | `""` | FerroPIX's `[server] base_path`, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.enabled | bool | `true` | Deploy FerroPIX beside the CDR and point config.pixm at it. |
-| ferropix.image.digest | string | `"sha256:4fcbabdd21bfc8993c94afe9043c25e7c2a651b872aebbd4d86935ff4c57cba5"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
-| ferropix.image.tag | string | `"0.0.25"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
+| ferropix.image.digest | string | `"sha256:85d40e6fdcdb39f782007eff91eb059861a4e039ca3f8fb56e37f2fa0f28d78a"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
+| ferropix.image.tag | string | `"0.0.26"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
 | ferropix.service.port | int | `8080` | FerroPIX's Service port, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.usageReport.enabled | bool | `true` | FerroPIX's own usage report switch, read by the dependency chart. A dependency chart cannot read this chart's `usageReport.enabled`, so with that set to false, set this false too: the render refuses the pair `usageReport.enabled=false` and `ferropix.usageReport.enabled=true`. |
 | fullnameOverride | string | `""` | Override the full resource name. |
@@ -449,10 +449,10 @@ Kubernetes: `>=1.36.0-0`
 | terminology.enabled | bool | `false` | Deploy FerroTERM alongside the CDR. |
 | terminology.extraEnv | list | `[]` | Extra environment for FerroTERM (escape hatch). |
 | terminology.failOnError | bool | `false` | What the CDR does when the terminology server cannot answer. `false` (the server's own shipped default) accepts the binding; `true` turns an unreachable server into a 422 refusal. No released openEHR text decides between the two. |
-| terminology.image.digest | string | `"sha256:b7f10609992377a7b8bca666254bceca79fe4366e2e54fc5fbce079eb9abf619"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
+| terminology.image.digest | string | `"sha256:7c20d39e1989fce1dfb92e6ddfd853dfa9a52bb9b7b973fbba42430963ef75bd"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
 | terminology.image.pullPolicy | string | `"IfNotPresent"` | Pull policy. |
 | terminology.image.repository | string | `"ghcr.io/ferrohealth/ferroterm"` | FerroTERM image repository. A separate product on its own release line (https://github.com/FerroHEALTH/FerroTERM), BUSL-1.1 from the same Licensor as FerroEHR. |
-| terminology.image.tag | string | `""` | Image tag. Empty falls back to the FerroTERM release this chart is pinned to (0.4.1) — never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert while the values file claimed otherwise. Clear `digest` to deploy a tag. |
+| terminology.image.tag | string | `""` | Image tag. Empty falls back to the FerroTERM release this chart is pinned to (0.4.5) — never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert while the values file claimed otherwise. Clear `digest` to deploy a tag. |
 | terminology.index.mountPath | string | `"/data/index"` | Directory the index claim is mounted at, read-only. Rendered as `FERROTERM__TERMINOLOGY__INDEX` only when a claim is named. |
 | terminology.index.persistentVolumeClaim | string | `""` | Name of an EXISTING PersistentVolumeClaim holding a built index for a release you hold a licence for. Empty means the shaped seed is served alone. The chart provisions no storage and renders no build Job: build the index off-cluster with `ferroterm-build --rf2 <release.zip> --out <dir>` and fill the claim from that output. |
 | terminology.logFormat | string | `"json"` | Log format (`json` or `pretty`), passed as `FERROTERM__TELEMETRY__FORMAT`. |

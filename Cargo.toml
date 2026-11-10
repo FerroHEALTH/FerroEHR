@@ -246,12 +246,12 @@ ferrohealth-authz = { version = "=0.10.0", default-features = false }
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
 # Verified on crates.io 2026-10-26 (0.2.0).
-ferrohealth-secret = "=0.2.0"
+ferrohealth-secret = "=0.2.1"
 # The family's configuration loader (FerroSYS): the file, the `FERROEHR__`
 # environment, the fallbacks and `--set`, strict with did-you-mean, and the
 # `config check` rendering, and the built-in defaults under the file
 # (`Loader::defaults`), with the `units` and `removed` types the tree uses.
-ferrohealth-config = "=0.4.2"
+ferrohealth-config = "=0.4.4"
 # The family's health document, indicator registry and process lifecycle
 # (FerroSYS): `/health/readiness` and `/management/health` serve its
 # `Readiness`, and the viewer reads the same document. The default build is the
@@ -266,7 +266,7 @@ ferrohealth-health = { version = "=0.1.1", default-features = false }
 # sets it on a `reqwest::ClientBuilder` (feature `reqwest`); `api_headers` is
 # the security header set the stack puts outermost on every response. Verified on
 # crates.io 2026-11-08 (0.6.2).
-ferrohealth-server = { version = "=0.8.2", default-features = false }
+ferrohealth-server = { version = "=0.8.3", default-features = false }
 # The family's telemetry (FerroSYS): the `[telemetry]` section, the console,
 # the one OpenTelemetry provider read by Prometheus and pushed over OTLP, the
 # request log with its `http.server.request.duration` histogram, and the panic
@@ -276,7 +276,7 @@ ferrohealth-telemetry = { version = "=0.4.0", features = ["axum", "otlp", "prome
 # latency window the request log fills (`telemetry`, its `Recorder`), and the
 # start and daily reporter over FerroEHR's PostgreSQL state store. Verified on
 # crates.io 2026-10-27 (0.2.0).
-ferrohealth-usage-report = { version = "=0.4.0", features = ["telemetry"] }
+ferrohealth-usage-report = { version = "=0.4.1", features = ["telemetry"] }
 
 # ── Terminology (the client of the one FHIR terminology server) ───────────────
 # FerroBRIDGE's FHIR terminology client: `$lookup`, `$validate-code`,
@@ -321,7 +321,7 @@ fhir-search = { version = "0.1.130", default-features = false }
 # PIXm Patient Identifier Cross-reference Consumer (ITI-83) the IHE patient
 # identity source of the EHR index is asked through (`[pixm]`), built from
 # ferrohealth-smart's outbound client. Verified on crates.io 2026-11-10.
-ihe-iti = { version = "=0.2.0", default-features = false }
+ihe-iti = { version = "=0.3.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
