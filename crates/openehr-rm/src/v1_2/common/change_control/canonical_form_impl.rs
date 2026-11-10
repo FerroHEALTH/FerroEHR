@@ -11,7 +11,7 @@
 //! members sorted by the UTF-16 code units of their raw names (§3.2.3). The
 //! writer runs once over the value into one `String`, sorting each object's
 //! members by reference with no per-name allocation, so a large version costs
-//! one pass (#5220). The `serde_jcs` crate is its test oracle.
+//! one pass (#5220). The `serde_json_canonicalizer` crate is its test oracle.
 
 #![expect(
     clippy::disallowed_types,

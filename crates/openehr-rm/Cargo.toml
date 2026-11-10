@@ -52,7 +52,7 @@ insta.workspace = true
 jsonschema.workspace = true
 proptest.workspace = true
 # The test oracle the RFC 8785 canonical form is held byte-equal to.
-serde_jcs.workspace = true
+serde_json_canonicalizer.workspace = true
 
 [lints]
 workspace = true
