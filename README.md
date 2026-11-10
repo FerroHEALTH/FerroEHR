@@ -103,13 +103,13 @@ data, reset nightly). To run it yourself you need Docker Compose 2.23.1 or
 newer:
 
 ```shell
-curl -LO https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/docker-compose.yml
-docker compose up
+curl -fsSLO https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/docker-compose.yml
+docker compose up --wait
 ```
 
-That file is the one attached to the latest release and pulls that release's
-images. Then create an EHR and query it with AQL (development credentials
-`ferroehr` / `ferroehr`):
+That one self-contained file, attached with its `.sha256sum` to every
+release, pulls that release's images and needs no checkout. Then create an
+EHR and query it with AQL (development credentials `ferroehr` / `ferroehr`):
 
 <!-- smoke:ehr -->
 ```sh
