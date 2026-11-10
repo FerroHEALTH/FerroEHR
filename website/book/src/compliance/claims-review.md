@@ -1449,3 +1449,25 @@ Read on the tree after commit `a6ce1927d`, for the FerroEHR release candidate
 - The public sandbox runs 5.6.3 until the owner moves it to 5.7.0-rc1 for the reseed #5009 asks of the candidate. The release legs move it to 5.7.0 at the stable cut.
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #4777, now for 5.9.0.
 - The performance page keeps its earlier figures until a record measured on the reference host replaces them.
+
+## The review of 2026-11-10, for 5.7.0-rc2
+
+Read on the tree after commit `936d1d921`, for the FerroEHR release candidate
+5.7.0-rc2. 5.7.0-rc1 was tagged at `dd30c84c4` and not published. The review
+of 2026-11-10 for 5.7.0-rc1 stands for everything 5.7.0-rc1 carried. The facts
+added since, checked in every text in scope:
+
+- The release's performance guard and logging evaluation start the login provisioner the quickstart ships, so they measure the candidate with its Basic login bound (#5346). No product code changed.
+- Chart 25.0.1-rc2 carries `appVersion` 5.7.0-rc2.
+
+### Read and kept on 2026-11-10, for 5.7.0-rc2
+
+- **The [logging performance](logging-performance.md) page** describes the method and the claims `scripts/perf/audit.sh` measures. The script now binds its login as the quickstart does, which changes neither.
+- **The installation pins:** the [Kubernetes installation](../installation/kubernetes.md), the chart README and [verifying releases](../verifying-releases.md) name chart 25.0.1-rc2 and image 5.7.0-rc2 in the book of main.
+- **The landing page, `SECURITY.md`, the crate READMEs, the [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the chart description** make no claim this release changes.
+
+### Left open on 2026-11-10, for 5.7.0-rc2
+
+- The public sandbox runs 5.6.3 until the owner moves it to 5.7.0-rc2 for the reseed #5009 asks of the candidate. The release legs move it to 5.7.0 at the stable cut.
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #4777 for 5.9.0.
+- The performance page keeps its earlier figures until a record measured on the reference host replaces them.
