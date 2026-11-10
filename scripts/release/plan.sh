@@ -344,6 +344,15 @@ check_compose_tags() {
 
 check_docs_claims() { bash scripts/checks/docs-claims.sh --all; }
 
+# The lockstep version the crates leg stamps answers the change since the
+# newest openehr-* release by Cargo SemVer (#5353). The plan job hands the
+# version it planned in CRATE_VERSION; preflight plans it here.
+check_crate_semver() {
+  local version="${CRATE_VERSION:-}"
+  [[ -n "$version" ]] || version="$(bash scripts/release/publish-crates.sh plan)"
+  bash scripts/checks/semver.sh check "$version"
+}
+
 # The list: "<function> <title>", in the order the plan job has always run
 # them. A check that reads the notes comes after check_notes.
 list() {
@@ -363,6 +372,7 @@ check_citation CITATION.cff version matches the workspace version
 check_zenodo .zenodo.json is in sync with CITATION.cff
 check_compose_tags The compose files pin :main, and the attached quickstart this release
 check_docs_claims Documented keys resolve in their source
+check_crate_semver The openehr-* crate version answers the change by Cargo SemVer (cargo-semver-checks)
 EOF
 }
 
