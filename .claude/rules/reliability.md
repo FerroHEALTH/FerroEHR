@@ -197,11 +197,11 @@ chapters, the Clippy book, and the Cargo/rustdoc books.)
   fallible, getters without `get_` prefixes. (Tier 3 via pedantic +
   review; `avoid-breaking-exported-api = false` in `clippy.toml` keeps the
   API-shape lints live. The justification is NOT "nothing publishes" — the
-  nine `openehr-*` crates publish to crates.io — it is the line they publish
-  on: `0.0.x`, where cargo treats every patch as its own compatibility set
-  (https://doc.rust-lang.org/cargo/reference/semver.html), so no consumer
-  version range spans a break, and any packaged-content change already bumps
-  all nine in the same PR. The `ferroehr-*` crates remain unpublished.
+  nine `openehr-*` crates publish to crates.io — it is that every publish is
+  judged by Cargo SemVer (https://doc.rust-lang.org/cargo/reference/semver.html):
+  `scripts/checks/semver.sh` runs cargo-semver-checks against crates.io and
+  the publish step takes the minor for any break it finds, so no consumer
+  version range spans a break (#5353). The `ferroehr-*` crates remain unpublished.
   Re-adjudicate if the line graduates past `0.x` — the same trigger the
   C-STABLE entry below carries.)
 - **Blocking never hides in async**: no `std::sync` locks held across

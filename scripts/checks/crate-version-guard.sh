@@ -2,10 +2,11 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # The crate-version guard (.claude/rules/crates-publishing.md). The nine
-# published crates/openehr-* members share one lockstep 0.0.x version, and
-# the publish step sets it (#4555): scripts/release/publish-crates.sh reads
-# crates.io, stamps the next version into the nine manifests, the internal
-# requirements and both lockfiles of the publishing checkout, and uploads.
+# published crates/openehr-* members share one lockstep version, and the
+# publish step sets it (#4555) by Cargo SemVer (scripts/checks/semver.sh,
+# #5353): scripts/release/publish-crates.sh reads crates.io, stamps the next
+# version into the nine manifests, the internal requirements and both
+# lockfiles of the publishing checkout, and uploads.
 # A pull request therefore never edits that version. Two open pull requests
 # that both took "the next version" always conflicted on nine manifests and
 # two lockfiles.

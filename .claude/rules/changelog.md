@@ -242,7 +242,8 @@ optional:
   reads the registry back before reporting success, so a publish that
   finished half the set fails instead of going green. Version bumps happen AT
   PUBLISH time, never in a pull request (#4555): `publish-crates.sh plan`
-  picks the next lockstep `0.0.x` from crates.io when packaged content changed
+  picks the next lockstep version from crates.io by Cargo SemVer
+  (`scripts/checks/semver.sh next`, #5353) when packaged content changed
   since the commit the newest version was packaged from, `stamp` writes it
   into the publishing checkout (manifests, internal requirements, both
   lockfiles), and `publish` refuses changed content under a version crates.io

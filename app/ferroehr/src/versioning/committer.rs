@@ -134,6 +134,16 @@ pub fn person_commits() -> bool {
     current_committer().is_some_and(|identity| identity.person)
 }
 
+/// Whether the current request's committer inserts for the record's person.
+///
+/// That is the person ([`CommitterIdentity::person`]) or their representative
+/// ([`CommitterIdentity::representative`]), whose writes EHDS Art. 5 holds to
+/// the same rules; `false` outside a request.
+#[must_use]
+pub fn inserts_for_the_person() -> bool {
+    current_committer().is_some_and(|identity| identity.person || identity.representative)
+}
+
 /// The committer a commit records for the committer the client `stated`.
 ///
 /// For a caller the server knows ([`bound::server_committer`]) the server's

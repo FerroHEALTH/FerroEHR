@@ -267,11 +267,11 @@ impl AuditSender {
     /// been audited.
     ///
     /// Every record is stamped with the digest of the category map in force,
-    /// and with the emergency mark when its declared purpose is one of
+    /// and with the emergency mark when a purpose of use it names is one of
     /// `[audit] emergency_purpose_codes`.
     pub fn emit(&self, mut event: AuditEvent) -> EmitOutcome {
         event.category_map_digest = Some(self.inner.categories.digest());
-        event.emergency_access = self.is_emergency_purpose(event.purpose.as_deref());
+        event.emergency_access = event.names_purpose(|c| self.is_emergency_purpose(Some(c)));
         crate::telemetry::metrics::metrics()
             .atna_audit_emitted
             .add(1, &[]);

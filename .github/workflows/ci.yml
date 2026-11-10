@@ -192,6 +192,7 @@ jobs:
       conformance: ${{ steps.filter.outputs.conformance }}
       msrv: ${{ steps.filter.outputs.msrv }}
       fuzz: ${{ steps.filter.outputs.fuzz }}
+      semver: ${{ steps.filter.outputs.semver }}
       queue_verified: ${{ steps.push.outputs.queue_verified }}
       cache_refresh: ${{ steps.push.outputs.cache_refresh }}
       test_shards: ${{ steps.shards.outputs.test_list }}
@@ -269,6 +270,7 @@ jobs:
               echo "cache=true"
               echo "conformance=true"
               echo "fuzz=true"
+              echo "semver=true"
             } >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -1829,19 +1831,21 @@ jobs:
           FERROEHR_IMAGE: ferroehr:chart-boot
         run: bash deploy/helm/ci/boot-check.sh
 
-  # ── The performance gate (#5081) ─────────────────────────────────────────────
+  # ── The performance gate (#5081, #5326) ──────────────────────────────────────
   # FerroPIX #490 shipped an outbox sender that ran about 8,000 PostgreSQL
   # transactions a second while idle, and no gate saw it. This one starts the
-  # server this tree builds with its own PostgreSQL, holds it to absolute idle
-  # limits, drives perf/plan.toml against it and judges the load phase against
-  # perf/baseline.toml once it lands (#5095; scripts/perf/gate.sh over ferrohealth-perf, pinned in
-  # docs/VERSIONS.md). The self-test runs first: an idle busy-loop must fail
-  # it. The baseline is measured on this runner image by perf-baseline.yml, one
-  # entry per CPU model; docs/release.md says how to read the report and write
-  # the baseline again.
+  # server this tree builds and the server of its base commit side by side,
+  # both built with the e2e profile, each with its own PostgreSQL and under its
+  # own tree's gate configuration, holds the head
+  # to absolute idle limits, and judges the head's load phases against the
+  # base's on the same runner (`ferrohealth-perf ab` through
+  # scripts/perf/gate.sh, pinned in docs/VERSIONS.md): runners of one CPU model
+  # differ by 25 to 45 %, so a stored baseline cannot judge a change. The
+  # self-test runs first: an idle busy-loop must fail it. docs/release.md says
+  # how to read the report.
   perf:
     name: perf
-    needs: [changes, ui-e2e-binary]
+    needs: [changes, ui-e2e-binary, perf-base-binary]
     if: needs.changes.outputs.perf == 'true' && github.event_name != 'merge_group'
     runs-on: ubuntu-26.04
     timeout-minutes: 30
@@ -1851,6 +1855,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The base arm runs under its own commit's tree, archived from history.
+          fetch-depth: 0
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache: false
@@ -1875,17 +1881,42 @@ jobs:
         run: docker buildx build --load -t ferroehr-postgres:perf docker/postgres
       - name: An idle busy-loop fails the gate
         run: bash scripts/perf/gate.sh self-test ferroehr:perf ferroehr-postgres:perf
-      # The load phase is judged once perf/baseline.toml holds a baseline per
-      # CPU model of the runner pool (#5095); until then it is reported.
-      - name: The gate
-        run: bash scripts/perf/gate.sh run ferroehr:perf ferroehr-postgres:perf
+      # The base is the change's base commit, built by perf-base-binary with the
+      # same profile and toolchain as the head, and packaged from its own tree
+      # with its own Dockerfile and PostgreSQL image, so the two arms differ in
+      # the change alone.
+      - name: The base commit's tree
+        env:
+          BASE_REV: ${{ needs.perf-base-binary.outputs.rev }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/perf-base-context
+          git archive "$BASE_REV" | tar -x -C target/perf-base-context
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: perf-base-server-binary
+          path: target/perf-base-context/bin/amd64
+      - name: Package the base image (COPY-only, seconds)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: target/perf-base-context
+          file: target/perf-base-context/docker/Dockerfile
+          target: runtime-prebuilt
+          load: true
+          tags: ferroehr:perf-base
+      - name: Build the base postgres image (COPY-only, seconds)
+        run: docker buildx build --load -t ferroehr-postgres:perf-base target/perf-base-context/docker/postgres
+      - name: The gate, the head against the base
+        env:
+          BASE_REV: ${{ needs.perf-base-binary.outputs.rev }}
+        run: >-
+          bash scripts/perf/gate.sh ab ferroehr:perf ferroehr-postgres:perf
+          ferroehr:perf-base ferroehr-postgres:perf-base "$BASE_REV"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: perf-report
-          path: |
-            target/perf/
-            perf/baseline.toml
+          path: target/perf/
           if-no-files-found: warn
 
   # ── The deployment harness, on a real composed stack (#2178) ─────────────────
@@ -2026,6 +2057,79 @@ jobs:
   # scripts/checks/binary-consumers.sh holds every consumer's lanes here.
   # A push the merge queue verified keeps this job and skips its consumers:
   # it is main's writer of the binary cache and the sccache entries (#4546).
+  # The base arm of the performance gate (#5326): the server binary of the
+  # change's base commit (the first parent of the commit under test, the base
+  # branch's head for a pull request), built exactly as ui-e2e-binary builds
+  # the head: the same container, toolchain and e2e profile, so the A/B run
+  # compares the change and not two build profiles. The binary cache keys on
+  # the base tree's files the way ui-e2e-binary keys on the head's, so a base
+  # that main already built is restored, not compiled.
+  perf-base-binary:
+    name: perf base server binary
+    needs: changes
+    if: needs.changes.outputs.perf == 'true' && github.event_name != 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    container: rust:1.99.1-slim-trixie@sha256:00544ccc9431a2fe93e65185d21381b0a039342f5cefcf84fbddac273c9e573d
+    env:
+      SOURCE_DATE_EPOCH: "1700000000"
+    outputs:
+      rev: ${{ steps.base.outputs.rev }}
+    steps:
+      # The slim image carries no git, and without it the checkout is a
+      # tarball with no history to take the base from.
+      - name: Install git
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends git ca-certificates >/dev/null
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - id: base
+        name: The base commit's tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          rev=$(git rev-parse HEAD^1)
+          echo "rev=$rev" >> "$GITHUB_OUTPUT"
+          mkdir -p perf-base
+          git archive "$rev" | tar -x -C perf-base
+      - id: binary-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: bin/amd64/ferroehr
+          key: ui-e2e-server-bin-1.99.1-${{ hashFiles('perf-base/Cargo.toml', 'perf-base/Cargo.lock', 'perf-base/rust-toolchain.toml', 'perf-base/.cargo/**', 'perf-base/crates/**', 'perf-base/app/ferroehr/**', 'perf-base/app/ferroehr-rest/**', 'perf-base/app/ferroehr-server/**', 'perf-base/tools/**') }}
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        if: steps.binary-cache.outputs.cache-hit != 'true'
+        with:
+          shared-key: ui-e2e-server-binary
+          cache-targets: false
+          workspaces: perf-base
+      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+        if: steps.binary-cache.outputs.cache-hit != 'true'
+      - name: Build the base server binary (e2e profile, native)
+        if: steps.binary-cache.outputs.cache-hit != 'true'
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          SCCACHE_GHA_RW_MODE: READ_ONLY
+          RUSTC_WRAPPER: sccache
+          CARGO_INCREMENTAL: "0"
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd perf-base
+          cargo build --profile e2e --locked -p ferroehr-server
+          strip target/e2e/ferroehr
+          mkdir -p ../bin/amd64
+          install -m0755 target/e2e/ferroehr ../bin/amd64/ferroehr
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: perf-base-server-binary
+          path: bin/amd64/ferroehr
+          if-no-files-found: error
+
   ui-e2e-binary:
     name: ui-e2e server binary
     needs: changes
@@ -2558,7 +2662,7 @@ jobs:
           bash scripts/checks/ui-screenshot.sh --self-test
           bash scripts/checks/ui-screenshot.sh "$BASE" "$HEAD"
 
-  # Crate-version guard: a PR never edits the lockstep 0.0.x version of the
+  # Crate-version guard: a PR never edits the lockstep version of the
   # published crates/* members or their internal requirements, because the
   # publish step stamps it from crates.io (#4555,
   # .claude/rules/crates-publishing.md; local twin:
@@ -2602,6 +2706,42 @@ jobs:
           # The guard reads the pull request's own change, from its merge base
           # with main (#4129).
           bash scripts/checks/crate-version-guard.sh "$BASE" "$HEAD"
+
+  # The SemVer judge of the nine openehr-* crates (#5353,
+  # .claude/rules/crates-publishing.md): cargo-semver-checks compares each
+  # crate's public API with its newest release on crates.io, the baseline,
+  # since main holds the manifests at a floor below the published line
+  # (#4555). The judge says which release the change needs (The Cargo Book,
+  # "SemVer Compatibility") and refuses nothing the publish step's stamp can
+  # still answer; it fails only when it cannot judge a crate. It runs on a
+  # pull request and again in the merge queue, over the merged tree.
+  crate-semver:
+    name: crate-semver (cargo-semver-checks)
+    needs: changes
+    if: (github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.changes.outputs.semver == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The judge builds rustdoc JSON in its own target directory, which no
+      # other lane shares, so it restores and writes no cache.
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - id: semver-pin
+        name: Read the cargo-semver-checks pin
+        run: echo "version=$(bash scripts/checks/semver.sh --pin)" >> "$GITHUB_OUTPUT"
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        with:
+          tool: cargo-semver-checks@${{ steps.semver-pin.outputs.version }}
+      - name: The judge's own arithmetic
+        run: bash scripts/checks/semver.sh --self-test
+      - name: The release the change needs (cargo-semver-checks against crates.io)
+        run: bash scripts/checks/semver.sh report
 
   # Chart-version guard (the crate-version-guard pattern, issue #2108): a PR that
   # changes PACKAGED chart content must bump `Chart.yaml` version in the same PR.
@@ -3015,6 +3155,7 @@ jobs:
       - helm-golden
       - unused-deps
       - ui-e2e-binary
+      - perf-base-binary
       - ui-e2e-viewer
       - ui-e2e
       - ui-docs-shots
@@ -3033,6 +3174,7 @@ jobs:
       - vulnerability-record
       - conformance
       - crate-version
+      - crate-semver
       - chart-version
       - chart-boot
       - conflict-markers

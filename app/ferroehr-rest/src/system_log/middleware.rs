@@ -478,6 +478,8 @@ pub(super) fn fill_common(
     // The roles the person held (NEN 7513's role element, #3239): the RFC 9068
     // §2.2.3.1 claim carriers for a bearer, the user definition for Basic.
     event.roles = principal.map(|p| p.roles.clone()).unwrap_or_default();
+    // The purposes and roles the token states (IHE ITI TF-2 §3.71.4.2.2.1.1).
+    event.token = principal.and_then(crate::extensions::access::authn::purpose::token_attributes);
     event.user_is_requestor = true;
     // The bearer token's `jti` (RFC 7519 §4.1.7) is the minimal token identity
     // IHE BALP `OAUTHaccessTokenUse.Minimal` records; token contents are never

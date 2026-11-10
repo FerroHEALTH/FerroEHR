@@ -21,13 +21,15 @@ use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::{AuthSection, IssuerEntry, ScopelessSubject};
 use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::party::config::PartySection;
-use ferrohealth_smart::profile::{Marker, Preset};
+use ferrohealth_smart::profile::{Delegate, Marker, Preset};
 use http::StatusCode;
 use serde_json::json;
 
 use crate::caller_kinds_http::{audience, bearer, machines};
-use crate::common;
-use crate::party_binding_http::{Capture, list, professional_of, refused, router_with, service};
+use crate::common::{self, BASE};
+use crate::party_binding_http::{
+    Capture, audited_service, list, professional_of, refused, router_with, service,
+};
 
 /// A standards-only `machines` issuer.
 const MACHINES: &str = "https://machines.callers.example";
@@ -45,6 +47,9 @@ const KEYCLOAK: &str = "https://keycloak.example/realms/callers";
 const KEYCLOAK_LOGIN: &str = "https://keycloak.example/realms/callers/users";
 /// The realm's first-party client.
 const VIEWER: &str = "ferroehr-viewer";
+/// The onward client both persons issuers list in `delegates`, such as
+/// `FerroBRIDGE`.
+const ONWARD: &str = "bridge";
 
 /// A `persons` issuer at `issuer` under `profile`.
 fn persons(issuer: &str, profile: Preset) -> IssuerEntry {
@@ -69,10 +74,12 @@ fn party(issuer: &str, identifier_issuer: &str) -> PartySection {
 fn config(scopeless: Vec<ScopelessSubject>) -> AppConfig {
     let entra = IssuerEntry {
         first_party_clients: Some(vec![common::TEST_CLIENT.to_owned()]),
+        delegates: Some(vec![Delegate::Client(ONWARD.to_owned())]),
         ..persons(ENTRA, Preset::Entra)
     };
     let keycloak = IssuerEntry {
         first_party_clients: Some(vec![VIEWER.to_owned()]),
+        delegates: Some(vec![Delegate::Client(ONWARD.to_owned())]),
         app_only: Some(vec![Marker::Subjects(vec![
             "service-account-viewer".to_owned(),
         ])]),
@@ -239,4 +246,97 @@ async fn a_scopeless_entry_admits_the_subject_of_its_own_issuer_only() {
         StatusCode::FORBIDDEN,
         "another issuer's lab: {body}"
     );
+}
+
+/// Creates an EHR as `credential`; the committer of its `EHR_STATUS`.
+async fn committer_of_new_ehr(app: &Router, credential: &str) -> serde_json::Value {
+    let (status, body) = common::send_body(
+        app,
+        common::req("POST", format!("{BASE}/ehr"))
+            .auth(credential)
+            .prefer_representation()
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let ehr: serde_json::Value = serde_json::from_str(&body).expect("an EHR");
+    let ehr_id = ehr
+        .pointer("/ehr_id/value")
+        .and_then(serde_json::Value::as_str)
+        .expect("the EHR id")
+        .to_owned();
+    let (status, version) = common::send_json(
+        app,
+        common::req(
+            "GET",
+            format!("{BASE}/ehr/{ehr_id}/versioned_ehr_status/version"),
+        )
+        .auth(credential)
+        .accept("application/json")
+        .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{version}");
+    version["commit_audit"]["committer"].clone()
+}
+
+/// The `(acting_mode, client_id)` of the `ehr_create` record of `principal`.
+async fn delegated_record(
+    pool: &sqlx::PgPool,
+    principal: &str,
+) -> (Option<String>, Option<String>) {
+    for _ in 0..50 {
+        let row: Option<(Option<String>, Option<String>)> = sqlx::query_as(
+            "SELECT acting_mode, client_id FROM audit.audit_event \
+             WHERE operation = 'ehr_create' AND principal = $1",
+        )
+        .bind(principal)
+        .fetch_optional(pool)
+        .await
+        .expect("query");
+        if let Some(row) = row {
+            return row;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    panic!("no ehr_create record of {principal} was stored");
+}
+
+/// An Entra ID on-behalf-of token (the middle tier's application id in
+/// `azp`, Microsoft "On-behalf-of flow") and a Keycloak standard token
+/// exchange token (the requesting client in `azp`, Keycloak "Token
+/// exchange") each name the person in their key claim and the onward client
+/// the issuer lists in `delegates`: the request is bound to the person, commits
+/// as their `PERSON`, and the record carries the delegated mode and the client.
+#[tokio::test]
+async fn an_onward_token_of_entra_and_of_keycloak_is_the_persons_with_its_client() {
+    let (db, _audit, svc) = audited_service().await;
+    let oid = "6d5e4f3a-2b1c-4d0e-9f8a-7b6c5d4e3f2a";
+    let sub = "5e4f3a2b-1c0d-4e9f-8a7b-6c5d4e3f2a1b";
+    professional_of(&svc, ENTRA_LOGIN, oid, "532").await;
+    professional_of(&svc, KEYCLOAK_LOGIN, sub, "532").await;
+    let app = router(svc, config(Vec::new())).await;
+    let obo = entra(oid, &json!({ "azp": ONWARD }));
+    let exchanged = bearer(
+        KEYCLOAK,
+        &audience(KEYCLOAK),
+        &json!({ "sub": sub, "azp": ONWARD }),
+    );
+    for (case, credential, key, principal) in [
+        ("entra on-behalf-of", &obo, oid, "pairwise-subject"),
+        ("keycloak standard exchange", &exchanged, sub, sub),
+    ] {
+        let committer = committer_of_new_ehr(&app, credential).await;
+        assert_eq!(
+            committer["external_ref"]["type"], "PERSON",
+            "{case}: {committer}"
+        );
+        assert_eq!(
+            committer["identifiers"][0]["id"], key,
+            "{case}: {committer}"
+        );
+        let (mode, client) = delegated_record(&db.pool(), principal).await;
+        assert_eq!(mode.as_deref(), Some("delegated"), "{case}");
+        assert_eq!(client.as_deref(), Some(ONWARD), "{case}");
+    }
 }

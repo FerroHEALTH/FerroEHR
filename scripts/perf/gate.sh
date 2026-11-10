@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
-# The performance gate (#5081): one FerroEHR and its PostgreSQL, idle and then
-# under the committed request set, judged by ferrohealth-perf against the
-# committed baseline. The run fails when the server works while idle (CPU, or
-# transactions in its database), or is slower, heavier or busier under load
-# than perf/baseline.toml allows. No openEHR spec governs this: our own design.
+# The performance gate (#5081, #5326): FerroEHR and its PostgreSQL, idle and
+# then under the committed request set, measured by ferrohealth-perf. `ab`
+# judges the head of a change against its base, both measured side by side on
+# one runner in one job (ferrohealth-perf's A/B mode), each arm the image of
+# its own tree under its own tree's gate configuration, templates, SCIM
+# client and seed data (the family rule). `run` measures one server and holds
+# it to the idle limits. Either fails when the head works while idle (CPU, or
+# transactions in its database); `ab` also fails when the head is slower,
+# heavier or busier under load than its base by more than the plan's
+# tolerance. No openEHR spec governs this: our own design.
 #
 # The server runs in a container of the image under test with
 # perf/ferroehr.toml as its configuration, its database in a container of the
@@ -20,8 +25,13 @@
 #
 # Usage:
 #   scripts/perf/gate.sh install                     the pinned ferrohealth-perf into target/tools/perf
-#   scripts/perf/gate.sh run <image> <pg-image>      the gate
-#   scripts/perf/gate.sh update <image> <pg-image>   the gate, writing perf/baseline.toml
+#   scripts/perf/gate.sh ab <image> <pg-image> <base-image> <base-pg-image> [<base-rev>]
+#       the head images against the base images; the base's tree is
+#       <base-rev>, or the commit the base image names
+#       (org.opencontainers.image.revision), taken from this clone's history
+#       with `git archive`
+#   scripts/perf/gate.sh run <image> <pg-image>      one server: the idle limits, the load reported
+#   scripts/perf/gate.sh update <image> <pg-image>   one server, writing perf/baseline.toml
 #   scripts/perf/gate.sh self-test <image> <pg-image>
 #       an idle busy-loop against the database must fail the idle phase,
 #       naming idle.transactions_per_second
@@ -43,6 +53,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 readonly ROOT
 readonly PREFIX=ferroehr-perf
 readonly NETWORK="${PREFIX}-net"
+# The head's containers; the base's carry the suffix -base.
 readonly PG="${PREFIX}-postgres"
 readonly SERVER="${PREFIX}-server"
 # The throwaway database's roles, which the image's init script creates.
@@ -50,16 +61,23 @@ readonly PG_SECRET=ferroehr
 readonly PG_SUPER_SECRET=postgres
 readonly PG_PORT=55432
 readonly HTTP_PORT=58080
+readonly BASE_PG_PORT=55433
+readonly BASE_HTTP_PORT=58081
 readonly BASE="/ferroehr/rest/openehr/v1"
 readonly AUTH="Basic ZmVycm9laHI6ZmVycm9laHI="
-readonly TEMPLATE="$ROOT/corpus/templates/ckm/generic-lab-test-result.opt"
-readonly COMPOSITION="$ROOT/corpus/templates/ckm/generic-lab-test-result.example.json"
-readonly PERSON="$ROOT/corpus/fixtures/demographic/person.v1.json"
+# Paths in an arm's tree: the head's is this checkout, the base's the
+# archive of its commit under target/perf-base.
+readonly TEMPLATE_PATH=corpus/templates/ckm/generic-lab-test-result.opt
+readonly COMPOSITION_PATH=corpus/templates/ckm/generic-lab-test-result.example.json
+readonly PERSON_PATH=corpus/fixtures/demographic/person.v1.json
+readonly TEMPLATE="$ROOT/$TEMPLATE_PATH"
+readonly COMPOSITION="$ROOT/$COMPOSITION_PATH"
+readonly BASE_TREE="$ROOT/target/perf-base"
 OUT="${PERF_OUT:-$ROOT/target/perf}"
 readonly OUT
 
 usage() {
-  sed -n '21,29p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+  sed -n '26,39p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -102,8 +120,9 @@ teardown() {
   [[ -n "${PERF_SERVER:-}" ]] && return 0
   if [[ "${STARTED:-0}" == 1 ]]; then
     docker logs --tail 40 "$SERVER" >"$OUT/server.log" 2>&1 || true
+    docker logs --tail 40 "$SERVER-base" >"$OUT/base-server.log" 2>&1 || true
   fi
-  docker rm -f "$SERVER" "$PG" >/dev/null 2>&1 || true
+  docker rm -f "$SERVER" "$PG" "$SERVER-base" "$PG-base" >/dev/null 2>&1 || true
   docker network rm "$NETWORK" >/dev/null 2>&1 || true
 }
 
@@ -117,34 +136,40 @@ wait_for() { # <what> <seconds> <command...>
   die "$what was not ready after ${seconds}s"
 }
 
-up() { # <image> <pg-image>
-  local image="$1" pg_image="$2"
-  teardown
-  docker network create "$NETWORK" >/dev/null
-  docker run -d --name "$PG" --network "$NETWORK" -p "127.0.0.1:${PG_PORT}:5432" \
+# up <image> <pg-image> [<tree> <suffix> <http-port> <pg-port>]: one arm's
+# PostgreSQL and server, configured, provisioned and seeded from <tree> (this
+# checkout by default), its containers named with <suffix>. Sets SERVER_URL,
+# DATABASE_URL, TARGET and SEED for that arm.
+up() {
+  local image="$1" pg_image="$2" tree="${3:-$ROOT}" suffix="${4:-}"
+  local http_port="${5:-$HTTP_PORT}" pg_port="${6:-$PG_PORT}"
+  local pg="$PG$suffix" server="$SERVER$suffix"
+  docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK" >/dev/null
+  docker run -d --name "$pg" --network "$NETWORK" -p "127.0.0.1:${pg_port}:5432" \
     -e "POSTGRES_PASSWORD=$PG_SUPER_SECRET" -e PG_INIT_USER=ferroehr -e "PG_INIT_PASSWORD=$PG_SECRET" \
     -e PG_INIT_DB=ferroehr "$pg_image" >/dev/null
-  wait_for "PostgreSQL" 60 docker exec "$PG" pg_isready -h 127.0.0.1 -U ferroehr -d ferroehr
+  wait_for "PostgreSQL$suffix" 60 docker exec "$pg" pg_isready -h 127.0.0.1 -U ferroehr -d ferroehr
   STARTED=1
   local -a process=(--network "$NETWORK" --read-only --tmpfs /tmp --cap-drop ALL
     --security-opt no-new-privileges:true
     -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml
-    -e "FERROEHR__DATABASE__URL=postgres://ferroehr:${PG_SECRET}@${PG}:5432/ferroehr"
+    -e "FERROEHR__DATABASE__URL=postgres://ferroehr:${PG_SECRET}@${pg}:5432/ferroehr"
     -e FERROEHR__USAGE_REPORT__ENABLED=false
-    -v "$ROOT/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro"
-    -v "$ROOT/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
-    -v "$ROOT/deploy/definitions/professional:/etc/ferroehr/definitions:ro")
+    -v "$tree/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro"
+    -v "$tree/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
+    -v "$tree/deploy/definitions/professional:/etc/ferroehr/definitions:ro")
   # The professional templates the party mapping names are stored before serve.
   docker run --rm "${process[@]}" "$image" definitions load \
     /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls \
     /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls >/dev/null
-  docker run -d --name "$SERVER" -p "127.0.0.1:${HTTP_PORT}:8080" "${process[@]}" \
+  docker run -d --name "$server" -p "127.0.0.1:${http_port}:8080" "${process[@]}" \
     "$image" >/dev/null
-  SERVER_URL="http://127.0.0.1:${HTTP_PORT}"
-  DATABASE_URL="postgres://postgres:${PG_SUPER_SECRET}@127.0.0.1:${PG_PORT}/ferroehr"
-  TARGET=(--container "$(docker inspect -f '{{.Id}}' "$SERVER")")
-  wait_for "FerroEHR" 120 curl -fsS "$SERVER_URL/health/readiness"
-  bash "$ROOT/scripts/scim-provision.sh" "$SERVER_URL" basic-users ferroehr >/dev/null
+  SERVER_URL="http://127.0.0.1:${http_port}"
+  DATABASE_URL="postgres://postgres:${PG_SUPER_SECRET}@127.0.0.1:${pg_port}/ferroehr"
+  TARGET=(--container "$(docker inspect -f '{{.Id}}' "$server")")
+  wait_for "FerroEHR$suffix" 120 curl -fsS "$SERVER_URL/health/readiness"
+  bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users ferroehr >/dev/null
+  seed "$tree"
 }
 
 # call <method> <path> <content-type> <body-file|-> <want-status>: the
@@ -160,15 +185,15 @@ call() {
   cat "$OUT/seed.body"
 }
 
+# seed <tree>: the arm's records, from its tree's corpus.
 seed() {
-  local read_ehr write_ehr uid party
-  call POST /definition/template/adl1.4 application/xml "$TEMPLATE" 201 >/dev/null
+  local tree="$1" read_ehr write_ehr uid party
+  call POST /definition/template/adl1.4 application/xml "$tree/$TEMPLATE_PATH" 201 >/dev/null
   read_ehr=$(call POST /ehr "" - 201 | jq -er '.ehr_id.value')
   write_ehr=$(call POST /ehr "" - 201 | jq -er '.ehr_id.value')
-  uid=$(call POST "/ehr/$read_ehr/composition" application/json "$COMPOSITION" 201 | jq -er '.uid.value')
-  party=$(call POST /demographic/person application/json "$PERSON" 201 | jq -er '.uid.value')
+  uid=$(call POST "/ehr/$read_ehr/composition" application/json "$tree/$COMPOSITION_PATH" 201 | jq -er '.uid.value')
+  party=$(call POST /demographic/person application/json "$tree/$PERSON_PATH" 201 | jq -er '.uid.value')
   SEED=(
-    "AUTH=$AUTH"
     "READ_EHR=$read_ehr"
     "WRITE_EHR=$write_ehr"
     "READ_COMPOSITION=$uid"
@@ -185,24 +210,36 @@ aql() { # <read-ehr> <ordered: true|false>
   jq -cn --arg q "$q" --arg ehr "$1" '{q: $q, query_parameters: {ehr: $ehr}}'
 }
 
-# render <plan-in> <plan-out>: every @NAME@ replaced; a placeholder left over
-# is refused.
+# render <plan-in> <plan-out> [per-arm]: every @NAME@ replaced. With
+# per-arm, the names an arm's seed fills (READ_EHR and the others) are left
+# for ferrohealth-perf, which fills each arm's copy with that arm's values;
+# the request bodies are this checkout's. A placeholder left over that the
+# seed does not name is refused.
 render() {
-  local plan entry name read_ehr=""
+  local plan entry name read_ehr="@READ_EHR@" leftover
   plan=$(<"$1")
   shopt -u patsub_replacement 2>/dev/null || true
-  for entry in "${SEED[@]}"; do
-    name="${entry%%=*}"
-    [[ "$name" == READ_EHR ]] && read_ehr="${entry#*=}"
-    plan="${plan//@${name}@/${entry#*=}}"
-  done
+  if [[ "${3:-}" != per-arm ]]; then
+    for entry in "${SEED[@]}"; do
+      name="${entry%%=*}"
+      [[ "$name" == READ_EHR ]] && read_ehr="${entry#*=}"
+      plan="${plan//@${name}@/${entry#*=}}"
+    done
+  fi
+  plan="${plan//@AUTH@/$AUTH}"
   plan="${plan//@COMPOSITION@/$(<"$COMPOSITION")}"
   plan="${plan//@TEMPLATE@/$(<"$TEMPLATE")}"
   plan="${plan//@AQL_ORDER_BY@/$(aql "$read_ehr" true)}"
   plan="${plan//@AQL_UNORDERED@/$(aql "$read_ehr" false)}"
-  if grep -qE '@[A-Z_]+@' <<<"$plan"; then
-    die "the plan names a placeholder the seed does not fill: $(grep -oE '@[A-Z_]+@' <<<"$plan" | sort -u | paste -sd, -)"
-  fi
+  local -a left=()
+  # A fully rendered plan holds no placeholder, so grep finding none is no error.
+  while IFS= read -r name; do
+    [[ -n "$name" ]] || continue
+    [[ "${3:-}" == per-arm ]] && grep -q "^${name//@/}=" <<<"$(printf '%s\n' "${SEED[@]}")" && continue
+    left+=("$name")
+  done < <({ grep -oE '@[A-Z_]+@' <<<"$plan" || true; } | sort -u)
+  leftover=$(IFS=,; echo "${left[*]+"${left[*]}"}")
+  [[ -z "$leftover" ]] || die "the plan names a placeholder the seed does not fill: $leftover"
   printf '%s\n' "$plan" >"$2"
 }
 
@@ -213,11 +250,12 @@ prepare() { # <image> <pg-image>
     SERVER_URL="$PERF_SERVER"
     DATABASE_URL="$PERF_DATABASE"
     read -r -a TARGET <<<"$PERF_TARGET"
+    seed "$ROOT"
   else
     [[ "$#" -eq 2 ]] || usage
+    teardown
     up "$1" "$2"
   fi
-  seed
 }
 
 gate() { # <update: true|false> <image> <pg-image>
@@ -239,6 +277,52 @@ gate() { # <update: true|false> <image> <pg-image>
     echo "perf gate: the idle limits held; the load phase is reported, not judged, until perf/baseline.toml lands (#5095)"
     return 0
   fi
+  return "$status"
+}
+
+# base_tree <base-image> [<rev>]: the source tree of <rev>, or of the commit
+# the base image names (org.opencontainers.image.revision), archived from
+# this clone into BASE_TREE, so the base arm runs under its own tree's
+# configuration.
+base_tree() {
+  local rev="${2:-}"
+  if [[ -z "$rev" ]]; then
+    rev=$(docker inspect -f '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$1") \
+      || die "the base image $1 cannot be inspected"
+  fi
+  [[ "$rev" =~ ^[0-9a-f]{40}$ ]] || die "the base image $1 names no revision"
+  git -C "$ROOT" cat-file -e "${rev}^{commit}" 2>/dev/null \
+    || die "this clone does not hold $rev, the base image's commit: fetch the full history"
+  rm -rf "$BASE_TREE"
+  mkdir -p "$BASE_TREE"
+  git -C "$ROOT" archive "$rev" | tar -x -C "$BASE_TREE"
+  [[ -f "$BASE_TREE/perf/ferroehr.toml" ]] \
+    || die "the base commit $rev predates the gate's configuration (perf/ferroehr.toml)"
+  printf '%s\n' "$rev" >"$OUT/base-rev"
+  echo "perf gate: the base is $rev"
+}
+
+# ab <image> <pg-image> <base-image> <base-pg-image>: the head and the base
+# side by side, each seeded and provisioned from its own tree, judged by
+# `ferrohealth-perf ab` over this checkout's plan with each arm's ids.
+ab() {
+  [[ "$#" -eq 4 || "$#" -eq 5 ]] || usage
+  local bin status=0 entry
+  bin=$(binary)
+  mkdir -p "$OUT"
+  teardown
+  base_tree "$3" "${5:-}"
+  up "$1" "$2"
+  local head_url="$SERVER_URL" head_db="$DATABASE_URL" head_container="${TARGET[1]}"
+  local -a vars=()
+  for entry in "${SEED[@]}"; do vars+=(--head-var "$entry"); done
+  up "$3" "$4" "$BASE_TREE" -base "$BASE_HTTP_PORT" "$BASE_PG_PORT"
+  for entry in "${SEED[@]}"; do vars+=(--base-var "$entry"); done
+  render "$ROOT/perf/plan.toml" "$OUT/plan.toml" per-arm
+  "$bin" ab --plan "$OUT/plan.toml" \
+    --head-url "$head_url" --head-container "$head_container" --head-database-url "$head_db" \
+    --base-url "$SERVER_URL" --base-container "${TARGET[1]}" --base-database-url "$DATABASE_URL" \
+    "${vars[@]}" --out-dir "$OUT" --summary "$OUT/summary.md" || status=$?
   return "$status"
 }
 
@@ -295,9 +379,10 @@ shift
 case "$command" in
 pin) pin ;;
 install) install ;;
-run | update | self-test)
+ab | run | update | self-test)
   trap teardown EXIT
   case "$command" in
+  ab) ab "$@" ;;
   run) gate false "$@" ;;
   update) gate true "$@" ;;
   self-test) self_test "$@" ;;

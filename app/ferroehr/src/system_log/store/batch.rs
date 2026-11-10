@@ -17,7 +17,7 @@ use super::{
     AuditRecord, RecordEnd, access_ehr_id, action_str, binding_columns, categories_json,
     category_basis, category_content_json, category_evidence_json, category_map_digest, event_code,
     nonempty_opt, operation, origin_count, origins_json, outcome_smallint, resource_class,
-    result_count, roles_json,
+    result_count, roles_json, token_attributes_json,
 };
 use crate::system_log::AuditError;
 use crate::system_log::event::ActingMode;
@@ -93,6 +93,7 @@ batch_columns! {
     facilities: Option<serde_json::Value>,
     details: Option<serde_json::Value>,
     summaries: Option<serde_json::Value>,
+    token_attributes: Option<serde_json::Value>,
 }
 
 impl<'a> BatchColumns<'a> {
@@ -176,6 +177,7 @@ impl<'a> BatchColumns<'a> {
         self.facilities.push(facility);
         self.details.push(detail);
         self.summaries.push(summary);
+        self.token_attributes.push(token_attributes_json(event));
         Ok(())
     }
 }

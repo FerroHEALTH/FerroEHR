@@ -151,7 +151,7 @@ every citation.
 |---|---|---|
 | NEN 7510-1:2024 and NEN 7510-2:2024, information security in healthcare | [nl/nen-7510/](nl/nen-7510/) | The part (-1 the management system, -2 the controls) and the control family; no numbered clause |
 | NEN 7512:2022, the trust basis for data exchange | [nl/nen-7512/](nl/nen-7512/) | The standard whole; no numbered clause |
-| NEN 7513:2018, logging actions on electronic patient records | [nl/nen-7513/](nl/nen-7513/) | §5, the content of a logged event; plus actor role, event content and retention |
+| NEN 7513:2024, logging actions on personal health information (the citations still name NEN 7513:2018 clauses, #5136) | [nl/nen-7513/](nl/nen-7513/) | §5, the content of a logged event; plus actor role, event content and retention |
 
 ## Licensing
 

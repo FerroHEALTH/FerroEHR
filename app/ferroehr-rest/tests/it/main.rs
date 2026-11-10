@@ -62,6 +62,7 @@ mod basic_binding_http;
 mod binding_callers_http;
 mod binding_commits_http;
 mod binding_issuers_http;
+mod binding_purposes_http;
 mod binding_refusals_http;
 mod caller_kinds_http;
 mod cohort_http;

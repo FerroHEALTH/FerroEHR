@@ -46,11 +46,11 @@ pub(super) fn accessor(
         // NOTE: NEN 7513:2018 §5 (not vendored, NEN copyright) asks for the role or authority
         // under which the record was accessed, which BALP 1.1.4 §3:5.7.5.4 writes at role.
         roles: event
-            .roles
-            .iter()
+            .role_codings()
+            .into_iter()
             .map(|role| Coded {
-                system: None,
-                code: role.clone(),
+                system: role.system,
+                code: role.code,
             })
             .collect(),
         token_id: event.token_id.clone(),
