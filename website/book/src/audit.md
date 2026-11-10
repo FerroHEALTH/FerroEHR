@@ -345,7 +345,9 @@ than assumed to still hold; see the
 ### The binding outcome
 
 Every record of an authenticated request carries `binding`: how the caller
-was bound to a demographic party, or why the binding refused it. It answers
+was bound to a demographic party, or why the binding refused it. The
+committer the same request writes into a version is on
+[Who is the committer](security/committer.md). It answers
 Annex II 3.2(a) and (b) where the token's subject alone does not. The columns
 beside it hold what each outcome needs:
 
