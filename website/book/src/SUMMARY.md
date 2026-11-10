@@ -48,6 +48,7 @@
   - [Data protection impact assessment](security/dpia.md)
   - [Records of processing](security/records-of-processing.md)
   - [Go-live checklist](security/go-live-checklist.md)
+  - [Who is the committer](security/committer.md)
   - [Enterprise identity providers](identity-providers.md)
   - [SMART App Launch](smart-app-launch.md)
   - [Audit trail (IHE ATNA)](audit.md)

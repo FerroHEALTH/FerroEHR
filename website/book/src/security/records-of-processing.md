@@ -120,6 +120,24 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 | Retention | Rows pruned `[record.change_feed] retention` after their commit, seven days by default, once every active reader has acknowledged them |
 | Security measures | Written in the same transaction as the commit it announces, so there is no event without its commit; read only by a caller holding the `__ferroehr.outbox` scope, one access record per read; the envelope carries identifiers, so a consumer still has to authenticate to the API to read anything |
 
+## 7. Workforce identity (off by default)
+
+| Art. 30 field | What the software does |
+|---|---|
+| Purpose | Identifying the health professionals and the representatives who act on the record, so each version and each access names the natural person and the provider (EHDS Art. 13(4), Annex II 3.1 and 3.2), when [`[auth.scim]`](../installation/config-auth.md#authscim) or [just-in-time creation](../installation/config-auth.md#just-in-time-creation) is on |
+| Categories of data subject | The deployment's own professionals, its Basic users, and registered representatives |
+| Categories of personal data | Per professional: the binding key (the identity provider's immutable user id), the `userName`, the `externalId`, the name, the groups (care teams), the lifecycle state and the professional `ROLE`. Contact attributes only where the operator maps them; none are mapped by default. Just-in-time creation writes only the key, the `userName` and the name |
+| Source (Art. 14(2)(f)) | The identity provider: Microsoft Entra ID, Keycloak or another SCIM client, or the access token at the first login |
+| Lawful basis | *yours*. FerroEHR's design assumes Art. 6(1)(c) for the attribution minimum (key, `userName`, name), since EHDS Art. 13(4) and the logging duties need the professional identified, and Art. 6(1)(b) or (f) for any contact attribute a deployment maps |
+| Recipients | *yours*: everyone who reads a version's committer or an access record |
+| Third-country transfers | *yours* |
+| Retention | *yours*. In the Netherlands the attribution minimum is kept for the BW 7:454(3) horizon of the records it attributes (twenty years); EHDS Art. 13(4) sets the duty to identify, not a period. Elsewhere, name the national retention provision (GDPR Art. 6(3)). Contact attributes are erased `[auth.scim] contact_erasure_delay` after a User's deletion, and the attribution minimum stays with the versions it attributes |
+| Security measures | A professional's `PERSON` and the groups are writable only by their SCIM client or an administrator; the binding key never changes once set; every SCIM request is an access record of the client naming the person; deactivations past `max_deactivations` are refused |
+
+Because the data come from the identity provider and not from the
+professional, give the professionals the information GDPR Art. 14 asks for:
+what is copied, from which source, for which purpose, and for how long.
+
 ## Fields no software can fill
 
 The record is not complete until these are answered, and they are answered by
