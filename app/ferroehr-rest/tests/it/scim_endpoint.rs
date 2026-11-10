@@ -97,7 +97,9 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
             ..AppConfig::default()
         };
         c.auth.scim = Some(ScimConfig {
-            public_base_url: Some("https://cdr.example.com".to_owned()),
+            public_base_url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
+                "https://cdr.example.com",
+            )),
             client: vec![ScimClient {
                 issuer: MACHINES.to_owned(),
                 client_id: CLIENT.to_owned(),

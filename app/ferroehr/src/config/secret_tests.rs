@@ -260,6 +260,16 @@ fn url_userinfo_reaches_no_rendering() {
         ..ferrohealth_telemetry::section::OtlpSection::default()
     });
     c.record.multimedia.url = Some(leaky(14));
+    c.audit.syslog = Some(crate::system_log::config::SyslogConfig {
+        url: leaky(16),
+        ..crate::system_log::config::SyslogConfig::default()
+    });
+    c.auth.smart.platform_base_url = Some(leaky(17));
+    c.auth.smart.public_base_url = Some(leaky(18));
+    c.auth.scim = Some(scim::ScimConfig {
+        public_base_url: Some(leaky(19)),
+        ..scim::ScimConfig::default()
+    });
     // URL 11 was the usage report endpoint, whose type refuses userinfo, so it
     // can hold no sentinel; URL 7 was the removed event broker.
     assert!(
@@ -284,7 +294,7 @@ fn url_userinfo_reaches_no_rendering() {
             !rendered.contains("URL_PW_SENTINEL"),
             "URL userinfo leaked into the {surface} rendering: {rendered}"
         );
-        for n in (1..=15).filter(|n| *n != 7 && *n != 11) {
+        for n in (1..=19).filter(|n| *n != 7 && *n != 11) {
             assert!(
                 rendered.contains(&format!("https://***@h{n}:1/p{n}")),
                 "URL {n} lost its host and path in the {surface} rendering: {rendered}"
@@ -299,7 +309,7 @@ fn url_userinfo_reaches_no_rendering() {
 fn an_issuer_refusal_masks_userinfo() {
     let mut c = standalone();
     c.auth.smart.discovery = true;
-    c.auth.smart.public_base_url = Some("https://a:SMART_PW_SENTINEL@cdr.example".to_owned());
+    c.auth.smart.public_base_url = Some(SecretUrl::new("https://a:SMART_PW_SENTINEL@cdr.example"));
     c.auth.shared.issuer = auth_section::machines("https://b:OIDC_PW_SENTINEL@idp.example/r");
     let text = c.validate().expect_err("refused").to_string();
     assert!(!text.contains("SMART_PW_SENTINEL"), "{text}");

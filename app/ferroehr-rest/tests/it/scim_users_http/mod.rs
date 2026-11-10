@@ -305,7 +305,9 @@ fn config() -> AppConfig {
             ..AppConfig::default()
         };
         c.auth.scim = Some(ScimConfig {
-            public_base_url: Some("https://cdr.example.com".to_owned()),
+            public_base_url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
+                "https://cdr.example.com",
+            )),
             client: vec![client(CLIENT, LOGIN), client(OTHER, OTHER_LOGIN)],
             ..ScimConfig::default()
         });

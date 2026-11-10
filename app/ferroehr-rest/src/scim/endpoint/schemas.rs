@@ -274,7 +274,9 @@ mod tests {
 
     fn enabled() -> ScimConfig {
         ScimConfig {
-            public_base_url: Some("https://cdr.example.com".to_owned()),
+            public_base_url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
+                "https://cdr.example.com",
+            )),
             ..ScimConfig::default()
         }
     }

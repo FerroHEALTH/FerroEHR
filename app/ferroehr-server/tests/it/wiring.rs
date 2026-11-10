@@ -376,6 +376,9 @@ assigning_authority = "urn:oid:2.999.7.1"
 
 [pixm.endpoint]
 url = "https://u7:URL_PW_SENTINEL_7@h7:8443/p7"
+
+[audit.syslog]
+url = "tls://u8:URL_PW_SENTINEL_8@h8:6514/p8"
 "#,
     );
     assert!(ok, "the configuration checks: {text}");
@@ -387,6 +390,7 @@ url = "https://u7:URL_PW_SENTINEL_7@h7:8443/p7"
         (4, 3001),
         (5, 443),
         (7, 8443),
+        (8, 6514),
     ] {
         assert!(
             text.contains(&format!("://***@h{n}:{port}/p{n}")),

@@ -33,7 +33,6 @@
               dump, management env, validity-checker input, OpenAPI schema literals)"
 )]
 
-mod env;
 pub mod flamegraph;
 pub(crate) mod guard;
 mod info_routes;
@@ -507,7 +506,7 @@ async fn metrics_detail(State(s): State<ManagementState>, path: Path<String>) ->
     )
 )]
 async fn env_view(State(s): State<ManagementState>) -> Json<Value> {
-    env::env(&s.env_snapshot)
+    Json(s.env_snapshot.as_ref().clone())
 }
 
 /// The effective log-filter directives + boot filter (`GET /management/loggers`).

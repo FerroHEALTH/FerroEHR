@@ -112,14 +112,16 @@ Details that decide behaviour:
 - **The config view is redacted structurally, not by key name.** Passwords and
   password hashes, signing-key secrets and S3 secret keys render as
   `***`; every URL that can carry credentials (database, the FHIR audit
-  feed, the terminology server and its token endpoint, the remote policy
-  server, the OTLP collector, the object store, the usage-report endpoint)
-  keeps its host and path and masks the embedded credentials
-  (`postgres://***@host:5432/db`). The OIDC issuer and the SMART URLs are
-  refused at boot when they carry credentials, so they render as set. Non-secret
-  identifiers (usernames, roles, an OIDC issuer) stay visible. Redaction is
-  a property of the configuration's secret types, so no secret value can reach
-  this response.
+  feed, the syslog audit repository, the terminology server and its token
+  endpoint, the remote policy server, the OTLP collector, the object store,
+  the SMART platform and public base URLs, the SCIM public base URL) keeps
+  its host and path and masks the embedded credentials and query
+  (`postgres://***@host:5432/db`). The usage-report endpoint refuses
+  credentials, and the OIDC issuer and the SMART URLs are refused at boot
+  when they carry them. Non-secret identifiers (usernames, roles, an OIDC
+  issuer) stay visible. Redaction is a property of the configuration's
+  secret types alone, with no key-name scan beside them, so no secret value
+  can reach this response.
 
 > [!NOTE]
 > The template delete, the stored-query delete and the config view are FerroEHR
