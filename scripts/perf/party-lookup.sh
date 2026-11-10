@@ -77,8 +77,9 @@ measure() {
   local side="$1" n="$2"
   echo "==> run $n: $side"
   down
+  # ferroehr-provision binds the quickstart's Basic login to a PERSON (#5006).
   if ! docker compose "${COMPOSE[@]}" up -d --wait --wait-timeout 300 \
-    ferroehr-postgres ferroehr; then
+    ferroehr-postgres ferroehr ferroehr-provision; then
     echo "::error::the $side stack did not become healthy" >&2
     docker compose "${COMPOSE[@]}" logs ferroehr >&2 || true
     down
