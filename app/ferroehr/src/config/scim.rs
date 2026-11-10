@@ -26,6 +26,7 @@ const MAX_CONTACT_ERASURE_DELAY: Duration = Duration::from_days(30);
 
 /// The `[auth.scim]` section.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct ScimConfig {
     /// The externally reachable origin the SCIM base URL hangs off, such as
@@ -87,6 +88,7 @@ impl Default for ScimConfig {
 
 /// One `[[auth.scim.client]]` table.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct ScimClient {
     /// The issuer of the client's access tokens: the deployment's own

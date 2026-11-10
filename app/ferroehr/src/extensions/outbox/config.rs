@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 /// The commit-event outbox configuration (`[record.change_feed]`), our own
 /// extension.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct OutboxConfig {
     /// The readers of the outbox feed, each a name matching

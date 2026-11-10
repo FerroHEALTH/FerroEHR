@@ -27,6 +27,7 @@ const SCIM: &str = "scim";
 
 /// The `[auth]` table.
 #[derive(Debug, Clone, Default, Serialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub struct AuthConfig {
     /// Every key `ferrohealth-smart` reads: the issuers, the party and
     /// federation tables, the vendor adapter tables (`[auth.idp]`), the Basic

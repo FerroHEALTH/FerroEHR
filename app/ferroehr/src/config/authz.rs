@@ -29,6 +29,7 @@ use crate::config::abac_rules::{CedarConfig, RemoteConfig};
 /// mandates no authorization scheme, and RM `master07` only defines the
 /// per-EHR object.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum EhrAccessDefault {
     /// Any caller the coarse layers already admitted reaches the EHR. The
@@ -47,6 +48,7 @@ pub enum EhrAccessDefault {
 
 /// The coarse role-based access-control settings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct RbacConfig {
     /// Master switch of the coarse role gate, active only when auth is enabled
@@ -145,6 +147,7 @@ impl Default for RbacConfig {
 /// The ABAC policy engine selector (`abac.engine`). `cedar` is the
 /// embedded default; `remote` delegates to an external PDP.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum AbacEngineKind {
     /// Embedded Cedar (`cedar-policy`), policies from `abac.cedar.policy_dir`.
@@ -158,6 +161,7 @@ pub enum AbacEngineKind {
 /// attribute keys, exactly `organization` / `patient` / `template` /
 /// `category` / `origin` on the wire.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum AbacParam {
     /// The caller's organization (from `abac.organization_claim`).
@@ -191,6 +195,7 @@ impl AbacParam {
 /// A per-resource-kind policy binding: the policy name appended to the
 /// remote PDP base URL, and which resolved parameters its request body carries.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct PolicyRule {
     /// The policy name (the path segment appended to `abac.remote.url`).
@@ -208,6 +213,7 @@ pub struct PolicyRule {
 /// table's presence, because `organization_claim` applies while it is off:
 /// the access log records the organisation a caller acts for.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct AbacConfig {
     /// Master ABAC switch (default `false`).
@@ -297,6 +303,7 @@ impl AbacConfig {
 /// Authorization configuration: the coarse RBAC gate plus the opt-in ABAC
 /// policy layer.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct AuthzConfig {
     /// Role-based access control.

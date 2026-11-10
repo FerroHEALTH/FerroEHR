@@ -6,6 +6,16 @@
 //!
 //! **No openEHR spec governs configuration — our own design.**
 
+#![cfg_attr(
+    feature = "schema",
+    expect(
+        clippy::disallowed_types,
+        reason = "owner-approved 2026-08-03 (#1694 family 8, OpenAPI schema literals): the \
+                  schemars derive builds the JSON Schema of this module's configuration type \
+                  with serde_json::Map, which no item-level attribute reaches"
+    )
+)]
+
 use serde::{Deserialize, Serialize};
 
 /// The national-identifier protection policy.
@@ -17,6 +27,7 @@ use serde::{Deserialize, Serialize};
 /// versioned body for `party.national_identifier` and the body keeps a
 /// reference. With it off the body carries the value as written.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct IdentifierProtectionConfig {
     /// The scheme codes to protect

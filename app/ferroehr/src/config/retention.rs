@@ -72,6 +72,24 @@ impl fmt::Display for RetentionPeriod {
     }
 }
 
+// NOTE: the schema says what `FromStr` reads, the string form serde writes and
+// reads; a derive would describe the enum's variants instead.
+#[cfg(feature = "schema")]
+impl schemars::JsonSchema for RetentionPeriod {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("RetentionPeriod")
+    }
+
+    fn json_schema(_generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "description": "A calendar retention period: an ISO 8601 duration of whole years or whole days, never zero, such as \"P5Y\" or \"P1830D\".",
+            "type": "string",
+            "pattern": "^P[0-9]*[1-9][0-9]*[YD]$",
+            "examples": ["P5Y", "P1830D"]
+        })
+    }
+}
+
 impl Serialize for RetentionPeriod {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.collect_str(self)

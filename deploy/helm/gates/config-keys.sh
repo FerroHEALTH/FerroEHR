@@ -36,6 +36,11 @@ key_paths() {
 }
 
 defined="$(sed -E 's/^#\? ?//' "$DEFAULT_TOML" | key_paths)"
+# The keys whose value is a table of operator-chosen names (written `{}`), so
+# any key below them is defined too.
+map_keys="$(sed -E 's/^#\? ?//' "$DEFAULT_TOML" | yq -p toml -o json '.' | jq -r '
+  [paths(type == "object" and length == 0) | map(select(type == "string")) | join(".")]
+  | unique[]')"
 
 toml="$(yq "select(.kind == \"ConfigMap\" and .metadata.name == \"${RELEASE}\") | .data.\"ferroehr.toml\"" "$RENDER")"
 if [[ -z "$toml" || "$toml" == "null" ]]; then
@@ -56,6 +61,9 @@ while IFS= read -r key; do
   while IFS= read -r table; do
     [[ -n "$table" && "$key" == "$table".* ]] && { mapped=1; break; }
   done <<<"$MAP_TABLES"
+  while IFS= read -r table; do
+    [[ -n "$table" && "$key" == "$table".* ]] && { mapped=1; break; }
+  done <<<"$map_keys"
   [[ "$mapped" -eq 1 ]] && continue
   echo "${key} is not a key of ferroehr.default.toml"
   unknown=1
