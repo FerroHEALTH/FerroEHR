@@ -45,9 +45,7 @@ use crate::system_log::AuditError;
 use crate::system_log::categories::{ClassifiedContent, MapDigest};
 #[cfg(feature = "fhir")]
 use crate::system_log::event::{AccessDomain, EventActionCode};
-use crate::system_log::event::{
-    ActingMode, AuditEvent, EventOutcome, EventType, ObjectClass, TokenAttributes,
-};
+use crate::system_log::event::{ActingMode, AuditEvent, EventOutcome, EventType, ObjectClass};
 use crate::system_log::render::RenderPolicy;
 #[cfg(feature = "fhir")]
 use crate::system_log::render::{CompiledPolicy, StoredRecord};
@@ -1420,7 +1418,7 @@ pub(super) fn stored_record(row: &PgRow) -> Result<(Vec<u8>, StoredRecord), Audi
     event.purpose = row.try_get("purpose")?;
     event.token = row
         .try_get::<Option<serde_json::Value>, _>("token_attributes")?
-        .map(serde_json::from_value::<TokenAttributes>)
+        .map(serde_json::from_value::<crate::system_log::event::TokenAttributes>)
         .transpose()
         .map_err(|_unreadable| unreadable("its token attributes do not read"))?;
     event.permit = row.try_get("permit")?;
