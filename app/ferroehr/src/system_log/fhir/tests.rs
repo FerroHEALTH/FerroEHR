@@ -771,6 +771,8 @@ fn a_horizon_end_is_the_day_after_the_period() {
 fn the_token_purposes_and_roles_reach_the_requesting_agent() {
     use crate::system_log::event::{Coding, TokenAttributes};
     const ACT_REASON: &str = "http://terminology.hl7.org/CodeSystem/v3-ActReason";
+    // The SNOMED CT concept the role is coded by (medical practitioner).
+    const PRACTITIONER: &str = "158965000"; // privacy-allow: a SNOMED CT concept id, not a BSN
     let mut e = event(
         EventActionCode::Read,
         ObjectClass::Composition,
@@ -791,7 +793,7 @@ fn the_token_purposes_and_roles_reach_the_requesting_agent() {
         ],
         roles: vec![Coding {
             system: Some("urn:oid:2.16.840.1.113883.6.96".to_owned()),
-            code: "158965000".to_owned(),
+            code: PRACTITIONER.to_owned(),
         }],
     });
     let rendered = to_fhir(&e, &ctx(), None).expect("render");
@@ -814,7 +816,7 @@ fn the_token_purposes_and_roles_reach_the_requesting_agent() {
     );
     let roles = user["role"].to_string();
     assert!(
-        roles.contains("CLINICIAN") && roles.contains("158965000"),
+        roles.contains("CLINICIAN") && roles.contains(PRACTITIONER),
         "{roles}"
     );
 }

@@ -30,6 +30,9 @@ use crate::party_binding_http::{
 const PURPOSE_HEADER: &str = "x-purpose-of-use";
 /// The HL7 v3 `ActReason` code system.
 const ACT_REASON: &str = "http://terminology.hl7.org/CodeSystem/v3-ActReason";
+/// The SNOMED CT concept the professional's role is coded by (medical
+/// practitioner).
+const PRACTITIONER: &str = "158965000"; // privacy-allow: a SNOMED CT concept id, not a BSN
 /// The login of the professional the cases bind.
 const KEY: &str = "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b";
 
@@ -56,7 +59,7 @@ fn stating(purposes: &[&str]) -> String {
         KEY,
         &json!({ "extensions": { "ihe_iua": {
             "purpose_of_use": purposes,
-            "subject_role": [{ "system": "urn:oid:2.16.840.1.113883.6.96", "code": "158965000" }]
+            "subject_role": [{ "system": "urn:oid:2.16.840.1.113883.6.96", "code": PRACTITIONER }]
         } } }),
     )
 }
@@ -96,7 +99,7 @@ async fn records(pool: &sqlx::PgPool, count: usize) -> Vec<(i16, Option<String>,
 fn recorded(purposes: &[&str]) -> Value {
     json!({
         "purposes": purposes.iter().map(|code| json!({ "system": ACT_REASON, "code": code })).collect::<Vec<_>>(),
-        "roles": [{ "system": "urn:oid:2.16.840.1.113883.6.96", "code": "158965000" }]
+        "roles": [{ "system": "urn:oid:2.16.840.1.113883.6.96", "code": PRACTITIONER }]
     })
 }
 
