@@ -333,3 +333,55 @@ async fn only_a_bound_professional_attests() {
         forbidden(attest(&svc, ehr, identity, &anyone).await);
     }
 }
+
+/// Commits `body` into `ehr` as `identity`, stating `committer` in its audit.
+async fn commit_stating(
+    svc: &FerroEhrService,
+    ehr: EhrId,
+    identity: CommitterIdentity,
+    body: &Value,
+    committer: &Value,
+) -> Result<Committed, ServiceError> {
+    let mut request = WriteRequest::new(crate::typed_body::typed(body));
+    request.audit = Some(
+        openehr_its::json::from_canonical_value(&json!({
+            "change_type": { "_type": "DV_CODED_TEXT", "value": "creation",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                    "code_string": "249" } },
+            "committer": committer
+        }))
+        .expect("an UPDATE_AUDIT"),
+    );
+    with_committer(
+        Some(identity),
+        Box::pin(svc.create_composition(ehr, request)),
+    )
+    .await
+    .map_err(ServiceError::flattened)
+}
+
+/// #5011: a system caller that states a bound person's committer is refused
+/// with `403`, since a system commit records the client and never a person
+/// (EHDS Art. 13(4)); the placeholder naming the client is accepted and
+/// replaced by the client's committer.
+#[tokio::test]
+async fn a_persons_committer_stated_by_a_system_caller_is_refused() {
+    let (_db, svc, ehr) = service().await;
+    let (example, template) = example(&svc).await;
+    let vo = professional(&svc, "Dr Jane Roe", KEY).await;
+    let body = vital_signs(&example, party("Dr A", PROFESSIONALS, "hp-1"), "ward-7");
+    let lab = system("lab", Some(table("lab", &template, &[Origin::Relay])));
+    let person = json!({ "_type": "PARTY_IDENTIFIED", "name": "Dr Jane Roe",
+        "external_ref": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": vo.to_string() } },
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": ISSUER, "id": KEY, "type": "oauth2" }] });
+    forbidden(commit_stating(&svc, ehr, lab.clone(), &body, &person).await);
+    let committed = commit_stating(&svc, ehr, lab, &body, &placeholder(MACHINES, "lab"))
+        .await
+        .expect("the placeholder naming the client");
+    assert_eq!(
+        stored_committer(&svc, ehr, &committed).await["identifiers"][0]["type"],
+        json!("client")
+    );
+}
