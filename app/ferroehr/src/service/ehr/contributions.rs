@@ -123,8 +123,9 @@ impl FerroEhrService {
     ///
     /// `committer` is the audit committer `PARTY_PROXY`'s `name`, a summary
     /// string rather than the full rendering the by-uid GET returns, and
-    /// `inserted_by_person` whether that committer is `PARTY_SELF`, the
-    /// record's person (EHDS Art. 5);
+    /// `inserted_by_person` whether that committer is `PARTY_SELF` or
+    /// `PARTY_RELATED`, the record's person or their representative (EHDS
+    /// Art. 5);
     /// `change_type` is the stored `audit.change_type` code and
     /// `change_type_rubric` its display rubric from the `audit_change_type`
     /// group, so consumers never map codes locally. `offset` and `fetch` are
