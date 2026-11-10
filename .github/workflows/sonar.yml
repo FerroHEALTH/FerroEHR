@@ -26,6 +26,13 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+# A newer push to a pull request cancels its running analysis (#5380). On main
+# a running analysis finishes, and a queued one gives way to the newer merge,
+# so main is analyzed at its latest commit.
+concurrency:
+  group: sonar-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions: {}
 
 env:

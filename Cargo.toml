@@ -394,10 +394,12 @@ zip = { version = "9.0.5", default-features = false, features = ["deflate-flate2
 sevenz-rust2 = { version = "0.24", default-features = false, features = ["compress"] }
 rust_decimal = { version = "1", features = ["serde-with-str"] }   # BigDecimal replacement (DV_QUANTITY)
 # canonical JSON (RFC 8785 JCS): openehr-rm writes it itself for
-# VERSION.canonical_form() (#5220); serde_jcs stays as its test oracle, and
-# ryu-js is the ECMAScript number form both use (RFC 8785 §3.2.2.3).
-serde_jcs = "0.2.0"
-ryu-js = { version = "0.2.2", default-features = false }
+# VERSION.canonical_form() (#5220); serde_json_canonicalizer is its test
+# oracle, and ryu-js is the ECMAScript number form both use (RFC 8785
+# §3.2.2.3). ryu-js 1.x carries the format64_to_fixed fix (#5372), and the
+# oracle requires the same line, so the lock holds one.
+serde_json_canonicalizer = "0.4.1"
+ryu-js = { version = "1.0.3", default-features = false }
 
 # ── Parsing (native ADL / cADL / ODIN / AQL) ─────────────────────────────────
 logos = "0.16.1"                      # DFA lexer
