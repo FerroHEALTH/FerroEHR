@@ -93,8 +93,9 @@ measure() {
   [[ "$side" == "on" ]] && audit=(--audit)
   echo "==> run $n: access log $side ($image)"
   down "$side"
+  # ferroehr-provision binds the quickstart's Basic login to a PERSON (#5006).
   if ! FERROEHR_IMAGE="$image" FERROEHR_POSTGRES_IMAGE="$pg_image" \
-    compose "$side" up -d --wait --wait-timeout 300 ferroehr-postgres ferroehr; then
+    compose "$side" up -d --wait --wait-timeout 300 ferroehr-postgres ferroehr ferroehr-provision; then
     echo "::error::the stack with the access log $side did not become healthy" >&2
     compose "$side" logs ferroehr >&2 || true
     down "$side"
