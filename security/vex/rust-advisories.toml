@@ -83,6 +83,7 @@ crate = "rsa"
 aliases = ["CVE-2023-49092", "GHSA-c38w-74pg-36hr", "GHSA-4grx-2x9w-596c"]
 carriers = ["pgp"]
 workspace_roots = [
+  "config-reference",
   "ferroehr",
   "ferroehr-viewer",
   "ferroehr-ext",
@@ -119,7 +120,9 @@ spec crates' test-only edge below. The spec crates (`openehr-rm`, `openehr-its`,
 cargo strips at packaging, so no published crate ships the code at all. \
 The scale-test seeder (`scaleseed`, `publish = false`, never shipped) \
 reaches it through the platform library and signs in the default `digest` \
-mode. No \
+mode. The configuration reference generator (`config-reference`, \
+`publish = false`, never shipped) reaches it through the platform library \
+and signs nothing: it only renders the configuration schema. No \
 upstream fix exists — `rsa` has no patched release — so this is not a deferred \
 upgrade. Re-evaluate if a release beyond rsa 0.9 ships, or if the default \
 signing mode changes.\
@@ -131,6 +134,7 @@ crate = "crypto-bigint"
 version = "0.5.5"
 carriers = ["cx448", "elliptic-curve"]
 workspace_roots = [
+  "config-reference",
   "ferroehr",
   "ferroehr-viewer",
   "ferroehr-ext",
@@ -170,7 +174,9 @@ file and cannot be repeated or timed by an adversary. The spec crates reach \
 the crate only through their path-only dev-dependency on `testkit`, which \
 cargo strips at packaging. The scale-test seeder (`scaleseed`, \
 `publish = false`) reaches it through the platform library and verifies no \
-signature with an ECDSA or Ed448 key. No fix exists on the 0.5 line (only 0.7.6 and \
+signature with an ECDSA or Ed448 key, and the configuration reference \
+generator (`config-reference`, `publish = false`) neither signs nor \
+verifies anything. No fix exists on the 0.5 line (only 0.7.6 and \
 later are patched), and no release of `pgp` (0.21.0) or `cx448` (0.1.1) \
 leaves it. Re-evaluate when `pgp` releases on crypto-bigint 0.7.6 or later, \
 and before the \
@@ -182,6 +188,7 @@ id = "RUSTSEC-2026-0440"
 crate = "astral-tokio-tar"
 carriers = ["testcontainers"]
 workspace_roots = [
+  "config-reference",
   "ferroehr",
   "ferroehr-viewer",
   "ferroehr-ext",
@@ -203,7 +210,8 @@ is `testcontainers` 0.27.3, which `testkit`, the shared test-database harness \
 (`publish = false`), uses to start the PostgreSQL 18 server the DB-backed \
 tests run against. Every workspace root above reaches it only through a \
 dev-dependency on `testkit` (`scaleseed`, the scale-test seeder, also \
-unpublished, for its one test), so the crate is in none of the three products: \
+unpublished, for its one test; `config-reference`, the unpublished \
+configuration reference generator, through the platform library's), so the crate is in none of the three products: \
 `cargo tree -p ferroehr-server` and `cargo tree -p ferroehr-viewer` over \
 normal and build edges, all features and all targets, find no \
 `astral-tokio-tar` node, and the server binary, the `ferroehr` image and the \
