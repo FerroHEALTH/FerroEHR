@@ -1,8 +1,8 @@
-- Twelve MIT Kerberos 5 CVEs of MITKRB5-SA-2026-001 in the `ferroehr-postgres`
+- Thirteen MIT Kerberos 5 CVEs of MITKRB5-SA-2026-001 in the `ferroehr-postgres`
   image's `libgssapi-krb5-2`, `libk5crypto3`, `libkrb5-3` and
   `libkrb5support0` `1.21.3-5+deb13u1` have no Debian fix for trixie and are
   judged `not_affected`. The image keeps the four libraries because the
-  `postgres` binary links `libgssapi_krb5.so.2`. Ten sit in code the image
+  `postgres` binary links `libgssapi_krb5.so.2`. Eleven sit in code the image
   does not carry: the KDC (CVE-2026-107364), its PKINIT plugin
   (CVE-2026-71200), `kadmind` (CVE-2026-107884, CVE-2026-112318),
   `libgssrpc` (CVE-2026-112314, CVE-2026-112315, CVE-2026-112320,
