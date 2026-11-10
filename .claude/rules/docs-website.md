@@ -91,7 +91,7 @@ unenforced rule is labelled as one, here is the honest split.
 job, `--all` over the whole book:
 
 - Every `FERROEHR__…` environment form resolves to a key in
-  `app/ferroehr/assets/ferroehr.reference.toml`.
+  `app/ferroehr/assets/ferroehr.default.toml`.
 - Every Helm values path on a chart page resolves — against `values.yaml`, or
   for `config.*` against the TOML schema, since the chart renders `config:`
   verbatim into `ferroehr.toml`.

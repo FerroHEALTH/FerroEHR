@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Generates FerroEHR's configuration reference from the JSON Schema of its
-//! configuration tree (#5316): the reference page of the book, the reference
-//! TOML holding every key, and the shipped default `ferroehr.toml` holding the
-//! keys an operator usually sets. `--check` writes nothing and fails when a
-//! committed file differs from what the types generate.
+//! configuration tree (#5316): the shipped default `ferroehr.toml`, holding
+//! every key with its default under its description, and the book's reference
+//! page. `--check` writes nothing and fails when a committed file differs from
+//! what the types generate.
 //!
 //! # Examples
 //!
@@ -22,18 +22,15 @@
 )]
 
 mod model;
-mod operator;
 mod render;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-/// The reference page of the book, relative to the workspace root.
+/// The shipped default `ferroehr.toml`, relative to the workspace root.
+const TEMPLATE: &str = "app/ferroehr/assets/ferroehr.default.toml";
+/// The reference page of the book.
 const PAGE: &str = "website/book/src/installation/config-keys.md";
-/// The reference TOML holding every key.
-const REFERENCE: &str = "app/ferroehr/assets/ferroehr.reference.toml";
-/// The shipped default `ferroehr.toml`.
-const DEFAULTS: &str = "app/ferroehr/assets/ferroehr.default.toml";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -60,21 +57,20 @@ fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-/// Generates the three files under `root`, writing them, or with `check`
+/// Generates the two files under `root`, writing them, or with `check`
 /// comparing them; returns whether every committed file matches.
 ///
 /// # Errors
-/// A message when the schema cannot be read, an operator key is not in it,
-/// or a file cannot be read or written.
+/// A message when the schema cannot be read or a file cannot be read or
+/// written.
 fn run(root: &Path, check: bool) -> Result<bool, String> {
     let schema = schemars::generate::SchemaSettings::draft2020_12()
         .into_generator()
         .into_root_schema_for::<ferroehr::config::FerroEhrConfig>();
     let sections = model::sections(schema.as_value())?;
     let files = [
+        (TEMPLATE, render::template(&sections)),
         (PAGE, render::page(&sections)),
-        (REFERENCE, render::reference(&sections)),
-        (DEFAULTS, render::defaults(&sections, operator::KEYS)?),
     ];
     let mut clean = true;
     for (path, text) in files {

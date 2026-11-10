@@ -23,7 +23,7 @@
 # for the run; it answers `404` as if unmounted while it is off, so the
 # viewer's journeys over it would otherwise have nothing but a disabled empty
 # state to drive. The mechanical `__` env mapping addresses the same TOML key
-# (app/ferroehr/assets/ferroehr.reference.toml).
+# (app/ferroehr/assets/ferroehr.default.toml).
 services:
   ferroehr:
     depends_on:

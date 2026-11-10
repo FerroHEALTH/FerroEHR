@@ -14,7 +14,7 @@
 # against, and nothing else. Three of them:
 #
 #   1. Every `FERROEHR__…` environment form a page shows resolves to a real key
-#      in `app/ferroehr/assets/ferroehr.reference.toml`.
+#      in `app/ferroehr/assets/ferroehr.default.toml`.
 #   2. Every Helm values path a chart page shows resolves — against
 #      `values.yaml`, or for the `config.*` subtree against the TOML schema,
 #      because the chart renders `config:` VERBATIM to ferroehr.toml (so
@@ -63,7 +63,7 @@ guard_known_flags "[--all | --diff [base] | <file>...]" "--all --diff" "$@"
 cd "$(dirname "$0")/../.."
 
 BOOK=website/book/src
-TOML=app/ferroehr/assets/ferroehr.reference.toml
+TOML=app/ferroehr/assets/ferroehr.default.toml
 VALUES=deploy/helm/ferroehr/values.yaml
 # The pages that document the Helm chart, and therefore the only pages on which a
 # dotted token is read as a chart values path. Glob-derived: a hardcoded list

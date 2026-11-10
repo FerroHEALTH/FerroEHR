@@ -227,10 +227,10 @@ impl Default for FerroEhrConfig {
     }
 }
 
-/// The shipped default `ferroehr.toml`, the keys an operator usually sets.
+/// The shipped default `ferroehr.toml`: every key with its default.
 ///
 /// `tools/config-reference` generates it from the configuration types, each
-/// key with its default (#5316).
+/// key under its description (#5316).
 pub const DEFAULT_TEMPLATE: &str = include_str!("../../assets/ferroehr.default.toml");
 
 impl FerroEhrConfig {
@@ -1338,10 +1338,6 @@ mod tests {
 
     // ── 6. Template sync ──────────────────────────────────────────────────────
 
-    /// Every key with its default, generated beside [`DEFAULT_TEMPLATE`] from
-    /// the configuration types (#5316).
-    const REFERENCE_TEMPLATE: &str = include_str!("../../assets/ferroehr.reference.toml");
-
     #[test]
     fn template_parses_to_default() {
         let file = toml_file(DEFAULT_TEMPLATE);
@@ -1376,13 +1372,6 @@ mod tests {
     }
 
     #[test]
-    fn the_reference_template_parses_to_default() {
-        let file = toml_file(REFERENCE_TEMPLATE);
-        let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
-        assert_eq!(json(&c), json(&FerroEhrConfig::default()));
-    }
-
-    #[test]
     fn template_mentions_every_section() {
         let sections = match serde_json::to_value(FerroEhrConfig::default()) {
             Ok(serde_json::Value::Object(members)) => members.keys().cloned().collect::<Vec<_>>(),
@@ -1393,10 +1382,10 @@ mod tests {
             let dotted = format!("[{section}."); // sub-tables count too
             let scalar = format!("\n{section} = "); // top-level scalar keys
             assert!(
-                REFERENCE_TEMPLATE.contains(&header)
-                    || REFERENCE_TEMPLATE.contains(&dotted)
-                    || REFERENCE_TEMPLATE.contains(&scalar)
-                    || REFERENCE_TEMPLATE.contains(&format!("\n#? {section} = ")),
+                DEFAULT_TEMPLATE.contains(&header)
+                    || DEFAULT_TEMPLATE.contains(&dotted)
+                    || DEFAULT_TEMPLATE.contains(&scalar)
+                    || DEFAULT_TEMPLATE.contains(&format!("\n#? {section} = ")),
                 "template missing section {section}"
             );
         }
@@ -1407,7 +1396,7 @@ mod tests {
     /// inside another key's trailing comment does not count: a key mentioned
     /// only that way stays invisible to an operator reading the template.
     fn template_declares(key: &str) -> bool {
-        REFERENCE_TEMPLATE.lines().any(|line| {
+        DEFAULT_TEMPLATE.lines().any(|line| {
             let line = line.trim_start();
             let line = line.strip_prefix("#?").map_or(line, str::trim_start);
             line.strip_prefix(key)
@@ -1436,7 +1425,7 @@ mod tests {
                     // as a `[section]` header rather than a key line.
                     serde_json::Value::Null => {}
                     _ if template_declares(key) => {}
-                    _ if REFERENCE_TEMPLATE.contains(&format!(".{key}]")) => {}
+                    _ if DEFAULT_TEMPLATE.contains(&format!(".{key}]")) => {}
                     _ => missing.push(key.clone()),
                 }
             }
@@ -1445,8 +1434,10 @@ mod tests {
         walk(&json(&FerroEhrConfig::default()), &mut missing);
         assert!(
             missing.is_empty(),
-            "the reference template declares no key line for: {}. Every field belongs \
-             in it: it is how the reference page and the gates know a key.",
+            "the shipped ferroehr.toml template declares no key line for: {}. \
+             Every field belongs in it — the file's own header calls itself the \
+             complete configuration, and the shipped template is how an \
+             operator discovers a key.",
             missing.join(", ")
         );
     }
@@ -1538,8 +1529,8 @@ mod tests {
                     .iter()
                     .filter(move |f| {
                         !template_declares(f)
-                            && !REFERENCE_TEMPLATE.contains(&format!("[{section}.{f}]"))
-                            && !REFERENCE_TEMPLATE.contains(&format!("[[{section}.{f}."))
+                            && !DEFAULT_TEMPLATE.contains(&format!("[{section}.{f}]"))
+                            && !DEFAULT_TEMPLATE.contains(&format!("[[{section}.{f}."))
                     })
                     .map(move |f| format!("{section}.{f}"))
             })

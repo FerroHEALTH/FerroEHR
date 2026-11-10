@@ -9,7 +9,7 @@ types, so it always matches the server you run. Each section is one TOML table. 
 default is unset until you set it. Every key can also be set as an environment variable: `FERROEHR`,
 then the TOML path with `__` between the segments, such as `FERROEHR__DATABASE__MAX_CONNECTIONS`.
 
-The shipped `ferroehr.toml` holds only the keys an operator usually sets. The guides under
+The shipped `ferroehr.toml` holds the same keys, each set to its default. The guides under
 [Configuration reference](configuration.md) explain the sections.
 
 ## `[deployment]`

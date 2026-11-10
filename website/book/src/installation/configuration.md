@@ -14,8 +14,8 @@ map of which page documents which section.
 Copy the shipped template, edit it, and run:
 
 ```bash
-# The keys an operator usually sets, each at its default. Every other key is
-# listed on the generated reference page, "Every configuration key".
+# Every key under its description, each at its default, generated from the
+# configuration types.
 curl -fsSLo ferroehr.toml \
   https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/main/app/ferroehr/assets/ferroehr.default.toml
 

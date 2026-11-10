@@ -4,7 +4,7 @@
 #
 # Every configuration key a rendered chart hands the server, in the
 # ferroehr.toml it mounts or as a FERROEHR__ environment variable, must be a key
-# app/ferroehr/assets/ferroehr.reference.toml defines (as an active line or a
+# app/ferroehr/assets/ferroehr.default.toml defines (as an active line or a
 # `#?` example line). A key the configuration no longer has is otherwise
 # caught only by the chart-boot lane, after an image build and a boot (#3901).
 #
@@ -15,7 +15,7 @@ set -euo pipefail
 readonly RENDER="$1"
 readonly RELEASE="${2:-ferroehr}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-readonly DEFAULT_TOML="${DEFAULT_TOML:-${REPO_ROOT}/app/ferroehr/assets/ferroehr.reference.toml}"
+readonly DEFAULT_TOML="${DEFAULT_TOML:-${REPO_ROOT}/app/ferroehr/assets/ferroehr.default.toml}"
 
 # Tables whose keys are the operator's own names (a template id, a user id, a
 # predicate name), so any key below them is defined.
@@ -65,7 +65,7 @@ while IFS= read -r key; do
     [[ -n "$table" && "$key" == "$table".* ]] && { mapped=1; break; }
   done <<<"$map_keys"
   [[ "$mapped" -eq 1 ]] && continue
-  echo "${key} is not a key of ferroehr.reference.toml"
+  echo "${key} is not a key of ferroehr.default.toml"
   unknown=1
 done < <(printf '%s\n%s\n' "$rendered_toml" "$rendered_env" | sort -u)
 exit "$unknown"

@@ -4,11 +4,11 @@
 # Fail when the configuration reference drifted from the configuration types
 # (#5316).
 #
-# tools/config-reference generates three files from the JSON Schema of
-# `ferroehr::config::FerroEhrConfig`: the book's reference page
-# (website/book/src/installation/config-keys.md), the reference TOML holding
-# every key (app/ferroehr/assets/ferroehr.reference.toml) and the shipped
-# default ferroehr.toml holding the operator keys. Its `--check` writes nothing
+# tools/config-reference generates two files from the JSON Schema of
+# `ferroehr::config::FerroEhrConfig`: the shipped default ferroehr.toml
+# (app/ferroehr/assets/ferroehr.default.toml), every key with its default under
+# its description, and the book's reference page
+# (website/book/src/installation/config-keys.md). Its `--check` writes nothing
 # and names each committed file that differs from what the types generate. No
 # specification governs the reference: our own design.
 #

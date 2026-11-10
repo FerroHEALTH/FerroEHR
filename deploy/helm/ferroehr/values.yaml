@@ -21,7 +21,7 @@
 #
 # The env-mapping grammar for overrides is FERROEHR_ + the TOML path upper-cased
 # with `__` between segments (e.g. config.db.max_connections ⇔
-# FERROEHR__DATABASE__MAX_CONNECTIONS). app/ferroehr/assets/ferroehr.reference.toml is the
+# FERROEHR__DATABASE__MAX_CONNECTIONS). app/ferroehr/assets/ferroehr.default.toml is the
 # complete TOML schema with every key and its default.
 #
 # The database role architecture, the pgaudit/TLS/PITR posture, and the
@@ -591,7 +591,7 @@ metrics:
 # ═════════════════════════════════════════════════════════════════════════════
 # ferroehr.toml — rendered VERBATIM into the ConfigMap as /etc/ferroehr/ferroehr.toml
 # (keys map 1:1 onto the server config schema — app/ferroehr/assets/
-# ferroehr.reference.toml lists it in full). Secrets are NOT here — see `secrets:` above.
+# ferroehr.default.toml lists it in full). Secrets are NOT here — see `secrets:` above.
 # The `files:` key is NOT part of the TOML (see below); it is mounted separately.
 # ═════════════════════════════════════════════════════════════════════════════
 config:

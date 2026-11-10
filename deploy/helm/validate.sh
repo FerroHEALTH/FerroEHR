@@ -1007,7 +1007,7 @@ unknown_config_key_gate() {
   if out="$(bash "$(dirname "$0")/gates/config-keys.sh" "$rendered" "$RELEASE_NAME")"; then
     red "  NOT REFUSED: audit.syslog.transport passed the config-keys gate"
     FAIL=1
-  elif ! grep -qx 'audit.syslog.transport is not a key of ferroehr.reference.toml' <<<"$out"; then
+  elif ! grep -qx 'audit.syslog.transport is not a key of ferroehr.default.toml' <<<"$out"; then
     red "  the gate failed, but did not name audit.syslog.transport:"
     printf '%s\n' "$out" | sed 's/^/    /'
     FAIL=1
@@ -1021,7 +1021,7 @@ unknown_config_key_gate() {
   if out="$(bash "$(dirname "$0")/gates/config-keys.sh" "$rendered" "$RELEASE_NAME")"; then
     red "  NOT REFUSED: the section-level auth.audience passed the config-keys gate"
     FAIL=1
-  elif ! grep -qx 'auth.audience is not a key of ferroehr.reference.toml' <<<"$out"; then
+  elif ! grep -qx 'auth.audience is not a key of ferroehr.default.toml' <<<"$out"; then
     red "  the gate failed, but did not name auth.audience:"
     printf '%s\n' "$out" | sed 's/^/    /'
     FAIL=1
@@ -1406,7 +1406,7 @@ for case in "${CASES[@]}"; do
 
   echo "config keys:"
   if unknown_keys="$(bash "$(dirname "$0")/gates/config-keys.sh" "$rendered" "$RELEASE_NAME")"; then
-    echo "  every key in ferroehr.toml and every FERROEHR__ variable is a key of ferroehr.reference.toml"
+    echo "  every key in ferroehr.toml and every FERROEHR__ variable is a key of ferroehr.default.toml"
   else
     red "  config-keys gate FAILED for ${label}:"
     printf '%s\n' "$unknown_keys" | sed 's/^/    /'

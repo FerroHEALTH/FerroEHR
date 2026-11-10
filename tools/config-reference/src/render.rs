@@ -1,10 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The three files written from the configuration tree: the reference page,
-//! the reference TOML holding every key, and the default `ferroehr.toml`
-//! holding the operator keys. No specification governs their layout: our own
-//! design.
+//! The two files written from the configuration tree: the shipped default
+//! `ferroehr.toml`, holding every key, and the book's reference page. No
+//! specification governs their layout: our own design.
 
 use std::fmt::Write as _;
 
@@ -41,7 +40,7 @@ pub(crate) fn page(sections: &[Section]) -> String {
     ));
     out.push('\n');
     out.push_str(&wrapped(
-        "The shipped `ferroehr.toml` holds only the keys an operator usually sets. The guides \
+        "The shipped `ferroehr.toml` holds the same keys, each set to its default. The guides \
          under [Configuration reference](configuration.md) explain the sections.",
         PAGE_WIDTH,
     ));
@@ -78,74 +77,32 @@ pub(crate) fn page(sections: &[Section]) -> String {
     out
 }
 
-/// The reference TOML: every key, a key with a default as a live line and
-/// any other as a `#?` line, so the file parses to the defaults.
-pub(crate) fn reference(sections: &[Section]) -> String {
+/// The shipped default `ferroehr.toml`: every key under its description, a
+/// key the defaults set as a live line and any other, a secret included, as
+/// a `#?` line with a placeholder, so the file parses to the defaults.
+pub(crate) fn template(sections: &[Section]) -> String {
     let mut out = String::new();
     let _ = writeln!(out, "# {GENERATED}");
     out.push_str(
         "# SPDX-FileCopyrightText: Cadasto B.V.\n\
          # SPDX-License-Identifier: BUSL-1.1\n\
          #\n\
-         # Every key of ferroehr.toml with its default. A line marked `#?` is a key with no\n\
-         # default, or one whose default is a secret, shown with an example value.\n",
-    );
-    for section in sections {
-        let mode = mode(section, sections);
-        write_section(&mut out, section, mode, section.keys.iter().collect());
-    }
-    out
-}
-
-/// The default `ferroehr.toml`: the keys of `operator`, each `(table path,
-/// key)`, under the tables that hold them, in the order of `operator`.
-///
-/// # Errors
-/// A message naming each operator key the tree does not hold.
-pub(crate) fn defaults(sections: &[Section], operator: &[(&str, &str)]) -> Result<String, String> {
-    let mut missing = Vec::new();
-    let mut chosen: Vec<(&Section, Vec<&Key>)> = Vec::new();
-    for (path, name) in operator {
-        let Some(section) = sections.iter().find(|s| s.path == *path) else {
-            missing.push(format!("[{path}]"));
-            continue;
-        };
-        let Some(key) = section.keys.iter().find(|k| k.name == *name) else {
-            missing.push(format!("{path}.{name}"));
-            continue;
-        };
-        match chosen.iter_mut().find(|(s, _)| s.path == *path) {
-            Some((_, keys)) => keys.push(key),
-            None => chosen.push((section, vec![key])),
-        }
-    }
-    if !missing.is_empty() {
-        return Err(format!(
-            "the operator keys name what the configuration does not hold: {}",
-            missing.join(", ")
-        ));
-    }
-    let mut out = String::new();
-    let _ = writeln!(out, "# {GENERATED}");
-    out.push_str(
-        "# SPDX-FileCopyrightText: Cadasto B.V.\n\
-         # SPDX-License-Identifier: BUSL-1.1\n\
-         #\n\
-         # ferroehr.toml: the keys an operator usually sets, each with its default.\n\
-         # Copy this file to ferroehr.toml and edit it. A line marked `#?` is a key with\n\
-         # no default, or one whose default is a secret: remove `#? ` to set it. Every\n\
-         # other key is listed on the configuration reference page,\n\
-         # https://ferroehr.eu/docs/latest/installation/config-keys.html.\n\
+         # ferroehr.toml: every key FerroEHR reads, each under its description and set to\n\
+         # its default. Copy this file to ferroehr.toml and edit what you change. A line\n\
+         # marked `#?` is a key with no default, a secret, or a table the defaults leave\n\
+         # out: remove `#? ` and fill the placeholder to set it. A line marked `#` under a\n\
+         # `# [table.<name>]` header shows a table you name yourself.\n\
          #\n\
          # A duration is a string with its unit (\"500ms\", \"30s\", \"10min\", \"12h\",\n\
          # \"7d\"), a size a string with an IEC binary unit (\"64MiB\"). Each key can\n\
          # also be set as FERROEHR__<TABLE>__<KEY>, such as\n\
          # FERROEHR__DATABASE__MAX_CONNECTIONS; `--set key=value` wins over it.\n",
     );
-    for (section, keys) in chosen {
-        write_section(&mut out, section, mode(section, sections), keys);
+    for section in sections {
+        let mode = mode(section, sections);
+        write_section(&mut out, section, mode, &section.keys);
     }
-    Ok(out)
+    out
 }
 
 /// How a section's lines are written.
@@ -184,7 +141,7 @@ fn mode(section: &Section, sections: &[Section]) -> Mode {
 }
 
 /// Writes `section` with `keys` to `out` in `mode`.
-fn write_section(out: &mut String, section: &Section, mode: Mode, keys: Vec<&Key>) {
+fn write_section(out: &mut String, section: &Section, mode: Mode, keys: &[Key]) {
     out.push('\n');
     if !section.description.is_empty() {
         comment(out, &section.description);
@@ -201,8 +158,11 @@ fn write_section(out: &mut String, section: &Section, mode: Mode, keys: Vec<&Key
         comment(out, &key.description);
         let name = bare(&key.name);
         let (lead, value) = match (&key.default, mode) {
-            (Some(default), Mode::Live) if !key.masked => ("", default),
-            (Some(default), Mode::Live | Mode::Example) => ("#? ", default),
+            // NOTE: a secret's default renders masked, and a masked value is no
+            // value to set, so the line carries the placeholder instead.
+            (Some(_), Mode::Live | Mode::Example) if key.masked => ("#? ", &key.example),
+            (Some(default), Mode::Live) => ("", default),
+            (Some(default), Mode::Example) => ("#? ", default),
             (None, Mode::Live | Mode::Example) => ("#? ", &key.example),
             (Some(default), Mode::Comment) => ("# ", default),
             (None, Mode::Comment) => ("# ", &key.example),
