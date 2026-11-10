@@ -30,7 +30,7 @@
 # subtree in REUSE.toml.
 #
 # THE NEN STANDARDS ARE NOT HERE, AND THAT IS DELIBERATE. NEN 7510-1:2024,
-# NEN 7510-2:2024, NEN 7512:2022 and NEN 7513:2018 are sold under copyright by
+# NEN 7510-2:2024, NEN 7512:2022 and NEN 7513:2024 are sold under copyright by
 # NEN. They are not fetched, not vendored, and not quoted. Each gets a
 # PROVENANCE.md that says so, names the edition and the shop URL, and lists
 # what the compliance pages cite, so a reviewer holding a licensed copy can
@@ -307,7 +307,7 @@ fi
 if selected nen-7513; then
   nen_record nen-7513
   cat >"$DEST/nen-7513/PROVENANCE.md" <<EOF
-# NEN 7513:2018 — not vendored
+# NEN 7513:2024 — not vendored
 
 **Nothing but this record is in this directory, and nothing else may be.**
 NEN 7513 is sold under copyright by NEN (Koninklijk Nederlands
@@ -316,14 +316,26 @@ fetched, not vendored, not quoted and not paraphrased clause by clause here.
 
 | | |
 |---|---|
-| NEN 7513:2018 | Medische informatica — Logging — Vastleggen van acties op elektronische patiëntdossiers |
+| NEN 7513:2024 | Medische informatica — Logging — Vastleggen van acties op persoonlijke gezondheidsinformatie |
 | Publisher | NEN, https://www.nen.nl |
-| Shop | https://www.nen.nl/nen-7513-2018-nl-245399 |
+| Published | December 2024 |
+| Shop | https://www.nen.nl/nen-7513-2024-nl-329182 |
 | Recorded | $FETCHED (UTC) by \`scripts/vendor/law-nl.sh\` |
+
+The 2024 edition follows NEN 7513:2018 (Medische informatica — Logging —
+Vastleggen van acties op elektronische patiëntdossiers,
+https://www.nen.nl/nen-7513-2018-nl-245399). The Besluit elektronische
+gegevensverwerking door zorgaanbieders, Art. 5(1) (\`docs/law/nl/begz/\`),
+names NEN 7513 without an edition. The edition and the shop link above are
+the ones Logius's Logboek Dataverwerkingen NEN 7513 extension cites
+(\`docs/specs/nen-7513-sources/logius/js/config.mjs\`).
 
 ## What the compliance pages cite
 
 This is the one standard of the three whose citations reach a numbered clause.
+The citations below were written against NEN 7513:2018, so their clause
+numbers are that edition's until someone who holds the 2024 edition checks
+each one and names its 2024 clause (#5136).
 
 | Cited as | Where | What the page claims against it |
 |---|---|---|
