@@ -23,6 +23,14 @@ re-added on first consumption, version verified on crates.io/docs.rs at that
 moment (versions below are as of 2026-07 and items marked *(verify)* were
 never confirmed). Add a crate to a member with `dep.workspace = true`.
 
+**FerroBRIDGE's published crates are required by a caret range** (`fhir-types`,
+`hl7v2-types`, `openehr-mapping-core`, `fhirconnect`, `fhir-search`,
+`ferrobridge-*`, `eehrxf`), never with `=`: they follow Cargo SemVer, a
+breaking change moving the minor while a crate is 0.x and judged by
+cargo-semver-checks in FerroBRIDGE's CI (The Cargo Book, "Specifying
+Dependencies: caret requirements" and "SemVer Compatibility"). The floor is
+the release FerroEHR needs, and the lock resolves one copy of each.
+
 Web & HTTP core: `axum` 0.8, `axum-extra` 0.12, `axum-server` 0.8 (graceful
 shutdown + TLS), `tower` 0.5, `tower-http` 0.7 (trace, cors, compression,
 timeout, limit, request-id, sensitive-headers, catch-panic, normalize-path),
