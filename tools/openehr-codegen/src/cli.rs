@@ -1178,7 +1178,7 @@ pub(crate) fn generated_bytes(crate_name: &str, body: &str) -> String {
 ///
 /// # Errors
 /// Returns the underlying filesystem error.
-fn write_generated(path: &Path, crate_name: &str, body: &str) -> std::io::Result<()> {
+pub(crate) fn write_generated(path: &Path, crate_name: &str, body: &str) -> std::io::Result<()> {
     std::fs::write(path, generated_bytes(crate_name, body))
 }
 
@@ -1238,7 +1238,7 @@ fn is_generated_file(path: &Path) -> bool {
 
 /// Recursively delete every `@generated` file under `dir` (leaving hand-written
 /// files + their directories in place), then prune directories left empty.
-fn remove_generated_files(dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn remove_generated_files(dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     for entry in std::fs::read_dir(dir)? {
         let path = entry?.path();
         if path.is_dir() {
@@ -1372,7 +1372,7 @@ fn collect_dirs(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), Box<dyn std::e
 /// Run `rustfmt` over the generated files so the emitted output is exactly what
 /// `cargo fmt --all --check` expects (line wrapping, empty `{}`, import order,
 /// …), instead of the emitter having to reproduce every rustfmt rule by hand.
-fn rustfmt(files: &[PathBuf]) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn rustfmt(files: &[PathBuf]) -> Result<(), Box<dyn std::error::Error>> {
     if files.is_empty() {
         return Ok(());
     }
