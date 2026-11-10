@@ -1241,7 +1241,7 @@ read on every route as RFC 7240 §2 defines it (#4722); chart
 - Broker delivery waits on a FerroBRIDGE release (FerroHEALTH/FerroBRIDGE
   issue 1367), as the change-events page says.
 - Everything the 5.6.0-rc8 review left open: the development-profile run's
-  failed row tracked on #4777, the canonical-XML `reverse_relationships`
+  failed row tracked on #4777 (since closed as not planned), the canonical-XML `reverse_relationships`
   (#4778), the 5.5.0 sandbox and the performance page's earlier figures.
 
 ## The review of 2026-11-04, for 5.6.0
@@ -1296,7 +1296,7 @@ conformance record of Veredictum 0.4.1 (#4971); chart 21.0.0 with `appVersion`
 ### Left open on 2026-11-04, for 5.6.0
 
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
-  accepted, tracked on #4777 for the next release.
+  accepted, tracked on #4777 (since closed as not planned) for the next release.
 - The performance page keeps its earlier figures until a record measured on
   the reference host replaces them.
 
@@ -1338,7 +1338,7 @@ change no behaviour (#4987); chart 21.0.1 with `appVersion` 5.6.1.
 ### Left open on 2026-11-05, for 5.6.1
 
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
-  accepted, tracked on #4777 for 5.7.0.
+  accepted, tracked on #4777 (since closed as not planned) for 5.7.0.
 - The performance page keeps its earlier figures until a record measured on
   the reference host replaces them.
 
@@ -1371,7 +1371,7 @@ in scope: CVE-2026-76844 in the zlib package of the three images, judged
 ### Left open on 2026-11-05, for 5.6.2
 
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
-  accepted, tracked on #4777 for 5.7.0.
+  accepted, tracked on #4777 (since closed as not planned) for 5.7.0.
 - The performance page keeps its earlier figures until a record measured on
   the reference host replaces them.
 
@@ -1408,7 +1408,7 @@ with `appVersion` 5.6.3.
 ### Left open on 2026-11-05, for 5.6.3
 
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
-  accepted, tracked on #4777 for 5.7.0.
+  accepted, tracked on #4777 (since closed as not planned) for 5.7.0.
 - The performance page keeps its earlier figures until a record measured on
   the reference host replaces them.
 
@@ -1447,7 +1447,7 @@ Read on the tree after commit `a6ce1927d`, for the FerroEHR release candidate
 ### Left open on 2026-11-10, for 5.7.0-rc1
 
 - The public sandbox runs 5.6.3 until the owner moves it to 5.7.0-rc1 for the reseed #5009 asks of the candidate. The release legs move it to 5.7.0 at the stable cut.
-- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #4777, now for 5.9.0.
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #4777 (since closed as not planned), now for 5.9.0.
 - The performance page keeps its earlier figures until a record measured on the reference host replaces them.
 
 ## The review of 2026-11-10, for 5.7.0-rc2
@@ -1469,5 +1469,5 @@ added since, checked in every text in scope:
 ### Left open on 2026-11-10, for 5.7.0-rc2
 
 - The public sandbox runs 5.6.3 until the owner moves it to 5.7.0-rc2 for the reseed #5009 asks of the candidate. The release legs move it to 5.7.0 at the stable cut.
-- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #4777 for 5.9.0.
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #4777 (since closed as not planned) for 5.9.0.
 - The performance page keeps its earlier figures until a record measured on the reference host replaces them.
