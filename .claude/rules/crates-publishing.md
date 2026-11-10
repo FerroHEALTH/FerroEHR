@@ -12,6 +12,42 @@ when the crates are published, never in a pull request (#4555): two open pull
 requests that both took "the next version" rewrote the same lines in nine
 manifests and two lockfiles, and the second always conflicted.
 
+## The authority: Cargo SemVer, judged by cargo-semver-checks
+
+The versioning rule is The Cargo Book, "SemVer Compatibility"
+(<https://doc.rust-lang.org/cargo/reference/semver.html>), and nothing of
+our own beside it: a `0.y.z` release "can treat changes in "y" as a major
+release, and "z" as a minor release", and "0.0.z releases are always major
+changes". The judge is `cargo-semver-checks`
+(<https://github.com/obi1kenobi/cargo-semver-checks>, pinned in
+`docs/VERSIONS.md`), run by `scripts/checks/semver.sh` (#5353):
+
+- **On every pull request and in the merge queue** that reaches `crates/`,
+  a manifest, the lock or the toolchain, the `crate-semver` CI job runs
+  `semver.sh report`: each of the nine against its newest release on
+  crates.io (main holds a floor below the published line, so crates.io is
+  the baseline), on the judge's default feature set and on
+  `--only-explicit-features`. It names the release the change needs and
+  refuses nothing the stamp can still answer; it fails only when it cannot
+  judge a crate.
+- **In the publish plan**, `publish-crates.sh plan` takes the version from
+  `semver.sh next`: the next patch for a compatible change, the next minor at
+  patch 0 for a break, lockstep over the nine.
+- **In the release plan**, `scripts/release/plan.sh` runs `semver.sh check`
+  over the version the crates leg stamps, before any upload, and refuses a
+  break that version does not answer.
+- **A public dependency moved to another compatibility line is a break**
+  (`scripts/lib/public-deps.sh`: a `ferrohealth-*`, `ferrobridge-*`,
+  `fhir-types`, `fhir-search` or `hl7v2-types` requirement whose caret line
+  moved since the release). The chapter has no entry for it; its intro counts
+  as breaking the "changes that will cause cargo and rustc to fail to build
+  something that previously worked", and the cargo-semver-checks README
+  lists "breaking type changes" among what the judge does not catch.
+- **The line leaves `0.0.z` at the next publish** (owner decision
+  2026-11-10, #5353): `semver.sh next` turns the newest `0.0.z` into
+  `0.1.0`, so on `0.1.z` an additive change ships as a patch and only a real
+  break moves every consumer.
+
 ## The version rule
 
 - **A pull request never edits the lockstep version.** It changes crate
@@ -36,8 +72,8 @@ manifests and two lockfiles, and the second always conflicted.
   reads the commit it was packaged from out of the `.cargo_vcs_info.json`
   cargo writes into every package. When packaged content is unchanged since
   that commit (`crate-version-guard.sh changed <sha> HEAD`), the version stays
-  and the publish is a no-op; otherwise it is the next `0.0.x`, never below
-  the manifests' own version. `publish-crates.sh stamp <version>` writes it
+  and the publish is a no-op; otherwise it is the version `semver.sh next`
+  derives from it, never below the manifests' own version. `publish-crates.sh stamp <version>` writes it
   into the nine manifests, every internal requirement, `Cargo.lock` and
   `fuzz/Cargo.lock` of the publishing checkout, uncommitted; cargo records
   the commit with `"dirty": true`. The manifests on `main` keep the version
@@ -48,9 +84,9 @@ manifests and two lockfiles, and the second always conflicted.
   have the same packaged content as `HEAD`, or the publish is refused. An
   archive that records no commit, or one this history does not hold, is
   refused too, because its content cannot be compared.
-- **Bumps are lockstep across all nine** (`0.0.x`: cargo treats every
-  `0.0.x` as its own compatibility set, so the internal `version =`
-  requirements move together). The stamp refuses a tree whose nine manifests
+- **Bumps are lockstep across all nine**: the internal `version =`
+  requirements move with the set, and the version answers the largest change
+  the judge finds in any of the nine. The stamp refuses a tree whose nine manifests
   disagree.
 - Escape hatch: the `no-crate-bump` PR label, ONLY for a pull request that
   must set the version by hand (a crate's first, manual release).
