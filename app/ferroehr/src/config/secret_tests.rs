@@ -247,6 +247,10 @@ fn url_userinfo_reaches_no_rendering() {
                         token_endpoint: SecretUrl::new("https://u10:URL_PW_SENTINEL_10@h10:1/p10"),
                         ..OauthSection::default()
                     }),
+                    onward: Some(ferrohealth_smart::config::onward::OnwardSection {
+                        token_endpoint: leaky(20),
+                        ..ferrohealth_smart::config::onward::OnwardSection::default()
+                    }),
                     ..ferrohealth_smart::config::credentials::CredentialsSection::default()
                 },
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
@@ -259,6 +263,13 @@ fn url_userinfo_reaches_no_rendering() {
         endpoint: leaky(13),
         ..ferrohealth_telemetry::section::OtlpSection::default()
     });
+    c.auth.shared.issuer = vec![ferrohealth_smart::config::IssuerEntry {
+        introspection: Some(ferrohealth_smart::config::IntrospectionSection {
+            endpoint: leaky(21),
+            ..ferrohealth_smart::config::IntrospectionSection::default()
+        }),
+        ..auth_section::machines("https://idp.example").remove(0)
+    }];
     c.record.multimedia.url = Some(leaky(14));
     c.audit.syslog = Some(crate::system_log::config::SyslogConfig {
         url: leaky(16),
@@ -294,7 +305,7 @@ fn url_userinfo_reaches_no_rendering() {
             !rendered.contains("URL_PW_SENTINEL"),
             "URL userinfo leaked into the {surface} rendering: {rendered}"
         );
-        for n in (1..=19).filter(|n| *n != 7 && *n != 11) {
+        for n in (1..=21).filter(|n| *n != 7 && *n != 11) {
             assert!(
                 rendered.contains(&format!("https://***@h{n}:1/p{n}")),
                 "URL {n} lost its host and path in the {surface} rendering: {rendered}"

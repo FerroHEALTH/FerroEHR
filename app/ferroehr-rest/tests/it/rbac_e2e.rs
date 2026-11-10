@@ -623,6 +623,10 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
                         token_endpoint: SecretUrl::new("https://u3:URL_PW_SENTINEL_3@h3/p"),
                         ..ferrohealth_smart::config::credentials::OauthSection::default()
                     }),
+                    onward: Some(ferrohealth_smart::config::onward::OnwardSection {
+                        token_endpoint: leaky(12),
+                        ..ferrohealth_smart::config::onward::OnwardSection::default()
+                    }),
                     ..ferrohealth_smart::config::credentials::CredentialsSection::default()
                 },
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
@@ -647,6 +651,14 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
         public_base_url: Some(leaky(11)),
         ..ferroehr::config::scim::ScimConfig::default()
     });
+    cfg.auth.shared.issuer = vec![ferrohealth_smart::config::IssuerEntry {
+        issuer: "https://idp.example".to_owned(),
+        introspection: Some(ferrohealth_smart::config::IntrospectionSection {
+            endpoint: leaky(13),
+            ..ferrohealth_smart::config::IntrospectionSection::default()
+        }),
+        ..ferrohealth_smart::config::IssuerEntry::default()
+    }];
     let snapshot = cfg.to_redacted_json().expect("redacted json");
 
     let (_pg, svc) = service(None).await;
@@ -678,7 +690,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
             !body.contains("URL_PW_SENTINEL"),
             "URL userinfo leaked from {uri}: {body}"
         );
-        for n in (1..=11).filter(|n| *n != 4) {
+        for n in (1..=13).filter(|n| *n != 4) {
             assert!(
                 body.contains(&format!("https://***@h{n}/p")),
                 "URL {n} lost its host and path in {uri}: {body}"
