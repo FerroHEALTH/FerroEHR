@@ -17,6 +17,843 @@ has no matching section here.
 
 ## [Unreleased]
 
+## [5.7.0-rc2] - 2026-11-10
+
+5.7.0-rc2 is the second release candidate of 5.7.0, published for testing. 5.7.0-rc1 was tagged but not published: the release's performance guard booted the candidate without the login provisioner its quickstart ships, so its load test was refused as an unbound login. The guard now starts the provisioner (#5346), and the server is unchanged. These notes carry every change since 5.6.3, those of the 5.7.0-rc1 section below included. 5.6.3 stays the stable release: this pre-release moves neither the `latest` image tags, the book under `/docs/latest/` nor the hosted sandbox, it publishes no crates, and it receives no fixes; the next release candidate or 5.7.0 itself replaces it. Before you try it: the configuration is one table per concern with typed durations and sizes, so run `ferroehr config check` on your file first, which names every key a release before 5.7.0 read with its replacement, all at once; every person is bound to a demographic `PERSON`, so each `persons` issuer needs its `[[auth.party]]` table and each Basic user its `[[authz.party_binding.basic_user]]` mapping, with the steps on the book's bootstrap and migration page; and a deployment whose FerroBRIDGE facade or FerroFED gateway writes to FerroEHR adds its `persons` issuers only after FerroBRIDGE v0.0.23 and FerroFED v0.0.17 reach it. Party migrations 0027 to 0032, clinical migration 0035 and audit migrations 0023 to 0025 add the binding, SCIM, DPoP replay and refusal tables, columns and codes. Helm chart 25.0.1-rc2 carries `appVersion` 5.7.0-rc2. Security carries two advisories, GHSA-jhg2-jwjp-hq74 and GHSA-pfgx-xq28-2629, the zlib fixes of CVE-2026-76844, CVE-2026-85091 and CVE-2026-27171 in the three images, and the `not_affected` judgements of four krb5 CVEs in the PostgreSQL image.
+
+### Added
+
+- AQL reads the attestations of a version: `v/attestations` and any
+  `ATTESTATION` attribute below it (`is_pending`, `reason`, `proof`, `items`,
+  `committer`, `time_committed`) under `FROM EHR e CONTAINS VERSION v CONTAINS
+  COMPOSITION c`, with predicates on `attestations` and `EXISTS`, and
+  `v/commit_audit/is_pending` and `v/commit_audit/reason` on a commit audit
+  that is an `ATTESTATION`. `SELECT v/attestations` returns the list, and a
+  comparison below `attestations` holds when any attestation matches. The
+  FerroEHR extension function `LAST(v/attestations/<path>)` reads the most
+  recent attestation, so `WHERE LAST(v/attestations/is_pending) = true` lists
+  the versions awaiting signature, including one marked pending again after
+  it was signed (#4989).
+
+- The party binding's configuration, each table with its boot refusals:
+  `[authz.party_binding]` (`provider` as one table or one table per tenant,
+  `namespace`, `basic_user`), `[authz.import] trusted_systems`,
+  `[[authz.system_client]]` (the provider, facilities, templates and origins
+  of each client-credentials client that commits) and
+  `[[authz.federation.agreement]]` (what a federation issuer's external
+  persons or organisation may do, on which legal ground), with
+  `[authz.rbac] role_issuers` and `import_role`. A template an agreement or
+  a system client writes that the store does not hold refuses the start. The
+  boot line and `GET /management/info` list the issuers with their kind and
+  identifier issuer, the provider, and every agreement with its accessor and
+  legal ground, and an agreement that admits an organisation without a named
+  person is logged at `warn` (#5003).
+
+- `[auth.idp.entra]`, the Microsoft Graph access of the `idp-entra` adapter
+  of `ferrohealth-smart`, which resolves the groups of an Entra ID groups
+  overage for an issuer whose profile sets `adapter = "idp-entra"` (#5003).
+
+- `[auth.dpop]` and `[[auth.issuer]] sender_constraint`: tokens bound to a
+  DPoP key (RFC 9449) or a mutual-TLS client certificate (RFC 8705), checked
+  on every request. A DPoP proof is recorded by the replica that accepted it,
+  so the Helm chart refuses a sender-constrained issuer on more than one
+  replica (#5003).
+
+- The login binding reads the local party source on every request, with no cache: the new party migration `0027_binding_side_table` adds the indexed `binding_identifier`, `binding_membership` and `binding_representation` relations, written in each party commit's transaction from the `PERSON`s of the mapped templates that perform a professional `ROLE` or represent another person, their `GROUP` memberships and their representation relationships, and rebuilt from the party versions alone. A login matching two parties, an `inactive`, `abandoned` or deleted party, a token without the key claim, a party without the needed marker and unreadable groups are refused with `403` and their binding code; a party store or identity provider that cannot answer is answered `503` (#5004).
+
+- `ferroehr definitions load <path>...` stores OPT 1.4 (`.opt`) and ADL 2
+  (`.adls`) definitions before `serve`, through the validation and versioning
+  of the REST upload. A file already stored with the same text is left alone
+  and other text under a stored id is refused, so a deployment runs it at
+  every start to give its party mapping the templates it needs at boot.
+  `deploy/definitions/professional/` holds a professional PERSON and ROLE pair
+  adapted from openEHR CKM archetypes for the development lanes and the
+  quickstart (#5006).
+
+- The compose quickstart binds its user to a professional `PERSON`: the
+  `ferroehr-definitions` one-shot loads the PERSON and ROLE templates the
+  party mapping names before the server starts, and `ferroehr-provision`
+  creates the user through `/scim/v2/Users` with a token of the development
+  issuer, then reports healthy, so `docker compose up --wait` returns once
+  the login is bound. The Helm chart (23.3.0) takes `definitions.files`,
+  which an init container stores with `ferroehr definitions load` before the
+  server container starts. The conformance, browser and Kubernetes lanes
+  load the same templates and provision every login they use through SCIM,
+  with the committed test client of `docs/conformance/party/scim/` (#5006).
+
+- `ferroehr party-binding adopt <PARTY_ID>...` gives each prepared `PERSON`
+  of an existing deployment a professional `ROLE` of the mapping's role
+  template, with the `PERSON` as `performer`, and a new `PERSON` version
+  listing it in `roles`, all in one demographic CONTRIBUTION committed by the
+  first administrator named with `--admin` or `--admin-key`, and writes one
+  access record per adopted `PERSON` through the configured audit trail. It
+  refuses the whole adoption, naming them, while any listed `PERSON`'s key
+  was introduced by a committer that is no `[[scim.client]]`, named
+  administrator or `--migration`, so a key planted before the upgrade is
+  never adopted. A `PERSON` that already performs the `ROLE` is reported and
+  left alone. The report is JSON on stdout (#5009).
+
+- `ferroehr party-binding check` is the read-only pre-flight of a migration to
+  party binding, and the one report of the provisional persons just-in-time
+  creation left incomplete. It reads the party versions alone, so it runs
+  before any boot fill, and writes nothing. Per key issuer it reports the
+  `PERSON`s that carry a binding key, every selector value two `PERSON`s
+  carry, the inactive and abandoned ones, the provisional ones older than
+  `provisional_report_days`, the key-bearing ones that perform no
+  professional `ROLE`, and every mapped Basic user with the `PERSON` it
+  binds. For each key it names the committer of the version that introduced
+  it, and fails unless that committer is a `[[scim.client]]`, an
+  administrator named with `--admin` or `--admin-key`, a migration declared
+  with `--migration`, or just-in-time creation on an issuer with `jit = true`.
+  `--expected <file>` lists every login of the identity provider with no
+  `PERSON`. The report is JSON on stdout, and the command exits non-zero on a
+  duplicate, a missing person or a key that fails the provenance rule (#5009).
+
+- At boot, FerroEHR logs a `warn` naming every Basic user mapped in `[[authz.party_binding.basic_user]]` while `[authz.assurance] minimum` is unset: a Basic credential carries no assurance level, so such a person is never refused on patient data (#5009).
+
+- The one `PERSON` mapping SCIM provisioning, just-in-time creation and the login binding share: `[[authz.party_binding.person.template]]` with the binding key, `userName` and `externalId` selectors of each template, `[[authz.party_binding.person.attribute]]` with the SCIM attribute, the OpenID Connect claim and the path of each mapped value, and `[authz.party_binding.professional_role]`, `[authz.party_binding.group]`, `[authz.party_binding.membership]` and `[authz.party_binding.representation]`. Boot refuses a mapping that breaks one of its rules, naming the key, including a template that is absent, rooted at another class or lacks a mapped path, and deleting a template the mapping names is refused with `409` (#5013).
+
+- The new party migration `0028_binding_selectors` holds each binding key, `userName` (compared after RFC 8265 width mapping, lower case and NFC), `externalId` and group `displayName` to one live party, so a commit giving one a second party is refused with `409`. The first boot fills the side table under the mapping's digest, a replica with another mapping refuses to start, and `ferroehr party-binding refill` rebuilds it after a mapping change, refusing while a replica runs and naming the parties when a value is carried twice (#5013).
+
+- `POST /admin/party/binding-key` re-keys a `PERSON`'s binding key: it refuses the administrator's own login and a key already bound, retires the old key in the same commit and writes one access record carrying both (#5013).
+
+- `[scim]` mounts the SCIM 2.0 service provider at `/scim/v2/` (off by default): `[[scim.client]]` declares each provisioning client by `issuer`, `client_id`, `scope` and `binding_issuer`, and `public_base_url` names the origin its documents hang off. `/scim/v2/ServiceProviderConfig` answers without a token; `/ResourceTypes` and `/Schemas` answer a declared client acting for nobody that holds its scope, within `[server.caller_rate]`. Every refusal is an RFC 7644 `Error` message. The start is refused for a client of a non-`machines` issuer, one declared twice, two clients sharing a `binding_issuer`, or a `binding_issuer` no `[[auth.party]]` table carries (#5014).
+
+- The SCIM endpoint answers the Microsoft Entra ID provisioning client as Microsoft's "Develop a SCIM endpoint" guide documents it: a value-filtered attribute such as `emails[type eq "work"].value` serves its `type` and declares `primary` read-only, so the `primary` Entra sends is ignored (RFC 7644 §3.3); a `PATCH` of `userName` renames the User; and the Test Connection probes are answered with an empty `ListResponse` and `404`. `ferroehr config check` refuses a `[scim]` the person mapping cannot serve, as `serve` does. The Helm chart exposes `config.scim` and routes `/scim/v2` on every Ingress host when it is enabled, and the book walks an operator through provisioning from Entra ID, with the Workload Identity Federation checks the authorization server makes (#5014).
+
+- `/scim/v2/Users/{id}` takes `PUT`, `PATCH` and `DELETE`: a write commits the next version of the professional's `PERSON`, clearing a mapped attribute a `PUT` leaves out, keeping the binding key and `externalId`, and moving the lifecycle state by `active` (`complete` or `incomplete` to `inactive` or `abandoned` and back, an `abandoned` User completed in two versions, an attribute change to an inactive User refused until it is reactivated). `DELETE` logically deletes the `PERSON` and its professional `ROLE` in one CONTRIBUTION and leaves the binding key as a tombstone. An `If-Match` naming another version is `412`, and `ServiceProviderConfig` declares PATCH. `[scim] max_deactivations` and `deactivation_window_minutes` bound the deactivations and deletions of one client, counted in the database so replicas share the bound, with `429` past it (#5014).
+
+- `/scim/v2/Users` serves a client's Users: `POST` creates the professional's `PERSON` and its professional `ROLE` in one demographic CONTRIBUTION, `complete` when the template holds in full and `incomplete` otherwise, `GET /Users/{id}` answers with the version's entity tag and `304` to a matching `If-None-Match`, and `GET /Users` answers a `ListResponse` filtered by `eq` and `and` over `userName`, `externalId` and `id`, with any other filter `400` `invalidFilter`. A client sees only the Users whose binding key its `binding_issuer` issues, every SCIM request is an access record of the client naming the `PERSON`, and `ServiceProviderConfig` declares entity tags. The start is refused when `[scim]` is on and the party mapping has no default person template with a `user_name` selector or no professional role (#5014).
+
+- `/scim/v2/Groups` serves SCIM Groups as demographic `GROUP`s of `[authz.party_binding.group]`, each member holding an inline `PARTY_RELATIONSHIP` of `[authz.party_binding.membership]` from its `PERSON` to the `GROUP`, with no `ROLE` minted: create, read, `eq`/`and` filters on `displayName`, `externalId` and `id`, `excludedAttributes=members`, `PATCH` (answered `204`), `PUT` and `DELETE`, with the entity tags of Users. A Group belongs to the client that created it, its members are that client's Users, its `displayName` is unique, and its `externalId` sits under the client's `group_identifier_issuer`. A `remove` of `members` with a `value` list removes only those members, an Entra compatibility deviation from RFC 7644 §3.5.2.2. Deleting a User removes its memberships in the same CONTRIBUTION. `[scim] max_group_members` (default 5000) caps a Group (#5015).
+
+- Just-in-time creation of a provisional `PERSON` at a first login, off by
+  default and enabled per `persons` issuer in a new
+  `[[authz.party_binding.issuer]]` table (`jit`, `guests_jit`,
+  `user_name_claim`, `idp_claim`, `admit_idp`, `admit_groups`, `admit_roles`,
+  `admit_assurance`). A login of a person or a delegated caller that matches
+  no party and meets every declared admission condition commits one
+  `553|incomplete|` `PERSON` holding the binding key, the `userName` and the
+  name claims of the access token, with its professional `ROLE`, as a
+  creation by the person, and is served bound to it; any other mapped
+  attribute is written only where its mapping sets `jit = true`, and
+  `externalId` never. Concurrent first requests commit one `PERSON`, a
+  deprovisioned or inactive login is never recreated, a taken `userName`
+  refuses the login, and a SCIM client of the key's issuer completes the
+  `PERSON`. Boot refuses `jit` without an admission condition or a mapping
+  that can write it. `ferroehr party-binding check` lists the provisional
+  persons older than `[authz.party_binding] provisional_report_days`
+  (default 30) (#5016).
+
+- A party of a mapped template is validated against that template on every
+  demographic write: a `PERSON` or `GROUP` whose `archetype_details.template_id`
+  names a template of the shared party mapping, and a `PARTY_RELATIONSHIP` of
+  its membership archetype. A `532|complete|` version must meet every
+  constraint, and a `553|incomplete|` one may miss mandatory nodes but nothing
+  it carries may be wrong (RM common master06 §Incomplete Content); the refusal
+  is a `422` naming each failing path. Every other party keeps the
+  reference-model checks alone, so parties created through the Demographic API
+  under other templates are accepted as before (#5042).
+
+- The FHIR `AuditEvent`, the DICOM audit message and the ITI-20 syslog feed carry the binding fields of the access record: the binding outcome, the party and its groups, the provider acted for, the facilities of a system commit, the representation with its relationship, the actor chain, the external accessor's asserted fields and the agreement with its legal ground, consent and access class, and a `chained` request's correlation id. `ehds-logging` 0.5.1 writes them as the `ehds-accessor` and `ehds-relayed` entities, in the DICOM message as participant objects of type Other. The FHIR record also writes the `external` and `system` acting modes. FerroEHR moves to `ehds-logging` and `ihe-atna` 0.5.1 and `ihe-iti` 0.0.77 (#5043).
+
+- A bound representative reaches only the EHR whose `EHR_STATUS` names the
+  subject it represents. Every composition, `EHR_STATUS`, directory,
+  contribution and query request is held to that EHR whatever the token's
+  scopes cover, and a query must name it with `ehr_id`. A representative
+  whose token names a subject its party has no live representation
+  relationship to, or whose issuer no `[[auth.party]]` table binds, is
+  refused with `403` and `refused-representation-unrecorded` (#5086).
+
+- The Helm chart (23.1.0) accepts `bridge.cdr.oauth.tokenEndpoint` for an
+  authorization server whose metadata FerroBRIDGE cannot read at
+  `bridge.cdr.oauth.issuer`. FerroBRIDGE then requests its client
+  credentials token from that endpoint, and `issuer` still names the
+  `machines` issuer the CDR trusts (#5093).
+
+- A MyHealth@EU contact point's caller (a `contact_point = true` `federation` issuer) reaches patient data only for the patient of its treatment relationship confirmation. The token's `ehdsi.patient.id` (`system|value`) is resolved to its EHR through the EHR index, and every patient-data request must name that EHR. A token without it is refused with `403` and `ERROR_SEC_DATA_INTEGRITY_NOT_ENSURED`, recorded as `refused-trc-missing`. Another patient's EHR, an unknown EHR and a request naming no EHR all answer one `404` of the new problem type `trc-patient-mismatch`, carrying the agreement service's `*_NOT_FOUND` code and recorded as a `refused-trc-patient-mismatch` security event (eHDSI XCA Profile 8.0.1 §4.2.1, §4.2.2). A contact point's person agreement now names its `ehdsi_service`; upgrade step: set it, and list the issuer in `[smart] patient_issuers` (#5102).
+
+- An external person under an agreement with `discard` discards a dispensation of a listed template, as a logical delete, within `discard_window_hours` and from the same point of care: the dispensation's `health_care_facility` carries the token's provider identifier and its eHDSI `organization-id`. A token carrying permissions records and discards a dispensation only with `PPD-046` (eHDSI SAML Profile 10.0.0 §2.5) (#5102).
+
+- A read under a federation agreement with a `consent` condition is served
+  when the token carries the consent decision reference for its patient
+  (Wabvpz Art. 1(j) and Art. 15a(1)), in the claim or `authorization_details`
+  member the issuer's `[[auth.federation]]` table maps to
+  `consent.reference`, and refused with `403` without it. The reference is
+  one string, the token's `patient/` grant holds it to the launch-context
+  patient, and the access record carries it with the other external fields.
+  `ferrohealth-smart` moves to 0.9.3, which reads the field (#5106).
+
+- Every access record of an authenticated request carries the outcome of the party binding (`binding`: `bound`, `provisional`, `external`, `organisation`, `system`, `self` or a `refused-*` code) with the fields it needs: the bound party, its groups, the provider, the guest mark, a representative's representation, a delegated token's actor chain, a verified external accessor's fields and agreement, and the facilities a system caller's compositions named. `acting_mode` gains `delegated`, `external` and `system`. The audit migration `0023_binding_outcome.sql` adds the columns and restores a per-row digest version: records written before stay version 1 and keep verifying, new records are version 2, and a version-1 record after a version-2 one is refused (#5118).
+
+- Every refused request is an access record through the gated path, and a refusal of the login binding or of a caller kind carries its `refused-*` binding code and the party it names. Refusals of tokens that failed verification are budgeted by source network and those of verified callers by issuer and subject, so neither crowds out the other; past a caller's limit its refusals become one summary record with the count and the EHR ids they named, and past a budget one summary record per issuer and outcome is written. Security-event refusals are recorded for every answered request, and a refusal record the system log cannot take is counted in `atna_audit_refusals_unwritten`. The limits, windows and budgets are kept per replica (#5119).
+
+- A `chained` organisation request under a federation agreement is served
+  only when its token carries the requester's correlation id in the claim or
+  attested `authorization_details` member the issuer's `[[auth.federation]]`
+  table maps to `correlation_id`. Without it the request is refused with
+  `403` and recorded under the binding code `refused-correlation-missing`
+  (audit migration `0025`); a request header never stands in for it. The
+  `organisation` access record's `agreement` carries the id and its source
+  beside the legal ground and the access class. A chained agreement whose
+  issuer maps no `correlation_id`, or maps it from a constant, refuses the
+  start (#5120).
+
+- On the MyHealth@EU contact-point route, the committer of an external person names the professional by the HP Identity Assertion's `NameID`: `DV_IDENTIFIER{issuer = the assertion's issuer, id = the NameID, type = "hp_identifier:<NameID format>"}`, beside the voucher's `oauth2` identifier (eHDSI SAML Profile 10.0.0 §2.1), and a dispensation's discard is a logical delete under the same committer. A contact point's COMPOSITION must carry the HCPO's `organization-id` in `EVENT_CONTEXT.health_care_facility.identifiers`, under the issuer `urn:oasis:names:tc:xspa:1.0:subject:organization-id`, beside the provider's identifier, or it is refused with `422`. `ferrohealth-smart` moves to 0.9.4, which reads `ehdsi.assertion.name_id_format` and refuses a contact-point token without one of the three formats as `ERROR_HPI_INSUFFICIENT_INFORMATION`; upgrade step: a contact point's authorization server writes the NameID format into its tokens (#5144).
+
+- A federation caller above its agreement's `caller_rate`, a MyHealth@EU
+  contact point's included, is answered `429` with `Retry-After` right after
+  authentication and before any patient lookup, keyed on the token's subject
+  per replica, and every such refusal is counted into the caller's summary
+  record (#5149).
+
+- A deleted SCIM User's contacts are erased from every version of its `PERSON`, keeping the name, the binding key and the identifiers for the record-keeping duties that need them. `[scim] contact_erasure_minutes` (default `0`, at most 43200) sets when: `0` erases them in the `DELETE` itself, a period leaves them to a sweep that runs every minute. Each erased version's node rows are derived again from the new body, its server signature is removed, and the erasure is an access record naming `party:<id>#contacts`. Party migration 0030 adds the `scim_contact_erasure` table (#5178).
+
+- `openehr-rm` types generic RM type names and paths: `typing::RmType` parses and prints names such as `DV_INTERVAL<DV_QUANTITY>`, `typing::attribute_type` gives an attribute of an instantiated class with the actual argument in place of the formal parameter, and `typing::path_type` types every step of an `RmPath` with its container. Each `model::RmAttribute` and `model::RmTypeRef` keeps the formal parameter it is written as (`formal`) beside the resolved bound. `paths::write::item_at_path_mut` and `paths::write::set_at_path` write at a path into a canonical instance, positional predicates included, creating the members the path names and changing nothing when a write is refused (#5187).
+
+- `openehr-sdt`: `flat::navigate::Navigator` gives every instance of a Web Template path in a composition, with each step's occurrence, container index, positional path and JSON pointer, reaching a renamed instance where the template's name is redundant and an OPT2 archetype root through the complete identifier the template recorded. `flat::navigate::relative` compares two paths step by step. `flat::attribute_keys` gives the FLAT key of an RM attribute of a structural class (the `master05-rm_mapping.adoc` tables, checked against them). A `WebTemplateNode` carries `facts` (the embedded template id of an OPT 1.4 archetype root and the terms its archetype defines) and every coded option its `terminology`, so no consumer walks the operational template (#5189).
+
+- `openehr-base` gives identifier and time parts as written: `ObjectVersionId::object_id_str` and `ObjectVersionId::versioned_object_id` keep the case of the `object_id` part, `Iso8601Time::fraction_digits` and `Iso8601DateTime::fraction_digits` return the digits of the fractional second as text, and `Iso8601Duration::parts` returns each component's designator and number verbatim (`DurationDesignator`, `DurationPart`), with `Iso8601Duration::fraction_digits` for the seconds (#5190).
+
+- `openehr-its` reads the ITS-REST `ETag` as a typed entity tag: `rest::etag::EntityTag` parses and writes the RFC 9110 form, weak or strong, with the weak and strong comparisons. It types the tag as an `ObjectVersionId` or a `HierObjectId`. Every generated response-headers struct that carries an `ETag` gains `entity_tag()` beside the raw `etag` field (#5191).
+
+- `openehr-term` names the `null_flavours` and `setting` groups: `codes::NullFlavour` and `codes::Setting` give each concept's code and English rubric and read a code back, held equal to the bundled terminology by tests. Every typed group's `ALL` is now a slice (#5192).
+
+- `openehr-am`: `HridRef` reads an archetype reference with the version precision it was written at (`VersionPrecision`: major, minor or full, BASE Artefact Identification §Referencing), gives the version as written and matches an `ArchetypeHrid` by the specification's rule, the namespace never a wildcard. `ArchetypeHrid::local_semantic_id` gives the namespace-free interface form a Web Template `nodeId` carries, which the `v2_4` Web Template builder now uses (#5193).
+
+- `openehr-its`: `rest::stored_query` types a stored query's qualified name (`QualifiedQueryName`, `[{namespace}::]{query-name}`, with `check_registrable` refusing the reserved `aql`), its version (`QueryVersion`, `major.minor.patch` in numeric order) and the version pattern a request addresses (`VersionPattern`, exact, `{major}` or `{major}.{minor}`, selecting the highest match), per ITS-REST 1.1.0. The generated stored-query operations and the `StoredQuery` and `RESULT_SET` documents carry them, so a name or version outside the grammar is a `400` where the request is decoded (#5207).
+
+- `openehr_rm::Generation::earliest_for_composition` answers the oldest RM generation whose canonical-JSON decode accepts a composition, so a builder can name `ARCHETYPED.rm_version` without naming a generation module; a value no generation decodes is a typed `NoGenerationDecodes` error carrying every generation's refusal (#5242).
+
+### Changed
+
+- The published server, viewer and PostgreSQL images take their
+  `org.opencontainers.image.base.name` and `base.digest` labels and
+  annotations from the runtime stage's digest-pinned `FROM` line at build
+  time, so a base-image bump changes that one line. An image built directly
+  from a Dockerfile no longer carries these two labels (#4953).
+
+- `[auth]` takes the `ferrohealth-smart` 0.9 shape. Every trusted issuer is
+  an `[[auth.issuer]]` table with a required `kind` (`persons`, `patients`,
+  `machines` or `federation`) and a `profile` (`rfc9068` by default, or
+  `entra`, `keycloak`, `okta`, `nl`), and holds every setting of its tokens
+  itself. A configuration in the old shape refuses the start, naming what
+  replaces it. Upgrade steps: write a flat `issuer = "…"` as an
+  `[[auth.issuer]]` table; move `audience`, `algorithms`,
+  `clock_skew_seconds`, `jwks_max_age_seconds`,
+  `jwks_refresh_interval_seconds`, `jwks_file`, `timeout_ms`, `mode`,
+  `role_claims` and `[auth.introspection]` onto each issuer table
+  (`[auth.issuer.introspection]`); give each issuer its `kind`, with patients
+  and professionals at separate issuers (a realm or tenant each), since one
+  issuer is one kind; replace `token_profile = "jwt"` with
+  `token_types = ["JWT"]` and the `required_claims` the issuer's tokens
+  carry, and drop `token_profile = "rfc9068"`; and write each
+  `scopeless_subjects` entry as `{ issuer = "…", sub = "…" }` (#5003).
+
+- A `persons` token is admitted only through a client its issuer lists in
+  `first_party_clients` or `delegates`. Upgrade step: list the deployment's
+  own clients, the viewer's among them, in `first_party_clients`, and a
+  third-party client that acts for a person in `delegates`. The other 0.9
+  profile keys (`person_key`, `tenant_claim`, `client_claims`, `app_only`,
+  `guest`, `impersonation_marker`, `expect`, `user_claims`,
+  `person_equality`, `unstable_claims`, `max_actor_chain`,
+  `representation`, `scope_claim`, `app_only_scope_claim`, `adapter`,
+  `sender_constraint` and the `onward_*` keys) are documented in the
+  configuration reference (#5003).
+
+- An array of tables, such as `[[auth.issuer]]`, is set from the environment
+  by element index (`FERROEHR__AUTH__ISSUER__0__ISSUER`), through
+  `ferrohealth-config` 0.2.10 (#5003).
+
+- `[smart] issuer_metadata_file` is the metadata of the `[auth]` issuer it
+  names, wherever that issuer stands in the list, and a file naming no
+  `[auth]` issuer refuses the start. The SMART discovery document describes
+  the first introspected issuer, else that named issuer, else the first
+  issuer whose metadata is read from it, else the first issuer, so a Basic
+  users' issuer listed first no longer takes the discovery document (#5003).
+
+- The family crates move together: `ferrohealth-smart` 0.9.1,
+  `ferrohealth-authz` 0.3.0, `ferrohealth-session` 0.3.1, `ihe-atna` and
+  `ehds-logging` 0.4.0, `ihe-iti` 0.0.76, `ferrohealth-config` 0.2.10,
+  `ferrohealth-server` 0.5.1 and `ferrohealth-ui` 0.6.9. `ihe-atna` and
+  `ehds-logging` now escape every control and bidirectional formatting
+  character of a value they write as its code point. With `ferrohealth-ui`
+  0.6.9 the viewer's session watch no longer throws when the party
+  relationship form, which holds a control named `target`, is submitted (#5003).
+
+- The terminology client moves to `ferrobridge-term` 0.1.143 (FerroBRIDGE
+  v0.0.22), which takes the `ferrohealth-smart` 0.9 token source (#5003).
+
+- Every person is bound to a demographic party, with no switch. A `persons`
+  issuer needs its `[[auth.party]]` table, two issuers of one node may not
+  share an audience, and `[authz.party_binding] provider` (the healthcare
+  provider the deployment acts for, EHDS Art. 13(4) and Annex II 3.2(a)) is
+  required once `[auth]` admits a credential; each refuses the start naming
+  what to set. A Basic user is a person: it maps to the binding key of its
+  `PERSON` in `[[authz.party_binding.basic_user]]` (`user`, `key_issuer`,
+  `key`), and a Basic user without a mapping refuses the start, naming the
+  user. Upgrade steps: add an `[[auth.party]]` table to each `persons`
+  issuer, set `provider`, and map each Basic user under the
+  `identifier_issuer` of an `[[auth.party]]` table, which needs a `persons`
+  issuer; a deployment of Basic users alone declares one whose `jwks_file`
+  is a key set that signs nothing, as the quickstart and the sandbox do (#5003).
+
+- A token grants `[authz.rbac] admin_role`, `emergency_access_role`,
+  `import_role` and `identifier_reader_role` only when its issuer is listed
+  in the new `[authz.rbac] role_issuers`, each a `persons` issuer; any other
+  kind refuses the start. Upgrade step: list the issuers whose role claims
+  grant these roles; a Basic user keeps the roles its own table grants (#5003).
+
+- The compose quickstart, the dev and conformance stacks, the hosted sandbox
+  and the Helm chart's Basic overlays bind their Basic users under a
+  `persons` issuer that signs nothing: its key set, which every FerroEHR
+  image carries at `/opt/sandbox-posture/basic-users-jwks.json`, is the
+  public half of a key pair whose private key was discarded (#5003).
+
+- The quickstart has one copy. `docker-compose.yml` on `main` pulls the
+  FerroEHR images at `:main` and carries `main`'s configuration, which CI
+  checks with the server image the change builds; the copy attached to each
+  release pulls that release's images, written by the release lane, which
+  refuses a copy that still names `:main`. Download the release asset
+  (`releases/latest/download/docker-compose.yml`) to run a release (#5003).
+
+- The Helm chart moves to 22.0.0. `config.auth.issuer` is a list of issuer
+  tables, each with its `kind`, `profile` and `audience`, and `values.yaml`
+  exposes `config.auth.party`, `config.authz.party_binding`,
+  `config.authz.rbac.role_issuers`, `config.authz.system_client` and
+  `config.authz.federation.agreement`. The chart refuses an issuer with
+  `sender_constraint: required` beside `replicaCount` above 1 or
+  autoscaling. Upgrade steps: rewrite `config.auth` as the `[auth]` upgrade
+  above describes, set `config.authz.party_binding.provider`, and list the
+  issuers whose roles grant the administrator role in
+  `config.authz.rbac.role_issuers` (#5003).
+
+- A caller bound to a demographic `PERSON` commits under the committer the server writes: a `PARTY_IDENTIFIED` with the `PERSON`'s name, the login identifier (the issuer profile's `person_key` value under the token issuer, type `oauth2`, or the Basic user under `ferroehr`, type `basic`), the provider identifier (type `healthcare-provider`) and an `external_ref` to the `PERSON`, on every commit path, attestations and CONTRIBUTIONs included. Upgrade: stop sending a committer, or send the placeholder `{"_type": "PARTY_IDENTIFIED", "identifiers": [{"_type": "DV_IDENTIFIER", "issuer": "<iss>", "id": "<sub>"}]}`, which must name the authenticated caller; a stated committer with another name, identifier or `external_ref`, and a stated `PARTY_RELATED`, is refused with `403` (#5005).
+
+- A patient's committer is `PARTY_SELF` with no `external_ref`, and a representative commits as a `PARTY_RELATED` naming their own `PERSON` and the coded relationship. A patient-context token commits no demographic version. Upgrade: read the person's own entries by the committer's `PARTY_SELF` type, not by its former `external_ref` (#5005).
+
+- Importing an EHR Extract needs the role `[authz.rbac] import_role` names, or a `system/` caller, and a wrapped committer naming a party or a login of this deployment is refused unless its version was created by a system `[authz.import] trusted_systems` lists. Upgrade: set `import_role` and give it to the accounts that import (#5005).
+
+- A person of a `persons` issuer whose login no demographic party carries is refused with `403` and `refused-unbound` on every request, with no fallback to a login-only committer. The problem names the identifier issuer to provision the person under, a token without the key claim is refused with a problem naming that claim, and each refusal counts into the new `binding_refusals` metric by issuer and outcome. The Keycloak quickstart overlay provisions its four demo users through SCIM with the `ferroehr-provision-keycloak` one-shot. Upgrade: provision every professional (through SCIM or the demographic API) before you add a `persons` issuer to the upgraded deployment (#5006).
+
+- A deployment whose FerroBRIDGE facade or FerroFED gateway writes to
+  FerroEHR adds its `persons` issuers only after the bridge and the gateway
+  reach it under the caller: FerroBRIDGE v0.0.23 and FerroFED v0.0.17. Until
+  then the committer rule refuses their writes. FerroFED v0.0.17 follows this
+  release, so a deployment with a FerroFED gateway adds its `persons` issuers
+  only once that release is out. The book's new "Party binding: bootstrap and
+  migration" page carries the bootstrap path, the four migration steps and
+  these prerequisites, and "Breaking changes of party binding" lists every
+  incompatible change with its upgrade step (#5009).
+
+- The hosted sandbox follows the bootstrap path of party binding: its
+  configuration declares the `sandbox-scim` client (`[[scim.client]]`, with
+  the development issuer trusted as a `machines` issuer for it), the box's
+  new `ferroehr-provision` service provisions the demo `PERSON` through
+  `/scim/v2/` after every reset, and `scripts/sandbox/reseed.sh` waits for the
+  demo login to bind before it seeds, then checks the committer of the
+  marker's `EHR_STATUS` version references a `PERSON`. The deploy probe's new
+  `bootstrap` family (`P-BOOTSTRAP-01`) shows the compose quickstart does the
+  same from an empty database: the quickstart user is a User of the SCIM
+  client, and a commit of the Basic user names that `PERSON` (#5009).
+
+- With a party mapping configured, the parties the login binding relies on are written through the demographic API by an administrator (`authz.rbac.admin_role`) only: a `PERSON` of a mapped template carrying a binding key, `userName` or `externalId`, its professional `ROLE`, a representation relationship, and a `GROUP` of the group template. Any other caller's write is refused with `403`, a version that changes a present binding key is refused with `403`, and an administrator's version that leaves a protected identifier out is refused with `422`. Upgrade: write these parties as an administrator, and change a key through `POST /admin/party/binding-key` (#5013).
+
+- FerroEHR records every DPoP proof it accepts in its PostgreSQL database
+  until the proof's window ends, so a proof is accepted once across all
+  replicas, and a proof replayed to another replica is refused there
+  (RFC 9449 §11.1). If the database cannot record a proof, the request is
+  refused with `503`. The Helm chart (22.1.0) no longer refuses an issuer with
+  `sender_constraint: required` beside `replicaCount` above 1 or autoscaling (#5072).
+
+- An AQL query scoped to one EHR now takes the streaming plan shape whatever
+  its `ORDER BY`, `DISTINCT` or aggregates, whether the EHR comes from the
+  `ehr_id` request parameter or from an `ehr_id/value` equality in the query.
+  On a store of 100,000 compositions such a query used to spend 16 to 64 ms in
+  PostgreSQL's planner for an execution of about 1 ms, on every new connection
+  and every new statement text; it now plans in 1 to 3 ms (#5076).
+
+- The Helm chart (23.0.0) connects FerroBRIDGE to the CDR as a machine.
+  FerroBRIDGE uses an OAuth 2.0 client credentials client of a `machines`
+  issuer that the CDR trusts, set in `bridge.cdr.oauth` (`issuer`, `clientId`,
+  and optionally `scope`, `audience` and `resource`). The client secret comes
+  from the `client_secret` key of `bridge.cdr.existingSecret`. The chart no
+  longer accepts a Basic user for this connection: from ferrohealth-smart 0.9
+  a Basic credential belongs to a person and holds no `system/` scope. The
+  chart refuses to render when `bridge.cdr.oauth.issuer` is not listed in
+  `config.auth.issuer` with `kind: machines`. To upgrade, add that issuer,
+  create the client, and replace the `user` and `password` keys of the Secret
+  with `client_secret` (#5085).
+
+- A verified external person's commit records the professional as its committer: a `PARTY_IDENTIFIED` with the asserted name, the `hp_identifier` under the issuer `"<country_code>:<issuing_authority_name>"` and the token's `iss` and `sub`, with no `external_ref`. A country code that is no upper-case ISO 3166-1 alpha-2 code, or an issuing authority holding a `:`, control or bidi character, is refused with `403` naming the field. The COMPOSITION must name the token's healthcare provider (`provider.healthcare_provider_identifier` under `provider.issuing_authority_name`) as its `health_care_facility`, or it is refused with `422`. Upgrade step: map `provider.issuing_authority_name` in each `[[auth.federation]]` table whose agreements carry `writes`, with a `constant` source where the token does not carry it (#5097).
+
+- A system caller (an app-only token by its issuer profile's `app_only` markers) holds `system/` scopes only: a token carrying a `user/` or `patient/` scope is refused with `403`. It commits into an EHR only as a client an `[[authz.system_client]]` table declares, under the committer `PARTY_IDENTIFIED{name = <client>, identifiers = [{issuer = <iss>, id = <client>, type = "client"}]}`, and each COMPOSITION it commits must be of a template its `writes` lists (`403`), name a facility its `facilities` lists in `context.health_care_facility`, or in `feeder_audit.originating_system_audit.location` when it has no context (`422`), and be either a device act from a `device` client or a relayed person act naming the professional by an identifier from a `relay` client. Upgrade: declare every client that commits in `[[authz.system_client]]` with its `writes`, `facilities` and `origins`, and give its compositions the facility identifier (#5100).
+
+- An attestation is accepted only from a caller bound to a professional `PERSON`; one from a patient, a representative, a system caller or an unbound caller is refused with `403`. Upgrade: attest under the professional's own token (#5100).
+
+- A guest of a `persons` issuer, by its profile's `guest` markers, is refused with `403` (`refused-guest`) unless the issuer's `[[auth.party]]` table sets `guests = true`. Upgrade: set `guests = true` on the issuers whose guests act under your responsibility (#5100).
+
+- A verified external person or organisation of a `federation` issuer is admitted only under the `[[authz.federation.agreement]]` of its issuer and accessor, holding no scope beyond the agreement's `reads`, and is an access-service caller by its kind: an opted-out EHR answers `404` to it, and only an external person under an agreement with `opt_out_override` reaches one under an emergency purpose. It commits only a COMPOSITION of a template the agreement's `writes` lists (an organisation nothing), and a read under a `consent`-conditioned agreement, and every request under an NL agreement, is refused until the consent decision reference and the Wabvpz Art. 15f roles can be read. Upgrade: declare an agreement for every `federation` issuer and accessor, list the issuer in `[smart] patient_issuers`, and give its tokens only the `patient/` scopes the agreement reads (#5101).
+
+- Under an NL `[[authz.federation.agreement]]`, Wabvpz Art. 15f now decides admission in place of the refusal of every request. A caller whose `nl.role` is the UZI role 01.008 (bedrijfsarts) or 01.048 (verzekeringsarts) is refused with `403` as `refused-wabvpz-role`, and a caller whose `nl.organisation_type` is missing or is not a care provider type of Nictiz's `OrganisatieTypeCodelijst` is refused with `403` as `refused-wabvpz-organisation-type`, so an insurer is refused. Every NL agreement declares `purpose = "care"`; one without a purpose, or for a `keuring`, refuses the start. The code lists are vendored by `scripts/vendor/nl-role-codes.sh` into `docs/specs/nl-role-codes/`. Upgrade: add `purpose = "care"` to every NL agreement and map `nl.organisation_type` (and `nl.role` for persons) in its issuer's `[[auth.federation]]` table (#5107).
+
+- A delegated token's access record now has `acting_mode = "delegated"` where it had `client`, and a system caller's `system`. The FHIR rendering still names a delegated access as a client one. Upgrade: a review query that selects delegated access by `acting_mode = 'client'` also selects `'delegated'` (#5118).
+
+- FerroEHR builds on `ferrohealth-server` 0.6.1, whose public caller-rate take
+  holds a federation caller to its agreement's `caller_rate`. Its 0.6.0 break,
+  the `revocation` feature's move to `der` 0.8, touches no feature FerroEHR
+  enables (#5149).
+
+- The source tree no longer carries the UZI role code CodeSystem
+  (`uzi-rolcode`) of Nictiz's zib 2020 package: its codes and titles
+  reproduce the UZI-register CPS, which CIBG does not license for
+  reproduction. `scripts/vendor/nl-role-codes.sh` writes it into the
+  git-ignored `.vendor-cache/nl-role-codes/`, as it does the CPS, and
+  `--test-inputs` fetches only what the Wabvpz tests read. Nictiz's care
+  provider types stay under `docs/specs/nl-role-codes/`. Run
+  `scripts/vendor/nl-role-codes.sh --test-inputs` once before running the
+  `ferroehr-rest` tests (#5175).
+
+- `[auth]` takes three boot refusals from `ferrohealth-smart`: a Basic
+  user's hash below the Argon2id floor (m=19456, t=2, p=1), an issuer that
+  carries `userinfo`, and private or symmetric key material in a
+  `jwks_file`. They are refused as before, with the crate's messages. A
+  `jwks_file` that is no JWK Set now refuses the start where the crate
+  reads the key set (#5209).
+
+- The family crates move together to one `ferrohealth-smart`: 0.13.1, with
+  `ferrohealth-authz` 0.7.0, `ferrohealth-session` 0.7.0, `ihe-atna` and
+  `ehds-logging` 0.8.0, `ihe-iti` 0.0.83, `ferrohealth-server` 0.6.4 and
+  `ferrobridge-term` 0.1.148. The 0.13 line refuses a JSON document it
+  cannot read without quoting it (GHSA-mhv7-3975-6xq3), so a `jwks_file` or
+  `[smart] issuer_metadata_file` that does not parse is refused at boot
+  with the crate's message, which names the failure class and position;
+  0.13.1 keeps a refused key set, introspection or metadata body out of the
+  error (GHSA-5qm7-v4fw-p2v9). The
+  OAuth client credentials tables (`[authz.abac.remote.oauth]`,
+  `[ehr_index.oauth]`, `[terminology.oauth]` and `[audit.fhir_feed.oauth]`)
+  read as before (#5209).
+
+- The API's response security headers come from the family server stack
+  (`ferrohealth-server` 0.6.2) with the same six headers and values. They now
+  also reach the management listener on its own port, and
+  `Strict-Transport-Security: max-age=31536000` is sent when FerroEHR or the
+  viewer serves TLS itself (`[server.tls]`, RFC 6797 §7.2). The viewer gains
+  `Cross-Origin-Resource-Policy: same-site` (#5210).
+
+- The server and the viewer read the parts of an `OBJECT_VERSION_ID` through
+  `openehr-base` and its BASE grammar, never by cutting at `::`. A value that
+  is no `OBJECT_VERSION_ID` now names no version: the AQL branch refusal, the
+  version item tags and the viewer's version numbers leave it alone, a
+  reference to a container is read as the whole value (so `uuid::extension`
+  no longer names the container `uuid`), and the viewer's deletes refuse it
+  before calling the CDR. Every part keeps its case (#5211).
+
+- `ETag` and `If-Match` values are read through `openehr-its`'s RFC 9110
+  entity tag on the server and in the viewer. The server accepts the same
+  forms as before. The viewer reads its CDR's `ETag` strictly: a value that
+  is no entity tag names no version (#5212).
+
+- The viewer's audit screen reads the ITI-81 searchset and each `AuditEvent`
+  as FHIR R4 resources, and a refusal's `OperationOutcome` too. A searchset
+  that is no FHIR R4 `Bundle` of `AuditEvent`s now shows as a failed read,
+  never as a page of empty rows (#5214).
+
+- The EHR index's boot check reads the PIX Manager's `CapabilityStatement`
+  through `ihe-iti`'s PIXm client, with its transport and its
+  client-credentials token, so a Manager behind IUA answers the probe as it
+  answers ITI-83. A failed probe is reported as the client's refusal: no
+  answer, the status it answered, or no FHIR R4 `CapabilityStatement` (#5216).
+
+- `[audit.syslog]` reads its TLS material from `[audit.syslog.tls]`, the
+  outbound TLS table of every FerroHEALTH product (`trust_roots_file`,
+  `client_identity_file` or `client_identity`, `min_version`), and hands
+  `ihe-atna` the rustls configuration `ferrohealth-server` builds from it.
+  The keys `tls_ca_file`, `tls_identity_cert_file` and
+  `tls_identity_key_file` are retired and refused at boot by name: name the
+  roots file as `trust_roots_file`, and concatenate the client certificate
+  chain and its private key into the one PEM `client_identity_file` names.
+  The client speaks TLS 1.3 unless `min_version = "1.2"` lowers it (#5217).
+
+- A SCIM Group membership is now held by the member: an inline `PARTY_RELATIONSHIP` from the member's `PERSON` to the `GROUP`, stored in the `PERSON`'s version (RM demographic §Party Relationships). A membership change versions only that `PERSON`, so its cost no longer grows with the Group's size. The `GROUP` is versioned only by a rename, an `externalId` change or its deletion. The Group's `members` is read from the membership index (#5220).
+
+- A Group's `ETag` is now its `GROUP` version plus a membership revision, so it still changes with every membership change. The member User's `ETag` now changes too, while its body stays the same (#5220).
+
+- Deactivating a User (`active = false`) drops all of its memberships in the same version, because an inactive `PERSON` cannot be versioned again. A reactivated User belongs to no Group until its client adds it again (#5220).
+
+- Microsoft Entra ID's disable-then-remove order now succeeds, since the later `remove` finds nothing to remove. An `add` naming an inactive User is `400 invalidValue` ("reactivate the User first") (#5220).
+
+- A refused SCIM write now names the rule it breaks in `detail` (#5220).
+
+- `scripts/perf/scim-groups.sh` keeps the database log, `df -h` and `free -m` of a failed run (#5220).
+
+- A party commit no longer re-derives the login binding's side table, the reverse-relationship index and the protection check from the whole stored body. Each hook reads what the committed body holds, derived once in memory, and writes only the rows that changed, and `ferroehr party-binding refill` derives the rows with the same code. A party commit without a server signature no longer reassembles its body. A membership change at the cap of a 5 000-member SCIM Group went from 810 ms to 358 ms at p99 on a developer laptop (#5220).
+
+- `openehr-rm` writes the RFC 8785 canonical form a `VERSION` signature covers in one pass over the version, sorting each object's members by reference. A 3.3 MB `GROUP` version canonicalises about seven times faster than through `serde_jcs`, with byte-identical output, so signed versions verify unchanged. `serde_jcs` remains the test oracle (#5220).
+
+- The stored-query service takes the typed name, version and version pattern of `openehr_its::rest::stored_query` end to end, so it reads one grammar with the REST layer: the three-part `{namespace}::{formalism}::{query-name}` name, which ITS-REST 1.1.0 `Qualified_query_name.md` does not define, is no longer accepted anywhere (the formalism is the `query_type` parameter), and `DELETE /admin/query/{qualified_query_name}/{version}` answers `400` for a name outside `[{namespace}::]{query-name}` or a version that is no exact `major.minor.patch`, where it answered `404` (#5223).
+
+- Boot and `ferroehr config check` refuse an `[[auth.party]]` table whose `identifier_type` is the `type` of no `[[authz.party_binding.person.template]]` `key`, naming the issuer, the type and the types the templates write: no login of such an issuer could ever match a party, and every one would be refused. Upgrade step: give the deployment a person template whose key carries the table's `identifier_type` (or set the table to the type the template writes). The Helm CI and production values and the hosted sandbox now carry the professional PERSON and ROLE mapping, and the sandbox loads the two templates before the CDR starts (#5231).
+
+- `openehr_query::printer::to_aql` writes each `WHERE` comparison with one space on each side of the operator (`c/name/value = $nameValue`), as the QUERY 1.1.0 AQL syntax examples do; path predicates keep their unspaced form (`[ehr_id/value=$ehrUid]`). The query builder's generated AQL follows (#5241).
+
+- `openehr_sdt::flat::navigate::Navigator` owns what it copies from its Web Template (the name-fallback table and the OPT2 archetype references) and carries no template lifetime, so a consumer can keep it beside the template it was built from; it is `Debug`, `Clone`, `Send` and `Sync` (#5243).
+
+- **Breaking: the configuration tree is one table per concern.** `ferroehr.toml`
+  moves to `[deployment]`, `[api]`, `[database]`, `[auth]` (with `[auth.smart]`
+  and `[auth.scim]`), `[authz]` (with `[[authz.origin]]`), `[management]`,
+  `[audit]`, `[privacy]` (with `identifier_protection`, `cohort` and
+  `access_delay`), `[record]` (with `subject_index`, `versioning`, `signing`,
+  `query`, `change_feed` and `multimedia`), `[terminology]` and `[pixm]`.
+  FerroEHR's own keys take one duration type (`"500ms"`, `"30s"`, `"10min"`,
+  `"12h"`, `"7d"`, UCUM unit codes, so a bare number and `m` are refused), one
+  size type (`"256KiB"`, `"64MiB"`, IEC binary units, decimal units refused)
+  and one calendar retention period (`"P5Y"`, `"P1830D"`, unset keeps forever).
+  An optional feature is on when its table is present: `[terminology]`,
+  `[pixm]`, `[auth.scim]`, `[audit.syslog]`, `[audit.fhir_feed]`,
+  `[privacy.identifier_protection]` and `[privacy.access_delay]` carry no
+  `enabled`; `[authz.abac]`, `[record.multimedia]` and `[auth.smart]` keep a
+  switch because some of their keys apply while off. `record.subject_index`
+  has no default, so the server refuses to start until `"pixm"` or `"local"`
+  is chosen. `[api.cors]` replaces `cors_permissive` with the Fetch Standard
+  response headers (`allow_origins`, `allow_methods`, `allow_headers`,
+  `expose_headers`, `allow_credentials`, `max_age`). The environment follows
+  the tree (`FERROEHR__DB__URL` is `FERROEHR__DATABASE__URL`,
+  `FERROEHR__EHR_INDEX__PROVIDER` is `FERROEHR__RECORD__SUBJECT_INDEX`). The
+  Helm chart moves to its 25 line with `config:` on the same tree. Every key a
+  release before v5.7.0 read is refused at load with its replacement named,
+  all at once, so `ferroehr config check --config <old file>` prints the whole
+  move list; the refusals ship in v5.7.0 only and the next release removes
+  them. To upgrade, run `config check` on the old file and move each key it
+  names:
+  `spec_profile`, `deployment_profile`, `deployment_accepts` and
+  `licence.file` are `deployment.spec_profile`, `deployment.profile`,
+  `deployment.accepts` and `deployment.licence_file`;
+  `[rest]` is `[api]` (`swagger_ui` is `openapi_ui`, `body_limit_bytes` is
+  `body_limit`, `cors_permissive = true` is `[api.cors] allow_origins = ["*"]`,
+  `[rest.identity]` is `[api.options]` with `solution` and `vendor`; the
+  version keys are facts of the build), `admin.enabled` is `api.admin` and
+  `terminology.api_enabled` is `api.terminology`;
+  `[db]` is `[database]` (`acquire_timeout_secs` is `acquire_timeout`,
+  `statement_timeout_ms` is `statement_timeout`, `migrate` is `migrations`),
+  `[storage.<domain>]` is `[database.<domain>]` and
+  `[storage.migrate.<domain>] url` is `[database.<domain>] migrate_url`;
+  `[smart]` is `[auth.smart]` (`enabled` is `discovery`, `episode.enabled` is
+  `episode_launch`, `launch_base64_json = true` is `"launch-base64-json"` in
+  `auth.capabilities`);
+  `[scim]` is `[auth.scim]` (`max_results` is `filter_max_results`,
+  `deactivation_window_minutes` is `deactivation_window`,
+  `contact_erasure_minutes` is `contact_erasure_delay`);
+  `[authz.abac.cedar] reload_secs` is `reload_interval`,
+  `[authz.abac.remote] server`, `connect_timeout_ms` and `request_timeout_ms`
+  are `url`, `connect_timeout` and `timeout`,
+  `authz.party_binding.provisional_report_days` is `provisional_report_after`,
+  and an agreement's `discard_window_hours` and `chained_log_retention_years`
+  are `discard_window` and `chained_log_retention`;
+  `[[origins.registered]]` is `[[authz.origin]]`;
+  `management.port` is `management.listen` (an `address:port`) and
+  `management.profiling.max_seconds` is `max_duration`;
+  `audit.store.retention_days` and `retention_years` are `audit.store.retention`,
+  `verify_interval_seconds` and `full_verify_interval_seconds` are
+  `verify_interval` and `full_verify_interval`;
+  `[audit.syslog]` `host` and `port` are `url = "tls://host:port"`,
+  `spool_max_messages` is `spool_max_events`, `spool_max_bytes` is
+  `spool_max_size`, `retry_max_ms` is `retry.max_backoff`, and
+  `[audit.fhir_feed]` `poll_interval_ms` and `retry_max_ms` are
+  `poll_interval` and `retry.max_backoff`;
+  `[demographic.identifier_protection]` is `[privacy.identifier_protection]`,
+  `[cohort]` is `[privacy.cohort]`, and `[access_delay]` is
+  `[privacy.access_delay]` with `hours` as `max_delay`;
+  `ehr_index.provider` is `record.subject_index` (`"ihe"` is `"pixm"`) and the
+  rest of `[ehr_index]` is `[pixm]` (`pixm_url` is `url`, `invocation` is
+  `method`, `request_timeout_ms` is `timeout`);
+  `versioning.skip_identical_resend` is `record.versioning.idempotent_resend`;
+  `[signing]` is `[record.signing]` (`key_path` is `key_file`,
+  `retired_key_paths` is `retired_key_files`), `[query]` is `[record.query]`
+  (`timeout_ms` is `timeout`), `[outbox]` is `[record.change_feed]`
+  (`retention_days` is `retention`, `prune_interval_secs` is
+  `prune_interval`), and `[multimedia]` is `[record.multimedia]` (`endpoint` is
+  `url`, `threshold_bytes` is `threshold`, and `allow_http` is retired: an
+  `http://` url is plain HTTP);
+  `[terminology.server]` is `[terminology]` (`fail_on_error` is
+  `on_error = "accept" | "refuse"`, `request_timeout_ms` is `timeout`).
+  The family sections take the same types, from `ferrohealth-server` 0.8,
+  `ferrohealth-telemetry` 0.4, `ferrohealth-smart` 0.15 and
+  `ferrohealth-session` 0.9: `[server]` `request_timeout_ms`,
+  `header_read_timeout_ms`, `idle_timeout_ms`, `drain_delay_ms`,
+  `shutdown_timeout_ms` and `retry_after_s` are `request_timeout`,
+  `header_read_timeout`, `idle_timeout`, `drain_delay`, `shutdown_timeout` and
+  `retry_after`, `body_limit_bytes` and `compression_min_bytes` are
+  `body_limit` and `compression_min_size`, and `[server.tls]
+  reload_interval_s` is `reload_interval`; `[telemetry.otlp]`
+  `trust_roots_file` and `client_identity_file` move into
+  `[telemetry.otlp.tls]`, and an `https://` collector is dialed over it;
+  `[auth] ca_file` is `[auth.tls] trust_roots_file`, an `[[auth.issuer]]`
+  table's `clock_skew_seconds`, `jwks_max_age_seconds`,
+  `jwks_refresh_interval_seconds` and `timeout_ms` are `clock_skew`,
+  `jwks_max_age`, `jwks_refresh_interval` and `timeout`, its introspection
+  `cache_max_age_seconds` is `cache_max_age`, `[auth.basic]
+  cache_ttl_seconds` is `cache_ttl`, `[auth.dpop]` `max_age_seconds` and
+  `clock_skew_seconds` are `max_age` and `clock_skew`, `[auth.idp.entra]`
+  `timeout_ms` and `max_response_bytes` are `timeout` and
+  `max_response_size`, and an `oauth` grant's `ca_file`,
+  `client_certificate_file` and `client_key_file` are its `tls` table's
+  `trust_roots_file` and `client_identity_file` (one PEM), with
+  `refresh_margin_ms`, `timeout_ms` and `previous_key_overlap_ms` as
+  `refresh_margin`, `timeout` and `previous_key_overlap`. The `[auth]` keys
+  v5.6 read for every issuer (`audience`, `algorithms`, `token_profile`,
+  `jwks_file`, `mode`, `introspection`, `role_claims` and the rest) live on
+  each `[[auth.issuer]]` table, and `scopeless_subjects` entries are
+  `{ issuer, sub }` tables. In the viewer, `cdr.request_timeout_secs` is
+  `cdr.timeout`, `[oidc] ca_file` is `[oidc.tls] trust_roots_file`,
+  `[oidc.tls]` `client_certificate` and `client_key` are
+  `client_identity_file`, and `[session]` `idle_timeout_s`,
+  `absolute_timeout_s` and `sign_in_timeout_s` are `idle_timeout`,
+  `absolute_timeout` and `sign_in_timeout`. Each of these is refused in
+  v5.7.0 naming its replacement, in the CDR and the viewer alike (#5259).
+
+- **Breaking: a `patients` token that names an actor is refused.** With
+  `ferrohealth-smart` 0.15, a `patients` issuer reads a token whose top-level
+  `act` (RFC 8693 §4.1) names someone other than the patient only when its
+  `[[auth.issuer]]` table sets `act_represents_patient = true`; without it the
+  token is refused `401`, where v5.6 admitted it as the patient's own access.
+  With it, FerroEHR refuses the token `403`
+  (`refused-patient-representative`), because it binds no party to someone
+  acting for a patient, and the access log records the refusal (#5259).
+
+- `SECURITY.md`, `security.txt` (its `Contact: mailto:` field), the
+  post-market record, the CRA technical documentation and the book's
+  compliance pages name `security@cadasto.com` as the email route for a
+  vulnerability report, in place of `info@cadasto.com`, which stays the
+  single point of contact for complaints and incidents, the manufacturer's
+  address on the running server and the address for licensing and other
+  business questions (#5272).
+
+- `ferroehr` and `ferroehr-viewer` run through the FerroHEALTH family's run path. A configuration either binary refuses (an unknown or invalid key, a broken semantic rule, an `[auth]` table with no mechanism, a SCIM mapping it cannot serve, or for the viewer a TLS file that does not read or an unusable `[oidc]` or `[session]` table) now exits `78` (`EX_CONFIG` of `sysexits(3)`) where it exited `1`, so an orchestrator can tell a configuration to fix from a failure to retry. Every other failure still exits `1`, and the failure is written to stderr as one line with its whole cause, prefixed with the binary's name. Upgrade: a script or probe that expects exactly `1` from `config check` on a refused file expects `78` (#5321).
+
+- **Breaking: the outbound integrations take the family's endpoint table.**
+  `[terminology]`, `[pixm]`, `[audit.fhir_feed]` and `[authz.abac.remote]`
+  read where they call and
+  how from one `[<x>.endpoint]` table, the same keys for every outbound
+  integration of every FerroHEALTH product: `url`, `timeout`,
+  `connect_timeout`, `retry` (`max_attempts`, `initial_backoff`,
+  `max_backoff`), `tls` (`trust_roots_file`, `client_identity_file`,
+  `min_version`) and `credentials` (HTTP Basic `user` with `password` or
+  `password_file`, or the client credentials grant `[...credentials.oauth]`).
+  `terminology.url`, `timeout` and `[terminology.oauth]` are
+  `terminology.endpoint.url`, `timeout` and
+  `[terminology.endpoint.credentials.oauth]`; `pixm.url`, `timeout`,
+  `[pixm.tls]` and `[pixm.oauth]` are `pixm.endpoint.url`, `timeout`,
+  `[pixm.endpoint.tls]` and `[pixm.endpoint.credentials.oauth]`;
+  `audit.fhir_feed.url`, `[audit.fhir_feed.retry]` and
+  `[audit.fhir_feed.oauth]` are `audit.fhir_feed.endpoint.url`,
+  `[audit.fhir_feed.endpoint.retry]` and
+  `[audit.fhir_feed.endpoint.credentials.oauth]`; `authz.abac.remote.url`,
+  `connect_timeout`, `timeout` and `[authz.abac.remote.oauth]` are
+  `authz.abac.remote.endpoint.url`, `connect_timeout`, `timeout` and
+  `[authz.abac.remote.endpoint.credentials.oauth]`. The v5.6 keys are refused
+  naming their new home. Every client now honours `retry`: the terminology,
+  PIXm and remote policy clients try a call that got no answer or a `5xx` up
+  to `max_attempts` times (three by default; each tried once before), so set
+  `max_attempts = 1` to keep one attempt, and the FHIR feed's delivery rounds
+  take `max_attempts` tries each, from `initial_backoff`, before the round
+  waits `max_backoff`; the feed still never gives a record up. The environment
+  follows the tree (`FERROEHR__TERMINOLOGY__ENDPOINT__URL`,
+  `FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL`), and so do the Helm chart's
+  values and its client secret routing, in the chart's 25 line (#5331).
+
+- **The FerroEHR PostgreSQL image is built on the 2026-11-09 respin of
+  `postgres:18.6`** (`sha256:e3d24f69…`), a same-version respin with rebuilt
+  base packages. A full scan of the rebuilt image on amd64 and arm64 finds the
+  same findings as the image of the previous base, each judged in
+  `security/vex/postgres-os.openvex.json`, and a gate scan finds no fixable
+  HIGH or CRITICAL finding (#5332).
+
+- The development and Keycloak example compose files run Keycloak 26.8.2
+  (`quay.io/keycloak/keycloak:26.8.2@sha256:723b1d6e…`). Of the 26.8.2
+  upgrading notes, the shipped realm meets the ones that touch it: the Admin
+  REST API's new audience check passes for the master realm's `admin-cli`
+  token the browser-test harness uses, and the realm uses no token exchange,
+  identity broker, SAML client, CIBA or dynamic client registration. The
+  `ferroehr-service` client-credentials token carries the same audience and
+  scopes as under 26.8.1 (#5333).
+
+### Removed
+
+- `[authz.professional]` (`claim`, `client_tokens`, `acting_for_claim`) and
+  its `403` for a token that names no natural person. The issuer's `kind`
+  and profile classify the caller, and the access record's acting mode and
+  professional come from that classification: a person's own token is the
+  person, and a delegated token is the client acting for the person it
+  names. Upgrade step: remove the table, which refuses the start, and list a
+  client that acts for a person in its issuer's `delegates` (#5003).
+
+- The named refusal of `authz.rbac.user_role`, which v5.6 introduced, is gone
+  under the one-release rule for removal aids: the key is now refused as an
+  unknown key when the configuration loads (#5259).
+
+### Fixed
+
+- A `553|incomplete|` commit no longer refuses an empty mandatory archetype
+  slot: RM common master06 §Incomplete Content sets every occurrences lower
+  limit to zero, a slot's included, while too many fillers are still refused.
+  The OPT 1.4 writer now closes a mandatory slot once the fillers placed in it
+  carry its lower bound, as ADL 2 §Slot Filling and Redefinition allows, and
+  still refuses to close one they leave unmet (#5042).
+
+- The example of a party template whose identity the template marks optional
+  is a party of its class carrying one identity at every detail level, where
+  the `required` level answered `500`: RM demographic `PARTY.identities` admits
+  no party without one. A party template that constrains no identity at all
+  answers `400 Bad Request` naming its class (#5057).
+
+- An AQL `VERSION` standard predicate on `commit_audit/time_committed` applies its operator: `VERSION v[commit_audit/time_committed/value > $t]` returns every version committed after `$t`, where it returned the trunk version current at `$t` whatever the operator (QUERY 1.1.0 master03 §Standard predicate). A number, boolean or `NULL` literal as the bound, a string bound no ISO 8601 form reads, and a `time_committed` path other than the whole value or `/value` are refused with `400` (#5062).
+
+- AQL refuses a number, boolean or `null` parameter or literal compared with a date/time path, in `WHERE` and in a `VERSION` predicate, with the same `400` a non-ISO 8601 string gets; such a bound used to become `NULL` and match nothing (#5064).
+
+- The served OpenAPI document now lists, on both template example operations,
+  the `400` answered for a party template that constrains no `PARTY_IDENTITY` (#5066).
+
+- The compose quickstart, the hosted sandbox and the Helm chart run FerroPIX
+  0.0.18 (`ghcr.io/ferrohealth/ferropix:0.0.18@sha256:6fb622b5b9ade34c8a4053112c8f166ff495d8b32bf99f35529d01e512b7cc42`),
+  with the FerroPIX chart 0.3.10 built for it. The 0.0.16 they pinned had an
+  outbox sender that never slept while its outbox was empty, so an idle
+  install kept about 1.2 CPU cores busy between FerroPIX and its PostgreSQL
+  at about 8,000 transactions a second (FerroHEALTH/FerroPIX#490). 0.0.18
+  also makes FerroPIX's `[auth] scopeless_subjects` and `role_claims` hold
+  per issuer, which changes nothing for a FerroPIX that trusts one issuer, as
+  every configuration FerroEHR ships does. The chart moves to 21.0.5 (#5073).
+
+- An OPT2 built from a template that specialises a published archetype now
+  carries that archetype, by its full id, as `parent_archetype_id`, as the
+  `OPERATIONAL_TEMPLATE` invariant `is_specialised` requires (AOM2 §3.6.6), so
+  a reader of the OPT finds the archetype its root specialises. The
+  ADL form of an OPT still prints no `specialize` section (OPT2 §Artefact
+  Structure), so the parent travels in the canonical JSON form (#5075).
+
+- A `refused-key-claim-missing` access record names the key claim the issuer's binding reads (its `person_key`) in `binding_detail.claim`, so an operator sees which claim the token lacked. It records the name only, never a claim value (#5139).
+
+- A `403` for a caller kind is recorded with its own binding code: `refused-system-personal-scope` for a system caller holding a `user/` or `patient/` scope, `refused-no-agreement` for an external caller whose issuer has no agreement for its accessor kind, and `refused-scope-beyond-agreement` for an external caller holding a scope its agreement does not read. Audit migration `0024` widens the `binding` constraint; the problem text of each refusal is unchanged (#5140).
+
+- `openehr-sdt` builds no `/context` node, and no `start_time` or `setting`
+  leaf, in the Web Template of an OPT 1.4 whose COMPOSITION prohibits
+  `context` (existence `0..0`, or an `EVENT_CONTEXT` of occurrences `0..0`),
+  and the template example of such a template carries no `context`. A
+  template that leaves `context` open or optional keeps the node as before (#5147).
+
+- `openehr-sdt` gives the `/context` node it synthesizes in a Web Template the
+  `min` of the template's existence on `COMPOSITION.context`, and `0` where the
+  template leaves `context` unconstrained, since the RM makes `context`
+  optional (`0..1`). A client following the Web Template no longer treats the
+  context as mandatory when the template does not require it, and the
+  `required` template example of such a template carries no `context` (#5154).
+
+- An ADL2 template that deletes an attribute (`existence matches {0}`), for
+  example `COMPOSITION.context`, keeps the prohibition after it compiles to its
+  operational template: `openehr-adl`'s `create_opt` now returns a `RawOpt`
+  that names each removed attribute beside the OPT, and
+  `build_web_template_v2_4` takes that list. A template that deletes `context`
+  gets no `/context` node, and a commit that carries one is refused, as it is
+  for an OPT 1.4 template that prohibits `context`. An OPT2 uploaded already
+  compiled carries no such list and reads a deleted attribute at its
+  reference-model existence. Breaking for crate users: `create_opt` returns
+  `RawOpt` and `build_web_template_v2_4` takes the prohibited attributes (#5154).
+
+- A composition commit whose `template_id` names a stored ADL2 archetype
+  rather than a template is refused with `422` as an unknown operational
+  template; it failed at the insert with a server error before (#5177).
+
+- `openehr-rm` types `REFERENCE_RANGE.range` as `DV_INTERVAL<T>`: `ReferenceRange` is now generic over its limit type (`ReferenceRange<DvQuantity>` on a `DV_QUANTITY`, `ReferenceRange<DvOrdered>` on the other ordered types), its `is_in_range` and `Range_is_simple` work at that type, and the static RM model gives `REFERENCE_RANGE.range` and `IMPORTED_VERSION.item` their argument. Each `model::RmAttribute` and `model::RmTypeRef` now keeps the formal parameter it is written as (`formal`, `Some("T")` for `DV_INTERVAL.lower`) beside the resolved bound. The RM class table declares `REFERENCE_RANGE<T>` and leaves `T` unused; the generator restores it from a cited table and refuses a schema that no longer matches (#5196) (#5188).
+
+- An access record names the client the token's issuer profile reads from `client_claims` (`azp` under the `entra` and `keycloak` profiles), the one the caller was admitted as. A token carrying a different `client_id` claim beside it was recorded under that claim. The `[origins]` register and the SCIM client lookup read the same client (#5194).
+
+- An `Interval` or `DV_INTERVAL` read from canonical JSON or XML that omits a boundedness or inclusion flag now takes it from its bound. An absent bound reads as unbounded and not included, and a present bound as bounded and included. A flag the wire states is kept as written. Before, an omitted flag always read as bounded and included, so an interval with only an `upper` came out with a bounded, included lower side that had no value. ITS-JSON requires all four flags, and BASE ties none of them to its bound, so reading the omission is our own design (#5203).
+
+- The viewer's New contribution commits as the signed-in login. Each audit carries the placeholder naming that login, and the server records the committer it derives from the login. The free-text committer field is gone. For a login bound to a demographic `PERSON`, a stated name that differs from the `PERSON`'s name was refused with `403` (#5222).
+
+- The management surface answers a caller the login binding refuses with
+  `403` and its binding code, such as `refused-unbound`, as every other
+  route does, in place of `401`: the credential authenticated, so new
+  credentials cannot help (RFC 9110 §15.5.4). An absent or invalid
+  credential still answers `401` with its challenge (#5250).
+
+- The party binding posture in `ferroehr report` and the boot log masks the
+  user name and password of an issuer URL, as every other rendering of the
+  configuration does (#5259).
+
+- `GET /definition/query/{namespace}::` lists every stored query in the namespace again, where it answered `400` since the typed stored-query name: ITS-REST 1.1.0 `definition_query_list` reads its name as a pattern in which an empty part is a wildcard, so `::{name}` also lists the names that start with it in any namespace. `openehr-its` gains `rest::stored_query::QueryNamePattern`, the type the generated `DefinitionQueryListParams` carries. The store and the single-query reads still refuse an empty name or namespace (#5268).
+
+- The identifier scan (`[privacy.identifier_scan]`) reads the `name` of the
+  `ELEMENT` that holds a `DV_IDENTIFIER` when the identifier's `type` is
+  absent or names neither a person nor an item, with the same word rules. An
+  untyped laboratory order number in the `Receiver order identifier` or
+  `Requester order identifier` element of `laboratory_test_result.v1` that
+  passes the NHS Number check by chance is now stored under the default rule
+  set. A person word still wins, so an untyped value in an element named
+  `NHS number` or `Patient identifier` stays scanned, and a `type` that names
+  a kind takes precedence over the element name (#5291).
+
+- The Helm chart's description and README name `config.deployment.profile`,
+  the key the chart refuses to render without since 5.7.0, and the README's
+  install command sets it; the command it showed set the old
+  `config.deployment_profile` and did not render (chart 25.0.1) (#5341).
+
+### Security
+
+Shipped with functional changes because: the advisory reaches only a deployment that trusts several issuers, which no configuration FerroEHR ships does, and its fix changes what such a configuration must state at boot, so it lands on main beside the AQL version attestations already merged for this release; a security-only patch of the last release remains open to the release cut.
+
+- A Basic user never carries a `system/` scope, through `ferrohealth-smart`
+  0.9.1 (GHSA-jhg2-jwjp-hq74, CWE-269, CWE-863). A `system/` scope granted
+  to a Basic user gave that person every resource of a type, a backend
+  service's reach. Such a user now refuses the start, naming the user and
+  the scope. Upgrade step: give each Basic user the `user/` scopes a person
+  holds, and move each machine on Basic to a client of the authorization
+  server under the client credentials grant (#5003).
+
+- `[auth] scopeless_subjects` and `role_claims` hold per issuer, through
+  `ferrohealth-smart` 0.8.9 (GHSA-pfgx-xq28-2629, CWE-863, CWE-639). Before
+  it, beside several `[[auth.issuer]]` tables both lists applied to every
+  trusted issuer's tokens: a token from any of them whose `sub` was listed
+  met every SMART on openEHR requirement without a scope, and any of them
+  could assert every role the RBAC checks, `ADMIN` included. An entry is now
+  written `<issuer>#<value>` and holds for that issuer alone; beside several
+  issuers a bare entry, or one naming an issuer the section does not trust,
+  refuses the boot. Upgrade step for a deployment with several issuers:
+  write each `scopeless_subjects` entry as `<issuer>#<sub>`, and write each
+  `role_claims` path as `<issuer>#<path>` for the issuers whose roles count
+  (or set `role_claims = []` to read none), since the default
+  `role_claims` is bare and refused. A deployment with one issuer changes
+  nothing (#5047).
+
+- The `ferroehr-postgres` image carries zlib1g
+  `1:1.3.dfsg+really1.3.1-1+deb13u1` from trixie-security, which fixes
+  CVE-2026-76844 and CVE-2026-85091 (HIGH, heap overflows in zlib's gzip
+  writer) and CVE-2026-27171 (MEDIUM, an infinite loop in
+  `crc32_combine64`). The image of 5.6.3 and earlier releases carries
+  `1:1.3.dfsg+really1.3.1-1+b1`, judged `affected` with the upgrade as its
+  action (`security/vex/postgres-os.openvex.json`). The `ferroehr` and
+  `ferroehr-viewer` images keep the distroless base's zlib, which neither
+  program loads (`security/vex/ferroehr-os.openvex.json`) (#5137).
+
+- The `ferroehr` and `ferroehr-viewer` images move to the
+  `gcr.io/distroless/cc-debian13:nonroot` build of 2026-11-08
+  (`sha256:cc66d222…`), whose zlib1g `1:1.3.dfsg+really1.3.1-1+deb13u1`
+  fixes CVE-2026-76844 and CVE-2026-85091 (HIGH, heap overflows in zlib's
+  gzip writer) and CVE-2026-27171 (MEDIUM, an infinite loop in
+  `crc32_combine64`). Neither program loads zlib. The images of 5.6.3 and
+  earlier releases carry `1:1.3.dfsg+really1.3.1-1+b1`, judged `affected`
+  with the upgrade as its action, as the `ferroehr-postgres` image of those
+  releases is (`security/vex/ferroehr-os.openvex.json`) (#5152, #5329).
+
+- CVE-2026-112321, CVE-2026-112322 and CVE-2026-112323 (memory and CPU
+  exhaustion in `kadmind` through the AUTH_GSSAPI handler) and
+  CVE-2026-119079 (CPU exhaustion in the KDC decoding an AS-REQ or TGS-REQ)
+  in MIT Kerberos 5 have no Debian fix for trixie and are judged
+  `not_affected` in `ferroehr-postgres`. The image carries neither `kadmind`,
+  a KDC nor `libgssrpc`, and the PostgreSQL server never decodes either
+  request; the configuration FerroEHR ships enables no GSS-API
+  authentication (`security/vex/postgres-os.openvex.json`) (#5344).
+
 ## [5.7.0-rc1] - 2026-11-10
 
 5.7.0-rc1 is the first release candidate of 5.7.0, published for testing. 5.6.3 stays the stable release: this pre-release moves neither the `latest` image tags, the book under `/docs/latest/` nor the hosted sandbox, it publishes no crates, and it receives no fixes; the next release candidate or 5.7.0 itself replaces it. Before you try it: the configuration is one table per concern with typed durations and sizes, so run `ferroehr config check` on your file first, which names every key a release before 5.7.0 read with its replacement, all at once; every person is bound to a demographic `PERSON`, so each `persons` issuer needs its `[[auth.party]]` table and each Basic user its `[[authz.party_binding.basic_user]]` mapping, with the steps on the book's bootstrap and migration page; and a deployment whose FerroBRIDGE facade or FerroFED gateway writes to FerroEHR adds its `persons` issuers only after FerroBRIDGE v0.0.23 and FerroFED v0.0.17 reach it. Party migrations 0027 to 0032, clinical migration 0035 and audit migrations 0023 to 0025 add the binding, SCIM, DPoP replay and refusal tables, columns and codes. Helm chart 25.0.1-rc1 carries `appVersion` 5.7.0-rc1. Security carries two advisories, GHSA-jhg2-jwjp-hq74 and GHSA-pfgx-xq28-2629, the zlib fixes of CVE-2026-76844, CVE-2026-85091 and CVE-2026-27171 in the three images, and the `not_affected` judgements of four krb5 CVEs in the PostgreSQL image.
@@ -22328,6 +23165,7 @@ but has not yet run in production.
 
 
 [unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.3...HEAD
+[5.7.0-rc2]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.3...v5.7.0-rc2
 [5.7.0-rc1]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.3...v5.7.0-rc1
 [5.6.3]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.2...v5.6.3
 [5.6.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.1...v5.6.2
