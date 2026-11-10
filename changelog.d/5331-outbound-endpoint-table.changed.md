@@ -27,4 +27,4 @@
   waits `max_backoff`; the feed still never gives a record up. The environment
   follows the tree (`FERROEHR__TERMINOLOGY__ENDPOINT__URL`,
   `FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL`), and so do the Helm chart's
-  values and its client secret routing, in chart 25.0.0.
+  values and its client secret routing, in the chart's 25 line.

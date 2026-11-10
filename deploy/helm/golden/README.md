@@ -25,7 +25,7 @@ without a golden is a render nothing compares.
   viewer, FerroBRIDGE and the ServiceMonitor scrape all calling the CDR over
   https and trusting the CA from `service.tls.caExistingSecret`).
 - `production.yaml` — `ferroehr/values-production.yaml`, the overlay the chart
-  ships to users (`deployment_profile: production`: one Secret per storage
+  ships to users (`deployment.profile: production`: one Secret per storage
   domain, the migration Job under `migrate: verify`, a TLS Ingress and a
   NetworkPolicy narrowed to the ingress controller).
 
