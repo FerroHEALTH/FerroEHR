@@ -461,26 +461,33 @@ the marker is the RM's own.
   person, because a professional's token in a patient's context carries it
   too. The rule is the FerroHEALTH family's strict answer, shared through
   `ferrohealth-smart`; the Art. 3(3) delay below asks its broad one.
+- **Who counts as the representative.** A person bound to their own `PERSON`
+  who acts for the patient through a representation relationship FerroEHR has
+  recorded ([how a login is looked up](installation/config-auth.md#how-a-login-is-looked-up)).
+  The rules below hold for the representative exactly as for the person.
 - **The marker.** Every version and CONTRIBUTION the person commits records
-  `PARTY_SELF` as `AUDIT_DETAILS.committer`, the RM's way to say the committer
-  is the record subject (RM common, Audit Details). Its `external_ref` names the
-  login: a `GENERIC_ID` holding the token subject, in the scheme of the token
-  issuer. FerroEHR writes this committer itself and ignores any committer the
-  request names, in the `openehr-audit-details` header or in a CONTRIBUTION
-  body. Every read of the version carries it, an AQL query reads it with
+  `PARTY_SELF` with no `external_ref` as `AUDIT_DETAILS.committer`, the RM's
+  way to say the committer is the record subject (RM common, Audit Details).
+  A representative's records `PARTY_RELATED`, naming the representative's own
+  `PERSON` and the coded relationship. FerroEHR writes this committer itself
+  and refuses one the request states that differs, in the
+  `openehr-audit-details` header or in a CONTRIBUTION body. Every read of the version carries it, an AQL query reads it with
   `v/commit_audit/committer`, the contribution list extension flags the change
   set with `inserted_by_person`, and the viewer names the committer "The person
   or their representative". The marker is part of the stored version, so a
   dump and its restore keep it.
-- **The composer.** A COMPOSITION the person commits names the person
-  (`PARTY_SELF`) or their representative (`PARTY_RELATED`) as its composer.
+- **The composer.** A COMPOSITION the person or the representative commits
+  names the person (`PARTY_SELF`) or their representative (`PARTY_RELATED`)
+  as its composer.
   Any other composer is refused with **403**, so the person cannot present what
   they insert as a professional's.
-- **What the person may change.** The person may update and delete a version
-  whose committer is `PARTY_SELF`. An update or a deletion of a version anyone
-  else committed, a professional or a system, is refused with **403** and a
-  body that names EHDS Art. 5, whether it comes as a direct write or inside a
-  CONTRIBUTION. Nothing is written.
+- **What the person may change.** The person and their representative may
+  update and delete a version whose committer is `PARTY_SELF` or
+  `PARTY_RELATED`. An update or a deletion of a version anyone else committed,
+  a professional or a system, is refused with **403** and a body that names
+  EHDS Art. 5, whether it comes as a direct write or inside a CONTRIBUTION.
+  Nothing is written. The marker is in the version, so the rule holds whatever
+  became of the access record of the write.
 - **What a professional may change.** A professional's writes are unchanged.
   A professional may update or delete an entry the person inserted; the new
   version is the professional's, which the person may then no longer alter.
