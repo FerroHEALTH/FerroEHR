@@ -467,3 +467,60 @@ async fn a_contact_points_dispensation_and_discard_record_the_ida_nameid() {
         "the discard is a logical delete: {body}"
     );
 }
+
+/// #5011: a token of any of the seven authentication classes is admitted,
+/// whatever level country B gave the professional (MyHealth@EU Requirements
+/// Catalogue 10.0.0, the authentication classes of `ferrohealth-smart`'s
+/// contact-point check).
+#[tokio::test]
+async fn a_token_of_every_authentication_class_is_admitted() {
+    let (_db, svc, app) = serve(eprescription(24)).await;
+    let mine = patient_ehr(&svc, "SYNTHETIC-1").await;
+    for class in ferrohealth_smart::federation::contact::AUTHENTICATION_CLASSES {
+        let credential = token(
+            Some("SYNTHETIC-1"),
+            PROVIDER,
+            &json!({ "authentication_method": class }),
+        );
+        let (status, body) = send(&app, "GET", &format!("/ehr/{mine}"), &credential, None).await;
+        assert_eq!(status, StatusCode::OK, "{class}: {body}");
+    }
+}
+
+/// #5011: the access record of a contact point's read carries the HP
+/// Identity Assertion and TRC assertion ids and the authentication class, as
+/// asserted fields, and never the token that carried them.
+#[tokio::test]
+async fn a_contact_points_access_record_carries_its_assertion_ids_and_never_the_token() {
+    let (db, svc, app) = serve(eprescription(24)).await;
+    let mine = patient_ehr(&svc, "SYNTHETIC-1").await;
+    let credential = token(Some("SYNTHETIC-1"), PROVIDER, &json!({}));
+    let (status, body) = send(&app, "GET", &format!("/ehr/{mine}"), &credential, None).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let pool = db.pool();
+    let mut row = None;
+    for _ in 0..50 {
+        row = sqlx::query_scalar::<_, String>(
+            "SELECT to_jsonb(e)::text FROM audit.audit_event e \
+             WHERE binding = 'external' AND operation = 'ehr_get_by_id'",
+        )
+        .fetch_optional(&pool)
+        .await
+        .expect("query");
+        if row.is_some() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    let row = row.expect("the external read is recorded");
+    for asserted in [
+        "urn:uuid:ida-1",
+        "urn:uuid:trc-1",
+        ferrohealth_smart::federation::contact::AUTHENTICATION_CLASSES[4],
+    ] {
+        assert!(row.contains(asserted), "{asserted} is recorded: {row}");
+    }
+    let raw = credential.trim_start_matches("Bearer ");
+    let signature = raw.rsplit('.').next().expect("a signed token");
+    assert!(!row.contains(signature), "the token is never recorded");
+}

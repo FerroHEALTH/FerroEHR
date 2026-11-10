@@ -58,6 +58,11 @@ const CORRELATION_MEMBER: &str = "correlation_id";
 const NL_ROLE_CLAIM: &str = "nl_role";
 /// The claim the issuer carries a Dutch organisation type in.
 const NL_TYPE_CLAIM: &str = "nl_organisation_type";
+/// The claim of a Nuts RFC021 §6 introspection response holding its
+/// Verifiable Presentations.
+const PRESENTATIONS: &str = "vps";
+/// The credential type the deployment declares user-authenticated.
+const EMPLOYEE_CREDENTIAL: &str = "NutsEmployeeCredential";
 
 /// The `[[auth.federation]]` table of [`FEDERATION`]: IHE IUA claims, the
 /// country and issuing authority beside them, the consent decision
@@ -102,6 +107,8 @@ fn federation_table() -> FederationSection {
         attests_authorization_details: true,
         authorization_details_type: Some(ORGANISATION_ACCESS.to_owned()),
         organisation_types: vec![ORGANISATION_ACCESS.to_owned()],
+        presentations_claim: Some(PRESENTATIONS.to_owned()),
+        user_credential_types: vec![EMPLOYEE_CREDENTIAL.to_owned()],
         ..FederationSection::default()
     }
 }
@@ -978,6 +985,43 @@ async fn an_nl_agreement_admits_only_a_care_provider_organisation() {
             "{refused}"
         );
     }
+}
+
+/// #5011: a Nuts token whose Verifiable Presentations carry no credential of
+/// a type the deployment declares user-authenticated is an external
+/// organisation (Nuts RFC021 §6). It reads under the issuer's organisation
+/// agreement, is recorded as `organisation` with no party, and its `sub`,
+/// which names the resource owner, binds nobody.
+#[tokio::test]
+async fn a_nuts_token_without_a_user_credential_is_an_external_organisation() {
+    let (db, svc, app) = serve(vec![agreement(Accessor::Organisation)]).await;
+    let target = ehr(&svc).await.to_string();
+    let nuts = token(&json!({
+        "sub": "did:web:care.example",
+        "client_id": "did:web:requester.example",
+        "ehrId": target,
+        PRESENTATIONS: [{
+            "type": ["VerifiablePresentation"],
+            "verifiableCredential": [{
+                "type": ["VerifiableCredential", "NutsOrganizationCredential"],
+                "credentialSubject": { "id": "did:web:requester.example" }
+            }]
+        }],
+    }));
+    assert_eq!(read(&app, &target, &nuts, None).await, StatusCode::OK);
+    let (binding, mode, _, _) = stored(&db.pool(), "organisation").await;
+    assert_eq!(
+        (binding.as_str(), mode.as_str()),
+        ("organisation", "external")
+    );
+    let party: Option<Value> = sqlx::query_scalar(
+        "SELECT party FROM audit.audit_event \
+         WHERE operation = 'ehr_get_by_id' AND binding = 'organisation'",
+    )
+    .fetch_one(&db.pool())
+    .await
+    .expect("query");
+    assert_eq!(party, None, "the resource owner's sub binds nobody");
 }
 
 /// A professional's token whose `ihe_iua` extension is `edit`ed.
