@@ -198,8 +198,10 @@ server). Its person agreement names the service it serves in `ehdsi_service`
 
 - The token carries the patient of the treatment relationship confirmation
   in `ehdsi.patient.id`, as `system|value`, the patient identifier's
-  assigning authority and value. A token without it, or with a value of
-  another form, is refused with `403` whose `detail` opens with
+  assigning authority and value, the form every family resource server
+  reads. A token without it, or with a value of another form (an empty
+  system or one with whitespace, or a value holding a control character,
+  `|`, `^`, `&`, `~` or a backslash), is refused with `403` whose `detail` opens with
   `ERROR_SEC_DATA_INTEGRITY_NOT_ENSURED` (MyHealth@EU Requirements Catalogue
   10.0.0 requirement 11.01.02), recorded as `refused-trc-missing`, before
   the EHR index is asked.
