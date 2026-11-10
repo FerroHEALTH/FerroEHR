@@ -299,8 +299,8 @@ ferrobridge-term = { version = "=0.3.0", default-features = false, features = ["
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
 # crates.io 2026-11-10.
-ihe-atna = { version = "=0.10.0", default-features = false }
-ehds-logging = { version = "=0.10.0", default-features = false }
+ihe-atna = { version = "=0.10.1", default-features = false }
+ehds-logging = { version = "=0.10.1", default-features = false }
 # The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
 # the viewer reads the ITI-81 searchset, each BALP `AuditEvent` and a refusal's
 # `OperationOutcome` through it. Verified on crates.io 2026-11-08.
