@@ -177,6 +177,52 @@ replay_env() {
   return 0
 }
 
+# ── Whether a rendered configuration selects the production posture ─────────
+# `profile = "production"` under `[deployment]`, the key #5259 moved
+# `deployment_profile` to; the rendered TOML indents a table's keys.
+selects_production() {
+  awk '/^[[:space:]]*\[/ { gsub(/[[:space:]]/, ""); table = $0; next }
+       table == "[deployment]" && /^[[:space:]]*profile[[:space:]]*=[[:space:]]*"production"[[:space:]]*$/ { found = 1 }
+       END { exit !found }' "$1"
+}
+
+# ── The posture selection's own proof, run before any overlay ────────────────
+# The chart's production overlay is judged as production, and a sandbox
+# render is not. Before #5341 the selection read `deployment_profile`, which no
+# render has carried since #5259, so no overlay's production posture was judged.
+posture_self_test() {
+  local work; work="$(mktemp -d)"
+  local profile rendered want got
+  local -a overlay
+  for profile in production sandbox; do
+    rendered="${work}/${profile}.yaml"
+    if [[ "$profile" == production ]]; then
+      overlay=(-f "${CHART_DIR}/values-production.yaml")
+      want=yes
+    else
+      overlay=(-f "${CI_DIR}/default-values.yaml")
+      want=no
+    fi
+    if ! helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" "${overlay[@]}" > "$rendered" 2>"${work}/render.err"; then
+      red "self-test: the ${profile} overlay does not render:"
+      indented "${work}/render.err"
+      rm -rf "$work"; return 1
+    fi
+    mkdir -p "${work}/${profile}"
+    split_data "$rendered" "$RELEASE_NAME" "${work}/${profile}"
+    split_data "$rendered" "${RELEASE_NAME}-config" "${work}/${profile}"
+    got=no
+    selects_production "${work}/${profile}/ferroehr.toml" && got=yes
+    if [[ "$got" != "$want" ]]; then
+      red "self-test: the ${profile} overlay selects production: ${got}, expected ${want}"
+      rm -rf "$work"; return 1
+    fi
+  done
+  rm -rf "$work"
+  green "self-test: the production overlay is judged as production, a sandbox one is not"
+  return 0
+}
+
 # ── The replay's own proof, run before any overlay ───────────────────────────
 # An env-valued Secret key reaches the server with its rendered value: the
 # server accepts a well-formed audit feed URL and refuses a malformed one, so a
@@ -361,7 +407,7 @@ boot_one() {
        --entrypoint /usr/local/bin/ferroehr "$IMAGE" config check > "$log" 2>&1; then
     green "  ${IMAGE} accepts ${label}"
     indented "$log"
-    if grep -qx 'deployment_profile = "production"' "${cfgdir}/ferroehr.toml"; then
+    if selects_production "${cfgdir}/ferroehr.toml"; then
       production_posture "$work" "$cfgdir" "$secdir" ${docker_env[@]+"${docker_env[@]}"} || return 1
     fi
     rm -rf "$work"
@@ -380,7 +426,7 @@ boot_one() {
 
 # ── A production overlay must clear the server's own posture evaluation ──────
 # `config check` validates keys and values and never evaluates
-# deployment_profile = "production", which refuses at boot only after the pools
+# [deployment] profile = "production", which refuses at boot only after the pools
 # connect. `ferroehr report` evaluates the same posture and, with no database
 # reachable (`--network none`), falls back to the configuration alone. So this
 # judges every separation the configuration decides, and NOT the two the server
@@ -403,7 +449,7 @@ production_posture() {
     return 1
   fi
   if [[ "$(jq -r '.deployment.profile' "$report")" != "production" ]]; then
-    red "  the server does not read deployment_profile as production"
+    red "  the server does not read deployment.profile as production"
     return 1
   fi
   gaps="$(jq -r '.deployment.gaps | join(" ")' "$report")"
@@ -448,6 +494,7 @@ fi
 [[ "${#TARGETS[@]}" -gt 0 ]] || { red "no values files to boot"; exit 1; }
 
 self_test || { red "the environment replay is broken; no overlay is judged"; exit 1; }
+posture_self_test || { red "the production posture selection is broken; no overlay is judged"; exit 1; }
 
 FAILED=()
 for values in "${TARGETS[@]}"; do

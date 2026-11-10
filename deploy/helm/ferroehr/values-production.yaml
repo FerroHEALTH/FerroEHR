@@ -1,5 +1,5 @@
 # The production overlay: values that boot the server under
-# `deployment_profile = "production"` with every separation that profile checks
+# `[deployment] profile = "production"` with every separation that profile checks
 # made, and the one that a Kubernetes deployment behind an ingress cannot make
 # accepted by name, with its reason. Layer it over the chart defaults:
 #

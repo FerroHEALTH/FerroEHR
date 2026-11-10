@@ -179,7 +179,7 @@ probes_deployment_posture() {
   probe_done
 
   uncovered "the production profile's refusal" \
-    "declaring deployment_profile = production would stop this stack booting at
+    "declaring [deployment] profile = production would stop this stack booting at
      all, which the harness reads as a dead SUT rather than as the refusal it
      is. The refusal itself is unit-covered in config::deployment; what is not
      observed anywhere is a REAL server refusing to start on it."

@@ -1033,7 +1033,7 @@ unknown_config_key_gate() {
 unknown_config_key_gate
 
 # ── The production overlay makes the separations it claims (#3678) ────────────
-# values-production.yaml says which gap of deployment_profile = "production" it
+# values-production.yaml says which gap of [deployment] profile = "production" it
 # closes and which one it accepts by name. A golden records the render; this
 # asserts the claim, key by key, so an edit that reopens a gap fails here rather
 # than at the operator's first boot. Whether the server ACCEPTS the posture is
