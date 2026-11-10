@@ -123,20 +123,23 @@ fn the_reader_is_strict() {
     );
 }
 
+/// An invariant, and the edit of the example entry that breaks it alone.
+type Breaking = (&'static str, fn(&mut Value));
+
 #[test]
 fn each_entry_invariant_refuses_an_entry_that_breaks_it() {
-    let cases: [(&str, fn(&mut Value)); 16] = [
+    let cases: [Breaking; 16] = [
         ("ACCESS_LOG_RECORD.System_id_valid", |e| {
-            e["system_id"] = json!("")
+            e["system_id"] = json!("");
         }),
         ("ACCESS_LOG_LINK.Sequence_valid", |e| {
-            e["link"]["sequence"] = json!(0)
+            e["link"]["sequence"] = json!(0);
         }),
         ("ACCESS_LOG_LINK.Algorithm_valid", |e| {
-            e["link"]["algorithm"] = json!("")
+            e["link"]["algorithm"] = json!("");
         }),
         ("ACCESS_LOG_LINK.Digests_valid", |e| {
-            e["link"]["digest"] = json!("")
+            e["link"]["digest"] = json!("");
         }),
         ("ACCESS_LOG_ENTRY.Action_valid", |e| {
             e["action"] = coded("openehr", "browse", "1");
@@ -148,7 +151,7 @@ fn each_entry_invariant_refuses_an_entry_that_breaks_it() {
             e["outcome"]["result"] = coded("local", "granted", "1");
         }),
         ("ACCESS_OUTCOME.Delivered_valid", |e| {
-            e["outcome"]["delivered"] = json!(-1)
+            e["outcome"]["delivered"] = json!(-1);
         }),
         ("ACCESSOR.Kind_valid", |e| {
             e["accessor"]["kind"] = coded("openehr", "robot", "1");
