@@ -19,7 +19,7 @@
   `expose_headers`, `allow_credentials`, `max_age`). The environment follows
   the tree (`FERROEHR__DB__URL` is `FERROEHR__DATABASE__URL`,
   `FERROEHR__EHR_INDEX__PROVIDER` is `FERROEHR__RECORD__SUBJECT_INDEX`). The
-  Helm chart moves to 25.0.0 with `config:` on the same tree. Every key a
+  Helm chart moves to its 25 line with `config:` on the same tree. Every key a
   release before v5.7.0 read is refused at load with its replacement named,
   all at once, so `ferroehr config check --config <old file>` prints the whole
   move list; the refusals ship in v5.7.0 only and the next release removes
