@@ -259,7 +259,22 @@ back to `[database] url`, which is the single-credential posture.
 - [ ] `migrations = "verify"` if the schema is applied out of band, with
       `ferroehr db migrate` run under the migrator DSN first.
 
-## 8. The paperwork exists
+## 8. Callers are bound and rate-limited
+
+Every person is bound to a demographic `PERSON` before their issuer is
+trusted ([Who is the committer](committer.md)), and each caller is held to a
+rate.
+
+- [ ] Every professional is provisioned through SCIM, adopted, or admitted by
+      just-in-time creation before their `persons` issuer is added
+      ([bootstrap and migration](../installation/party-binding-migration.md)).
+- [ ] `[server.caller_rate]` is set. It limits each authenticated caller on
+      the clinical API, is kept per replica, and is off unless configured
+      ([`[server.caller_rate]`](../installation/config-server.md#servercaller_rate-per-caller-request-rates)).
+- [ ] Every `[[authz.federation.agreement]]` carries its own `caller_rate`;
+      boot refuses one without it.
+
+## 9. The paperwork exists
 
 - [ ] A data protection impact assessment has been carried out and signed off.
       The technical half is [the DPIA page](dpia.md); the purposes, the lawful

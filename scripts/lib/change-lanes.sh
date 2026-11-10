@@ -49,6 +49,9 @@ readonly ROOT
 # ci cache (#4546): what the rust-cache key hashes, every manifest, the
 # lockfile, the toolchain, the cargo configuration, and the recipe's env, so a
 # push that moves one writes main's cargo caches again.
+# ci semver (#5353): what the published openehr-* crates package or the SemVer
+# judge reads: the crates, the manifests the members inherit from, the lock,
+# the toolchain, the judge, its pin and the recipe.
 # ci fuzz (#4740): the harness build. Its row is not in the table: fuzz_lane
 # derives it from the path-dependency closure of fuzz/Cargo.toml on every run,
 # so a crate the harnesses come to depend on is covered the day it is added.
@@ -69,6 +72,7 @@ ci|perf|^(app/ferroehr(-rest|-server|-ext)?/|crates/|\.cargo/|Cargo\.toml$|Cargo
 ci|workflows|^\.github/workflows/ci\.yml$
 ci|vex|^(security/vex/|scripts/checks/(vex-reachability|advisory-exceptions|vex-linkage)\.sh$)
 ci|cache|(^|/)Cargo\.(toml|lock)$|^rust-toolchain\.toml$|^\.cargo/config\.toml$|^\.github/workflows/ci\.yml$
+ci|semver|^(crates/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|docs/VERSIONS\.md$|scripts/checks/semver\.sh$|scripts/lib/public-deps\.sh$|\.github/workflows/ci\.yml$)
 docs|docs|^(website/|docs/conformance/|scripts/(render|site)/|scripts/lib/veredictum\.sh$|scripts/checks/(docs-claims|conformance-numbers)\.sh$|\.github/workflows/docs\.yml$|\.github/actions/docs-toolchain/)
 sonar|code|^(app/|crates/|tools/|Cargo\.(toml|lock)$|rust-toolchain\.toml$|clippy\.toml$|sonar-project\.properties$|\.github/workflows/sonar\.yml$)
 conformance|conformance|^(app/ferroehr(-rest|-server|-ext)?/|crates/|tools/|\.cargo/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|\.dockerignore$|docker/Dockerfile$|docker/sut-[^/]+\.yml$|docker/ferroehr\.dev\.toml$|docker/postgres/|docker/terminology/|docs/conformance/party/|scripts/conformance\.sh$|scripts/lib/(veredictum|cnf-compose)\.sh$|\.github/workflows/conformance\.yml$)'
@@ -187,12 +191,12 @@ self_test() {
       fi
     done
   done <<'CASES'
-a crate source runs the cargo lanes, the gate and the harnesses|ci|crates/openehr-rm/src/lib.rs|code,perf,fuzz
-a crate the harnesses reach only through another builds them|ci|crates/openehr-lang/src/lib.rs|code,perf,fuzz
+a crate source runs the cargo lanes, the gate and the harnesses|ci|crates/openehr-rm/src/lib.rs|code,perf,semver,fuzz
+a crate the harnesses reach only through another builds them|ci|crates/openehr-lang/src/lib.rs|code,perf,semver,fuzz
 a crate the harnesses never build runs no harness build|ci|app/ferroehr/src/lib.rs|code,perf
 a harness runs the harness build alone|ci|fuzz/fuzz_targets/aql_query.rs|fuzz
-a nested manifest moves the msrv and the cache|ci|crates/openehr-rm/Cargo.toml|code,msrv,perf,cache,fuzz
-the lockfile reaches the viewer, the msrv, the gate and the cache|ci|Cargo.lock|code,msrv,viewer,perf,cache
+a nested manifest moves the msrv and the cache|ci|crates/openehr-rm/Cargo.toml|code,msrv,perf,cache,semver,fuzz
+the lockfile reaches the viewer, the msrv, the gate and the cache|ci|Cargo.lock|code,msrv,viewer,perf,cache,semver
 the cargo configuration moves the gate and the cache|ci|.cargo/config.toml|code,perf,cache
 the e2e harness runs the cargo lanes and the viewer|ci|scripts/ui-e2e.sh|code,viewer
 the sandbox viewer posture runs its viewer test|ci|deploy/hosted/ferroehr-viewer.sandbox.toml|code
@@ -203,10 +207,12 @@ the server Dockerfile reaches six lanes|ci|docker/Dockerfile|deploy,viewer,serve
 the viewer Dockerfile reaches its own image lane|ci|docker/viewer/Dockerfile|deploy,viewer,viewer_dockerfile
 the chart runs helm and chart boot|ci|deploy/helm/ferroehr/values.yaml|helm,chart_boot
 the configuration tree reboots the chart|ci|app/ferroehr/src/config/mod.rs|code,viewer,chart_boot,perf
-the ci recipe reaches its recipe lanes|ci|.github/workflows/ci.yml|msrv,viewer,helm,chart_boot,perf,workflows,cache,fuzz
+the ci recipe reaches its recipe lanes|ci|.github/workflows/ci.yml|msrv,viewer,helm,chart_boot,perf,workflows,cache,semver,fuzz
 a VEX document runs the vex lane|ci|security/vex/rust.openvex.json|vex
 the plan runs the gate alone|ci|perf/plan.toml|perf
 the gate script runs the gate alone|ci|scripts/perf/gate.sh|perf
+the pin table runs the gate and the SemVer judge|ci|docs/VERSIONS.md|perf,semver
+the SemVer judge runs its lane alone|ci|scripts/checks/semver.sh|semver
 the viewer runs no gate|ci|app/ferroehr-viewer/src/lib.rs|code,viewer
 a book page builds the site|docs|website/book/src/index.md|docs
 a crate source does not build the site|docs|crates/openehr-rm/src/lib.rs|

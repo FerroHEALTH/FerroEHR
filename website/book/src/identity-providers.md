@@ -3,9 +3,11 @@
 FerroEHR does not manage users. There is no user table, no user API, and no
 plan to add one: **identity administration is delegated to your identity
 provider (IdP)**, and the CDR consumes standard OAuth 2.0 bearer tokens. This page
-records that posture and walks through connecting the two enterprise IdPs we
-are asked about most, **Microsoft Entra ID** (Azure AD) and **AD FS**, plus
-the answer for plain-LDAP directories.
+records that posture and walks through connecting an identity provider:
+[the generic standards path](#the-generic-standards-path) first, then
+**Microsoft Entra ID** (Azure AD), **AD FS**, **Okta**, **Keycloak**, a SAML
+identity provider behind one of them, and the answer for plain-LDAP
+directories.
 
 <!-- toc -->
 
@@ -198,8 +200,10 @@ server). Its person agreement names the service it serves in `ehdsi_service`
 
 - The token carries the patient of the treatment relationship confirmation
   in `ehdsi.patient.id`, as `system|value`, the patient identifier's
-  assigning authority and value. A token without it, or with a value of
-  another form, is refused with `403` whose `detail` opens with
+  assigning authority and value, the form every family resource server
+  reads. A token without it, or with a value of another form (an empty
+  system or one with whitespace, or a value holding a control character,
+  `|`, `^`, `&`, `~` or a backslash), is refused with `403` whose `detail` opens with
   `ERROR_SEC_DATA_INTEGRITY_NOT_ENSURED` (MyHealth@EU Requirements Catalogue
   10.0.0 requirement 11.01.02), recorded as `refused-trc-missing`, before
   the EHR index is asked.
@@ -249,6 +253,60 @@ server). Its person agreement names the service it serves in `ehdsi_service`
   a dispensation and discards one only with `PPD-046` among them, as the code
   or its `urn:oasis:names:tc:xspa:1.0:subject:hl7:permission:` URN (eHDSI SAML
   Profile 10.0.0 §2.5); otherwise it is refused with `403`.
+
+## The generic standards path
+
+Every walk-through on this page configures the same three things: an issuer
+of kind `persons` that signs your professionals' access tokens, the
+`[[auth.party]]` table their logins are bound through, and a SCIM client that
+provisions their `PERSON`s. Configure them first against a standards-only
+authorization server; the vendor sections after this one are the same
+configuration through a preset (`entra`, `keycloak`, `okta`), each listing
+the preset's deviations with their sources. Every preset key can be set on
+the issuer table, which wins over the preset.
+
+1. **The issuer.** The `rfc9068` profile is the default: an RFC 9068 access
+   token with `typ` `at+jwt`, the client in `client_id` and the scopes in
+   `scope`.
+
+   ```toml
+   [[auth.issuer]]
+   issuer = "https://as.example.com"
+   kind = "persons"
+   audience = ["ferroehr"]
+   first_party_clients = ["ferroehr-viewer"]
+   ```
+
+2. **The binding, on `sub`.** OpenID Connect Core 1.0 §5.7 names `iss` with
+   `sub` as the only stable identifier of an end-user, so the `rfc9068`
+   profile binds on `sub`. The `[[auth.party]]` table names the identifier
+   the key is matched against:
+
+   ```toml
+   [[auth.party]]
+   issuer = "https://as.example.com"
+   identifier_issuer = "urn:example:staff-login"
+   identifier_type = "uuid"
+   ```
+
+   An `email`, `phone_number`, `preferred_username` or `name` is never a key.
+3. **The SCIM client.** Your authorization server issues the provisioning
+   client an access token by the client credentials grant (RFC 6749 §4.4), or
+   in exchange for a client assertion (RFC 7523 §2.2). Declare the
+   authorization server as an issuer of kind `machines`, and the client in
+   [`[[auth.scim.client]]`](installation/config-auth.md#authscim) with the
+   `binding_issuer` of step 2. The SCIM client sends the key as
+   `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`
+   (RFC 7644).
+4. **An onward caller.** A service that calls FerroEHR for a signed-in
+   professional, such as FerroBRIDGE, exchanges the professional's token at
+   the authorization server by RFC 8693 token exchange. List the service in
+   the issuer's `delegates` (`{ client = "<its client id>" }`, or `{ sub }` for
+   an RFC 8693 actor): the request is bound to the professional, and the
+   access record names the service.
+
+[Who is the committer](security/committer.md) shows what the server records
+for each of these callers.
 
 ## Microsoft Entra ID (Azure AD)
 
@@ -309,6 +367,70 @@ Entra ID exposes a standards-compliant OIDC issuer per tenant.
 > a different service. An issuer the server cannot reach at boot refuses the
 > start too.
 
+### Binding and provisioning with the `entra` preset
+
+The `entra` preset is the generic path with Entra ID's deviations, each from
+Microsoft's *Access token claims reference* (claims) or *Optional claims
+reference* (optional):
+
+| Preset key | Value | Source |
+|---|---|---|
+| `person_key` | `oid` | claims, `oid`: "The immutable identifier for the requestor"; `sub` is a pairwise value per application and never a key |
+| `tenant_claim` | `tid` | claims, `tid` |
+| `token_types` | `["JWT"]` | claims, header `typ` "always `JWT`" |
+| `scope_claim`, `app_only_scope_claim` | `scp` (string), `roles` (array) | claims, `scp` and `roles` |
+| `client_claims` | `["azp"]` | claims, `azp` |
+| `app_only` | `idtyp = "app"`, and no `scp` | optional, `idtyp`; claims, `scp` "Only included for user tokens" |
+| `guest` | an `idp` other than the issuer, or `acct = 1` | claims, `idp`; optional, `acct` |
+| `expect` | `ver = "2.0"` | claims, `ver` |
+| `user_claims` | `["acct"]` | optional, `acct`, emitted only when the registration asks for it |
+| `unstable_claims` | `upn`, `unique_name` | claims, `unique_name`; optional, `upn` |
+
+Binding on `oid` is FerroEHR's choice on Microsoft's "immutable identifier"
+wording. For it to work, the app registration of FerroEHR's API, and of
+every service such as FerroBRIDGE that calls it, needs:
+
+- the optional claims `acct` (the guest marker: the preset requires it on
+  every user token, so a registration without it is refused at the first
+  token, naming the claim), `idtyp` (the app-only marker), `given_name` and
+  `family_name`, and the `profile` scope that `oid` needs;
+- `"requestedAccessTokenVersion": 2` in the manifest's `api` attribute
+  (*Understand the app manifest*): FerroEHR accepts v2.0 tokens only, and a
+  null value defaults to version 1.
+
+Cross-tenant synchronisation and converted guests: a member-type user of
+another tenant carries `acct = 0`, but an `idp` naming their home tenant. The
+preset treats them as a guest by `idp`, so they bind only where the
+`[[auth.party]]` table sets `guests = true`, and never as staff.
+
+A person in more groups than fit in a token (the groups overage: "150 for
+SAML tokens, 200 for JWT tokens", claims) carries no `groups` claim, and the
+login is refused with `403` (`refused-groups-unavailable`) unless the issuer
+sets `adapter = "idp-entra"` with an `[auth.idp.entra]` table, which reads the
+groups from Microsoft Graph. Provision only the groups assigned to the
+application to stay under the limit.
+
+**Provisioning through SCIM.** The non-gallery enterprise application, its
+Tenant URL `https://<host>/scim/v2/` and the steps on FerroEHR's side are in
+[Provision from Microsoft Entra ID](installation/config-auth.md#provision-from-microsoft-entra-id).
+On the Entra side:
+
+- **Authentication.** Use the OAuth 2.0 client credentials grant against your
+  own authorization server, or Workload Identity Federation, in which Entra
+  presents a signed client assertion your authorization server exchanges.
+  Never leave the Secret Token blank: Entra then sends its own test token,
+  which every non-gallery application of the tenant receives.
+- **Attribute mappings.** Replace the tutorial's `mailNickname` to
+  `externalId` with `objectId` to `externalId`, because a mail nickname "may
+  not be unique in the directory" (*Develop a SCIM endpoint*). Map `objectId`
+  to `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`
+  as well, and `userPrincipalName` to `userName`.
+- **Matching precedence.** Set `externalId` first and `userName` second.
+- **Remove every other attribute** the FerroEHR mapping does not carry:
+  "Schema discovery isn't currently supported on custom non-gallery SCIM
+  application" (*Develop a SCIM endpoint*), so Entra cannot learn FerroEHR's
+  schema and sends what its defaults name.
+
 ## AD FS (on-premises Active Directory)
 
 AD FS 2016+ speaks OIDC. This is also the supported path for on-premises
@@ -355,6 +477,119 @@ broker and connect that instead:
   any other OIDC provider that can federate LDAP.
 
 The broker owns the LDAP bind; the CDR sees only signed tokens.
+
+## Okta
+
+The `okta` preset reads Okta's access tokens (Okta, *OpenID Connect & OAuth
+2.0 API*, the reserved claims of the access token):
+
+| Preset key | Value | Source |
+|---|---|---|
+| `person_key` | `uid` | `uid`: "A unique identifier for the user" |
+| `client_claims` | `["cid"]` | `cid`: "Client ID of the client that requested the access token" |
+| `scope_claim` | `scp` (array) | `scp`: "Array of scopes that are granted to this access token" |
+| `app_only` | no `uid` | `uid` "isn't included in the access token if there is no user bound to it" |
+| `token_types` | none | the page names no `typ`, so an `okta` issuer fails to load until you set `token_types` to what your Okta server writes |
+
+```toml
+[[auth.issuer]]
+issuer = "https://example.okta.com/oauth2/default"
+kind = "persons"
+profile = "okta"
+token_types = ["<the typ header your server writes>"]
+audience = ["api://ferroehr"]
+first_party_clients = ["<the viewer's client id>"]
+```
+
+Read the `typ` header of one of your server's access tokens and set it in
+`token_types`; the preset deliberately names none.
+
+## Keycloak
+
+The `keycloak` preset reads Keycloak 26.8 access tokens: `azp` as the client,
+`scope` as a string, `typ` `JWT` (confirm it against your own server), and no
+app-only marker until you list your service accounts. Configure a realm for
+binding as follows.
+
+1. **Two realms.** An issuer has one `kind`, so professionals sign in at one
+   realm (`kind = "persons"`) and patients at another (`kind = "patients"`).
+2. **The binding on `sub`.** Keycloak's `sub` is the user id, which no user
+   can change. A user-profile attribute can be the key instead only when its
+   *Who can edit* permission is *Admin* (`"permissions": { "edit": ["admin"] }`,
+   Server Administration Guide, *Managing user attributes*).
+3. **Service accounts.** "A client's service account is a user account with
+   username `service-account-CLIENT_ID`", so its `sub` is a user id. List
+   every service account of the realm by its `sub` in the issuer's
+   `app_only`; the empty list refuses the issuer at load. On a realm with
+   just-in-time creation an unlisted service account would be read as a
+   person, so the list must be complete.
+
+   ```toml
+   [[auth.issuer]]
+   issuer = "https://keycloak.example.com/realms/staff"
+   kind = "persons"
+   profile = "keycloak"
+   audience = ["ferroehr"]
+   first_party_clients = ["ferroehr-viewer"]
+   app_only = [{ subjects = ["<the sub of service-account-lab>"] }]
+   ```
+
+4. **The audience for an onward caller.** Keycloak's standard token exchange
+   requires "the requester client set as an audience in the `aud` claim" of
+   the subject token (*Securing applications*, token exchange). Add an
+   audience mapper to the client scope your professionals' tokens carry that
+   puts the bridge's or gateway's client in `aud`, and let the onward caller
+   name FerroEHR's client id in the `audience` parameter. List the onward
+   client in `delegates`.
+5. **No impersonation on a binding realm.** "Any user with the
+   `impersonation` role in the realm can impersonate a user" (*Impersonating
+   users*). Check that no user or group holds the realm `impersonation` role,
+   or the fine-grained admin permission `impersonate`, and that no client
+   holds the legacy token exchange's impersonation permission; disable the
+   legacy token exchange. Where an administrator must keep impersonation, add
+   the built-in user session note mappers IMPERSONATOR_ID and
+   IMPERSONATOR_USERNAME to the inbound client scope and set
+   `impersonation_marker = "impersonator"`, so every impersonation is
+   refused. Whether Keycloak 26.8 adds those mappers by default is not
+   verified here; check the client scope. Keycloak 26.8 also writes an RFC
+   8693 `act` claim into every impersonation token, so an impersonator your
+   `delegates` does not list is refused even without the marker
+   ([Who the caller is](#who-the-caller-is)).
+6. **Realm hardening.** On a binding or just-in-time realm: no
+   self-registration, no social or other brokered identity provider without
+   an explicit allow-list, and no automatic account linking (the first login
+   flow's "automatically set existing user", or linking by email). Each of
+   them would let a person choose which account, and so which `PERSON`, a
+   login reaches.
+7. **SCIM.** Keycloak 26.8 promotes its SCIM API to supported, as a service
+   provider for its own realm's users and groups (release notes, *SCIM API
+   (supported)*). It provisions nothing outbound, so it cannot create
+   FerroEHR's `PERSON`s or `GROUP`s: a deployment needs an upstream SCIM
+   client, such as its identity governance or HR system, or just-in-time
+   creation. Enabling Keycloak's own SCIM adds a second SCIM endpoint to the
+   deployment, which FerroEHR does not read.
+
+## A SAML identity provider through Keycloak or Entra ID
+
+FerroEHR never sees SAML. It is an OAuth 2.0 resource server and validates
+only access tokens, so a SAML 2.0 identity provider reaches it through an
+authorization server that brokers it:
+
+- **Keycloak** brokers it by Web Browser SSO (OASIS SAML V2.0 Profiles §4.1)
+  as the service provider, and issues its own OpenID Connect tokens after the
+  login. Set the identity provider's *Principal Type* to the Subject `NameID`
+  with the persistent format (`urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`,
+  Keycloak's default *NameID Policy Format*) or to an immutable attribute, so
+  the brokered user's Keycloak `sub` stays the same from login to login.
+  Keycloak refuses a Subject `NameID` principal with the transient format.
+  Map the name attributes to `given_name`, `family_name` and `name` for
+  just-in-time creation, and the group attribute to the group claim.
+- **Entra ID** federates the SAML identity provider for its tenant, and the
+  `entra` preset reads the tokens it issues as above.
+
+Never bind on `email`, `phone_number`, `preferred_username`, `name`, `upn` or
+`unique_name`, whatever the SAML assertion maps them from (OpenID Connect
+Core 1.0 §5.7).
 
 ## Just-in-time creation
 

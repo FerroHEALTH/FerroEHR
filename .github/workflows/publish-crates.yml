@@ -71,6 +71,13 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache: false
+      # The SemVer judge `plan` takes the version from (scripts/checks/semver.sh, #5353).
+      - id: semver-pin
+        name: Read the cargo-semver-checks pin
+        run: echo "version=$(bash scripts/checks/semver.sh --pin)" >> "$GITHUB_OUTPUT"
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        with:
+          tool: cargo-semver-checks@${{ steps.semver-pin.outputs.version }}
       - name: Plan and stamp the lockstep version
         run: |
           set -euo pipefail
@@ -113,6 +120,13 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache: false
+      # The SemVer judge `plan` takes the version from (scripts/checks/semver.sh, #5353).
+      - id: semver-pin
+        name: Read the cargo-semver-checks pin
+        run: echo "version=$(bash scripts/checks/semver.sh --pin)" >> "$GITHUB_OUTPUT"
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        with:
+          tool: cargo-semver-checks@${{ steps.semver-pin.outputs.version }}
       - name: Plan and stamp the lockstep version
         run: |
           set -euo pipefail

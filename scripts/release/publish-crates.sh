@@ -32,10 +32,12 @@
 # (https://doc.rust-lang.org/cargo/commands/cargo-package.html), and asks
 # scripts/checks/crate-version-guard.sh whether packaged content changed
 # since. Unchanged, the version stays and the publish is a no-op; changed, it
-# is the next 0.0.x, never below the manifests' own. `publish` then refuses to
-# upload when any crate already holds the stamped version from a commit whose
-# packaged content differs: "already exists" counts as done only for the same
-# content.
+# is the version scripts/checks/semver.sh next derives from the newest one by
+# Cargo SemVer (0.1.0 out of the 0.0.z line, #5353; then the patch for a
+# compatible change and the minor for a break), never below the manifests' own.
+# `publish` then refuses to upload when any crate already holds the stamped
+# version from a commit whose packaged content differs: "already exists"
+# counts as done only for the same content.
 #
 # Usage:
 #   publish-crates.sh plan            # print the lockstep version to publish
@@ -172,7 +174,7 @@ do_plan() {
   else
     echo "publish-crates: openehr-base does not hold the newest published version $top, so the set takes a fresh one" >&2
   fi
-  next="${top%.*}.$((${top##*.} + 1))"
+  next="$(bash scripts/checks/semver.sh next "$top")" || die "scripts/checks/semver.sh could not derive the version after $top"
   floor="$(manifest_version)"
   next="$(higher "$next" "$floor")"
   echo "publish-crates: publish $next (newest on crates.io $top, manifests at $floor)" >&2

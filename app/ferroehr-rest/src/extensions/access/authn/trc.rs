@@ -9,10 +9,11 @@
 //! assertion, and §4.2.2 answers a request for another patient's documents
 //! with "No Data", an audit record and a security alert. The token's
 //! `patient.id` is that binding, as the contact point writes it, `system|value`
-//! (the FHIR R4 search token form). It is resolved to its EHR through the
-//! deployment's EHR index, compared on the value and the assigning authority,
-//! and every patient-data request must name that EHR before any lookup of its
-//! own. An unknown EHR, another patient's EHR, a TRC patient no EHR belongs to
+//! (the FHIR R4 search token form), read through the family's one definition,
+//! `ferrohealth_smart::federation::contact::TrcPatientId`. It is resolved to
+//! its EHR through the deployment's EHR index, compared on the value and the
+//! assigning authority, and every patient-data request must name that EHR
+//! before any lookup of its own. An unknown EHR, another patient's EHR, a TRC patient no EHR belongs to
 //! and a request that names no EHR get the one `trc-patient-mismatch`
 //! answer, so the answer discloses nothing. Reading the binding is our own
 //! design on those sources.
@@ -22,8 +23,7 @@ use std::sync::Arc;
 use axum::extract::Request;
 use axum::response::{IntoResponse as _, Response};
 use ferroehr::service::ehr_index::types::SubjectRef;
-use ferrohealth_smart::federation::contact::EhdsiCode;
-use ferrohealth_smart::federation::{Attribute, Field};
+use ferrohealth_smart::federation::contact::{EhdsiCode, TrcPatientId};
 use ferrohealth_smart::guard::Requirement;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::resource::{Access, Caller};
@@ -135,11 +135,7 @@ async fn confine(
         return None;
     }
     let auth = &layer.authenticator;
-    let Some(subject) = external
-        .field(Field::PatientId)
-        .and_then(Attribute::text)
-        .and_then(binding)
-    else {
+    let Some(subject) = external.trc_patient().as_ref().map(subject) else {
         let refusal = AuthError::KindRefused {
             code: "refused-trc-missing",
             message: format!(
@@ -184,14 +180,10 @@ async fn confine(
     Some(mismatch(principal, not_found))
 }
 
-/// The subject `patient.id` names, `system|value`; `None` for a value that
-/// is not of that form.
-// NOTE: a binding that is not of the form is defective, and is refused like a
-// missing one (requirement 11.01.02).
-fn binding(text: &str) -> Option<SubjectRef> {
-    let (system, value) = text.split_once('|')?;
-    let (system, value) = (system.trim(), value.trim());
-    (!system.is_empty() && !value.is_empty()).then(|| SubjectRef::person(value, system))
+/// The EHR index subject of the TRC patient `patient`, a `PERSON` whose
+/// identifier is assigned in the patient's system.
+fn subject(patient: &TrcPatientId) -> SubjectRef {
+    SubjectRef::person(patient.value(), patient.system())
 }
 
 /// The `trc-patient-mismatch` answer to `principal`, opening its detail with
@@ -230,6 +222,7 @@ mod tests {
 
     #[test]
     fn the_binding_is_the_system_and_the_value() {
+        let binding = |claim: &str| TrcPatientId::from_claim(claim).ok().as_ref().map(subject);
         assert_eq!(
             binding("urn:oid:2.999.1|SYNTHETIC-1"),
             Some(SubjectRef::person("SYNTHETIC-1", "urn:oid:2.999.1"))

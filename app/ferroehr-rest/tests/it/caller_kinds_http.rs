@@ -60,12 +60,12 @@ const SUPPORT_ADMIN: &str = "0e1f2a3b-4c5d-4e6f-8a7b-9c0d1e2f3a4b";
 const SYSTEM_SCOPES: &str = "system/composition-*.cruds system/template-*.r";
 
 /// The audience of the machines issuer `issuer`: each issuer has its own.
-fn audience(issuer: &str) -> String {
+pub(crate) fn audience(issuer: &str) -> String {
     format!("{AUDIENCE}-{}", issuer.trim_start_matches("https://"))
 }
 
 /// A `machines` issuer at `issuer` under `profile`.
-fn machines(issuer: &str, profile: Preset) -> IssuerEntry {
+pub(crate) fn machines(issuer: &str, profile: Preset) -> IssuerEntry {
     IssuerEntry {
         issuer: issuer.to_owned(),
         kind: Some(IssuerKind::Machines),
@@ -179,7 +179,7 @@ async fn router(svc: Arc<FerroEhrService>, config: AppConfig) -> Router {
 }
 
 /// A bearer of `issuer` for `audience` carrying `claims`.
-fn bearer(issuer: &str, audience: &str, claims: &Value) -> String {
+pub(crate) fn bearer(issuer: &str, audience: &str, claims: &Value) -> String {
     let exp = jiff::Timestamp::now().as_second() + 3600;
     let mut all = json!({ "iss": issuer, "aud": audience, "exp": exp });
     if let (Some(all), Some(claims)) = (all.as_object_mut(), claims.as_object()) {

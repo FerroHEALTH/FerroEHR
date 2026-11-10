@@ -9,8 +9,9 @@
 //! her representative", and they "shall not be able to directly alter the
 //! electronic health data and related information inserted by health
 //! professionals" (`docs/law/eu/ehds/text.html` Art. 5). The marker is the
-//! committer `PARTY_SELF` ([`crate::versioning::committer::resolve`]); these are
-//! the refusals. No openEHR spec governs who may change what: our own design.
+//! committer `PARTY_SELF` of the person or the `PARTY_RELATED` of their
+//! representative ([`crate::versioning::committer::resolve`]); these are the
+//! refusals. No openEHR spec governs who may change what: our own design.
 
 use serde_json::Value;
 use sqlx::PgConnection;
@@ -38,7 +39,7 @@ pub(crate) fn refuse_composing_for_others(
     kind: Kind,
     canonical: &Value,
 ) -> Result<(), ServiceError> {
-    if kind != Kind::Composition || !crate::versioning::committer::person_commits() {
+    if kind != Kind::Composition || !crate::versioning::committer::inserts_for_the_person() {
         return Ok(());
     }
     let composer = canonical
@@ -60,26 +61,28 @@ pub(crate) fn refuse_composing_for_others(
 /// directly alter the electronic health data and related information inserted
 /// by health professionals" (`docs/law/eu/ehds/text.html` Art. 5). A version
 /// the person inserted is one whose committer is `PARTY_SELF`, the RM's
-/// "committer is the record subject" (RM common master04 §Audit Details); any
-/// other committer is held to be someone else, a professional or a system.
-/// Which committers count is our own design: no openEHR spec governs it.
+/// "committer is the record subject" (RM common master04 §Audit Details), or
+/// `PARTY_RELATED`, which the server writes for the person's representative
+/// alone; any other committer is held to be someone else, a professional or a
+/// system. Which committers count is our own design: no openEHR spec governs it.
 ///
 /// # Errors
-/// [`ServiceError::Restricted`] (`403`) when a person changes a version whose
-/// committer is not `PARTY_SELF`; the storage error of the committer read.
+/// [`ServiceError::Restricted`] (`403`) when a person or their representative
+/// changes a version whose committer is neither `PARTY_SELF` nor
+/// `PARTY_RELATED`; the storage error of the committer read.
 pub(crate) async fn refuse_altering_others(
     tx: &mut PgConnection,
     kind: Kind,
     vo_id: VoId,
     preceding: TreeId,
 ) -> Result<(), ServiceError> {
-    if !crate::versioning::committer::person_commits() {
+    if !crate::versioning::committer::inserts_for_the_person() {
         return Ok(());
     }
     let committer =
         crate::storage::version_repo::placement::committer_type(tx, vo_id, preceding.columns())
             .await?;
-    if committer.as_deref() == Some("PARTY_SELF") {
+    if matches!(committer.as_deref(), Some("PARTY_SELF" | "PARTY_RELATED")) {
         return Ok(());
     }
     Err(ServiceError::not_permitted(format!(

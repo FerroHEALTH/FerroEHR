@@ -136,6 +136,14 @@ self_test() {
   unreleased ''
   printf -- '- An entry a change moves out.\n' > "$work/changelog.d/3-moved.fixed.md"
   commit "the entry moves into a fragment"
+  # A CHANGELOG.md whose [Unreleased] heading is its last line, and the cut
+  # that adds a blank line under it before the new version's section (#5367).
+  branch bare
+  printf '# Changelog\n\n## [Unreleased]\n' > "$work/CHANGELOG.md"
+  commit "an empty [Unreleased] as the last line"
+  stub_git checkout -q -b bare-cut
+  printf '# Changelog\n\n## [Unreleased]\n\n## [1.0.0] - 2026-10-01\n\n### Added\n\n- The first release.\n' > "$work/CHANGELOG.md"
+  commit "the cut under an empty [Unreleased]"
 
   stub_git checkout -q main
   printf -- '- An entry from main.\n' > "$work/changelog.d/4-main.fixed.md"
@@ -155,6 +163,7 @@ self_test() {
   expect "a change that removes a fragment" 1 removed
   base_ref=moved expect "a change that moves an [Unreleased] entry into a fragment" 0 moved-out
   says "the moved entry" "adds the fragment"
+  base_ref=bare expect "a cut that adds a blank line under an empty [Unreleased]" 0 bare-cut --waived
   echo "changelog-guard: self-test passed."
 }
 
@@ -200,7 +209,8 @@ if git cat-file -e "$head:CHANGELOG.md" 2> /dev/null; then
     }
     /^\+\+\+ / { next }
     /^\+/ {
-      if (line >= first && line <= last && $0 ~ /[^[:space:]]/) print "  CHANGELOG.md:" line ": " substr($0, 2)
+      text = substr($0, 2)
+      if (line >= first && line <= last && text ~ /[^[:space:]]/) print "  CHANGELOG.md:" line ": " text
       line++
     }
   ')"
