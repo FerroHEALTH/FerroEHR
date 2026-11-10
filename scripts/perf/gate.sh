@@ -6,11 +6,12 @@
 # judges the head of a change against its base, both measured side by side on
 # one runner in one job (ferrohealth-perf's A/B mode), each arm the image of
 # its own tree under its own tree's gate configuration, templates, SCIM
-# client and seed data (the family rule). `run` measures one server and holds
-# it to the idle limits. Either fails when the head works while idle (CPU, or
-# transactions in its database); `ab` also fails when the head is slower,
+# client and seed data (the family rule). It fails when the head works while
+# idle (CPU, or transactions in its database), or when the head is slower,
 # heavier or busier under load than its base by more than the plan's
-# tolerance. No openEHR spec governs this: our own design.
+# tolerance. The pull-request gate runs it against main and the release lane
+# against the previous published release, so no baseline is stored (#5095).
+# No openEHR spec governs this: our own design.
 #
 # The server runs in a container of the image under test with
 # perf/ferroehr.toml as its configuration, its database in a container of the
@@ -30,8 +31,6 @@
 #       <base-rev>, or the commit the base image names
 #       (org.opencontainers.image.revision), taken from this clone's history
 #       with `git archive`
-#   scripts/perf/gate.sh run <image> <pg-image>      one server: the idle limits, the load reported
-#   scripts/perf/gate.sh update <image> <pg-image>   one server, writing perf/baseline.toml
 #   scripts/perf/gate.sh self-test <image> <pg-image>
 #       an idle busy-loop against the database must fail the idle phase,
 #       naming idle.transactions_per_second
@@ -77,7 +76,7 @@ OUT="${PERF_OUT:-$ROOT/target/perf}"
 readonly OUT
 
 usage() {
-  sed -n '26,39p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+  sed -n '27,37p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -258,28 +257,6 @@ prepare() { # <image> <pg-image>
   fi
 }
 
-gate() { # <update: true|false> <image> <pg-image>
-  local update="$1" bin
-  shift
-  bin=$(binary)
-  prepare "$@"
-  render "$ROOT/perf/plan.toml" "$OUT/plan.toml"
-  local -a extra=()
-  [[ "$update" == true ]] && extra=(--update)
-  local status=0
-  "$bin" run --plan "$OUT/plan.toml" --baseline "$ROOT/perf/baseline.toml" "${TARGET[@]}" \
-    --base-url "$SERVER_URL" --database-url "$DATABASE_URL" --out-dir "$OUT" \
-    --summary "$OUT/summary.md" ${extra[@]+"${extra[@]}"} || status=$?
-  # TODO(#5095): commit the load baseline perf-baseline.yml writes per CPU
-  # model; until then a run judges the idle limits and reports the load.
-  if [[ "$status" == 2 && "$update" == false && ! -f "$ROOT/perf/baseline.toml" ]] \
-    && unjudged_for_no_baseline "$OUT/summary.md"; then
-    echo "perf gate: the idle limits held; the load phase is reported, not judged, until perf/baseline.toml lands (#5095)"
-    return 0
-  fi
-  return "$status"
-}
-
 # base_tree <base-image> [<rev>]: the source tree of <rev>, or of the commit
 # the base image names (org.opencontainers.image.revision), archived from
 # this clone into BASE_TREE, so the base arm runs under its own tree's
@@ -326,16 +303,6 @@ ab() {
   return "$status"
 }
 
-# Whether the run's only reason it could not be judged is the missing
-# baseline: every check passed, every request was answered as the plan
-# expects, and the generator and the window were sound.
-unjudged_for_no_baseline() { # <summary.md>
-  local reasons
-  reasons=$(awk '/^### Why it could not be judged/ { on = 1; next } /^### / { on = 0 } on && /^- / { print }' "$1")
-  [[ "$reasons" == "- there is no baseline; write one with --update" ]] || return 1
-  ! grep -qE '^### Breaches|^### Requests answered other than expected|\| FAIL \|$' "$1"
-}
-
 # The plan with a short idle window and a short load, so the self-test spends
 # about half a minute; the idle limits are the committed plan's own.
 short_plan() { # <out>
@@ -379,12 +346,10 @@ shift
 case "$command" in
 pin) pin ;;
 install) install ;;
-ab | run | update | self-test)
+ab | self-test)
   trap teardown EXIT
   case "$command" in
   ab) ab "$@" ;;
-  run) gate false "$@" ;;
-  update) gate true "$@" ;;
   self-test) self_test "$@" ;;
   esac
   ;;

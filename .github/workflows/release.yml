@@ -1150,16 +1150,29 @@ jobs:
         env:
           LOADTEST_BIN: target/release/loadtest
         run: bash scripts/perf/audit.sh ferroehr:perf ferroehr-postgres:perf perf-audit
-      # The performance gate on the release image (#5081): its idle limits,
-      # with the load phase reported. The candidate's load against the previous
-      # release is the A/B run above; the pull-request gate judges each change
-      # against main side by side (#5326).
+      # The performance gate on the release image (#5081, #5095): its idle
+      # limits, and its load judged side by side against the previous published
+      # release on this runner, as the pull-request gate judges each change
+      # against main (#5326). The base arm runs under the previous release's
+      # own tree, archived from its tag's commit.
       - name: Install the pinned ferrohealth-perf
         run: bash scripts/perf/gate.sh install
       - name: The performance gate
         env:
           PERF_OUT: perf-gate
-        run: bash scripts/perf/gate.sh run ferroehr:perf ferroehr-postgres:perf
+          PREVIOUS: ${{ steps.previous.outputs.tag }}
+        run: |
+          set -euo pipefail
+          version="${PREVIOUS#v}"
+          base="ghcr.io/ferrohealth/ferroehr:${version}"
+          base_pg="ghcr.io/ferrohealth/ferroehr-postgres:${version}"
+          docker pull "$base"
+          docker pull "$base_pg"
+          if ! git rev-parse -q --verify "refs/tags/${PREVIOUS}^{commit}" > /dev/null; then
+            git fetch --no-tags --depth=1 origin "+refs/tags/${PREVIOUS}:refs/tags/${PREVIOUS}"
+          fi
+          rev="$(git rev-parse "refs/tags/${PREVIOUS}^{commit}")"
+          bash scripts/perf/gate.sh ab ferroehr:perf ferroehr-postgres:perf "$base" "$base_pg" "$rev"
       - name: Name the evaluation for the release
         env:
           TAG: ${{ needs.plan.outputs.tag }}
@@ -1169,6 +1182,7 @@ jobs:
         run: |
           if [ -f perf-out/summary.md ]; then cat perf-out/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
           if [ -f perf-audit/summary.md ]; then cat perf-audit/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f perf-gate/summary.md ]; then cat perf-gate/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
       - name: Keep the reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
