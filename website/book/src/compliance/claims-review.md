@@ -1411,3 +1411,41 @@ with `appVersion` 5.6.3.
   accepted, tracked on #4777 for 5.7.0.
 - The performance page keeps its earlier figures until a record measured on
   the reference host replaces them.
+
+## The review of 2026-11-10, for 5.7.0-rc1
+
+Read on the tree after commit `a6ce1927d`, for the FerroEHR release candidate
+5.7.0-rc1. The facts of this release checked in every text in scope:
+
+- **Party binding:** every person is bound to a demographic `PERSON`. A login no party carries is refused with `403` and `refused-unbound`, and a bound caller commits under the committer the server derives (#5003, #5004, #5005, #5006). The Basic user list holds persons only (#5009).
+- **SCIM 2.0 provisioning** at `/scim/v2/`, off by default, with the Entra ID profile and contact erasure (#5014, #5015, #5178). Just-in-time creation of a provisional person is off by default (#5016).
+- **The caller kinds:** system callers, federation agreements with the Wabvpz Art. 15f roles, the MyHealth@EU contact point route and its caller rate, and representative confinement (#5086, #5100, #5101, #5102, #5107, #5149).
+- **The access record** carries the binding outcome, and every refused request is recorded (#5118, #5119).
+- **The security fixes** GHSA-jhg2-jwjp-hq74 and GHSA-pfgx-xq28-2629 (#5003, #5047), and the zlib fixes in the three images (#5137, #5152).
+- **The configuration tree** is one table per concern, with every retired key refused by name (#5259). The four outbound integrations use one endpoint table (#5331).
+- **The family run path** (#5321).
+- **Chart 25.0.1-rc1** with `appVersion` 5.7.0-rc1.
+
+### Changed on 2026-11-10, for 5.7.0-rc1
+
+- **The chart description and README** said `config.deployment_profile` names the posture, and the README's install command set that key, which the chart refuses to render since #5259. #5341 renamed both to `config.deployment.profile` before this review. It also made the chart's boot check judge the production overlay's posture again.
+- **The CRA risk assessment's outbound data flows** named `[auth] mode = "introspection"` with `[auth.introspection.client]` and `[pixm] subject_index`. They now name `mode = "introspection"` in an `[[auth.issuer]]` table, `[auth.issuer.introspection.client]` and `[record] subject_index` (#5259). #5331 had already moved the integrations' `oauth` tables to `[<x>.endpoint.credentials.oauth]`. Revision 29 records the release.
+- **The hazard log:**
+  - H2 named two assurance tests #5003 renamed.
+  - H5 named its floor tests in `config/mod.rs` and `system_log/config.rs`, which moved to `config/audit_tests.rs` and `system_log/retention.rs`.
+  - Review 21 records both moves.
+- **The technical documentation** named the FerroAUDIT pins as 0.3.3. It names 0.9.1, the version the root `Cargo.toml` pins, and gains the 5.7.0-rc1 row.
+
+### Read and kept on 2026-11-10, for 5.7.0-rc1
+
+- **The configuration pages:** [configuration](../installation/configuration.md), the integrations, audit, auth and CLI pages, [security](../security.md), [the terminology page](../beyond-core/terminology.md) and the [go-live checklist](../security/go-live-checklist.md) name the 5.7.0 keys. `docs-claims` resolves every documented key against the shipped default configuration.
+- **The identity pages:** [identity providers](../identity-providers.md) says the Basic list holds persons only and machines use client credentials. The [bootstrap and migration](../installation/party-binding-migration.md) page names the four steps and the go-live prerequisites: FerroBRIDGE v0.0.23 and FerroFED v0.0.17 before a deployment adds `persons` issuers its bridge or gateway writes through.
+- **The installation pins:** the [Kubernetes installation](../installation/kubernetes.md), the chart README and [verifying releases](../verifying-releases.md) name chart 25.0.1-rc1 and image 5.7.0-rc1 in the book of main. The frozen book of 5.6.3 under `/docs/latest/` keeps its pins, since a pre-release freezes no book.
+- **`SECURITY.md`** names `security@cadasto.com` for a vulnerability report (#5272).
+- **The landing page, the crate READMEs, the [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html) and the image labels** make no claim this release changes.
+
+### Left open on 2026-11-10, for 5.7.0-rc1
+
+- The public sandbox runs 5.6.3 until the owner moves it to 5.7.0-rc1 for the reseed #5009 asks of the candidate. The release legs move it to 5.7.0 at the stable cut.
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #4777, now for 5.9.0.
+- The performance page keeps its earlier figures until a record measured on the reference host replaces them.
