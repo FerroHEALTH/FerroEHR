@@ -38,6 +38,7 @@ use crate::db::MigrationMode;
 
 /// How rigorously this deployment is held to the separations.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum DeploymentProfile {
     /// Must not hold real personal data. One cluster and one credential are
@@ -106,6 +107,7 @@ impl std::str::FromStr for DeploymentProfile {
 /// The token is what `deployment_accepts` names to run `production` without
 /// it, which is then said loudly at boot and on `/management/status`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum DeploymentGap {
     /// The clinical and party domains do not each connect on their own

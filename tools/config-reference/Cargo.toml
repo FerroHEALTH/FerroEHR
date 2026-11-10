@@ -1,0 +1,21 @@
+[package]
+name = "config-reference"
+version.workspace = true
+description = "Generates FerroEHR's configuration reference page and default ferroehr.toml from the JSON Schema of its configuration tree"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+ferroehr = { path = "../../app/ferroehr", features = ["schema"] }
+schemars.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

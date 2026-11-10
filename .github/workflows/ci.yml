@@ -1584,6 +1584,10 @@ jobs:
         run: bash scripts/checks/codegen-drift.sh --self-test
       - name: Regenerate and diff
         run: bash scripts/checks/codegen-drift.sh
+      # The configuration reference page, the reference TOML and the shipped
+      # default ferroehr.toml are generated from the configuration types (#5316).
+      - name: The configuration reference matches the configuration types
+        run: bash scripts/checks/config-reference.sh
       # The committed codegen inputs reproduce byte-identically from their
       # pinned upstream commits (vendored-corpora.md; fetched over https).
       - name: Codegen inputs match their pins

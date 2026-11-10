@@ -31,6 +31,7 @@ pub mod person;
 
 /// The `[authz.party_binding]` table.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct PartyBindingConfig {
     /// The healthcare provider this deployment acts for, which every access
@@ -105,6 +106,7 @@ impl Default for PartyBindingConfig {
 /// A healthcare provider, named by an identifier: its issuer and its id (in
 /// the Netherlands the URA).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct ProviderId {
     /// The issuer of the identifier.
@@ -122,6 +124,7 @@ impl fmt::Display for ProviderId {
 /// One `[[authz.party_binding.provider]]` table: the provider of the tokens
 /// whose issuer profile's `tenant_claim` carries `tenant`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct TenantProvider {
     /// The `tenant_claim` value the table holds for.
@@ -134,6 +137,7 @@ pub struct TenantProvider {
 
 /// The `provider` key: one table, or an array of tables keyed by tenant.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(untagged)]
 pub enum Providers {
     /// `[authz.party_binding.provider]`: the one provider of the deployment.
@@ -172,6 +176,7 @@ impl<'de> Visitor<'de> for ProvidersVisitor {
 /// One `[[authz.party_binding.basic_user]]` table: the binding key a Basic
 /// user is looked up by.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct BasicUserKey {
     /// The `[[auth.basic.users]]` user-id.

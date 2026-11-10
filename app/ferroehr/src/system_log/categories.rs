@@ -52,6 +52,7 @@ pub const NONE: &str = ehds_logging::map::NONE;
 /// declares no template and no archetype the map FerroEHR ships applies
 /// ([`SHIPPED_MAP`]); a deployment that declares a key replaces it whole.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct CategoryMapConfig {
     /// Whether the map FerroEHR ships applies while this section declares no

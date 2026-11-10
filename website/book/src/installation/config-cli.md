@@ -47,9 +47,10 @@ status alone.
 ferroehr config check [--config P]  # validate file + environment + --set
 ```
 
-The fully-commented template every key's default comes from, the starting
-point for a real `ferroehr.toml`, is
-[`app/ferroehr/assets/ferroehr.default.toml`](https://github.com/FerroHEALTH/FerroEHR/blob/main/app/ferroehr/assets/ferroehr.default.toml).
+The starting point for a real `ferroehr.toml` is
+[`app/ferroehr/assets/ferroehr.default.toml`](https://github.com/FerroHEALTH/FerroEHR/blob/main/app/ferroehr/assets/ferroehr.default.toml),
+the keys an operator usually sets, each at its default. [Every configuration
+key](config-keys.md) lists the others, generated from the configuration types.
 
 `config check` runs the same validation the server runs at boot (the strict
 unknown-key sweep, the type pass, the aggregated semantic rules, and the

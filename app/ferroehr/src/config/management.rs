@@ -26,6 +26,7 @@ use serde::{Deserialize, Serialize};
 /// The access level of a single management endpoint. Maps onto the existing
 /// authentication layer (the same authenticator the API surface uses).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum AccessLevel {
     /// Not mounted at all — the route returns `404` (the default for every
@@ -65,6 +66,7 @@ impl AccessLevel {
 
 /// Per-endpoint access levels. Each defaults to [`AccessLevel::Off`].
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct EndpointLevels {
     /// `/management/info`.
@@ -102,6 +104,7 @@ pub struct EndpointLevels {
 /// request may ask for; a request outside them is refused with `400`, never
 /// silently clamped.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 #[expect(
     clippy::struct_field_names,
@@ -139,6 +142,7 @@ impl Default for ProfilingConfig {
 
 /// The management surface configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct ManagementConfig {
     /// Master switch. When `false`, no management routes are mounted at all.

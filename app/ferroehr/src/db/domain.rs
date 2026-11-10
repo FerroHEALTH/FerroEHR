@@ -25,6 +25,16 @@
 //! No openEHR spec governs schemas, pools or database roles — our own
 //! design/extension.
 
+#![cfg_attr(
+    feature = "schema",
+    expect(
+        clippy::disallowed_types,
+        reason = "owner-approved 2026-08-03 (#1694 family 8, OpenAPI schema literals): the \
+                  schemars derive builds the JSON Schema of this module's configuration type \
+                  with serde_json::Map, which no item-level attribute reaches"
+    )
+)]
+
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
@@ -153,6 +163,7 @@ impl std::fmt::Display for Domain {
 /// shared `[database] url`, and its database is prepared on `[database]
 /// migrate_url`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct DomainDsn {
     /// This domain's `PostgreSQL` DSN. Unset reuses `[database] url`.

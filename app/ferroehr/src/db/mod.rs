@@ -24,6 +24,16 @@
 //! in [`iden`]. This is the defining module for the whole bootstrap surface,
 //! with no re-exports.
 
+#![cfg_attr(
+    feature = "schema",
+    expect(
+        clippy::disallowed_types,
+        reason = "owner-approved 2026-08-03 (#1694 family 8, OpenAPI schema literals): the \
+                  schemars derive builds the JSON Schema of this module's configuration type \
+                  with serde_json::Map, which no item-level attribute reaches"
+    )
+)]
+
 pub mod acquire;
 pub mod domain;
 pub mod iden;
@@ -60,6 +70,7 @@ pub const DEFAULT_URL: &str = "postgres://ferroehr:ferroehr@localhost:5432/ferro
 /// No openEHR spec governs migration mechanics or database roles — our own
 /// design/extension.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum MigrationMode {
     /// Apply the embedded migrations at boot, then verify (the default, and
@@ -79,6 +90,7 @@ pub enum MigrationMode {
 /// [`SecretUrl`]: its embedded credentials are redacted from every rendering
 /// (`Debug`, `/management/env`, `config check`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct DbConfig {
     /// `PostgreSQL` connection DSN (`postgres://user:pass@host:port/db`).

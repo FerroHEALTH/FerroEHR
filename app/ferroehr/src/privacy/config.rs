@@ -24,6 +24,7 @@ use crate::privacy::detect::built_in_rules;
 /// What the identifier scanner does with a clinical write that carries a value
 /// one of its rules claims.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum ScanMode {
     /// Refuse the write, naming the RM path and the rule that matched. The
@@ -48,6 +49,7 @@ impl ScanMode {
 
 /// The identifier scanner (`[privacy.identifier_scan]`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct IdentifierScanConfig {
     /// `strict` (refuse) or `warn` (accept and record)
@@ -95,6 +97,7 @@ impl Default for IdentifierScanConfig {
 
 /// The clinical-side data-minimisation policy (`[privacy]`).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct PrivacyConfig {
     /// The namespaces an `EHR_STATUS.subject.external_ref` may name

@@ -67,6 +67,7 @@ use crate::config::loader::{ConfigError, ConfigErrors};
 /// v5.7.0 read is kept only to be refused at load, naming its replacement
 /// ([`retired`]).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct FerroEhrConfig {
     /// `[deployment]`: the declared posture, the openEHR specification set
@@ -226,9 +227,10 @@ impl Default for FerroEhrConfig {
     }
 }
 
-/// The annotated default template, shipped as
-/// `app/ferroehr/assets/ferroehr.default.toml` — a hand-maintained asset kept in
-/// sync with the schema by the template tests.
+/// The shipped default `ferroehr.toml`, the keys an operator usually sets.
+///
+/// `tools/config-reference` generates it from the configuration types, each
+/// key with its default (#5316).
 pub const DEFAULT_TEMPLATE: &str = include_str!("../../assets/ferroehr.default.toml");
 
 impl FerroEhrConfig {
@@ -1336,9 +1338,46 @@ mod tests {
 
     // ── 6. Template sync ──────────────────────────────────────────────────────
 
+    /// Every key with its default, generated beside [`DEFAULT_TEMPLATE`] from
+    /// the configuration types (#5316).
+    const REFERENCE_TEMPLATE: &str = include_str!("../../assets/ferroehr.reference.toml");
+
     #[test]
     fn template_parses_to_default() {
         let file = toml_file(DEFAULT_TEMPLATE);
+        let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
+        assert_eq!(json(&c), json(&FerroEhrConfig::default()));
+    }
+
+    /// The shipped template passes what `ferroehr config check` validates once
+    /// the operator makes the two choices no default makes for them: the
+    /// patient identity source and the authentication mechanism.
+    #[test]
+    fn the_default_template_passes_validation_once_the_operator_chooses() {
+        let file = toml_file(DEFAULT_TEMPLATE);
+        let unchosen = assemble_ok(Some(file.path()), &env(&[]), &[]);
+        let refused = unchosen
+            .validate()
+            .expect_err("no patient identity source is chosen");
+        assert!(
+            refused.to_string().contains("record.subject_index"),
+            "{refused}"
+        );
+        let chosen = assemble_ok(
+            Some(file.path()),
+            &env(&[]),
+            &[("record.subject_index".to_owned(), "local".to_owned())],
+        );
+        chosen.validate().expect("the shipped template validates");
+        assert!(matches!(
+            auth::require_mechanism(&chosen.auth.shared),
+            Err(auth::AuthConfigError::NoMechanism)
+        ));
+    }
+
+    #[test]
+    fn the_reference_template_parses_to_default() {
+        let file = toml_file(REFERENCE_TEMPLATE);
         let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
         assert_eq!(json(&c), json(&FerroEhrConfig::default()));
     }
@@ -1354,10 +1393,10 @@ mod tests {
             let dotted = format!("[{section}."); // sub-tables count too
             let scalar = format!("\n{section} = "); // top-level scalar keys
             assert!(
-                DEFAULT_TEMPLATE.contains(&header)
-                    || DEFAULT_TEMPLATE.contains(&dotted)
-                    || DEFAULT_TEMPLATE.contains(&scalar)
-                    || DEFAULT_TEMPLATE.contains(&format!("\n#? {section} = ")),
+                REFERENCE_TEMPLATE.contains(&header)
+                    || REFERENCE_TEMPLATE.contains(&dotted)
+                    || REFERENCE_TEMPLATE.contains(&scalar)
+                    || REFERENCE_TEMPLATE.contains(&format!("\n#? {section} = ")),
                 "template missing section {section}"
             );
         }
@@ -1368,7 +1407,7 @@ mod tests {
     /// inside another key's trailing comment does not count: a key mentioned
     /// only that way stays invisible to an operator reading the template.
     fn template_declares(key: &str) -> bool {
-        DEFAULT_TEMPLATE.lines().any(|line| {
+        REFERENCE_TEMPLATE.lines().any(|line| {
             let line = line.trim_start();
             let line = line.strip_prefix("#?").map_or(line, str::trim_start);
             line.strip_prefix(key)
@@ -1397,7 +1436,7 @@ mod tests {
                     // as a `[section]` header rather than a key line.
                     serde_json::Value::Null => {}
                     _ if template_declares(key) => {}
-                    _ if DEFAULT_TEMPLATE.contains(&format!(".{key}]")) => {}
+                    _ if REFERENCE_TEMPLATE.contains(&format!(".{key}]")) => {}
                     _ => missing.push(key.clone()),
                 }
             }
@@ -1406,10 +1445,8 @@ mod tests {
         walk(&json(&FerroEhrConfig::default()), &mut missing);
         assert!(
             missing.is_empty(),
-            "the shipped ferroehr.toml template declares no key line for: {}. \
-             Every field belongs in it — the file's own header calls itself the \
-             complete configuration, and the shipped template is how an \
-             operator discovers a key.",
+            "the reference template declares no key line for: {}. Every field belongs \
+             in it: it is how the reference page and the gates know a key.",
             missing.join(", ")
         );
     }
@@ -1501,8 +1538,8 @@ mod tests {
                     .iter()
                     .filter(move |f| {
                         !template_declares(f)
-                            && !DEFAULT_TEMPLATE.contains(&format!("[{section}.{f}]"))
-                            && !DEFAULT_TEMPLATE.contains(&format!("[[{section}.{f}."))
+                            && !REFERENCE_TEMPLATE.contains(&format!("[{section}.{f}]"))
+                            && !REFERENCE_TEMPLATE.contains(&format!("[[{section}.{f}."))
                     })
                     .map(move |f| format!("{section}.{f}"))
             })

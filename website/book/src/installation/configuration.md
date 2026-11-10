@@ -11,10 +11,11 @@ map of which page documents which section.
 
 ## Quickstart
 
-Copy the annotated template, edit it, and run:
+Copy the shipped template, edit it, and run:
 
 ```bash
-# A fully-commented ferroehr.toml with every key at its default.
+# The keys an operator usually sets, each at its default. Every other key is
+# listed on the generated reference page, "Every configuration key".
 curl -fsSLo ferroehr.toml \
   https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/main/app/ferroehr/assets/ferroehr.default.toml
 

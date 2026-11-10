@@ -28,6 +28,7 @@ use url::Url;
 /// §Glossary). It never issues tokens, registers clients, or runs the OAuth 2.0
 /// endpoints; those are the authorization server's.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct SmartConfig {
     /// Serve the `/.well-known/smart-configuration` discovery document

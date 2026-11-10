@@ -14,7 +14,7 @@
 # against, and nothing else. Three of them:
 #
 #   1. Every `FERROEHR__…` environment form a page shows resolves to a real key
-#      in `app/ferroehr/assets/ferroehr.default.toml`.
+#      in `app/ferroehr/assets/ferroehr.reference.toml`.
 #   2. Every Helm values path a chart page shows resolves — against
 #      `values.yaml`, or for the `config.*` subtree against the TOML schema,
 #      because the chart renders `config:` VERBATIM to ferroehr.toml (so
@@ -63,7 +63,7 @@ guard_known_flags "[--all | --diff [base] | <file>...]" "--all --diff" "$@"
 cd "$(dirname "$0")/../.."
 
 BOOK=website/book/src
-TOML=app/ferroehr/assets/ferroehr.default.toml
+TOML=app/ferroehr/assets/ferroehr.reference.toml
 VALUES=deploy/helm/ferroehr/values.yaml
 # The pages that document the Helm chart, and therefore the only pages on which a
 # dotted token is read as a chart values path. Glob-derived: a hardcoded list
@@ -99,14 +99,21 @@ trap 'rm -rf "$work"' EXIT
 
 # Every TOML path, plus every ancestor table (a page may document `[audit]` as
 # `config.audit`). A `#?` line documents a real optional/secret/derived key and
-# counts; a plain `#` comment does not.
+# counts; a plain `#` comment does not, except under a `# [table.<name>]`
+# header, a table under an operator-chosen name, whose keys are written as
+# `# key = …` and count with `*` in the name's place.
 toml_paths() {
   local file="$1"
   awk '
     { line = $0
       sub(/^[[:space:]]*/, "", line)
-      if (line ~ /^#\?[[:space:]]*/) sub(/^#\?[[:space:]]*/, "", line)
+      if (line ~ /^# \[[A-Za-z0-9_.]+\.<name>\]$/) {
+        sec = line; gsub(/^# \[|\]$/, "", sec); gsub(/<name>/, "*", sec); named = 1; next
+      }
+      if (named && line ~ /^# [A-Za-z0-9_]+ = /) sub(/^# /, "", line)
+      else if (line ~ /^#\?[[:space:]]*/) { sub(/^#\?[[:space:]]*/, "", line); named = 0 }
       else if (line ~ /^#/) next
+      else named = 0
       if (line ~ /^\[\[?[A-Za-z0-9_.]+\]\]?/) { sec = line; gsub(/^\[\[?|\]\]?.*$/, "", sec); next }
       if (line ~ /^[A-Za-z0-9_]+[[:space:]]*=/) {
         k = line; sub(/[[:space:]]*=.*$/, "", k)
@@ -146,6 +153,9 @@ toml_paths "$TOML" > "$work/toml"
 values_paths "$VALUES" > "$work/values"
 # Env forms: the TOML path upper-cased with `__` between segments.
 sed 's/\./__/g' "$work/toml" | tr '[:lower:]' '[:upper:]' | sed 's/^/FERROEHR__/' | sort -u > "$work/env"
+# The same forms of the keys under an operator-chosen name, as patterns; `$^`
+# matches nothing when there is none.
+{ echo '$^'; grep -F '*' "$work/env" | sed 's/\*/[A-Z0-9]+(_[A-Z0-9]+)*/g'; } > "$work/env_named"
 grep -vE '\.' "$work/values" > "$work/values_top"
 
 failures=0
@@ -181,12 +191,15 @@ for f in $files; do
     case "$form" in *__) continue ;; *) ;; esac
     # An array of tables is set by element index (FERROEHR__AUTH__ISSUER__0__KIND),
     # which names the key the path without the index names.
-    grep -qxF "$(sed -E 's/__[0-9]+__/__/g' <<<"$form")" "$work/env" \
+    form=$(sed -E 's/__[0-9]+__/__/g' <<<"$form")
+    grep -qxF "$form" "$work/env" && continue
+    # A key under an operator-chosen table name matches any one name.
+    grep -qxEf "$work/env_named" <<<"$form" \
       || report "$f" "documents \`$form\`, which is not a key in $TOML"
   done < <(grep -ohE 'FERROEHR__[A-Z0-9_]+' "$f" | sort -u)
 done
 
-# ── 1b. documented defaults vs the shipped default TOML ─────────────────────
+# ── 1b. documented defaults vs the reference TOML ───────────────────────────
 # A `| Key | Type | Default |` row on a configuration page states a default the
 # TOML asset also states; the two went out of sync on the published site
 # (`[query] timeout_ms` documented as `0` against a shipped `30000` — #2348).
