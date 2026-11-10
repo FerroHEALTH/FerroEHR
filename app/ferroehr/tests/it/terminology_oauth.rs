@@ -30,7 +30,7 @@ const SNOMED: &str = "http://snomed.info/sct";
 fn server_cfg(base: &str, oauth: Option<OauthSection>) -> TerminologyServerConfig {
     TerminologyServerConfig {
         endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-            url: base.to_owned(),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(base),
             timeout: ferrohealth_config::units::Duration::from_millis(800),
             credentials: ferrohealth_smart::config::credentials::CredentialsSection {
                 oauth,

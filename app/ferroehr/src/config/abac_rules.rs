@@ -75,7 +75,7 @@ impl AbacConfig {
     /// (an unconfigured kind denies, and the missing rule is a boot error
     /// rather than a silent refusal at request time).
     fn validate_remote_engine(&self) -> Result<(), AuthzConfigError> {
-        let server = Some(self.remote.endpoint.url.as_str())
+        let server = Some(self.remote.endpoint.url.expose())
             .filter(|s| !s.trim().is_empty())
             .ok_or(AuthzConfigError::RemoteServerMissing)?;
         if !server.ends_with('/') {

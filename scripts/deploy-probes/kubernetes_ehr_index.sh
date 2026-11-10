@@ -16,7 +16,7 @@
 # in a source domain and the CDR asks the PIX Manager for the clinical
 # pseudonym (ITI-83), which is what proves the index answers.
 #
-# FerroPIX 0.0.18 reads its issuer from the issuer's metadata and accepts a
+# FerroPIX 0.0.25 reads its issuer from the issuer's metadata and accepts a
 # plain-http issuer on loopback only (RFC 8414 §2), so the development issuer
 # runs beside it in its pod on localhost:8180 and signs every client
 # credentials token with that `iss` and FerroPIX's audience. The CDR reaches
@@ -84,10 +84,14 @@ config:
   server:
     listen: "0.0.0.0:8080"
   auth:
-    audience: ["$K8S_PIX_AUDIENCE"]
     issuer:
       - issuer: "$K8S_PIX_ISSUER"
-        token_profile: jwt
+        kind: machines
+        profile: rfc9068
+        audience: ["$K8S_PIX_AUDIENCE"]
+        token_types: [JWT]
+        required_claims: [iss, exp, aud, sub]
+        client_claims: [client_id, azp]
   trust:
     issuer:
       - issuer: "$K8S_PIX_ISSUER"

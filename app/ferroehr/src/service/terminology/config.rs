@@ -56,7 +56,7 @@ impl TerminologyServerConfig {
     /// The server's URL with any `userinfo` masked, for a log line.
     #[must_use]
     pub fn masked_url(&self) -> String {
-        ferrohealth_smart::config::mask_userinfo(&self.endpoint.url)
+        self.endpoint.url.redacted()
     }
 
     /// Whether an unresolvable binding refuses the composition.
@@ -74,7 +74,7 @@ mod tests {
     fn the_defaults_accept_on_error() {
         let c = TerminologyServerConfig::default();
         assert!(!c.refuses_on_error());
-        assert_eq!(c.endpoint.url, "");
+        assert_eq!(c.endpoint.url.expose(), "");
         assert!(c.endpoint.credentials.oauth.is_none());
         assert_eq!(
             c.endpoint.timeout,

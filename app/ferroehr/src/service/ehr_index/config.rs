@@ -169,7 +169,7 @@ mod tests {
     fn pixm() -> PixmConfig {
         PixmConfig {
             endpoint: EndpointSection {
-                url: "https://pix.example/fhir".to_owned(),
+                url: ferrohealth_secret::secret_url::SecretUrl::new("https://pix.example/fhir"),
                 ..EndpointSection::default()
             },
             assigning_authority: DOMAIN.to_owned(),
@@ -244,7 +244,7 @@ mod tests {
     fn a_half_configured_source_is_refused() {
         let index = Some(SubjectIndex::Pixm);
         let mut no_url = pixm();
-        no_url.endpoint.url = String::new();
+        no_url.endpoint.url = ferrohealth_secret::secret_url::SecretUrl::new("");
         assert!(
             problems(index, Some(&no_url), &[DOMAIN.to_owned()])
                 .iter()

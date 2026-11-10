@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment.profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
-![Version: 25.0.1-rc2](https://img.shields.io/badge/Version-25.0.1--rc2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.7.0-rc2](https://img.shields.io/badge/AppVersion-5.7.0--rc2-informational?style=flat-square)
+![Version: 25.0.1-rc3](https://img.shields.io/badge/Version-25.0.1--rc3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.7.0-rc2](https://img.shields.io/badge/AppVersion-5.7.0--rc2-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 25.0.1-rc2 \
+  --version 25.0.1-rc3 \
   --namespace ferroehr --create-namespace \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
@@ -62,7 +62,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `25.0.1-rc2` |
+| the **chart** (templates, defaults, this document) | `--version` | `25.0.1-rc3` |
 | the **server image** | `image.tag` | `5.7.0-rc2` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -74,7 +74,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:25.0.1-rc2 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:25.0.1-rc3 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -82,7 +82,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:25.0.1-rc2 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:25.0.1-rc2 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:25.0.1-rc3 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.7.0-rc2 \
   -R FerroHEALTH/FerroEHR
@@ -178,7 +178,7 @@ Kubernetes: `>=1.36.0-0`
 
 | Repository | Name | Version |
 |------------|------|---------|
-| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.10 |
+| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.17 |
 
 > [!NOTE]
 > Rows under `config.*` carry no description here on purpose. Those keys are the
@@ -340,8 +340,8 @@ Kubernetes: `>=1.36.0-0`
 | extraVolumes | list | `[]` | Extra volumes / volumeMounts (e.g. an external secret store for the PGP key). |
 | ferropix.config.server.base_path | string | `""` | FerroPIX's `[server] base_path`, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.enabled | bool | `true` | Deploy FerroPIX beside the CDR and point config.pixm at it. |
-| ferropix.image.digest | string | `"sha256:6fb622b5b9ade34c8a4053112c8f166ff495d8b32bf99f35529d01e512b7cc42"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
-| ferropix.image.tag | string | `"0.0.18"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
+| ferropix.image.digest | string | `"sha256:4fcbabdd21bfc8993c94afe9043c25e7c2a651b872aebbd4d86935ff4c57cba5"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
+| ferropix.image.tag | string | `"0.0.25"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
 | ferropix.service.port | int | `8080` | FerroPIX's Service port, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.usageReport.enabled | bool | `true` | FerroPIX's own usage report switch, read by the dependency chart. A dependency chart cannot read this chart's `usageReport.enabled`, so with that set to false, set this false too: the render refuses the pair `usageReport.enabled=false` and `ferropix.usageReport.enabled=true`. |
 | fullnameOverride | string | `""` | Override the full resource name. |

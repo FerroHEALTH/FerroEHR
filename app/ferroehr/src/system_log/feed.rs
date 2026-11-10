@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The ITI-20 ATX: FHIR Feed (`[audit.fhir_feed]`): `ihe-atna`'s
-//! [`FeedRepository`] with its [`Bearer`] source, which asks the feed's IHE
-//! IUA bearer token for each request and renews it once on a `401` (RFC 6750
-//! §3.1), and the [`StoreOutbox`] `ihe-atna`'s forwarder delivers from when
+//! [`FeedRepository`] over the endpoint's [`OutboundClient`], which carries
+//! the feed's IHE IUA bearer token on each request and renews it once on a
+//! `401` (RFC 6750 §3.1), and the [`StoreOutbox`] `ihe-atna`'s forwarder delivers from when
 //! the local audit store is on.
 //!
 //! The store is the feed's outbox: a record not yet delivered has a row in
@@ -23,7 +23,8 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::Duration;
 
-use ihe_atna::atna::bearer::Bearer;
+use ferrohealth_smart::client::outbound::OutboundClient;
+use ferrohealth_smart::config::ServerTls;
 use ihe_atna::atna::feed::FeedRepository;
 use ihe_atna::atna::forwarder::{Outbox, OutboxError};
 use ihe_atna::atna::spool::{Depth, Stored};
@@ -34,28 +35,23 @@ use crate::system_log::AuditError;
 use crate::system_log::config::FhirFeedConfig;
 use crate::system_log::store::AuditStore;
 
-/// The repository `config` names, over the HTTP client and the credential of
-/// `[audit.fhir_feed.endpoint]`.
+/// The repository `config` names, over `ferrohealth-smart`'s outbound client
+/// of `[audit.fhir_feed.endpoint]`.
 ///
 /// # Errors
 /// [`AuditError::Transport`] when the endpoint is refused or the URL is not an
 /// `http(s)` URL; boot validation refuses an incomplete table first.
 pub(super) fn repository(config: &FhirFeedConfig) -> Result<FeedRepository, AuditError> {
-    let endpoint = crate::outbound::Endpoint::connect("audit.fhir_feed.endpoint", &config.endpoint)
+    let client = OutboundClient::build(&config.endpoint, "audit.fhir_feed.endpoint", &ServerTls)
         .map_err(|e| AuditError::Transport(Box::new(e)))?;
-    let base = endpoint.url().clone();
     // NOTE: an `http` feed opens the `plaintext_audit_feed` deployment gap, which
     // production refuses unless it is accepted by name.
-    let repository = if base.scheme() == "http" {
-        FeedRepository::cleartext(base, endpoint.http(), endpoint.timeout())
+    if client.url().scheme() == "http" {
+        FeedRepository::cleartext(client)
     } else {
-        FeedRepository::new(base, endpoint.http(), endpoint.timeout())
+        FeedRepository::new(client)
     }
-    .map_err(|e| AuditError::Transport(Box::new(e)))?;
-    Ok(match endpoint.token() {
-        Some(token) => repository.with_credentials(Arc::new(Bearer::from(token))),
-        None => repository,
-    })
+    .map_err(|e| AuditError::Transport(Box::new(e)))
 }
 
 /// The local audit store as the FHIR Feed's outbox.

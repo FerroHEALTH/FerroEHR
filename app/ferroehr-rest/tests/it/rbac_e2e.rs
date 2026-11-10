@@ -617,7 +617,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
     cfg.terminology = Some(
         ferroehr::service::terminology::config::TerminologyServerConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                url: leaky(2).expose().to_owned(),
+                url: leaky(2),
                 credentials: ferrohealth_smart::config::credentials::CredentialsSection {
                     oauth: Some(ferrohealth_smart::config::credentials::OauthSection {
                         token_endpoint: "https://u3:URL_PW_SENTINEL_3@h3/p".to_owned(),
@@ -631,7 +631,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
         },
     );
     // URL 4 was the usage report endpoint, whose type now refuses userinfo.
-    cfg.authz.abac.remote.endpoint.url = leaky(5).expose().to_owned();
+    cfg.authz.abac.remote.endpoint.url = leaky(5);
     cfg.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
         endpoint: leaky(6),
         ..ferrohealth_telemetry::section::OtlpSection::default()

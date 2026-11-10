@@ -548,7 +548,7 @@ mod tests {
             abac: AbacConfig {
                 remote: RemoteConfig {
                     endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                        url: "http://pdp:3001/exec".to_owned(),
+                        url: ferrohealth_secret::secret_url::SecretUrl::new("http://pdp:3001/exec"),
                         ..RemoteConfig::default().endpoint
                     },
                     ..RemoteConfig::default()
@@ -566,7 +566,9 @@ mod tests {
             abac: AbacConfig {
                 remote: RemoteConfig {
                     endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                        url: "http://pdp:3001/exec/".to_owned(),
+                        url: ferrohealth_secret::secret_url::SecretUrl::new(
+                            "http://pdp:3001/exec/",
+                        ),
                         ..RemoteConfig::default().endpoint
                     },
                     ..RemoteConfig::default()
@@ -590,7 +592,9 @@ mod tests {
                 engine: AbacEngineKind::Remote,
                 remote: RemoteConfig {
                     endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                        url: "http://pdp:3001/exec/".to_owned(),
+                        url: ferrohealth_secret::secret_url::SecretUrl::new(
+                            "http://pdp:3001/exec/",
+                        ),
                         ..RemoteConfig::default().endpoint
                     },
                     ..RemoteConfig::default()

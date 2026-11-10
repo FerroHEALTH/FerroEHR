@@ -465,7 +465,7 @@ async fn an_overage_the_identity_provider_throttles_is_unavailable_with_its_retr
     if let Some(entry) = config.auth.shared.issuer.first_mut() {
         entry.adapter = Some(ferrohealth_smart::idp::entra::NAME.to_owned());
     }
-    config.auth.idp.entra = Some(Box::new(ferrohealth_smart::idp::entra::GraphSection {
+    config.auth.shared.idp.entra = Some(Box::new(ferrohealth_smart::idp::entra::GraphSection {
         base_url: format!("{}/v1.0", graph.uri()),
         credentials: ferrohealth_smart::config::credentials::OauthSection {
             token_endpoint: format!("{}/token", graph.uri()),

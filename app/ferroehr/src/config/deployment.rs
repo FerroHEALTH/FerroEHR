@@ -421,7 +421,7 @@ impl DeploymentPosture {
                 .audit
                 .fhir_feed
                 .as_ref()
-                .is_some_and(|feed| is_plaintext_http(&feed.endpoint.url))
+                .is_some_and(|feed| is_plaintext_http(feed.endpoint.url.expose()))
         {
             gaps.push(DeploymentGap::PlaintextAuditFeed);
         }
@@ -1024,7 +1024,7 @@ mod tests {
         let feed = |enabled: bool, url: &str| {
             let mut config = production(separated());
             let mut feed = crate::system_log::config::FhirFeedConfig::default();
-            feed.endpoint.url = url.to_owned();
+            feed.endpoint.url = SecretUrl::new(url);
             config.audit.fhir_feed = enabled.then_some(feed);
             config
         };

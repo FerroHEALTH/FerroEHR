@@ -36,7 +36,7 @@ fn config(server: &str, name: &str, parameters: Vec<AbacParam>) -> AbacConfig {
         engine: AbacEngineKind::Remote,
         remote: RemoteConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                url: server.to_owned(),
+                url: ferrohealth_secret::secret_url::SecretUrl::new(server),
                 connect_timeout: Some(ferrohealth_config::units::Duration::from_millis(500)),
                 timeout: ferrohealth_config::units::Duration::from_millis(1000),
                 retry: ferrohealth_smart::config::endpoint::RetrySection {

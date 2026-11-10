@@ -22,7 +22,7 @@ type: application
 # A published OCI version is immutable by refusal rather than by the registry —
 # `helm push` over an existing tag replaces it silently — so a correction always
 # ships as a NEW version and the published one stands as it was.
-version: 25.0.1-rc2
+version: 25.0.1-rc3
 # The DEFAULT container image tag (overridable via image.tag). Equals the
 # workspace version in Cargo.toml, bumped in the release PR beside the
 # docker-compose.yml image tags — one version sweep, the compose treatment
@@ -50,7 +50,7 @@ appVersion: "5.7.0-rc2"
 # fetches it into charts/ before any render (deploy/helm/validate.sh does).
 dependencies:
   - name: ferropix
-    version: 0.3.10
+    version: 0.3.17
     repository: oci://ghcr.io/ferrohealth/charts
     condition: ferropix.enabled
 
@@ -233,7 +233,7 @@ annotations:
     # release line, so third party on the FerroTERM reasoning; tag and digest
     # are the ones `ferropix.image.digest` in values.yaml pins.
     - name: ferropix
-      image: ghcr.io/ferrohealth/ferropix:0.0.18@sha256:6fb622b5b9ade34c8a4053112c8f166ff495d8b32bf99f35529d01e512b7cc42  # party: third
+      image: ghcr.io/ferrohealth/ferropix:0.0.25@sha256:4fcbabdd21bfc8993c94afe9043c25e7c2a651b872aebbd4d86935ff4c57cba5  # party: third
       platforms:
         - linux/amd64
         - linux/arm64

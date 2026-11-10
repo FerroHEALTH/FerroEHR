@@ -1823,8 +1823,8 @@ bridge:
 #     config:
 #       public_base_url: https://pix.example.org
 #       auth:
-#         audience: [https://pix.example.org/fhir]
-#         issuer: [{issuer: https://idp.example.org}]
+#         issuer:
+#           - {issuer: https://idp.example.org, kind: machines, audience: [https://pix.example.org/fhir]}
 #       trust:
 #         issuer: [{issuer: https://idp.example.org, clients: [hospital-source]}]
 #       pseudonym_domain:
@@ -1838,10 +1838,10 @@ ferropix:
   image:
     # -- The FerroPIX release the pinned `digest` belongs to. The dependency
     # chart deploys the digest, and the Artifact Hub entry names this tag.
-    tag: "0.0.18"
+    tag: "0.0.25"
     # -- FerroPIX image digest of release `tag`. Pinned here so
     # the image this chart deploys is stated by this chart.
-    digest: "sha256:6fb622b5b9ade34c8a4053112c8f166ff495d8b32bf99f35529d01e512b7cc42"
+    digest: "sha256:4fcbabdd21bfc8993c94afe9043c25e7c2a651b872aebbd4d86935ff4c57cba5"
   config:
     server:
       # -- FerroPIX's `[server] base_path`, read here to build the FHIR base the

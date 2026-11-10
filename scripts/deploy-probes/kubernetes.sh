@@ -101,7 +101,7 @@ K8S_BRIDGE_SECRET="ferroehr-bridge-cdr"
 # CDR trusts that issuer as `kind: machines` through the key set the probe reads
 # from the running server, so no key material is kept anywhere.
 K8S_MACHINES="probe-machines"
-K8S_MACHINES_IMAGE="ghcr.io/navikt/mock-oauth2-server:6.1.3@sha256:2a813381bf282da46ff36ff386059e7903e25865056af8149f4fb3f1441916b8"
+K8S_MACHINES_IMAGE="ghcr.io/navikt/mock-oauth2-server:6.1.5@sha256:d88e445d55c4ff6eed59b02d86adfece47d985233b1616fb712669b98328c8a2"
 K8S_MACHINES_ISSUER="https://machines.ferroehr.invalid"
 K8S_MACHINES_AUDIENCE="ferroehr-machines"
 K8S_BRIDGE_CLIENT_ID="ferrobridge"

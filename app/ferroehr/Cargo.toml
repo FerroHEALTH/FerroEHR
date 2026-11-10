@@ -123,7 +123,7 @@ ehds-logging.workspace = true
 # The IHE patient identity source of the EHR index (`service::ehr_index::ihe`):
 # the PIXm Patient Identifier Cross-reference Consumer (ITI-83), authenticated by
 # the `smart` token authorizer under `[ehr_index.oauth]`.
-ihe-iti = { workspace = true, features = ["pixm", "smart"] }
+ihe-iti = { workspace = true, features = ["pixm"] }
 
 openehr-base = { path = "../../crates/openehr-base" }
 openehr-term = { path = "../../crates/openehr-term" }
