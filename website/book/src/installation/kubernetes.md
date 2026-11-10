@@ -982,7 +982,7 @@ Secret you own through `extraEnv` instead. Another PIX Manager:
 `ferropix.enabled: false` and `config.pixm.endpoint.url`. A CDR run on its
 own: `ferropix.enabled: false` and `config.record.subject_index: local`.
 
-The chart pins FerroPIX 0.0.25 by digest (`ferropix.image`) with the
+The chart pins FerroPIX 0.0.26 by digest (`ferropix.image`) with the
 FerroPIX chart built for it. Since FerroPIX 0.0.19 every `[[auth.issuer]]`
 entry carries its `kind` and its own `audience`: an issuer that signs only
 the client credentials tokens of the Source and of FerroEHR is

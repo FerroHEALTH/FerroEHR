@@ -50,7 +50,7 @@ appVersion: "5.7.0-rc2"
 # fetches it into charts/ before any render (deploy/helm/validate.sh does).
 dependencies:
   - name: ferropix
-    version: 0.3.18
+    version: 0.3.19
     repository: oci://ghcr.io/ferrohealth/charts
     condition: ferropix.enabled
 
@@ -213,7 +213,7 @@ annotations:
     # the digest to `terminology.image.digest` in values.yaml. Bumping FerroTERM
     # is those two edits; this line is then checked, not maintained.
     - name: ferroterm
-      image: ghcr.io/ferrohealth/ferroterm:0.4.1@sha256:b7f10609992377a7b8bca666254bceca79fe4366e2e54fc5fbce079eb9abf619  # party: third
+      image: ghcr.io/ferrohealth/ferroterm:0.4.5@sha256:7c20d39e1989fce1dfb92e6ddfd853dfa9a52bb9b7b973fbba42430963ef75bd  # party: third
       platforms:
         - linux/amd64
         - linux/arm64
@@ -233,7 +233,7 @@ annotations:
     # release line, so third party on the FerroTERM reasoning; tag and digest
     # are the ones `ferropix.image.digest` in values.yaml pins.
     - name: ferropix
-      image: ghcr.io/ferrohealth/ferropix:0.0.25@sha256:4fcbabdd21bfc8993c94afe9043c25e7c2a651b872aebbd4d86935ff4c57cba5  # party: third
+      image: ghcr.io/ferrohealth/ferropix:0.0.26@sha256:85d40e6fdcdb39f782007eff91eb059861a4e039ca3f8fb56e37f2fa0f28d78a  # party: third
       platforms:
         - linux/amd64
         - linux/arm64

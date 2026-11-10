@@ -335,7 +335,7 @@ steps.
 FerroTERM 0.3 reads its configuration tree only: the compose file sets
 `FERROTERM__TERMINOLOGY__CODE_SYSTEMS` and `FERROTERM__TERMINOLOGY__INDEX`,
 and the index list in `.env` is `FERROTERM_INDEXES`, comma-separated, where
-FerroTERM 0.1 read `FERROTERM_INDEX`, colon-separated. FerroTERM 0.3.3, 0.4.0 and 0.4.1 read
+FerroTERM 0.1 read `FERROTERM_INDEX`, colon-separated. FerroTERM 0.3.3, 0.4.0, 0.4.1 and 0.4.5 read
 artifact layout 7, the layout of the index the box carries (built with
 `ferroterm-build` 0.1.6, `ferroterm-index.env`), so the move from 0.1.6 needs
 no rebuild.

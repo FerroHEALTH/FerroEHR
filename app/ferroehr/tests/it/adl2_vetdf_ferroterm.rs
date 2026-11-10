@@ -38,7 +38,7 @@ const FERROTERM_IMAGE: &str = "ghcr.io/ferrohealth/ferroterm";
 /// Tag AND index digest, the reference the overlay carries: the digest is what
 /// is pulled, so this suite measures the exact bytes a deployment runs.
 const FERROTERM_TAG: &str =
-    "0.4.1@sha256:b7f10609992377a7b8bca666254bceca79fe4366e2e54fc5fbce079eb9abf619";
+    "0.4.5@sha256:7c20d39e1989fce1dfb92e6ddfd853dfa9a52bb9b7b973fbba42430963ef75bd";
 const FERROTERM_PORT: ContainerPort = ContainerPort::Tcp(8080);
 /// The shaped code system the seed serves (`docker/terminology/seed/`).
 const SHAPED_SYSTEM: &str = "http://cnf.example.test/fhir/CodeSystem/sct-shaped";
