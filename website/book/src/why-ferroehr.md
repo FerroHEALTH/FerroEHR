@@ -64,13 +64,11 @@ and published*.
 - **Maintenance in the open.** Public roadmap, public issue tracker,
   changelog-driven releases, signed artifacts, and a security policy with a
   private reporting channel.
-- **A compliance posture you can read before you buy.** FerroEHR aims to be
-  the first openly developed, source-available openEHR CDR with a published,
-  tracker-backed EU compliance posture, and an EHDS conformity
-  self-assessment is on its roadmap. The
-  [compliance overview](compliance/index.md) states which controls ship
-  today, which are planned and under which issue number, and which
-  obligations stay with the organisation running the software. It claims no
+- **A compliance posture you can read before you buy.** FerroEHR publishes
+  its EU compliance posture, backed by the tracker. The
+  [compliance overview](compliance/index.md) states the status of each
+  control with its issue, and which obligations stay with the organisation
+  running the software. It claims no
   certification and no conformity, because a product cannot hold either on
   its own.
 

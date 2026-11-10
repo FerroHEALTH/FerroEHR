@@ -1,42 +1,38 @@
 <!DOCTYPE html>
+<!-- SPDX-FileCopyrightText: Cadasto B.V. -->
+<!-- SPDX-License-Identifier: BUSL-1.1 -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- GitHub Pages serves static files and sets no response headers, so the
-       policy travels as a <meta> element. Weaker than the header by
-       specification — `frame-ancestors`, `report-uri` and `sandbox` are ignored
-       in meta form (CSP3 §3.3) — but it still blocks an injected external
-       script or an exfiltrating connection, which is the realistic risk here. -->
-  <!-- Neither script-src nor style-src carries an inline allowance. The page's
-       only <script> is an application/ld+json DATA BLOCK, which browsers never
-       execute, so script-src does not govern it
-       (https://html.spec.whatwg.org/multipage/scripting.html#data-block); the
-       page carries no <style> element and no style attribute, so every rule
-       comes from the same-origin stylesheet. The inline <svg> elements style
-       themselves with presentation attributes (fill, stroke), which are not
-       CSS and are outside style-src
-       (https://www.w3.org/TR/CSP3/#directive-style-src). -->
+  <!-- GitHub Pages sets no response headers, so the policy travels in a <meta>
+       element. The page loads no external script, style or font; the one
+       image source beyond 'self' is the repository path the conformance
+       badges are pushed to. The only <script> is an application/ld+json data
+       block, which browsers never execute
+       (https://html.spec.whatwg.org/multipage/scripting.html#data-block). -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>FerroEHR — a pure-Rust openEHR Clinical Data Repository</title>
-  <meta name="description" content="FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0, AQL 1.1, PostgreSQL 18-native storage, shipped as a single self-contained binary. Conformance measured and machine-verified.">
+  <title>FerroEHR: a pure-Rust openEHR Clinical Data Repository</title>
+  <meta name="description" content="FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0, AQL 1.1 and PostgreSQL 18-native storage, shipped as a single self-contained binary, with its openEHR conformance measured and machine-verified.">
   <link rel="canonical" href="https://ferroehr.eu/">
-  <link rel="icon" type="image/svg+xml" href="./assets/logo-mark.svg">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v={{hash:style.css}}">
+  <link rel="icon" href="./assets/brand/favicon.svg" type="image/svg+xml">
+  <link rel="alternate icon" href="./assets/brand/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="alternate icon" href="./assets/brand/favicon.ico" sizes="32x32 16x16">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="FerroEHR — a pure-Rust openEHR Clinical Data Repository">
-  <meta property="og:description" content="openEHR conformance, measured. ITS-REST 1.1.0 · AQL 1.1 · PostgreSQL 18.">
   <meta property="og:url" content="https://ferroehr.eu/">
   <meta property="og:site_name" content="FerroEHR">
+  <meta property="og:title" content="FerroEHR: a pure-Rust openEHR Clinical Data Repository">
+  <meta property="og:description" content="openEHR conformance, measured: ITS-REST 1.1.0, AQL 1.1 and PostgreSQL 18, in one self-contained binary.">
   <meta property="og:image" content="https://ferroehr.eu/assets/social-card.png">
+  <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1280">
   <meta property="og:image:height" content="640">
-  <meta property="og:image:alt" content="FerroEHR — a pure-Rust openEHR Clinical Data Repository">
+  <meta property="og:image:alt" content="FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://ferroehr.eu/assets/social-card.png">
-  <meta name="twitter:title" content="FerroEHR — a pure-Rust openEHR Clinical Data Repository">
-  <meta name="twitter:description" content="openEHR conformance, measured. ITS-REST 1.1.0 · AQL 1.1 · PostgreSQL 18.">
+  <meta name="twitter:image:alt" content="FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
 
   <!-- Structured data. `WebSite` + `Organization` identify the site and its
        publisher; `SoftwareSourceCode` describes what the site is ABOUT (an
@@ -45,7 +41,7 @@
        `hasPart` list names the site's top-level sections so the hierarchy is
        explicit rather than inferred from crawling alone.
        NOTE: Google generates sitelinks algorithmically and no markup can
-       request them — the old sitelinks-searchbox type was withdrawn in 2023;
+       request them: the old sitelinks-searchbox type was withdrawn in 2023;
        this markup makes the hierarchy unambiguous, which is the part under
        our control. -->
   <script type="application/ld+json">
@@ -104,75 +100,132 @@
 </head>
 <body>
 
-  <!-- ── Nav ────────────────────────────────────────────────────────────── -->
   <header class="nav">
     <div class="wrap">
       <a class="brand" href="./">
-        <img src="./assets/logo-mark.svg" alt="" aria-hidden="true">
-        <span>Ferro<span class="tld">EHR</span></span>
+        <picture>
+          <source srcset="./assets/brand/ferroehr-icon-iron.svg" media="(prefers-color-scheme: dark)">
+          <img src="./assets/brand/ferroehr-icon.svg" alt="" aria-hidden="true" width="28" height="28">
+        </picture>
+        <span>FerroEHR</span>
       </a>
       <nav class="nav-links" aria-label="Primary">
         <a href="./docs/latest/">Docs</a>
-        <a href="https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui" rel="noopener">API ↗</a>
-        <a href="#why" class="hide-sm">Why</a>
-        <a href="#conformance" class="hide-sm">Conformance</a>
-        <a href="https://github.com/FerroHEALTH/FerroEHR" rel="noopener">GitHub ↗</a>
+        <a href="./docs/latest/getting-started.html" class="hide-sm">Quickstart</a>
+        <a href="./docs/latest/installation/kubernetes.html" class="hide-sm">Deploy</a>
+        <a href="./docs/latest/conformance.html" class="hide-sm">Conformance</a>
+        <a href="https://github.com/FerroHEALTH/FerroEHR" rel="noopener">GitHub</a>
       </nav>
     </div>
   </header>
 
   <main>
 
-    <!-- ── Hero ─────────────────────────────────────────────────────────── -->
     <section class="hero">
       <div class="wrap">
-        <img class="hero-logo" src="./assets/logo.svg" alt="FerroEHR">
-        <h1>A pure-Rust openEHR Clinical Data Repository. openEHR conformance, measured.</h1>
+        <img class="hero-logo" src="./assets/brand/ferroehr-icon.svg" alt="FerroEHR" width="88" height="88">
+        <!-- The version is rendered from the root Cargo.toml when the site is
+             built (scripts/site/build.sh), so it is always the release main
+             carries. -->
+        <a class="status" href="https://github.com/FerroHEALTH/FerroEHR/releases/latest" rel="noopener">v{{version:ferroehr}} released</a>
+        <h1>A pure-Rust openEHR Clinical Data Repository, with its conformance measured.</h1>
         <p class="sub">
-          openEHR separates clinical knowledge from software: applications store
-          and query structured health records through a vendor-neutral REST API
-          and the Archetype Query Language. FerroEHR implements that standard
-          natively in Rust: headless, API-first, one self-contained binary on PostgreSQL 18.
+          openEHR separates clinical knowledge from software: applications
+          store and query structured health records through a vendor-neutral
+          REST API and the Archetype Query Language. FerroEHR implements that
+          standard natively in Rust: headless, API-first, one self-contained
+          binary on PostgreSQL 18.
         </p>
         <div class="hero-cta">
-          <a class="btn btn-primary" href="./docs/latest/getting-started.html">Get started</a>
+          <a class="btn btn-primary" href="./docs/latest/getting-started.html">Run the quickstart</a>
           <a class="btn btn-ghost" href="https://sandbox.ferroehr.eu" rel="noopener">Try the live demo</a>
         </div>
-        <p class="note">No JVM · no language runtime · every conformance number machine-verified.</p>
+        <p class="note">
+          A server image, a viewer image and a Helm chart on GHCR, built at
+          SLSA Build Level 3, with no JVM and no language runtime, and the
+          openEHR model crates on crates.io.
+        </p>
       </div>
     </section>
 
-    <!-- ── Why we built it ──────────────────────────────────────────────── -->
-    <section id="why">
+    <section id="platform" class="surface">
       <div class="wrap">
         <div class="section-head">
-          <span class="eyebrow">Why we built it</span>
-          <h2>An open standard deserves an implementation you can run</h2>
-          <p>openEHR writes clinical meaning down as a shared, computable model, which is what lets a record outlive the application, the vendor and the procurement cycle that produced it. A specification that good deserves a CDR anyone can actually run.</p>
+          <span class="eyebrow">What it does</span>
+          <h2>The openEHR platform services</h2>
+          <p>
+            Generated from the official machine-readable models, so a
+            specification update is a regeneration, and every service is
+            reached over the openEHR REST API.
+          </p>
         </div>
         <div class="grid">
 
-          <article class="card">
-            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13"/><path d="M4 19a2 2 0 0 0 2 2h14"/><path d="M8 8h8M8 12h5"/></svg></div>
-            <h3>One licence, no open-core tier</h3>
-            <p>The whole application is source-available under the Business Source License 1.1, with every capability in one repository and nothing held back for a paid tier. Reading, building, modifying and redistributing the source is free, and so is every non-production use. Production use is free for personal use, research, teaching and a non-profit or public body outside the course of a business. Treating patients, any other production use by a company, hosting it for third parties, and distributing it for a fee need a commercial licence. Each version becomes Apache 2.0 four years after it is published. <a href="https://ferrohealth.eu/docs/licensing.html" rel="noopener">A table says whether you need one</a>. Cadasto B.V., the Licensor, arranges commercial licences: write to <a href="mailto:info@cadasto.com">info@cadasto.com</a> or use <a href="https://www.cadasto.com/contact/" rel="noopener">its contact page</a>.</p>
-          </article>
+          <a class="card" href="./docs/latest/using-the-api/index.html">
+            <span class="tag">ITS-REST 1.1.0</span>
+            <h3>The REST API</h3>
+            <p>
+              EHR, EHR_STATUS, COMPOSITION, DIRECTORY, CONTRIBUTION, query,
+              template and admin resources, in canonical JSON and XML on the
+              wire.
+            </p>
+          </a>
 
-          <article class="card">
-            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2"/><path d="M17 8h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M8 12h8"/><path d="m13 9 3 3-3 3"/><path d="m11 15-3-3 3-3"/></svg></div>
-            <h3>Send the improvements back</h3>
-            <p>The one thing we ask, and cannot require. A private fork pays for the whole maintenance surface alone; upstreamed, the same work is maintained once for everyone. A defect found once gets fixed everywhere, which is what clinical software should do.</p>
-          </article>
+          <a class="card" href="./docs/latest/querying-aql.html">
+            <span class="tag">AQL 1.1</span>
+            <h3>The AQL engine</h3>
+            <p>
+              Typed path analysis over a specification-generated Reference
+              Model, compiled to SQL, including <code>ALL_VERSIONS</code> and
+              stored queries.
+            </p>
+          </a>
 
-        </div>
-        <div class="section-cta">
-          <a class="btn btn-ghost" href="./docs/latest/why-ferroehr.html">Read the full statement</a>
+          <a class="card" href="./docs/latest/concepts/storage.html">
+            <span class="tag">PostgreSQL 18</span>
+            <h3>Full versioning</h3>
+            <p>
+              Contribution-atomic commits, indelible version history with
+              database-enforced non-overlap, logical delete, attestations and
+              per-version digital signatures.
+            </p>
+          </a>
+
+          <a class="card" href="./docs/latest/templates-validation.html">
+            <span class="tag">OPT 1.4</span>
+            <h3>Templates and validation</h3>
+            <p>
+              Template ingestion, WebTemplate generation and deep composition
+              validation against archetype constraints and terminology
+              bindings.
+            </p>
+          </a>
+
+          <a class="card" href="./docs/latest/security.html">
+            <span class="tag">OIDC, SMART and IHE ATNA</span>
+            <h3>Security</h3>
+            <p>
+              OIDC authentication, RBAC and ABAC authorization, SMART App
+              Launch and an IHE ATNA audit trail. One instance per
+              organisation.
+            </p>
+          </a>
+
+          <a class="card" href="./docs/latest/beyond-core/index.html">
+            <span class="tag">Beyond the core</span>
+            <h3>Integration</h3>
+            <p>
+              A change-event feed, EHR Extract messaging, demographics, a FHIR
+              terminology server and S3 multimedia storage connect openEHR to
+              the systems around it.
+            </p>
+          </a>
+
         </div>
       </div>
     </section>
 
-    <!-- ── Conformance proof strip ──────────────────────────────────────── -->
-    <section class="proof" id="conformance">
+    <section class="proof surface" id="conformance">
       <div class="wrap">
         <div class="section-head">
           <span class="eyebrow">Conformance</span>
@@ -216,168 +269,248 @@
       </div>
     </section>
 
-    <!-- ── Feature grid ─────────────────────────────────────────────────── -->
-    <section id="features">
+    <section id="viewer" class="surface">
       <div class="wrap">
         <div class="section-head">
-          <span class="eyebrow">Platform</span>
-          <h2>The openEHR platform services</h2>
-          <p>Generated from the official machine-readable models: a specification update is a regeneration.</p>
+          <span class="eyebrow">The viewer</span>
+          <h2>See what the API serves</h2>
+          <p>
+            <code>ferroehr-viewer</code> is a web UI for any ITS-REST 1.1.0
+            CDR. It goes through the public API and never the database, so
+            what you see is exactly what the API serves: queries, templates,
+            EHRs, parties, terminology and the audit log.
+          </p>
+        </div>
+        <figure class="shot">
+          <picture>
+            <source srcset="./docs/latest/viewer/img/dashboard/dashboard-dark.png" media="(prefers-color-scheme: dark)">
+            <img src="./docs/latest/viewer/img/dashboard/dashboard.png" alt="The viewer's dashboard." width="1440" height="757" loading="lazy">
+          </picture>
+          <figcaption>
+            The dashboard.
+            <a href="./docs/latest/viewer/index.html">Every page of the viewer</a>.
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="run">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Run it</span>
+          <h2>From a laptop to a Kubernetes cluster</h2>
+          <p>
+            The server is one self-contained binary on a minimal distroless
+            image, beside PostgreSQL 18. The viewer is its own image.
+          </p>
+        </div>
+        <div class="grid">
+
+          <a class="card" href="./docs/latest/installation/compose.html">
+            <span class="tag">Compose</span>
+            <h3>The quickstart</h3>
+            <p>
+              <code>docker-compose.yml</code> ships with every release:
+              <code>docker compose up</code> starts the server and PostgreSQL,
+              and the <code>viewer</code> profile adds the viewer.
+            </p>
+          </a>
+
+          <a class="card" href="./docs/latest/verifying-releases.html">
+            <span class="tag">OCI images</span>
+            <h3>The container images</h3>
+            <p>
+              <code>ghcr.io/ferrohealth/ferroehr</code> and its PostgreSQL
+              image, for amd64 and arm64, each with SLSA provenance and an SBOM
+              you verify before you run it.
+            </p>
+          </a>
+
+          <a class="card" href="./docs/latest/installation/kubernetes.html">
+            <span class="tag">Helm</span>
+            <h3>The chart</h3>
+            <p>
+              <code>oci://ghcr.io/ferrohealth/charts/ferroehr</code> runs the
+              server on Kubernetes, with the cluster hardening guide beside it.
+            </p>
+          </a>
+
+        </div>
+      </div>
+    </section>
+
+    <section id="family" class="surface">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">In the family</span>
+          <h2>The product that stores the record</h2>
+          <p>
+            The FerroHEALTH products reach each other only over published
+            protocols. FerroEHR is where the openEHR record lives.
+          </p>
         </div>
         <div class="grid">
 
           <article class="card">
-            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
-            <h3>REST API 1.1.0</h3>
-            <p>EHR, EHR_STATUS, COMPOSITION, DIRECTORY, CONTRIBUTION, query, template and admin resources. Canonical JSON and XML on the wire.</p>
+            <h3>FerroPIX</h3>
+            <p>
+              The patient index FerroEHR asks for the pseudonym an
+              <code>EHR_STATUS</code> subject carries, so identifying data
+              stays outside the clinical record.
+            </p>
           </article>
 
           <article class="card">
-            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
-            <h3>AQL 1.1 engine</h3>
-            <p>Typed path analysis over a spec-generated Reference Model, compiled to efficient SQL, including <code>ALL_VERSIONS</code> and stored queries.</p>
+            <h3>FerroTERM and FerroBRIDGE</h3>
+            <p>
+              Coded text is validated on a FHIR terminology server such as
+              FerroTERM, and FHIR mapping and broker delivery live in
+              FerroBRIDGE, a separate server.
+            </p>
           </article>
 
           <article class="card">
-            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5V15a3 3 0 0 0 3 3h6"/></svg></div>
-            <h3>Full versioning</h3>
-            <p>Contribution-atomic commits, indelible version history, logical delete, attestations and per-version digital signatures.</p>
-          </article>
-
-          <article class="card">
-            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></div>
-            <h3>Templates &amp; validation</h3>
-            <p>OPT 1.4 ingestion, WebTemplate generation and deep composition validation against archetype constraints and terminology bindings.</p>
-          </article>
-
-          <article class="card">
-            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h.01M7 12h.01M7 16h.01M11 8h6M11 12h6M11 16h4"/></svg></div>
-            <h3>One self-contained binary</h3>
-            <p>A minimal distroless image, and no garbage-collection pauses in the write path.</p>
-          </article>
-
-          <article class="card">
-            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></div>
-            <h3>PostgreSQL 18-native</h3>
-            <p>Temporal versioning with database-enforced non-overlap, UUIDv7 keys and canonical openEHR JSON stored verbatim.</p>
-          </article>
-
-          <article class="card">
-            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
-            <h3>Security</h3>
-            <p>OIDC authentication, RBAC/ABAC authorization and an IHE ATNA access log. One instance per organisation.</p>
-          </article>
-
-          <article class="card">
-            <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M6 8.5v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-3M12 13.5v2"/></svg></div>
-            <h3>Integration</h3>
-            <p>A change-event feed, a FHIR terminology server (FerroTERM), an IHE ATNA audit feed and S3 multimedia storage connect openEHR to the systems around it. FHIR mapping and broker delivery live in FerroBRIDGE, a separate server.</p>
+            <h3>FerroFED</h3>
+            <p>
+              The federation gateway sends each member CDR ordinary AQL scoped
+              to its own EHR ids, and FerroEHR answers as a federation node.
+            </p>
           </article>
 
         </div>
       </div>
     </section>
 
-    <!-- ── Quick start ──────────────────────────────────────────────────── -->
-    <section class="quickstart" id="quick-start">
+    <section id="audiences">
       <div class="wrap">
         <div class="section-head">
-          <span class="eyebrow">Quick start</span>
-          <h2>Running in one command</h2>
-          <p>The full stack (server plus PostgreSQL 18) from one Docker Compose file. No checkout, no configuration.</p>
+          <span class="eyebrow">The documentation</span>
+          <h2>Four questions, four parts of the book</h2>
         </div>
-        <div class="code">
-          <div class="code-head">
-            <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
-            <span>shell</span>
-          </div>
-          <pre><code><span class="cmt"># With docker-compose.yml from the latest release in the current directory</span>
-<span class="prompt">$</span> docker compose up
+        <div class="grid audiences">
 
-<span class="cmt"># Probe the status endpoint</span>
-<span class="prompt">$</span> curl http://localhost:8080/ferroehr/rest/status
+          <article class="card audience">
+            <span class="tag">Evaluate</span>
+            <h3>Does it fit my problem?</h3>
+            <p>
+              Why FerroEHR exists, the openEHR concepts it implements, its
+              measured conformance and performance, and the licence.
+            </p>
+            <ul>
+              <li><a href="./docs/latest/why-ferroehr.html">Why FerroEHR exists</a></li>
+              <li><a href="./docs/latest/conformance.html">Conformance</a></li>
+              <li><a href="./docs/latest/licensing.html">Licensing and legal</a></li>
+            </ul>
+          </article>
 
-<span class="cmt"># Create an EHR (development credentials: ferroehr / ferroehr)</span>
-<span class="prompt">$</span> curl -u ferroehr:ferroehr -X POST -i \
-    http://localhost:8080/ferroehr/rest/openehr/v1/ehr
+          <article class="card audience">
+            <span class="tag">Integrate</span>
+            <h3>How do my applications call it?</h3>
+            <p>
+              The REST resources, AQL, templates and validation, and the
+              services beyond the core.
+            </p>
+            <ul>
+              <li><a href="./docs/latest/getting-started.html">Getting started</a></li>
+              <li><a href="./docs/latest/using-the-api/index.html">Using the API</a></li>
+              <li><a href="./docs/latest/querying-aql.html">Querying with AQL</a></li>
+            </ul>
+          </article>
 
-<span class="cmt"># Query it with AQL</span>
-<span class="prompt">$</span> curl -u ferroehr:ferroehr -H 'Content-Type: application/json' \
-    -d '{"q":"SELECT e/ehr_id/value FROM EHR e"}' \
-    http://localhost:8080/ferroehr/rest/openehr/v1/query/aql</code></pre>
-        </div>
-      </div>
-    </section>
+          <article class="card audience">
+            <span class="tag">Operate</span>
+            <h3>What does running it involve?</h3>
+            <p>
+              Installation and configuration, cluster hardening, security and
+              audit, the viewer, and day-to-day operations.
+            </p>
+            <ul>
+              <li><a href="./docs/latest/installation/index.html">Installation</a></li>
+              <li><a href="./docs/latest/security.html">Security</a></li>
+              <li><a href="./docs/latest/operations.html">Operations</a></li>
+            </ul>
+          </article>
 
-    <!-- ── Integration chips ────────────────────────────────────────────── -->
-    <section id="integrations">
-      <div class="wrap">
-        <div class="section-head">
-          <span class="eyebrow">Ecosystem</span>
-          <h2>Fits your stack</h2>
-        </div>
-        <div class="chips">
-          <span class="chip">PostgreSQL 18</span>
-          <span class="chip">Keycloak / OIDC</span>
-          <span class="chip">RabbitMQ via FerroBRIDGE</span>
-          <span class="chip">FHIR R4B terminology</span>
-          <span class="chip">S3 / SeaweedFS</span>
-          <span class="chip">Kubernetes / Helm</span>
-          <span class="chip">Prometheus / OpenTelemetry</span>
+          <article class="card audience">
+            <span class="tag">Contribute</span>
+            <h3>How is the work organised?</h3>
+            <p>
+              The tracker is the worklist, every check is a committed script
+              you can run, and a change cites the specification section it
+              implements.
+            </p>
+            <ul>
+              <li><a href="./docs/latest/contributing.html">Contributing</a></li>
+              <li><a href="./docs/latest/crates.html">Rust crates</a></li>
+              <li><a href="./docs/latest/changelog.html">Changelog</a></li>
+            </ul>
+          </article>
+
         </div>
       </div>
     </section>
 
   </main>
 
-  <!-- ── Footer ───────────────────────────────────────────────────────────── -->
   <footer class="footer">
     <div class="wrap">
       <div class="footer-grid">
         <div class="footer-brand">
           <a class="brand" href="./">
-            <img src="./assets/logo-mark.svg" alt="" aria-hidden="true">
-            <span>Ferro<span class="tld">EHR</span></span>
+            <picture>
+          <source srcset="./assets/brand/ferroehr-icon-iron.svg" media="(prefers-color-scheme: dark)">
+          <img src="./assets/brand/ferroehr-icon.svg" alt="" aria-hidden="true" width="28" height="28">
+        </picture>
+            <span>FerroEHR</span>
           </a>
-          <p>A pure-Rust openEHR® Clinical Data Repository. Code licensed under
-            <a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSE" rel="noopener">BUSL-1.1</a>, free
-            outside production and for non-commercial production use, a commercial licence for
-            other production use, Apache 2.0 four years after each version
-            (<a href="./docs/latest/licensing.html">whether you need one</a>);
-            vendored openEHR material keeps its upstream
-            <a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSE-APACHE-2.0" rel="noopener">Apache-2.0</a>,
-            <a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSE-CC-BY-SA-3.0" rel="noopener">CC-BY-SA 3.0</a>
-            and
-            <a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSE-CC-BY-SA-4.0" rel="noopener">CC-BY-SA 4.0</a>
-            terms; see <a href="./docs/latest/licensing.html">Licensing &amp; legal</a>.</p>
-          <p>Began as a fork of EHRbase by vitasystems and the Peter L. Reichertz
-            Institute (PLRI). openEHR® is the registered trademark of the openEHR
-            Foundation.</p>
+          <p>
+            A pure-Rust openEHR® Clinical Data Repository, one of the
+            <a href="https://ferrohealth.eu/" rel="noopener">FerroHEALTH</a>
+            family. The software is licensed under the
+            <a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSE" rel="noopener">Business Source License 1.1</a>:
+            free outside production and for non-commercial production use, a
+            commercial licence for other production use, and Apache License
+            2.0 four years after each version.
+            <a href="./docs/latest/licensing.html">Which applies to you</a>.
+            Vendored openEHR material keeps its upstream terms.
+          </p>
+          <p>
+            Began as a fork of EHRbase by vitasystems and the Peter L.
+            Reichertz Institute (PLRI). openEHR® is the registered trademark
+            of the openEHR Foundation.
+          </p>
+          <p>
+            Manufactured by Cadasto B.V., Comeniusstraat 2d, 1817 MS Alkmaar,
+            The Netherlands:
+            <a href="mailto:info@cadasto.com">info@cadasto.com</a>.
+          </p>
         </div>
         <div class="footer-links">
           <div>
-            <h4>Docs</h4>
+            <h4>Read</h4>
             <ul>
               <li><a href="./docs/latest/">Documentation</a></li>
+              <li><a href="./docs/latest/getting-started.html">Quickstart</a></li>
+              <li><a href="./docs/latest/installation/configuration.html">Configuration</a></li>
               <li><a href="https://sandbox.ferroehr.eu/ferroehr/rest/swagger-ui" rel="noopener">API reference</a></li>
-              <li><a href="./docs/latest/getting-started.html">Getting started</a></li>
               <li><a href="./docs/latest/conformance.html">Conformance</a></li>
+              <li><a href="https://ferrohealth.eu/docs/" rel="noopener">The family book</a></li>
             </ul>
           </div>
           <div>
             <h4>Project</h4>
             <ul>
               <li><a href="https://github.com/FerroHEALTH/FerroEHR" rel="noopener">GitHub</a></li>
-              <li><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/SECURITY.md" rel="noopener">Security policy</a></li>
-              <li><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/CHANGELOG.md" rel="noopener">Changelog</a></li>
-              <li><a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/conformance/ferroehr/summary.md" rel="noopener">Conformance record</a></li>
-              <li><a href="https://ferrohealth.eu/docs/" rel="noopener">FerroHEALTH family</a></li>
+              <li><a href="https://github.com/FerroHEALTH/FerroEHR/releases" rel="noopener">Releases</a></li>
+              <li><a href="https://github.com/FerroHEALTH/FerroEHR/milestones" rel="noopener">Roadmap</a></li>
+              <li><a href="https://github.com/FerroHEALTH/FerroEHR/issues" rel="noopener">Issues</a></li>
+              <li><a href="https://github.com/FerroHEALTH/FerroEHR/security/policy" rel="noopener">Security policy</a></li>
             </ul>
           </div>
         </div>
       </div>
       <div class="footer-note">
-        <span>© Cadasto B.V., manufacturer of the <a href="https://ferrohealth.eu/docs/manufacturer.html" rel="noopener">FerroHEALTH</a> products</span>
+        <span>ferroehr.eu</span>
       </div>
     </div>
   </footer>
