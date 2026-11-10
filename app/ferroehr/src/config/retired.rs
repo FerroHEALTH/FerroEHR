@@ -600,6 +600,8 @@ pub(crate) fn live(fields: Vec<String>, retired: &[&str]) -> Vec<String> {
 mod tests {
     use std::collections::BTreeSet;
 
+    use ferrohealth_config::removed;
+
     use super::*;
 
     /// Every refusal records the release that introduced it, v5.7.0, the one
@@ -613,5 +615,25 @@ mod tests {
         }
         let own: BTreeSet<&str> = RETIRED.iter().map(Retired::key).collect();
         assert_eq!(own.len(), RETIRED.len(), "a key is declared twice");
+    }
+
+    /// No refusal outlives the one release it lives for: each was introduced
+    /// in the release this crate belongs to, a release candidate's included.
+    #[test]
+    fn no_refusal_outlives_its_release() {
+        let release = env!("CARGO_PKG_VERSION")
+            .split('-')
+            .next()
+            .expect("a version has a release part");
+        let shared = crate::config::retired_shared::retired();
+        let stale: Vec<&str> = removed::stale(&RETIRED, release)
+            .into_iter()
+            .chain(removed::stale(&shared, release))
+            .map(Retired::key)
+            .collect();
+        assert!(
+            stale.is_empty(),
+            "past their release, delete them: {stale:?}"
+        );
     }
 }

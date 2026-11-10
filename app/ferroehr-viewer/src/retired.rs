@@ -222,6 +222,28 @@ mod tests {
         }
     }
 
+    /// No refusal outlives the one release it lives for: each was introduced
+    /// in the release this crate belongs to, a release candidate's included.
+    #[test]
+    fn no_refusal_outlives_its_release() {
+        let release = env!("CARGO_PKG_VERSION")
+            .split('-')
+            .next()
+            .expect("a version has a release part");
+        let all: Vec<Retired> = TABLES
+            .iter()
+            .flat_map(|(_, retired)| retired.iter().map(|(key, _)| *key))
+            .collect();
+        let stale: Vec<&str> = ferrohealth_config::removed::stale(&all, release)
+            .into_iter()
+            .map(Retired::key)
+            .collect();
+        assert!(
+            stale.is_empty(),
+            "past their release, delete them: {stale:?}"
+        );
+    }
+
     /// A v5.6 key of each family section is named with its replacement, and
     /// the refusal says once how each form it names is written.
     #[test]
