@@ -91,9 +91,10 @@ ferropix:
   config:
     public_base_url: https://pix.example.com
     auth:
-      audience: [https://pix.example.com/fhir]
       issuer:
         - issuer: https://idp.example.com/realms/pix
+          kind: machines
+          audience: [https://pix.example.com/fhir]
     # The clients the issuer signs for that may act as a Patient Identity
     # Source.
     trust:

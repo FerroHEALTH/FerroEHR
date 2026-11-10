@@ -17,7 +17,11 @@ use std::str::FromStr;
 use crate::error::ViewerError;
 use confined::{RootError, Roots};
 use diagnostic::{diagnostic_of, without_lead};
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_session::record::Credential;
+use ferrohealth_smart::client::outbound::{OutboundClient, OutboundError};
+use ferrohealth_smart::config::ServerTls;
+use ferrohealth_smart::config::endpoint::EndpointSection;
 use openehr_its::rest::etag::EntityTag;
 
 /// How many CDR requests one screen's fan-out has in flight at once.
@@ -144,12 +148,10 @@ fn header_text(headers: &http::HeaderMap, name: &str) -> Option<String> {
 /// The CDR client could not be built from its configuration.
 #[derive(Debug, thiserror::Error)]
 pub enum CdrClientError {
-    /// `[cdr.tls]` names material that does not read.
-    #[error("the CDR client's TLS material could not be read")]
-    Tls(#[from] ferrohealth_server::tls_client::TlsClientError),
-    /// The HTTP client refused its settings.
+    /// `base_url`, `timeout` or `[cdr.tls]` is refused, or the HTTP client
+    /// could not be built from them.
     #[error("the CDR HTTP client could not be built")]
-    Build(#[from] reqwest::Error),
+    Build(#[from] OutboundError),
     /// A configured CDR URL does not parse.
     #[error(transparent)]
     Root(#[from] RootError),
@@ -179,20 +181,26 @@ pub struct CdrClient {
 }
 
 impl CdrClient {
-    /// Build the client from configuration: the platform's trust roots, the
-    /// extra roots and the client identity `[cdr.tls]` names, no redirect.
+    /// Build the client from configuration with `ferrohealth-smart`'s
+    /// outbound client: the platform's trust roots, the extra roots and the
+    /// client identity `[cdr.tls]` names, the `timeout`, no redirect, and no
+    /// credential of its own, since each request carries its caller's.
     ///
     /// # Errors
-    /// [`CdrClientError::Tls`] when a `[cdr.tls]` file does not read or holds
-    /// no PEM of its kind, [`CdrClientError::Build`] when the HTTP client
-    /// refuses its settings, and [`CdrClientError::Root`] when `base_url`,
-    /// `base_path` or `management_base_url` makes no absolute URL.
+    /// [`CdrClientError::Build`] when `base_url` is no URL, `timeout` is zero,
+    /// a `[cdr.tls]` file does not read or holds no PEM of its kind, or the
+    /// HTTP client refuses its settings, and [`CdrClientError::Root`] when
+    /// `base_url`, `base_path` or `management_base_url` makes no absolute URL.
     pub fn new(cfg: &crate::config::CdrConfig) -> Result<Self, CdrClientError> {
-        let tls = ferrohealth_server::tls_client::TlsClient::read("cdr.tls", &cfg.tls)?;
-        let builder = reqwest::Client::builder()
-            .timeout(cfg.timeout.get())
-            .redirect(reqwest::redirect::Policy::none());
-        let http = tls.apply(builder)?.build()?;
+        let endpoint = EndpointSection {
+            url: SecretUrl::new(cfg.base_url.as_str()),
+            timeout: cfg.timeout,
+            tls: cfg.tls.clone(),
+            ..EndpointSection::default()
+        };
+        let http = OutboundClient::build(&endpoint, "cdr", &ServerTls)?
+            .http()
+            .clone();
         let origin = cfg.base_url.trim_end_matches('/').to_owned();
         let rest_root = cfg.rest_root().to_owned();
         let management_base = cfg.management_base();

@@ -365,6 +365,8 @@ scopeless_subjects = []      # e.g. [{ issuer = "https://idp.example/realms/staf
 #? max_age = "60s"
 #? clock_skew = "10s"
 
+# The vendor adapter tables, one per adapter an issuer's profile may name.
+#? [auth.idp]
 # The Microsoft Graph access of the idp-entra adapter, which an issuer turns on
 # with `adapter = "idp-entra"` to read the groups of an Entra ID groups overage;
 # an issuer naming the adapter without this table refuses the start.

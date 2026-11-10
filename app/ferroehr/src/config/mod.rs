@@ -769,7 +769,7 @@ mod tests {
         let d = assemble_ok(None, &env(&[]), &[]);
         assert!(!d.authz.abac.check_directory);
         assert_eq!(d.authz.abac.patient_namespace(), None);
-        assert!(d.auth.shared.issuers().is_empty());
+        assert_eq!(d.auth.shared.issuers(), []);
         let entry = ferrohealth_smart::config::IssuerEntry::default();
         assert_eq!(
             entry.clock_skew,
@@ -1792,7 +1792,7 @@ mod tests {
 
         c.terminology = Some(TerminologyServerConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                url: "https://ts.example/fhir".to_owned(),
+                url: SecretUrl::new("https://ts.example/fhir"),
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
             },
             ..TerminologyServerConfig::default()
@@ -1811,7 +1811,7 @@ mod tests {
         let with = |url: &str, oauth: OauthSection| {
             let mut c = standalone();
             let mut endpoint = ferrohealth_smart::config::endpoint::EndpointSection {
-                url: url.to_owned(),
+                url: SecretUrl::new(url),
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
             };
             endpoint.credentials.oauth = Some(oauth);
@@ -1834,7 +1834,7 @@ mod tests {
         }
 
         let complete = || OauthSection {
-            token_endpoint: "https://idp.example/token".to_owned(),
+            token_endpoint: SecretUrl::new("https://idp.example/token"),
             client_id: "cdr".to_owned(),
             client_secret: Some(secrecy::SecretString::from("s3cret")),
             ..OauthSection::default()
@@ -1892,7 +1892,7 @@ mod tests {
         );
         let server = c.terminology.as_ref().expect("the table from env");
         assert!(server.refuses_on_error());
-        assert_eq!(server.endpoint.url, "http://ferroterm:8080/r4b");
+        assert_eq!(server.endpoint.url.expose(), "http://ferroterm:8080/r4b");
         assert_eq!(
             server.endpoint.timeout,
             ferrohealth_config::units::Duration::from_millis(2_500)
@@ -1904,7 +1904,7 @@ mod tests {
             .oauth
             .as_ref()
             .expect("the grant from env");
-        assert_eq!(oauth.token_endpoint, "https://idp/token");
+        assert_eq!(oauth.token_endpoint.expose(), "https://idp/token");
         assert_eq!(oauth.client_id, "cdr");
         assert_eq!(
             oauth

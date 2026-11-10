@@ -106,7 +106,7 @@ quickstart selects its local configuration with one variable
 | `record.subject_index` | enum{pixm,local} | required | Who translates a subject into the clinical domain. |
 | `pixm.assigning_authority` | URI | required for `pixm` | The clinical domain, such as `urn:oid:2.999.7.1`: the `targetSystem` of every ITI-83 query and the namespace the answered pseudonym is stored under. It must be one of `privacy.subject_namespaces`. |
 | `pixm.method` | enum{post,get} | `post` | `post` sends a `Parameters` body, so a patient identifier never appears in a URL or an access log; `get` is the form ITI-83 prescribes, for a PIX Manager that accepts no `POST`. |
-| `pixm.endpoint` | [endpoint table](#the-endpoint-table) | required for `pixm` | The PIX Manager: `url`, its FHIR base (`[base]` of `[base]/Patient/$ihe-pix`), `timeout` for one ITI-83 exchange, the `retry` of an exchange that got no answer or a `5xx`, the TLS and the credential. |
+| `pixm.endpoint` | [endpoint table](#the-endpoint-table) | required for `pixm` | The PIX Manager: `url`, its FHIR base (`[base]` of `[base]/Patient/$ihe-pix`), `timeout` for one ITI-83 exchange with its tries and the waits between them, the `retry` of an exchange that got no answer or a `5xx`, the TLS and the credential. |
 
 ```toml
 [privacy]
@@ -219,7 +219,8 @@ Every outbound HTTP integration, `[terminology.endpoint]`, `[pixm.endpoint]`,
 `[audit.fhir_feed.endpoint]` and `[authz.abac.remote.endpoint]`, is the
 FerroHEALTH family's one endpoint
 table, so an operator writes the same keys for each integration of each
-product.
+product. Each integration's client is built from it by `ferrohealth-smart`'s
+outbound client, the one every product of the family uses.
 
 | Key | Type | Default | Description |
 |---|---|---|---|

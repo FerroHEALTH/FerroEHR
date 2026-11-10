@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DATABASE__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 25.0.1-rc2 -n ferroehr \
+  --version 25.0.1-rc3 -n ferroehr \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.7.0-rc2 \
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.1-rc2
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.1-rc3
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 25.0.1-rc2` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 25.0.1-rc3` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.7.0-rc2` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.1-rc2 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.1-rc3 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -334,7 +334,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.1-rc2 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.1-rc3 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -837,7 +837,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 25.0.1-rc2 -n ferroehr --reuse-values \
+  --version 25.0.1-rc3 -n ferroehr --reuse-values \
   --set config.record.query.plan_cache_capacity=512
 ```
 
@@ -954,8 +954,8 @@ ferropix:
   config:
     public_base_url: https://pix.example.org
     auth:
-      audience: [https://pix.example.org/fhir]
-      issuer: [{issuer: https://idp.example.org/realms/pix}]
+      issuer:
+        - {issuer: https://idp.example.org/realms/pix, kind: machines, audience: [https://pix.example.org/fhir]}
     trust:
       issuer: [{issuer: https://idp.example.org/realms/pix, clients: [hospital-source]}]
     pseudonym_domain:
@@ -982,8 +982,14 @@ Secret you own through `extraEnv` instead. Another PIX Manager:
 `ferropix.enabled: false` and `config.pixm.endpoint.url`. A CDR run on its
 own: `ferropix.enabled: false` and `config.record.subject_index: local`.
 
-The chart pins FerroPIX 0.0.18 by digest (`ferropix.image`) with the
-FerroPIX chart built for it. Since FerroPIX 0.0.8, `public_base_url` is a
+The chart pins FerroPIX 0.0.26 by digest (`ferropix.image`) with the
+FerroPIX chart built for it. Since FerroPIX 0.0.19 every `[[auth.issuer]]`
+entry carries its `kind` and its own `audience`: an issuer that signs only
+the client credentials tokens of the Source and of FerroEHR is
+`kind: machines`, and FerroPIX refuses an audience written on the auth
+section itself. Since 0.0.21 a
+Patient Identity Source is admitted only with a client credentials token,
+and a Basic user holding a `system/` scope refuses the start. Since FerroPIX 0.0.8, `public_base_url` is a
 top-level key and the clients that may act as a Patient Identity Source sit
 in the `[[trust.issuer]]` table, apart from the `[[auth.issuer]]` entry that
 names the issuer; FerroPIX refuses the older `server.public_base_url` and `auth.issuer[].clients`, so an
@@ -1011,7 +1017,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 25.0.1-rc2 -n ferroehr --reuse-values \
+  --version 25.0.1-rc3 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1386,7 +1392,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.1-rc2 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.1-rc3 \
   -n ferroehr -f my-values.yaml | less
 ```
 

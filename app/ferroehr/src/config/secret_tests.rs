@@ -233,7 +233,7 @@ fn url_userinfo_reaches_no_rendering() {
     c.database.party.migrate_url = Some(leaky(15));
     c.audit.fhir_feed = Some(crate::system_log::config::FhirFeedConfig {
         endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-            url: leaky(8).expose().to_owned(),
+            url: leaky(8),
             ..ferrohealth_smart::config::endpoint::EndpointSection::default()
         },
         ..crate::system_log::config::FhirFeedConfig::default()
@@ -241,10 +241,10 @@ fn url_userinfo_reaches_no_rendering() {
     c.terminology = Some(
         crate::service::terminology::config::TerminologyServerConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                url: leaky(9).expose().to_owned(),
+                url: leaky(9),
                 credentials: ferrohealth_smart::config::credentials::CredentialsSection {
                     oauth: Some(OauthSection {
-                        token_endpoint: "https://u10:URL_PW_SENTINEL_10@h10:1/p10".to_owned(),
+                        token_endpoint: SecretUrl::new("https://u10:URL_PW_SENTINEL_10@h10:1/p10"),
                         ..OauthSection::default()
                     }),
                     ..ferrohealth_smart::config::credentials::CredentialsSection::default()
@@ -254,7 +254,7 @@ fn url_userinfo_reaches_no_rendering() {
             ..crate::service::terminology::config::TerminologyServerConfig::default()
         },
     );
-    c.authz.abac.remote.endpoint.url = leaky(12).expose().to_owned();
+    c.authz.abac.remote.endpoint.url = leaky(12);
     c.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
         endpoint: leaky(13),
         ..ferrohealth_telemetry::section::OtlpSection::default()

@@ -78,7 +78,7 @@ pub(crate) fn answer(status: u16, body: &Value) -> ResponseTemplate {
 fn config(base: &str) -> PixmConfig {
     PixmConfig {
         endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-            url: base.to_owned(),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(base),
             timeout: ferrohealth_config::units::Duration::from_secs(2),
             ..ferrohealth_smart::config::endpoint::EndpointSection::default()
         },
@@ -369,7 +369,7 @@ async fn a_private_ca_is_trusted_through_the_tls_roots() {
     assert!(matches!(
         IheIdentitySource::new(&missing),
         Err(IdentitySourceError::Endpoint(
-            ferroehr::outbound::EndpointError::Tls { .. }
+            ferrohealth_smart::client::outbound::OutboundError::Config { .. }
         ))
     ));
 }

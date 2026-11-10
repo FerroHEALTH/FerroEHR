@@ -266,7 +266,7 @@ async fn enabled_terminology_group_serves_real_bundle() {
 async fn app_with_server(base: &str) -> (testkit::TestDb, Router) {
     let cfg = ferroehr::service::terminology::config::TerminologyServerConfig {
         endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-            url: base.to_owned(),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(base),
             timeout: ferrohealth_config::units::Duration::from_millis(800),
             ..ferrohealth_smart::config::endpoint::EndpointSection::default()
         },

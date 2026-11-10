@@ -2,20 +2,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The `[auth]` table: the shared `ferrohealth-smart` section and the tables
-//! FerroEHR keeps beside it: `[auth.idp]`, `[auth.smart]` and `[auth.scim]`.
+//! FerroEHR keeps beside it: `[auth.smart]` and `[auth.scim]`.
 //!
-//! `ferrohealth-smart` owns every other key of `[auth]` and reads it with
-//! `deny_unknown_fields`; its `idp::entra::GraphSection` is a table "a product
-//! embeds where its configuration keeps the party binding", and FerroEHR keeps
-//! it at `[auth.idp.entra]`, beside the crate's `[[auth.party]]` tables. The
-//! loader takes FerroEHR's keys out of the table and hands every other key to
-//! the crate's section, so an unknown key is still refused with the crate's
-//! field list. No openEHR spec governs configuration: our own design.
+//! `ferrohealth-smart` owns every other key of `[auth]`, `[auth.idp.entra]`
+//! included, and reads it with `deny_unknown_fields`. The loader takes
+//! FerroEHR's keys out of the table and hands every other key to the crate's
+//! section, so an unknown key is still refused with the crate's field list.
+//! No openEHR spec governs configuration: our own design.
 
 use std::fmt;
 
 use ferrohealth_smart::config::AuthSection;
-use ferrohealth_smart::idp::entra::GraphSection;
 use serde::de::value::{MapAccessDeserializer, StringDeserializer};
 use serde::de::{DeserializeSeed, Error as _, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
@@ -23,8 +20,6 @@ use serde::{Deserialize, Deserializer, Serialize};
 use crate::config::scim::ScimConfig;
 use crate::config::smart::SmartConfig;
 
-/// The key of the vendor adapter tables inside `[auth]`.
-const IDP: &str = "idp";
 /// The key of the SMART App Launch table inside `[auth]`.
 const SMART: &str = "smart";
 /// The key of the SCIM service provider table inside `[auth]`.
@@ -34,36 +29,16 @@ const SCIM: &str = "scim";
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct AuthConfig {
     /// Every key `ferrohealth-smart` reads: the issuers, the party and
-    /// federation tables, the Basic users, `[auth.dpop]` and the discovery
-    /// options.
+    /// federation tables, the vendor adapter tables (`[auth.idp]`), the Basic
+    /// users, `[auth.dpop]` and the discovery options.
     #[serde(flatten)]
     pub shared: Box<AuthSection>,
-    /// The vendor adapter tables (`[auth.idp]`).
-    #[serde(skip_serializing_if = "IdpSection::is_empty")]
-    pub idp: IdpSection,
     /// `[auth.smart]` — the SMART App Launch resource-server posture.
     pub smart: SmartConfig,
     /// `[auth.scim]` — the SCIM 2.0 service provider and its provisioning
     /// clients; absent, `/scim/v2/` is not served.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scim: Option<ScimConfig>,
-}
-
-/// The `[auth.idp]` table: one table per vendor adapter a profile may name.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct IdpSection {
-    /// The Microsoft Graph access of the `idp-entra` adapter
-    /// (`[auth.idp.entra]`), which resolves an Entra ID groups overage.
-    pub entra: Option<Box<GraphSection>>,
-}
-
-impl IdpSection {
-    /// Returns whether no adapter table is set.
-    #[must_use]
-    pub const fn is_empty(&self) -> bool {
-        self.entra.is_none()
-    }
 }
 
 impl<'de> Deserialize<'de> for AuthConfig {
@@ -90,7 +65,6 @@ impl<'de> Visitor<'de> for AuthVisitor {
         }))?;
         Ok(AuthConfig {
             shared: Box::new(shared),
-            idp: own.idp.unwrap_or_default(),
             smart: own.smart.unwrap_or_default(),
             scim: own.scim,
         })
@@ -100,8 +74,6 @@ impl<'de> Visitor<'de> for AuthVisitor {
 /// FerroEHR's own tables of `[auth]`, as read.
 #[derive(Default)]
 struct Own {
-    /// `[auth.idp]`.
-    idp: Option<IdpSection>,
     /// `[auth.smart]`.
     smart: Option<SmartConfig>,
     /// `[auth.scim]`.
@@ -128,7 +100,6 @@ impl<'de, A: MapAccess<'de>> MapAccess<'de> for WithoutOwn<'_, A> {
             match self.inner.next_key_seed(KeyOrOwn(&mut seed))? {
                 None => return Ok(None),
                 Some(Key::Shared(value)) => return Ok(Some(value)),
-                Some(Key::Idp) => read_once(&mut self.inner, &mut self.own.idp, IDP)?,
                 Some(Key::Smart) => read_once(&mut self.inner, &mut self.own.smart, SMART)?,
                 Some(Key::Scim) => read_once(&mut self.inner, &mut self.own.scim, SCIM)?,
             }
@@ -158,8 +129,6 @@ fn read_once<'de, A: MapAccess<'de>, T: Deserialize<'de>>(
 enum Key<T> {
     /// A key the crate's section reads.
     Shared(T),
-    /// The `idp` key.
-    Idp,
     /// The `smart` key.
     Smart,
     /// The `scim` key.
@@ -188,7 +157,6 @@ impl<'de, K: DeserializeSeed<'de>> Visitor<'de> for KeyOrOwn<'_, K> {
 
     fn visit_str<E: serde::de::Error>(self, key: &str) -> Result<Self::Value, E> {
         match key {
-            IDP => return Ok(Key::Idp),
             SMART => return Ok(Key::Smart),
             SCIM => return Ok(Key::Scim),
             _ => {}
@@ -226,7 +194,7 @@ mod tests {
         )
         .expect("parses");
         assert_eq!(auth.shared.realm, "r");
-        let entra = auth.idp.entra.expect("the entra table");
+        let entra = auth.shared.idp.entra.expect("the entra table");
         assert_eq!(entra.base_url, "https://graph.example/v1.0");
         assert_eq!(entra.credentials.client_id, "reader");
     }
@@ -242,10 +210,14 @@ mod tests {
     }
 
     #[test]
-    fn the_section_renders_flat_and_leaves_an_empty_idp_out() {
+    fn the_section_renders_flat_with_the_crate_s_idp_table() {
         let rendered = serde_json::to_value(AuthConfig::default()).expect("renders");
         assert!(rendered.get("enabled").is_some(), "{rendered}");
-        assert!(rendered.get("idp").is_none(), "{rendered}");
+        assert_eq!(
+            rendered.get("idp"),
+            Some(&serde_json::json!({})),
+            "{rendered}"
+        );
         assert!(rendered.get("scim").is_none(), "{rendered}");
     }
 
