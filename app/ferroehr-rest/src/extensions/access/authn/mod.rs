@@ -43,6 +43,7 @@ pub(crate) mod declared;
 mod gates;
 mod issuer;
 mod party;
+pub(crate) mod purpose;
 pub(crate) mod record;
 pub(crate) mod refusal;
 mod scope;
@@ -575,6 +576,9 @@ pub(crate) async fn middleware(
             mut principal,
             fresh,
         }) => {
+            if let Some(refusal) = purpose::mismatch(&layer, &principal, &req) {
+                return refusal;
+            }
             if let Some(refusal) = trc::patient_context(&layer, &mut principal, &req).await {
                 return refusal;
             }
