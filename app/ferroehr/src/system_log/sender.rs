@@ -636,14 +636,8 @@ fn start_feed(
         return Ok((None, Some(forwarder)));
     };
     let notify = Arc::new(Notify::new());
-    let outbox = StoreOutbox::new(
-        store.clone(),
-        Arc::clone(&notify),
-        fhir_feed
-            .poll_interval
-            .get()
-            .max(Duration::from_millis(100)),
-    );
+    let poll = Duration::max(fhir_feed.poll_interval.get(), Duration::from_millis(100));
+    let outbox = StoreOutbox::new(store.clone(), Arc::clone(&notify), poll);
     deliveries.push(deliver(
         "fhir_feed",
         &Forwarder::fhir_feed_from_with_retry(outbox, feed, retry),

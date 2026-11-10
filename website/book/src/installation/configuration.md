@@ -68,7 +68,7 @@ including after the `FERROEHR` prefix.** A single underscore only ever appears
 | `[database] max_connections = 20` | `FERROEHR__DATABASE__MAX_CONNECTIONS=20` |
 | `[authz.rbac] admin_role = "…"` | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE=…` |
 | `[management.endpoints] env = "off"` | `FERROEHR__MANAGEMENT__ENDPOINTS__ENV=off` |
-| `[terminology] url = "…"` | `FERROEHR__TERMINOLOGY__URL=…` |
+| `[terminology.endpoint] url = "…"` | `FERROEHR__TERMINOLOGY__ENDPOINT__URL=…` |
 
 Scalars are typed automatically (bool / int / float, else string).
 **List-typed keys take comma-separated values**

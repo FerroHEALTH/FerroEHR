@@ -134,13 +134,14 @@ impl FerroEhrConfig {
     /// identifier rules name, and the German ceiling additionally waits for the
     /// deployment to declare itself one of the SGB V § 307 controllers. Bounds
     /// are written in calendar years: a retention in years is compared exactly,
-    /// a day count conservatively ([`crate::system_log::config::RetentionBound`]).
+    /// a day count conservatively ([`crate::system_log::retention::RetentionBound`]).
     /// Where a floor and a ceiling contradict each other in years, no horizon
     /// satisfies both and the refusal says so; where only the day rounding
     /// leaves no day count between them, the refusal names the year form.
     /// Every emergency purpose code must also be an agreed purpose code.
     fn validate_audit(&self, errors: &mut Vec<ConfigError>) {
-        use crate::system_log::config::{Retention, RetentionBound};
+        use crate::system_log::config::Retention;
+        use crate::system_log::retention::RetentionBound;
         for code in &self.audit.emergency_purpose_codes {
             if !self.audit.purpose_codes.contains(code) {
                 errors.push(ConfigError::semantic(format!(
@@ -166,11 +167,11 @@ impl FerroEhrConfig {
         let mut floors: Vec<(&str, RetentionBound)> = Vec::new();
         let mut ceilings: Vec<(&str, RetentionBound)> = Vec::new();
         for jurisdiction in jurisdictions {
-            if let Some(floor) = crate::system_log::config::retention_floor(jurisdiction) {
+            if let Some(floor) = crate::system_log::retention::retention_floor(jurisdiction) {
                 floors.push((jurisdiction, floor));
             }
             if let Some(ceiling) =
-                crate::system_log::config::retention_ceiling(jurisdiction, declared)
+                crate::system_log::retention::retention_ceiling(jurisdiction, declared)
             {
                 ceilings.push((jurisdiction, ceiling));
             }
@@ -578,8 +579,8 @@ const fn is_unreserved(c: char) -> bool {
 /// ceiling to the fewest, so a floor and a ceiling of the same years leave no
 /// day count between them while the year count itself satisfies both.
 fn years_fix(
-    floors: &[(&str, crate::system_log::config::RetentionBound)],
-    ceilings: &[(&str, crate::system_log::config::RetentionBound)],
+    floors: &[(&str, crate::system_log::retention::RetentionBound)],
+    ceilings: &[(&str, crate::system_log::retention::RetentionBound)],
 ) -> Option<u32> {
     let floor = floors
         .iter()
