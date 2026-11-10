@@ -44,15 +44,17 @@ pub(super) fn env(snapshot: &Value) -> Json<Value> {
     Json(redact(snapshot))
 }
 
-/// Recursively redact a config value: secret-keyed values → [`MASK`]; the
-/// every URL string → masked by [`mask_userinfo`].
+/// Recursively redact a config value: a secret-keyed leaf → [`MASK`], a
+/// secret-keyed table walked like any other (a `credentials` table holds a
+/// user name beside its secrets, each judged by its own key), and every URL
+/// string masked by [`mask_userinfo`].
 #[must_use]
 pub(crate) fn redact(value: &Value) -> Value {
     match value {
         Value::Object(map) => Value::Object(
             map.iter()
                 .map(|(k, v)| {
-                    if is_secret_key(k) {
+                    if is_secret_key(k) && !v.is_object() {
                         (k.clone(), Value::String(MASK.to_owned()))
                     } else {
                         (k.clone(), redact(v))

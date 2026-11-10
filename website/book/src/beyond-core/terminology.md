@@ -54,12 +54,12 @@ is a `400`.
 
 The terminology server is off by default, and while it is off nothing is
 requested: validation uses the in-process bundle alone. The keys live under
-`[terminology]`; the full table, including the timeout and OAuth2, is on
+`[terminology]` and its `[terminology.endpoint]` table; the full table, including the timeout and OAuth2, is on
 [Integrations](../installation/config-integrations.md#terminology). The minimum
 is the switch and the server's FHIR R4B base URL:
 
 ```toml
-[terminology]
+[terminology.endpoint]
 url = "http://ferroterm:8080/r4b"
 ```
 
@@ -155,10 +155,10 @@ thing asked about is unknown.
 ### Authenticating to the server
 
 A server behind an authorization server takes an OAuth2 client-credentials
-grant under `[terminology.oauth]`; the token is cached and renewed shortly
+grant under `[terminology.endpoint.credentials.oauth]`; the token is cached and renewed shortly
 before it expires. The client secret should come from a mounted file rather than
 an inline value, `client_secret_file`. The keys are on
-[Integrations](../installation/config-integrations.md#authenticating-to-the-terminology-server).
+[Integrations](../installation/config-integrations.md#the-endpoint-table).
 
 There is no option to disable certificate verification. Server-certificate and
 hostname verification are always on against the platform's trust store.

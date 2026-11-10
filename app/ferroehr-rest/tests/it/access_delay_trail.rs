@@ -210,7 +210,7 @@ async fn recorded(app: &Router, user: &str, vo: &str) -> Vec<String> {
 /// controller reads it throughout.
 #[tokio::test]
 async fn a_record_about_a_held_composition_appears_in_the_persons_trail_at_release() {
-    let (_db, pool, app) = app().await;
+    let (_db, pool, app) = Box::pin(app()).await;
     let ehr = ehr(&app).await;
     let vo = commit(&app, &pool, &ehr).await;
 
@@ -244,7 +244,7 @@ async fn a_record_about_a_held_composition_appears_in_the_persons_trail_at_relea
 /// held back, each with its original time.
 #[tokio::test]
 async fn a_record_about_a_held_composition_appears_in_the_persons_trail_at_expiry() {
-    let (_db, pool, app) = app().await;
+    let (_db, pool, app) = Box::pin(app()).await;
     let ehr = ehr(&app).await;
     let vo = commit(&app, &pool, &ehr).await;
     let controller = recorded(&app, "root", &vo).await;

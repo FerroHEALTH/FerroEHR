@@ -65,11 +65,15 @@ async fn service(
     }
     if let Some(url) = feed {
         audit.fhir_feed = Some(FhirFeedConfig {
-            url: ferrohealth_secret::secret_url::SecretUrl::new(url),
-            poll_interval: ferrohealth_config::units::Duration::from_millis(100),
-            retry: ferroehr::system_log::config::SinkRetry {
-                max_backoff: ferrohealth_config::units::Duration::from_millis(500),
+            endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                url: url.to_owned(),
+                retry: ferrohealth_smart::config::endpoint::RetrySection {
+                    max_backoff: ferrohealth_config::units::Duration::from_millis(500),
+                    ..ferrohealth_smart::config::endpoint::RetrySection::default()
+                },
+                ..ferrohealth_smart::config::endpoint::EndpointSection::default()
             },
+            poll_interval: ferrohealth_config::units::Duration::from_millis(100),
             ..FhirFeedConfig::default()
         });
     }

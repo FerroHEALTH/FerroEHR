@@ -616,16 +616,22 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
     cfg.database.url = leaky(1);
     cfg.terminology = Some(
         ferroehr::service::terminology::config::TerminologyServerConfig {
-            url: leaky(2),
-            oauth: Some(ferrohealth_smart::config::credentials::OauthSection {
-                token_endpoint: "https://u3:URL_PW_SENTINEL_3@h3/p".to_owned(),
-                ..ferrohealth_smart::config::credentials::OauthSection::default()
-            }),
+            endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                url: leaky(2).expose().to_owned(),
+                credentials: ferrohealth_smart::config::credentials::CredentialsSection {
+                    oauth: Some(ferrohealth_smart::config::credentials::OauthSection {
+                        token_endpoint: "https://u3:URL_PW_SENTINEL_3@h3/p".to_owned(),
+                        ..ferrohealth_smart::config::credentials::OauthSection::default()
+                    }),
+                    ..ferrohealth_smart::config::credentials::CredentialsSection::default()
+                },
+                ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+            },
             ..ferroehr::service::terminology::config::TerminologyServerConfig::default()
         },
     );
     // URL 4 was the usage report endpoint, whose type now refuses userinfo.
-    cfg.authz.abac.remote.url = Some(leaky(5));
+    cfg.authz.abac.remote.endpoint.url = leaky(5).expose().to_owned();
     cfg.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
         endpoint: leaky(6),
         ..ferrohealth_telemetry::section::OtlpSection::default()

@@ -49,9 +49,11 @@ const TERMINOLOGY_SERVER: Retired = Retired::replaced(
     "terminology.server",
     concat!(
         "the [terminology] table itself, present to turn the server on: ",
-        "terminology.server.url is terminology.url, request_timeout_ms is timeout (",
+        "terminology.server.url is terminology.endpoint.url, request_timeout_ms is ",
+        "terminology.endpoint.timeout (",
         duration!(),
-        "), fail_on_error = true is on_error = \"refuse\" and oauth is terminology.oauth"
+        "), fail_on_error = true is on_error = \"refuse\" and oauth is ",
+        "terminology.endpoint.credentials.oauth"
     ),
     SINCE,
 );
@@ -162,10 +164,11 @@ const EHR_INDEX: Retired = Retired::replaced(
     "ehr_index",
     concat!(
         "record.subject_index (\"pixm\" or \"local\"; ehr_index.provider = \"ihe\" is \"pixm\") ",
-        "and the [pixm] table: ehr_index.pixm_url is pixm.url, ehr_index.invocation is ",
-        "pixm.method, ehr_index.request_timeout_ms is pixm.timeout (",
+        "and the [pixm] table: ehr_index.pixm_url is pixm.endpoint.url, ehr_index.invocation is ",
+        "pixm.method, ehr_index.request_timeout_ms is pixm.endpoint.timeout (",
         duration!(),
-        "), ehr_index.tls and ehr_index.oauth are pixm.tls and pixm.oauth"
+        "), ehr_index.tls and ehr_index.oauth are pixm.endpoint.tls and ",
+        "pixm.endpoint.credentials.oauth"
     ),
     SINCE,
 );
@@ -226,16 +229,19 @@ const CEDAR_RELOAD_SECS: Retired = Retired::replaced(
     concat!("authz.abac.cedar.reload_interval, ", duration!()),
     SINCE,
 );
-const REMOTE_SERVER: Retired =
-    Retired::replaced("authz.abac.remote.server", "authz.abac.remote.url", SINCE);
+const REMOTE_SERVER: Retired = Retired::replaced(
+    "authz.abac.remote.server",
+    "authz.abac.remote.endpoint.url",
+    SINCE,
+);
 const REMOTE_CONNECT_TIMEOUT_MS: Retired = Retired::replaced(
     "authz.abac.remote.connect_timeout_ms",
-    concat!("authz.abac.remote.connect_timeout, ", duration!()),
+    concat!("authz.abac.remote.endpoint.connect_timeout, ", duration!()),
     SINCE,
 );
 const REMOTE_REQUEST_TIMEOUT_MS: Retired = Retired::replaced(
     "authz.abac.remote.request_timeout_ms",
-    concat!("authz.abac.remote.timeout, ", duration!()),
+    concat!("authz.abac.remote.endpoint.timeout, ", duration!()),
     SINCE,
 );
 const PARTY_BINDING_ENABLED: Retired = Retired::removed(
@@ -352,7 +358,23 @@ const FEED_POLL_INTERVAL_MS: Retired = Retired::replaced(
 );
 const FEED_RETRY_MAX_MS: Retired = Retired::replaced(
     "audit.fhir_feed.retry_max_ms",
-    concat!("audit.fhir_feed.retry.max_backoff, ", duration!()),
+    concat!("audit.fhir_feed.endpoint.retry.max_backoff, ", duration!()),
+    SINCE,
+);
+const REMOTE_OAUTH: Retired = Retired::replaced(
+    "authz.abac.remote.oauth",
+    "[authz.abac.remote.endpoint.credentials.oauth], whose tls table holds trust_roots_file and \
+     client_identity_file and whose refresh_margin, timeout and previous_key_overlap are \
+     durations",
+    SINCE,
+);
+const FEED_URL: Retired =
+    Retired::replaced("audit.fhir_feed.url", "audit.fhir_feed.endpoint.url", SINCE);
+const FEED_OAUTH: Retired = Retired::replaced(
+    "audit.fhir_feed.oauth",
+    "[audit.fhir_feed.endpoint.credentials.oauth], whose tls table holds trust_roots_file and \
+     client_identity_file and whose refresh_margin, timeout and previous_key_overlap are \
+     durations",
     SINCE,
 );
 const MULTIMEDIA_ALLOW_HTTP: Retired = Retired::removed(
@@ -365,7 +387,7 @@ const MULTIMEDIA_ALLOW_HTTP: Retired = Retired::removed(
 /// Every key this module refuses, for the test that holds each to the one
 /// release it lives for.
 #[cfg(test)]
-pub(crate) const RETIRED: [Retired; 57] = [
+pub(crate) const RETIRED: [Retired; 60] = [
     TERMINOLOGY_API_ENABLED,
     TERMINOLOGY_SERVER,
     PROFILING_MAX_SECONDS,
@@ -422,6 +444,9 @@ pub(crate) const RETIRED: [Retired; 57] = [
     FEED_ENABLED,
     FEED_POLL_INTERVAL_MS,
     FEED_RETRY_MAX_MS,
+    FEED_URL,
+    FEED_OAUTH,
+    REMOTE_OAUTH,
     MULTIMEDIA_ALLOW_HTTP,
 ];
 
@@ -499,6 +524,7 @@ fn authz(config: &FerroEhrConfig, removals: &mut Removals) {
     removals.check(remote.server, &REMOTE_SERVER);
     removals.check(remote.connect_timeout_ms, &REMOTE_CONNECT_TIMEOUT_MS);
     removals.check(remote.request_timeout_ms, &REMOTE_REQUEST_TIMEOUT_MS);
+    removals.check(remote.oauth, &REMOTE_OAUTH);
     removals.check(authz.party_binding.enabled, &PARTY_BINDING_ENABLED);
     removals.check(authz.professional, &PROFESSIONAL);
     removals.check(
@@ -555,6 +581,8 @@ fn audit(config: &FerroEhrConfig, removals: &mut Removals) {
         removals.check(feed.enabled, &FEED_ENABLED);
         removals.check(feed.poll_interval_ms, &FEED_POLL_INTERVAL_MS);
         removals.check(feed.retry_max_ms, &FEED_RETRY_MAX_MS);
+        removals.check(feed.url, &FEED_URL);
+        removals.check(feed.oauth, &FEED_OAUTH);
     }
 }
 

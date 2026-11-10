@@ -104,10 +104,9 @@ quickstart selects its local configuration with one variable
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `record.subject_index` | enum{pixm,local} | required | Who translates a subject into the clinical domain. |
-| `pixm.url` | secret URL | required for `pixm` | The PIX Manager's FHIR base, `[base]` of `[base]/Patient/$ihe-pix`. Credentials embedded in it are masked in every rendering. |
 | `pixm.assigning_authority` | URI | required for `pixm` | The clinical domain, such as `urn:oid:2.999.7.1`: the `targetSystem` of every ITI-83 query and the namespace the answered pseudonym is stored under. It must be one of `privacy.subject_namespaces`. |
 | `pixm.method` | enum{post,get} | `post` | `post` sends a `Parameters` body, so a patient identifier never appears in a URL or an access log; `get` is the form ITI-83 prescribes, for a PIX Manager that accepts no `POST`. |
-| `pixm.timeout` | duration | `"10s"` | How long one ITI-83 exchange may take, connection included. |
+| `pixm.endpoint` | [endpoint table](#the-endpoint-table) | required for `pixm` | The PIX Manager: `url`, its FHIR base (`[base]` of `[base]/Patient/$ihe-pix`), `timeout` for one ITI-83 exchange, the `retry` of an exchange that got no answer or a `5xx`, the TLS and the credential. |
 
 ```toml
 [privacy]
@@ -117,26 +116,25 @@ subject_namespaces = ["urn:oid:2.999.7.1"]
 subject_index = "pixm"
 
 [pixm]
-url = "https://pix.example.org/fhir"
 assigning_authority = "urn:oid:2.999.7.1"
 
-[pixm.oauth]
+[pixm.endpoint]
+url = "https://pix.example.org/fhir"
+
+[pixm.endpoint.credentials.oauth]
 token_endpoint = "https://idp.example.org/realms/pix/protocol/openid-connect/token"
 client_id = "ferroehr"
 client_secret_file = "/run/secrets/pix-client"
 scope = "system/Patient.rs"
 ```
 
-`[pixm.oauth]` is the client credentials grant every ITI-83 request
-carries, with the keys of the
-[terminology server's grant](#authenticating-to-the-terminology-server); a
-`401` is answered once more under a new token. The client id is the one the
+`[pixm.endpoint.credentials.oauth]` is the client credentials grant every
+ITI-83 request carries, with the [grant's keys](#the-endpoint-table); a `401`
+is answered once more under a new token. The client id is the one the
 identity source mints pseudonyms in the clinical domain for, and the scope is
-the one its PIX Manager takes from a Consumer. `[pixm.tls]` holds the
-client's TLS material: `trust_roots_file`, a PEM bundle trusted beside the
-platform roots for a PIX Manager behind a private PKI, `client_identity_file`
-(or `client_identity` inline), the chain and key presented for mutual TLS, and
-`min_version` (`"1.3"`, or `"1.2"`).
+the one its PIX Manager takes from a Consumer. `[pixm.endpoint.tls]` holds
+the client's TLS material for a PIX Manager behind a private PKI or one that
+asks for mutual TLS.
 
 How a subject a cohort names is resolved:
 
@@ -184,19 +182,20 @@ on. The terminology extension API is `api.terminology` (bool, `false`).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `url` | secret URL | required | The server's FHIR R4B base URL, for FerroTERM `http://ferroterm:8080/r4b`. A `[terminology]` table without it is a boot error. Credentials embedded in it are redacted from every rendering. |
+| `endpoint` | [endpoint table](#the-endpoint-table) | required | The server: `url`, its FHIR R4B base URL (for FerroTERM `http://ferroterm:8080/r4b`; a `[terminology]` table without it is a boot error), `timeout` for one call, the `retry` of a call that got no answer or a `5xx`, the TLS and the credential. |
 | `on_error` | enum{accept,refuse} | `accept` | What an unresolvable binding does to a commit: `accept` accepts it (fail-open), `refuse` rejects it. |
-| `timeout` | duration | `"10s"` | How long one request may take, connection included. |
 
 Every key is a scalar, so the whole section is reachable through the
-environment: `FERROEHR__TERMINOLOGY__URL`,
+environment: `FERROEHR__TERMINOLOGY__ENDPOINT__URL`,
 `FERROEHR__TERMINOLOGY__ON_ERROR`,
-`FERROEHR__TERMINOLOGY__TIMEOUT`.
+`FERROEHR__TERMINOLOGY__ENDPOINT__TIMEOUT`.
 
 ```toml
 [terminology]
-url = "http://ferroterm:8080/r4b"
 on_error = "accept"
+
+[terminology.endpoint]
+url = "http://ferroterm:8080/r4b"
 ```
 
 The server answers every terminology the bundled openEHR terminology does not
@@ -214,13 +213,26 @@ decides what the commit does.
 > `--no-default-features` refuses at startup if `[terminology]` is configured;
 > the in-process openEHR terminology bundle remains available.
 
-### Authenticating to the terminology server
+### The endpoint table
 
-A server behind an authorization server takes the OAuth2 client-credentials
-grant under `[terminology.oauth]`, with the same keys as
-`[audit.fhir_feed.oauth]` and `[authz.abac.remote.oauth]`. The access token is
-cached and re-requested shortly before it expires, and a request the server
-answers with `401` is sent once more under a new token.
+Every outbound HTTP integration, `[terminology.endpoint]`, `[pixm.endpoint]`,
+`[audit.fhir_feed.endpoint]` and `[authz.abac.remote.endpoint]`, is the
+FerroHEALTH family's one endpoint
+table, so an operator writes the same keys for each integration of each
+product.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `url` | URL | required | The service's base URL. Credentials embedded in it are masked in every rendering, and a credential here beside one in `credentials` is a boot error: the service would receive two authorizations. |
+| `timeout` | duration | `"10s"` | How long one whole call may take; never zero. |
+| `connect_timeout` | duration | unset | How long opening the connection may take; unset, only `timeout` bounds it. |
+| `retry` | table | three attempts, a fifth of a second doubling to five seconds | How a call that got no answer, or a `5xx`, is tried again: `max_attempts` (`3`) counts the first try, so `1` never retries; the wait starts at `initial_backoff` and doubles up to `max_backoff` (`"5s"`). A refusal the service answered on purpose is never retried. |
+| `tls` | table | platform roots | The family's outbound TLS table: `trust_roots_file`, a PEM bundle trusted beside the platform's roots for a service behind a private PKI; `client_identity_file` (or `client_identity` inline), one PEM holding the client certificate chain and its key for mutual TLS; and `min_version` (`"1.3"`, or `"1.2"`). |
+| `credentials` | table | none | What every call carries: HTTP Basic (`user` with `password` or `password_file`) or the OAuth2 client-credentials grant `[...credentials.oauth]`, never both. |
+
+The grant's access token is cached and re-requested shortly before it
+expires, and a call the service answers with `401` is sent once more under a
+new token. Its keys:
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -236,20 +248,17 @@ answers with `401` is sent once more under a new token.
 | `kid` | string | the RFC 7638 thumbprint | The `kid` the client assertion names. |
 | `assertion_alg` | string | by key type | The algorithm the client assertion is signed with. |
 | `assertion_audience` | enum{token_endpoint,issuer} | `token_endpoint` | The `aud` of the client assertion; `issuer` needs `issuer` set. |
-| `tls` | table | platform roots | The family's outbound TLS table: `trust_roots_file`, PEM trust roots added to the platform's for a token endpoint behind a private certificate authority; `client_identity_file`, one PEM holding the client certificate chain and its key presented over mutual TLS (RFC 8705); and `min_version`. |
+| `tls` | table | platform roots | The token endpoint's own TLS table, with the keys above. |
 | `refresh_margin` | duration | `"30s"` | How long before the token expires a new one is fetched. |
 | `timeout` | duration | `"10s"` | How long one call to the authorization server may take. |
 
 ```toml
-[terminology.oauth]
+[terminology.endpoint.credentials.oauth]
 token_endpoint = "https://idp.example.org/realms/ts/protocol/openid-connect/token"
 client_id = "ferroehr-cdr"
 client_secret_file = "/run/secrets/ts-client"
 scope = "system/*.read"
 ```
-
-A grant beside credentials in the server URL's userinfo is a boot error: the
-server would receive two authorizations.
 
 ### Archetype value-set bindings at commit
 

@@ -140,7 +140,7 @@ active response is reused until its `exp`, at most `cache_max_age`.
 | `endpoint` | URL | unset | The introspection endpoint; unset reads the `introspection_endpoint` of the issuer's metadata. `https`, or `http` on a loopback host. |
 | `cache_max_age` | duration | `"60s"` | The longest an active response is used; `"0s"` caches nothing. |
 | `cache_capacity` | int | `10000` | The most responses held at once. |
-| `client` | table | unset | The client authentication of the call (RFC 7662 §2.1), with the keys of an outbound grant: `client_id` and `client_secret`, `private_key_jwt` or mutual TLS (see [the grant keys](config-integrations.md#authenticating-to-the-terminology-server)). |
+| `client` | table | unset | The client authentication of the call (RFC 7662 §2.1), with the keys of an outbound grant: `client_id` and `client_secret`, `private_key_jwt` or mutual TLS (see [the grant keys](config-integrations.md#the-endpoint-table)). |
 | `bearer` | table | unset | A client credentials grant whose token authorizes the call instead (SMART App Launch 2.2.0, Token Introspection). Exactly one of `client` and `bearer`. |
 
 ```toml
@@ -605,16 +605,17 @@ namespaces is refused with `403`, because a bare id would name both subjects.
 - **`[authz.abac.cedar]`:** `policy_dir` (path, required when
   `engine = "cedar"` and ABAC is on) and `reload_interval` (duration, unset,
   an optional hot-reload interval).
-- **`[authz.abac.remote]`:** `url` (secret URL, required when
-  `engine = "remote"`, and it must end with `/`, because the policy name is
-  appended; credentials embedded in it are redacted from every rendering),
-  `connect_timeout` (duration, `"2s"`) and `timeout` (duration, `"5s"`).
-- **`[authz.abac.remote.oauth]`:** calls the policy service as an OAuth 2.0
-  client instead of with the Basic credentials of `url`: FerroEHR obtains a
-  token with the client credentials grant and sends it as a bearer token. The
-  keys are those of [`[audit.fhir_feed.oauth]`](config-audit.md#auditfhir_feedoauth-authenticating-with-oauth-20-client-credentials)
-  (`token_endpoint` or `issuer`, `client_id`, `client_secret` or
-  `client_secret_file`, `client_auth`, `scope`, `audience`, `resource`).
+- **`[authz.abac.remote.endpoint]`:** the policy service, as the family's
+  [endpoint table](config-integrations.md#the-endpoint-table): `url` (required
+  when `engine = "remote"`, and it must end with `/`, because the policy name
+  is appended; credentials embedded in it are masked in every rendering),
+  `connect_timeout` (`"2s"` here), `timeout` (`"5s"` here), `retry` (a call
+  that got no answer or a `5xx` is asked again; a `4xx` is a decision and is
+  never asked again), `tls` and `credentials`.
+- **`[authz.abac.remote.endpoint.credentials.oauth]`:** calls the policy
+  service as an OAuth 2.0 client instead of with HTTP Basic: FerroEHR obtains
+  a token with the client credentials grant and sends it as a bearer token,
+  with the [grant's keys](config-integrations.md#the-endpoint-table).
   When the policy service refuses the token with `401`, a new one is fetched
   and the decision asked once more; a token that cannot be obtained, or that
   is refused again, is no decision, and the request fails closed with a `500`,

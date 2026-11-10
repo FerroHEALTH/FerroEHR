@@ -86,6 +86,7 @@ pub mod fhir;
 mod fhir_accessor;
 pub mod message;
 pub mod render;
+pub mod retention;
 #[cfg(feature = "fhir")]
 pub(crate) mod search;
 pub mod sender;

@@ -31,10 +31,12 @@ const IHE_CONFIG: &str = r#"
 subject_index = "pixm"
 
 [pixm]
-url = "http://localhost:8090/fhir"
 assigning_authority = "urn:oid:2.999.7.1"
 
-[pixm.oauth]
+[pixm.endpoint]
+url = "http://localhost:8090/fhir"
+
+[pixm.endpoint.credentials.oauth]
 token_endpoint = "http://localhost:8180/quickstart/token"
 client_id = "ferroehr"
 client_secret = "quickstart"

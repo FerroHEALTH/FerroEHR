@@ -120,8 +120,8 @@ YAML
 }
 
 # The CDR's half of an IHE mode: the clinical domain, and the grant it asks
-# the PIX Manager with. $1 is the `[pixm]` table's `url` line, empty for the
-# FerroPIX the chart runs beside it.
+# the PIX Manager with. $1 is the PIX Manager's URL, empty for the FerroPIX the
+# chart runs beside it.
 k8s_pix_cdr_values() {
   cat <<YAML
 secrets:
@@ -137,12 +137,14 @@ config:
 ${1:+  record:
     subject_index: pixm
 }  pixm:
-$1
     assigning_authority: "$K8S_PIX_CLINICAL"
-    oauth:
-      token_endpoint: "http://$K8S_PIX_ISSUER_SVC:8180/machines/token"
-      client_id: ferroehr
-      scope: system/Patient.rs
+    endpoint:
+${1:+      url: "$1"
+}      credentials:
+        oauth:
+          token_endpoint: "http://$K8S_PIX_ISSUER_SVC:8180/machines/token"
+          client_id: ferroehr
+          scope: system/Patient.rs
 YAML
 }
 
@@ -373,7 +375,7 @@ probes_k8s_ehr_index() {
   probe "P-K8S-INDEX-PIXM" "$PROBE_WORKING" "server" "#5108" \
     "ferropix.enabled=false with pixm.url naming a PIX Manager's Service: an EHR is found by its source identifier"
   k8s_pix_values > "$PROBE_TMP/pix-values.yaml"
-  k8s_pix_cdr_values "    url: \"http://$K8S_PIX_RELEASE:8080/fhir\"" > "$PROBE_TMP/index-pixm.yaml"
+  k8s_pix_cdr_values "http://$K8S_PIX_RELEASE:8080/fhir" > "$PROBE_TMP/index-pixm.yaml"
   if ! helm upgrade --install "$K8S_PIX_RELEASE" "$K8S_PIX_CHART" -n "$K8S_NS" \
        -f "$PROBE_TMP/pix-values.yaml" >/dev/null 2>&1 || ! k8s_pix_rollout; then
     probe_fail "the FerroPIX release rolled out" \

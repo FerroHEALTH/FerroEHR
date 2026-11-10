@@ -393,23 +393,41 @@ async fn subsumes_sends_code_a_and_code_b() {
     assert!(p.subsumes("sys", "parent", "child").await.expect("call"));
 }
 
-/// A `5xx` is answered once: the request timeout bounds the whole call on the
-/// commit path, so the client does not retry.
+/// `[terminology.endpoint] retry` is honoured: a `5xx` is asked again up to
+/// `max_attempts` times (three by default), and `max_attempts = 1` asks once.
 #[tokio::test]
-async fn a_server_failure_is_not_retried() {
-    let server = MockServer::start().await;
-    operation("/ValueSet/$validate-code")
-        .respond_with(ResponseTemplate::new(503))
-        .expect(1)
-        .mount(&server)
-        .await;
-
-    let p = provider(&server.uri());
-    let err = p
-        .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
-        .await
-        .expect_err("5xx → exception");
-    assert!(matches!(&err, ServiceError::Fault(_)), "got {err:?}");
+async fn a_server_failure_is_tried_as_the_endpoint_retry_says() {
+    for (attempts, calls) in [(None, 3), (Some(1), 1)] {
+        let server = MockServer::start().await;
+        operation("/ValueSet/$validate-code")
+            .respond_with(ResponseTemplate::new(503))
+            .expect(calls)
+            .mount(&server)
+            .await;
+        let mut endpoint = ferrohealth_smart::config::endpoint::EndpointSection {
+            url: server.uri(),
+            timeout: ferrohealth_config::units::Duration::from_millis(800),
+            ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+        };
+        endpoint.retry.initial_backoff = ferrohealth_config::units::Duration::from_millis(1);
+        endpoint.retry.max_backoff = ferrohealth_config::units::Duration::from_millis(2);
+        if let Some(attempts) = attempts {
+            endpoint.retry.max_attempts = attempts;
+        }
+        let p = ferroehr::service::terminology::fhir::FhirTerminologyProvider::new(
+            &ferroehr::service::terminology::config::TerminologyServerConfig {
+                endpoint,
+                ..ferroehr::service::terminology::config::TerminologyServerConfig::default()
+            },
+        )
+        .expect("build provider");
+        let err = p
+            .value_set_validate(SURFACE_SYS, SURFACE_VS, "B", None)
+            .await
+            .expect_err("5xx → exception");
+        assert!(matches!(&err, ServiceError::Fault(_)), "got {err:?}");
+        server.verify().await;
+    }
 }
 
 // ─── reading the answer ──────────────────────────────────────────────────────

@@ -139,6 +139,102 @@ split_data() {
   ' "$rendered"
 }
 
+# ── Replay the Deployment's environment ──────────────────────────────────────
+# Reads the `name<TAB>kind<TAB>value` lines of ENVLIST into REPLAYED_ENV as
+# `-e NAME=VALUE` docker arguments. A `secret` line takes the REAL value the
+# chart's env Secret rendered into SECDIR under its key, then removes that file,
+# since an env-valued key is no file the server reads. Only a key the chart did
+# not render (an operator-owned Secret) gets the placeholder. Before #5331 the
+# `FERROEHR__*` files were deleted before this ran, so every env-valued secret
+# arrived as the placeholder and the overlay's real value was never checked.
+REPLAYED_ENV=()
+replay_env() {
+  local envlist="$1" secdir="$2" name kind value f
+  REPLAYED_ENV=()
+  while IFS=$'\t' read -r name kind value; do
+    [[ -n "$name" ]] || continue
+    case "$kind" in
+      literal) REPLAYED_ENV+=(-e "${name}=${value}") ;;
+      secret)
+        if [[ -f "${secdir}/${value}" ]]; then
+          REPLAYED_ENV+=(-e "${name}=$(cat "${secdir}/${value}")")
+          rm -f "${secdir}/${value}"
+        else
+          # An EXTERNAL Secret the operator owns; the chart never rendered it.
+          REPLAYED_ENV+=(-e "${name}=ci-boot-check-external-secret-value")
+        fi
+        ;;
+      *)
+        red "  ${name}: unknown env source '${kind}'; teach boot-check.sh about it"
+        return 1
+        ;;
+    esac
+  done < "$envlist"
+  # An env-valued key no declared variable read is no file either.
+  for f in "$secdir"/FERROEHR__*; do
+    [[ -e "$f" ]] && rm -f "$f"
+  done
+  return 0
+}
+
+# ── The replay's own proof, run before any overlay ───────────────────────────
+# An env-valued Secret key reaches the server with its rendered value: the
+# server accepts a well-formed audit feed URL and refuses a malformed one, so a
+# replay that substituted the placeholder would fail the first case and pass the
+# second for the wrong reason. A key the chart never rendered takes the
+# placeholder.
+self_test() {
+  local work; work="$(mktemp -d)"
+  local secdir="${work}/secrets" cfgdir="${work}/etc"
+  mkdir -p "$secdir" "$cfgdir"
+  cat > "${cfgdir}/ferroehr.toml" <<'TOML'
+[deployment]
+profile = "sandbox"
+[auth]
+enabled = false
+[database]
+url = "postgres://ferroehr_clinical:pw@postgres:5432/ferroehr"
+[record]
+subject_index = "local"
+[audit.fhir_feed]
+TOML
+  local key="FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL"
+  printf '%s\t%s\t%s\n' "$key" secret "$key" "FERROEHR__UNRENDERED" secret "FERROEHR__UNRENDERED" > "${work}/env"
+  local case_value expect outcome
+  for case_value in "https://arr:pw@arr.example.com/fhir" "not a url"; do
+    printf '%s' "$case_value" > "${secdir}/${key}"
+    replay_env "${work}/env" "$secdir" || { rm -rf "$work"; return 1; }
+    if [[ " ${REPLAYED_ENV[*]} " != *" ${key}=${case_value} "* ]]; then
+      red "self-test: ${key} was not replayed with its rendered value '${case_value}'"
+      rm -rf "$work"; return 1
+    fi
+    if [[ " ${REPLAYED_ENV[*]} " != *" FERROEHR__UNRENDERED=ci-boot-check-external-secret-value "* ]]; then
+      red "self-test: a key the chart never rendered did not take the placeholder"
+      rm -rf "$work"; return 1
+    fi
+    if [[ -e "${secdir}/${key}" ]]; then
+      red "self-test: the env-valued key was left behind as a secret file"
+      rm -rf "$work"; return 1
+    fi
+    expect=accepted; [[ "$case_value" == "not a url" ]] && expect=refused
+    if docker run --rm -v "${cfgdir}:/etc/ferroehr:ro" \
+         -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml -e "${key}=${case_value}" \
+         --entrypoint /usr/local/bin/ferroehr "$IMAGE" config check > "${work}/check.log" 2>&1; then
+      outcome=accepted
+    else
+      outcome=refused
+    fi
+    if [[ "$outcome" != "$expect" ]]; then
+      red "self-test: ${IMAGE} ${outcome} the replayed feed URL '${case_value}', expected ${expect}:"
+      indented "${work}/check.log"
+      rm -rf "$work"; return 1
+    fi
+  done
+  rm -rf "$work"
+  green "self-test: an env-valued Secret key reaches the server with its rendered value"
+  return 0
+}
+
 boot_one() {
   local values="$1"
   local label; label="$(basename "$values" .yaml)"
@@ -184,10 +280,6 @@ boot_one() {
   # /etc/ferroehr-secrets — the chart's own file-shaped secret keys, at their
   # real rendered values. A `FERROEHR__…`-spelled key is environment, not a file.
   split_data "$all" "${RELEASE_NAME}-env" "$secdir"
-  local f
-  for f in "$secdir"/FERROEHR__*; do
-    [[ -e "$f" ]] && rm -f "$f"
-  done
 
   # The Deployment's declared environment. `value:` literals pass through;
   # `valueFrom.secretKeyRef` resolves against the chart Secret already split
@@ -216,27 +308,9 @@ boot_one() {
     /^                  key: / { if (name != "") { print name "\tsecret\t" $2; name = "" } }
   ' "$cdr" > "$envlist"
 
+  replay_env "$envlist" "$secdir" || return 1
   local -a docker_env=()
-  local name kind value
-  while IFS=$'\t' read -r name kind value; do
-    [[ -n "$name" ]] || continue
-    case "$kind" in
-      literal) docker_env+=(-e "${name}=${value}") ;;
-      secret)
-        if [[ -f "${secdir}/${value}" ]]; then
-          docker_env+=(-e "${name}=$(cat "${secdir}/${value}")")
-          rm -f "${secdir}/${value}"
-        else
-          # An EXTERNAL Secret the operator owns; the chart never rendered it.
-          docker_env+=(-e "${name}=ci-boot-check-external-secret-value")
-        fi
-        ;;
-      *)
-        red "  ${name}: unknown env source '${kind}'; teach boot-check.sh about it"
-        return 1
-        ;;
-    esac
-  done < "$envlist"
+  [[ "${#REPLAYED_ENV[@]}" -eq 0 ]] || docker_env=("${REPLAYED_ENV[@]}")
 
   # Every `*_FILE` path the environment or the TOML points at must exist. The
   # DSN is the one the chart deliberately does not carry.
@@ -372,6 +446,8 @@ else
   echo "not booted (declared not a deployment): ${NOT_A_DEPLOYMENT[*]}"
 fi
 [[ "${#TARGETS[@]}" -gt 0 ]] || { red "no values files to boot"; exit 1; }
+
+self_test || { red "the environment replay is broken; no overlay is judged"; exit 1; }
 
 FAILED=()
 for values in "${TARGETS[@]}"; do

@@ -17,10 +17,8 @@
 //! configuration of that client — our own design.
 
 use ferrohealth_config::removed::Removed;
-use ferrohealth_config::units::Duration;
+use ferrohealth_smart::config::endpoint::EndpointSection;
 use serde::{Deserialize, Serialize};
-
-use ferrohealth_secret::secret_url::SecretUrl;
 
 /// What a composition gets when the terminology server cannot resolve one of
 /// its bindings (unreachable, an error, an unknown value set).
@@ -35,20 +33,17 @@ pub enum OnError {
 }
 
 /// The one FHIR R4B terminology server (`[terminology]`).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct TerminologyServerConfig {
-    /// The FHIR R4B base URL, e.g. `http://ferroterm:8080/r4b`; required. Any
-    /// `userinfo` in it is masked in every rendering.
-    pub url: SecretUrl,
+    /// `[terminology.endpoint]`, the family's outbound endpoint: the FHIR R4B
+    /// base URL (`url`, such as `http://ferroterm:8080/r4b`, required), the
+    /// timeouts, the `retry` of a call, the TLS and the credential. Any
+    /// `userinfo` in the URL is masked in every rendering.
+    pub endpoint: EndpointSection,
     /// On a binding the server cannot resolve: `accept` (the default) or
     /// `refuse`. A resolved non-member is refused under either setting.
     pub on_error: OnError,
-    /// How long one request may take, connection included.
-    pub timeout: Duration,
-    /// The OAuth 2.0 client credentials grant whose bearer token every request
-    /// carries (`[terminology.oauth]`). Unset = unauthenticated.
-    pub oauth: Option<ferrohealth_smart::config::credentials::OauthSection>,
     /// Retired in v5.7.0: refused at load, naming `api.terminology`.
     #[serde(skip_serializing)]
     pub api_enabled: Removed,
@@ -57,20 +52,13 @@ pub struct TerminologyServerConfig {
     pub server: Removed,
 }
 
-impl Default for TerminologyServerConfig {
-    fn default() -> Self {
-        Self {
-            url: SecretUrl::default(),
-            on_error: OnError::Accept,
-            timeout: Duration::from_secs(10),
-            oauth: None,
-            api_enabled: Removed::default(),
-            server: Removed::default(),
-        }
-    }
-}
-
 impl TerminologyServerConfig {
+    /// The server's URL with any `userinfo` masked, for a log line.
+    #[must_use]
+    pub fn masked_url(&self) -> String {
+        ferrohealth_smart::config::mask_userinfo(&self.endpoint.url)
+    }
+
     /// Whether an unresolvable binding refuses the composition.
     #[must_use]
     pub fn refuses_on_error(&self) -> bool {
@@ -86,9 +74,12 @@ mod tests {
     fn the_defaults_accept_on_error() {
         let c = TerminologyServerConfig::default();
         assert!(!c.refuses_on_error());
-        assert!(c.url.is_empty());
-        assert!(c.oauth.is_none());
-        assert_eq!(c.timeout, Duration::from_secs(10));
+        assert_eq!(c.endpoint.url, "");
+        assert!(c.endpoint.credentials.oauth.is_none());
+        assert_eq!(
+            c.endpoint.timeout,
+            ferrohealth_config::units::Duration::from_secs(10)
+        );
     }
 
     /// The section a release before the one-server shape carried is refused

@@ -175,7 +175,7 @@ config:
     syslog:
       url: tls://arr.example.com:6514
     fhir_feed: {}
-      # url is a SecretUrl (its userinfo may carry ARR basic-auth credentials),
+      # endpoint.url may carry ARR basic-auth credentials in its userinfo,
       # so it arrives as secrets.auditFhirFeedUrl, never through the ConfigMap.
   files:
     signing.asc: |
@@ -184,10 +184,12 @@ config:
       -----END PGP PRIVATE KEY BLOCK-----
   pixm:
     assigning_authority: urn:oid:2.999.7.1
-    oauth:
-      token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token
-      client_id: ferroehr
-      scope: system/Patient.rs
+    endpoint:
+      credentials:
+        oauth:
+          token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token
+          client_id: ferroehr
+          scope: system/Patient.rs
   api:
     base_path: /ferroehr/rest/openehr/v1
     openapi_ui: public
@@ -215,7 +217,7 @@ config:
       bucket: openehr-multimedia
       region: eu-west-1
   terminology:
-    # `url` and `on_error` are INJECTED by the chart from the
+    # `endpoint.url` and `on_error` are INJECTED by the chart from the
     # `terminology:` block below, which is why they are not declared here:
     # declaring the URL beside the in-cluster one is refused at render,
     # because two answers to "which server resolves a binding" is exactly the
@@ -223,10 +225,12 @@ config:
     # choose. The grant is the operator's, so the OAuth2 shape still reaches
     # a golden render; its client secret is secrets.terminologyClientSecret,
     # and the chart injects client_secret_file pointing at the mounted file.
-    oauth:
-      token_endpoint: https://idp.example.org/realms/ts/protocol/openid-connect/token
-      client_id: ferroehr
-      scope: tx.read
+    endpoint:
+      credentials:
+        oauth:
+          token_endpoint: https://idp.example.org/realms/ts/protocol/openid-connect/token
+          client_id: ferroehr
+          scope: tx.read
 
 ingress:
   enabled: true

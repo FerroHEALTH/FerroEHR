@@ -224,13 +224,16 @@ mod tests {
     /// fail-closed posture.
     async fn service(base: &str, fail_on_error: bool) -> FerroEhrService {
         let cfg = TerminologyServerConfig {
-            url: ferrohealth_secret::secret_url::SecretUrl::new(base),
+            endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                url: base.to_owned(),
+                timeout: ferrohealth_config::units::Duration::from_millis(800),
+                ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+            },
             on_error: if fail_on_error {
                 crate::service::terminology::config::OnError::Refuse
             } else {
                 crate::service::terminology::config::OnError::Accept
             },
-            timeout: ferrohealth_config::units::Duration::from_millis(800),
             ..TerminologyServerConfig::default()
         };
         let server = FhirTerminologyProvider::new(&cfg).expect("build the terminology client");

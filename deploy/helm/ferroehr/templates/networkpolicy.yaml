@@ -118,7 +118,7 @@ spec:
     {{- if .Values.ferropix.enabled }}
     # The in-cluster FerroPIX, by pod selector, for the reason FerroTERM's rule
     # above gives: the chart chose this destination when it wired
-    # config.pixm.url. Omitted, the server refuses to boot, because it
+    # config.pixm.endpoint.url. Omitted, the server refuses to boot, because it
     # reads the identity source's capabilities at start. 8080 is FerroPIX's
     # container port; its token endpoint is the operator's `rules`.
     - to:

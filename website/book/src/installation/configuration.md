@@ -68,7 +68,7 @@ including after the `FERROEHR` prefix.** A single underscore only ever appears
 | `[database] max_connections = 20` | `FERROEHR__DATABASE__MAX_CONNECTIONS=20` |
 | `[authz.rbac] admin_role = "…"` | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE=…` |
 | `[management.endpoints] env = "off"` | `FERROEHR__MANAGEMENT__ENDPOINTS__ENV=off` |
-| `[terminology] url = "…"` | `FERROEHR__TERMINOLOGY__URL=…` |
+| `[terminology.endpoint] url = "…"` | `FERROEHR__TERMINOLOGY__ENDPOINT__URL=…` |
 
 Scalars are typed automatically (bool / int / float, else string).
 **List-typed keys take comma-separated values**
@@ -332,7 +332,7 @@ rather than inherit from a quickstart. See
 | `[record.signing]` | VERSION signing and read-time verification | [Authentication & access](config-auth.md) |
 | `[record.versioning]` | The opt-in answer to an update whose content equals the current version's, off by default | [Authentication & access](config-auth.md#recordversioning) |
 | `[record.query]` | AQL execution budgets and result ceilings | [Integrations](config-integrations.md) |
-| `record.subject_index`, `[pixm]`, `[pixm.oauth]`, `[pixm.tls]` | Who holds the patient-to-EHR cross-reference: an IHE patient identity source over PIXm or the in-instance map | [Integrations](config-integrations.md#pixm) |
+| `record.subject_index`, `[pixm]`, `[pixm.endpoint]` | Who holds the patient-to-EHR cross-reference: an IHE patient identity source over PIXm or the in-instance map | [Integrations](config-integrations.md#pixm) |
 | `[record.change_feed]` | The commit-event outbox and the readers of its feed | [Integrations](config-integrations.md#recordchange_feed) |
 | `[terminology]`, `[record.multimedia]` | The terminology server, multimedia externalization | [Integrations](config-integrations.md) |
 | `[audit]`, `[audit.store]`, `[audit.syslog]`, `[audit.fhir_feed]` | The IHE ATNA audit trail and its sinks | [Audit](config-audit.md) |

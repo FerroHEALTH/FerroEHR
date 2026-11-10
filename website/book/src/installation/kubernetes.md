@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DATABASE__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 24.0.0 -n ferroehr \
+  --version 25.0.0 -n ferroehr \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.6.3 \
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 24.0.0
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.0
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 24.0.0` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 25.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.6.3` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 24.0.0 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -223,7 +223,7 @@ therefore classifies every key it renders and takes one of two actions.
 **A secret the chart routes:** `record.signing.key_passphrase`,
 `record.multimedia.secret_access_key`, a Basic user's `password_hash`, a terminology
 `client_secret`, and the two URL-shaped ones (`database.url` and
-`audit.fhir_feed.url`) has a `secrets:` key of its own, so
+`audit.fhir_feed.endpoint.url`) has a `secrets:` key of its own, so
 a value under `config:` is a mistake and fails the render, naming the key that
 belongs there:
 
@@ -334,7 +334,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 24.0.0 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -499,7 +499,7 @@ asks for a read-only volume instead.
 | `secrets.multimediaSecretAccessKey` | mounted at `/etc/ferroehr-secrets/record.multimedia.secret_access_key` |
 | `secrets.basicUserPasswordHashes` (per user-id) | mounted at `/etc/ferroehr-secrets/auth.basic.users.<user>.password_hash`; the chart injects the matching `password_hash_file` |
 | `secrets.terminologyClientSecret` | mounted at `/etc/ferroehr-secrets/[terminology].oauth.client_secret`; the chart injects the matching `client_secret_file` into `config.[terminology].oauth`, which must declare the grant |
-| `secrets.auditFhirFeedUrl` | env; `audit.fhir_feed.url` is the only credential-bearing key with no `*_file` sibling |
+| `secrets.auditFhirFeedUrl` | env; `audit.fhir_feed.endpoint.url` is the only credential-bearing key with no `*_file` sibling |
 | `secrets.multimediaAccessKeyId` | env; an access key *id* is not secret (it is reported unredacted by the management surface's `env` endpoint) |
 
 The mount is read-only, `0440`, owned `root:65532` so the non-root process reads
@@ -837,7 +837,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 24.0.0 -n ferroehr --reuse-values \
+  --version 25.0.0 -n ferroehr --reuse-values \
   --set config.record.query.plan_cache_capacity=512
 ```
 
@@ -876,7 +876,7 @@ is an explicit, auditable decision:
 | RBAC | `config.authz.rbac.enabled` | **on** | The coarse role gate (active while `config.auth.enabled`). |
 | ABAC | `config.authz.abac.enabled` | off | Cedar (policies via a `config.files` mount) or a remote policy decision point. |
 | S3 multimedia | `config.record.multimedia.enabled` | off | ⚠ Offloaded blobs are PHI. Private, encrypted, HTTPS bucket; keys via `secrets.multimediaAccessKeyId` and `secrets.multimediaSecretAccessKey`. |
-| Terminology server | `config.the [terminology] table` | off | The one FHIR terminology server, at `config.terminology.url`. To run FerroTERM in the cluster instead, use `terminology.enabled` ([FerroTERM](#ferroterm-a-terminology-server-beside-the-cdr-off-by-default)), which sets these keys for you. |
+| Terminology server | `config.terminology` | off | The one FHIR terminology server, at `config.terminology.endpoint.url`. To run FerroTERM in the cluster instead, use `terminology.enabled` ([FerroTERM](#ferroterm-a-terminology-server-beside-the-cdr-off-by-default)), which sets these keys for you. |
 | ATNA audit trail | `config.audit.enabled` | **on** | On with the local store only; forwarding (`config.audit.syslog`, `config.audit.fhir_feed`) is opt-in per sink. |
 | Version signing | `config.record.signing.enabled` | **on** (`config.record.signing.mode: digest`) | `pgp` mode needs a `config.files` key plus `secrets.signingKeyPassphrase`, and fails closed at boot without a usable key. |
 | OTLP telemetry | `config.telemetry.otlp.endpoint` | unset | Setting the endpoint is all it takes; without a `config.telemetry.otlp` table nothing is exported. With `networkPolicy.egress.enabled`, add a rule for the collector, since a blocked exporter drops spans without an error. |
@@ -939,7 +939,7 @@ clinical domain holds for a patient
 its Deployment, Service, NetworkPolicy and configuration are its own chart's,
 and every key under `ferropix:` is that chart's value. With
 `ferropix.enabled` (the default) the chart writes
-`config.ehr_index.subject_index = "pixm"` and `config.pixm.url` at the
+`config.record.subject_index = "pixm"` and `config.pixm.endpoint.url` at the
 FerroPIX Service, and refuses a values file that sets either too. With the
 egress policy on, it adds the rule to FerroPIX's pods.
 
@@ -963,21 +963,23 @@ ferropix:
 config:
   privacy:
     subject_namespaces: [urn:oid:2.999.7.1]
-  ehr_index:
+  pixm:
     assigning_authority: urn:oid:2.999.7.1
-    oauth:
-      token_endpoint: https://idp.example.org/realms/pix/protocol/openid-connect/token
-      client_id: ferroehr
-      scope: system/Patient.rs
+    endpoint:
+      credentials:
+        oauth:
+          token_endpoint: https://idp.example.org/realms/pix/protocol/openid-connect/token
+          client_id: ferroehr
+          scope: system/Patient.rs
 secrets:
   ehrIndexClientSecret: <the client secret>
 ```
 
 `secrets.ehrIndexClientSecret` is mounted at
-`/etc/ferroehr-secrets/pixm.oauth.client_secret`, and the chart injects
+`/etc/ferroehr-secrets/ehr_index.oauth.client_secret`, and the chart injects
 the matching `client_secret_file`; the production overlay reads it from a
 Secret you own through `extraEnv` instead. Another PIX Manager:
-`ferropix.enabled: false` and `config.pixm.url`. A CDR run on its
+`ferropix.enabled: false` and `config.pixm.endpoint.url`. A CDR run on its
 own: `ferropix.enabled: false` and `config.record.subject_index: local`.
 
 The chart pins FerroPIX 0.0.18 by digest (`ferropix.image`) with the
@@ -1009,24 +1011,22 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 24.0.0 -n ferroehr --reuse-values \
+  --version 25.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
 That renders a Deployment, a ClusterIP Service, its own ServiceAccount, a
 ConfigMap holding the code systems, and a NetworkPolicy. It also writes three
-things into the CDR's `ferroehr.toml`: `config.the [terminology] table`,
-`config.terminology.on_error` from `terminology.failOnError`, and
-`config.terminology.url` at the Service address.
+two things into the CDR's `ferroehr.toml`: `config.terminology.on_error` from
+`terminology.failOnError`, and `config.terminology.endpoint.url` at the
+Service address.
 
-Because the chart writes those three, a values file that contradicts any of them
-is refused at render rather than silently overwritten. Three shapes are refused
+Because the chart writes those two, a values file that contradicts either is
+refused at render rather than silently overwritten. Two shapes are refused
 while `terminology.wireCdr` is on:
 
-- **`config.terminology.url`** — two answers to "which server resolves a
+- **`config.terminology.endpoint.url`** — two answers to "which server resolves a
   binding" is how resolution ends up pointed somewhere nobody chose.
-- **`config.the [terminology] table: false`** — the rendered
-  `ferroehr.toml` would say the opposite of your values file.
 - **`config.terminology.on_error`** disagreeing with
   `terminology.failOnError` — same reason, for the posture that decides whether
   an unresolvable binding is a `422`.
@@ -1386,7 +1386,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 24.0.0 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

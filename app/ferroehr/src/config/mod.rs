@@ -1785,10 +1785,16 @@ mod tests {
         let err = c
             .validate()
             .expect_err("a server with no url must be rejected");
-        assert!(err.to_string().contains("terminology.url"), "got {err}");
+        assert!(
+            err.to_string().contains("terminology.endpoint"),
+            "got {err}"
+        );
 
         c.terminology = Some(TerminologyServerConfig {
-            url: SecretUrl::new("https://ts.example/fhir"),
+            endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                url: "https://ts.example/fhir".to_owned(),
+                ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+            },
             ..TerminologyServerConfig::default()
         });
         assert!(c.validate().is_ok());
@@ -1804,9 +1810,13 @@ mod tests {
 
         let with = |url: &str, oauth: OauthSection| {
             let mut c = standalone();
+            let mut endpoint = ferrohealth_smart::config::endpoint::EndpointSection {
+                url: url.to_owned(),
+                ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+            };
+            endpoint.credentials.oauth = Some(oauth);
             c.terminology = Some(TerminologyServerConfig {
-                url: SecretUrl::new(url),
-                oauth: Some(oauth),
+                endpoint,
                 ..TerminologyServerConfig::default()
             });
             c
@@ -1815,7 +1825,7 @@ mod tests {
             .validate()
             .expect_err("a grant with no token endpoint, client id or secret is rejected");
         for key in [
-            "terminology.oauth",
+            "terminology.endpoint.credentials.oauth",
             "token_endpoint",
             "client_id",
             "client_secret",
@@ -1841,7 +1851,8 @@ mod tests {
             .validate()
             .expect_err("userinfo beside a grant is rejected");
         assert!(
-            err.to_string().contains("terminology carries credentials"),
+            err.to_string()
+                .contains("terminology.endpoint.url carries credentials"),
             "got {err}"
         );
     }
@@ -1853,27 +1864,46 @@ mod tests {
         let c = assemble_ok(
             None,
             &env(&[
-                ("FERROEHR__TERMINOLOGY__URL", "http://ferroterm:8080/r4b"),
-                ("FERROEHR__TERMINOLOGY__ON_ERROR", "refuse"),
-                ("FERROEHR__TERMINOLOGY__TIMEOUT", "2500ms"),
                 (
-                    "FERROEHR__TERMINOLOGY__OAUTH__TOKEN_ENDPOINT",
+                    "FERROEHR__TERMINOLOGY__ENDPOINT__URL",
+                    "http://ferroterm:8080/r4b",
+                ),
+                ("FERROEHR__TERMINOLOGY__ON_ERROR", "refuse"),
+                ("FERROEHR__TERMINOLOGY__ENDPOINT__TIMEOUT", "2500ms"),
+                ("FERROEHR__TERMINOLOGY__ENDPOINT__RETRY__MAX_ATTEMPTS", "2"),
+                (
+                    "FERROEHR__TERMINOLOGY__ENDPOINT__CREDENTIALS__OAUTH__TOKEN_ENDPOINT",
                     "https://idp/token",
                 ),
-                ("FERROEHR__TERMINOLOGY__OAUTH__CLIENT_ID", "cdr"),
-                ("FERROEHR__TERMINOLOGY__OAUTH__CLIENT_SECRET", "s3cret"),
-                ("FERROEHR__TERMINOLOGY__OAUTH__SCOPE", "system/*.read"),
+                (
+                    "FERROEHR__TERMINOLOGY__ENDPOINT__CREDENTIALS__OAUTH__CLIENT_ID",
+                    "cdr",
+                ),
+                (
+                    "FERROEHR__TERMINOLOGY__ENDPOINT__CREDENTIALS__OAUTH__CLIENT_SECRET",
+                    "s3cret",
+                ),
+                (
+                    "FERROEHR__TERMINOLOGY__ENDPOINT__CREDENTIALS__OAUTH__SCOPE",
+                    "system/*.read",
+                ),
             ]),
             &[],
         );
         let server = c.terminology.as_ref().expect("the table from env");
         assert!(server.refuses_on_error());
-        assert_eq!(server.url.expose(), "http://ferroterm:8080/r4b");
+        assert_eq!(server.endpoint.url, "http://ferroterm:8080/r4b");
         assert_eq!(
-            server.timeout,
+            server.endpoint.timeout,
             ferrohealth_config::units::Duration::from_millis(2_500)
         );
-        let oauth = server.oauth.as_ref().expect("the grant from env");
+        assert_eq!(server.endpoint.retry.max_attempts, 2);
+        let oauth = server
+            .endpoint
+            .credentials
+            .oauth
+            .as_ref()
+            .expect("the grant from env");
         assert_eq!(oauth.token_endpoint, "https://idp/token");
         assert_eq!(oauth.client_id, "cdr");
         assert_eq!(
@@ -1932,9 +1962,9 @@ mod tests {
     #[test]
     fn the_old_token_url_key_is_refused_in_every_grant() {
         for table in [
-            "terminology.oauth",
-            "audit.fhir_feed.oauth",
-            "authz.abac.remote.oauth",
+            "terminology.endpoint.credentials.oauth",
+            "audit.fhir_feed.endpoint.credentials.oauth",
+            "authz.abac.remote.endpoint.credentials.oauth",
         ] {
             let file = toml_file(&format!(
                 "[{table}]\ntoken_url = \"https://idp.example/token\"\nclient_id = \"c\"\n"

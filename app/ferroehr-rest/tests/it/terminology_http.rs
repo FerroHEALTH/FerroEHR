@@ -265,8 +265,11 @@ async fn enabled_terminology_group_serves_real_bundle() {
 /// The router over a service whose terminology server is the mock at `base`.
 async fn app_with_server(base: &str) -> (testkit::TestDb, Router) {
     let cfg = ferroehr::service::terminology::config::TerminologyServerConfig {
-        url: ferrohealth_secret::secret_url::SecretUrl::new(base),
-        timeout: ferrohealth_config::units::Duration::from_millis(800),
+        endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+            url: base.to_owned(),
+            timeout: ferrohealth_config::units::Duration::from_millis(800),
+            ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+        },
         ..Default::default()
     };
     let provider = ferroehr::service::terminology::fhir::FhirTerminologyProvider::new(&cfg)

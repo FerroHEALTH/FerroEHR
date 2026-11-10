@@ -131,8 +131,10 @@ enabled = false
 # non-member is refused with 422.
 
 [terminology]
-url = "http://ferroterm:8080/r4b"
 on_error = "accept"
+
+[terminology.endpoint]
+url = "http://ferroterm:8080/r4b"
 
 # The pseudonym namespace of the clinical domain (#4242): EHR_STATUS.subject
 # names a demo patient by the UUID FerroPIX minted for it there.
@@ -149,10 +151,12 @@ subject_namespaces = ["urn:oid:2.999.7.1"]
 subject_index = "pixm"
 
 [pixm]
-url = "http://localhost:8090/fhir"
 assigning_authority = "urn:oid:2.999.7.1"
 
-[pixm.oauth]
+[pixm.endpoint]
+url = "http://localhost:8090/fhir"
+
+[pixm.endpoint.credentials.oauth]
 token_endpoint = "http://localhost:8180/sandbox/token"
 client_id = "ferroehr"
 client_secret = "sandbox"

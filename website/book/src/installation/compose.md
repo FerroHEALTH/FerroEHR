@@ -282,8 +282,8 @@ curl -s -X PUT -H "Authorization: Bearer $SRC" \
   -d '{"resourceType":"Patient","identifier":[{"system":"urn:oid:2.999.1.1","value":"H-1"}],"name":[{"family":"Synthetic"}]}'
 ```
 
-Any conformant PIX Manager can take FerroPIX's place: point `pixm.url`,
-`assigning_authority` and `[pixm.oauth]` at it.
+Any conformant PIX Manager can take FerroPIX's place: point `[pixm.endpoint]` url,
+`assigning_authority` and `[pixm.endpoint.credentials.oauth]` at it.
 
 ## The local EHR index
 

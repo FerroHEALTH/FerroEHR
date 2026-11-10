@@ -15,11 +15,8 @@
 //! NOTE: no openEHR spec governs where the cross-reference lives (RM common
 //! master04 §`PARTY_SELF`: "may be done elsewhere for security reasons"): our own design.
 
-use ferrohealth_config::units::Duration;
+use ferrohealth_smart::config::endpoint::EndpointSection;
 use serde::{Deserialize, Serialize};
-
-use ferrohealth_config::tls::TlsClientSection;
-use ferrohealth_secret::secret_url::SecretUrl;
 
 /// The provider that holds the subject-to-EHR cross-reference
 /// (`record.subject_index`).
@@ -50,12 +47,18 @@ pub enum PixmInvocation {
 
 /// The `[pixm]` table: the IHE PIXm Patient Identifier Cross-reference
 /// Manager the subject index asks (ITI-83).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct PixmConfig {
-    /// The FHIR base URL of the PIX Manager (`[base]` of `[base]/Patient/$ihe-pix`,
-    /// PIXm §2:3.83.4.1.2). Any `userinfo` in it is masked in every rendering.
-    pub url: SecretUrl,
+    /// `[pixm.endpoint]`, the family's outbound endpoint: the FHIR base URL of
+    /// the PIX Manager (`url`, the `[base]` of `[base]/Patient/$ihe-pix`, PIXm
+    /// §2:3.83.4.1.2), the timeout of one ITI-83 exchange, its `retry`, the
+    /// TLS (trust roots for a PIX Manager behind a private PKI, a client
+    /// identity for mutual TLS) and the credential, such as the OAuth 2.0
+    /// client credentials grant whose access token every request carries (IUA
+    /// ITI-72 §3.72.4.2). Any `userinfo` in the URL is masked in every
+    /// rendering.
+    pub endpoint: EndpointSection,
     /// The assigning authority of the clinical domain, an absolute URI such as
     /// `urn:oid:2.999.1`: the `targetSystem` of every ITI-83 query and the
     /// `EHR_STATUS.subject.external_ref.namespace` the answered identifier is
@@ -63,28 +66,6 @@ pub struct PixmConfig {
     pub assigning_authority: String,
     /// How the PIX Manager is asked: `post` (the default) or `get`.
     pub method: PixmInvocation,
-    /// How long one ITI-83 exchange may take, connection included.
-    pub timeout: Duration,
-    /// `[pixm.tls]`: the trust roots beside the platform's
-    /// (`trust_roots_file`), for a PIX Manager behind a private PKI, and the
-    /// client identity presented for mutual TLS.
-    pub tls: TlsClientSection,
-    /// The OAuth 2.0 client credentials grant whose access token every request
-    /// carries (IUA ITI-72 §3.72.4.2, `[pixm.oauth]`). Unset sends none.
-    pub oauth: Option<ferrohealth_smart::config::credentials::OauthSection>,
-}
-
-impl Default for PixmConfig {
-    fn default() -> Self {
-        Self {
-            url: SecretUrl::default(),
-            assigning_authority: String::new(),
-            method: PixmInvocation::Post,
-            timeout: Duration::from_secs(10),
-            tls: TlsClientSection::default(),
-            oauth: None,
-        }
-    }
 }
 
 /// Every rule the subject index breaks, as boot-refusal messages.
@@ -106,16 +87,16 @@ pub fn problems(
         (Some(SubjectIndex::Pixm), Some(pixm)) => pixm.problems(subject_namespaces),
         (Some(SubjectIndex::Pixm), None) => vec![
             "record.subject_index = \"pixm\" names no patient identity source: add a [pixm] \
-             table with url (the PIXm base URL of an IHE patient identity source) and \
-             assigning_authority (the clinical domain)"
+             table with assigning_authority (the clinical domain) and a [pixm.endpoint] url \
+             (the PIXm base URL of an IHE patient identity source)"
                 .to_owned(),
         ],
         (None, _) => vec![
             "record.subject_index is not set: choose an IHE patient identity source with \
-             record.subject_index = \"pixm\" and a [pixm] table naming its url and \
-             assigning_authority, or the in-instance map with record.subject_index = \"local\" \
-             (FERROEHR__RECORD__SUBJECT_INDEX=local), where EHR_STATUS.subject names a patient \
-             by its own namespace and identifier"
+             record.subject_index = \"pixm\" and a [pixm] table naming its \
+             assigning_authority and its [pixm.endpoint] url, or the in-instance map with \
+             record.subject_index = \"local\" (FERROEHR__RECORD__SUBJECT_INDEX=local), where \
+             EHR_STATUS.subject names a patient by its own namespace and identifier"
                 .to_owned(),
         ],
     }
@@ -134,16 +115,20 @@ pub fn unused_keys(index: Option<SubjectIndex>, pixm: Option<&PixmConfig>) -> Ve
 impl PixmConfig {
     /// The keys of this table that carry a value.
     fn set_keys(&self) -> Vec<&'static str> {
-        let tls = &self.tls;
+        let endpoint = &self.endpoint;
+        let tls = &endpoint.tls;
         [
-            ("pixm.url", !self.url.is_empty()),
+            ("pixm.endpoint.url", !endpoint.url.is_empty()),
             (
                 "pixm.assigning_authority",
                 !self.assigning_authority.trim().is_empty(),
             ),
-            ("pixm.oauth", self.oauth.is_some()),
             (
-                "pixm.tls",
+                "pixm.endpoint.credentials",
+                !endpoint.credentials.user.is_empty() || endpoint.credentials.oauth.is_some(),
+            ),
+            (
+                "pixm.endpoint.tls",
                 tls.client_identity.is_some()
                     || tls.client_identity_file.is_some()
                     || tls.trust_roots_file.is_some(),
@@ -156,14 +141,7 @@ impl PixmConfig {
 
     /// The rules of a configured identity source.
     fn problems(&self, subject_namespaces: &[String]) -> Vec<String> {
-        let mut problems = Vec::new();
-        match url::Url::parse(self.url.expose().trim()) {
-            Ok(url) if matches!(url.scheme(), "http" | "https") => {}
-            _ => problems.push(format!(
-                "pixm.url ({}) must be an http or https URL",
-                self.url
-            )),
-        }
+        let mut problems = crate::outbound::problems("pixm.endpoint", &self.endpoint);
         let authority = self.assigning_authority.trim();
         if url::Url::parse(authority).is_err() {
             problems.push(
@@ -178,21 +156,6 @@ impl PixmConfig {
                  the clinical domain is the pseudonym EHR_STATUS carries"
             ));
         }
-        if self.timeout.is_zero() {
-            problems.push("pixm.timeout must be longer than \"0s\"".to_owned());
-        }
-        if let Some(oauth) = &self.oauth {
-            problems.extend(oauth.problems("pixm.oauth"));
-            let userinfo = url::Url::parse(self.url.expose())
-                .is_ok_and(|u| !u.username().is_empty() || u.password().is_some());
-            if userinfo {
-                problems.push(
-                    "pixm.url carries credentials in its URL and a [pixm.oauth] grant; \
-                     authenticate one way: remove the userinfo or the grant"
-                        .to_owned(),
-                );
-            }
-        }
         problems
     }
 }
@@ -205,7 +168,10 @@ mod tests {
 
     fn pixm() -> PixmConfig {
         PixmConfig {
-            url: SecretUrl::new("https://pix.example/fhir"),
+            endpoint: EndpointSection {
+                url: "https://pix.example/fhir".to_owned(),
+                ..EndpointSection::default()
+            },
             assigning_authority: DOMAIN.to_owned(),
             ..PixmConfig::default()
         }
@@ -240,14 +206,17 @@ mod tests {
         let local = Some(SubjectIndex::Local);
         assert_eq!(problems_of(local, None), Vec::<String>::new());
         assert_eq!(unused_keys(local, None), Vec::<&str>::new());
-        let kept = PixmConfig {
-            oauth: Some(ferrohealth_smart::config::credentials::OauthSection::default()),
-            ..pixm()
-        };
+        let mut kept = pixm();
+        kept.endpoint.credentials.oauth =
+            Some(ferrohealth_smart::config::credentials::OauthSection::default());
         assert_eq!(problems_of(local, Some(&kept)), Vec::<String>::new());
         assert_eq!(
             unused_keys(local, Some(&kept)),
-            ["pixm.url", "pixm.assigning_authority", "pixm.oauth"]
+            [
+                "pixm.endpoint.url",
+                "pixm.assigning_authority",
+                "pixm.endpoint.credentials"
+            ]
         );
         assert_eq!(
             unused_keys(Some(SubjectIndex::Pixm), Some(&pixm())),
@@ -274,14 +243,12 @@ mod tests {
     #[test]
     fn a_half_configured_source_is_refused() {
         let index = Some(SubjectIndex::Pixm);
-        let no_url = PixmConfig {
-            url: SecretUrl::default(),
-            ..pixm()
-        };
+        let mut no_url = pixm();
+        no_url.endpoint.url = String::new();
         assert!(
             problems(index, Some(&no_url), &[DOMAIN.to_owned()])
                 .iter()
-                .any(|p| p.contains("pixm.url"))
+                .any(|p| p.contains("pixm.endpoint"))
         );
         let not_a_uri = PixmConfig {
             assigning_authority: "nl-bsn".to_owned(),

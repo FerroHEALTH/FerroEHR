@@ -66,10 +66,12 @@ config:
     subject_namespaces: [urn:oid:2.999.7.1]
   pixm:
     assigning_authority: urn:oid:2.999.7.1
-    oauth:
-      token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token
-      client_id: ferroehr
-      scope: system/Patient.rs
+    endpoint:
+      credentials:
+        oauth:
+          token_endpoint: https://idp.example.com/realms/pix/protocol/openid-connect/token
+          client_id: ferroehr
+          scope: system/Patient.rs
 
 # FerroPIX takes only authenticated calls, so the grant needs its client
 # secret: the one fixture in this file, low-entropy on purpose.

@@ -647,9 +647,9 @@ without it.
 | `FERROEHR__AUTHZ__ABAC__CHECK_DIRECTORY` | `false` | also submit DIRECTORY (FOLDER) operations to the policy engine |
 | `FERROEHR__AUTHZ__ABAC__CEDAR__POLICY_DIR` | — (required for `cedar`) | directory of `*.cedar` policy files |
 | `FERROEHR__AUTHZ__ABAC__CEDAR__RELOAD_INTERVAL` | off | optional policy hot-reload interval |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__URL` | — (required for `remote`) | PDP base URL (must end with `/`) |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__CONNECT_TIMEOUT` | `2000` | PDP connect timeout |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__TIMEOUT` | `5000` | PDP request timeout |
+| `FERROEHR__AUTHZ__ABAC__REMOTE__ENDPOINT__URL` | — (required for `remote`) | PDP base URL (must end with `/`) |
+| `FERROEHR__AUTHZ__ABAC__REMOTE__ENDPOINT__CONNECT_TIMEOUT` | `2s` | PDP connect timeout |
+| `FERROEHR__AUTHZ__ABAC__REMOTE__ENDPOINT__TIMEOUT` | `5s` | PDP request timeout |
 
 Two engines sit behind one interface. **Cedar** is the embedded default:
 policies live in `*.cedar` files, are schema-validated at boot against a

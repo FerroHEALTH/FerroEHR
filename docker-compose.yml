@@ -324,7 +324,7 @@ services:
   # FerroPIX and FerroEHR join (the header says why). It signs any client
   # credentials request: the client as `sub` and `client_id`, FerroPIX's FHIR
   # base as the audience, and the scope asked for. NOT for anything real: name
-  # your own https issuer in [pixm.oauth] and in FerroPIX's [[auth.issuer]].
+  # your own https issuer in [pixm.endpoint.credentials.oauth] and in FerroPIX's [[auth.issuer]].
   identity-issuer:
     image: ghcr.io/navikt/mock-oauth2-server:6.1.3@sha256:2a813381bf282da46ff36ff386059e7903e25865056af8149f4fb3f1441916b8
     networks:
@@ -960,10 +960,12 @@ configs:
       subject_index = "pixm"
 
       [pixm]
-      url = "http://localhost:8090/fhir"
       assigning_authority = "urn:oid:2.999.7.1"
 
-      [pixm.oauth]
+      [pixm.endpoint]
+      url = "http://localhost:8090/fhir"
+
+      [pixm.endpoint.credentials.oauth]
       token_endpoint = "http://localhost:8180/quickstart/token"
       client_id = "ferroehr"
       client_secret = "quickstart"

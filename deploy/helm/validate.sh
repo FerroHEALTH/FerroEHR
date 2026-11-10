@@ -282,10 +282,10 @@ secret_leak_gate() {
   # value is the SENTINEL_PROBE literal, which no release can carry.
   local -a routed_paths=(
     "database.url"
-    "audit.fhir_feed.url"
+    "audit.fhir_feed.endpoint.url"
     "record.signing.key_passphrase"
     "record.multimedia.secret_access_key"
-    "terminology.oauth.client_secret"
+    "terminology.endpoint.credentials.oauth.client_secret"
     "auth.basic.users[0].password_hash"
   )
   local refused=0
@@ -598,11 +598,11 @@ refusal_registry_gate() {
     "_helpers.tpl|config.deployment.profile is unset, and the chart has no default|${base}|--set config.deployment.profile=null|config.deployment.profile;sandbox;production;values-production.yaml"
     "_helpers.tpl|refusing to render a secret into the ConfigMap|${base}|--set-string config.database.url=SENTINEL_PROBE|config.database.url;database.existingSecret"
     "_helpers.tpl|has no matching entry at config.auth.basic.users[]|${basic}|--set-string secrets.basicUserPasswordHashes.ghost=SENTINEL_PROBE|secrets.basicUserPasswordHashes.ghost"
-    "_helpers.tpl|declares no grant|${base}|--set-string secrets.terminologyClientSecret=SENTINEL_PROBE|secrets.terminologyClientSecret;config.terminology.oauth"
-    "_helpers.tpl|config.pixm.oauth holds no grant|${base}|--set-string secrets.ehrIndexClientSecret=SENTINEL_PROBE --set config.pixm.oauth=null|secrets.ehrIndexClientSecret;config.pixm.oauth"
+    "_helpers.tpl|declares no grant|${base}|--set-string secrets.terminologyClientSecret=SENTINEL_PROBE|secrets.terminologyClientSecret;config.terminology.endpoint.credentials.oauth"
+    "_helpers.tpl|config.pixm.endpoint.credentials.oauth holds no grant|${base}|--set-string secrets.ehrIndexClientSecret=SENTINEL_PROBE --set config.pixm.endpoint.credentials.oauth=null|secrets.ehrIndexClientSecret;config.pixm.endpoint.credentials.oauth"
     "_helpers.tpl|already points the subject index at the in-cluster FerroPIX|${base}|--set config.record.subject_index=local|config.record.subject_index;ferropix.enabled=false"
-    "_helpers.tpl|the configuration names no patient identity source|${base}|--set ferropix.enabled=false|config.pixm.url;config.record.subject_index=local"
-    "_helpers.tpl|already points config.terminology.url|${base}|--set terminology.enabled=true --set config.terminology.url=https://tx.example.com/fhir|config.terminology.url;terminology.wireCdr"
+    "_helpers.tpl|the configuration names no patient identity source|${base}|--set ferropix.enabled=false|config.pixm.endpoint.url;config.record.subject_index=local"
+    "_helpers.tpl|already points config.terminology.endpoint.url|${base}|--set terminology.enabled=true --set config.terminology.endpoint.url=https://tx.example.com/fhir|config.terminology.endpoint.url;terminology.wireCdr"
     "_helpers.tpl|contradicts terminology.failOnError|${base}|--set terminology.enabled=true --set config.terminology.on_error=refuse|config.terminology.on_error;terminology.failOnError"
     "_helpers.tpl|while terminology.image.digest is non-empty|${base}|--set terminology.enabled=true --set terminology.image.tag=never-a-release|terminology.image.tag;terminology.image.digest"
     "_helpers.tpl|the chart injects both|${base}|--set config.usage_report.enabled=false|config.usage_report.enabled;usageReport.enabled"

@@ -762,8 +762,8 @@ mod tests {
             &file,
             "[privacy]\nsubject_namespaces = [\"urn:oid:2.999.7.1\"]\n\n\
              [record]\nsubject_index = \"pixm\"\n\n\
-             [pixm]\nurl = \"http://localhost:8090/fhir\"\n\
-             assigning_authority = \"urn:oid:2.999.7.1\"\n",
+             [pixm]\nassigning_authority = \"urn:oid:2.999.7.1\"\n\n\
+             [pixm.endpoint]\nurl = \"http://localhost:8090/fhir\"\n",
         )
         .expect("write the config");
         let (_, config) = assemble_from(
@@ -778,7 +778,7 @@ mod tests {
                 config.record.subject_index,
                 config.pixm.as_ref()
             ),
-            ["pixm.url", "pixm.assigning_authority"]
+            ["pixm.endpoint.url", "pixm.assigning_authority"]
         );
         // The declared namespace stays in force under the local index, so every
         // subject reference is still a pseudonym (no mixed mode, #4379).

@@ -15,7 +15,6 @@ use std::sync::Arc;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::terminology::config::TerminologyServerConfig;
 use ferroehr::service::terminology::fhir::FhirTerminologyProvider;
-use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::client::ClientAuth;
 use ferrohealth_smart::config::credentials::OauthSection;
 use secrecy::SecretString;
@@ -30,10 +29,16 @@ const SNOMED: &str = "http://snomed.info/sct";
 /// An enabled server at `base`, authenticated by `oauth` when given.
 fn server_cfg(base: &str, oauth: Option<OauthSection>) -> TerminologyServerConfig {
     TerminologyServerConfig {
-        url: SecretUrl::new(base),
+        endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+            url: base.to_owned(),
+            timeout: ferrohealth_config::units::Duration::from_millis(800),
+            credentials: ferrohealth_smart::config::credentials::CredentialsSection {
+                oauth,
+                ..ferrohealth_smart::config::credentials::CredentialsSection::default()
+            },
+            ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+        },
         on_error: ferroehr::service::terminology::config::OnError::Accept,
-        timeout: ferrohealth_config::units::Duration::from_millis(800),
-        oauth,
         ..TerminologyServerConfig::default()
     }
 }

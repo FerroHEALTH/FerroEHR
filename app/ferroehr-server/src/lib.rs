@@ -183,7 +183,7 @@ pub(crate) async fn dispatch(cli: Cli) -> anyhow::Result<()> {
             command: ConfigCommand::Check,
         })) => run_config_check(config, set),
         Some(Command::Db { cmd }) => db_cmd::run(&cmd, config, set).await,
-        Some(Command::Definitions { cmd }) => definitions::run(&cmd, config, set).await,
+        Some(Command::Definitions { cmd }) => Box::pin(definitions::run(&cmd, config, set)).await,
         Some(Command::PartyBinding { cmd }) => {
             Box::pin(party_binding::run(&cmd, config, set)).await
         }
@@ -837,9 +837,10 @@ pub(crate) fn attach_terminology(
     let client = ferroehr::service::terminology::fhir::FhirTerminologyProvider::new(server)
         .context("initialising the terminology server client")?;
     tracing::info!(
-        server = %server.url,
+        server = %server.masked_url(),
         on_error = ?server.on_error,
-        authenticated = server.oauth.is_some(),
+        authenticated = server.endpoint.credentials.oauth.is_some()
+            || !server.endpoint.credentials.user.is_empty(),
         "FHIR terminology server configured"
     );
     Ok(service.with_terminology_server(Arc::new(client)))

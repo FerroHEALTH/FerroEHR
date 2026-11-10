@@ -286,13 +286,13 @@ unless its key is set, so add only the rows you have switched on:
 | PostgreSQL | the DSN, **never optional** | the DSN's (5432) | off-cluster (managed) |
 | OTLP collector | `config.telemetry.otlp.endpoint` | 4317 gRPC / 4318 HTTP | in-cluster |
 | Token issuer (metadata + key set) | each `config.auth.issuer` table, **unless** it sets its own `jwks_file` | 443 | off-cluster |
-| External policy decision point | `config.authz.abac.engine: remote` plus `config.authz.abac.remote.url` | the URL's (3001) | in-cluster |
+| External policy decision point | `config.authz.abac.engine: remote` plus `config.authz.abac.remote.endpoint.url` | the URL's (3001) | in-cluster |
 | FHIR terminology server | `config.the [terminology] table` plus its `url` | 443 | off-cluster |
 | FerroTERM in the cluster | `terminology.enabled` | 8080 | in-cluster, and the **chart renders this rule itself** — it chose the destination when it wired the CDR at the Service, so you do not add it to `rules`. Omitted, terminology would fail silently: under the shipped fail-open posture an unresolvable binding is accepted, so nothing refuses and nothing logs. |
 | Terminology token endpoint | `config.[terminology].oauth.token_endpoint` | 443 | off-cluster |
 | Object store | `config.record.multimedia.enabled` plus `config.record.multimedia.url` (unset means AWS regional resolution) | 443, or the endpoint's | off-cluster |
 | Syslog audit repository | `config.audit.syslog.url` | 6514 TCP (TLS) | off-cluster |
-| FHIR audit repository | `config.audit.fhir_feed.url` plus `secrets.auditFhirFeedUrl` | 443 | off-cluster |
+| FHIR audit repository | `config.audit.fhir_feed.endpoint.url` plus `secrets.auditFhirFeedUrl` | 443 | off-cluster |
 | FerroPULSE usage report | `usageReport.enabled`, **on by default** | 443 | off-cluster, `report.ferropulse.eu`. Without the rule the report logs a warning and nothing else is affected; see [Usage report](../usage-report.md#network) |
 
 The viewer, when enabled, carries its own egress policy rather than

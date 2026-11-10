@@ -50,7 +50,7 @@ where
 /// binary refuses exits [`EXIT_CONFIG`] (78, `EX_CONFIG` of `sysexits(3)`),
 /// every other boot, probe or serve failure exits 1.
 pub async fn run(cli: Cli) -> Result<ExitCode, Failure> {
-    crate::dispatch(cli)
+    Box::pin(crate::dispatch(cli))
         .await
         .map(|()| ExitCode::SUCCESS)
         .map_err(failure)

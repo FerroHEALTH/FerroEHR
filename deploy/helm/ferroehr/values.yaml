@@ -6,8 +6,8 @@
 # /etc/ferroehr/ferroehr.toml, which the Deployment names in FERROEHR_CONFIG
 # (the server searches for no file). Secrets never go in the ConfigMap: they come from a Secret (see
 # `secrets:` and `database:`) — mounted as read-only FILES wherever the config key
-# has a `*_file` sibling, which is now everything except `audit.fhir_feed.url` and
-# `multimedia.access_key_id`; only the mounted PATH is passed as env. `config.files` mounts genuinely file-shaped material
+# has a `*_file` sibling, which is now everything except `audit.fhir_feed.endpoint.url` and
+# `record.multimedia.access_key_id`; only the mounted PATH is passed as env. `config.files` mounts genuinely file-shaped material
 # (Cedar policies, ATNA PEMs, the PGP key, JWKS) that in-TOML `*_path`/`*_file`
 # keys point at. `extraEnv` is the escape hatch for anything not surfaced here.
 #
@@ -484,7 +484,7 @@ backup:
 # https://cheatsheetseries.owasp.org/cheatsheets/Kubernetes_Security_Cheat_Sheet.html).
 # So every value whose config key has a `*_file` sibling is MOUNTED at
 # /etc/ferroehr-secrets/<config.path> and the chart passes only the PATH as env.
-# The one key that has no `*_file` sibling (audit.fhir_feed.url) still passes
+# The one key that has no `*_file` sibling (audit.fhir_feed.endpoint.url) still passes
 # its value as env — that is a config-tree gap, not a chart choice.
 #
 # Setting any of these under `config:` instead REFUSES to render: they would land
@@ -503,24 +503,25 @@ secrets:
   # would reach the ConfigMap.
   basicUserPasswordHashes: {}
   # -- FHIR base URL of the external Audit Record Repository for
-  # [audit.fhir_feed] (may carry basic-auth credentials in its userinfo) →
-  # FERROEHR__AUDIT__FHIR_FEED__URL env: audit.fhir_feed.url has no `*_file`
-  # sibling either.
+  # [audit.fhir_feed.endpoint] (may carry basic-auth credentials in its
+  # userinfo) → FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL env:
+  # audit.fhir_feed.endpoint.url has no `*_file` sibling either.
   auditFhirFeedUrl: ""
   # -- The client secret of the terminology server's OAuth2 grant
-  # ([terminology.server.oauth]). MOUNTED as
+  # ([terminology.endpoint.credentials.oauth]). MOUNTED as
   # /etc/ferroehr-secrets/terminology.server.oauth.client_secret, and the chart
   # injects the matching `client_secret_file` into the rendered TOML (a path is
   # not sensitive). Declare the grant itself — token_endpoint or issuer, client_id,
-  # scope — under config.terminology.server.oauth; a secret with no such
+  # scope — under config.terminology.endpoint.credentials.oauth; a secret with no such
   # declaration is a render error.
   terminologyClientSecret: ""
   # -- The client secret of the identity source's OAuth2 grant
-  # ([ehr_index.oauth]). MOUNTED as
+  # ([pixm.endpoint.credentials.oauth]). MOUNTED as
   # /etc/ferroehr-secrets/ehr_index.oauth.client_secret, and the chart injects
   # the matching `client_secret_file` into the rendered TOML. Declare the grant
   # itself (token_endpoint or issuer, client_id, scope) under
-  # config.ehr_index.oauth; a secret with no such declaration is a render error.
+  # config.pixm.endpoint.credentials.oauth; a secret with no such declaration is
+  # a render error.
   ehrIndexClientSecret: ""
   # -- S3 access key id for [multimedia] → FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID
   # env. Not a secret in the server's own model (it is reported unredacted by
@@ -846,17 +847,20 @@ config:
     # subject_index — who holds the subject-to-EHR cross-reference: "pixm",
     # an IHE patient identity source asked over PIXm (ITI-83, config.pixm), or
     # "local", the in-instance map. With `ferropix.enabled` the chart INJECTS
-    # subject_index = "pixm" and config.pixm.url (the in-cluster FerroPIX
+    # subject_index = "pixm" and config.pixm.endpoint.url (the in-cluster FerroPIX
     # Service), so declaring either is refused while it is on. You still name
     # the clinical domain and the grant:
     #   pixm:                                    # beside record:, under config
     #     assigning_authority: urn:oid:2.999.7.1   # also in privacy.subject_namespaces
-    #     oauth:
-    #       token_endpoint: https://idp.example.org/token
-    #       client_id: ferroehr                    # FerroPIX's consumer_client_id
-    #       scope: system/Patient.rs
+    #     endpoint:
+    #       credentials:
+    #         oauth:
+    #           token_endpoint: https://idp.example.org/token
+    #           client_id: ferroehr                # FerroPIX's consumer_client_id
+    #           scope: system/Patient.rs
     # with the client secret in `secrets.ehrIndexClientSecret`. Another PIX
-    # Manager: `ferropix.enabled: false`, subject_index "pixm" and pixm.url.
+    # Manager: `ferropix.enabled: false`, subject_index "pixm" and
+    # pixm.endpoint.url.
     # A FerroEHR run on its own: `ferropix.enabled: false` and subject_index
     # "local". With neither the render is refused, as the server's boot would
     # be.
@@ -897,7 +901,7 @@ config:
 
   # [terminology] — the outbound FHIR terminology server; absent, none is
   # asked. Not defaulted here: with `terminology.enabled` +
-  # `terminology.wireCdr` the chart INJECTS its `url` and `on_error`, and a
+  # `terminology.wireCdr` the chart INJECTS its `endpoint.url` and `on_error`, and a
   # defaulted key is indistinguishable from one an operator typed — so the
   # render could not tell an agreement from an overwrite. Left out, a
   # declaration of either is visibly the operator's and is refused.
@@ -1450,13 +1454,13 @@ viewer:
 terminology:
   # -- Deploy FerroTERM alongside the CDR.
   enabled: false
-  # -- Point the CDR's `config.terminology.server` at the rendered Service.
-  # The chart injects `enabled`, `url` and `fail_on_error`, so the Service
-  # address and the workload answering it are one decision. Set it to false to
-  # run FerroTERM beside a CDR you wire yourself. While it is true the render
+  # -- Point the CDR's `config.terminology` at the rendered Service.
+  # The chart injects `endpoint.url` and `on_error`, so the Service address and
+  # the workload answering it are one decision. Set it to false to run
+  # FerroTERM beside a CDR you wire yourself. While it is true the render
   # refuses every values file that contradicts the injection: a
-  # `config.terminology.server.url` of your own, a `server.enabled: false`, and
-  # a `server.fail_on_error` disagreeing with `failOnError` below.
+  # `config.terminology.endpoint.url` of your own, and an `on_error`
+  # disagreeing with `failOnError` below.
   wireCdr: true
   # -- What the CDR does when the terminology server cannot answer. `false` (the
   # server's own shipped default) accepts the binding; `true` turns an
@@ -1810,7 +1814,7 @@ bridge:
 # taken as the chart dependency `ferropix` from
 # oci://ghcr.io/ferrohealth/charts. Every key below is that chart's own value
 # (its README lists them all); this chart adds only the injection of its
-# in-cluster FHIR base into config.ehr_index.pixm_url. FerroPIX needs its own
+# in-cluster FHIR base into config.pixm.endpoint.url. FerroPIX needs its own
 # PostgreSQL URL and sealing key Secrets, an issuer, and the
 # pseudonymisation domain whose consumer is FerroEHR's client:
 #   ferropix:
@@ -1826,10 +1830,10 @@ bridge:
 #       pseudonym_domain:
 #         - {namespace: urn:oid:2.999.7.1, name: Clinical domain, consumer_client_id: ferroehr}
 # Any conformant PIX Manager can serve instead: set `enabled: false` and
-# config.ehr_index.pixm_url.
+# config.pixm.endpoint.url.
 # ─────────────────────────────────────────────────────────────────────────────
 ferropix:
-  # -- Deploy FerroPIX beside the CDR and point config.ehr_index at it.
+  # -- Deploy FerroPIX beside the CDR and point config.pixm at it.
   enabled: true
   image:
     # -- The FerroPIX release the pinned `digest` belongs to. The dependency

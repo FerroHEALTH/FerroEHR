@@ -31,8 +31,6 @@ use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::linkage::cohort::CohortQueryRequest;
 use ferroehr::service::linkage::cohort::config::CohortConfig;
-use ferrohealth_config::tls::TlsClientSection;
-use ferrohealth_secret::secret_url::SecretUrl;
 use ihe_iti::pixm::capabilities::CapabilitiesError;
 
 /// The IG's clinical ("blue") domain, the one the stub answers for.
@@ -79,9 +77,12 @@ pub(crate) fn answer(status: u16, body: &Value) -> ResponseTemplate {
 
 fn config(base: &str) -> PixmConfig {
     PixmConfig {
-        url: SecretUrl::new(base),
+        endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+            url: base.to_owned(),
+            timeout: ferrohealth_config::units::Duration::from_secs(2),
+            ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+        },
         assigning_authority: CLINICAL.to_owned(),
-        timeout: ferrohealth_config::units::Duration::from_secs(2),
         ..PixmConfig::default()
     }
 }
@@ -342,13 +343,8 @@ async fn a_private_ca_is_trusted_through_the_tls_roots() {
         .await
         .expect("the HTTPS stub starts");
 
-    let trusting = PixmConfig {
-        tls: TlsClientSection {
-            trust_roots_file: Some(server.ca_file.clone()),
-            ..TlsClientSection::default()
-        },
-        ..config(&server.base_url)
-    };
+    let mut trusting = config(&server.base_url);
+    trusting.endpoint.tls.trust_roots_file = Some(server.ca_file.clone());
     IheIdentitySource::new(&trusting)
         .expect("builds with the test CA")
         .probe()
@@ -368,15 +364,12 @@ async fn a_private_ca_is_trusted_through_the_tls_roots() {
         "{error:?}"
     );
 
-    let missing = PixmConfig {
-        tls: TlsClientSection {
-            trust_roots_file: Some(server.ca_file.with_extension("absent")),
-            ..TlsClientSection::default()
-        },
-        ..config(&server.base_url)
-    };
+    let mut missing = config(&server.base_url);
+    missing.endpoint.tls.trust_roots_file = Some(server.ca_file.with_extension("absent"));
     assert!(matches!(
         IheIdentitySource::new(&missing),
-        Err(IdentitySourceError::Tls(_))
+        Err(IdentitySourceError::Endpoint(
+            ferroehr::outbound::EndpointError::Tls { .. }
+        ))
     ));
 }
