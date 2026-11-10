@@ -49,9 +49,8 @@ ferroehr config check [--config P]  # validate file + environment + --set
 
 The starting point for a real `ferroehr.toml` is
 [`app/ferroehr/assets/ferroehr.default.toml`](https://github.com/FerroHEALTH/FerroEHR/blob/main/app/ferroehr/assets/ferroehr.default.toml),
-every key under its description and set to its default. [Every configuration
-key](config-keys.md) lists the same keys in tables. Both are generated from the
-configuration types.
+every key under its description and set to its default, generated from the
+configuration types. [Every configuration key](config-keys.md) shows it whole.
 
 `config check` runs the same validation the server runs at boot (the strict
 unknown-key sweep, the type pass, the aggregated semantic rules, and the

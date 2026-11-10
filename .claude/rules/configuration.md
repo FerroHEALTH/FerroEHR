@@ -64,11 +64,11 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
    deny_unknown_fields)]`, `Default` is the source of truth).
 2. Run `cargo run -p config-reference` and commit what it writes **in the
    same change** (#5316): the shipped `app/ferroehr/assets/ferroehr.default.toml`,
-   every key with its default under its description, and the book page
-   `website/book/src/installation/config-keys.md`. Both are generated from
-   the types' JSON Schema (`schemars`, the `schema` feature of `ferroehr`), so
+   every key with its default under its description, which the book page
+   `website/book/src/installation/config-keys.md` includes whole. It is
+   generated from the types' JSON Schema (`schemars`, the `schema` feature of `ferroehr`), so
    a new section type derives `JsonSchema` behind that feature, and its doc
-   comments are the reference text. There is one template, never a second
+   comments are the reference text. There is one file, never a second
    trimmed copy (owner ruling, 2026-11-10). `scripts/checks/config-reference.sh`
    fails on drift and the template-sync tests (`config::tests`) on a key the
    template misses. A key is never read
@@ -84,7 +84,7 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
    `config:` block + golden renders (`deploy/helm/validate.sh --update`), and
    a `changelog.d/` fragment — same PR.
 4. The configuration types are the schema of record, and the generated
-   template and page are their rendering; reconcile the deployment/compose
+   template is their rendering; reconcile the deployment/compose
    spellings against them.
 
 ## Tests

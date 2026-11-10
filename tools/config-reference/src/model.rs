@@ -44,15 +44,11 @@ pub(crate) struct Section {
 pub(crate) struct Key {
     /// The key as written.
     pub(crate) name: String,
-    /// The value type, as the reference names it.
-    pub(crate) kind: String,
     /// The default as TOML, `None` when the key has none.
     pub(crate) default: Option<String>,
     /// Whether the default hides a secret (`***`), so it is never written
     /// as a live line.
     pub(crate) masked: bool,
-    /// Whether a table must carry the key.
-    pub(crate) required: bool,
     /// A placeholder value of the key's type, for a commented example line.
     pub(crate) example: String,
     /// The first paragraph of the key's description.
@@ -189,11 +185,6 @@ impl Walker<'_> {
         } = place;
         let (path, shape, optional, described, inherited) =
             (path.as_str(), *shape, *optional, *described, *inherited);
-        let required: Vec<&str> = node
-            .get("required")
-            .and_then(Value::as_array)
-            .map(|names| names.iter().filter_map(Value::as_str).collect())
-            .unwrap_or_default();
         let mut keys = Vec::new();
         let mut children = Vec::new();
         let members = node
@@ -238,10 +229,8 @@ impl Walker<'_> {
             let rendered = default.map(toml_value);
             keys.push(Key {
                 name: name.clone(),
-                kind: self.kind(member)?,
                 masked: rendered.as_deref().is_some_and(|d| d.contains("***")),
                 default: rendered,
-                required: required.contains(&name.as_str()),
                 example: self.example(member)?,
                 description: first_paragraph(member, name),
             });
@@ -285,69 +274,6 @@ impl Walker<'_> {
             self.table(target, &place, out)?;
         }
         Ok(())
-    }
-
-    /// The value type of `node`, as the reference names it.
-    fn kind(&self, node: &Value) -> Result<String, String> {
-        if let Some(name) = node.get("$ref").and_then(Value::as_str) {
-            let name = name.trim_start_matches("#/$defs/");
-            if let Some(special) = named_kind(name) {
-                return Ok(special.to_owned());
-            }
-        }
-        let node = self.resolve(node)?;
-        for alternatives in ["oneOf", "anyOf"] {
-            if let Some(Value::Array(branches)) = node.get(alternatives) {
-                let mut parts = Vec::new();
-                for branch in branches {
-                    let branch = self.resolve(branch)?;
-                    if branch.get("type").is_some_and(|t| t == "null") {
-                        continue;
-                    }
-                    if let Some(value) = branch.get("const") {
-                        parts.push(format!("`{}`", toml_value(value)));
-                    } else if let Some(Value::Array(values)) = branch.get("enum") {
-                        parts.extend(values.iter().map(|v| format!("`{}`", toml_value(v))));
-                    } else {
-                        parts.push(self.kind(branch)?);
-                    }
-                }
-                parts.dedup();
-                return Ok(parts.join(" or "));
-            }
-        }
-        if let Some(Value::Array(values)) = node.get("enum") {
-            return Ok(values
-                .iter()
-                .map(|v| format!("`{}`", toml_value(v)))
-                .collect::<Vec<_>>()
-                .join(" or "));
-        }
-        let types: Vec<&str> = match node.get("type") {
-            Some(Value::String(one)) => vec![one.as_str()],
-            Some(Value::Array(many)) => many
-                .iter()
-                .filter_map(Value::as_str)
-                .filter(|t| *t != "null")
-                .collect(),
-            _ => Vec::new(),
-        };
-        Ok(match types.as_slice() {
-            ["array"] => match node.get("items") {
-                Some(items) => format!("array of {}", self.kind(items)?),
-                None => "array".to_owned(),
-            },
-            ["object"] => match node.get("additionalProperties").filter(|v| v.is_object()) {
-                Some(value) => format!("table of {}", self.kind(value)?),
-                None => "table".to_owned(),
-            },
-            ["integer"] => "integer".to_owned(),
-            ["number"] => "number".to_owned(),
-            ["boolean"] => "boolean".to_owned(),
-            ["string"] => "string".to_owned(),
-            [] => "any".to_owned(),
-            many => many.join(" or "),
-        })
     }
 
     /// A value of `node`'s type for a commented example line.
@@ -406,18 +332,6 @@ impl Walker<'_> {
         }
         .to_owned())
     }
-}
-
-/// The name the reference gives a family value type, by its schema name.
-fn named_kind(name: &str) -> Option<&'static str> {
-    Some(match name {
-        "Duration" => "duration",
-        "ByteSize" => "size",
-        "Secret" => "secret",
-        "SecretUrl" => "secret URL",
-        "Retention" | "RetentionPeriod" => "period",
-        _ => return None,
-    })
 }
 
 /// `path` and `name`, dotted.

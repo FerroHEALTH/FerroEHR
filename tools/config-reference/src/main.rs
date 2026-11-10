@@ -3,9 +3,9 @@
 
 //! Generates FerroEHR's configuration reference from the JSON Schema of its
 //! configuration tree (#5316): the shipped default `ferroehr.toml`, holding
-//! every key with its default under its description, and the book's reference
-//! page. `--check` writes nothing and fails when a committed file differs from
-//! what the types generate.
+//! every key with its default under its description, which the book's
+//! reference page includes. `--check` writes nothing and fails when the
+//! committed file differs from what the types generate.
 //!
 //! # Examples
 //!
@@ -29,8 +29,6 @@ use std::process::ExitCode;
 
 /// The shipped default `ferroehr.toml`, relative to the workspace root.
 const TEMPLATE: &str = "app/ferroehr/assets/ferroehr.default.toml";
-/// The reference page of the book.
-const PAGE: &str = "website/book/src/installation/config-keys.md";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -57,8 +55,8 @@ fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-/// Generates the two files under `root`, writing them, or with `check`
-/// comparing them; returns whether every committed file matches.
+/// Generates the template under `root`, writing it, or with `check`
+/// comparing it; returns whether the committed file matches.
 ///
 /// # Errors
 /// A message when the schema cannot be read or a file cannot be read or
@@ -68,10 +66,7 @@ fn run(root: &Path, check: bool) -> Result<bool, String> {
         .into_generator()
         .into_root_schema_for::<ferroehr::config::FerroEhrConfig>();
     let sections = model::sections(schema.as_value())?;
-    let files = [
-        (TEMPLATE, render::template(&sections)),
-        (PAGE, render::page(&sections)),
-    ];
+    let files = [(TEMPLATE, render::template(&sections))];
     let mut clean = true;
     for (path, text) in files {
         let file = root.join(path);

@@ -1,13 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The two files written from the configuration tree: the shipped default
-//! `ferroehr.toml`, holding every key, and the book's reference page. No
-//! specification governs their layout: our own design.
+//! The shipped default `ferroehr.toml` written from the configuration tree:
+//! every key under its description. No specification governs its layout: our
+//! own design.
 
 use std::fmt::Write as _;
 
 use crate::model::{Key, Section, Shape, bare};
+
+// REUSE-IgnoreStart
 
 /// The line every generated file opens with, in its own comment syntax.
 const GENERATED: &str =
@@ -15,67 +17,6 @@ const GENERATED: &str =
 
 /// The longest comment line the TOML files wrap at.
 const WIDTH: usize = 79;
-
-/// The longest prose line of the page, the width the book wraps at
-/// (`.mdbook-lint.toml`, MD013).
-const PAGE_WIDTH: usize = 100;
-
-/// The reference page: every section and every key, with its type, its
-/// default and its description.
-pub(crate) fn page(sections: &[Section]) -> String {
-    let mut out = String::new();
-    let _ = writeln!(out, "<!-- {GENERATED} -->");
-    out.push_str(
-        "<!-- SPDX-FileCopyrightText: Cadasto B.V. -->\n\
-         <!-- SPDX-License-Identifier: BUSL-1.1 -->\n\n\
-         # Every configuration key\n\n",
-    );
-    out.push_str(&wrapped(
-        "This page lists every key FerroEHR reads from `ferroehr.toml`, generated from the \
-         configuration types, so it always matches the server you run. Each section is one \
-         TOML table. A key without a default is unset until you set it. Every key can also \
-         be set as an environment variable: `FERROEHR`, then the TOML path with `__` between \
-         the segments, such as `FERROEHR__DATABASE__MAX_CONNECTIONS`.",
-        PAGE_WIDTH,
-    ));
-    out.push('\n');
-    out.push_str(&wrapped(
-        "The shipped `ferroehr.toml` holds the same keys, each set to its default. The guides \
-         under [Configuration reference](configuration.md) explain the sections.",
-        PAGE_WIDTH,
-    ));
-    for section in sections {
-        let _ = write!(out, "\n## `{}`\n\n", header(section));
-        if !section.description.is_empty() {
-            out.push_str(&wrapped(&section.description, PAGE_WIDTH));
-            out.push('\n');
-        }
-        if section.optional && section.shape == Shape::Table {
-            out.push_str("The table is optional.\n\n");
-        }
-        if section.keys.is_empty() {
-            out.push_str("The table holds only the tables below.\n");
-            continue;
-        }
-        out.push_str("| Key | Type | Default | Description |\n|---|---|---|---|\n");
-        for key in &section.keys {
-            let default = match (&key.default, key.required) {
-                (Some(default), _) => format!("`{}`", cell(default)),
-                (None, true) => "required".to_owned(),
-                (None, false) => "unset".to_owned(),
-            };
-            let _ = writeln!(
-                out,
-                "| `{}` | {} | {} | {} |",
-                key.name,
-                cell(&key.kind),
-                default,
-                cell(&key.description)
-            );
-        }
-    }
-    out
-}
 
 /// The shipped default `ferroehr.toml`: every key under its description, a
 /// key the defaults set as a live line and any other, a secret included, as
@@ -195,30 +136,4 @@ fn comment(out: &mut String, text: &str) {
     }
 }
 
-/// `text` as lines of at most `width` characters, each ended by a newline;
-/// a word longer than `width` stands on its own line.
-fn wrapped(text: &str, width: usize) -> String {
-    let mut out = String::new();
-    let mut line = String::new();
-    for word in text.split_whitespace() {
-        if !line.is_empty() && line.chars().count() + 1 + word.chars().count() > width {
-            out.push_str(&line);
-            out.push('\n');
-            line.clear();
-        }
-        if !line.is_empty() {
-            line.push(' ');
-        }
-        line.push_str(word);
-    }
-    if !line.is_empty() {
-        out.push_str(&line);
-        out.push('\n');
-    }
-    out
-}
-
-/// `text` safe inside a Markdown table cell.
-fn cell(text: &str) -> String {
-    text.replace('|', "\\|")
-}
+// REUSE-IgnoreEnd
