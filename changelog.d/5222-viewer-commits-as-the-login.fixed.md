@@ -1,1 +1,0 @@
-- The viewer's New contribution commits as the signed-in login. Each audit carries the placeholder naming that login, and the server records the committer it derives from the login. The free-text committer field is gone. For a login bound to a demographic `PERSON`, a stated name that differs from the `PERSON`'s name was refused with `403`.

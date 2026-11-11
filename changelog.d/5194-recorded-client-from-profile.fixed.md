@@ -1,1 +1,0 @@
-- An access record names the client the token's issuer profile reads from `client_claims` (`azp` under the `entra` and `keycloak` profiles), the one the caller was admitted as. A token carrying a different `client_id` claim beside it was recorded under that claim. The `[origins]` register and the SCIM client lookup read the same client.
