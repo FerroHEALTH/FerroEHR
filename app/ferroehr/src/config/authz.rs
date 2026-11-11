@@ -17,6 +17,7 @@
 
 use std::collections::BTreeMap;
 
+use ferrohealth_secret::secret_url::SecretUrl;
 use serde::{Deserialize, Serialize};
 
 use crate::config::abac_rules::{CedarConfig, RemoteConfig};
@@ -109,7 +110,8 @@ pub struct RbacConfig {
     /// The issuers whose role claims may grant `admin_role`,
     /// `emergency_access_role`, `import_role` and `identifier_reader_role`,
     /// each a `persons` issuer; empty, the default, lets no token grant them.
-    pub role_issuers: Vec<String>,
+    /// Each renders with any userinfo masked.
+    pub role_issuers: Vec<SecretUrl>,
     /// What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default
     /// `open`).
     ///
@@ -555,7 +557,7 @@ mod tests {
             abac: AbacConfig {
                 remote: RemoteConfig {
                     endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                        url: ferrohealth_secret::secret_url::SecretUrl::new("http://pdp:3001/exec"),
+                        url: SecretUrl::new("http://pdp:3001/exec"),
                         ..RemoteConfig::default().endpoint
                     },
                     ..RemoteConfig::default()
@@ -573,9 +575,7 @@ mod tests {
             abac: AbacConfig {
                 remote: RemoteConfig {
                     endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                        url: ferrohealth_secret::secret_url::SecretUrl::new(
-                            "http://pdp:3001/exec/",
-                        ),
+                        url: SecretUrl::new("http://pdp:3001/exec/"),
                         ..RemoteConfig::default().endpoint
                     },
                     ..RemoteConfig::default()
@@ -599,9 +599,7 @@ mod tests {
                 engine: AbacEngineKind::Remote,
                 remote: RemoteConfig {
                     endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                        url: ferrohealth_secret::secret_url::SecretUrl::new(
-                            "http://pdp:3001/exec/",
-                        ),
+                        url: SecretUrl::new("http://pdp:3001/exec/"),
                         ..RemoteConfig::default().endpoint
                     },
                     ..RemoteConfig::default()

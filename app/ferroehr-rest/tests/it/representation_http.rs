@@ -69,7 +69,8 @@ fn config() -> AppConfig {
         auth,
         ..AppConfig::default()
     };
-    config.auth.smart.patient_issuers = vec![ISSUER.to_owned()];
+    config.auth.smart.patient_issuers =
+        vec![ferrohealth_secret::secret_url::SecretUrl::new(ISSUER)];
     config
 }
 

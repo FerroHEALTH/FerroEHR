@@ -27,7 +27,7 @@ pub(super) struct RoleIssuers {
     /// `identifier_reader_role`, upper-cased.
     privileged: Vec<String>,
     /// `role_issuers`.
-    issuers: Vec<String>,
+    issuers: Vec<ferrohealth_secret::secret_url::SecretUrl>,
 }
 
 impl RoleIssuers {
@@ -56,7 +56,7 @@ impl RoleIssuers {
     pub(super) fn roles(&self, caller: &Caller) -> Vec<String> {
         let mut roles = upper_cased(caller.roles());
         if let Some(issuer) = caller.issuer()
-            && !self.issuers.iter().any(|listed| listed == issuer)
+            && !self.issuers.iter().any(|listed| listed.expose() == issuer)
         {
             roles.retain(|role| !self.privileged.contains(role));
         }
@@ -200,7 +200,7 @@ fn honoured(config: &AppConfig) -> impl Fn(&Caller) -> Honoured + Send + Sync + 
             .is_some_and(|client| backend.iter().any(|listed| listed == client)),
         patient: caller
             .issuer()
-            .is_some_and(|issuer| patient.iter().any(|listed| listed == issuer)),
+            .is_some_and(|issuer| patient.iter().any(|listed| listed.expose() == issuer)),
     }
 }
 

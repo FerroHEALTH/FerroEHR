@@ -740,7 +740,7 @@ backend_clients = []
 # The issuers whose `patient/` grants count, each confined to the `ehrId` of
 # the token's launch context (master07 §Context Selection: the `ehrId` names
 # an EHR of the platform that issued it). Empty, a `patient/` grant grants
-# nothing.
+# nothing. Each renders with any userinfo masked.
 patient_issuers = []
 # The `client_id`s that reach the DEMOGRAPHIC API. master08 §Resource Scopes
 # defines no resource family for demographic data, so no SMART scope covers it:
@@ -777,7 +777,8 @@ demographic_clients = []
 # The provisioning clients.
 #? [[auth.scim.client]]
 # The issuer of the client's access tokens: the deployment's own authorization
-# server, an `[auth.issuer]` of kind `machines`.
+# server, an `[auth.issuer]` of kind `machines`. It renders with any userinfo
+# masked.
 #? issuer = ""
 # The client the token names (`client_id`, failing that `azp`).
 #? client_id = ""
@@ -821,7 +822,8 @@ access_service_roles = []
 #? import_role = ""
 # The issuers whose role claims may grant `admin_role`,
 # `emergency_access_role`, `import_role` and `identifier_reader_role`, each a
-# `persons` issuer; empty, the default, lets no token grant them.
+# `persons` issuer; empty, the default, lets no token grant them. Each renders
+# with any userinfo masked.
 role_issuers = []
 # What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default `open`).
 ehr_access_default = "open"
@@ -1300,7 +1302,8 @@ provisional_report_after = "30d"
 # What FerroEHR does for each `persons` issuer beyond the lookup
 # (`[authz.party_binding.issuer]`): just-in-time creation.
 #? [[authz.party_binding.issuer]]
-# The `persons` issuer the table holds for.
+# The `persons` issuer the table holds for. It renders with any userinfo
+# masked.
 #? issuer = ""
 # Whether a first login with no party creates a provisional `PERSON`.
 #? jit = false
@@ -1330,7 +1333,8 @@ trusted_systems = []
 
 # The system clients that commit (`[authz.system_client]`).
 #? [[authz.system_client]]
-# The `machines` or `persons` issuer of the client's tokens.
+# The `machines` or `persons` issuer of the client's tokens. It renders with
+# any userinfo masked.
 #? issuer = ""
 # The client the token names.
 #? client_id = ""
@@ -1364,7 +1368,8 @@ trusted_systems = []
 
 # The agreements, one per issuer and accessor.
 #? [[authz.federation.agreement]]
-# The `federation` issuer of the external callers.
+# The `federation` issuer of the external callers. It renders with any userinfo
+# masked.
 #? issuer = ""
 # Who the agreement admits: named persons, or the organisation.
 #? accessor = "person"

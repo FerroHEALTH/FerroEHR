@@ -201,7 +201,7 @@ fn origin(
                 && input
                     .scim_clients
                     .iter()
-                    .any(|(i, client)| i == issuer && client == id)
+                    .any(|(i, client)| i.expose() == *issuer && client == id)
         });
         if scim {
             return Some(Origin::Scim);
@@ -216,7 +216,7 @@ fn origin(
             input
                 .jit_issuers
                 .iter()
-                .any(|issuer| text == jit::description(issuer))
+                .any(|issuer| text == jit::description(issuer.expose()))
         });
     if person && jit && referenced == Some(party) {
         return Some(Origin::Jit);

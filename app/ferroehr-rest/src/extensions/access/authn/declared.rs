@@ -51,13 +51,24 @@ const NEUTRAL: [&str; 5] = ["openid", "profile", "fhirUser", "online_access", "l
 
 /// The `[[authz.system_client]]` tables and the
 /// `[[authz.federation.agreement]]` tables, by issuer and accessor.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub(super) struct Declared {
     /// The system clients.
     pub(super) system_clients: Vec<Arc<SystemClient>>,
     /// The agreements, each with the jurisdiction it holds for; boot has
     /// refused a table without an accessor.
     agreements: BTreeMap<(String, Accessor), Arc<Held>>,
+}
+
+// NOTE: RFC 3986 §3.2.1: the keys hold each issuer as written, so `Debug` shows the
+// agreements alone, whose issuer renders as its `SecretUrl`.
+impl std::fmt::Debug for Declared {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Declared")
+            .field("system_clients", &self.system_clients)
+            .field("agreements", &self.agreements.values().collect::<Vec<_>>())
+            .finish()
+    }
 }
 
 impl Declared {
@@ -81,7 +92,7 @@ impl Declared {
                     };
                     let correlation_source = ferroehr::config::agreement::correlation_sources(
                         &config.auth.shared,
-                        &table.issuer,
+                        table.issuer.expose(),
                     )
                     .map(|sources| {
                         sources
@@ -91,8 +102,7 @@ impl Declared {
                             .join(" ")
                     });
                     let contact_point = config.auth.shared.federation.iter().any(|federation| {
-                        federation.issuer.expose() == table.issuer
-                            && federation.contact_point == Some(true)
+                        federation.issuer == table.issuer && federation.contact_point == Some(true)
                     });
                     let held = Held {
                         agreement: Arc::new(agreement),
@@ -100,7 +110,7 @@ impl Declared {
                         limit: table.caller_rate.map(CallerLimit::new),
                         contact_point,
                     };
-                    Some(((table.issuer.clone(), accessor), Arc::new(held)))
+                    Some(((table.issuer.expose().to_owned(), accessor), Arc::new(held)))
                 })
                 .collect(),
         }

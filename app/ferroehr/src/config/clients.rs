@@ -13,6 +13,7 @@
 
 use std::collections::BTreeSet;
 
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::Resolved;
 use ferrohealth_smart::kind::IssuerKind;
 use serde::{Deserialize, Serialize};
@@ -25,8 +26,8 @@ use crate::config::binding::ProviderId;
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct SystemClient {
-    /// The `machines` or `persons` issuer of the client's tokens.
-    pub issuer: String,
+    /// The `machines` or `persons` issuer of the client's tokens. It renders with any userinfo masked.
+    pub issuer: SecretUrl,
     /// The client the token names.
     pub client_id: String,
     /// The healthcare provider the client acts for, recorded on every system
@@ -90,7 +91,7 @@ pub fn system_client_errors(clients: &[SystemClient], resolved: &Resolved) -> Ve
             "the [[authz.system_client]] table of {:?} and {:?}",
             client.issuer, client.client_id
         );
-        match resolved.kinds.get(&client.issuer) {
+        match resolved.kinds.get(client.issuer.expose()) {
             Some(IssuerKind::Machines | IssuerKind::Persons) => {}
             Some(kind) => errors.push(format!(
                 "{name} names a {kind} issuer: a system client's issuer is of kind machines or \
@@ -101,7 +102,7 @@ pub fn system_client_errors(clients: &[SystemClient], resolved: &Resolved) -> Ve
         if client.client_id.trim().is_empty() {
             errors.push(format!("{name} needs client_id"));
         }
-        if !seen.insert((client.issuer.as_str(), client.client_id.as_str())) {
+        if !seen.insert((client.issuer.expose(), client.client_id.as_str())) {
             errors.push(format!("{name} is declared twice"));
         }
         if client

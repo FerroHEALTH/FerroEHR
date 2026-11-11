@@ -293,7 +293,7 @@ fn config() -> AppConfig {
     });
     auth.shared.enabled = true;
     let client = |client_id: &str, binding_issuer: &str| ScimClient {
-        issuer: MACHINES.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
         client_id: client_id.to_owned(),
         scope: SCOPE.to_owned(),
         binding_issuer: binding_issuer.to_owned(),

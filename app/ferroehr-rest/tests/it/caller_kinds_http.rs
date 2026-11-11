@@ -266,7 +266,7 @@ async fn only_a_declared_system_client_commits() {
     let declared = [MACHINES, ENTRA, KEYCLOAK]
         .into_iter()
         .map(|issuer| SystemClient {
-            issuer: issuer.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer),
             client_id: "lab".to_owned(),
             origins: vec![Origin::Relay],
             ..SystemClient::default()
@@ -565,7 +565,7 @@ async fn a_system_callers_records_carry_its_client_and_provider() {
     let declared = [MACHINES, ENTRA, KEYCLOAK]
         .into_iter()
         .map(|issuer| SystemClient {
-            issuer: issuer.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer),
             client_id: "lab".to_owned(),
             provider: Some(ferroehr::config::binding::ProviderId {
                 issuer: "urn:oid:2.16.528.1.1007.3.3".to_owned(),

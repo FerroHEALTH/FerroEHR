@@ -74,8 +74,8 @@ pub struct SmartConfig {
     /// The issuers whose `patient/` grants count, each confined to the `ehrId`
     /// of the token's launch context (master07 §Context Selection: the `ehrId`
     /// names an EHR of the platform that issued it). Empty, a `patient/` grant
-    /// grants nothing.
-    pub patient_issuers: Vec<String>,
+    /// grants nothing. Each renders with any userinfo masked.
+    pub patient_issuers: Vec<SecretUrl>,
 
     /// The `client_id`s that reach the DEMOGRAPHIC API. master08 §Resource
     /// Scopes defines no resource family for demographic data, so no SMART
@@ -156,7 +156,7 @@ mod tests {
         assert!(c.public_base_url.is_none());
         assert!(!c.episode_launch);
         assert_eq!(c.backend_clients, Vec::<String>::new());
-        assert_eq!(c.patient_issuers, Vec::<String>::new());
+        assert_eq!(c.patient_issuers, Vec::<SecretUrl>::new());
         assert_eq!(c.demographic_clients, Vec::<String>::new());
         assert!(c.validate().is_ok());
     }

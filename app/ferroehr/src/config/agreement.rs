@@ -17,6 +17,7 @@
 use std::collections::BTreeSet;
 use std::fmt;
 
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_server::section::CallerRate;
 use ferrohealth_smart::config::{AuthSection, Resolved};
 use ferrohealth_smart::federation::{Field, Source};
@@ -44,8 +45,8 @@ pub struct FederationConfig {
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct Agreement {
-    /// The `federation` issuer of the external callers.
-    pub issuer: String,
+    /// The `federation` issuer of the external callers. It renders with any userinfo masked.
+    pub issuer: SecretUrl,
     /// Who the agreement admits: named persons, or the organisation.
     pub accessor: Option<Accessor>,
     /// The agreement's name.
@@ -114,7 +115,7 @@ impl Agreement {
 impl Default for Agreement {
     fn default() -> Self {
         Self {
-            issuer: String::new(),
+            issuer: SecretUrl::default(),
             accessor: None,
             name: String::new(),
             version: String::new(),
@@ -267,7 +268,7 @@ impl Agreement {
         let nl = auth
             .issuers()
             .iter()
-            .any(|entry| entry.issuer.expose() == self.issuer && entry.profile == Preset::Nl);
+            .any(|entry| entry.issuer == self.issuer && entry.profile == Preset::Nl);
         if self.jurisdiction.is_empty() && nl {
             NL.to_owned()
         } else {
@@ -295,14 +296,14 @@ pub fn errors(
             "the [[authz.federation.agreement]] of {:?} for accessor {accessor}",
             agreement.issuer
         );
-        match resolved.kinds.get(&agreement.issuer) {
+        match resolved.kinds.get(agreement.issuer.expose()) {
             Some(IssuerKind::Federation) => {}
             Some(kind) => errors.push(format!(
                 "{name} names a {kind} issuer: an agreement's issuer is of kind federation"
             )),
             None => errors.push(format!("{name} names no [[auth.issuer]]")),
         }
-        if !seen.insert((agreement.issuer.as_str(), agreement.accessor)) {
+        if !seen.insert((agreement.issuer.expose(), agreement.accessor)) {
             errors.push(format!("{name} is declared twice"));
         }
         let Some(kind) = agreement.accessor else {
@@ -312,7 +313,7 @@ pub fn errors(
             continue;
         };
         common(agreement, auth, &name, &mut errors);
-        let contact_point = is_contact_point(resolved, &agreement.issuer);
+        let contact_point = is_contact_point(resolved, agreement.issuer.expose());
         match (contact_point, agreement.ehdsi_service) {
             (true, None) if kind == Accessor::Person => errors.push(format!(
                 "{name} is a MyHealth@EU contact point's and needs ehdsi_service"
@@ -418,7 +419,7 @@ fn organisation(
              professional; use consent = \"local\""
         ));
     }
-    if is_contact_point(resolved, &agreement.issuer) {
+    if is_contact_point(resolved, agreement.issuer.expose()) {
         errors.push(format!(
             "{name} names a contact_point issuer, whose requests name a professional"
         ));
@@ -471,7 +472,7 @@ fn chained(agreement: &Agreement, holder: Retention, name: &str, errors: &mut Ve
 /// A `chained` agreement's issuer reads the correlation id from its token: its
 /// `[[auth.federation]]` table maps `correlation_id`, and from no constant.
 fn correlated(agreement: &Agreement, auth: &AuthSection, name: &str, errors: &mut Vec<String>) {
-    match correlation_sources(auth, &agreement.issuer) {
+    match correlation_sources(auth, agreement.issuer.expose()) {
         None => errors.push(format!(
             "{name} is chained and its issuer's [[auth.federation]] table maps no correlation_id"
         )),

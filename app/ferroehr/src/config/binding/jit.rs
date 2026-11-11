@@ -15,6 +15,7 @@
 
 use std::collections::BTreeSet;
 
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection};
 use ferrohealth_smart::config::Resolved;
 use ferrohealth_smart::kind::IssuerKind;
@@ -28,8 +29,8 @@ use super::person::{NEVER_A_KEY, Source};
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct IssuerBinding {
-    /// The `persons` issuer the table holds for.
-    pub issuer: String,
+    /// The `persons` issuer the table holds for. It renders with any userinfo masked.
+    pub issuer: SecretUrl,
     /// Whether a first login with no party creates a provisional `PERSON`.
     pub jit: bool,
     /// Whether a guest the issuer's `[[auth.party]]` table admits is created
@@ -55,7 +56,7 @@ pub struct IssuerBinding {
 impl Default for IssuerBinding {
     fn default() -> Self {
         Self {
-            issuer: String::new(),
+            issuer: SecretUrl::default(),
             jit: false,
             guests_jit: false,
             user_name_claim: None,
@@ -97,14 +98,11 @@ pub fn errors(
             "the [[authz.party_binding.issuer]] table of {:?}",
             table.issuer
         );
-        if !seen.insert(table.issuer.as_str()) {
+        if !seen.insert(table.issuer.expose()) {
             errors.push(format!("{at} is listed twice"));
         }
-        let party = resolved
-            .party
-            .iter()
-            .find(|p| p.issuer.expose() == table.issuer);
-        let persons = resolved.kinds.get(&table.issuer) == Some(&IssuerKind::Persons);
+        let party = resolved.party.iter().find(|p| p.issuer == table.issuer);
+        let persons = resolved.kinds.get(table.issuer.expose()) == Some(&IssuerKind::Persons);
         let Some(party) = party.filter(|_| persons) else {
             errors.push(format!(
                 "{at} names no persons issuer an [[auth.party]] table binds"
@@ -220,13 +218,13 @@ mod tests {
         let section = AuthSection {
             enabled: true,
             issuer: vec![IssuerEntry {
-                issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
+                issuer: SecretUrl::new(ISSUER),
                 kind: Some(IssuerKind::Persons),
                 audience: vec!["ferroehr".to_owned()],
                 ..IssuerEntry::default()
             }],
             party: vec![PartySection {
-                issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
+                issuer: SecretUrl::new(ISSUER),
                 identifier_issuer: "urn:login".to_owned(),
                 identifier_type: "guid".to_owned(),
                 guests,
@@ -275,7 +273,7 @@ mod tests {
 
     fn jit() -> IssuerBinding {
         IssuerBinding {
-            issuer: ISSUER.to_owned(),
+            issuer: SecretUrl::new(ISSUER),
             jit: true,
             admit_idp: vec!["https://sts.example/".to_owned()],
             ..IssuerBinding::default()
@@ -306,7 +304,7 @@ mod tests {
     #[test]
     fn a_table_of_no_bound_persons_issuer_is_refused() {
         let table = IssuerBinding {
-            issuer: "https://elsewhere.example".to_owned(),
+            issuer: SecretUrl::new("https://elsewhere.example"),
             ..jit()
         };
         let errors = errors(&with(table), &resolved(false), &AssuranceSection::default());

@@ -116,7 +116,7 @@ fn federation_table() -> FederationSection {
 /// An agreement of [`FEDERATION`] for `accessor`, reading [`READ`].
 fn agreement(accessor: Accessor) -> Agreement {
     Agreement {
-        issuer: FEDERATION.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION),
         accessor: Some(accessor),
         name: "Regional exchange".to_owned(),
         version: "1".to_owned(),
@@ -189,7 +189,8 @@ async fn serve_also(
         agreements,
         ..common::api_config(true)
     };
-    config.auth.smart.patient_issuers = vec![FEDERATION.to_owned()];
+    config.auth.smart.patient_issuers =
+        vec![ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION)];
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
         .await
         .expect("build app");
@@ -773,7 +774,7 @@ fn contact_point_token(certificate: &ClientCertificate) -> String {
 #[tokio::test]
 async fn a_contact_point_caller_above_its_caller_rate_is_refused_too() {
     let professional_agreement = Agreement {
-        issuer: CONTACT_POINT.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(CONTACT_POINT),
         reads: vec!["patient/*.rs".to_owned()],
         ..limited(Accessor::Person)
     };

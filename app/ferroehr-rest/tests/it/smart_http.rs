@@ -70,7 +70,8 @@ fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
         "https://cdr.example.com",
     ));
     if patient_bound {
-        cfg.auth.smart.patient_issuers = vec![issuer.to_owned()];
+        cfg.auth.smart.patient_issuers =
+            vec![ferrohealth_secret::secret_url::SecretUrl::new(issuer)];
     }
     cfg
 }

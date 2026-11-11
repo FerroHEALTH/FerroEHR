@@ -270,7 +270,7 @@ mod tests {
 
     fn client(origins: &[Origin]) -> SystemClient {
         SystemClient {
-            issuer: "https://machines.example".to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new("https://machines.example"),
             client_id: "lab".to_owned(),
             facilities: vec![
                 Facility {

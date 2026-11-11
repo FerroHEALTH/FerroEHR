@@ -39,7 +39,7 @@ const PROFESSIONALS: &str = "urn:oid:2.999.5";
 /// the facility `ward-7` with `origins`.
 fn table(client: &str, template: &str, origins: &[Origin]) -> SystemClient {
     SystemClient {
-        issuer: MACHINES.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
         client_id: client.to_owned(),
         facilities: vec![Facility {
             issuer: FACILITIES.to_owned(),

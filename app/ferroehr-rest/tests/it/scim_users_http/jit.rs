@@ -48,7 +48,7 @@ fn jit_config() -> AppConfig {
         attribute.oidc = Some(claim.to_owned());
     }
     config.party_binding.issuer = vec![IssuerBinding {
-        issuer: PERSONS.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(PERSONS),
         jit: true,
         admit_idp: vec![IDP.to_owned()],
         ..IssuerBinding::default()
