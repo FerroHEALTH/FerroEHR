@@ -66,9 +66,9 @@ write_files:
 
   # The ONE command the CI key may run. It reads SSH_ORIGINAL_COMMAND and
   # accepts exactly five verbs: `deploy` (the default — pull, extract the
-  # posture out of the pulled image, recreate), `restart` (recreate the CDR
-  # so a fresh boot re-runs the migrations — what the reseed needs after its
-  # wipe), `wipe` (drop the CDR's schemas on the private database, using
+  # posture out of the pulled image, recreate), `restart` (restart the CDR
+  # alone; no caller names it since #5406, because a wiped definition store
+  # needs the deploy's definitions one-shot first), `wipe` (drop the CDR's schemas on the private database, using
   # the DSN this box already holds — the database has no public port and CI
   # holds no database credential), and `identities` (register the demo
   # subjects with FerroPIX and answer their pseudonyms, #4242), and `verbs`
@@ -180,9 +180,9 @@ write_files:
         exit 0
       fi
 
-      # `restart` exists for the reseed: after the schema wipe the CDR must
-      # boot fresh to re-run its migrations, and `docker compose up -d` alone
-      # recreates nothing when the image and config are unchanged.
+      # `restart` restarts the CDR alone. The reseed brings the CDR up through
+      # `deploy` instead (#5406): after the wipe the CDR refuses to boot until
+      # the definitions one-shot has loaded its party-binding templates.
       if [[ "$verb" == "restart" ]]; then
         docker compose restart ferroehr
         exit 0

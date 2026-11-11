@@ -1285,7 +1285,7 @@ jobs:
 
   # After the deploy, the seed. The wipe and the fresh boot happened in the
   # `sandbox` job above, so the reseed workflow is called seed-only; the
-  # nightly schedule keeps its own wipe and restart. Environment secrets
+  # nightly schedule keeps its own wipe and deploy (#5406). Environment secrets
   # reach the called workflow's own environment-naming jobs here (measured:
   # the v4.0.13 release's reseed succeeded through two call hops).
   #
