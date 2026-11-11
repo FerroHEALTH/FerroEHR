@@ -14,8 +14,9 @@
 #     version, so the expectation is derived from `:latest`'s own label.
 #   - `.github/workflows/release.yml`, the `sandbox` job — a real release,
 #     after scan-and-tag moved `:latest`, with the tag's version supplied.
-#   - `.github/workflows/sandbox-reseed.yml` — verb `restart`: recreate the
-#     CDR so a fresh boot re-runs the migrations after the schema wipe.
+#   - `.github/workflows/sandbox-reseed.yml`: verb `wipe`, then verb
+#     `deploy` with `same-release`: the deploy brings the CDR up after the
+#     wipe, its definitions one-shot first (#5406).
 #
 # WHY an action and not a reusable workflow: the deploy key and the host key
 # are `hosted` ENVIRONMENT secrets, and environment secrets are not available
@@ -36,10 +37,11 @@ inputs:
   verb:
     description: >-
       What the restricted key is asked to run: `deploy` (pull + install the
-      posture + recreate), `restart` (recreate the CDR so a fresh boot
-      re-runs the migrations — the reseed's step after its wipe), or `wipe`
+      posture + recreate, the definitions one-shot before the CDR) or `wipe`
       (drop the CDR's schemas on the private database box, using the DSN the
-      app box already holds — the reseed's first step; #3015).
+      app box already holds, the reseed's first step; #3015). The box's
+      `restart` verb starts the CDR alone, which a wiped definition store
+      refuses since party binding (#5406), so no caller names it.
     required: false
     default: deploy
   expected-version:
@@ -47,9 +49,17 @@ inputs:
       The version string the sandbox must serve before a deploy counts as done
       (`X.Y.Z`, no `v`). Empty means "derive it from the `:latest` image's own
       version label" — what a manual redeploy wants, since it changes no
-      image. Ignored for verb `restart`.
+      image.
     required: false
     default: ""
+  same-release:
+    description: >-
+      `true` when the deploy brings back the release the box already served
+      (the reseed after its wipe, #5406): `expected-version` is that release,
+      and `:latest` need not name it, since a release candidate on the box
+      runs from its own tag.
+    required: false
+    default: "false"
   ssh-key:
     description: >-
       The deploy key, restricted on the box to the one deploy command. An
@@ -94,7 +104,7 @@ runs:
     # because `:latest` is what the box pulls. A stale tag fails here, before
     # any deploy. Anonymous registry reads: the image is public.
     - name: The :latest tag is the release image
-      if: inputs.verb == 'deploy' && inputs.expected-version != ''
+      if: inputs.verb == 'deploy' && inputs.expected-version != '' && inputs.same-release != 'true'
       shell: bash
       env:
         IMAGE: ${{ inputs.image }}
@@ -183,7 +193,7 @@ runs:
         fi
         echo "version=${expected}" >> "$GITHUB_OUTPUT"
 
-    # The deploy (or the reseed's restart), and the proof. The action issues
+    # The deploy, and the proof. The action issues
     # exactly one command — the key on the box runs the deploy script whatever
     # is asked, and SSH_ORIGINAL_COMMAND selects the verb — then fetches the
     # public status document from THIS runner and requires the served version.
@@ -218,16 +228,6 @@ runs:
           sleep 10
         done
         echo "viewer serving"
-
-    - name: Restart the CDR (fresh boot re-runs the migrations)
-      if: inputs.verb == 'restart'
-      uses: rubentalstra/hetzner-deploy-action@23e875e1249a2fe2a27107291a638ab40da0172b # v1.0.1
-      with:
-        host: ${{ inputs.host }}
-        user: deploy
-        ssh-key: ${{ inputs.ssh-key }}
-        known-hosts: ${{ inputs.known-hosts }}
-        remote-command: restart
 
     # The wipe runs on the app box, which reaches the database box over the
     # private network with the DSN in its own .env — no runner ever opens a
