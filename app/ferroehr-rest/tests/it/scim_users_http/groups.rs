@@ -653,7 +653,7 @@ async fn a_token_naming_two_of_a_persons_groups_lists_exactly_those_two() {
         }
     }
     let table = PartySection {
-        issuer: PERSONS.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(PERSONS),
         identifier_issuer: LOGIN.to_owned(),
         identifier_type: "guid".to_owned(),
         group_claim: "groups".to_owned(),

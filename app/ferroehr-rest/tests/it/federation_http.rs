@@ -69,7 +69,7 @@ const EMPLOYEE_CREDENTIAL: &str = "NutsEmployeeCredential";
 /// reference, and the organisation statement with its correlation id.
 fn federation_table() -> FederationSection {
     FederationSection {
-        issuer: FEDERATION.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION),
         contact_point: Some(false),
         mapping: Some(Mapping::Iua),
         fields: BTreeMap::from([
@@ -712,7 +712,7 @@ fn contact_point() -> (IssuerEntry, FederationSection, DpopSection) {
         ..IssuerEntry::default()
     };
     let table = FederationSection {
-        issuer: CONTACT_POINT.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(CONTACT_POINT),
         contact_point: Some(true),
         mapping: Some(Mapping::Ehdsi),
         fields: BTreeMap::from([

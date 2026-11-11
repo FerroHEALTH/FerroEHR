@@ -481,7 +481,8 @@ product_scope = ""
 # }`; only a `CallerKind::System` caller of a `persons` or `machines` issuer is
 # ever admitted by an entry.
 #? [[auth.scopeless_subjects]]
-# The issuer.
+# The issuer. It renders with any userinfo masked, as `SecretUrl` renders
+# itself.
 #? issuer = ""
 # The `sub`.
 #? sub = ""
@@ -535,7 +536,8 @@ min_version = "1.3"
 
 # The `[auth.federation]` tables, one per `federation` issuer.
 #? [[auth.federation]]
-# The `[auth.issuer]` this table describes, of kind `federation`.
+# The `[auth.issuer]` this table describes, of kind `federation`. It renders
+# with any userinfo masked, as `SecretUrl` renders itself.
 #? issuer = ""
 # Whether the issuer is a MyHealth@EU contact point; required, with no default.
 #? contact_point = false
@@ -577,7 +579,8 @@ min_version = "1.3"
 # states its professionals' attributes.
 #? [[auth.attributes]]
 # The `[auth.issuer]` this table describes, of kind `persons`, `patients` or
-# `machines`.
+# `machines`. It renders with any userinfo masked, as `SecretUrl` renders
+# itself.
 #? issuer = ""
 # The default sources the table starts from.
 #? mapping = "iua"
@@ -590,7 +593,8 @@ min_version = "1.3"
 # The `[auth.party]` tables, one per `persons` issuer whose logins are bound to
 # a party.
 #? [[auth.party]]
-# The `persons` issuer whose logins the table binds.
+# The `persons` issuer whose logins the table binds. It renders with any
+# userinfo masked, as `SecretUrl` renders itself.
 #? issuer = ""
 # The issuer of the identifiers the key is matched against; no two tables share
 # one.
@@ -1115,7 +1119,8 @@ user = ""
 # What a `federation` issuer asserts, over its preset's defaults;
 # `exchanges_from` and `person_mapping` are required.
 #? [authz.abac.remote.endpoint.credentials.onward.federation]
-# The `[auth.issuer]` this table describes, of kind `federation`.
+# The `[auth.issuer]` this table describes, of kind `federation`. It renders
+# with any userinfo masked, as `SecretUrl` renders itself.
 #? issuer = ""
 # Whether the issuer is a MyHealth@EU contact point; required, with no default.
 #? contact_point = false
@@ -2010,7 +2015,8 @@ full_verify_interval = "7d"
 # What a `federation` issuer asserts, over its preset's defaults;
 # `exchanges_from` and `person_mapping` are required.
 #? [audit.fhir_feed.endpoint.credentials.onward.federation]
-# The `[auth.issuer]` this table describes, of kind `federation`.
+# The `[auth.issuer]` this table describes, of kind `federation`. It renders
+# with any userinfo masked, as `SecretUrl` renders itself.
 #? issuer = ""
 # Whether the issuer is a MyHealth@EU contact point; required, with no default.
 #? contact_point = false
@@ -2504,7 +2510,8 @@ region = "us-east-1"
 # What a `federation` issuer asserts, over its preset's defaults;
 # `exchanges_from` and `person_mapping` are required.
 #? [terminology.endpoint.credentials.onward.federation]
-# The `[auth.issuer]` this table describes, of kind `federation`.
+# The `[auth.issuer]` this table describes, of kind `federation`. It renders
+# with any userinfo masked, as `SecretUrl` renders itself.
 #? issuer = ""
 # Whether the issuer is a MyHealth@EU contact point; required, with no default.
 #? contact_point = false
@@ -2827,7 +2834,8 @@ region = "us-east-1"
 # What a `federation` issuer asserts, over its preset's defaults;
 # `exchanges_from` and `person_mapping` are required.
 #? [pixm.endpoint.credentials.onward.federation]
-# The `[auth.issuer]` this table describes, of kind `federation`.
+# The `[auth.issuer]` this table describes, of kind `federation`. It renders
+# with any userinfo masked, as `SecretUrl` renders itself.
 #? issuer = ""
 # Whether the issuer is a MyHealth@EU contact point; required, with no default.
 #? contact_point = false

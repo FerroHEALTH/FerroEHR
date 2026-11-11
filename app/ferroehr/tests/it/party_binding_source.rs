@@ -18,6 +18,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::binding::PartyBinding;
 use ferrohealth_smart::party::config::PartySection;
@@ -793,7 +794,7 @@ async fn the_source_reports_the_live_groups_a_person_belongs_to() {
     // Through the shared binding, a token naming two of the three groups
     // binds the PERSON with exactly those two.
     let table = PartySection {
-        issuer: "https://login.example".to_owned(),
+        issuer: SecretUrl::new("https://login.example"),
         identifier_issuer: LOGIN.to_owned(),
         identifier_type: GUID.to_owned(),
         group_claim: "groups".to_owned(),

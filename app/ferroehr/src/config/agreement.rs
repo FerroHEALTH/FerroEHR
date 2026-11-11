@@ -491,7 +491,7 @@ fn correlated(agreement: &Agreement, auth: &AuthSection, name: &str, errors: &mu
 pub fn correlation_sources<'a>(auth: &'a AuthSection, issuer: &str) -> Option<&'a [Source]> {
     auth.federation
         .iter()
-        .find(|table| table.issuer == issuer)
+        .find(|table| table.issuer.expose() == issuer)
         .and_then(|table| table.fields.get(&Field::CorrelationId))
         .map(Vec::as_slice)
         .filter(|sources| !sources.is_empty())

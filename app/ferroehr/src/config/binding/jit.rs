@@ -100,7 +100,10 @@ pub fn errors(
         if !seen.insert(table.issuer.as_str()) {
             errors.push(format!("{at} is listed twice"));
         }
-        let party = resolved.party.iter().find(|p| p.issuer == table.issuer);
+        let party = resolved
+            .party
+            .iter()
+            .find(|p| p.issuer.expose() == table.issuer);
         let persons = resolved.kinds.get(&table.issuer) == Some(&IssuerKind::Persons);
         let Some(party) = party.filter(|_| persons) else {
             errors.push(format!(
@@ -223,7 +226,7 @@ mod tests {
                 ..IssuerEntry::default()
             }],
             party: vec![PartySection {
-                issuer: ISSUER.to_owned(),
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
                 identifier_issuer: "urn:login".to_owned(),
                 identifier_type: "guid".to_owned(),
                 guests,

@@ -108,7 +108,7 @@ async fn serve(agreement: Agreement) -> (testkit::TestDb, Arc<FerroEhrService>, 
             ..IssuerEntry::default()
         }],
         federation: vec![FederationSection {
-            issuer: CONTACT_POINT.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(CONTACT_POINT),
             contact_point: Some(true),
             mapping: Some(Mapping::Ehdsi),
             fields: BTreeMap::from([

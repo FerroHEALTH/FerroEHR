@@ -283,7 +283,7 @@ pub fn errors(authz: &crate::config::authz::AuthzConfig, resolved: &Resolved) ->
 /// Refuses a `persons` issuer with no `[[auth.party]]` table: binding is how
 /// FerroEHR attributes a person, with no unbound mode.
 fn unbound_persons(resolved: &Resolved, errors: &mut Vec<String>) {
-    let bound: BTreeSet<&str> = resolved.party.iter().map(|t| t.issuer.as_str()).collect();
+    let bound: BTreeSet<&str> = resolved.party.iter().map(|t| t.issuer.expose()).collect();
     for (issuer, kind) in &resolved.kinds {
         if *kind == IssuerKind::Persons && !bound.contains(issuer.as_str()) {
             errors.push(format!(
@@ -392,7 +392,7 @@ fn tenants(tables: &[TenantProvider], resolved: &Resolved, errors: &mut Vec<Stri
             ));
         }
     }
-    let bound: BTreeSet<&str> = resolved.party.iter().map(|t| t.issuer.as_str()).collect();
+    let bound: BTreeSet<&str> = resolved.party.iter().map(|t| t.issuer.expose()).collect();
     for settings in &resolved.issuers {
         if bound.contains(settings.issuer.as_str())
             && settings
@@ -533,7 +533,7 @@ impl BindingPosture {
                 kind: entry.kind,
                 identifier_issuer: party
                     .iter()
-                    .find(|table| table.issuer == entry.issuer.expose())
+                    .find(|table| table.issuer == entry.issuer)
                     .map(|table| table.identifier_issuer.clone()),
             })
             .collect();

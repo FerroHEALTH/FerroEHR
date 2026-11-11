@@ -91,7 +91,8 @@ impl Declared {
                             .join(" ")
                     });
                     let contact_point = config.auth.shared.federation.iter().any(|federation| {
-                        federation.issuer == table.issuer && federation.contact_point == Some(true)
+                        federation.issuer.expose() == table.issuer
+                            && federation.contact_point == Some(true)
                     });
                     let held = Held {
                         agreement: Arc::new(agreement),

@@ -15,6 +15,7 @@
 
 use std::sync::Arc;
 
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::Outcome;
 use ferrohealth_smart::party::binding::PartyBinding;
@@ -134,7 +135,7 @@ pub(crate) async fn professional(svc: &FerroEhrService, name: &str, key: &str) -
 /// The identity of the login `sub` whose key `key` the binding binds.
 pub(crate) async fn bound(svc: &FerroEhrService, sub: &str, key: &str) -> CommitterIdentity {
     let table = PartySection {
-        issuer: ISSUER.to_owned(),
+        issuer: SecretUrl::new(ISSUER),
         identifier_issuer: LOGIN.to_owned(),
         identifier_type: "guid".to_owned(),
         ..PartySection::default()
