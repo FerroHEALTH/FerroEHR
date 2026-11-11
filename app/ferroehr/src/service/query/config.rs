@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 
 /// AQL execution configuration (`[record.query]`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct QueryConfig {
     /// Max distinct cached query plans; `0` disables the plan cache (every

@@ -6,6 +6,7 @@
 
 [Documentation](https://ferroehr.eu/docs/latest/) ·
 [Live sandbox](https://sandbox.ferroehr.eu) ·
+[What it implements](#what-it-implements) ·
 [Quick start](#quick-start) ·
 [Commercial licence](https://ferroehr.eu/docs/latest/licensing.html)
 
@@ -48,101 +49,32 @@
 
 </div>
 
-## What FerroEHR does
 
-FerroEHR stores patient health records. It keeps them in openEHR, an open
-standard that describes clinical information (a blood pressure, a diagnosis,
-a discharge letter) independently of any one software product. Every change
-is kept as a new version, so the full history of a record stays readable and
-nothing is ever overwritten.
+## What FerroEHR is
+
+FerroEHR stores patient health records. It is an openEHR Clinical Data
+Repository in pure Rust: it keeps records in openEHR, an open standard that
+describes clinical information (a blood pressure, a diagnosis, a discharge
+letter) independently of any one software product. Every change is kept as a
+new version, so the full history of a record stays readable and nothing is
+ever overwritten.
 
 Applications such as an electronic patient record, a nursing app or a
 research dashboard all read and write through one standard interface. The
 data does not belong to the application that wrote it: you can replace an
-application, or add a new one, and the records stay where they are. That
-ends the usual lock-in, where moving to a new system means a migration
-project and a loss of history.
+application, or add a new one, and the records stay where they are.
 
-### Who it is for
-
-- **Hospitals and care providers** that want to own their clinical data and
-  choose their applications freely.
-- **Software vendors and integrators** that build clinical applications and
-  need a standard back end to store and query records.
-- **Research groups** that need structured, queryable clinical data.
-
-### Why you can trust what it claims
-
-Every release is signed and comes with a software bill of materials (the
-list of every component inside) and SLSA build provenance, so you can check
-that what you install is what was built here. The source is public, and every
-feature is in this repository: there is no paid edition with extra functions.
-The conformance reports link each run, with the openEHR specification as the
-reference, so you can check a result against the standard yourself.
-
-## Part of FerroHEALTH
-
-FerroEHR is one of five [FerroHEALTH](https://ferrohealth.eu) servers. Each
-does one job and reaches the others only over published standards:
-FerroEHR stores the record, FerroBRIDGE translates it to FHIR and the OMOP
-research model, FerroFED connects records across organisations and borders,
-FerroPIX matches patient identities, and FerroTERM serves the code systems
-(the shared lists of medical terms). You can run FerroEHR alone or beside
-products from other vendors. Sign-in, the audit trail and the web consoles
-come from three shared libraries: FerroAUTH, FerroAUDIT and FerroUI.
+It is for hospitals and care providers that want to own their clinical data
+and choose their applications freely, for vendors and integrators that build
+clinical applications on a standard back end, and for research groups that
+need structured, queryable clinical data.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="website/book/src/viewer/img/dashboard/dashboard-dark.png">
   <img src="website/book/src/viewer/img/dashboard/dashboard.png" alt="The FerroEHR Viewer dashboard">
 </picture>
 
-## Quick start
-
-Try it without installing anything in the
-[live sandbox](https://sandbox.ferroehr.eu) (`ferroehr` / `ferroehr`, demo
-data, reset nightly). To run it yourself you need Docker Compose 2.23.1 or
-newer:
-
-```shell
-curl -LO https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/docker-compose.yml
-docker compose up
-```
-
-That file is the one attached to the latest release and pulls that release's
-images. The `docker-compose.yml` in this repository pulls the images built
-from `main` and carries `main`'s configuration, for running `main`.
-
-Then create an EHR and query it with AQL (development credentials
-`ferroehr` / `ferroehr`):
-
-```shell
-curl -u ferroehr:ferroehr -X POST -i http://localhost:8080/ferroehr/rest/openehr/v1/ehr
-
-curl -u ferroehr:ferroehr -H 'Content-Type: application/json' \
-  -d '{"q":"SELECT e/ehr_id/value FROM EHR e"}' \
-  http://localhost:8080/ferroehr/rest/openehr/v1/query/aql
-```
-
-The API documentation is at `http://localhost:8080/ferroehr/rest/swagger-ui`
-(same credentials), and `docker compose --profile viewer up` adds the viewer
-on `http://localhost:3000`.
-
-The quickstart asks FerroPIX, an IHE patient identity source, for the
-pseudonym an `EHR_STATUS` subject carries. To keep the subject-to-EHR
-cross-reference in FerroEHR instead, so a subject is named by its own namespace
-and identifier and `GET /ehr?subject_id=&subject_namespace=` finds it, start
-with one variable:
-
-```shell
-FERROEHR_EHR_INDEX=local docker compose up
-```
-
-These defaults are for evaluation only. The
-[getting started guide](https://ferroehr.eu/docs/latest/getting-started.html)
-continues from here, and [Kubernetes & Helm](https://ferroehr.eu/docs/latest/installation/kubernetes.html)
-covers production.
-
-## What ships today
+## What it implements
 
 ### Clinical records
 
@@ -163,15 +95,57 @@ covers production.
 - [The FerroEHR Viewer](https://ferroehr.eu/docs/latest/viewer/index.html), a web interface over the same public API
 - [The `openehr-*` Rust crates](https://ferroehr.eu/docs/latest/crates.html), the openEHR specifications as libraries (listed below)
 
-### Security and privacy
+## Quick start
 
-- [Sign-in](https://ferroehr.eu/docs/latest/identity-providers.html) with Basic or OpenID Connect (Keycloak, Active Directory), with [SMART scopes](https://ferroehr.eu/docs/latest/smart-app-launch.html)
-- [Access control](https://ferroehr.eu/docs/latest/security.html#authorization) by role and by attribute-based policy
-- [Pseudonymisation](https://ferroehr.eu/docs/latest/security.html#the-pseudonymisation-boundary): clinical data and identities kept apart in the database
-- [Audit trail](https://ferroehr.eu/docs/latest/audit.html) of every access and refusal, in the IHE ATNA format
-- [One instance per organisation](https://ferroehr.eu/docs/latest/security.html#one-instance-one-organisation), each with its own database
+Try it without installing anything in the
+[live sandbox](https://sandbox.ferroehr.eu) (`ferroehr` / `ferroehr`, demo
+data, reset nightly). To run it yourself you need Docker Compose 2.23.1 or
+newer:
 
-### Operations
+```shell
+curl -fsSLO https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/docker-compose.yml
+docker compose up --wait
+```
+
+That one self-contained file, attached with its `.sha256sum` to every
+release, pulls that release's images and needs no checkout. Then create an
+EHR and query it with AQL (development credentials `ferroehr` / `ferroehr`):
+
+<!-- smoke:ehr -->
+```sh
+curl --fail-with-body -u ferroehr:ferroehr -X POST -i http://localhost:8080/ferroehr/rest/openehr/v1/ehr
+```
+
+<!-- smoke:aql -->
+```sh
+curl --fail-with-body -u ferroehr:ferroehr -H 'Content-Type: application/json' \
+  -d '{"q":"SELECT e/ehr_id/value FROM EHR e"}' \
+  http://localhost:8080/ferroehr/rest/openehr/v1/query/aql
+```
+
+Both commands are steps of
+[`docker/smoke-test.sh`](docker/smoke-test.sh), which CI runs against the
+standalone `docker-compose.yml` and the images each push to `main` builds.
+The API documentation is at `http://localhost:8080/ferroehr/rest/swagger-ui`
+(same credentials), and `docker compose --profile viewer up` adds the viewer
+on `http://localhost:3000`.
+
+The quickstart asks FerroPIX, an IHE patient identity source, for the
+pseudonym an `EHR_STATUS` subject carries. To keep the subject-to-EHR
+cross-reference in FerroEHR instead, so a subject is named by its own namespace
+and identifier and `GET /ehr?subject_id=&subject_namespace=` finds it, start
+with one variable:
+
+```shell
+FERROEHR_EHR_INDEX=local docker compose up
+```
+
+These defaults are for evaluation on your own machine. The
+[getting started guide](https://ferroehr.eu/docs/latest/getting-started.html)
+continues from here.
+
+## Deploy it
+
 
 - [Docker Compose](https://ferroehr.eu/docs/latest/installation/compose.html) and a [Helm chart](https://ferroehr.eu/docs/latest/installation/kubernetes.html), with multi-arch images (amd64, arm64)
 - [Observability](https://ferroehr.eu/docs/latest/operations.html#observability): Prometheus metrics, OpenTelemetry traces, health probes
@@ -179,8 +153,32 @@ covers production.
 - [Measured conformance](https://ferroehr.eu/docs/latest/conformance.html) and [performance](https://ferroehr.eu/docs/latest/performance.html)
 - [Verifiable releases](https://ferroehr.eu/docs/latest/verifying-releases.html): signed, with provenance and a software bill of materials
 
-<details>
-<summary><b>Published crates</b> (9)</summary>
+[Kubernetes & Helm](https://ferroehr.eu/docs/latest/installation/kubernetes.html)
+covers production, with the
+[cluster hardening](https://ferroehr.eu/docs/latest/installation/kubernetes-hardening.html)
+guide beside it.
+
+## Security and conformance
+
+
+- [Sign-in](https://ferroehr.eu/docs/latest/identity-providers.html) with Basic or OpenID Connect (Keycloak, Active Directory), with [SMART scopes](https://ferroehr.eu/docs/latest/smart-app-launch.html)
+- [Access control](https://ferroehr.eu/docs/latest/security.html#authorization) by role and by attribute-based policy
+- [Pseudonymisation](https://ferroehr.eu/docs/latest/security.html#the-pseudonymisation-boundary): clinical data and identities kept apart in the database
+- [Audit trail](https://ferroehr.eu/docs/latest/audit.html) of every access and refusal, in the IHE ATNA format
+- [One instance per organisation](https://ferroehr.eu/docs/latest/security.html#one-instance-one-organisation), each with its own database
+
+Every release is signed and comes with a software bill of materials and
+SLSA build provenance, so you can check that what you install is what was
+built here. The conformance badges above link each run, with the openEHR
+specification as the reference, so you can check a result against the
+standard yourself. The source is public and every feature is in this
+repository; there is no paid edition with extra functions.
+
+## Crates
+
+The openEHR specifications are published as Rust crates, generated from the
+official machine-readable models
+([Rust crates](https://ferroehr.eu/docs/latest/crates.html)).
 
 | Crate | What it does | Version | Docs | Downloads |
 |---|---|---|---|---|
@@ -194,21 +192,39 @@ covers production.
 | [`openehr-term`](https://crates.io/crates/openehr-term) | The terminology model and the bundled openEHR terminology | [![crates.io](https://img.shields.io/crates/v/openehr-term?logo=rust&label=crates.io)](https://crates.io/crates/openehr-term) | [![docs.rs](https://img.shields.io/docsrs/openehr-term?logo=docsdotrs&label=docs.rs)](https://docs.rs/openehr-term) | [![downloads](https://img.shields.io/crates/d/openehr-term?logo=rust&label=downloads)](https://crates.io/crates/openehr-term) |
 | [`openehr-lang`](https://crates.io/crates/openehr-lang) | The BMM object model and the ODIN reader | [![crates.io](https://img.shields.io/crates/v/openehr-lang?logo=rust&label=crates.io)](https://crates.io/crates/openehr-lang) | [![docs.rs](https://img.shields.io/docsrs/openehr-lang?logo=docsdotrs&label=docs.rs)](https://docs.rs/openehr-lang) | [![downloads](https://img.shields.io/crates/d/openehr-lang?logo=rust&label=downloads)](https://crates.io/crates/openehr-lang) |
 
-</details>
+## Part of FerroHEALTH
 
+FerroEHR is one of five [FerroHEALTH](https://ferrohealth.eu) servers. Each
+does one job and reaches the others only over published standards:
+FerroEHR stores the record, FerroBRIDGE translates it to FHIR and the OMOP
+research model, FerroFED connects records across organisations and borders,
+FerroPIX matches patient identities, and FerroTERM serves the code systems.
+You can run FerroEHR alone or beside products from other vendors.
 
-## Learn more
+## Documentation
 
-- [Documentation](https://ferroehr.eu/docs/latest/) and the [FerroHEALTH book](https://ferrohealth.eu/docs/)
+- [The FerroEHR book](https://ferroehr.eu/docs/latest/): evaluate,
+  integrate, operate and contribute, and the
+  [FerroHEALTH book](https://ferrohealth.eu/docs/) for what the family
+  shares
 - [Why FerroEHR exists](https://ferroehr.eu/docs/latest/why-ferroehr.html)
-- [Compliance overview](https://ferroehr.eu/docs/latest/compliance/index.html): EHDS, CRA and data protection
-- [Changelog](CHANGELOG.md) and [milestones](https://github.com/FerroHEALTH/FerroEHR/milestones)
-- [Security policy](SECURITY.md) and [threat model](https://ferroehr.eu/docs/latest/threat-model.html)
-- [Contributing](CONTRIBUTING.md), [code of conduct](CODE_OF_CONDUCT.md), [support](SUPPORT.md), [governance](GOVERNANCE.md), [maintainers](MAINTAINERS.md) and the [AI statement](AI_STATEMENT.md)
+  and the [compliance overview](https://ferroehr.eu/docs/latest/compliance/index.html):
+  EHDS, CRA and data protection
+- The [changelog](CHANGELOG.md) and the
+  [GitHub releases](https://github.com/FerroHEALTH/FerroEHR/releases)
+
+## Support and contributing
+
+- [Support](SUPPORT.md), the [security policy](SECURITY.md) and the
+  [threat model](https://ferroehr.eu/docs/latest/threat-model.html)
+- [Contributing](CONTRIBUTING.md), [code of conduct](CODE_OF_CONDUCT.md),
+  [governance](GOVERNANCE.md), [maintainers](MAINTAINERS.md) and the
+  [AI statement](AI_STATEMENT.md)
 
 ## Licence
 
-Business Source License 1.1 ([LICENSE](LICENSE)), with Apache License 2.0 as
-the Change License four years after each version; the
-[licensing page](https://ferroehr.eu/docs/latest/licensing.html) says when you
-need a commercial licence from Cadasto B.V.
+Business Source License 1.1 ([LICENSE](LICENSE)): free outside production
+and for non-commercial production use, a commercial licence from Cadasto
+B.V. for other production use, and Apache License 2.0 four years after each
+version. The [licensing page](https://ferroehr.eu/docs/latest/licensing.html)
+says which applies to you.

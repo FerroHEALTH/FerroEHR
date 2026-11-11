@@ -18,6 +18,15 @@
     reason = "product identifiers (SeaweedFS, object_store, …) read as prose in \
               this module's docs"
 )]
+#![cfg_attr(
+    feature = "schema",
+    expect(
+        clippy::disallowed_types,
+        reason = "owner-approved 2026-08-03 (#1694 family 8, OpenAPI schema literals): the \
+                  schemars derive builds the JSON Schema of this module's configuration type \
+                  with serde_json::Map, which no item-level attribute reaches"
+    )
+)]
 
 use std::path::PathBuf;
 
@@ -30,6 +39,7 @@ use url::Url;
 
 /// DV_MULTIMEDIA externalization settings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct MultimediaConfig {
     /// Master switch. `false` (default) = today's inline behaviour, byte for

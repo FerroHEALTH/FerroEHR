@@ -1125,6 +1125,17 @@ jobs:
       - name: docs-claims / Documented keys resolve in their source
         if: ${{ !cancelled() }}
         run: bash scripts/checks/docs-claims.sh --all
+
+      # ---- readme-quickstart -------------------------------------------
+      # The README's quick start is the anchored steps of docker/smoke-test.sh,
+      # which the containers workflow runs against the standalone
+      # docker-compose.yml; the guard refuses a README copy that drifts.
+      - name: readme-quickstart / The guard refuses each drift it claims to
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/readme-quickstart.sh --self-test
+      - name: readme-quickstart / The README shows the quick start CI runs
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/readme-quickstart.sh
       # Image metadata (#2146): the OCI keys are declared in two places — the
       # Dockerfile, so a direct build is labelled correctly, and the publishing
       # workflow, whose repo-derived defaults are wrong for a repo shipping three
@@ -1573,6 +1584,10 @@ jobs:
         run: bash scripts/checks/codegen-drift.sh --self-test
       - name: Regenerate and diff
         run: bash scripts/checks/codegen-drift.sh
+      # The configuration reference page, the reference TOML and the shipped
+      # default ferroehr.toml are generated from the configuration types (#5316).
+      - name: The configuration reference matches the configuration types
+        run: bash scripts/checks/config-reference.sh
       # The committed codegen inputs reproduce byte-identically from their
       # pinned upstream commits (vendored-corpora.md; fetched over https).
       - name: Codegen inputs match their pins

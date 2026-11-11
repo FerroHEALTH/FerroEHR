@@ -126,6 +126,7 @@ exceptions = [
   { allow = ["BUSL-1.1"], crate = "loadtest" },
   { allow = ["BUSL-1.1"], crate = "forwarders" },
   { allow = ["BUSL-1.1"], crate = "scaleseed" },
+  { allow = ["BUSL-1.1"], crate = "config-reference" },
   # The two hand-written spec engines carry the Business Source License
   # (owner decisions 2026-09-04 and 2026-09-24); the five generated model
   # crates, the openehr-its wire layer and openehr-query (2026-10-29) are

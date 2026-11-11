@@ -97,6 +97,7 @@ impl AbacConfig {
 
 /// The embedded-Cedar engine settings.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct CedarConfig {
     /// Directory of `*.cedar` policy files (required when `engine = cedar`).
@@ -110,6 +111,7 @@ pub struct CedarConfig {
 
 /// The remote-PDP client settings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct RemoteConfig {
     /// `[authz.abac.remote.endpoint]`, the family's outbound endpoint: the PDP

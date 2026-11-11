@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 /// The signing mode: a data-integrity digest, or an `OpenPGP` (RFC 4880) digital
 /// signature (RM common master06 §Digital Signature).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum Mode {
     /// `radix-64(SHA-256(canonical_form))` — a data-integrity check, no key
@@ -44,6 +45,7 @@ pub enum Mode {
 /// reader/receiver's role and marks the exact canonical serialisation "To Be
 /// Determined" — so this is our own integrity-hardening design, not conformance.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum VerifyOnRead {
     /// Serve the stored signature untouched (RM common master06 §Digital
@@ -62,6 +64,7 @@ pub enum VerifyOnRead {
 /// **on**, `digest` mode, and — with signing enabled — read-time verification
 /// **strict** (see [`Self::effective_verify_on_read`]).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct SigningConfig {
     /// Server-side signing of committed versions. Defaults **on** so the

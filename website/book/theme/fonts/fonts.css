@@ -1,0 +1,4 @@
+/* SPDX-FileCopyrightText: Cadasto B.V. */
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* Present so mdBook neither links nor copies its bundled web fonts. The book
+   sets the landing page's system font stack in ferroehr.css instead. */

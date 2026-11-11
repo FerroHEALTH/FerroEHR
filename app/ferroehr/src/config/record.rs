@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 /// The `[record]` table.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct RecordConfig {
     /// `subject_index`: who holds the subject-to-EHR cross-reference, the

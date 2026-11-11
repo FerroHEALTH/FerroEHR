@@ -59,6 +59,7 @@ pub(crate) const NEVER_A_KEY: [&str; 7] = [
 
 /// `[authz.party_binding.person]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct PersonSection {
     /// `[[authz.party_binding.person.template]]`, one per template a
@@ -70,6 +71,7 @@ pub struct PersonSection {
 
 /// One `[[authz.party_binding.person.template]]` table.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct PersonTemplate {
     /// An operational template in the definition store rooted at `PERSON`.
@@ -88,6 +90,7 @@ pub struct PersonTemplate {
 /// An identifier selector: the path of the `ELEMENT` holding the
 /// `DV_IDENTIFIER`, and its `type`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct Selector {
     /// The openEHR path.
@@ -99,6 +102,7 @@ pub struct Selector {
 
 /// One `[[authz.party_binding.person.attribute]]` table: a mapped value.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct PersonAttribute {
     /// A SCIM attribute path, with the RFC 7644 §3.4.2.2 `valuePath` filter
@@ -180,6 +184,7 @@ impl PersonAttribute {
 
 /// `[authz.party_binding.professional_role]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct RoleSection {
     /// An operational template rooted at `ROLE`.
@@ -188,6 +193,7 @@ pub struct RoleSection {
 
 /// `[authz.party_binding.group]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct GroupSection {
     /// An operational template rooted at `GROUP`.
@@ -200,6 +206,7 @@ pub struct GroupSection {
 
 /// `[authz.party_binding.membership]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct MembershipSection {
     /// A `PARTY_RELATIONSHIP` archetype.
@@ -208,6 +215,7 @@ pub struct MembershipSection {
 
 /// `[authz.party_binding.representation]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct RepresentationSection {
     /// A `PARTY_RELATIONSHIP` archetype whose `source` is the representative

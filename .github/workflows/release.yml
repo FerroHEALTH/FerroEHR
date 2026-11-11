@@ -339,7 +339,10 @@ jobs:
       - name: Pin the attached quickstart to this release
         env:
           VERSION: ${{ needs.plan.outputs.version }}
-        run: bash scripts/release/quickstart-compose.sh "$VERSION" docker-compose.yml
+        run: |
+          set -euo pipefail
+          bash scripts/release/quickstart-compose.sh "$VERSION" docker-compose.yml
+          sha256sum docker-compose.yml > docker-compose.yml.sha256sum
 
       - name: Create the GitHub release as a draft
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
@@ -356,6 +359,7 @@ jobs:
           # clone the repo to run the release.
           files: |
             docker-compose.yml
+            docker-compose.yml.sha256sum
             docker-compose.keycloak.yml
             docker-compose.observability.yml
             docker-compose.db-publish.yml
@@ -609,6 +613,7 @@ jobs:
           for asset in \
             "ferroehr-${TAG}.spdx.json" \
             "docker-compose.yml" \
+            "docker-compose.yml.sha256sum" \
             "docker-compose.keycloak.yml" \
             "docker-compose.observability.yml" \
             "docker-compose.db-publish.yml" \

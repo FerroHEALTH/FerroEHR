@@ -301,8 +301,8 @@ ferrobridge-term = { version = "0.4.0", default-features = false, features = ["r
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
 # crates.io 2026-11-10.
-ihe-atna = { version = "=0.11.0", default-features = false }
-ehds-logging = { version = "=0.11.0", default-features = false }
+ihe-atna = { version = "=0.11.1", default-features = false }
+ehds-logging = { version = "=0.11.1", default-features = false }
 # The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
 # the viewer reads the ITI-81 searchset, each BALP `AuditEvent` and a refusal's
 # `OperationOutcome` through it. `r4-resources` compiles R4's resources alone;
@@ -371,6 +371,11 @@ serde = { version = "1", features = ["derive", "rc"] }
 # float_roundtrip: a parsed decimal is the exact nearest double, which the
 # RFC 8785 number form of a signed VERSION is computed from.
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
+# The JSON Schema of the configuration tree (`schema` feature of `ferroehr`),
+# from which the configuration reference and the default ferroehr.toml are
+# generated (#5316). The family crates derive it on the sections they own.
+# Verified on crates.io 2026-11-10.
+schemars = { version = "1.2.2", default-features = false, features = ["derive", "std"] }
 # Number formatters for the openehr-its native canonical-JSON codec
 # (`json_codec`): integers via itoa (byte-identical to serde_json), reals via
 # ryu (the chosen canonical REAL lexeme — spec-silent, our own design; see

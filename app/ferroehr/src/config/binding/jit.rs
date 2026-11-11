@@ -25,6 +25,7 @@ use super::person::{NEVER_A_KEY, Source};
 
 /// One `[[authz.party_binding.issuer]]` table.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct IssuerBinding {
     /// The `persons` issuer the table holds for.

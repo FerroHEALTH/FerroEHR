@@ -24,6 +24,7 @@ use ferrohealth_config::tls::TlsClientSection;
 
 /// Behaviour when an audit record cannot be enqueued/delivered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum FailMode {
     /// Log + meter the drop and let the request succeed (common ATNA default).
@@ -38,6 +39,7 @@ pub enum FailMode {
 /// The local Audit Record Repository (`[audit.store]`) — the PG-backed store
 /// ([`crate::system_log::store`]), the durability anchor of the subsystem.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct StoreConfig {
     /// Persist every record locally (`FERROEHR__AUDIT__STORE__ENABLED`).
@@ -159,6 +161,7 @@ impl StoreConfig {
 /// between two delivery attempts. A sink's forwarder retries until the record
 /// is delivered, so the table has no attempt count.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct SinkRetry {
     /// The longest wait between two delivery attempts after a failure.
@@ -177,6 +180,7 @@ impl Default for SinkRetry {
 /// record over syslog (IHE ITI TF-2 ITI-20; the RFC 5424 message over RFC 5425
 /// TLS, sent through `ihe-atna`). Present, records are shipped.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct SyslogConfig {
     /// The Audit Record Repository, `tls://host:port`
@@ -285,6 +289,7 @@ impl SyslogConfig {
 /// from the store (`audit.fhir_feed_outbox`), so a down ARR loses
 /// nothing; with the store off it delivers from an in-memory spool.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct FhirFeedConfig {
     /// `[audit.fhir_feed.endpoint]`, the family's outbound endpoint: the ARR's
@@ -340,6 +345,7 @@ impl Default for FhirFeedConfig {
 /// ATNA audit configuration (`[audit]`). Every field has a default; the
 /// all-defaults tree is **auditing on with only the local store active**.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct AuditConfig {
     /// Master switch (`FERROEHR__AUDIT__ENABLED`). **On by default** — every

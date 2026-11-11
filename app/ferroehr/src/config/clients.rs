@@ -22,6 +22,7 @@ use crate::config::binding::ProviderId;
 /// One `[[authz.system_client]]` table, keyed by `issuer` and `client_id`.
 // TODO(#5008): admit a system commit only from a declared client, within its facilities and writes.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct SystemClient {
     /// The `machines` or `persons` issuer of the client's tokens.
@@ -45,6 +46,7 @@ pub struct SystemClient {
 /// A facility a system client may commit for: an identifier issuer with the
 /// id, or with an id prefix.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct Facility {
     /// The issuer of the facility identifier.
@@ -58,6 +60,7 @@ pub struct Facility {
 
 /// The origin of what a system client commits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum Origin {
     /// It relays another system's record of a human act, such as HL7 v2.
@@ -68,6 +71,7 @@ pub enum Origin {
 
 /// The `[authz.import]` table.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct ImportConfig {
     /// The `creating_system_id` values whose wrapped committers may name a
