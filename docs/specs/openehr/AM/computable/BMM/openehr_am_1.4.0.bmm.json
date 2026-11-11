@@ -3,7 +3,7 @@
     "rm_publisher": "openehr",
     "schema_name": "am",
     "rm_release": "1.4.0",
-    "schema_revision": "1.4.0.2",
+    "schema_revision": "1.4.0.3",
     "schema_lifecycle_state": "stable",
     "schema_description": "openEHR Archetype Model",
     "schema_author": "Thomas Beale <thomas.beale@openehr.org>, code-generator",
@@ -195,6 +195,18 @@
                     "name": "units",
                     "documentation": "Optional units constraint.",
                     "type": "String"
+                },
+                "units_system": {
+                    "_type": "P_BMM_SINGLE_PROPERTY",
+                    "name": "units_system",
+                    "documentation": "Optional units system from which the code in `_units_` is defined, as for `DV_QUANTITY._units_system_`: a URI identifying a terminology containing units concepts.\n\nIf not set, the UCUM standard (case-sensitive codes) is assumed as the units system.",
+                    "type": "String"
+                },
+                "units_display_name": {
+                    "_type": "P_BMM_SINGLE_PROPERTY",
+                    "name": "units_display_name",
+                    "documentation": "Optional displayable form of `_units_`, as for `DV_QUANTITY._units_display_name_`, e.g. `'lb'` for `'[lb_av]'`.\n\nNOTE: The display name may be language-dependent, so it is better set in templates than in archetypes.",
+                    "type": "String"
                 }
             }
         },
@@ -251,12 +263,6 @@
                     "documentation": "Multi-axial identifier of this archetype in archetype space.",
                     "is_mandatory": true,
                     "type": "ARCHETYPE_ID"
-                },
-                "uid": {
-                    "_type": "P_BMM_SINGLE_PROPERTY",
-                    "name": "uid",
-                    "documentation": "OID identifier of this archetype.",
-                    "type": "HIER_OBJECT_ID"
                 },
                 "concept": {
                     "_type": "P_BMM_SINGLE_PROPERTY",

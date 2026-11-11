@@ -6,16 +6,16 @@ Re-pinned: 2026-11-05 from `37b317396eb9b5f03c4c422296a15bdd665028dd`. The six
 commits between them add repository scaffolding (`.claude/`, `AGENTS.md`,
 `.gitignore`) and the design note `docs/bmm-sync.md`; `components/` is
 byte-identical at both commits, so the vendored tree and the generated crates
-do not change, and ITS-BMM still republishes none of the four overlays below.
+do not change, and ITS-BMM still republishes none of the overlays below.
 Fetched: 2026-07-04 · Layout: **verbatim upstream `components/`** mirror,
 `json/` and `odin/` serializations (the `yaml/` one is not vendored: nothing
 here reads it).
 Reproduced by: `scripts/vendor/codegen-inputs.sh` (`--check` proves the
 committed tree, overlays included, matches the pins below byte for byte).
 License: Apache-2.0 (the ITS-BMM repo's `LICENSE`; root reference copy
-`LICENSE-APACHE-2.0`). The four component-repo overlay files below come from
-`specifications-BASE`, `specifications-RM`, `specifications-TERM` and
-`specifications-LANG`, whose repos are CC-BY-SA 3.0 — each is the same BMM artifact ITS-BMM redistributes
+`LICENSE-APACHE-2.0`). The five component-repo overlay files below come from
+`specifications-BASE`, `specifications-RM`, `specifications-AM`,
+`specifications-TERM` and `specifications-LANG`, whose repos are CC-BY-SA 3.0 — each is the same BMM artifact ITS-BMM redistributes
 under Apache-2.0, taken from the component repo only until ITS-BMM
 republishes it.
 
@@ -26,7 +26,7 @@ file is vendored verbatim from the component repo ITS-BMM redistributes from.
 Each is byte-identical to its reference twin under
 `docs/specs/openehr/<C>/computable/BMM/`, and `codegen-inputs.sh` fails when a
 twin is missing or differs. The component repos publish json only, so the
-ITS-BMM `odin/` serialization of each of these four versions predates the
+ITS-BMM `odin/` serialization of each of these five versions predates the
 overlay; `codegen-inputs.sh` drops it rather than vendor a second, different
 text of the release (see "The odin serialization" below). Fold each back to a plain ITS-BMM pin at
 the next ITS-BMM bump.
@@ -35,6 +35,7 @@ the next ITS-BMM bump.
 |---|---|---|---|---|
 | `components/BASE/json/openehr_base_1.3.0.bmm.json` | specifications-BASE | `93abaf9f656b7bc87019458303c9d88f3f688ef8` | 2026-10-26 | SPECBASE-42 `TEMPLATE_ID` aligned with the HRID (its `value: Hrid` with `Value_valid` and the HRID functions), and the bracketed `Interval.has()` post-condition; before it, SPECBASE-49 `Hrid` primitive, SPECBASE-35/50 `ARCHETYPE_ID.value: Hrid` with `Value_valid` and the namespace/major/minor/patch functions; before it, SPECBASE-48 invariants, SPECAM-82 CODE_PHRASE package move, SPECPR-426/386/460 fixes |
 | `components/RM/json/openehr_rm_1.2.0.bmm.json` | specifications-RM | `09e481e9f2ed9e3f9d5b9257bd68c0679d80c7cc` | 2026-11-02 | `TRANSLATION_DETAILS.accreditaton` renamed `accreditation` (upstream PR #43, schema revision `1.2.0.3`); before it, SPECRM-103: the `INTERVAL_EVENT.time` documentation states the time is where the interval ends (documentation string only); before it, the asterisk-entity normalization of upstream PR #33 |
+| `components/AM/json/openehr_am_1.4.0.bmm.json` | specifications-AM | `38d767c898112994295f3332d45ec712ab72b7dd` | 2026-11-11 | schema revision `1.4.0.3`: SPECAM-109 gives `C_QUANTITY_ITEM` the optional `units_system` and `units_display_name` (as on RM `DV_QUANTITY`), and SPECPR-515 removes the `HIER_OBJECT_ID` redefinition of `ARCHETYPE.uid`, so `uid` is the `UUID` inherited from BASE `AUTHORED_RESOURCE` (`AOM1.4/master03-archetype_package.adoc` §Machine Identifier) |
 | `components/TERM/json/openehr_term_3.1.0.bmm.json` | specifications-TERM | `fa5f6e7bd29dc125cb91a3e4734e030ef291f890` | 2026-11-01 | BMM unchanged since `1232e59b` (SPECTERM-31 and SPECTERM-36 touch the computable XML only); | `status` default facet `""` -> `"active"` on CODE_SET, TERMINOLOGY_GROUP, CODE, TERMINOLOGY_CONCEPT; `includes` names `openehr_base_1.3.0` |
 | `components/LANG/json/openehr_lang_1.1.0.bmm.json` | specifications-LANG | `46406fe57c606aba7c0c7a9fd60a31bc7749c175` | 2026-11-02 | byte-identical to `f80763ab` (the commits between re-render the class tables only); at `f80763ab`, SPECLANG-16: `P_BMM_SCHEMA.primitive_types` and `class_definitions`, `P_BMM_CLASS.ancestor_defs` and `P_BMM_GENERIC_TYPE.generic_parameter_defs` become keyed `Hash` collections, with the `Generic_parameters_valid` invariant; `root_type` marked persisted; schema revision `1.1.0.3`. The `-bmm3` file is byte-identical at both pins and stays on the ITS-BMM pin |
 
@@ -44,8 +45,8 @@ the 2026-07-04 note below); the specifications-BASE file still carries the
 typo, so the generated doc comment regresses to authentic component-repo text.
 
 The ITS-BMM `components/` tree is vendored under `components/` here — all
-released versions in two serializations (**json**: 18 files; **odin**: 14, the
-four overlaid versions dropped).
+released versions in two serializations (**json**: 18 files; **odin**: 13, the
+five overlaid versions dropped).
 The `json` files are upstream's source of truth (`odin`/`yaml` are generated
 from them by `bmm-publisher`); we consume **json** for codegen. Upstream's
 `yaml/` serialization is excluded by `codegen-inputs.sh` because no code,
@@ -88,7 +89,7 @@ The `odin/` files are not codegen input. `openehr-lang`'s
 both P_BMM readers and requires the same `P_BMM_SCHEMA` value. The other
 `openehr-lang` tests over the component schemas (`tests/it/vendor_bmm_schema.rs`,
 `tests/it/el_assertions.rs`) read the json files codegen reads. For BASE 1.3.0,
-RM 1.2.0, TERM 3.1.0 and LANG 1.1.0 (the P_BMM file; its `-bmm3` twin keeps its
+RM 1.2.0, AM 1.4.0, TERM 3.1.0 and LANG 1.1.0 (the P_BMM file; its `-bmm3` twin keeps its
 ODIN file) no ODIN file is vendored: the ITS-BMM copies at
 `1c678406…` predate the json overlays above, and `codegen-inputs.sh` drops them.
 

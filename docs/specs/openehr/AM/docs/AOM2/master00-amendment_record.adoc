@@ -6,11 +6,17 @@
 
 4+^h|*AM Release 2.4.0 (unreleased)*
 
-|[[latest_issue]]2.4.2
+|[[latest_issue]]2.4.3
+|Add ADL 1.4 → ADL 2.4 conversion rules for additional translators (`other_contributors`), per-language `copyright` and `conversion_details` to the changes from release 2.3. ({spec_tickets}/SPECAM-107[SPECAM-107^], see also {spec_tickets}/SPECRM-119[SPECRM-119^])
+|S Kohler, +
+S Iancu
+|[[latest_issue_date]]02 Nov 2026
+
+|2.4.2
 |Correct text on machine identifiers: `build_uid` is mandatory and defined on `AUTHORED_ARCHETYPE`; `uid` is defined on `AUTHORED_RESOURCE`. ({spec_tickets}/SPECPR-366[SPECPR-366^])
 |S Garde, +
 S Kohler
-|[[latest_issue_date]]16 Oct 2026
+|16 Oct 2026
 
 |2.4.1
 |Fix typos. ({spec_tickets}/SPECPR-387[SPECPR-387^])
