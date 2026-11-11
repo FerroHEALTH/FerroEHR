@@ -652,7 +652,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
         ..ferroehr::config::scim::ScimConfig::default()
     });
     cfg.auth.shared.issuer = vec![ferrohealth_smart::config::IssuerEntry {
-        issuer: "https://idp.example".to_owned(),
+        issuer: SecretUrl::new("https://idp.example"),
         introspection: Some(ferrohealth_smart::config::IntrospectionSection {
             endpoint: leaky(13),
             ..ferrohealth_smart::config::IntrospectionSection::default()

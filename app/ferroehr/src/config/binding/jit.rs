@@ -217,7 +217,7 @@ mod tests {
         let section = AuthSection {
             enabled: true,
             issuer: vec![IssuerEntry {
-                issuer: ISSUER.to_owned(),
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
                 kind: Some(IssuerKind::Persons),
                 audience: vec!["ferroehr".to_owned()],
                 ..IssuerEntry::default()

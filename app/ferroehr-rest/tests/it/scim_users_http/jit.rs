@@ -458,7 +458,7 @@ fn callers_config(guests_jit: bool) -> AppConfig {
         .shared
         .issuer
         .iter_mut()
-        .find(|entry| entry.issuer == PERSONS)
+        .find(|entry| entry.issuer.expose() == PERSONS)
     {
         persons.guest = Some(vec![Marker::Claim {
             claim: "acct".to_owned(),
@@ -469,7 +469,7 @@ fn callers_config(guests_jit: bool) -> AppConfig {
     {
         let entries = &mut config.auth.shared.issuer;
         entries.push(IssuerEntry {
-            issuer: PATIENTS.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(PATIENTS),
             kind: Some(IssuerKind::Patients),
             audience: vec![AUDIENCE.to_owned()],
             jwks_file: common::jwks_file().display().to_string(),

@@ -158,7 +158,7 @@ async fn serve_also(
             .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),
     );
     let mut entries = vec![IssuerEntry {
-        issuer: FEDERATION.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION),
         kind: Some(IssuerKind::Federation),
         audience: vec![AUDIENCE.to_owned()],
         jwks_file: common::jwks_file().display().to_string(),
@@ -704,7 +704,7 @@ const CONTACT_POINT: &str = "https://ncpeh-a.example";
 /// eHDSI mapping, and the `[auth.dpop]` table its sender constraint needs.
 fn contact_point() -> (IssuerEntry, FederationSection, DpopSection) {
     let entry = IssuerEntry {
-        issuer: CONTACT_POINT.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(CONTACT_POINT),
         kind: Some(IssuerKind::Federation),
         audience: vec![AUDIENCE.to_owned()],
         jwks_file: common::jwks_file().display().to_string(),

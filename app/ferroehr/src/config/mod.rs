@@ -577,7 +577,7 @@ mod tests {
         let [issuer] = c.auth.shared.issuers() else {
             panic!("one issuer table from the env");
         };
-        assert_eq!(issuer.issuer, "https://idp");
+        assert_eq!(issuer.issuer.expose(), "https://idp");
         assert_eq!(
             issuer.kind,
             Some(ferrohealth_smart::kind::IssuerKind::Persons)

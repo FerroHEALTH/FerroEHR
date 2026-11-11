@@ -63,7 +63,7 @@ fn binding() -> PartyBindingConfig {
 
 fn config(rate: Option<CallerRate>) -> AppConfig {
     let machines = IssuerEntry {
-        issuer: MACHINES.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
         kind: Some(IssuerKind::Machines),
         profile: Preset::Rfc9068,
         audience: vec![AUDIENCE.to_owned()],

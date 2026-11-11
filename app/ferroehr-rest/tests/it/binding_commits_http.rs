@@ -59,7 +59,7 @@ fn deployment() -> AppConfig {
     {
         let entries = &mut config.auth.shared.issuer;
         entries.push(IssuerEntry {
-            issuer: MACHINES.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
             kind: Some(IssuerKind::Machines),
             audience: vec![MACHINE_AUDIENCE.to_owned()],
             jwks_file: jwks_file.clone(),
