@@ -67,7 +67,7 @@ pub(crate) fn config(person_key: Option<&str>) -> AppConfig {
             ..common::entry(ISSUER, AUDIENCE)
         }],
         party: vec![PartySection {
-            issuer: ISSUER.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
             identifier_issuer: LOGIN.to_owned(),
             identifier_type: "guid".to_owned(),
             group_claim: "groups".to_owned(),

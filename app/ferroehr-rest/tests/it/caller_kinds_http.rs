@@ -137,14 +137,14 @@ fn config_marked(
         ],
         party: vec![
             PartySection {
-                issuer: ISSUER.to_owned(),
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
                 identifier_issuer: LOGIN.to_owned(),
                 identifier_type: "guid".to_owned(),
                 guests,
                 ..PartySection::default()
             },
             PartySection {
-                issuer: KEYCLOAK_STAFF.to_owned(),
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(KEYCLOAK_STAFF),
                 identifier_issuer: KEYCLOAK_LOGIN.to_owned(),
                 identifier_type: "guid".to_owned(),
                 ..PartySection::default()

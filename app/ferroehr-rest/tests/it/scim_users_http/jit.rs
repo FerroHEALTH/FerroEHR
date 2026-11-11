@@ -481,7 +481,7 @@ fn callers_config(guests_jit: bool) -> AppConfig {
         .shared
         .party
         .iter_mut()
-        .find(|party| party.issuer == PERSONS)
+        .find(|party| party.issuer.expose() == PERSONS)
     {
         party.guests = true;
     }

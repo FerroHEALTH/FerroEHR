@@ -276,7 +276,7 @@ fn config() -> AppConfig {
         ..common::entry(issuer, AUDIENCE)
     };
     let party = |issuer: &str, identifier_issuer: &str, groups: &str| PartySection {
-        issuer: issuer.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer),
         identifier_issuer: identifier_issuer.to_owned(),
         identifier_type: "guid".to_owned(),
         group_claim: "groups".to_owned(),

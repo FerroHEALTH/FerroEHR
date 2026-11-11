@@ -79,7 +79,7 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
     let mut auth = common::auth(AuthSection {
         issuer: vec![machines, persons],
         party: vec![PartySection {
-            issuer: PERSONS.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(PERSONS),
             identifier_issuer: LOGIN.to_owned(),
             identifier_type: "guid".to_owned(),
             ..PartySection::default()

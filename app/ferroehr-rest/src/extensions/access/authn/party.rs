@@ -131,7 +131,7 @@ pub(super) fn binding(
     let mut identifier_issuers: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for party in &resolved.party {
         identifier_issuers
-            .entry(party.issuer.clone())
+            .entry(party.issuer.expose().to_owned())
             .or_default()
             .push(party.identifier_issuer.clone());
     }

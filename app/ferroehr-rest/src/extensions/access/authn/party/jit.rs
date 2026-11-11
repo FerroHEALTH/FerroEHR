@@ -120,7 +120,11 @@ pub(super) fn tables(binding: &PartyBindingConfig, resolved: &Resolved) -> BTree
         .filter_map(claimed)
         .collect();
     for table in binding.issuer.iter().filter(|t| t.jit) {
-        let Some(party) = resolved.party.iter().find(|p| p.issuer == table.issuer) else {
+        let Some(party) = resolved
+            .party
+            .iter()
+            .find(|p| p.issuer.expose() == table.issuer)
+        else {
             continue;
         };
         out.insert(
@@ -307,7 +311,7 @@ mod tests {
                 ..IssuerEntry::default()
             }],
             party: vec![PartySection {
-                issuer: ISSUER.to_owned(),
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
                 identifier_issuer: "urn:login".to_owned(),
                 identifier_type: "guid".to_owned(),
                 group_claim: "groups".to_owned(),

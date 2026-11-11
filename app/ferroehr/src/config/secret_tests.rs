@@ -291,16 +291,7 @@ fn url_userinfo_reaches_no_rendering() {
         "the usage report endpoint refuses userinfo"
     );
 
-    let toml = rendered(&c);
-    let table = c.to_redacted_table().expect("table").to_string();
-    let json = serde_json::to_string(&c.to_redacted_json().expect("json")).expect("json");
-    let debug = format!("{c:?}");
-    for (surface, rendered) in [
-        ("toml", &toml),
-        ("table", &table),
-        ("json", &json),
-        ("debug", &debug),
-    ] {
+    for (surface, rendered) in surfaces(&c) {
         assert!(
             !rendered.contains("URL_PW_SENTINEL"),
             "URL userinfo leaked into the {surface} rendering: {rendered}"
@@ -312,6 +303,20 @@ fn url_userinfo_reaches_no_rendering() {
             );
         }
     }
+}
+
+/// Every rendering of `c` an operator reads, by name: the TOML of `config
+/// check`, the redacted table and JSON, and `Debug`.
+fn surfaces(c: &FerroEhrConfig) -> [(&'static str, String); 4] {
+    [
+        ("toml", rendered(c)),
+        ("table", c.to_redacted_table().expect("table").to_string()),
+        (
+            "json",
+            serde_json::to_string(&c.to_redacted_json().expect("json")).expect("json"),
+        ),
+        ("debug", format!("{c:?}")),
+    ]
 }
 
 /// A refusal of an issuer or a published SMART URL never prints the
@@ -394,5 +399,80 @@ fn redacted_json_masks_every_secret_field() {
     assert_eq!(
         value["record"]["multimedia"]["access_key_id"],
         "AKIA_PUBLIC_ID"
+    );
+}
+
+/// The `[auth]` section the four tables that name an issuer are written
+/// under: one trusted persons issuer, with no userinfo.
+const NAMED_ISSUER: &str = "[auth]\nenabled = true\n\n[[auth.issuer]]\nissuer = \"https://idp.example/realms/ferroehr\"\nkind = \"persons\"\naudience = [\"ferroehr\"]\n";
+
+/// Loads `[auth]` with `table` beside its trusted issuer, and asserts the
+/// password `sentinel` in the table's issuer reaches no rendering of the
+/// tree and no refusal, while the issuer still renders under `host` with
+/// its userinfo masked (RFC 3986 §3.2.1).
+fn assert_table_issuer_masked(table: &str, sentinel: &str, host: &str) {
+    let file = toml_file(&format!("{NAMED_ISSUER}\n{table}"));
+    let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
+    for (surface, shown) in surfaces(&c) {
+        assert!(
+            !shown.contains(sentinel),
+            "the issuer's password leaked into the {surface} rendering: {shown}"
+        );
+        assert!(
+            shown.contains(&format!("https://***@{host}/realms/ferroehr")),
+            "the issuer lost its host in the {surface} rendering: {shown}"
+        );
+    }
+    let refused = c
+        .validate()
+        .expect_err("the issuer is not trusted")
+        .to_string();
+    assert!(
+        refused.contains(host),
+        "the refusal names the issuer: {refused}"
+    );
+    assert!(!refused.contains(sentinel), "{refused}");
+}
+
+/// An `[[auth.attributes]]` issuer renders and refuses with its userinfo
+/// masked.
+#[test]
+fn an_attributes_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[[auth.attributes]]\nissuer = \"https://u:ATTRIBUTES_PW_SENTINEL@attributes.example/realms/ferroehr\"\nmapping = \"iua\"\n",
+        "ATTRIBUTES_PW_SENTINEL",
+        "attributes.example",
+    );
+}
+
+/// An `[[auth.federation]]` issuer renders and refuses with its userinfo
+/// masked.
+#[test]
+fn a_federation_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[[auth.federation]]\nissuer = \"https://u:FEDERATION_PW_SENTINEL@federation.example/realms/ferroehr\"\ncontact_point = false\n",
+        "FEDERATION_PW_SENTINEL",
+        "federation.example",
+    );
+}
+
+/// An `[[auth.party]]` issuer renders and refuses with its userinfo masked.
+#[test]
+fn a_party_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[[auth.party]]\nissuer = \"https://u:PARTY_PW_SENTINEL@party.example/realms/ferroehr\"\nidentifier_issuer = \"urn:example:login\"\nidentifier_type = \"guid\"\n",
+        "PARTY_PW_SENTINEL",
+        "party.example",
+    );
+}
+
+/// An `auth.scopeless_subjects` issuer renders and refuses with its
+/// userinfo masked.
+#[test]
+fn a_scopeless_subject_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[[auth.scopeless_subjects]]\nissuer = \"https://u:SCOPELESS_PW_SENTINEL@scopeless.example/realms/ferroehr\"\nsub = \"svc\"\n",
+        "SCOPELESS_PW_SENTINEL",
+        "scopeless.example",
     );
 }

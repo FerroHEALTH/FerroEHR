@@ -564,7 +564,9 @@ mod tests {
     fn a_scopeless_subject_allowlist_boots() {
         let mut cfg = valid();
         cfg.scopeless_subjects = vec![ScopelessSubject {
-            issuer: "https://idp.example/realms/ferroehr".to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(
+                "https://idp.example/realms/ferroehr",
+            ),
             sub: "svc".to_owned(),
         }];
         assert!(validate(&cfg).is_ok(), "{:?}", validate(&cfg));
