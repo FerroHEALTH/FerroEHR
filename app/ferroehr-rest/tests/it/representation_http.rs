@@ -98,6 +98,12 @@ struct Recorded {
     subjects: Vec<&'static str>,
 }
 
+/// The `PERSON` every login of [`Recorded`] binds.
+const REPRESENTATIVE: &str = "9c3d4e5f-6a7b-4c8d-8e9f-1a2b3c4d5e6f";
+/// The openEHR `subject_relationship` code [`Recorded`] records for every
+/// subject (`10|mother|`).
+const MOTHER: &str = "10";
+
 impl BindingSource for Recorded {}
 
 impl PartySource for Recorded {
@@ -106,7 +112,7 @@ impl PartySource for Recorded {
         _query: &'a Query<'a>,
     ) -> std::pin::Pin<Box<dyn Future<Output = Result<Lookup, SourceError>> + Send + 'a>> {
         let record = PartyRecord::new(
-            PartyRef::new(NAMESPACE, "PERSON", "9c3d4e5f-6a7b-4c8d-8e9f-1a2b3c4d5e6f"),
+            PartyRef::new(NAMESPACE, "PERSON", REPRESENTATIVE),
             PartyState::Active,
             Markers {
                 professional: false,
@@ -116,7 +122,10 @@ impl PartySource for Recorded {
         .with_represents(
             self.subjects
                 .iter()
-                .map(|id| Represented::new(PartyRef::new(NAMESPACE, "PERSON", *id)))
+                .map(|id| {
+                    Represented::new(PartyRef::new(NAMESPACE, "PERSON", *id))
+                        .with_relationship(MOTHER)
+                })
                 .collect(),
         );
         Box::pin(async move { Ok(Lookup::Parties(vec![record])) })
@@ -319,4 +328,82 @@ async fn a_persons_token_with_patient_grants_reaches_its_launch_ehr_and_never_co
     let committer = &version["commit_audit"]["committer"];
     assert_ne!(committer["_type"], "PARTY_SELF", "{committer}");
     assert_eq!(committer["_type"], "PARTY_IDENTIFIED", "{committer}");
+}
+
+/// #5002: a representative commits under their own bound `PERSON` as a
+/// `PARTY_RELATED` whose `relationship` is the `subject_relationship` code
+/// the party source records for the subject, never as `PARTY_SELF` (RM
+/// common `master04-generic_package.adoc`: `PARTY_RELATED` "is used whenever
+/// the relationship of the party to the record subject is required"; EHDS
+/// Art. 5). The committer's shape is our own design.
+#[tokio::test]
+async fn a_representatives_commit_names_its_person_and_the_recorded_relationship() {
+    let (_db, svc) = service().await;
+    svc.template_adl14_upload(&common::ips_opt_xml())
+        .await
+        .expect("the template uploads");
+    let child = ehr(&svc, Some(CHILD)).await;
+    let app = router(
+        Arc::clone(&svc),
+        Arc::new(Recorded {
+            subjects: vec![CHILD],
+        }),
+    )
+    .await;
+    let credential = representative(CHILD);
+    let mut composition = common::ips_canonical_composition();
+    if let Some(object) = composition.as_object_mut() {
+        object.remove("uid");
+        object.insert(
+            "composer".to_owned(),
+            json!({ "_type": "PARTY_RELATED", "name": "Bea",
+                "relationship": { "_type": "DV_CODED_TEXT", "value": "mother",
+                    "defining_code": { "_type": "CODE_PHRASE",
+                        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                        "code_string": MOTHER } } }),
+        );
+    }
+    let (code, headers, body) = common::send(
+        &app,
+        common::req("POST", format!("{BASE}/ehr/{child}/composition"))
+            .auth(&credential)
+            .accept("application/json")
+            .json(composition.to_string())
+            .build(),
+    )
+    .await;
+    assert_eq!(
+        code,
+        StatusCode::CREATED,
+        "the representative's entry: {body}"
+    );
+    let uid = common::etag_uid(&headers);
+    let vo = uid.split("::").next().expect("a versioned object id");
+    let (code, body) = status(
+        &app,
+        "GET",
+        &format!("/ehr/{child}/versioned_composition/{vo}/version/{uid}"),
+        &credential,
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK, "the stored version: {body}");
+    let version: Value = serde_json::from_str(&body).expect("a version");
+    let committer = &version["commit_audit"]["committer"];
+    assert_eq!(committer["_type"], "PARTY_RELATED", "{committer}");
+    assert_eq!(
+        (
+            &committer["external_ref"]["type"],
+            &committer["external_ref"]["id"]["value"]
+        ),
+        (&json!("PERSON"), &json!(REPRESENTATIVE)),
+        "the representative's own PERSON: {committer}"
+    );
+    assert_eq!(
+        (
+            &committer["relationship"]["defining_code"]["terminology_id"]["value"],
+            &committer["relationship"]["defining_code"]["code_string"]
+        ),
+        (&json!("openehr"), &json!(MOTHER)),
+        "the recorded relationship: {committer}"
+    );
 }
