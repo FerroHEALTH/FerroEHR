@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/postgres-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-11-10T16:00:00Z",
-  "version": 10,
+  "timestamp": "2026-11-11T00:00:00Z",
+  "version": 11,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -3138,6 +3138,126 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "The NULL dereference is in cms_signeddata_verify() in the PKINIT plugin (src/plugins/preauth/pkinit/pkinit_crypto_openssl.c, upstream commit 6a5d772002c1), reached when a KDC configured for PKINIT processes a request. The plugin ships in krb5-pkinit, which is not installed (the image's krb5 preauth plugin directory holds only spake.so), and the image runs no KDC."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-88822"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl-provider-legacy"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The ferroehr-postgres image is the official postgres:18 image on Debian trixie with the build-time GnuPG toolchain purged and gosu replaced by a POSIX-sh wrapper; its processes are the PostgreSQL server and its children, started by the upstream docker-entrypoint.sh. The server is built with OpenSSL and maps libssl.so.3 and libcrypto.so.3 from libssl3t64 for TLS on client connections (the ssl settings an operator enables), for SCRAM-SHA-256 and its tls-server-end-point channel binding (a hash of the server certificate), and for its own hashing and random numbers. The image also carries the openssl command-line program and the legacy provider (openssl-provider-legacy), which no process of the image runs or loads: the entrypoint and the server never execute openssl, and the legacy provider is loaded only when an OpenSSL configuration names it, which neither the image nor FerroEHR does. The flaw is in the QUIC stack of OpenSSL 3.5.7 (libssl): its automated peer detection reads the peer address into a buffer too short for it (OpenSSL security advisory of 2026-11-10). PostgreSQL speaks TLS over TCP through the SSL_CTX and SSL API on a stream socket and never creates a QUIC connection, so the QUIC code is not reached. Debian has no fix for trixie, and the statement goes when the image carries one."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-95691"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl-provider-legacy"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The ferroehr-postgres image is the official postgres:18 image on Debian trixie with the build-time GnuPG toolchain purged and gosu replaced by a POSIX-sh wrapper; its processes are the PostgreSQL server and its children, started by the upstream docker-entrypoint.sh. The server is built with OpenSSL and maps libssl.so.3 and libcrypto.so.3 from libssl3t64 for TLS on client connections (the ssl settings an operator enables), for SCRAM-SHA-256 and its tls-server-end-point channel binding (a hash of the server certificate), and for its own hashing and random numbers. The image also carries the openssl command-line program and the legacy provider (openssl-provider-legacy), which no process of the image runs or loads: the entrypoint and the server never execute openssl, and the legacy provider is loaded only when an OpenSSL configuration names it, which neither the image nor FerroEHR does. The flaw is in the QUIC client of OpenSSL 3.5.7 (libssl): a retransmitted CRYPTO frame releases packet storage the TLS record layer still reads (OpenSSL security advisory of 2026-11-10). PostgreSQL speaks TLS over TCP and never creates a QUIC connection, as client or server, so the QUIC code is not reached. Debian has no fix for trixie, and the statement goes when the image carries one."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-88823"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl-provider-legacy"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The ferroehr-postgres image is the official postgres:18 image on Debian trixie with the build-time GnuPG toolchain purged and gosu replaced by a POSIX-sh wrapper; its processes are the PostgreSQL server and its children, started by the upstream docker-entrypoint.sh. The server is built with OpenSSL and maps libssl.so.3 and libcrypto.so.3 from libssl3t64 for TLS on client connections (the ssl settings an operator enables), for SCRAM-SHA-256 and its tls-server-end-point channel binding (a hash of the server certificate), and for its own hashing and random numbers. The image also carries the openssl command-line program and the legacy provider (openssl-provider-legacy), which no process of the image runs or loads: the entrypoint and the server never execute openssl, and the legacy provider is loaded only when an OpenSSL configuration names it, which neither the image nor FerroEHR does. The flaw is in the AES-GCM-SIV cipher of OpenSSL 3.5.7 (libcrypto): a zero-length AAD update discards the AAD supplied before it (OpenSSL security advisory of 2026-11-10). AES-GCM-SIV is no TLS cipher suite (the TLS 1.3 suites of RFC 8446 Appendix B.4 and the TLS 1.2 suites name AES-GCM, AES-CCM and ChaCha20-Poly1305, never GCM-SIV), so the server's TLS never selects it. Outside TLS PostgreSQL selects a cipher by name only in the pgcrypto extension, whose cipher table holds no GCM-SIV mode, and FerroEHR creates no extension. Debian has no fix for trixie, and the statement goes when the image carries one."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-95692"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl-provider-legacy"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The ferroehr-postgres image is the official postgres:18 image on Debian trixie with the build-time GnuPG toolchain purged and gosu replaced by a POSIX-sh wrapper; its processes are the PostgreSQL server and its children, started by the upstream docker-entrypoint.sh. The server is built with OpenSSL and maps libssl.so.3 and libcrypto.so.3 from libssl3t64 for TLS on client connections (the ssl settings an operator enables), for SCRAM-SHA-256 and its tls-server-end-point channel binding (a hash of the server certificate), and for its own hashing and random numbers. The image also carries the openssl command-line program and the legacy provider (openssl-provider-legacy), which no process of the image runs or loads: the entrypoint and the server never execute openssl, and the legacy provider is loaded only when an OpenSSL configuration names it, which neither the image nor FerroEHR does. The flaw is in the AES-GCM-SIV cipher of OpenSSL 3.5.7 (libcrypto): an IV of the wrong length set through EVP_CipherInit_ex() is read out of bounds or truncated (OpenSSL security advisory of 2026-11-10). AES-GCM-SIV is no TLS cipher suite, so the server's TLS never selects it, and the pgcrypto extension, the one place PostgreSQL selects a cipher by name, holds no GCM-SIV mode; FerroEHR creates no extension. Debian has no fix for trixie, and the statement goes when the image carries one."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-107496"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl-provider-legacy"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The ferroehr-postgres image is the official postgres:18 image on Debian trixie with the build-time GnuPG toolchain purged and gosu replaced by a POSIX-sh wrapper; its processes are the PostgreSQL server and its children, started by the upstream docker-entrypoint.sh. The server is built with OpenSSL and maps libssl.so.3 and libcrypto.so.3 from libssl3t64 for TLS on client connections (the ssl settings an operator enables), for SCRAM-SHA-256 and its tls-server-end-point channel binding (a hash of the server certificate), and for its own hashing and random numbers. The image also carries the openssl command-line program and the legacy provider (openssl-provider-legacy), which no process of the image runs or loads: the entrypoint and the server never execute openssl, and the legacy provider is loaded only when an OpenSSL configuration names it, which neither the image nor FerroEHR does. The flaw is in CMS_encrypt() and CMS_encrypt_ex() of OpenSSL 3.5.7 (libcrypto), which loop without end for an EC recipient certificate whose group order is 1; the advisory states that the TLS and QUIC implementations do not use this path (OpenSSL security advisory of 2026-11-10). PostgreSQL writes no CMS message, and the openssl program, whose cms command can, is never run in the image. Debian has no fix for trixie, and the statement goes when the image carries one."
     }
   ]
 }

@@ -20,7 +20,7 @@ has no matching section here.
 
 ## [5.7.0-rc3] - 2026-11-11
 
-5.7.0-rc3 is the third release candidate of 5.7.0, published for testing. It carries every change since 5.6.3, those of the 5.7.0-rc2 and 5.7.0-rc1 sections below included. 5.6.3 stays the stable release: this pre-release moves neither the `latest` image tags, the book under `/docs/latest/` nor the hosted sandbox, it publishes no crates, and it receives no fixes; the next release candidate or 5.7.0 itself replaces it. Since 5.7.0-rc2, FerroEHR runs on the newest FerroHEALTH family releases (`ferrohealth-smart` 0.18.0, `ferrohealth-session` 0.12.0, `ferrohealth-authz` 0.11.0, `ihe-atna` and `ehds-logging` 0.12.0, `ihe-iti` 0.4.0, `ferrobridge-term` 0.5.0), every outbound client is built from the family endpoint table, and the configuration is redacted by its secret types alone, so every URL and issuer renders with its credentials masked. The quickstart, the hosted sandbox and the chart move to FerroPIX 0.0.26 and FerroTERM 0.4.5. The audit record takes the purpose of use and the professional role from an IHE IUA token and records a contact point's request message id; audit migration 0026 adds their columns. The `openehr-*` crates are judged by Cargo SemVer, and their next publish moves the line to 0.1.0. Before you try it, run `ferroehr config check` on your file: it names every key a release before 5.7.0 read with its replacement, all at once. The steps for party binding are on the book's bootstrap and migration page. Helm chart 25.0.1-rc4 carries `appVersion` 5.7.0-rc3. Security carries the two advisories of 5.7.0-rc2, GHSA-jhg2-jwjp-hq74 and GHSA-pfgx-xq28-2629, the zlib fixes in the three images, and the `not_affected` judgements of the MIT Kerberos CVEs in the PostgreSQL image, the thirteen of MITKRB5-SA-2026-001 among them, and of three OpenSSL 3.5.7 CVEs in the `ferroehr` and `ferroehr-viewer` images.
+5.7.0-rc3 is the third release candidate of 5.7.0, published for testing. It carries every change since 5.6.3, those of the 5.7.0-rc2 and 5.7.0-rc1 sections below included. 5.6.3 stays the stable release: this pre-release moves neither the `latest` image tags, the book under `/docs/latest/` nor the hosted sandbox, it publishes no crates, and it receives no fixes; the next release candidate or 5.7.0 itself replaces it. Since 5.7.0-rc2, FerroEHR runs on the newest FerroHEALTH family releases (`ferrohealth-smart` 0.18.0, `ferrohealth-session` 0.12.0, `ferrohealth-authz` 0.11.0, `ihe-atna` and `ehds-logging` 0.12.0, `ihe-iti` 0.4.0, `ferrobridge-term` 0.5.0), every outbound client is built from the family endpoint table, and the configuration is redacted by its secret types alone, so every URL and issuer renders with its credentials masked. The quickstart, the hosted sandbox and the chart move to FerroPIX 0.0.26 and FerroTERM 0.4.5. The audit record takes the purpose of use and the professional role from an IHE IUA token and records a contact point's request message id; audit migration 0026 adds their columns. The `openehr-*` crates are judged by Cargo SemVer, and their next publish moves the line to 0.1.0. Before you try it, run `ferroehr config check` on your file: it names every key a release before 5.7.0 read with its replacement, all at once. The steps for party binding are on the book's bootstrap and migration page. Helm chart 25.0.1-rc4 carries `appVersion` 5.7.0-rc3. Security carries the two advisories of 5.7.0-rc2, GHSA-jhg2-jwjp-hq74 and GHSA-pfgx-xq28-2629, the zlib fixes in the three images, and the `not_affected` judgements of the MIT Kerberos CVEs in the PostgreSQL image, the thirteen of MITKRB5-SA-2026-001 among them, and of the five OpenSSL 3.5.7 CVEs of 2026-11-10 in the three images.
 
 ### Added
 
@@ -990,14 +990,18 @@ Shipped with functional changes because: the advisory reaches only a deployment 
   server keytab, and the server never reads a PAC or an authentication
   indicator (`security/vex/postgres-os.openvex.json`) (#5374).
 
-- Three OpenSSL 3.5.7 CVEs of the advisory of 2026-11-10 in the `ferroehr`
-  and `ferroehr-viewer` images' `libssl3t64` `3.5.7-1~deb13u3` have no
-  Debian fix for trixie and are judged `not_affected`: the AES-GCM-SIV flaws
-  CVE-2026-88823 and CVE-2026-95692 in `libcrypto` and the QUIC flaw
-  CVE-2026-95691 in `libssl`. Neither program maps `libssl.so.3` or
-  `libcrypto.so.3`: each links only `libc`, `libm` and `libgcc_s`, imports
-  no `dlopen`, and speaks TLS through rustls
-  (`security/vex/ferroehr-os.openvex.json`) (#5392).
+- The five OpenSSL 3.5.7 CVEs of the OpenSSL advisory of 2026-11-10 have no
+  Debian fix for trixie and are judged `not_affected` in the three images:
+  the AES-GCM-SIV flaws CVE-2026-88823 and CVE-2026-95692, the QUIC flaws
+  CVE-2026-88822 and CVE-2026-95691, and the `CMS_encrypt()` loop
+  CVE-2026-107496. The `ferroehr` and `ferroehr-viewer` programs never map
+  `libssl.so.3` or `libcrypto.so.3`: each links only `libc`, `libm` and
+  `libgcc_s`, imports no `dlopen`, and speaks TLS through rustls
+  (`security/vex/ferroehr-os.openvex.json`). The PostgreSQL server maps
+  both for TLS over TCP, which never selects AES-GCM-SIV (no TLS cipher suite
+  is one), never opens a QUIC connection and never writes CMS, and the image
+  never runs the `openssl` program or loads the legacy provider
+  (`security/vex/postgres-os.openvex.json`) (#5392).
 
 ## [5.7.0-rc2] - 2026-11-10
 
