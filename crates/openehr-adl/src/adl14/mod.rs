@@ -15,8 +15,11 @@
 //! archetypes, these are converted to id-codes by ADL 1.4 to ADL 2
 //! converters"), and `ADL2/master07.05-adl_identification.adoc` §Human Readable
 //! Archetype Identifier (convert a single-number 1.4 version part to `v1.0.0`
-//! or another Knowledge-Identification-conformant identifier). Every other rule
-//! below is ours, pinned by the paired
+//! or another Knowledge-Identification-conformant identifier). The meta-data
+//! half is governed too: the standardised items of
+//! `ADL1.4/masterAppB-extended_metadata.adoc` and the translator, copyright and
+//! conversion-record rules of `AOM2/master01-preface.adoc` §Release 2.3 changes
+//! (both in `metadata`). Every other rule below is ours, pinned by the paired
 //! `tests/corpus/adl2-reference/upgrade/upgrade_from_14/**` fixtures (each 1.4
 //! `.adl` source paired with its expected ADL2 `.adls`) — which are therefore
 //! the converter's only oracle.

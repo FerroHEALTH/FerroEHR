@@ -7,45 +7,180 @@
 //! this module owns everything that lands in `RESOURCE_DESCRIPTION` and the
 //! archetype HRID's version fields.
 //!
-//! NOTE: no openEHR spec governs 1.4→2 conversion — the whole `adl14` module is
-//! our own design (see the [`crate::adl14`] flag). The one exception lives here:
-//! the standardised `description/other_details` meta-data mapping, which
-//! `ADL1.4/masterAppB-extended_metadata.adoc` §Standardised Items governs
-//! directly — those items are "intended to be implemented by any ADL 1.4 =>
-//! ADL 2 conversion tool".
+//! The meta-data half is spec-governed in two places, the rest of the `adl14`
+//! module being our own design (see the [`crate::adl14`] flag):
+//!
+//! - the standardised `description/other_details` items, which
+//!   `ADL1.4/masterAppB-extended_metadata.adoc` §Standardised Items says "are
+//!   intended to be implemented by any ADL 1.4 => ADL 2 conversion tool";
+//! - the translator, copyright and conversion-record rules of
+//!   `AOM2/master01-preface.adoc` §Release 2.3 changes (SPECAM-107), applied by
+//!   [`transform_translations`], [`transform_description`] and
+//!   [`record_conversion`].
 
 use std::collections::BTreeMap;
 
 use openehr_am::v2_4::aom2::archetype::archetype_hrid_impl::version_status_of_modifier;
+use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetypeData;
+use openehr_am::v2_4::resource::resource_description::ResourceDescription;
+use openehr_base::v1_3::resource::translation_details::TranslationDetails;
+
+/// The `other_details` key an ADL 1.4 translation lists its additional
+/// translators under, one per line (`ADL1.4/master08-adl.adoc` §Language
+/// Section and Language Translation).
+const OTHER_CONTRIBUTORS: &str = "other_contributors";
+
+/// The `other_details` key a description item's copyright sits under.
+const COPYRIGHT: &str = "copyright";
+
+/// Apply the 1.4→2 meta-data transform to the translations and the
+/// description in place, then record the conversion.
+///
+/// `notes` are the conversion's non-mechanical decisions (collapse remaps,
+/// VCOSU re-mints), kept as conversion provenance in
+/// `RESOURCE_DESCRIPTION.conversion_details` under `code_remap_NNN`.
+pub(super) fn convert_meta_data(
+    data: &mut AuthoredArchetypeData,
+    record: &ConversionRecord<'_>,
+    notes: &[String],
+) {
+    if let Some(translations) = data.translations.as_mut() {
+        transform_translations(translations);
+    }
+    let Some(desc) = data.description.as_mut() else {
+        return;
+    };
+    transform_description(desc, &data.original_language.code_string);
+    if !notes.is_empty() {
+        let details = desc.conversion_details.get_or_insert_with(BTreeMap::new);
+        for (index, note) in notes.iter().enumerate() {
+            details.insert(format!("code_remap_{index:03}"), note.clone());
+        }
+    }
+    record_conversion(desc, record);
+}
 
 /// Apply the whole 1.4→2 `description` transform in place.
-pub(super) fn transform_description(
-    desc: &mut openehr_am::v2_4::resource::resource_description::ResourceDescription,
-) {
+///
+/// `original_language` is the archetype's original language code, whose
+/// description item carries the copyright the whole archetype takes.
+fn transform_description(desc: &mut ResourceDescription, original_language: &str) {
     // NOTE: every 1.4 lifecycle state converts to `unmanaged`, matching the
     // vendored `upgrade_from_14` expected `.adls`; no openEHR spec governs
     // 1.4→2 conversion — our own design/extension.
     "unmanaged".clone_into(&mut desc.lifecycle_state);
 
-    // Hoist `details[lang].copyright` (if any) up to `description.copyright`.
-    if desc.copyright.is_none()
-        && let Some(details) = desc.details.as_ref()
-        && let Some(cr) = details.values().find_map(|item| {
-            item.other_details
-                .as_ref()
-                .and_then(|o| o.get("copyright"))
-                .cloned()
-        })
-    {
-        desc.copyright = Some(cr);
-    }
-
+    convert_copyright(desc, original_language);
     convert_standardised_meta_data(desc);
 
     // Drop the consumed `revision` from other_details.
     if let Some(o) = desc.other_details.as_mut() {
         o.remove("revision");
     }
+}
+
+/// Move the ADL 1.4 per-language copyright to the one ADL 2
+/// `RESOURCE_DESCRIPTION.copyright`.
+///
+/// `AOM2/master01-preface.adoc` §Release 2.3 changes: the original language's
+/// copyright goes to `RESOURCE_DESCRIPTION.copyright`; a translation's
+/// copyright that differs from it stays in that translation's
+/// `other_details["copyright"]`, and one identical to it is dropped; with no
+/// original-language copyright the field stays empty. A description whose
+/// `copyright` is already populated is left as it is, nothing consumed.
+fn convert_copyright(desc: &mut ResourceDescription, original_language: &str) {
+    if desc.copyright.is_some() {
+        return;
+    }
+    let Some(details) = desc.details.as_mut() else {
+        return;
+    };
+    let original = details
+        .get_mut(original_language)
+        .and_then(|item| take_detail(&mut item.other_details, COPYRIGHT));
+    if let Some(original) = &original {
+        for (language, item) in details.iter_mut() {
+            let identical = item
+                .other_details
+                .as_ref()
+                .and_then(|o| o.get(COPYRIGHT))
+                .is_some_and(|copyright| copyright == original);
+            if language != original_language && identical {
+                take_detail(&mut item.other_details, COPYRIGHT);
+            }
+        }
+    }
+    desc.copyright = original;
+}
+
+/// Split each translation's ADL 1.4 `other_details["other_contributors"]` into
+/// `TRANSLATION_DETAILS.other_contributors`, one entry per non-blank line.
+///
+/// `AOM2/master01-preface.adoc` §Release 2.3 changes: converters "should map
+/// each line to one entry of `TRANSLATION_DETAILS._other_contributors_`". Each
+/// line is trimmed and blank lines are dropped; the key is consumed. A
+/// translation whose `other_contributors` is already populated, or whose value
+/// holds no non-blank line, keeps the key as it is.
+fn transform_translations(translations: &mut BTreeMap<String, TranslationDetails>) {
+    for translation in translations.values_mut() {
+        if translation
+            .other_contributors
+            .as_ref()
+            .is_some_and(|list| !list.is_empty())
+        {
+            continue;
+        }
+        let Some(raw) = translation
+            .other_details
+            .as_ref()
+            .and_then(|o| o.get(OTHER_CONTRIBUTORS))
+        else {
+            continue;
+        };
+        let lines: Vec<String> = raw
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(str::to_owned)
+            .collect();
+        if lines.is_empty() {
+            continue;
+        }
+        translation.other_contributors = Some(lines);
+        take_detail(&mut translation.other_details, OTHER_CONTRIBUTORS);
+    }
+}
+
+/// The record of one conversion: what was converted, by which tool, and when.
+#[derive(Debug)]
+pub(super) struct ConversionRecord<'a> {
+    /// The identifier of the ADL 1.4 archetype or template converted.
+    pub(super) source_model: &'a str,
+    /// The converter's name and version.
+    pub(super) tool: &'a str,
+    /// The moment of the conversion.
+    pub(super) time: jiff::Timestamp,
+}
+
+/// Record the conversion in `RESOURCE_DESCRIPTION.conversion_details` under the
+/// keys `AOM2/master01-preface.adoc` §Release 2.3 changes names:
+/// `"source_model"`, `"tool"` and `"time"` (ISO 8601).
+fn record_conversion(desc: &mut ResourceDescription, record: &ConversionRecord<'_>) {
+    let details = desc.conversion_details.get_or_insert_with(BTreeMap::new);
+    details.insert("source_model".to_owned(), record.source_model.to_owned());
+    details.insert("tool".to_owned(), record.tool.to_owned());
+    details.insert("time".to_owned(), record.time.to_string());
+}
+
+/// Remove `key` from an `other_details` map, returning its value; a map left
+/// empty becomes `None`, so no empty `other_details` is written.
+fn take_detail(other: &mut Option<BTreeMap<String, String>>, key: &str) -> Option<String> {
+    let map = other.as_mut()?;
+    let value = map.remove(key);
+    if map.is_empty() {
+        *other = None;
+    }
+    value
 }
 
 /// Convert the ADL 1.4 standardised `description/other_details` meta-data items
@@ -77,9 +212,7 @@ pub(super) fn transform_description(
 ///
 /// An AOM2 attribute already populated from elsewhere is never overwritten, and
 /// its `other_details` key is then left in place (nothing was consumed).
-fn convert_standardised_meta_data(
-    desc: &mut openehr_am::v2_4::resource::resource_description::ResourceDescription,
-) {
+fn convert_standardised_meta_data(desc: &mut ResourceDescription) {
     let Some(other) = desc.other_details.as_mut() else {
         return;
     };
