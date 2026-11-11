@@ -1,1 +1,0 @@
-- `openehr_rm::Generation::earliest_for_composition` answers the oldest RM generation whose canonical-JSON decode accepts a composition, so a builder can name `ARCHETYPED.rm_version` without naming a generation module; a value no generation decodes is a typed `NoGenerationDecodes` error carrying every generation's refusal.

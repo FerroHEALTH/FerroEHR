@@ -1,1 +1,0 @@
-- `openehr-its` reads the ITS-REST `ETag` as a typed entity tag: `rest::etag::EntityTag` parses and writes the RFC 9110 form, weak or strong, with the weak and strong comparisons. It types the tag as an `ObjectVersionId` or a `HierObjectId`. Every generated response-headers struct that carries an `ETag` gains `entity_tag()` beside the raw `etag` field.

@@ -1,1 +1,0 @@
-- AQL refuses a number, boolean or `null` parameter or literal compared with a date/time path, in `WHERE` and in a `VERSION` predicate, with the same `400` a non-ISO 8601 string gets; such a bound used to become `NULL` and match nothing.
