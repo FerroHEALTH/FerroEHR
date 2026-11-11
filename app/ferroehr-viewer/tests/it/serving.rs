@@ -240,9 +240,11 @@ async fn the_provider_client_trusts_the_ca_its_section_names() {
     let url = format!("https://localhost:{}", address.port());
     issuer.set(url.clone()).expect("set once");
     let section = |trust_roots_file: Option<PathBuf>| OidcSection {
-        issuer: url.clone(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(url.clone()),
         client_id: "ferroehr-viewer".to_owned(),
-        redirect_uri: "http://localhost:3000/auth/callback".to_owned(),
+        redirect_uri: ferrohealth_secret::secret_url::SecretUrl::new(
+            "http://localhost:3000/auth/callback".to_owned(),
+        ),
         tls: TlsClientSection {
             trust_roots_file,
             ..TlsClientSection::default()
@@ -289,9 +291,13 @@ fn an_unreadable_or_empty_roots_file_refuses_the_client() {
         assert!(chain.contains("cdr.tls.trust_roots_file"), "{chain}");
     }
     let refused = OidcSection {
-        issuer: "https://idp.example.org".to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(
+            "https://idp.example.org".to_owned(),
+        ),
         client_id: "ferroehr-viewer".to_owned(),
-        redirect_uri: "http://localhost:3000/auth/callback".to_owned(),
+        redirect_uri: ferrohealth_secret::secret_url::SecretUrl::new(
+            "http://localhost:3000/auth/callback".to_owned(),
+        ),
         tls: TlsClientSection {
             trust_roots_file: Some(dir.join("absent.pem")),
             ..TlsClientSection::default()
