@@ -154,8 +154,9 @@ every step. Three callers:
    seed-only) — verbs `wipe` (drop the CDR's five schemas on the private
    database box, plus the four superseded first-generation ones a box seeded
    before the storage rewrite still carries, with the DSN this box already
-   holds), `restart` (recreate the CDR so a fresh boot re-runs the
-   migrations against the wiped database) and `identities` (below).
+   holds), `deploy` (as above: the `ferroehr-definitions` one-shot loads the
+   party-binding templates into the wiped store, then the CDR boots fresh and
+   re-runs its migrations; #5406) and `identities` (below).
 
 The deploy key is restricted on the box to `deploy.sh` (`command=` in
 `cloud-init.yaml`), which reads `SSH_ORIGINAL_COMMAND` and accepts exactly
@@ -183,9 +184,9 @@ beside it, so **adding content is editing data**: a template slug, an EHR
 subject, an AQL file, a party. The walker itself never changes.
 
 The reseed seeds the release the sandbox runs, with that release's scripts
-(#4370). Its `identities` job reads `solution_version` from the ITS-REST
-system `OPTIONS /ferroehr/rest/openehr/v1`, and both the `identities` and the
-`seed` job check out the tag `v<version>`, so the routes the walker calls,
+(#4370). Its first job, `served`, reads `solution_version` from the ITS-REST
+system `OPTIONS /ferroehr/rest/openehr/v1` before anything is wiped, and both
+the `identities` and the `seed` job check out the tag `v<version>`, so the routes the walker calls,
 the corpus it loads and the manifest's pins are the deployed version's. A
 change to the walker or the dataset on `main` reaches the sandbox with the
 next release, and a version with no tag fails the run by name.
@@ -210,7 +211,7 @@ seeded version names the demo `PERSON`, and it reads the marker's
 
 ### The patients and FerroPIX
 
-The CDR resolves patients through FerroPIX (`[ehr_index] provider = "ihe"`),
+The CDR resolves patients through FerroPIX (`[record] subject_index = "pixm"`),
 so every `EHR_STATUS` names its patient by a pseudonym in the clinical domain
 `urn:oid:2.999.7.1` (`[privacy] subject_namespaces`). The manifest's subjects
 (`sandbox-patient-01` and on, and the marker) are the patients' identifiers in
@@ -223,9 +224,15 @@ as the CDR's client `ferroehr` (ITI-83), which mints its pseudonym on the
 first ask and answers the same one after. The answer is the file
 `reseed.sh` reads as `SANDBOX_IDENTITIES`. FerroPIX's database is never wiped,
 so every night answers the same pseudonyms, and after a reset the CDR's EHRs
-and FerroPIX's identities agree. A visitor sees the resolution through
+and FerroPIX's identities agree. The `identities` job refuses an answer whose namespace
+the served release's `[privacy] subject_namespaces` does not declare, or whose
+pseudonyms are not UUIDs, before the seed sends anything, and the
+`hosted-deploy-script` guard runs the verb on a stand-in box and holds every
+`EHR_STATUS` body `reseed.sh --render-ehrs` writes to the same list (#5409).
+The verb always runs the one-shot: it reads no CDR configuration key, since
+the copy on the box never sees a release rename one. A visitor sees the resolution through
 `POST /ferroehr/rest/extensions/v1/query/cohort` with `subjects` named in
-`urn:oid:2.999.1.1` (`[cohort] subjects = true`; the small-cell floor of 5
+`urn:oid:2.999.1.1` (`[privacy.cohort] subjects = true`; the small-cell floor of 5
 applies).
 
 FerroPIX and the CDR accept a plain-`http` token issuer only on loopback

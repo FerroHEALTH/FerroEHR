@@ -222,10 +222,11 @@ jobs:
   # stdin and answers each pseudonym, which the seed below writes into
   # EHR_STATUS. FerroPIX keeps its identities across the CDR's wipe, so every
   # night answers the same pseudonyms and the CDR's EHRs and FerroPIX agree.
-  # Under the in-instance map the verb answers `provider local` and the seed
-  # names the subjects themselves. Plain ssh, not the deploy action: the verb
-  # reads stdin and its answer is the job's output. The pseudonyms are
-  # synthetic and every visitor reads them on EHR_STATUS, so they are no secret.
+  # The answer is held to the served release's privacy.subject_namespaces
+  # before the seed sends anything, on every path (#5409). Plain ssh, not the
+  # deploy action: the verb reads stdin and its answer is the job's output.
+  # The pseudonyms are synthetic and every visitor reads them on EHR_STATUS,
+  # so they are no secret.
   identities:
     name: register the demo patients with FerroPIX (on the box)
     needs: [served, bring-up]
@@ -279,14 +280,26 @@ jobs:
                 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$dir/known_hosts" \
                 "deploy@$HOST" identities > "$dir/identities"
           provider="$(sed -n 's/^provider //p' "$dir/identities")"
-          case "$provider" in
-            local | ihe) ;;
-            *)
-              echo "::error::the box's identities verb answered no provider line; read the deploy script's output on the box." >&2
-              exit 1
-              ;;
-          esac
-          echo "the box resolves subjects through: $provider ($(grep -c '^subject ' "$dir/identities" || true) pseudonyms)"
+          if [ "$provider" != ihe ]; then
+            echo "::error::the box's identities verb answered provider '${provider}'; the sandbox runs FerroPIX, so the box holds a deploy.sh older than #5409, which decided from a configuration key the 5.7.0 CDR no longer has. Install /opt/ferroehr-sandbox/deploy.sh from deploy/hosted/cloud-init.yaml on the box." >&2
+            exit 1
+          fi
+          # Every subject the seed sends must name a pseudonym namespace the
+          # served release's sandbox configuration declares, with a UUID id:
+          # the CDR refuses any other EHR_STATUS subject (privacy.subject_namespaces).
+          namespace="$(sed -n 's/^pseudonym_namespace //p' "$dir/identities")"
+          declared="$(yq -p toml -o json '.privacy.subject_namespaces // []' deploy/hosted/ferroehr.sandbox.toml)"
+          if ! jq -e --arg ns "$namespace" 'any(.[]; . == $ns)' <<< "$declared" > /dev/null; then
+            echo "::error::the box answered the pseudonym namespace '${namespace}', which the served release's privacy.subject_namespaces does not declare: $(jq -c . <<< "$declared")." >&2
+            exit 1
+          fi
+          wanted="$(jq -r '.ehrs[].subject, .marker.subject' scripts/sandbox/seed/manifest.json | sort -u)"
+          answered="$(grep -E '^subject [A-Za-z0-9._-]+ [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' "$dir/identities" | cut -d' ' -f2 | sort -u || true)"
+          if [ "$wanted" != "$answered" ]; then
+            echo "::error::the box answered no UUID pseudonym for: $(comm -23 <(printf '%s\n' "$wanted") <(printf '%s\n' "$answered") | paste -sd' ' -)" >&2
+            exit 1
+          fi
+          echo "the box resolves subjects through FerroPIX: $(grep -c '^subject ' "$dir/identities") pseudonyms in $namespace"
           echo "identities=$(base64 -w0 < "$dir/identities")" >> "$GITHUB_OUTPUT"
 
   seed:
