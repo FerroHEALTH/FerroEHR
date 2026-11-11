@@ -10,23 +10,12 @@
 //! The text half only; the draft CLI writes the files.
 
 use crate::analyze::{augment_with_reemit, cross_schema_reemit};
+use crate::cli::EmittedFile;
 use crate::load::bmm::BmmSchema;
 use crate::load::impls::SiblingImpls;
 use crate::plan::drafts::{DRAFTS, DraftModule, compose_draft};
 use crate::render::{emit, emit_json};
 use std::path::{Path, PathBuf};
-
-/// One rendered draft file, before the value-carrier guard, the SPDX header
-/// and `rustfmt`.
-#[derive(Debug)]
-pub(crate) struct DraftFile {
-    /// Where the file lands, relative to the workspace root.
-    pub(crate) path: String,
-    /// The crate that owns the file, whose SPDX header it carries.
-    pub(crate) crate_name: &'static str,
-    /// The rendered body.
-    pub(crate) body: String,
-}
 
 /// The workspace root, two levels above this tool's manifest.
 pub(crate) fn workspace_root() -> PathBuf {
@@ -43,7 +32,7 @@ pub(crate) fn module_dir(draft: &DraftModule) -> String {
 ///
 /// # Errors
 /// Returns an error if a draft does not compose (`plan::drafts::compose_draft`).
-pub(crate) fn render_draft_files() -> Result<Vec<DraftFile>, Box<dyn std::error::Error>> {
+pub(crate) fn render_draft_files() -> Result<Vec<EmittedFile>, Box<dyn std::error::Error>> {
     let mut out = Vec::new();
     for draft in DRAFTS {
         let c = compose_draft(draft)?;
@@ -75,7 +64,7 @@ pub(crate) fn render_draft_files() -> Result<Vec<DraftFile>, Box<dyn std::error:
         );
         files.push((format!("{}/json_serde.rs", draft.module), json));
         for (path, body) in files {
-            out.push(DraftFile {
+            out.push(EmittedFile {
                 path: format!("{}/src/{path}", draft.crate_dir),
                 crate_name: draft.crate_name,
                 body,

@@ -5,7 +5,7 @@
 //! into each draft's application module, after wiping the module's previously
 //! generated files.
 
-use crate::cli::{remove_generated_files, rustfmt, write_generated};
+use crate::cli::{remove_generated_files, rustfmt, write_emitted};
 use crate::plan::drafts::DRAFTS;
 use crate::render::emit_drafts::{module_dir, render_draft_files, workspace_root};
 
@@ -23,15 +23,7 @@ pub(crate) fn cmd_emit_drafts() -> Result<(), Box<dyn std::error::Error>> {
             remove_generated_files(&dir)?;
         }
     }
-    let mut written = Vec::with_capacity(files.len());
-    for f in &files {
-        let full = root.join(&f.path);
-        if let Some(parent) = full.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        write_generated(&full, f.crate_name, &f.body)?;
-        written.push(full);
-    }
+    let written = write_emitted(&root, &files)?;
     rustfmt(&written)?;
     println!("emitted {} draft files", written.len());
     Ok(())

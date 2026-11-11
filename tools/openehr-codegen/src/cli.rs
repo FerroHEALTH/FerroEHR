@@ -68,7 +68,8 @@ pub(crate) const EXIT_USAGE: u8 = 2;
 /// cannot drift.
 #[derive(Debug)]
 pub(crate) struct EmittedFile {
-    /// Where the file lands, relative to the workspace `crates/` directory.
+    /// Where the file lands, relative to the root it is written under: the
+    /// workspace `crates/` directory, or the workspace for a draft module.
     pub(crate) path: String,
     /// The crate that owns the file, whose SPDX header it carries.
     pub(crate) crate_name: &'static str,
@@ -88,14 +89,13 @@ pub(crate) struct XsdEmission {
     pub(crate) unmatched: Vec<(String, String)>,
 }
 
-/// Write an emit target's rendered files into the workspace `crates/` tree,
-/// creating each file's parent directories, and return the written paths for
-/// the caller's `rustfmt` pass.
+/// Write an emit target's rendered files under `root` (the workspace `crates/`
+/// tree, or the workspace for a draft module), creating each file's parent
+/// directories, and return the written paths for the caller's `rustfmt` pass.
 ///
 /// # Errors
 /// Returns the underlying filesystem error.
-fn write_emitted(files: &[EmittedFile]) -> std::io::Result<Vec<PathBuf>> {
-    let root = crates_root();
+pub(crate) fn write_emitted(root: &Path, files: &[EmittedFile]) -> std::io::Result<Vec<PathBuf>> {
     let mut written = Vec::with_capacity(files.len());
     for f in files {
         let full = root.join(&f.path);
@@ -218,7 +218,7 @@ fn parse_model_query_args(
 /// for each API group into `openehr-its/src/rest/generated/`.
 pub(crate) fn cmd_emit_rest() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_rest_files()?;
-    let written = write_emitted(&files)?;
+    let written = write_emitted(&crates_root(), &files)?;
     rustfmt(&written)?;
     println!(
         "emitted {} files into {}",
@@ -327,7 +327,7 @@ pub(crate) fn render_rest_files() -> Result<Vec<EmittedFile>, Box<dyn std::error
 /// (`.../v1`, parity target) and v2 (`.../v2`, latest).
 pub(crate) fn cmd_emit_xml() -> Result<(), Box<dyn std::error::Error>> {
     let emission = render_xml_files()?;
-    let written = write_emitted(&emission.files)?;
+    let written = write_emitted(&crates_root(), &emission.files)?;
     rustfmt(&written)?;
     println!(
         "emitted {} files into {} ({} XSD-only elements without a BMM field skipped)",
@@ -420,7 +420,7 @@ pub(crate) fn render_xml_files() -> Result<XsdEmission, Box<dyn std::error::Erro
 /// cross-schema re-emission closure.
 pub(crate) fn cmd_emit_json() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_json_files()?;
-    let mut written = write_emitted(&files)?;
+    let mut written = write_emitted(&crates_root(), &files)?;
     for f in &files {
         if f.path.ends_with(JSON_SERDE_FILE) {
             let lib = crates_root().join(&f.path).with_file_name("lib.rs");
@@ -719,7 +719,7 @@ fn write_xsd_emission(
     target: &str,
     emission: &XsdEmission,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let written = write_emitted(&emission.files)?;
+    let written = write_emitted(&crates_root(), &emission.files)?;
     rustfmt(&written)?;
     println!(
         "{target}: emitted {} files into {} ({} XSD-only elements without a matching field \
@@ -738,7 +738,7 @@ fn write_xsd_emission(
 /// absent, so it is correct run standalone; `emit` produces the identical output.
 pub(crate) fn cmd_emit_rm_model() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_rm_model_files()?;
-    let mut written = write_emitted(&files)?;
+    let mut written = write_emitted(&crates_root(), &files)?;
     let src = crates_root().join(RM_CRATE).join("src");
     for g in &compose("rm")?.generations {
         // `emit` is the usual authority for the generation `mod.rs`, where it
@@ -818,7 +818,7 @@ fn rm_crate_files(files: Vec<GenFile>) -> Vec<EmittedFile> {
 /// produces the identical output (via `inject_validate`).
 pub(crate) fn cmd_emit_validate() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_validate_files()?;
-    let written = write_emitted(&files)?;
+    let written = write_emitted(&crates_root(), &files)?;
     rustfmt(&written)?;
     println!(
         "emitted {} file(s) into {}",
