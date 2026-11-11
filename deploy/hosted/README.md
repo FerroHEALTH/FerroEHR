@@ -198,7 +198,7 @@ binds the `PERSON` that carries its binding key `ferroehr` under
 request is refused `refused-unbound` while none does. The nightly wipe deletes
 every `PERSON`, so the compose file's `ferroehr-provision` service provisions
 it again the way an identity provider provisions people: as the
-`sandbox-scim` client (`[[scim.client]]`), with a client credentials token for
+`sandbox-scim` client (`[[auth.scim.client]]`), with a client credentials token for
 the scope `ferroehr/scim` from the development issuer, it asks
 `/scim/v2/Users` for `userName eq "ferroehr"` every 30 seconds and creates the
 User when it is missing (RFC 7644 §3.3). FerroEHR creates the `PERSON` and its

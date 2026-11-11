@@ -3028,6 +3028,10 @@ jobs:
         env:
           FERROEHR_CONFIG_IMAGE: ferroehr:quickstart-config
         run: bash scripts/checks/quickstart-config-image.sh
+      - name: Every other server configuration the repository ships reads under this change's server (#5396)
+        env:
+          FERROEHR_CONFIG_IMAGE: ferroehr:quickstart-config
+        run: bash scripts/checks/shipped-configs.sh
 
   # Veredictum pin guard (#4449): the conformance workflow runs the Veredictum
   # Action at the commit of the tag VEREDICTUM_VERSION names, on the image
