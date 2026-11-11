@@ -41,7 +41,7 @@ helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
   --version 25.0.1-rc3 -n ferroehr \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
-  --set image.tag=5.7.0-rc2 \
+  --set image.tag=5.7.0-rc3 \
   --set ferropix.enabled=false --set config.record.subject_index=local
 ```
 
@@ -82,7 +82,7 @@ against.
 | | Selects | Pin with | Line |
 |---|---|---|---|
 | Chart version | templates, values schema, defaults | `--version 25.0.1-rc3` | SemVer over the chart's own contract |
-| Image tag | the server binary | `--set image.tag=5.7.0-rc2` (or `image.digest`) | the application's SemVer line |
+| Image tag | the server binary | `--set image.tag=5.7.0-rc3` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
 never `latest`. Pin the two deliberately: the `config` tree is passed through to
@@ -1416,7 +1416,7 @@ The check that closes that gap runs the image against your rendered
 configuration:
 
 ```shell
-FERROEHR_IMAGE=ghcr.io/ferrohealth/ferroehr:5.7.0-rc2 \
+FERROEHR_IMAGE=ghcr.io/ferrohealth/ferroehr:5.7.0-rc3 \
   deploy/helm/ci/boot-check.sh my-values.yaml
 ```
 
