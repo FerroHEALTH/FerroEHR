@@ -17,7 +17,7 @@
 #   scripts/scim-provision.sh <base-url> <client-id> [--name <formatted>] <user>[=<login-key>]...
 #
 #   <base-url>   the server origin, such as http://localhost:8080
-#   <client-id>  the [[scim.client]] the token names; its binding_issuer
+#   <client-id>  the [[auth.scim.client]] the token names; its binding_issuer
 #                issues every key this call provisions
 #   <user>       the SCIM userName; <login-key> is the binding key the login
 #                carries (loginIdentifier), the userName when omitted

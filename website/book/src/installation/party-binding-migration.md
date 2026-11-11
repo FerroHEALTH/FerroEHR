@@ -40,7 +40,7 @@ start from, so it starts in this order:
 1. **Declare the identity provider's SCIM client.** It is an OAuth 2.0
    client-credentials client (RFC 6749 §4.4) of the deployment's
    authorization server with the provisioning scope: an `[[auth.issuer]]`
-   of kind `machines` that issues its tokens, and a `[[scim.client]]`
+   of kind `machines` that issues its tokens, and a `[[auth.scim.client]]`
    naming that issuer, the client, the scope and the `binding_issuer` its
    Users' keys are written under.
 2. **Provision the first person through `/scim/v2/`.** The identity
@@ -123,7 +123,7 @@ persons that perform no professional `ROLE` (which `adopt` has not
 reached), and every mapped Basic user with the `PERSON` it binds.
 
 For each key it reports the committer of the version that introduced the
-key, and fails unless that committer was a `[[scim.client]]`, an
+key, and fails unless that committer was a `[[auth.scim.client]]`, an
 administrator you name, a migration you declare, or just-in-time creation
 on an issuer with `jit = true`. A stored version records no role its
 committer held, so you name the administrators (`--admin`, `--admin-key`),
