@@ -124,14 +124,11 @@ write_files:
 
       # `identities` is the reseed's FerroPIX step (#4242): the demo subjects
       # arrive on stdin, one per line, and the answer on stdout is the file
-      # reseed.sh reads as SANDBOX_IDENTITIES. Under the in-instance map the
-      # answer says so and nothing runs; under FerroPIX the compose file's
-      # one-shot registers each subject and answers its pseudonym.
+      # reseed.sh reads as SANDBOX_IDENTITIES. The compose file's one-shot
+      # registers each subject and answers its pseudonym. The sandbox posture
+      # always runs FerroPIX, so nothing here reads the CDR's configuration,
+      # whose key names move with releases this copy never sees (#5409).
       if [[ "$verb" == "identities" ]]; then
-        if ! grep -qE '^provider = "ihe"' ferroehr.sandbox.toml; then
-          echo "provider local"
-          exit 0
-        fi
         subjects=()
         while IFS= read -r subject; do
           [[ -n "$subject" ]] || continue

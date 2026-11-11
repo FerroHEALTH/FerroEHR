@@ -861,7 +861,14 @@ jobs:
         uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: shellcheck@0.11.0
-      - name: hosted-deploy-script / The embedded deploy script is clean and its posture paths are baked
+      # The seed-subject check reads privacy.subject_namespaces with the runner's
+      # yq (#5409), held to the version the other yq readers are verified on.
+      - name: hosted-deploy-script / The runner's yq is 4.53.3 or newer
+        if: ${{ !cancelled() }}
+        env:
+          YQ_MIN_VERSION: 4.53.3
+        run: bash scripts/checks/runner-yq.sh
+      - name: hosted-deploy-script / The embedded deploy script is clean, its posture paths are baked and its seed names pseudonyms the sandbox declares
         if: ${{ !cancelled() }}
         run: bash scripts/checks/hosted-deploy-script.sh
       - name: hosted-deploy-script / The embedded deploy script's verb contract refuses a caller of a verb it lacks
