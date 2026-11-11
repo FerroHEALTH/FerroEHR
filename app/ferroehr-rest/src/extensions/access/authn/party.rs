@@ -570,7 +570,7 @@ pub(super) fn committer_identity(
         clients
             .iter()
             .find(|table| {
-                Some(table.issuer.as_str()) == caller.issuer() && table.client_id == named
+                Some(table.issuer.expose()) == caller.issuer() && table.client_id == named
             })
             .cloned()
     });

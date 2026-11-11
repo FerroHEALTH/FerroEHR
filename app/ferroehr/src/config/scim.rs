@@ -93,8 +93,9 @@ impl Default for ScimConfig {
 #[serde(default, deny_unknown_fields)]
 pub struct ScimClient {
     /// The issuer of the client's access tokens: the deployment's own
-    /// authorization server, an `[[auth.issuer]]` of kind `machines`.
-    pub issuer: String,
+    /// authorization server, an `[[auth.issuer]]` of kind `machines`. It
+    /// renders with any userinfo masked.
+    pub issuer: SecretUrl,
     /// The client the token names (`client_id`, failing that `azp`).
     pub client_id: String,
     /// The scope a token of the client must hold.
@@ -202,7 +203,7 @@ impl ScimConfig {
                 client.issuer, client.client_id
             );
             for (key, value) in [
-                ("issuer", &client.issuer),
+                ("issuer", client.issuer.expose()),
                 ("client_id", &client.client_id),
                 ("scope", &client.scope),
                 ("binding_issuer", &client.binding_issuer),
@@ -214,7 +215,7 @@ impl ScimConfig {
             if client.scope.split_whitespace().nth(1).is_some() {
                 errors.push(format!("{name} has a scope of more than one token"));
             }
-            if !clients.insert((client.issuer.as_str(), client.client_id.as_str())) {
+            if !clients.insert((client.issuer.expose(), client.client_id.as_str())) {
                 errors.push(format!("{name} is declared twice"));
             }
             if !client.binding_issuer.trim().is_empty()
@@ -237,7 +238,7 @@ impl ScimConfig {
 /// The refusals of `client`'s issuers against the resolved `[auth]` section.
 fn issuer_errors(client: &ScimClient, name: &str, resolved: &Resolved) -> Vec<String> {
     let mut errors = Vec::new();
-    match resolved.kinds.get(&client.issuer) {
+    match resolved.kinds.get(client.issuer.expose()) {
         Some(IssuerKind::Machines) => {}
         Some(kind) => errors.push(format!(
             "{name} names a {kind} issuer: a SCIM client acts for nobody, so its issuer is of \
@@ -265,7 +266,7 @@ mod tests {
 
     fn client(issuer: &str, client_id: &str, binding_issuer: &str) -> ScimClient {
         ScimClient {
-            issuer: issuer.to_owned(),
+            issuer: SecretUrl::new(issuer),
             client_id: client_id.to_owned(),
             scope: "scim".to_owned(),
             binding_issuer: binding_issuer.to_owned(),

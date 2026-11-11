@@ -402,8 +402,8 @@ fn redacted_json_masks_every_secret_field() {
     );
 }
 
-/// The `[auth]` section the four tables that name an issuer are written
-/// under: one trusted persons issuer, with no userinfo.
+/// The `[auth]` section every key that names an issuer is written under:
+/// one trusted persons issuer, with no userinfo.
 const NAMED_ISSUER: &str = "[auth]\nenabled = true\n\n[[auth.issuer]]\nissuer = \"https://idp.example/realms/ferroehr\"\nkind = \"persons\"\naudience = [\"ferroehr\"]\n";
 
 /// Loads `[auth]` with `table` beside its trusted issuer, and asserts the
@@ -411,6 +411,21 @@ const NAMED_ISSUER: &str = "[auth]\nenabled = true\n\n[[auth.issuer]]\nissuer = 
 /// tree and no refusal, while the issuer still renders under `host` with
 /// its userinfo masked (RFC 3986 §3.2.1).
 fn assert_table_issuer_masked(table: &str, sentinel: &str, host: &str) {
+    let refused = rendered_masked(table, sentinel, host)
+        .validate()
+        .expect_err("the issuer is not trusted")
+        .to_string();
+    assert!(
+        refused.contains(host),
+        "the refusal names the issuer: {refused}"
+    );
+    assert!(!refused.contains(sentinel), "{refused}");
+}
+
+/// Loads `[auth]` with `table` beside its trusted issuer, asserts every
+/// rendering shows the issuer under `host` with its userinfo masked and
+/// never the password `sentinel`, and returns the configuration.
+fn rendered_masked(table: &str, sentinel: &str, host: &str) -> FerroEhrConfig {
     let file = toml_file(&format!("{NAMED_ISSUER}\n{table}"));
     let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
     for (surface, shown) in surfaces(&c) {
@@ -423,15 +438,7 @@ fn assert_table_issuer_masked(table: &str, sentinel: &str, host: &str) {
             "the issuer lost its host in the {surface} rendering: {shown}"
         );
     }
-    let refused = c
-        .validate()
-        .expect_err("the issuer is not trusted")
-        .to_string();
-    assert!(
-        refused.contains(host),
-        "the refusal names the issuer: {refused}"
-    );
-    assert!(!refused.contains(sentinel), "{refused}");
+    c
 }
 
 /// An `[[auth.attributes]]` issuer renders and refuses with its userinfo
@@ -475,4 +482,76 @@ fn a_scopeless_subject_issuer_never_renders_its_userinfo() {
         "SCOPELESS_PW_SENTINEL",
         "scopeless.example",
     );
+}
+
+/// An `[[authz.federation.agreement]]` issuer renders and refuses with its
+/// userinfo masked.
+#[test]
+fn an_agreement_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[[authz.federation.agreement]]\nissuer = \"https://u:AGREEMENT_PW_SENTINEL@agreement.example/realms/ferroehr\"\naccessor = \"person\"\nname = \"cross-border\"\n",
+        "AGREEMENT_PW_SENTINEL",
+        "agreement.example",
+    );
+}
+
+/// An `[[authz.party_binding.issuer]]` issuer renders and refuses with its
+/// userinfo masked.
+#[test]
+fn a_party_binding_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[[authz.party_binding.issuer]]\nissuer = \"https://u:BINDING_PW_SENTINEL@binding.example/realms/ferroehr\"\njit = true\n",
+        "BINDING_PW_SENTINEL",
+        "binding.example",
+    );
+}
+
+/// An `[[authz.system_client]]` issuer renders and refuses with its userinfo
+/// masked.
+#[test]
+fn a_system_client_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[[authz.system_client]]\nissuer = \"https://u:SYSTEM_PW_SENTINEL@system.example/realms/ferroehr\"\nclient_id = \"lab\"\n",
+        "SYSTEM_PW_SENTINEL",
+        "system.example",
+    );
+}
+
+/// An `[[auth.scim.client]]` issuer renders and refuses with its userinfo
+/// masked.
+#[test]
+fn a_scim_client_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[[auth.scim.client]]\nissuer = \"https://u:SCIM_PW_SENTINEL@scim.example/realms/ferroehr\"\nclient_id = \"idm\"\nscope = \"scim\"\nbinding_issuer = \"urn:example:login\"\n",
+        "SCIM_PW_SENTINEL",
+        "scim.example",
+    );
+}
+
+/// An `authz.rbac.role_issuers` issuer renders and refuses with its userinfo
+/// masked.
+#[test]
+fn a_role_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[authz.rbac]\nrole_issuers = [\"https://u:ROLE_PW_SENTINEL@role.example/realms/ferroehr\"]\n",
+        "ROLE_PW_SENTINEL",
+        "role.example",
+    );
+}
+
+/// An `auth.smart.patient_issuers` issuer renders with its userinfo masked,
+/// and no refusal of the configuration carries it.
+#[test]
+fn a_patient_issuer_never_renders_its_userinfo() {
+    let c = rendered_masked(
+        "[auth.smart]\npatient_issuers = [\"https://u:PATIENT_PW_SENTINEL@patient.example/realms/ferroehr\"]\n",
+        "PATIENT_PW_SENTINEL",
+        "patient.example",
+    );
+    if let Err(refused) = c.validate() {
+        assert!(
+            !refused.to_string().contains("PATIENT_PW_SENTINEL"),
+            "{refused}"
+        );
+    }
 }

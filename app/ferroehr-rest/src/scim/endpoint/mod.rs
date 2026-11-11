@@ -242,7 +242,7 @@ async fn admit(State(gate): State<Gate>, request: Request, next: Next) -> Respon
     let issuer = caller.and_then(|caller| caller.issuer());
     let client_id = authn::client_of(&principal);
     let Some(client) = gate.clients.iter().find(|client| {
-        Some(client.issuer.as_str()) == issuer && client_id.as_deref() == Some(&client.client_id)
+        Some(client.issuer.expose()) == issuer && client_id.as_deref() == Some(&client.client_id)
     }) else {
         return refusal(&ScimError::new(
             StatusCode::FORBIDDEN,

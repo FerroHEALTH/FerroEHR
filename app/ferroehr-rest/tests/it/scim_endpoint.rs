@@ -101,7 +101,7 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
                 "https://cdr.example.com",
             )),
             client: vec![ScimClient {
-                issuer: MACHINES.to_owned(),
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
                 client_id: CLIENT.to_owned(),
                 scope: SCOPE.to_owned(),
                 binding_issuer: LOGIN.to_owned(),

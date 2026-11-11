@@ -372,7 +372,7 @@ mod tests {
     #[test]
     fn a_bound_issuer_declares_the_patient_capability_and_scopes() {
         let mut cfg = enabled_cfg();
-        cfg.auth.smart.patient_issuers = vec!["https://as.example".to_owned()];
+        cfg.auth.smart.patient_issuers = vec![SecretUrl::new("https://as.example")];
         let options = options(&cfg);
         assert!(options.permissions.contains(&PermissionCapability::Patient));
         assert!(

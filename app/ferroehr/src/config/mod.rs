@@ -663,7 +663,7 @@ mod tests {
         assert_eq!(c.auth.smart.backend_clients, vec!["etl".to_owned()]);
         assert_eq!(
             c.auth.smart.patient_issuers,
-            vec!["https://as.example".to_owned()]
+            vec![SecretUrl::new("https://as.example")]
         );
         assert_eq!(c.auth.smart.demographic_clients, vec!["mpi".to_owned()]);
         assert_eq!(c.record.change_feed.readers, vec!["ferrobridge".to_owned()]);

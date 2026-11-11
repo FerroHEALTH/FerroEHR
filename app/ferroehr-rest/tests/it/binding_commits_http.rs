@@ -76,7 +76,7 @@ fn deployment() -> AppConfig {
     }
     config.rbac = common::rbac_trusting(ISSUER);
     config.system_clients = vec![SystemClient {
-        issuer: MACHINES.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
         client_id: "lab".to_owned(),
         origins: vec![Origin::Relay],
         writes: vec![IPS.to_owned()],
@@ -87,7 +87,8 @@ fn deployment() -> AppConfig {
         }],
         ..SystemClient::default()
     }];
-    config.auth.smart.patient_issuers = vec![PATIENTS.to_owned()];
+    config.auth.smart.patient_issuers =
+        vec![ferrohealth_secret::secret_url::SecretUrl::new(PATIENTS)];
     config
 }
 

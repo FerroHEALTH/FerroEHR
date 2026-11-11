@@ -66,7 +66,7 @@ fn certificate() -> ClientCertificate {
 /// writing the dispensation, with `discard` over `hours`.
 fn eprescription(hours: u32) -> Agreement {
     Agreement {
-        issuer: CONTACT_POINT.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(CONTACT_POINT),
         accessor: Some(Accessor::Person),
         reads: vec![SCOPE.to_owned()],
         writes: vec![DISPENSATION.to_owned()],
@@ -134,7 +134,9 @@ async fn serve(agreement: Agreement) -> (testkit::TestDb, Arc<FerroEhrService>, 
         agreements: vec![agreement],
         ..common::api_config(true)
     };
-    config.auth.smart.patient_issuers = vec![CONTACT_POINT.to_owned()];
+    config.auth.smart.patient_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(
+        CONTACT_POINT,
+    )];
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
         .await
         .expect("build app");

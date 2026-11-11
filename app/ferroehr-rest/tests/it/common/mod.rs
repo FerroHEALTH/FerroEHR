@@ -353,7 +353,7 @@ pub(crate) fn persons_and_patients(persons: &str, patients: &str, audience: &str
 /// The RBAC rules whose privileged roles the tokens of `issuer` may grant.
 pub(crate) fn rbac_trusting(issuer: &str) -> ferroehr::config::authz::RbacConfig {
     ferroehr::config::authz::RbacConfig {
-        role_issuers: vec![issuer.to_owned()],
+        role_issuers: vec![ferrohealth_secret::secret_url::SecretUrl::new(issuer)],
         ..ferroehr::config::authz::RbacConfig::default()
     }
 }

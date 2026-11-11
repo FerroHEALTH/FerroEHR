@@ -250,7 +250,10 @@ async fn snapshot(pool: &PgPool) -> Vec<String> {
 fn input() -> CheckInput {
     CheckInput {
         key_types: BTreeMap::from([(LOGIN.to_owned(), "guid".to_owned())]),
-        scim_clients: vec![(MACHINES.to_owned(), CLIENT.to_owned())],
+        scim_clients: vec![(
+            ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
+            CLIENT.to_owned(),
+        )],
         migrations: vec![MIGRATION.to_owned()],
         provisional_report_after: ferrohealth_config::units::Duration::from_days(30),
         today: ferroehr::support::today_utc().to_string(),
@@ -498,7 +501,7 @@ async fn a_key_just_in_time_creation_introduced_passes_on_a_jit_issuer() {
         None,
         "no issuer has jit = true"
     );
-    input.jit_issuers = vec![JIT_ISSUER.to_owned()];
+    input.jit_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(JIT_ISSUER)];
     assert_eq!(verdict(&svc, &input).await, Some(Origin::Jit));
     input.provisional_report_after = ferrohealth_config::units::Duration::ZERO;
     let report = svc.check_binding(&input).await.expect("the check runs");
@@ -512,7 +515,7 @@ async fn a_creation_naming_another_committer_is_no_jit_creation() {
     let (_db, svc) = service().await;
     jit_created(&svc, JIT_ISSUER, Some(VoId(Uuid::now_v7()))).await;
     let mut input = input();
-    input.jit_issuers = vec![JIT_ISSUER.to_owned()];
+    input.jit_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(JIT_ISSUER)];
 
     assert_eq!(verdict(&svc, &input).await, None);
 }

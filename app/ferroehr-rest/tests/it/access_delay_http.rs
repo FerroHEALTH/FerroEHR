@@ -72,7 +72,10 @@ async fn app(delayed: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrService>, R
         .expect("mirror the category map");
     let mut config = common::api_config(true);
     config.auth = common::persons_and_patients(ISSUER, PATIENTS, AUDIENCE);
-    config.auth.smart.patient_issuers = vec![ISSUER.to_owned(), PATIENTS.to_owned()];
+    config.auth.smart.patient_issuers = vec![
+        ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
+        ferrohealth_secret::secret_url::SecretUrl::new(PATIENTS),
+    ];
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
         .await
         .expect("build app");

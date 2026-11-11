@@ -123,7 +123,7 @@ pub struct CheckInput {
     /// The mapped Basic users.
     pub basic_users: Vec<BasicUser>,
     /// Each `[[auth.scim.client]]` as its token `issuer` and `client_id`.
-    pub scim_clients: Vec<(String, String)>,
+    pub scim_clients: Vec<(ferrohealth_secret::secret_url::SecretUrl, String)>,
     /// The administrators the operator names.
     pub administrators: Vec<Administrator>,
     /// The committer names of the migrations the operator declares.
@@ -134,7 +134,7 @@ pub struct CheckInput {
     /// provisional `PERSON` is reported.
     pub provisional_report_after: ferrohealth_config::units::Duration,
     /// The `[[authz.party_binding.issuer]]`s with `jit = true`.
-    pub jit_issuers: Vec<String>,
+    pub jit_issuers: Vec<ferrohealth_secret::secret_url::SecretUrl>,
     /// The date a professional `ROLE` is judged on (`YYYY-MM-DD`).
     pub today: String,
 }

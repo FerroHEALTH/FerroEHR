@@ -120,15 +120,11 @@ pub(super) fn tables(binding: &PartyBindingConfig, resolved: &Resolved) -> BTree
         .filter_map(claimed)
         .collect();
     for table in binding.issuer.iter().filter(|t| t.jit) {
-        let Some(party) = resolved
-            .party
-            .iter()
-            .find(|p| p.issuer.expose() == table.issuer)
-        else {
+        let Some(party) = resolved.party.iter().find(|p| p.issuer == table.issuer) else {
             continue;
         };
         out.insert(
-            table.issuer.clone(),
+            table.issuer.expose().to_owned(),
             Jit {
                 table: table.clone(),
                 key_issuer: party.identifier_issuer.clone(),
@@ -376,7 +372,7 @@ mod tests {
             template_id: "professional role".to_owned(),
         });
         binding.issuer = vec![IssuerBinding {
-            issuer: ISSUER.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
             jit: true,
             ..table
         }];
