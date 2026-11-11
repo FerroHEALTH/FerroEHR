@@ -75,7 +75,7 @@ impl AbacConfig {
     /// (an unconfigured kind denies, and the missing rule is a boot error
     /// rather than a silent refusal at request time).
     fn validate_remote_engine(&self) -> Result<(), AuthzConfigError> {
-        let server = Some(self.remote.endpoint.url.as_str())
+        let server = Some(self.remote.endpoint.url.expose())
             .filter(|s| !s.trim().is_empty())
             .ok_or(AuthzConfigError::RemoteServerMissing)?;
         if !server.ends_with('/') {
@@ -97,6 +97,7 @@ impl AbacConfig {
 
 /// The embedded-Cedar engine settings.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct CedarConfig {
     /// Directory of `*.cedar` policy files (required when `engine = cedar`).
@@ -110,6 +111,7 @@ pub struct CedarConfig {
 
 /// The remote-PDP client settings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct RemoteConfig {
     /// `[authz.abac.remote.endpoint]`, the family's outbound endpoint: the PDP

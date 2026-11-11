@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/postgres-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-11-10T00:00:00Z",
-  "version": 9,
+  "timestamp": "2026-11-11T00:00:00Z",
+  "version": 11,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -2787,6 +2787,477 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "decode_sequence_of() in libkrb5 is reached by the KDC decoding an AS-REQ or TGS-REQ. The image runs no KDC, and postgres, a GSS-API acceptor at most, never decodes either request. The configuration FerroEHR ships has no gss or hostgssenc line in pg_hba.conf and no server keytab (krb_server_keyfile), so the server decodes no Kerberos message from a client at all."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-107364"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The read overrun is in fetch_asn1_field() in src/kdc/kdc_util.c (upstream commit cf44b0658832), which the KDC uses to locate the body of an AS-REQ or TGS-REQ and which is compiled only into krb5kdc. The image carries the krb5 client libraries PostgreSQL links (libkrb5-3, libgssapi-krb5-2, libk5crypto3, libkrb5support0) and no KDC: krb5-kdc is not installed, so the vulnerable code is not in the image."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-107884"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The missing lockdown_keys check is in kadmind's password change server (src/kadmin/server/schpw.c and misc.c, upstream commit d8248074bbd5). kadmind ships in krb5-admin-server, which is not installed; the image carries only the krb5 client libraries PostgreSQL links."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-111423"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in krb5_pac_verify_ext() (src/lib/krb5/krb/pac.c, upstream commit ffb49b20a30c), which lets a server application treat the PAC of an accepted ticket as verified when its server checksum is invalid. PostgreSQL accepts a ticket only through gss_accept_sec_context, for a gss or hostgssenc entry in pg_hba.conf with a server keytab (krb_server_keyfile); the configuration FerroEHR ships has neither, so the server accepts no ticket. Under an operator's GSSAPI configuration the server authorizes on the client principal name alone (gss_display_name, mapped through pg_ident.conf): the postgres binary imports no gss_get_name_attribute, so no decision it makes reads the PAC."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112314"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The leak is in clnttcp_call() in src/lib/rpc/clnt_tcp.c (upstream commit aac40ec59fd4), the GSS-RPC client built into libgssrpc. libgssrpc4t64 is not installed in this image, and postgres does not link libgssrpc."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112315"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The leak is in the RPCSEC_GSS buffer decoding of src/lib/rpc/authgss_prot.c and svc_auth_gss.c (upstream commit cc82b42ce92e), built into libgssrpc and reached in kadmind. Neither libgssrpc nor kadmind (krb5-admin-server) is installed in this image, and postgres does not link libgssrpc."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112316"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The leak is in xdr_krb5_tl_data() in src/lib/kadm5/kadm_rpc_xdr.c (upstream commit fe0a8a67f2fc), built into the kadm5 libraries (libkadm5srv-mit, libkadm5clnt-mit) and reached in kadmind. None of them is installed in this image, and postgres links none of them."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112317"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The leak is in krb5_ktkdb_get_entry() in src/lib/kdb/keytab.c (upstream commit 5d79291d7d67), built into libkdb5 and reached in the KDC or kadmind. libkdb5, krb5-kdc and krb5-admin-server are not installed in this image, and postgres does not link libkdb5."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112318"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The NULL dereference is in kadmind's policy RPC stubs (src/kadmin/server/server_stubs.c, upstream commit 407e75e927c1). kadmind ships in krb5-admin-server, which is not installed in this image."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112319"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The unbounded allocations are in the GSS-RPC XDR decoding of src/lib/rpc (libgssrpc) and in the kadm5 XDR routines of src/lib/kadm5 (libkadm5srv-mit, libkadm5clnt-mit) (upstream commit 6946435bc3e6), reached in kadmind. None of these libraries nor kadmind is installed in this image, and postgres links none of them."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112320"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The leak is in the GSS-RPC server transport (src/lib/rpc/svc_auth.c, upstream commit c4288c4a2fd4), built into libgssrpc and reached in kadmind. Neither libgssrpc nor kadmind is installed in this image, and postgres does not link libgssrpc."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-118380"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in the RPCSEC_GSS server's handling of the service level in src/lib/rpc/svc_auth_gss.c (upstream commit 2cda39a6c0a2), built into libgssrpc for RPC services such as kadmind. Neither libgssrpc nor kadmind is installed in this image, and postgres does not link libgssrpc."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-71199"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The unkeyed-checksum acceptance is in the CAMMAC verifier checks of the KDC (src/kdc/cammac.c) and of libkrb5 (check_svcver() in src/lib/krb5/krb/cammac_util.c, upstream commit 18142c9c3a3c), and lets a client bypass an authentication indicator requirement. The image runs no KDC. The libkrb5 check runs when a server application reads the authentication indicators of a ticket it accepts. PostgreSQL accepts a ticket only for a gss or hostgssenc entry in pg_hba.conf with a server keytab (krb_server_keyfile), and the configuration FerroEHR ships has neither. Under an operator's GSSAPI configuration the server reads no authentication indicator: the postgres binary imports no gss_get_name_attribute, the call through which a GSS acceptor reads the auth-indicators attribute."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-71200"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libgssapi-krb5-2"
+            },
+            {
+              "@id": "pkg:deb/debian/libk5crypto3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5-3"
+            },
+            {
+              "@id": "pkg:deb/debian/libkrb5support0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The NULL dereference is in cms_signeddata_verify() in the PKINIT plugin (src/plugins/preauth/pkinit/pkinit_crypto_openssl.c, upstream commit 6a5d772002c1), reached when a KDC configured for PKINIT processes a request. The plugin ships in krb5-pkinit, which is not installed (the image's krb5 preauth plugin directory holds only spake.so), and the image runs no KDC."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-88822"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl-provider-legacy"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The ferroehr-postgres image is the official postgres:18 image on Debian trixie with the build-time GnuPG toolchain purged and gosu replaced by a POSIX-sh wrapper; its processes are the PostgreSQL server and its children, started by the upstream docker-entrypoint.sh. The server is built with OpenSSL and maps libssl.so.3 and libcrypto.so.3 from libssl3t64 for TLS on client connections (the ssl settings an operator enables), for SCRAM-SHA-256 and its tls-server-end-point channel binding (a hash of the server certificate), and for its own hashing and random numbers. The image also carries the openssl command-line program and the legacy provider (openssl-provider-legacy), which no process of the image runs or loads: the entrypoint and the server never execute openssl, and the legacy provider is loaded only when an OpenSSL configuration names it, which neither the image nor FerroEHR does. The flaw is in the QUIC stack of OpenSSL 3.5.7 (libssl): its automated peer detection reads the peer address into a buffer too short for it (OpenSSL security advisory of 2026-11-10). PostgreSQL speaks TLS over TCP through the SSL_CTX and SSL API on a stream socket and never creates a QUIC connection, so the QUIC code is not reached. Debian has no fix for trixie, and the statement goes when the image carries one."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-95691"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl-provider-legacy"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The ferroehr-postgres image is the official postgres:18 image on Debian trixie with the build-time GnuPG toolchain purged and gosu replaced by a POSIX-sh wrapper; its processes are the PostgreSQL server and its children, started by the upstream docker-entrypoint.sh. The server is built with OpenSSL and maps libssl.so.3 and libcrypto.so.3 from libssl3t64 for TLS on client connections (the ssl settings an operator enables), for SCRAM-SHA-256 and its tls-server-end-point channel binding (a hash of the server certificate), and for its own hashing and random numbers. The image also carries the openssl command-line program and the legacy provider (openssl-provider-legacy), which no process of the image runs or loads: the entrypoint and the server never execute openssl, and the legacy provider is loaded only when an OpenSSL configuration names it, which neither the image nor FerroEHR does. The flaw is in the QUIC client of OpenSSL 3.5.7 (libssl): a retransmitted CRYPTO frame releases packet storage the TLS record layer still reads (OpenSSL security advisory of 2026-11-10). PostgreSQL speaks TLS over TCP and never creates a QUIC connection, as client or server, so the QUIC code is not reached. Debian has no fix for trixie, and the statement goes when the image carries one."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-88823"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl-provider-legacy"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The ferroehr-postgres image is the official postgres:18 image on Debian trixie with the build-time GnuPG toolchain purged and gosu replaced by a POSIX-sh wrapper; its processes are the PostgreSQL server and its children, started by the upstream docker-entrypoint.sh. The server is built with OpenSSL and maps libssl.so.3 and libcrypto.so.3 from libssl3t64 for TLS on client connections (the ssl settings an operator enables), for SCRAM-SHA-256 and its tls-server-end-point channel binding (a hash of the server certificate), and for its own hashing and random numbers. The image also carries the openssl command-line program and the legacy provider (openssl-provider-legacy), which no process of the image runs or loads: the entrypoint and the server never execute openssl, and the legacy provider is loaded only when an OpenSSL configuration names it, which neither the image nor FerroEHR does. The flaw is in the AES-GCM-SIV cipher of OpenSSL 3.5.7 (libcrypto): a zero-length AAD update discards the AAD supplied before it (OpenSSL security advisory of 2026-11-10). AES-GCM-SIV is no TLS cipher suite (the TLS 1.3 suites of RFC 8446 Appendix B.4 and the TLS 1.2 suites name AES-GCM, AES-CCM and ChaCha20-Poly1305, never GCM-SIV), so the server's TLS never selects it. Outside TLS PostgreSQL selects a cipher by name only in the pgcrypto extension, whose cipher table holds no GCM-SIV mode, and FerroEHR creates no extension. Debian has no fix for trixie, and the statement goes when the image carries one."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-95692"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl-provider-legacy"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The ferroehr-postgres image is the official postgres:18 image on Debian trixie with the build-time GnuPG toolchain purged and gosu replaced by a POSIX-sh wrapper; its processes are the PostgreSQL server and its children, started by the upstream docker-entrypoint.sh. The server is built with OpenSSL and maps libssl.so.3 and libcrypto.so.3 from libssl3t64 for TLS on client connections (the ssl settings an operator enables), for SCRAM-SHA-256 and its tls-server-end-point channel binding (a hash of the server certificate), and for its own hashing and random numbers. The image also carries the openssl command-line program and the legacy provider (openssl-provider-legacy), which no process of the image runs or loads: the entrypoint and the server never execute openssl, and the legacy provider is loaded only when an OpenSSL configuration names it, which neither the image nor FerroEHR does. The flaw is in the AES-GCM-SIV cipher of OpenSSL 3.5.7 (libcrypto): an IV of the wrong length set through EVP_CipherInit_ex() is read out of bounds or truncated (OpenSSL security advisory of 2026-11-10). AES-GCM-SIV is no TLS cipher suite, so the server's TLS never selects it, and the pgcrypto extension, the one place PostgreSQL selects a cipher by name, holds no GCM-SIV mode; FerroEHR creates no extension. Debian has no fix for trixie, and the statement goes when the image carries one."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-107496"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libssl3t64"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl"
+            },
+            {
+              "@id": "pkg:deb/debian/openssl-provider-legacy"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The ferroehr-postgres image is the official postgres:18 image on Debian trixie with the build-time GnuPG toolchain purged and gosu replaced by a POSIX-sh wrapper; its processes are the PostgreSQL server and its children, started by the upstream docker-entrypoint.sh. The server is built with OpenSSL and maps libssl.so.3 and libcrypto.so.3 from libssl3t64 for TLS on client connections (the ssl settings an operator enables), for SCRAM-SHA-256 and its tls-server-end-point channel binding (a hash of the server certificate), and for its own hashing and random numbers. The image also carries the openssl command-line program and the legacy provider (openssl-provider-legacy), which no process of the image runs or loads: the entrypoint and the server never execute openssl, and the legacy provider is loaded only when an OpenSSL configuration names it, which neither the image nor FerroEHR does. The flaw is in CMS_encrypt() and CMS_encrypt_ex() of OpenSSL 3.5.7 (libcrypto), which loop without end for an EC recipient certificate whose group order is 1; the advisory states that the TLS and QUIC implementations do not use this path (OpenSSL security advisory of 2026-11-10). PostgreSQL writes no CMS message, and the openssl program, whose cms command can, is never run in the image. Debian has no fix for trixie, and the statement goes when the image carries one."
     }
   ]
 }

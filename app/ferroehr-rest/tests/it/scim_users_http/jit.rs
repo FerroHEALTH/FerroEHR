@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use ferroehr::config::binding::jit::IssuerBinding;
+use ferroehr::config::binding::{ProviderId, Providers};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr_rest::config::AppConfig;
@@ -215,6 +216,41 @@ async fn a_first_login_creates_one_provisional_person_and_binds_to_it() {
         bindings(&pool, "provisional", 2).await,
         2,
         "EHDS Annex II 3.2(b)"
+    );
+}
+
+/// The provisional records of a first login name the healthcare provider the
+/// deployment declares, as a bound record does (EHDS Annex II 3.2(a); the
+/// record's fields are our own design).
+#[tokio::test]
+async fn a_provisional_record_names_the_declared_provider() {
+    let mut config = jit_config();
+    config.party_binding.provider = Some(Providers::One(ProviderId {
+        issuer: "urn:oid:2.16.528.1.1007.3.3".to_owned(),
+        id: "90000013".to_owned(),
+    }));
+    let (_db, pool, _service, app) = Box::pin(jit_app(config)).await;
+    let token = login("6a1f6c1e-0000-4000-8000-00000000a0f1", &named());
+    for _ in 0..2 {
+        let (status, body) = request(&app, &token).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+    }
+    assert_eq!(bindings(&pool, "provisional", 2).await, 2);
+    let providers: Vec<(Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT provider ->> 'issuer', provider ->> 'id' FROM audit.audit_event \
+         WHERE binding = 'provisional'",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("read the trail");
+    assert!(providers.len() >= 2, "{providers:?}");
+    assert!(
+        providers.iter().all(|provider| provider
+            == &(
+                Some("urn:oid:2.16.528.1.1007.3.3".to_owned()),
+                Some("90000013".to_owned())
+            )),
+        "{providers:?}"
     );
 }
 
@@ -422,7 +458,7 @@ fn callers_config(guests_jit: bool) -> AppConfig {
         .shared
         .issuer
         .iter_mut()
-        .find(|entry| entry.issuer == PERSONS)
+        .find(|entry| entry.issuer.expose() == PERSONS)
     {
         persons.guest = Some(vec![Marker::Claim {
             claim: "acct".to_owned(),
@@ -433,7 +469,7 @@ fn callers_config(guests_jit: bool) -> AppConfig {
     {
         let entries = &mut config.auth.shared.issuer;
         entries.push(IssuerEntry {
-            issuer: PATIENTS.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(PATIENTS),
             kind: Some(IssuerKind::Patients),
             audience: vec![AUDIENCE.to_owned()],
             jwks_file: common::jwks_file().display().to_string(),

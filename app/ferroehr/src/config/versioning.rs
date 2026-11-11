@@ -17,6 +17,7 @@ pub const RESEND_OPERATION: &str = "resend";
 
 /// The `[record.versioning]` section.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct VersioningConfig {
     /// `idempotent_resend` (default `false`): when `true`, an update whose

@@ -19,6 +19,7 @@ use crate::config::management::AccessLevel;
 
 /// The `[api]` table — the openEHR REST API the listener serves.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct ApiConfig {
     /// The ITS-REST base path all API routes hang off, from the root of the
@@ -119,6 +120,7 @@ impl Default for ApiConfig {
 /// The `[api.cors]` table: the CORS protocol response headers (Fetch Standard
 /// §3.2.3 "HTTP responses"), each key named for the header it sets.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct CorsConfig {
     /// `Access-Control-Allow-Origin`: the origins a browser may read
@@ -276,6 +278,7 @@ impl ApiConfig {
 /// `system_id` changes what newly authored data says about its origin and
 /// leaves the manifest alone.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct SystemOptionsConfig {
     /// `Options.solution` — the product name.

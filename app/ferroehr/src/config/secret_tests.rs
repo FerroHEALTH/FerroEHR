@@ -233,7 +233,7 @@ fn url_userinfo_reaches_no_rendering() {
     c.database.party.migrate_url = Some(leaky(15));
     c.audit.fhir_feed = Some(crate::system_log::config::FhirFeedConfig {
         endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-            url: leaky(8).expose().to_owned(),
+            url: leaky(8),
             ..ferrohealth_smart::config::endpoint::EndpointSection::default()
         },
         ..crate::system_log::config::FhirFeedConfig::default()
@@ -241,11 +241,15 @@ fn url_userinfo_reaches_no_rendering() {
     c.terminology = Some(
         crate::service::terminology::config::TerminologyServerConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                url: leaky(9).expose().to_owned(),
+                url: leaky(9),
                 credentials: ferrohealth_smart::config::credentials::CredentialsSection {
                     oauth: Some(OauthSection {
-                        token_endpoint: "https://u10:URL_PW_SENTINEL_10@h10:1/p10".to_owned(),
+                        token_endpoint: SecretUrl::new("https://u10:URL_PW_SENTINEL_10@h10:1/p10"),
                         ..OauthSection::default()
+                    }),
+                    onward: Some(ferrohealth_smart::config::onward::OnwardSection {
+                        token_endpoint: leaky(20),
+                        ..ferrohealth_smart::config::onward::OnwardSection::default()
                     }),
                     ..ferrohealth_smart::config::credentials::CredentialsSection::default()
                 },
@@ -254,12 +258,29 @@ fn url_userinfo_reaches_no_rendering() {
             ..crate::service::terminology::config::TerminologyServerConfig::default()
         },
     );
-    c.authz.abac.remote.endpoint.url = leaky(12).expose().to_owned();
+    c.authz.abac.remote.endpoint.url = leaky(12);
     c.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
         endpoint: leaky(13),
         ..ferrohealth_telemetry::section::OtlpSection::default()
     });
+    c.auth.shared.issuer = vec![ferrohealth_smart::config::IssuerEntry {
+        introspection: Some(ferrohealth_smart::config::IntrospectionSection {
+            endpoint: leaky(21),
+            ..ferrohealth_smart::config::IntrospectionSection::default()
+        }),
+        ..auth_section::machines("https://idp.example").remove(0)
+    }];
     c.record.multimedia.url = Some(leaky(14));
+    c.audit.syslog = Some(crate::system_log::config::SyslogConfig {
+        url: leaky(16),
+        ..crate::system_log::config::SyslogConfig::default()
+    });
+    c.auth.smart.platform_base_url = Some(leaky(17));
+    c.auth.smart.public_base_url = Some(leaky(18));
+    c.auth.scim = Some(scim::ScimConfig {
+        public_base_url: Some(leaky(19)),
+        ..scim::ScimConfig::default()
+    });
     // URL 11 was the usage report endpoint, whose type refuses userinfo, so it
     // can hold no sentinel; URL 7 was the removed event broker.
     assert!(
@@ -284,7 +305,7 @@ fn url_userinfo_reaches_no_rendering() {
             !rendered.contains("URL_PW_SENTINEL"),
             "URL userinfo leaked into the {surface} rendering: {rendered}"
         );
-        for n in (1..=15).filter(|n| *n != 7 && *n != 11) {
+        for n in (1..=21).filter(|n| *n != 7 && *n != 11) {
             assert!(
                 rendered.contains(&format!("https://***@h{n}:1/p{n}")),
                 "URL {n} lost its host and path in the {surface} rendering: {rendered}"
@@ -299,7 +320,7 @@ fn url_userinfo_reaches_no_rendering() {
 fn an_issuer_refusal_masks_userinfo() {
     let mut c = standalone();
     c.auth.smart.discovery = true;
-    c.auth.smart.public_base_url = Some("https://a:SMART_PW_SENTINEL@cdr.example".to_owned());
+    c.auth.smart.public_base_url = Some(SecretUrl::new("https://a:SMART_PW_SENTINEL@cdr.example"));
     c.auth.shared.issuer = auth_section::machines("https://b:OIDC_PW_SENTINEL@idp.example/r");
     let text = c.validate().expect_err("refused").to_string();
     assert!(!text.contains("SMART_PW_SENTINEL"), "{text}");

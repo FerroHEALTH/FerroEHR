@@ -15,6 +15,7 @@
 
 use ferrohealth_config::removed::Removed;
 use ferrohealth_config::units::{ByteSize, Duration};
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::endpoint::EndpointSection;
 use serde::{Deserialize, Serialize};
 
@@ -23,6 +24,7 @@ use ferrohealth_config::tls::TlsClientSection;
 
 /// Behaviour when an audit record cannot be enqueued/delivered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum FailMode {
     /// Log + meter the drop and let the request succeed (common ATNA default).
@@ -37,6 +39,7 @@ pub enum FailMode {
 /// The local Audit Record Repository (`[audit.store]`) — the PG-backed store
 /// ([`crate::system_log::store`]), the durability anchor of the subsystem.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct StoreConfig {
     /// Persist every record locally (`FERROEHR__AUDIT__STORE__ENABLED`).
@@ -158,6 +161,7 @@ impl StoreConfig {
 /// between two delivery attempts. A sink's forwarder retries until the record
 /// is delivered, so the table has no attempt count.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct SinkRetry {
     /// The longest wait between two delivery attempts after a failure.
@@ -176,12 +180,13 @@ impl Default for SinkRetry {
 /// record over syslog (IHE ITI TF-2 ITI-20; the RFC 5424 message over RFC 5425
 /// TLS, sent through `ihe-atna`). Present, records are shipped.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct SyslogConfig {
     /// The Audit Record Repository, `tls://host:port`
     /// (`FERROEHR__AUDIT__SYSLOG__URL`): RFC 5425 TLS, on the §4.1 port 6514
     /// by default.
-    pub url: String,
+    pub url: SecretUrl,
     /// The TLS material of the connection to the ARR
     /// (`[audit.syslog.tls]`): the family's outbound TLS keys, the client
     /// identity for mutual TLS and the trust roots beside the platform's.
@@ -228,7 +233,10 @@ pub struct SyslogConfig {
 impl Default for SyslogConfig {
     fn default() -> Self {
         Self {
-            url: format!("tls://localhost:{}", ihe_atna::atna::syslog::TLS_PORT),
+            url: SecretUrl::new(format!(
+                "tls://localhost:{}",
+                ihe_atna::atna::syslog::TLS_PORT
+            )),
             tls: TlsClientSection::default(),
             spool_dir: None,
             spool_max_events: 100_000,
@@ -258,10 +266,10 @@ impl SyslogConfig {
             format!(
                 "audit.syslog.url ({}) must be a tls://host:port URL, such as tls://arr.example:6514 \
                  (RFC 5425 TLS)",
-                self.url
+                self.url.redacted()
             )
         };
-        let Ok(url) = url::Url::parse(self.url.trim()) else {
+        let Ok(url) = url::Url::parse(self.url.expose().trim()) else {
             return Err(refused());
         };
         if url.scheme() != "tls" || url.host_str().is_none_or(str::is_empty) || url.port().is_none()
@@ -281,6 +289,7 @@ impl SyslogConfig {
 /// from the store (`audit.fhir_feed_outbox`), so a down ARR loses
 /// nothing; with the store off it delivers from an in-memory spool.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct FhirFeedConfig {
     /// `[audit.fhir_feed.endpoint]`, the family's outbound endpoint: the ARR's
@@ -336,6 +345,7 @@ impl Default for FhirFeedConfig {
 /// ATNA audit configuration (`[audit]`). Every field has a default; the
 /// all-defaults tree is **auditing on with only the local store active**.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct AuditConfig {
     /// Master switch (`FERROEHR__AUDIT__ENABLED`). **On by default** — every
@@ -590,7 +600,7 @@ mod tests {
     #[test]
     fn the_syslog_address_is_a_tls_url_with_a_port() {
         let with = |url: &str| SyslogConfig {
-            url: url.to_owned(),
+            url: SecretUrl::new(url),
             ..SyslogConfig::default()
         };
         assert!(with("tls://arr.example:6514").address().is_ok());

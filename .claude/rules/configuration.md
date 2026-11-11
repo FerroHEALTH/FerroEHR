@@ -5,6 +5,7 @@ paths:
   - "app/ferroehr-rest/src/config.rs"
   - "app/ferroehr-rest/src/**/config.rs"
   - "app/ferroehr/assets/ferroehr.default.toml"
+  - "tools/config-reference/**"
 ---
 
 # Configuration discipline — one `ferroehr.toml`, one loader
@@ -12,7 +13,7 @@ paths:
 No openEHR spec governs configuration — this is entirely our own design.
 The implementation contract is the loader itself
 (`app/ferroehr/src/config/`) + the documented default file
-(`app/ferroehr/assets/ferroehr.default.toml`) + the user book page; this rule
+(`app/ferroehr/assets/ferroehr.default.toml`) + the user book pages; this rule
 is the standing guard. **Cite the openEHR spec only where a config value is
 spec-adjacent** (e.g. signing modes → RM common master06 §Digital Signature);
 everywhere else flag "no openEHR spec governs configuration — our own design".
@@ -61,9 +62,16 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
 
 1. Edit the section struct in its owning crate (`#[serde(default,
    deny_unknown_fields)]`, `Default` is the source of truth).
-2. If you add/rename a key, update the annotated template
-   `app/ferroehr/assets/ferroehr.default.toml` **in the same change** — the
-   template-sync tests (`config::tests`) fail otherwise. A key is never read
+2. Run `cargo run -p config-reference` and commit what it writes **in the
+   same change** (#5316): the shipped `app/ferroehr/assets/ferroehr.default.toml`,
+   every key with its default under its description, which the book page
+   `website/book/src/installation/config-keys.md` includes whole. It is
+   generated from the types' JSON Schema (`schemars`, the `schema` feature of `ferroehr`), so
+   a new section type derives `JsonSchema` behind that feature, and its doc
+   comments are the reference text. There is one file, never a second
+   trimmed copy (owner ruling, 2026-11-10). `scripts/checks/config-reference.sh`
+   fails on drift and the template-sync tests (`config::tests`) on a key the
+   template misses. A key is never read
    under two names: no alias layer, no remapping table. A renamed or removed
    key keeps a `ferrohealth_config::removed::Removed` field that
    `config::retired::removals` refuses at load naming its replacement, for ONE
@@ -75,8 +83,9 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
    `website/book/src/installation/configuration.md`, the Helm `values.yaml`
    `config:` block + golden renders (`deploy/helm/validate.sh --update`), and
    a `changelog.d/` fragment — same PR.
-4. The default TOML + the book page are the schema of record; reconcile
-   the deployment/compose spellings against them.
+4. The configuration types are the schema of record, and the generated
+   template is their rendering; reconcile the deployment/compose
+   spellings against them.
 
 ## Tests
 

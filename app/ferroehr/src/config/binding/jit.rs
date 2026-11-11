@@ -25,6 +25,7 @@ use super::person::{NEVER_A_KEY, Source};
 
 /// One `[[authz.party_binding.issuer]]` table.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct IssuerBinding {
     /// The `persons` issuer the table holds for.
@@ -216,7 +217,7 @@ mod tests {
         let section = AuthSection {
             enabled: true,
             issuer: vec![IssuerEntry {
-                issuer: ISSUER.to_owned(),
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
                 kind: Some(IssuerKind::Persons),
                 audience: vec!["ferroehr".to_owned()],
                 ..IssuerEntry::default()

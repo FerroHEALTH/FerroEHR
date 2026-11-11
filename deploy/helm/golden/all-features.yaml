@@ -7,9 +7,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.18"
+    app.kubernetes.io/version: "0.0.26"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.10
+    helm.sh/chart: ferropix-0.3.19
 spec:
   podSelector:
     matchLabels:
@@ -31,10 +31,10 @@ metadata:
     kubernetes.io/description: >-
       Ingress for FerroBRIDGE: only its HTTP port, and only from the bridge.networkPolicy.ingressFrom peers. Egress admits this release's CDR, its FerroTERM, the bridge.networkPolicy.extraEgress rules and DNS.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: bridge
@@ -113,10 +113,10 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), and only from the networkPolicy.ingressFrom peers.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -229,10 +229,10 @@ metadata:
     kubernetes.io/description: >-
       Ingress for FerroTERM: only its HTTP port, and only from the CDR's pods, FerroBRIDGE's pods. Egress admits DNS only.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -288,9 +288,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.18"
+    app.kubernetes.io/version: "0.0.26"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.10
+    helm.sh/chart: ferropix-0.3.19
 spec:
   maxUnavailable: 1
   unhealthyPodEvictionPolicy: AlwaysAllow
@@ -310,10 +310,10 @@ metadata:
     kubernetes.io/description: >-
       Keeps FerroBRIDGE available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: bridge
@@ -334,10 +334,10 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -365,10 +365,10 @@ metadata:
     kubernetes.io/description: >-
       Keeps FerroTERM available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -388,9 +388,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.18"
+    app.kubernetes.io/version: "0.0.26"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.10
+    helm.sh/chart: ferropix-0.3.19
 automountServiceAccountToken: false
 
 ---
@@ -400,10 +400,10 @@ kind: ServiceAccount
 metadata:
   name: ferroehr-bridge
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: bridge
@@ -415,10 +415,10 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
   annotations:
@@ -432,10 +432,10 @@ kind: ServiceAccount
 metadata:
   name: ferroehr-terminology
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -461,10 +461,10 @@ kind: Secret
 metadata:
   name: ferroehr-env
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 type: Opaque
@@ -485,10 +485,10 @@ kind: Secret
 metadata:
   name: ferroehr-config
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 type: Opaque
@@ -508,19 +508,20 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.18"
+    app.kubernetes.io/version: "0.0.26"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.10
+    helm.sh/chart: ferropix-0.3.19
 data:
   ferropix.toml: |
     profile = "production"
     public_base_url = "https://pix.example.com"
     
     [auth]
-      audience = ["https://pix.example.com/fhir"]
     
       [[auth.issuer]]
+        audience = ["https://pix.example.com/fhir"]
         issuer = "https://idp.example.com/realms/pix"
+        kind = "machines"
     
     [db]
       data_key_file = "/run/secrets/ferropix/data-key"
@@ -545,6 +546,10 @@ data:
       base_path = ""
       listen = "0.0.0.0:8080"
     
+    [terminology]
+      [terminology.endpoint]
+        url = ""
+    
     [trust]
     
       [[trust.issuer]]
@@ -567,10 +572,10 @@ metadata:
     kubernetes.io/description: >-
       FerroBRIDGE's config.toml. It names FerroBRIDGE's OAuth client for the CDR and the path of its client secret, a file mounted from bridge.cdr.existingSecret, and carries no secret value itself.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: bridge
@@ -600,10 +605,10 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 data:
@@ -838,10 +843,10 @@ kind: ConfigMap
 metadata:
   name: ferroehr-grafana-dashboard
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     grafana_dashboard: "1"
@@ -1102,10 +1107,10 @@ metadata:
     kubernetes.io/description: >-
       Synthetic, licence-free FHIR code systems and value sets under the reserved example.test domain, mounted read-only as FerroTERM's code-system directory. Replace it with terminology.codeSystems.existingConfigMap to serve your own.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -1232,9 +1237,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.18"
+    app.kubernetes.io/version: "0.0.26"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.10
+    helm.sh/chart: ferropix-0.3.19
     app.kubernetes.io/component: server
 spec:
   type: ClusterIP
@@ -1257,10 +1262,10 @@ metadata:
     kubernetes.io/description: >-
       In-cluster address for FerroBRIDGE. ClusterIP only, with no Ingress: a caller FerroBRIDGE admits acts on the CDR with its credential, so its NetworkPolicy decides who reaches it.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: bridge
@@ -1280,10 +1285,10 @@ kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
   annotations:
@@ -1314,10 +1319,10 @@ metadata:
     kubernetes.io/description: >-
       In-cluster address for FerroTERM. Reached by the CDR alone — no Ingress is rendered for it, because a published FHIR terminology endpoint serves $expand and $lookup to every client that can reach it.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -1339,9 +1344,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.18"
+    app.kubernetes.io/version: "0.0.26"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.10
+    helm.sh/chart: ferropix-0.3.19
     app.kubernetes.io/component: server
 spec:
   replicas: 1
@@ -1355,12 +1360,12 @@ spec:
       labels:
         app.kubernetes.io/name: ferropix
         app.kubernetes.io/instance: ferroehr
-        app.kubernetes.io/version: "0.0.18"
+        app.kubernetes.io/version: "0.0.26"
         app.kubernetes.io/managed-by: Helm
-        helm.sh/chart: ferropix-0.3.10
+        helm.sh/chart: ferropix-0.3.19
         app.kubernetes.io/component: server
       annotations:
-        checksum/config: 7b6bf5aaab794d1bad427f629d127e4dfe5ebaef6732b1c617acfc91f90e777f
+        checksum/config: d5e7ab5f0a2198f10d040e7be8caf30b16aca8e9c5cbf423bf5881316ca9a12f
     spec:
       serviceAccountName: ferroehr-ferropix
       automountServiceAccountToken: false
@@ -1372,11 +1377,11 @@ spec:
         supplementalGroupsPolicy: Strict
         seccompProfile:
           type: RuntimeDefault
-      # Longer than the server's drain, [server] drain_delay_ms and shutdown_timeout_ms.
+      # Longer than the server's drain, [server] drain_delay and shutdown_timeout.
       terminationGracePeriodSeconds: 30
       containers:
         - name: ferropix
-          image: "ghcr.io/ferrohealth/ferropix@sha256:6fb622b5b9ade34c8a4053112c8f166ff495d8b32bf99f35529d01e512b7cc42"
+          image: "ghcr.io/ferrohealth/ferropix@sha256:85d40e6fdcdb39f782007eff91eb059861a4e039ca3f8fb56e37f2fa0f28d78a"
           imagePullPolicy: IfNotPresent
           args: ["serve"]
           env:
@@ -1463,10 +1468,10 @@ metadata:
     kubernetes.io/description: >-
       FerroBRIDGE, the FHIR and openEHR bridge. It reaches this release's CDR over ITS-REST under a client credentials token of bridge.cdr.oauth.issuer, and FerroTERM when that runs.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-bridge
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: bridge
@@ -1589,10 +1594,10 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -1642,7 +1647,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: ferroehr
-          image: "ghcr.io/ferrohealth/ferroehr:5.7.0-rc2"
+          image: "ghcr.io/ferrohealth/ferroehr:5.7.0-rc3"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -1847,10 +1852,10 @@ metadata:
     kubernetes.io/description: >-
       FerroTERM, the FHIR terminology server the CDR resolves bindings against. It serves a read-only index and the shaped code-system directory; it holds no clinical data and reaches nothing outbound.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -1892,7 +1897,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: terminology
-          image: "ghcr.io/ferrohealth/ferroterm@sha256:b7f10609992377a7b8bca666254bceca79fe4366e2e54fc5fbce079eb9abf619"
+          image: "ghcr.io/ferrohealth/ferroterm@sha256:7c20d39e1989fce1dfb92e6ddfd853dfa9a52bb9b7b973fbba42430963ef75bd"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -1986,10 +1991,10 @@ kind: HorizontalPodAutoscaler
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -2023,10 +2028,10 @@ metadata:
     kubernetes.io/description: >-
       Logical backup of the clinical storage domain: pg_dump of clinical, ext into the ferroehr-backup-clinical claim, under that domain's own backup DSN. Separate claim, separate credential and separate schedule from every other domain, so no one artefact carries two of the clinical record, the identities, the map between them and the access log.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-backup-clinical
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: backup
@@ -2071,7 +2076,7 @@ spec:
             supplementalGroupsPolicy: Strict
           containers:
             - name: pg-dump
-              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.7.0-rc2"
+              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.7.0-rc3"
               imagePullPolicy: IfNotPresent
               securityContext:
                 allowPrivilegeEscalation: false
@@ -2126,10 +2131,10 @@ metadata:
     kubernetes.io/description: >-
       Logical backup of the party storage domain: pg_dump of party into the ferroehr-backup-party claim, under that domain's own backup DSN. Separate claim, separate credential and separate schedule from every other domain, so no one artefact carries two of the clinical record, the identities, the map between them and the access log.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-backup-party
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: backup
@@ -2174,7 +2179,7 @@ spec:
             supplementalGroupsPolicy: Strict
           containers:
             - name: pg-dump
-              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.7.0-rc2"
+              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.7.0-rc3"
               imagePullPolicy: IfNotPresent
               securityContext:
                 allowPrivilegeEscalation: false
@@ -2229,10 +2234,10 @@ metadata:
     kubernetes.io/description: >-
       Logical backup of the audit storage domain: pg_dump of audit into the ferroehr-backup-audit claim, under that domain's own backup DSN. Separate claim, separate credential and separate schedule from every other domain, so no one artefact carries two of the clinical record, the identities, the map between them and the access log.
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-backup-audit
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: backup
@@ -2277,7 +2282,7 @@ spec:
             supplementalGroupsPolicy: Strict
           containers:
             - name: pg-dump
-              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.7.0-rc2"
+              image: "ghcr.io/ferrohealth/ferroehr-postgres:5.7.0-rc3"
               imagePullPolicy: IfNotPresent
               securityContext:
                 allowPrivilegeEscalation: false
@@ -2330,10 +2335,10 @@ kind: Ingress
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -2375,10 +2380,10 @@ kind: ServiceMonitor
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     release: kube-prometheus-stack
@@ -2435,10 +2440,10 @@ kind: ServiceAccount
 metadata:
   name: ferroehr-migrate
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-migration
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: migration
@@ -2454,10 +2459,10 @@ kind: Job
 metadata:
   name: ferroehr-migrate
   labels:
-    helm.sh/chart: ferroehr-25.0.1-rc2
+    helm.sh/chart: ferroehr-25.0.1-rc4
     app.kubernetes.io/name: ferroehr-migration
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.7.0-rc2"
+    app.kubernetes.io/version: "5.7.0-rc3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: migration
@@ -2479,10 +2484,10 @@ spec:
   template:
     metadata:
       labels:
-        helm.sh/chart: ferroehr-25.0.1-rc2
+        helm.sh/chart: ferroehr-25.0.1-rc4
         app.kubernetes.io/name: ferroehr-migration
         app.kubernetes.io/instance: ferroehr
-        app.kubernetes.io/version: "5.7.0-rc2"
+        app.kubernetes.io/version: "5.7.0-rc3"
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/part-of: ferroehr
         app.kubernetes.io/component: migration
@@ -2506,7 +2511,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: migrate
-          image: "ghcr.io/ferrohealth/ferroehr:5.7.0-rc2"
+          image: "ghcr.io/ferrohealth/ferroehr:5.7.0-rc3"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

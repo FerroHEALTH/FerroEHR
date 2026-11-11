@@ -52,7 +52,9 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
         "postgres://partyuser:{PARTY_PW}@127.0.0.1:1/ferroehr"
     )));
     config.auth.shared.issuer = vec![ferrohealth_smart::config::IssuerEntry {
-        issuer: format!("https://idpuser:{ISSUER_PW}@idp.example/realms/ferroehr"),
+        issuer: SecretUrl::new(format!(
+            "https://idpuser:{ISSUER_PW}@idp.example/realms/ferroehr"
+        )),
         ..ferrohealth_smart::config::IssuerEntry::default()
     }];
     config.auth.shared.basic = Some(ferrohealth_smart::config::BasicSection {
@@ -70,7 +72,7 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
                 credentials: ferrohealth_smart::config::credentials::CredentialsSection {
                     oauth: Some(ferrohealth_smart::config::credentials::OauthSection {
-                        token_endpoint: "https://idp.example/token".to_owned(),
+                        token_endpoint: SecretUrl::new("https://idp.example/token"),
                         client_id: "ferroehr".to_owned(),
                         client_secret: Some(secrecy::SecretString::from(CLIENT_SECRET)),
                         ..ferrohealth_smart::config::credentials::OauthSection::default()

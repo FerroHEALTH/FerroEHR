@@ -326,7 +326,7 @@ services:
   # base as the audience, and the scope asked for. NOT for anything real: name
   # your own https issuer in [pixm.endpoint.credentials.oauth] and in FerroPIX's [[auth.issuer]].
   identity-issuer:
-    image: ghcr.io/navikt/mock-oauth2-server:6.1.3@sha256:2a813381bf282da46ff36ff386059e7903e25865056af8149f4fb3f1441916b8
+    image: ghcr.io/navikt/mock-oauth2-server:6.1.5@sha256:d88e445d55c4ff6eed59b02d86adfece47d985233b1616fb712669b98328c8a2
     networks:
       default:
         aliases: [ferroehr, ferropix]
@@ -401,7 +401,7 @@ services:
   # below names the client `ferroehr`). Pinned by tag and by the digest of its
   # image index.
   ferropix:
-    image: ghcr.io/ferrohealth/ferropix:0.0.18@sha256:6fb622b5b9ade34c8a4053112c8f166ff495d8b32bf99f35529d01e512b7cc42
+    image: ghcr.io/ferrohealth/ferropix:0.0.26@sha256:85d40e6fdcdb39f782007eff91eb059861a4e039ca3f8fb56e37f2fa0f28d78a
     network_mode: service:identity-issuer
     depends_on:
       identity-issuer:
@@ -1130,13 +1130,18 @@ configs:
       url_file = "/etc/ferropix/db-url"
       data_key_file = "/var/lib/ferropix-key/data-key"
 
-      [auth]
-      audience = ["http://localhost:8090/fhir"]
-
-      # The development issuer signs plain JWTs (`typ` JWT), hence `jwt`.
+      # The development issuer signs only client credentials tokens, of the
+      # Source and of FerroEHR, so it is a `machines` issuer. It signs plain
+      # JWTs (`typ` JWT) rather than the `at+jwt` of RFC 9068 and names the
+      # client in `client_id`, so the issuer takes the claims it carries.
       [[auth.issuer]]
       issuer = "http://localhost:8180/quickstart"
-      token_profile = "jwt"
+      kind = "machines"
+      profile = "rfc9068"
+      audience = ["http://localhost:8090/fhir"]
+      token_types = ["JWT"]
+      required_claims = ["iss", "exp", "aud", "sub"]
+      client_claims = ["client_id", "azp"]
 
       # The clients the issuer signs for that may act as a Patient Identity
       # Source.

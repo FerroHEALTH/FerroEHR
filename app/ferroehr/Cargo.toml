@@ -23,9 +23,23 @@ publish = false
 default = ["fhir", "multimedia"]
 fhir = ["dep:ferrobridge-term", "ehds-logging/balp", "ihe-atna/balp", "ihe-atna/smart"]
 multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
+# `schemars::JsonSchema` on the configuration tree and every type it reaches,
+# which tools/config-reference renders into the reference page and the default
+# ferroehr.toml (#5316). No server build turns it on.
+schema = [
+  "dep:schemars",
+  "ehds-logging/schema",
+  "ferrohealth-config/schema",
+  "ferrohealth-secret/schema",
+  "ferrohealth-server/schema",
+  "ferrohealth-smart/schema",
+  "ferrohealth-telemetry/schema",
+  "ferrohealth-usage-report/schema",
+]
 
 [dependencies]
 ferrohealth-secret = { workspace = true }
+schemars = { workspace = true, optional = true }
 ferrohealth-server = { workspace = true, features = ["otlp", "platform-verifier", "reqwest"] }
 ferrohealth-health = { workspace = true, features = ["registry"] }
 ferroehr-ext = { path = "../ferroehr-ext", optional = true }
@@ -123,7 +137,7 @@ ehds-logging.workspace = true
 # The IHE patient identity source of the EHR index (`service::ehr_index::ihe`):
 # the PIXm Patient Identifier Cross-reference Consumer (ITI-83), authenticated by
 # the `smart` token authorizer under `[ehr_index.oauth]`.
-ihe-iti = { workspace = true, features = ["pixm", "smart"] }
+ihe-iti = { workspace = true, features = ["pixm"] }
 
 openehr-base = { path = "../../crates/openehr-base" }
 openehr-term = { path = "../../crates/openehr-term" }

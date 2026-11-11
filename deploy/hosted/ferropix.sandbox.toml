@@ -25,14 +25,19 @@ public_base_url = "http://localhost:8090"
 url_file = "/etc/ferropix/db-url"
 data_key_file = "/etc/ferropix/data-key"
 
-[auth]
-audience = ["http://localhost:8090/fhir"]
-
 # The development issuer on the same loopback (the compose file's
-# identity-issuer). It signs plain JWTs (`typ` JWT), hence `jwt`.
+# identity-issuer). It signs only client credentials tokens, of the seed and
+# of the CDR, so it is a `machines` issuer; it signs plain JWTs (`typ` JWT)
+# and names the client in `client_id`, so the issuer takes the claims it
+# carries.
 [[auth.issuer]]
 issuer = "http://localhost:8180/sandbox"
-token_profile = "jwt"
+kind = "machines"
+profile = "rfc9068"
+audience = ["http://localhost:8090/fhir"]
+token_types = ["JWT"]
+required_claims = ["iss", "exp", "aud", "sub"]
+client_claims = ["client_id", "azp"]
 
 # The one client that may feed patients, the on-box seed (PIXm ITI-104).
 [[trust.issuer]]

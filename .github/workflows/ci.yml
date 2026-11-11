@@ -1125,6 +1125,17 @@ jobs:
       - name: docs-claims / Documented keys resolve in their source
         if: ${{ !cancelled() }}
         run: bash scripts/checks/docs-claims.sh --all
+
+      # ---- readme-quickstart -------------------------------------------
+      # The README's quick start is the anchored steps of docker/smoke-test.sh,
+      # which the containers workflow runs against the standalone
+      # docker-compose.yml; the guard refuses a README copy that drifts.
+      - name: readme-quickstart / The guard refuses each drift it claims to
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/readme-quickstart.sh --self-test
+      - name: readme-quickstart / The README shows the quick start CI runs
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/readme-quickstart.sh
       # Image metadata (#2146): the OCI keys are declared in two places — the
       # Dockerfile, so a direct build is labelled correctly, and the publishing
       # workflow, whose repo-derived defaults are wrong for a repo shipping three
@@ -1573,6 +1584,10 @@ jobs:
         run: bash scripts/checks/codegen-drift.sh --self-test
       - name: Regenerate and diff
         run: bash scripts/checks/codegen-drift.sh
+      # The configuration reference page, the reference TOML and the shipped
+      # default ferroehr.toml are generated from the configuration types (#5316).
+      - name: The configuration reference matches the configuration types
+        run: bash scripts/checks/config-reference.sh
       # The committed codegen inputs reproduce byte-identically from their
       # pinned upstream commits (vendored-corpora.md; fetched over https).
       - name: Codegen inputs match their pins
@@ -1649,6 +1664,18 @@ jobs:
       - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-nextest
+      - name: The vendor cache uses a held file at its pin with no download and refuses one off it
+        run: bash scripts/vendor/lib/pinned.sh --self-test
+      - id: nl-role-codes
+        name: The pin the cache-only test inputs are kept under
+        run: echo "key=$(bash scripts/vendor/nl-role-codes.sh --cache-key)" >> "$GITHUB_OUTPUT"
+      # The package comes from the cache on a hit, so a registry outage costs
+      # nothing; the script checks every file against its pin either way and
+      # downloads, with retries, only what the cache lacks (#5398).
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .vendor-cache/nl-role-codes
+          key: ${{ steps.nl-role-codes.outputs.key }}
       - name: Fetch the cache-only test inputs
         # The UZI role code CodeSystem is cache only (CIBG copyright), so the
         # Wabvpz tests read it from .vendor-cache/, which this fetches by pin.
@@ -3013,6 +3040,10 @@ jobs:
         env:
           FERROEHR_CONFIG_IMAGE: ferroehr:quickstart-config
         run: bash scripts/checks/quickstart-config-image.sh
+      - name: Every other server configuration the repository ships reads under this change's server (#5396)
+        env:
+          FERROEHR_CONFIG_IMAGE: ferroehr:quickstart-config
+        run: bash scripts/checks/shipped-configs.sh
 
   # Veredictum pin guard (#4449): the conformance workflow runs the Veredictum
   # Action at the commit of the tag VEREDICTUM_VERSION names, on the image
@@ -3029,6 +3060,36 @@ jobs:
   # `conclusion` as an output: a failed job fails the run, and a merge-queue
   # run that ends `failure` fails its entry even while `conclusion` passed
   # (#4600).
+  # The viewer half of the shipped-configuration guard (#5396): the viewer's
+  # hosted file, its environment on the quickstart and every overlay, and the
+  # viewer Deployment of every chart render, read by `ferroehr-viewer config
+  # check` built from this change. The server half runs in quickstart-config.
+  shipped-viewer-configs:
+    name: shipped-viewer-configs
+    needs: changes
+    if: (needs.changes.outputs.viewer == 'true' || needs.changes.outputs.deploy == 'true' || needs.changes.outputs.helm == 'true') && needs.changes.outputs.queue_verified != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: The runner's yq
+        env:
+          YQ_MIN_VERSION: 4.53.3
+        run: bash scripts/checks/runner-yq.sh
+      - name: Build the viewer
+        run: cargo build --locked -p ferroehr-viewer --bin ferroehr-viewer
+      - name: Every viewer configuration the repository ships reads under this change's viewer
+        env:
+          FERROEHR_VIEWER_BIN: target/debug/ferroehr-viewer
+        run: bash scripts/checks/shipped-configs.sh
+
   conformance:
     name: conformance
     needs: [changes, ui-e2e-binary]
@@ -3170,6 +3231,7 @@ jobs:
       - changelog
       - release-fragments
       - quickstart-config
+      - shipped-viewer-configs
       - harnesses
       - vulnerability-record
       - conformance

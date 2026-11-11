@@ -18,7 +18,6 @@ use std::fmt;
 use std::sync::Arc;
 
 use ferrohealth_smart::config::Resolved;
-use ferrohealth_smart::idp::entra::{GraphError, NAME as ENTRA};
 use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::party::binding::PartyBinding;
 use ferrohealth_smart::party::config::PartyError;
@@ -27,13 +26,12 @@ use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer};
 use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::config::auth_section::AuthConfig;
-
 pub mod jit;
 pub mod person;
 
 /// The `[authz.party_binding]` table.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct PartyBindingConfig {
     /// The healthcare provider this deployment acts for, which every access
@@ -108,6 +106,7 @@ impl Default for PartyBindingConfig {
 /// A healthcare provider, named by an identifier: its issuer and its id (in
 /// the Netherlands the URA).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct ProviderId {
     /// The issuer of the identifier.
@@ -125,6 +124,7 @@ impl fmt::Display for ProviderId {
 /// One `[[authz.party_binding.provider]]` table: the provider of the tokens
 /// whose issuer profile's `tenant_claim` carries `tenant`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct TenantProvider {
     /// The `tenant_claim` value the table holds for.
@@ -137,6 +137,7 @@ pub struct TenantProvider {
 
 /// The `provider` key: one table, or an array of tables keyed by tenant.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(untagged)]
 pub enum Providers {
     /// `[authz.party_binding.provider]`: the one provider of the deployment.
@@ -175,6 +176,7 @@ impl<'de> Visitor<'de> for ProvidersVisitor {
 /// One `[[authz.party_binding.basic_user]]` table: the binding key a Basic
 /// user is looked up by.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct BasicUserKey {
     /// The `[[auth.basic.users]]` user-id.
@@ -192,34 +194,23 @@ pub enum BindingError {
     /// The shared crate refuses a party table or a Basic user's key.
     #[error(transparent)]
     Party(#[from] PartyError),
-    /// The `[auth.idp.entra]` table is refused.
-    #[error("auth.idp.entra is refused")]
-    Entra(#[source] Box<GraphError>),
 }
 
 /// Returns the party binding the configuration describes, looking logins up
 /// in `source`.
 ///
-/// The `idp-entra` adapter is registered when `[auth.idp.entra]` is set, so a
-/// profile naming it without the table is refused; every Basic user of the
-/// section must map to a key.
+/// The vendor adapters `[auth.idp]` builds are registered from `resolved`,
+/// so a profile naming one without its table is refused; every Basic user of
+/// the section must map to a key.
 ///
 /// # Errors
 /// [`BindingError`] naming the table, the adapter or the Basic user refused.
 pub fn party_binding(
-    auth: &AuthConfig,
     binding: &PartyBindingConfig,
     resolved: &Resolved,
     source: Arc<dyn PartySource>,
 ) -> Result<PartyBinding, BindingError> {
-    let mut built = PartyBinding::new(source);
-    if let Some(entra) = &auth.idp.entra {
-        let adapter = entra
-            .adapter()
-            .map_err(|e| BindingError::Entra(Box::new(e)))?;
-        built = built.with_adapter(ENTRA, Arc::new(adapter));
-    }
-    let mut built = built.with_resolved(resolved)?;
+    let mut built = PartyBinding::new(source).with_resolved(resolved)?;
     for user in &binding.basic_user {
         built = built.with_basic_user(&user.user, &user.key_issuer, &user.key)?;
     }
@@ -249,17 +240,13 @@ impl PartySource for CheckOnly {
 /// The boot refusals of the party binding and of the per-issuer tables, each
 /// naming its key; none when `[auth]` is off.
 #[must_use]
-pub fn errors(
-    auth: &AuthConfig,
-    authz: &crate::config::authz::AuthzConfig,
-    resolved: &Resolved,
-) -> Vec<String> {
+pub fn errors(authz: &crate::config::authz::AuthzConfig, resolved: &Resolved) -> Vec<String> {
     let mut errors = Vec::new();
     if !resolved.enabled {
         return errors;
     }
     let binding = &authz.party_binding;
-    if let Err(e) = party_binding(auth, binding, resolved, Arc::new(CheckOnly)) {
+    if let Err(e) = party_binding(binding, resolved, Arc::new(CheckOnly)) {
         errors.push(format!(
             "authz.party_binding: {}",
             crate::error::ErrorChain::new(&e)
@@ -436,7 +423,7 @@ impl crate::config::FerroEhrConfig {
         if !resolved.enabled {
             return errors;
         }
-        errors.extend(self::errors(&self.auth, &self.authz, &resolved));
+        errors.extend(self::errors(&self.authz, &resolved));
         let protected: &[String] = self
             .privacy
             .identifier_protection
@@ -542,11 +529,11 @@ impl BindingPosture {
             .issuers()
             .iter()
             .map(|entry| BoundIssuer {
-                issuer: ferrohealth_smart::config::mask_userinfo(&entry.issuer),
+                issuer: entry.issuer.redacted(),
                 kind: entry.kind,
                 identifier_issuer: party
                     .iter()
-                    .find(|table| table.issuer == entry.issuer)
+                    .find(|table| table.issuer == entry.issuer.expose())
                     .map(|table| table.identifier_issuer.clone()),
             })
             .collect();

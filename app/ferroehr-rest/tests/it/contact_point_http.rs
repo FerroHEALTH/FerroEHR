@@ -100,7 +100,7 @@ async fn serve(agreement: Agreement) -> (testkit::TestDb, Arc<FerroEhrService>, 
     let constant = |value: &str| vec![Source::Constant(value.to_owned())];
     let mut auth = common::auth(AuthSection {
         issuer: vec![IssuerEntry {
-            issuer: CONTACT_POINT.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(CONTACT_POINT),
             kind: Some(IssuerKind::Federation),
             audience: vec![AUDIENCE.to_owned()],
             jwks_file: common::jwks_file().display().to_string(),
@@ -196,7 +196,8 @@ fn token(patient: Option<&str>, provider: &str, extra: &Value) -> String {
             "not_before": now - 60,
             "not_on_or_after": now + 3600
         },
-        "trc": { "id": "urn:uuid:trc-1", "not_before": now - 60, "not_on_or_after": now + 3600 }
+        "trc": { "id": "urn:uuid:trc-1", "not_before": now - 60, "not_on_or_after": now + 3600 },
+        "message_id": "urn:uuid:msg-1"
     });
     if let Some(patient) = patient {
         ehdsi["patient"] = json!({ "id": format!("{NAMESPACE}|{patient}") });
@@ -516,6 +517,7 @@ async fn a_contact_points_access_record_carries_its_assertion_ids_and_never_the_
     for asserted in [
         "urn:uuid:ida-1",
         "urn:uuid:trc-1",
+        "urn:uuid:msg-1",
         ferrohealth_smart::federation::contact::AUTHENTICATION_CLASSES[4],
     ] {
         assert!(row.contains(asserted), "{asserted} is recorded: {row}");

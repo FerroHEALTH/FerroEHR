@@ -621,8 +621,6 @@ fn start_feed(
         return Ok((None, None));
     };
     let feed = repository(fhir_feed)?;
-    let retry = ihe_atna::atna::retry::Retry::try_from(fhir_feed.endpoint.retry)
-        .map_err(|e| AuditError::Transport(Box::new(e)))?;
     let Some(store) = store else {
         // NOTE: no specification governs the bounds of the store-off feed's
         // spool: our own design, about a day of records at a modest rate.
@@ -631,7 +629,7 @@ fn start_feed(
             max_bytes: 256 * 1024 * 1024,
             write_timeout: Duration::from_secs(2),
         });
-        let forwarder = Forwarder::fhir_feed_with_retry(spool, feed, retry);
+        let forwarder = Forwarder::fhir_feed(spool, feed);
         deliveries.push(deliver("fhir_feed", &forwarder));
         return Ok((None, Some(forwarder)));
     };
@@ -640,7 +638,7 @@ fn start_feed(
     let outbox = StoreOutbox::new(store.clone(), Arc::clone(&notify), poll);
     deliveries.push(deliver(
         "fhir_feed",
-        &Forwarder::fhir_feed_from_with_retry(outbox, feed, retry),
+        &Forwarder::fhir_feed_from(outbox, feed),
     ));
     Ok((Some(notify), None))
 }
@@ -1033,7 +1031,7 @@ mod tests {
             syslog: Some(SyslogConfig {
                 // A port nothing listens on is fine: the sink connects on the
                 // first send, which fails and is metered.
-                url: format!("tls://{}:{}", "127.0.0.1".to_owned(), 1),
+                url: ferrohealth_secret::secret_url::SecretUrl::new("tls://127.0.0.1:1"),
                 ..SyslogConfig::default()
             }),
             queue_capacity: 8,

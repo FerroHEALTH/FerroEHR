@@ -108,18 +108,13 @@ pub(super) fn binding(
     };
     let lookup: Arc<dyn ferrohealth_smart::party::source::PartySource> =
         Arc::<dyn BindingSource>::clone(&source);
-    let binding = ferroehr::config::binding::party_binding(
-        &config.auth,
-        &config.party_binding,
-        resolved,
-        lookup,
-    )
-    .map_err(|e| {
-        format!(
-            "authz.party_binding: {}",
-            ferroehr::error::ErrorChain::new(&e)
-        )
-    })?;
+    let binding = ferroehr::config::binding::party_binding(&config.party_binding, resolved, lookup)
+        .map_err(|e| {
+            format!(
+                "authz.party_binding: {}",
+                ferroehr::error::ErrorChain::new(&e)
+            )
+        })?;
     let tenant_claims = resolved
         .issuers
         .iter()

@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 /// The provider that holds the subject-to-EHR cross-reference
 /// (`record.subject_index`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum SubjectIndex {
     /// An IHE patient identity source asked over PIXm (ITI-83), configured in
@@ -33,6 +34,7 @@ pub enum SubjectIndex {
 
 /// How the PIX Manager is asked (FHIR R4 operations.html §3.2.0.1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum PixmInvocation {
     /// `POST [base]/Patient/$ihe-pix` with a `Parameters` body, the default: the
@@ -48,6 +50,7 @@ pub enum PixmInvocation {
 /// The `[pixm]` table: the IHE PIXm Patient Identifier Cross-reference
 /// Manager the subject index asks (ITI-83).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct PixmConfig {
     /// `[pixm.endpoint]`, the family's outbound endpoint: the FHIR base URL of
@@ -169,7 +172,7 @@ mod tests {
     fn pixm() -> PixmConfig {
         PixmConfig {
             endpoint: EndpointSection {
-                url: "https://pix.example/fhir".to_owned(),
+                url: ferrohealth_secret::secret_url::SecretUrl::new("https://pix.example/fhir"),
                 ..EndpointSection::default()
             },
             assigning_authority: DOMAIN.to_owned(),
@@ -244,7 +247,7 @@ mod tests {
     fn a_half_configured_source_is_refused() {
         let index = Some(SubjectIndex::Pixm);
         let mut no_url = pixm();
-        no_url.endpoint.url = String::new();
+        no_url.endpoint.url = ferrohealth_secret::secret_url::SecretUrl::new("");
         assert!(
             problems(index, Some(&no_url), &[DOMAIN.to_owned()])
                 .iter()

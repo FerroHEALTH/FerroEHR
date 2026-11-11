@@ -744,7 +744,7 @@ FerroTERM is this line plus `terminology.image.digest` in values.yaml; the
 annotation is then checked against both rather than maintained a third time.
 */}}
 {{- define "ferroehr.terminologyPinnedVersion" -}}
-0.4.1
+0.4.5
 {{- end }}
 
 {{/*

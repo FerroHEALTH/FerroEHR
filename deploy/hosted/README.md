@@ -198,7 +198,7 @@ binds the `PERSON` that carries its binding key `ferroehr` under
 request is refused `refused-unbound` while none does. The nightly wipe deletes
 every `PERSON`, so the compose file's `ferroehr-provision` service provisions
 it again the way an identity provider provisions people: as the
-`sandbox-scim` client (`[[scim.client]]`), with a client credentials token for
+`sandbox-scim` client (`[[auth.scim.client]]`), with a client credentials token for
 the scope `ferroehr/scim` from the development issuer, it asks
 `/scim/v2/Users` for `userName eq "ferroehr"` every 30 seconds and creates the
 User when it is missing (RFC 7644 §3.3). FerroEHR creates the `PERSON` and its
@@ -335,7 +335,7 @@ steps.
 FerroTERM 0.3 reads its configuration tree only: the compose file sets
 `FERROTERM__TERMINOLOGY__CODE_SYSTEMS` and `FERROTERM__TERMINOLOGY__INDEX`,
 and the index list in `.env` is `FERROTERM_INDEXES`, comma-separated, where
-FerroTERM 0.1 read `FERROTERM_INDEX`, colon-separated. FerroTERM 0.3.3, 0.4.0 and 0.4.1 read
+FerroTERM 0.1 read `FERROTERM_INDEX`, colon-separated. FerroTERM 0.3.3, 0.4.0, 0.4.1 and 0.4.5 read
 artifact layout 7, the layout of the index the box carries (built with
 `ferroterm-build` 0.1.6, `ferroterm-index.env`), so the move from 0.1.6 needs
 no rebuild.

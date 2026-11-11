@@ -107,11 +107,10 @@ kind = "machines"
 audience = ["ferroehr-scim"]
 token_types = ["JWT"]
 
-[scim]
-enabled = true
+[auth.scim]
 public_base_url = "https://sandbox.ferroehr.eu"
 
-[[scim.client]]
+[[auth.scim.client]]
 issuer = "http://localhost:8180/sandbox"
 client_id = "sandbox-scim"
 scope = "ferroehr/scim"

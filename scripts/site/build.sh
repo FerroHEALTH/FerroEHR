@@ -47,6 +47,27 @@ mkdir -p "$OUT"
 #    conformance markers filled from the committed artifacts.
 cp -R "$ROOT/website/landing/." "$OUT/"
 bash "$ROOT/scripts/render/conformance-stats.sh" fill-html "$OUT/index.html"
+#    The brand directory reaches the site root beside the landing's own
+#    assets, and two markers of the landing pages are rendered, a marker
+#    nothing renders failing the build: {{version:ferroehr}} becomes the
+#    [workspace.package] version of the root Cargo.toml, so the hero badge
+#    names the release main carries, and {{hash:style.css}} the first twelve
+#    hex digits of the stylesheet's sha256, so a browser that cached an older
+#    stylesheet fetches the new one with the new page.
+mkdir -p "$OUT/assets"
+cp -R "$ROOT/assets/brand" "$OUT/assets/"
+product_version="$(awk '/^\[workspace\.package\]/ { p = 1; next } /^\[/ { p = 0 }
+  p && $1 == "version" { if (match($0, /"[^"]*"/)) { print substr($0, RSTART + 1, RLENGTH - 2); exit } }' "$ROOT/Cargo.toml")"
+[[ -n "$product_version" ]] || { echo "build-site: Cargo.toml has no [workspace.package] version" >&2; exit 1; }
+style_hash="$(shasum -a 256 "$OUT/style.css" | cut -c1-12)"
+for page in "$OUT"/*.html; do
+  VERSION="$product_version" STYLE_HASH="$style_hash" perl -pi -e \
+    's/\{\{version:ferroehr\}\}/$ENV{VERSION}/g; s/\{\{hash:style\.css\}\}/$ENV{STYLE_HASH}/g' "$page"
+  if grep -q '{{' "$page"; then
+    echo "build-site: $page keeps a marker nothing renders" >&2
+    exit 1
+  fi
+done
 
 # 4. The dev book at /docs/dev/.
 build_book "$SITE_BASE/docs/dev/" "$OUT/docs/dev"

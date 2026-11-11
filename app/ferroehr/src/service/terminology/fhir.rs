@@ -441,16 +441,14 @@ impl Expansion {
 /// [`Absence`], or a [`ServiceError`] for a fault.
 #[cfg(feature = "fhir")]
 mod wire {
-    use std::sync::Arc;
-
     use ferrobridge_term::client::Client;
-    use ferrobridge_term::config::{Config, Credentials, RetryPolicy, WireVersion};
+    use ferrobridge_term::config::WireVersion;
     use ferrobridge_term::error::{Error, UpstreamError};
     use ferrobridge_term::outcome::{
         ExpandOutcome, ExpansionContains, LookupOutcome, SubsumesOutcome, ValidateOutcome,
     };
     use ferrobridge_term::request::{Coded, Subsumption, Validation};
-    use ferrobridge_term::smart::SmartToken;
+    use ferrohealth_smart::config::ServerTls;
     use http::StatusCode;
 
     use super::{
@@ -467,24 +465,20 @@ mod wire {
     /// The `tx-issue-type` code for "the code is not in the code system".
     const TX_ISSUE_INVALID_CODE: &str = "invalid-code";
 
-    /// Builds the client of the server `cfg` names, over the HTTP client,
-    /// the credential and the `retry` of `[terminology.endpoint]`.
+    /// Builds the client of the server `cfg` names, over `ferrohealth-smart`'s
+    /// outbound client of `[terminology.endpoint]`: its HTTP client, its
+    /// credential and its `retry`.
     pub(super) fn connect(cfg: &TerminologyServerConfig) -> Result<Client, ServiceError> {
-        let endpoint = crate::outbound::Endpoint::connect("terminology.endpoint", &cfg.endpoint)
-            .map_err(|e| ServiceError::fault_caused(ENDPOINT_REFUSED, e))?;
-        let retry = endpoint.retry();
-        let mut config = Config::new(endpoint.url().clone(), WireVersion::R4B)
-            .with_timeout(endpoint.timeout())
-            .with_retry(RetryPolicy {
-                max_attempts: retry.max_attempts,
-                initial_backoff: retry.initial_backoff.get(),
-                max_backoff: retry.max_backoff.get(),
-            });
-        if let Some(token) = endpoint.token() {
-            config = config.with_credentials(Credentials::OAuth(Arc::new(SmartToken::from(token))));
-        }
-        Client::with_http(config, endpoint.http())
-            .map_err(|e| ServiceError::fault_caused("building the terminology client failed", e))
+        Client::from_endpoint(
+            &cfg.endpoint,
+            "terminology.endpoint",
+            &ServerTls,
+            WireVersion::R4B,
+        )
+        .map_err(|e| match e {
+            Error::Endpoint { .. } => ServiceError::fault_caused(ENDPOINT_REFUSED, e),
+            other => ServiceError::fault_caused("building the terminology client failed", other),
+        })
     }
 
     /// Why a refusal says the asked-about thing is unknown, from the
@@ -743,7 +737,7 @@ mod tests {
     fn empty_url_rejected() {
         let cfg = TerminologyServerConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                url: "  ".to_owned(),
+                url: ferrohealth_secret::secret_url::SecretUrl::new("  "),
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
             },
             ..TerminologyServerConfig::default()

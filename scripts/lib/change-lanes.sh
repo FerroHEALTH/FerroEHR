@@ -27,7 +27,8 @@ readonly ROOT
 # The lanes, one per line: workflow|lane|extended regex over one path.
 # Each lane's reason, with the issue that set it:
 #
-# ci deploy: the deployment harness, the compose files and the server image.
+# ci deploy: the deployment harness, the compose files and the server image. The
+# hosted sandbox's files and the guard that reads them (#5396).
 # ci code: the Rust trees and manifests, the shared corpus (#2811), and the
 # only scripts a code-gated job runs (the drift check and the e2e harness);
 # any other script costs no Rust run. The sandbox viewer posture is read by a
@@ -60,7 +61,7 @@ readonly ROOT
 # conformance (#4449): the server build (never the viewer), the party set,
 # the conformance deployment's compose files and what it mounts, the
 # pipeline scripts and the recipe, conformance.yml, which ci.yml calls.
-readonly LANES='ci|deploy|^(scripts/deploy-probe|docker-compose|docker/)
+readonly LANES='ci|deploy|^(scripts/deploy-probe|docker-compose|docker/|deploy/hosted/|scripts/checks/shipped-configs\.sh$)
 ci|code|^scripts/(checks/codegen-drift|ui-e2e)\.sh$|^deploy/hosted/ferroehr-viewer\.sandbox\.toml$|^(app/|crates/|tools/|corpus/|\.cargo/|\.config/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|rustfmt\.toml$|clippy\.toml$|deny\.toml$)
 ci|msrv|(^|/)Cargo\.toml$|^Cargo\.lock$|^rust-toolchain\.toml$|^clippy\.toml$|^\.github/workflows/ci\.yml$
 ci|viewer|^(app/ferroehr-viewer/|app/ferroehr-server/src/|app/ferroehr/src/privacy/|app/ferroehr/src/config/|app/ferroehr-rest/src/extensions/access/|app/ferroehr-rest/src/smart/|app/ferroehr-rest/src/config\.rs$|app/ferroehr-rest/src/router\.rs$|docker/ferroehr\.dev\.toml$|app/ferroehr/assets/ferroehr\.default\.toml$|scripts/ui-e2e\.sh$|docker-compose\.yml$|docker-compose\.override\.yml$|docker-compose\.dev\.yml$|docker-compose\.keycloak\.yml$|docker/Dockerfile$|docker/viewer/|docker/keycloak/|docker/postgres/|Cargo\.lock$|\.github/workflows/ci\.yml$)
@@ -199,9 +200,10 @@ a nested manifest moves the msrv and the cache|ci|crates/openehr-rm/Cargo.toml|c
 the lockfile reaches the viewer, the msrv, the gate and the cache|ci|Cargo.lock|code,msrv,viewer,perf,cache,semver
 the cargo configuration moves the gate and the cache|ci|.cargo/config.toml|code,perf,cache
 the e2e harness runs the cargo lanes and the viewer|ci|scripts/ui-e2e.sh|code,viewer
-the sandbox viewer posture runs its viewer test|ci|deploy/hosted/ferroehr-viewer.sandbox.toml|code
+the sandbox viewer posture runs its viewer test|ci|deploy/hosted/ferroehr-viewer.sandbox.toml|deploy,code
 any other script runs no lane|ci|scripts/watch/eu-acts.sh|
 the deploy probe runs the deploy lane|ci|scripts/deploy-probe.sh|deploy
+the hosted sandbox configuration runs the deploy lane|ci|deploy/hosted/ferroehr.sandbox.toml|deploy
 a deploy probe family runs the deploy lane|ci|scripts/deploy-probes/bootstrap.sh|deploy
 the server Dockerfile reaches six lanes|ci|docker/Dockerfile|deploy,viewer,server_dockerfile,chart_boot,perf
 the viewer Dockerfile reaches its own image lane|ci|docker/viewer/Dockerfile|deploy,viewer,viewer_dockerfile

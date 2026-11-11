@@ -22,7 +22,7 @@ type: application
 # A published OCI version is immutable by refusal rather than by the registry —
 # `helm push` over an existing tag replaces it silently — so a correction always
 # ships as a NEW version and the published one stands as it was.
-version: 25.0.1-rc2
+version: 25.0.1-rc4
 # The DEFAULT container image tag (overridable via image.tag). Equals the
 # workspace version in Cargo.toml, bumped in the release PR beside the
 # docker-compose.yml image tags — one version sweep, the compose treatment
@@ -41,7 +41,7 @@ version: 25.0.1-rc2
 # defaults: values track development between releases, so the publish lane
 # re-checks the pairing against an image, and the `chart-boot` CI job replays it
 # against the image built from the tree.
-appVersion: "5.7.0-rc2"
+appVersion: "5.7.0-rc3"
 
 # FerroPIX, the IHE patient identity source the CDR's EHR index asks over PIXm
 # (ITI-83), taken whole as a dependency rather than copied: its Deployment,
@@ -50,7 +50,7 @@ appVersion: "5.7.0-rc2"
 # fetches it into charts/ before any render (deploy/helm/validate.sh does).
 dependencies:
   - name: ferropix
-    version: 0.3.10
+    version: 0.3.19
     repository: oci://ghcr.io/ferrohealth/charts
     condition: ferropix.enabled
 
@@ -176,7 +176,7 @@ annotations:
   # leaving a false claim in place, so it is deliberately not used.
   artifacthub.io/images: |
     - name: ferroehr
-      image: ghcr.io/ferrohealth/ferroehr:5.7.0-rc2  # party: first
+      image: ghcr.io/ferrohealth/ferroehr:5.7.0-rc3  # party: first
       platforms:
         - linux/amd64
         - linux/arm64
@@ -186,7 +186,7 @@ annotations:
     # the entry describes a surface an operator opts into rather than one every
     # install carries, and it is listed so that surface is scanned.
     - name: ferroehr-viewer
-      image: ghcr.io/ferrohealth/ferroehr-viewer:5.7.0-rc2  # party: first
+      image: ghcr.io/ferrohealth/ferroehr-viewer:5.7.0-rc3  # party: first
       platforms:
         - linux/amd64
         - linux/arm64
@@ -194,7 +194,7 @@ annotations:
     # `backup.enabled` is set: it carries pg_dump. The chart still provisions no
     # database — this image runs as a client, on a schedule, and exits.
     - name: ferroehr-postgres
-      image: ghcr.io/ferrohealth/ferroehr-postgres:5.7.0-rc2  # party: first
+      image: ghcr.io/ferrohealth/ferroehr-postgres:5.7.0-rc3  # party: first
       platforms:
         - linux/amd64
         - linux/arm64
@@ -213,7 +213,7 @@ annotations:
     # the digest to `terminology.image.digest` in values.yaml. Bumping FerroTERM
     # is those two edits; this line is then checked, not maintained.
     - name: ferroterm
-      image: ghcr.io/ferrohealth/ferroterm:0.4.1@sha256:b7f10609992377a7b8bca666254bceca79fe4366e2e54fc5fbce079eb9abf619  # party: third
+      image: ghcr.io/ferrohealth/ferroterm:0.4.5@sha256:7c20d39e1989fce1dfb92e6ddfd853dfa9a52bb9b7b973fbba42430963ef75bd  # party: third
       platforms:
         - linux/amd64
         - linux/arm64
@@ -233,7 +233,7 @@ annotations:
     # release line, so third party on the FerroTERM reasoning; tag and digest
     # are the ones `ferropix.image.digest` in values.yaml pins.
     - name: ferropix
-      image: ghcr.io/ferrohealth/ferropix:0.0.18@sha256:6fb622b5b9ade34c8a4053112c8f166ff495d8b32bf99f35529d01e512b7cc42  # party: third
+      image: ghcr.io/ferrohealth/ferropix:0.0.26@sha256:85d40e6fdcdb39f782007eff91eb059861a4e039ca3f8fb56e37f2fa0f28d78a  # party: third
       platforms:
         - linux/amd64
         - linux/arm64

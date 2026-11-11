@@ -31,6 +31,7 @@ const NL: &str = "NL";
 
 /// The `[authz.federation]` table.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct FederationConfig {
     /// The agreements, one per issuer and accessor.
@@ -40,6 +41,7 @@ pub struct FederationConfig {
 /// One `[[authz.federation.agreement]]` table.
 // TODO(#5008): admit an external caller only within the agreement of its issuer and accessor.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct Agreement {
     /// The `federation` issuer of the external callers.
@@ -138,6 +140,7 @@ impl Default for Agreement {
 
 /// Who an agreement admits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum Accessor {
     /// A verified external person, named in the token.
@@ -157,6 +160,7 @@ impl fmt::Display for Accessor {
 
 /// How an organisation accesses the data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum AccessClass {
     /// No natural person views the data.
@@ -168,6 +172,7 @@ pub enum AccessClass {
 
 /// What an agreement's exchange is for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum Purpose {
     /// The care of the patient by the requesting care provider.
@@ -179,6 +184,7 @@ pub enum Purpose {
 
 /// The MyHealth@EU service of a contact point's agreement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum EhdsiService {
     /// The Patient Summary.
@@ -205,6 +211,7 @@ impl EhdsiService {
 
 /// Where the consent an exchange is conditioned on is registered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum ConsentSource {
     /// Mitz, whose closed question needs a responsible professional.
@@ -216,6 +223,7 @@ pub enum ConsentSource {
 /// The legal ground of an agreement: the GDPR Art. 6(1) and Art. 9(2) points
 /// and the national provision.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct LegalGround {
     /// The point of GDPR Art. 6(1), `a` to `f`.
@@ -259,7 +267,7 @@ impl Agreement {
         let nl = auth
             .issuers()
             .iter()
-            .any(|entry| entry.issuer == self.issuer && entry.profile == Preset::Nl);
+            .any(|entry| entry.issuer.expose() == self.issuer && entry.profile == Preset::Nl);
         if self.jurisdiction.is_empty() && nl {
             NL.to_owned()
         } else {

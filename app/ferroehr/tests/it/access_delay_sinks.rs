@@ -55,7 +55,10 @@ async fn service(
     };
     if let Some(listener) = syslog {
         audit.syslog = Some(SyslogConfig {
-            url: format!("tls://localhost:{}", listener.port),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+                "tls://localhost:{}",
+                listener.port
+            )),
             tls: ferrohealth_config::tls::TlsClientSection {
                 trust_roots_file: Some(listener.ca_file.clone()),
                 ..ferrohealth_config::tls::TlsClientSection::default()
@@ -66,7 +69,7 @@ async fn service(
     if let Some(url) = feed {
         audit.fhir_feed = Some(FhirFeedConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                url: url.to_owned(),
+                url: ferrohealth_secret::secret_url::SecretUrl::new(url),
                 retry: ferrohealth_smart::config::endpoint::RetrySection {
                     max_backoff: ferrohealth_config::units::Duration::from_millis(500),
                     ..ferrohealth_smart::config::endpoint::RetrySection::default()

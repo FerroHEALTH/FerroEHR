@@ -225,7 +225,7 @@ mod tests {
     async fn service(base: &str, fail_on_error: bool) -> FerroEhrService {
         let cfg = TerminologyServerConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                url: base.to_owned(),
+                url: ferrohealth_secret::secret_url::SecretUrl::new(base),
                 timeout: ferrohealth_config::units::Duration::from_millis(800),
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
             },

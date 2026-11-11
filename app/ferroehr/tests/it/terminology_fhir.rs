@@ -405,7 +405,7 @@ async fn a_server_failure_is_tried_as_the_endpoint_retry_says() {
             .mount(&server)
             .await;
         let mut endpoint = ferrohealth_smart::config::endpoint::EndpointSection {
-            url: server.uri(),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(server.uri()),
             timeout: ferrohealth_config::units::Duration::from_millis(800),
             ..ferrohealth_smart::config::endpoint::EndpointSection::default()
         };

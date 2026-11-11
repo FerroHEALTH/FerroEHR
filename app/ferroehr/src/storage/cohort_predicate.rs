@@ -21,6 +21,16 @@
 //! "the `at0012` ELEMENT under an `openEHR-DEMOGRAPHIC-ADDRESS.address.v1`
 //! node" is one integer join, not a JSON walk.
 
+#![cfg_attr(
+    feature = "schema",
+    expect(
+        clippy::disallowed_types,
+        reason = "owner-approved 2026-08-03 (#1694 family 8, OpenAPI schema literals): the \
+                  schemars derive builds the JSON Schema of this module's configuration type \
+                  with serde_json::Map, which no item-level attribute reaches"
+    )
+)]
+
 use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
@@ -32,6 +42,7 @@ use crate::storage::error::StorageError;
 
 /// How a bound predicate's value is matched against the stored leaf.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum PredicateKind {
     /// Exact equality against a `DV_TEXT`-shaped leaf's `value/value`.

@@ -27,6 +27,7 @@ pub const MAX_HOURS: u32 = 24 * 366;
 /// immediate access holds until a deployment says its Member State provides
 /// otherwise.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct AccessDelayConfig {
     /// The categories whose new compositions are held at creation, named as

@@ -19,6 +19,7 @@
 //! turns the document on.
 
 use ferrohealth_config::removed::Removed;
+use ferrohealth_secret::secret_url::SecretUrl;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -28,6 +29,7 @@ use url::Url;
 /// §Glossary). It never issues tokens, registers clients, or runs the OAuth 2.0
 /// endpoints; those are the authorization server's.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct SmartConfig {
     /// Serve the `/.well-known/smart-configuration` discovery document
@@ -48,14 +50,14 @@ pub struct SmartConfig {
     /// gateway base, not the FHIR base). Unset, the REST root
     /// (`/ferroehr/rest`). A leading path segment is honoured, e.g.
     /// `/gateway/v1` → `/gateway/v1/.well-known/smart-configuration`.
-    pub platform_base_url: Option<String>,
+    pub platform_base_url: Option<SecretUrl>,
 
     /// The server's externally reachable origin (scheme + host [+ port]), e.g.
     /// `https://cdr.example.com`. master04 §Services makes every `services.*`
     /// entry's `baseUrl` an "Absolute URL to the root of the API (required)",
     /// so the document prefixes this origin onto the served base paths.
     /// Required when [`Self::discovery`] is set.
-    pub public_base_url: Option<String>,
+    pub public_base_url: Option<SecretUrl>,
 
     /// Episode context (master09 §Experimental: Episode Context), advertised
     /// only: `episode_launch = true` adds `context-openehr-episode` to the
@@ -115,7 +117,7 @@ impl SmartConfig {
             let Some(raw) = value else { continue };
             // NOTE: no openEHR spec governs this — our own design; a value that
             // does not parse as an absolute URL has no authority, so no userinfo.
-            let Ok(url) = Url::parse(raw.trim()) else {
+            let Ok(url) = Url::parse(raw.expose().trim()) else {
                 continue;
             };
             if !url.username().is_empty() || url.password().is_some() {
@@ -126,7 +128,7 @@ impl SmartConfig {
             }
         }
         if self.discovery {
-            let origin = self.public_base_url.as_deref().unwrap_or("");
+            let origin = self.public_base_url.as_ref().map_or("", SecretUrl::expose);
             let absolute = Url::parse(origin.trim())
                 .is_ok_and(|url| matches!(url.scheme(), "http" | "https") && url.has_host());
             if !absolute {
@@ -163,8 +165,8 @@ mod tests {
     /// document is served, and the refusal never quotes the credential.
     #[test]
     fn userinfo_in_any_published_url_is_refused() {
-        let leaky = "https://as:hunter2@as.example/x".to_owned();
-        let setters: [fn(&mut SmartConfig, String); 2] = [
+        let leaky = SecretUrl::new("https://as:hunter2@as.example/x");
+        let setters: [fn(&mut SmartConfig, SecretUrl); 2] = [
             |c, v| c.platform_base_url = Some(v),
             |c, v| c.public_base_url = Some(v),
         ];
@@ -179,7 +181,7 @@ mod tests {
         }
         // A bare-path platform base holds no authority.
         let c = SmartConfig {
-            platform_base_url: Some("/gateway/v1".to_owned()),
+            platform_base_url: Some(SecretUrl::new("/gateway/v1")),
             ..SmartConfig::default()
         };
         assert!(c.validate().is_ok());
@@ -192,12 +194,12 @@ mod tests {
             ..SmartConfig::default()
         };
         assert!(c.validate().is_err());
-        c.public_base_url = Some("/ferroehr".to_owned());
+        c.public_base_url = Some(SecretUrl::new("/ferroehr"));
         assert!(
             c.validate().is_err(),
             "a relative origin is no absolute URL"
         );
-        c.public_base_url = Some("https://cdr.example.com".to_owned());
+        c.public_base_url = Some(SecretUrl::new("https://cdr.example.com"));
         assert!(c.validate().is_ok());
     }
 }

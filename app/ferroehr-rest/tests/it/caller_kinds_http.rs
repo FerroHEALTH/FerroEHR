@@ -67,7 +67,7 @@ pub(crate) fn audience(issuer: &str) -> String {
 /// A `machines` issuer at `issuer` under `profile`.
 pub(crate) fn machines(issuer: &str, profile: Preset) -> IssuerEntry {
     IssuerEntry {
-        issuer: issuer.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
         kind: Some(IssuerKind::Machines),
         profile,
         audience: vec![audience(issuer)],

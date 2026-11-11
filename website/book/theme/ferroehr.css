@@ -1,0 +1,135 @@
+/* SPDX-FileCopyrightText: Cadasto B.V. */
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* The FerroEHR recolour of mdBook's "light" and "navy" themes, the two the
+   book opens in. The values are the "Oxide & Iron" palette of assets/brand/tokens.css and
+   the landing page's surfaces, written in because mdBook switches theme by
+   class, not by prefers-color-scheme. The other themes stay mdBook's own. */
+
+:root {
+  /* The landing page's stacks. No web font: theme/fonts/fonts.css replaces
+     mdBook's bundled Open Sans so nothing is fetched for type. */
+  --mono-font: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+html {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.light {
+  --bg: #ffffff;
+  --fg: #21262b;
+  --sidebar-bg: #f2f1ef;
+  --sidebar-fg: #21262b;
+  --sidebar-non-existant: #64748b;
+  --sidebar-active: #b7431b;
+  --sidebar-spacer: #e2dfdb;
+  --sidebar-header-border-color: #b7431b;
+  --scrollbar: #64748b;
+  --icons: #5f656c;
+  --icons-hover: #9a3816;
+  --links: #b7431b;
+  --inline-code-color: #9a3816;
+  --theme-popup-bg: #ffffff;
+  --theme-popup-border: #e2dfdb;
+  --theme-hover: #f7efea;
+  --quote-bg: #fbf1ec;
+  --quote-border: #f0c9b3;
+  --table-border-color: #e2dfdb;
+  --table-header-bg: #f6e4da;
+  --table-alternate-bg: #f2f1ef;
+  --searchbar-border-color: #e2dfdb;
+  --searchbar-bg: #ffffff;
+  --searchbar-fg: #21262b;
+  --searchresults-header-fg: #5f656c;
+  --search-mark-bg: #f0c9b3;
+  --footnote-highlight: #b7431b;
+}
+
+.navy {
+  --bg: #16191c;
+  --fg: #f2f1ef;
+  --sidebar-bg: #21262b;
+  --sidebar-fg: #cbd5e1;
+  --sidebar-non-existant: #64748b;
+  --sidebar-active: #d97742;
+  --sidebar-spacer: #343a40;
+  --sidebar-header-border-color: #d97742;
+  --scrollbar: #a9adb2;
+  --icons: #a9adb2;
+  --icons-hover: #f2f1ef;
+  --links: #d97742;
+  --inline-code-color: #f0b089;
+  --theme-popup-bg: #21262b;
+  --theme-popup-border: #343a40;
+  --theme-hover: #2a2f35;
+  --quote-bg: #2a1a12;
+  --quote-border: #5a3420;
+  --table-border-color: #343a40;
+  --table-header-bg: #2c2119;
+  --table-alternate-bg: #1b1f23;
+  --searchbar-border-color: #343a40;
+  --searchbar-bg: #21262b;
+  --searchbar-fg: #f2f1ef;
+  --searchresults-header-fg: #a9adb2;
+  --searchresults-li-bg: #21262b;
+  --search-mark-bg: #9a3816;
+  --footnote-highlight: #d97742;
+}
+
+/* The mark beside the book title. It sits on the site root, beside the
+   landing page, so the book carries no second copy of the artwork. The
+   stylesheet is served under /docs/<version>/theme/, three levels below it. */
+.menu-title::before {
+  content: "";
+  display: inline-block;
+  width: 1.5em;
+  height: 1.5em;
+  margin-right: 0.45em;
+  vertical-align: -0.35em;
+  background: url("../../../assets/brand/ferroehr-icon.svg") center / contain no-repeat;
+}
+
+.navy .menu-title::before,
+.coal .menu-title::before,
+.ayu .menu-title::before {
+  background-image: url("../../../assets/brand/ferroehr-icon-iron.svg");
+}
+
+.content h1,
+.content h2 {
+  border-bottom: 2px solid var(--sidebar-active);
+  padding-bottom: 0.2em;
+}
+
+.content a,
+.content a:visited {
+  color: var(--links);
+}
+
+.content a:hover {
+  color: var(--fg);
+}
+
+/* The version picker and the API link the version-picker script puts in the
+   top menu bar. */
+#rs-version-picker {
+  margin: 0 0.5rem;
+  font: inherit;
+  color: var(--fg);
+  background: var(--theme-hover, transparent);
+  border: 1px solid var(--sidebar-active);
+  border-radius: 4px;
+  padding: 0.15rem 0.35rem;
+  cursor: pointer;
+}
+#rs-api-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--links);
+  font-weight: 600;
+  text-decoration: none;
+  padding: 0 0.5rem;
+}
+#rs-api-link:hover {
+  color: var(--fg);
+}

@@ -340,7 +340,7 @@ pub(crate) mod test_support {
     /// test audience, admitting the test client.
     pub(crate) fn entry(issuer: &str) -> IssuerEntry {
         IssuerEntry {
-            issuer: issuer.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
             kind: Some(IssuerKind::Persons),
             audience: vec![AUDIENCE.to_owned()],
             role_claims: Some(keycloak_role_claims()),

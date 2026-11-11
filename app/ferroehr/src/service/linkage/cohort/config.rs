@@ -40,6 +40,7 @@ pub const BIRTH_DATE_KEY: &str = "age_band";
 /// One bound predicate: the archetype and at-code whose ELEMENT carries the
 /// value, and how to match it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct PredicateBinding {
     /// The archetype HRID of the nearest archetyped ancestor of the ELEMENT
@@ -56,6 +57,7 @@ pub struct PredicateBinding {
 
 /// The `[privacy.cohort]` section.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct CohortConfig {
     /// The distinct-EHR floor a result set must reach to be served

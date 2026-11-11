@@ -67,6 +67,7 @@ use crate::config::loader::{ConfigError, ConfigErrors};
 /// v5.7.0 read is kept only to be refused at load, naming its replacement
 /// ([`retired`]).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct FerroEhrConfig {
     /// `[deployment]`: the declared posture, the openEHR specification set
@@ -226,9 +227,10 @@ impl Default for FerroEhrConfig {
     }
 }
 
-/// The annotated default template, shipped as
-/// `app/ferroehr/assets/ferroehr.default.toml` — a hand-maintained asset kept in
-/// sync with the schema by the template tests.
+/// The shipped default `ferroehr.toml`: every key with its default.
+///
+/// `tools/config-reference` generates it from the configuration types, each
+/// key under its description (#5316).
 pub const DEFAULT_TEMPLATE: &str = include_str!("../../assets/ferroehr.default.toml");
 
 impl FerroEhrConfig {
@@ -260,31 +262,22 @@ impl FerroEhrConfig {
     /// snapshot with it; [`Self::to_redacted_table`] renders it. No openEHR spec governs
     /// configuration — our own design/extension.
     ///
-    /// Redaction is a property of the leaf type rather than of a key-name scan:
-    /// every secret-bearing field is typed `ferrohealth-secret`'s `Secret`, whose
-    /// [`Serialize`] emits the fixed `***` placeholder, or
-    /// `SecretUrl`, whose [`Serialize`] masks the URL `userinfo`
-    /// component. Every URL key that may carry `userinfo` is a `SecretUrl`;
-    /// a URL key whose value is an identifier or is published
-    /// (`auth.issuer`, the `smart` URLs) is refused at boot when it
-    /// carries `userinfo`. A field therefore cannot leak by being renamed, and
-    /// the `redacted_json_masks_every_secret_field` test enumerates the current
-    /// secret set as the standing backstop. On top of the types, every string
-    /// leaf of the tree that holds a URL passes `ferrohealth-smart`'s
-    /// [`mask_userinfo`](ferrohealth_smart::config::mask_userinfo), so a URL in a key
-    /// that is not typed `SecretUrl`, or in a configuration no validation has
-    /// run over, is masked too. `[auth]` is the `ferrohealth-smart` section,
-    /// whose serialization writes each Basic password hash as `***`.
-    /// Non-secret identifiers, such as a Basic user's `user` and `scopes`, an
-    /// `issuer` without `userinfo`, or `auth.jwks_file` (a path), stay visible.
+    /// Redaction is a property of the leaf type alone: every secret-bearing
+    /// field is typed `ferrohealth-secret`'s `Secret`, whose [`Serialize`]
+    /// writes `ferrohealth_secret::REDACTED`, or `SecretUrl`, whose
+    /// [`Serialize`] masks the URL `userinfo` and query. Every URL key that may
+    /// carry `userinfo` is a `SecretUrl`, and no pass over the tree or key-name
+    /// scan follows the types. An issuer is an identifier, refused at boot when
+    /// it carries `userinfo`. The `redacted_json_masks_every_secret_field` and
+    /// `url_userinfo_reaches_no_rendering` tests enumerate the secret and URL
+    /// keys. Non-secret identifiers, such as a Basic user's `user` and
+    /// `scopes`, an `issuer`, or `auth.jwks_file` (a path), stay visible.
     ///
     /// # Errors
     /// [`ConfigError`] if the tree cannot be serialized to JSON.
     pub fn to_redacted_json(&self) -> Result<serde_json::Value, ConfigError> {
-        let mut tree = serde_json::to_value(self)
-            .map_err(|e| ConfigError::semantic(format!("rendering config as JSON: {e}")))?;
-        redact::mask_url_userinfo(&mut tree);
-        Ok(tree)
+        serde_json::to_value(self)
+            .map_err(|e| ConfigError::semantic(format!("rendering config as JSON: {e}")))
     }
 }
 
@@ -356,6 +349,8 @@ pub fn load_with_provenance(
 mod audit_tests;
 #[cfg(test)]
 mod secret_tests;
+#[cfg(test)]
+mod template_tests;
 #[cfg(test)]
 mod tests {
     use assert_fs::prelude::*;
@@ -582,7 +577,7 @@ mod tests {
         let [issuer] = c.auth.shared.issuers() else {
             panic!("one issuer table from the env");
         };
-        assert_eq!(issuer.issuer, "https://idp");
+        assert_eq!(issuer.issuer.expose(), "https://idp");
         assert_eq!(
             issuer.kind,
             Some(ferrohealth_smart::kind::IssuerKind::Persons)
@@ -769,7 +764,7 @@ mod tests {
         let d = assemble_ok(None, &env(&[]), &[]);
         assert!(!d.authz.abac.check_directory);
         assert_eq!(d.authz.abac.patient_namespace(), None);
-        assert!(d.auth.shared.issuers().is_empty());
+        assert_eq!(d.auth.shared.issuers(), []);
         let entry = ferrohealth_smart::config::IssuerEntry::default();
         assert_eq!(
             entry.clock_skew,
@@ -1334,186 +1329,6 @@ mod tests {
         }
     }
 
-    // ── 6. Template sync ──────────────────────────────────────────────────────
-
-    #[test]
-    fn template_parses_to_default() {
-        let file = toml_file(DEFAULT_TEMPLATE);
-        let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
-        assert_eq!(json(&c), json(&FerroEhrConfig::default()));
-    }
-
-    #[test]
-    fn template_mentions_every_section() {
-        let sections = match serde_json::to_value(FerroEhrConfig::default()) {
-            Ok(serde_json::Value::Object(members)) => members.keys().cloned().collect::<Vec<_>>(),
-            other => panic!("the tree serializes as an object: {other:?}"),
-        };
-        for section in sections {
-            let header = format!("[{section}]");
-            let dotted = format!("[{section}."); // sub-tables count too
-            let scalar = format!("\n{section} = "); // top-level scalar keys
-            assert!(
-                DEFAULT_TEMPLATE.contains(&header)
-                    || DEFAULT_TEMPLATE.contains(&dotted)
-                    || DEFAULT_TEMPLATE.contains(&scalar)
-                    || DEFAULT_TEMPLATE.contains(&format!("\n#? {section} = ")),
-                "template missing section {section}"
-            );
-        }
-    }
-
-    /// Whether the template declares `key` as a key line — live (`key = …`) or
-    /// as a `#?` reference line for an optional/secret/derived one. A mention
-    /// inside another key's trailing comment does not count: a key mentioned
-    /// only that way stays invisible to an operator reading the template.
-    fn template_declares(key: &str) -> bool {
-        DEFAULT_TEMPLATE.lines().any(|line| {
-            let line = line.trim_start();
-            let line = line.strip_prefix("#?").map_or(line, str::trim_start);
-            line.strip_prefix(key)
-                .is_some_and(|rest| rest.trim_start().starts_with('='))
-        })
-    }
-
-    /// Every field the default config SERIALIZES must be a key in the template.
-    ///
-    /// Total for concrete fields and needs no hand-maintained list: it walks the
-    /// serialized default, so a newly added field is covered the moment it
-    /// exists. `Option::None` fields serialize away and are covered by
-    /// [`template_declares_every_optional_oidc_field`] instead.
-    #[test]
-    fn template_declares_every_serialized_field() {
-        fn walk(value: &serde_json::Value, missing: &mut Vec<String>) {
-            let serde_json::Value::Object(map) = value else {
-                return;
-            };
-            for (key, child) in map {
-                match child {
-                    serde_json::Value::Object(_) => walk(child, missing),
-                    // An absent optional serializes to null, so this walk cannot
-                    // see it at all — that class is the other test's job. An
-                    // absent optional SUB-TABLE lands here too and is declared
-                    // as a `[section]` header rather than a key line.
-                    serde_json::Value::Null => {}
-                    _ if template_declares(key) => {}
-                    _ if DEFAULT_TEMPLATE.contains(&format!(".{key}]")) => {}
-                    _ => missing.push(key.clone()),
-                }
-            }
-        }
-        let mut missing = Vec::new();
-        walk(&json(&FerroEhrConfig::default()), &mut missing);
-        assert!(
-            missing.is_empty(),
-            "the shipped ferroehr.toml template declares no key line for: {}. \
-             Every field belongs in it — the file's own header calls itself the \
-             complete configuration, and the shipped template is how an \
-             operator discovers a key.",
-            missing.join(", ")
-        );
-    }
-
-    /// The field names a `deny_unknown_fields` struct accepts, taken from serde
-    /// itself: an unknown key is refused with `expected one of …`, which is the
-    /// authoritative set and needs no hand-maintained list.
-    fn accepted_fields<T: serde::de::DeserializeOwned>(section: &str) -> Vec<String> {
-        let Err(err) = toml::from_str::<T>("__probe_unknown_key__ = 1") else {
-            panic!("[{section}] must carry deny_unknown_fields")
-        };
-        let err = err.to_string();
-        let Some((_, list)) = err.split_once("expected one of ") else {
-            panic!("serde no longer reports an accepted-field list for [{section}]: {err}")
-        };
-        let fields: Vec<String> = list
-            .split([',', '`'])
-            .map(|s| s.trim().to_owned())
-            .filter(|s| !s.is_empty())
-            .collect();
-        // Without this the test passes vacuously if serde ever reformats that
-        // message — a guard that silently checks nothing is worse than none.
-        assert!(
-            !fields.is_empty(),
-            "extracted no fields for [{section}]; serde's message format changed \
-             and this test is no longer checking anything: {err}"
-        );
-        fields
-    }
-
-    /// Optional fields serialize away when `None`, so the walk above cannot see
-    /// them, which is the class an operator can least afford to have
-    /// undeclared.
-    ///
-    /// Covered here are the sections carrying secret or file-indirection keys,
-    /// where an undiscoverable key costs an operator most. Adding another
-    /// section is one line, because the field list comes from serde.
-    #[test]
-    fn template_declares_every_optional_field_of_the_secret_bearing_sections() {
-        let sections = [
-            (
-                "auth",
-                accepted_fields::<ferrohealth_smart::config::AuthSection>("auth"),
-            ),
-            (
-                "authz.assurance",
-                accepted_fields::<ferrohealth_smart::assurance::AssuranceSection>(
-                    "authz.assurance",
-                ),
-            ),
-            (
-                "authz.party_binding",
-                retired::live(
-                    accepted_fields::<binding::PartyBindingConfig>("authz.party_binding"),
-                    &["enabled", "provisional_report_days"],
-                ),
-            ),
-            (
-                "database",
-                accepted_fields::<crate::db::DbConfig>("database"),
-            ),
-            (
-                "pixm",
-                accepted_fields::<crate::service::ehr_index::config::PixmConfig>("pixm"),
-            ),
-            (
-                "record.signing",
-                accepted_fields::<crate::versioning::signature::config::SigningConfig>(
-                    "record.signing",
-                ),
-            ),
-            (
-                "record.multimedia",
-                retired::live(
-                    accepted_fields::<crate::extensions::multimedia::config::MultimediaConfig>(
-                        "record.multimedia",
-                    ),
-                    &["allow_http"],
-                ),
-            ),
-        ];
-        let missing: Vec<String> = sections
-            .iter()
-            .flat_map(|(section, fields)| {
-                // A sub-table field is declared by its own `[section.field]`
-                // header, exactly as the serialized-field walk accepts one, or
-                // by the `[[section.field.…]]` header of the array it holds.
-                fields
-                    .iter()
-                    .filter(move |f| {
-                        !template_declares(f)
-                            && !DEFAULT_TEMPLATE.contains(&format!("[{section}.{f}]"))
-                            && !DEFAULT_TEMPLATE.contains(&format!("[[{section}.{f}."))
-                    })
-                    .map(move |f| format!("{section}.{f}"))
-            })
-            .collect();
-        assert!(
-            missing.is_empty(),
-            "the template declares no key line for: {}",
-            missing.join(", ")
-        );
-    }
-
     /// An enabled multimedia integration with a blank or relative endpoint is a
     /// BOOT error, not a panic on the first commit.
     #[test]
@@ -1560,7 +1375,7 @@ mod tests {
     fn a_served_smart_document_needs_an_issuer() {
         let mut c = standalone();
         c.auth.smart.discovery = true;
-        c.auth.smart.public_base_url = Some("https://cdr.example.com".to_owned());
+        c.auth.smart.public_base_url = Some(SecretUrl::new("https://cdr.example.com"));
         let err = c
             .validate()
             .expect_err("SMART without an [auth] issuer must refuse");
@@ -1792,7 +1607,7 @@ mod tests {
 
         c.terminology = Some(TerminologyServerConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                url: "https://ts.example/fhir".to_owned(),
+                url: SecretUrl::new("https://ts.example/fhir"),
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
             },
             ..TerminologyServerConfig::default()
@@ -1811,7 +1626,7 @@ mod tests {
         let with = |url: &str, oauth: OauthSection| {
             let mut c = standalone();
             let mut endpoint = ferrohealth_smart::config::endpoint::EndpointSection {
-                url: url.to_owned(),
+                url: SecretUrl::new(url),
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
             };
             endpoint.credentials.oauth = Some(oauth);
@@ -1834,7 +1649,7 @@ mod tests {
         }
 
         let complete = || OauthSection {
-            token_endpoint: "https://idp.example/token".to_owned(),
+            token_endpoint: SecretUrl::new("https://idp.example/token"),
             client_id: "cdr".to_owned(),
             client_secret: Some(secrecy::SecretString::from("s3cret")),
             ..OauthSection::default()
@@ -1892,7 +1707,7 @@ mod tests {
         );
         let server = c.terminology.as_ref().expect("the table from env");
         assert!(server.refuses_on_error());
-        assert_eq!(server.endpoint.url, "http://ferroterm:8080/r4b");
+        assert_eq!(server.endpoint.url.expose(), "http://ferroterm:8080/r4b");
         assert_eq!(
             server.endpoint.timeout,
             ferrohealth_config::units::Duration::from_millis(2_500)
@@ -1904,7 +1719,7 @@ mod tests {
             .oauth
             .as_ref()
             .expect("the grant from env");
-        assert_eq!(oauth.token_endpoint, "https://idp/token");
+        assert_eq!(oauth.token_endpoint.expose(), "https://idp/token");
         assert_eq!(oauth.client_id, "cdr");
         assert_eq!(
             oauth
