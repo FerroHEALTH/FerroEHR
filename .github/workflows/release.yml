@@ -173,13 +173,13 @@ jobs:
       # #5353): `plan` takes the version from it, and the release plan checks
       # the stamped version with it. No cache: the judge builds the crates
       # from this checkout and from crates.io.
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
       - id: semver-pin
         name: Read the cargo-semver-checks pin
         run: echo "version=$(bash scripts/checks/semver.sh --pin)" >> "$GITHUB_OUTPUT"
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-semver-checks@${{ steps.semver-pin.outputs.version }}
       # The crates the crates.io leg publishes, for the per-crate SBOM matrix:
@@ -279,7 +279,7 @@ jobs:
       # supplier, component name, version, other unique identifiers (purl),
       # dependency relationships, SBOM author and timestamp
       # (https://www.cisa.gov/sbom).
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: syft@1.50.0
       - name: Generate the repository SPDX SBOM
@@ -345,7 +345,7 @@ jobs:
           sha256sum docker-compose.yml > docker-compose.yml.sha256sum
 
       - name: Create the GitHub release as a draft
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           draft: true
           tag_name: ${{ needs.plan.outputs.tag }}
@@ -443,10 +443,10 @@ jobs:
           ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
       # A publishing lane restores no cache: the archive packaged here must be
       # the one the crates leg uploads from the same commit.
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-cyclonedx@0.5.9
       - name: The archive the SBOM describes, and the SBOM
@@ -475,7 +475,7 @@ jobs:
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
         run: cp "$BUNDLE" "${ARCHIVE}.sbom.sigstore.json"
       - name: Attach to the draft release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           draft: true
           tag_name: ${{ needs.plan.outputs.tag }}
@@ -512,7 +512,7 @@ jobs:
         run: bash scripts/security/vulnerability-record.sh --self-test
       - name: Install Trivy from its GitHub release, checked by sha256
         run: bash scripts/security/install-trivy.sh "$TRIVY_VERSION" "$RUNNER_TEMP/trivy-bin"
-      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -551,7 +551,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
       - name: Attach the record to the draft release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           draft: true
           tag_name: ${{ needs.plan.outputs.tag }}
@@ -714,7 +714,7 @@ jobs:
       # docker/Dockerfile and release-build.yml; the action fetches the
       # prebuilt binary and installs curl and jq into the slim container itself.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-auditable@0.7.5
 
@@ -845,7 +845,7 @@ jobs:
       # The viewer binary carries its dependency list too (#3675): the same
       # pinned `cargo auditable` as the app binary job above.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-auditable@0.7.5
 
@@ -981,7 +981,7 @@ jobs:
           persist-credentials: false
           ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
 
-      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1062,7 +1062,7 @@ jobs:
           persist-credentials: false
           ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
 
-      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1119,12 +1119,12 @@ jobs:
           persist-credentials: false
           ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
       # No cache: this lane gates a publish, so it builds the load test cold.
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
       - name: Build the load test
         run: cargo build --locked --release -p loadtest
-      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1185,7 +1185,7 @@ jobs:
             perf-gate/
           if-no-files-found: ignore
       - name: Attach the logging performance evaluation to the draft release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           draft: true
           tag_name: ${{ needs.plan.outputs.tag }}
@@ -1432,7 +1432,7 @@ jobs:
       # No cache in the lane that uploads to crates.io: a published version is
       # immutable, so it is built from this checkout and nothing else
       # (setup-rust-toolchain caches by default).
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
       - id: auth
