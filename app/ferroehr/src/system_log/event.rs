@@ -501,3 +501,33 @@ pub enum EmitOutcome {
     /// layer must return `503`.
     Rejected,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{AuditEvent, Coding, EventActionCode, EventOutcome, ObjectClass, TokenAttributes};
+
+    /// A purpose of use the access token states counts as named beside the
+    /// declared one, so the sender's emergency mark reads it too (EHDS
+    /// Art. 11(5), #5323).
+    #[test]
+    fn a_purpose_the_token_states_is_named_beside_the_declared_one() {
+        let mut event = AuditEvent::new(
+            EventActionCode::Read,
+            ObjectClass::Ehr,
+            EventOutcome::Success,
+        );
+        assert!(!event.names_purpose(|code| code == "ETREAT"));
+        event.token = Some(TokenAttributes {
+            purposes: vec![Coding {
+                system: Some("http://terminology.hl7.org/CodeSystem/v3-ActReason".to_owned()),
+                code: "ETREAT".to_owned(),
+            }],
+            roles: Vec::new(),
+        });
+        assert!(event.names_purpose(|code| code == "ETREAT"));
+        assert!(!event.names_purpose(|code| code == "TREAT"));
+        event.purpose = Some("TREAT".to_owned());
+        assert!(event.names_purpose(|code| code == "TREAT"));
+        assert!(event.names_purpose(|code| code == "ETREAT"));
+    }
+}

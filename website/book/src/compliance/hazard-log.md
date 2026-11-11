@@ -416,9 +416,10 @@ happened.
 
 **Control:** a deployment names the purpose-of-use codes its callers declare
 for an emergency (`[audit] emergency_purpose_codes`, each also on
-`purpose_codes`). An access declaring one carries the emergency mark in its
-access record: the `emergency_access` column, and in the FHIR `AuditEvent` the
-`ehds-logging` entity `ehds-emergency-access`, which states the mark in plain
+`purpose_codes`). An access declaring one, in the `[audit] purpose_header` or
+as a purpose of use its IHE IUA access token states (#5323), carries the
+emergency mark in its access record: the `emergency_access` column, and in the
+FHIR `AuditEvent` the `ehds-logging` entity `ehds-emergency-access`, which states the mark in plain
 words and names the purposes that marked it.
 The person's own subject-scoped ITI-81 retrieval serves that document. The
 mark lifts no restriction: an object restricted under GDPR Art. 18 is refused
@@ -436,15 +437,17 @@ names that EHR adds an `access-opt-out-override` record against it.
 `app/ferroehr/tests/it/audit_store.rs`:
 `both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten`;
 `app/ferroehr-rest/tests/it/access_opt_out_http.rs`:
-`the_vital_interest_override_reads_the_ehr_and_is_recorded`.
+`the_vital_interest_override_reads_the_ehr_and_is_recorded`;
+`app/ferroehr/src/system_log/event.rs`:
+`a_purpose_the_token_states_is_named_beside_the_declared_one`.
 
 **Remains:** the Art. 8 restriction hides restricted data from every
 professional route, query and export, and only a caller holding
 `authz.rbac.emergency_access_role` that declares an emergency purpose reads it
 (`app/ferroehr-rest/tests/it/access_restriction_http.rs`:
 `only_an_emergency_access_reads_restricted_data_and_is_marked`). The mark rests
-on the purpose the caller declares, and an emergency the caller does not
-declare is not marked. The DICOM syslog rendering has no purpose element and
+on the purpose the caller declares or its token states, and an emergency
+neither names is not marked. The DICOM syslog rendering has no purpose element and
 does not carry the mark.
 
 ## When the log is reviewed
@@ -479,3 +482,4 @@ EHDS-side risk assessment of the component.
 | 19 | 2026-11-04 | Reviewed for release 5.6.0 (changes since the 5.6.0-rc10 review: the logging component's modules changed only by refactors that change no record: one macro declares every guarded REST handler (#4887), every route calls its operation's handler with no operation-string match (#4662), the last REST and service forwarders go (#4663), and the committer context, the audit borrows and the service error move below the service (#4835); outside them, a manifest export under the EHDS Art. 10(2) override records the override against the EHR it exports (#4870), and the scope of the logging component names FerroBRIDGE's recording of its FHIR facade's accesses from FerroBRIDGE 0.0.16 (#4822)); every named test exists; no hazard added |
 | 20 | 2026-11-05 | Reviewed for release 5.6.1 (changes since the 5.6.0 review: no module of the logging component changed; the application code is unchanged and a viewer test reads the hosted sandbox posture (#4985); the deployment artifacts pin FerroPIX 0.0.16, FerroBRIDGE 0.0.20 and four FerroSYS crate releases that change no behaviour (#4987)); every named test exists; no hazard added |
 | 21 | 2026-11-10 | Reviewed for release candidate 5.7.0-rc1 (changes since the 5.6.1 review; 5.6.2 and 5.6.3 changed no module of the logging component: every access record of an authenticated request carries the outcome of the party binding with the bound party, its groups, the provider acted for and the representation, and the FHIR `AuditEvent`, the DICOM message and the syslog feed render them (#5043, #5118, audit migration 0023); a delegated access records `acting_mode = "delegated"` where it recorded `client`, and a system caller's `system` (#5118); every refused request is an access record through the gated path, with the `refused-*` code of a binding or caller-kind refusal, its own code per caller kind and the name of a missing key claim, and the refusals of tokens that failed verification are budgeted by source network (#5119, #5139, #5140, audit migrations 0024 and 0025); the recorded client is the one the issuer profile admitted, never another `client_id` claim (#5194); `[audit.syslog]` reads its TLS from `[audit.syslog.tls]` (#5217); the family crates move to `ehds-logging` and `ihe-atna` 0.9.1, and the FHIR feed tries a delivery again as `[audit.fhir_feed.endpoint] retry` states while its outbox still keeps every record until the sink takes it, as H5 states (#5209, #5259, #5331); H5 named its four floor tests in `config/mod.rs`, which #5259 moved to `config/audit_tests.rs`, and its member-state test in `system_log/config.rs`, which moves with the retention bounds to `system_log/retention.rs` (#5331), so it names both files; the audit keys take the 5.7.0 configuration tree (#5259); H2 named two assurance tests #5003 renamed, so it names `a_person_token_through_an_unlisted_client_is_refused` and `a_delegate_acting_for_a_professional_passes_and_is_recorded`); every named test exists; no hazard added |
+| 22 | 2026-11-11 | Reviewed for release candidate 5.7.0-rc3 (changes since the 5.7.0-rc1 review; 5.7.0-rc2 changed no module of the logging component: the access record takes the purposes of use and the professional roles an IHE IUA access token states, in the new `token_attributes` column (audit migration 0026, chain digest version 3), renders them in the EHDS access record and the BALP `AuditEvent`, and refuses and records a request whose `[audit] purpose_header` names a purpose the token does not state (#5323); a purpose the token states marks an emergency access as a declared one does, so H9 names it and its test; a contact point's request message id is recorded (#5011); `[audit.syslog] url` renders with its credentials masked (#5322); the component moves to `ehds-logging` and `ihe-atna` 0.12.0 (#5320)); every named test exists; no hazard added |
