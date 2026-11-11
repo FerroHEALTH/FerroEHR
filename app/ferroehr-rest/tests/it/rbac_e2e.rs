@@ -122,7 +122,7 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
             ..StoreConfig::default()
         },
         syslog: Some(SyslogConfig {
-            url: format!("tls://127.0.0.1:{port}"),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(format!("tls://127.0.0.1:{port}")),
             tls: ferrohealth_config::tls::TlsClientSection {
                 trust_roots_file: Some(socket.ca_file.clone()),
                 ..ferrohealth_config::tls::TlsClientSection::default()
@@ -623,6 +623,10 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
                         token_endpoint: SecretUrl::new("https://u3:URL_PW_SENTINEL_3@h3/p"),
                         ..ferrohealth_smart::config::credentials::OauthSection::default()
                     }),
+                    onward: Some(ferrohealth_smart::config::onward::OnwardSection {
+                        token_endpoint: leaky(12),
+                        ..ferrohealth_smart::config::onward::OnwardSection::default()
+                    }),
                     ..ferrohealth_smart::config::credentials::CredentialsSection::default()
                 },
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
@@ -637,6 +641,24 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
         ..ferrohealth_telemetry::section::OtlpSection::default()
     });
     cfg.record.multimedia.url = Some(leaky(7));
+    cfg.audit.syslog = Some(SyslogConfig {
+        url: leaky(8),
+        ..SyslogConfig::default()
+    });
+    cfg.auth.smart.platform_base_url = Some(leaky(9));
+    cfg.auth.smart.public_base_url = Some(leaky(10));
+    cfg.auth.scim = Some(ferroehr::config::scim::ScimConfig {
+        public_base_url: Some(leaky(11)),
+        ..ferroehr::config::scim::ScimConfig::default()
+    });
+    cfg.auth.shared.issuer = vec![ferrohealth_smart::config::IssuerEntry {
+        issuer: SecretUrl::new("https://idp.example"),
+        introspection: Some(ferrohealth_smart::config::IntrospectionSection {
+            endpoint: leaky(13),
+            ..ferrohealth_smart::config::IntrospectionSection::default()
+        }),
+        ..ferrohealth_smart::config::IssuerEntry::default()
+    }];
     let snapshot = cfg.to_redacted_json().expect("redacted json");
 
     let (_pg, svc) = service(None).await;
@@ -668,7 +690,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
             !body.contains("URL_PW_SENTINEL"),
             "URL userinfo leaked from {uri}: {body}"
         );
-        for n in (1..=7).filter(|n| *n != 4) {
+        for n in (1..=13).filter(|n| *n != 4) {
             assert!(
                 body.contains(&format!("https://***@h{n}/p")),
                 "URL {n} lost its host and path in {uri}: {body}"

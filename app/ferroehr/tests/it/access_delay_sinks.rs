@@ -55,7 +55,10 @@ async fn service(
     };
     if let Some(listener) = syslog {
         audit.syslog = Some(SyslogConfig {
-            url: format!("tls://localhost:{}", listener.port),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+                "tls://localhost:{}",
+                listener.port
+            )),
             tls: ferrohealth_config::tls::TlsClientSection {
                 trust_roots_file: Some(listener.ca_file.clone()),
                 ..ferrohealth_config::tls::TlsClientSection::default()

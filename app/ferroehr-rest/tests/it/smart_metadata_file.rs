@@ -57,7 +57,9 @@ fn config(entries: Vec<IssuerEntry>) -> AppConfig {
     };
     cfg.auth.smart.discovery = true;
     cfg.auth.smart.issuer_metadata_file = Some(metadata_file());
-    cfg.auth.smart.public_base_url = Some("https://cdr.example.com".to_owned());
+    cfg.auth.smart.public_base_url = Some(ferrohealth_secret::secret_url::SecretUrl::new(
+        "https://cdr.example.com",
+    ));
     cfg
 }
 

@@ -100,7 +100,7 @@ async fn serve(agreement: Agreement) -> (testkit::TestDb, Arc<FerroEhrService>, 
     let constant = |value: &str| vec![Source::Constant(value.to_owned())];
     let mut auth = common::auth(AuthSection {
         issuer: vec![IssuerEntry {
-            issuer: CONTACT_POINT.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(CONTACT_POINT),
             kind: Some(IssuerKind::Federation),
             audience: vec![AUDIENCE.to_owned()],
             jwks_file: common::jwks_file().display().to_string(),

@@ -529,11 +529,11 @@ impl BindingPosture {
             .issuers()
             .iter()
             .map(|entry| BoundIssuer {
-                issuer: ferrohealth_smart::config::mask_userinfo(&entry.issuer),
+                issuer: entry.issuer.redacted(),
                 kind: entry.kind,
                 identifier_issuer: party
                     .iter()
-                    .find(|table| table.issuer == entry.issuer)
+                    .find(|table| table.issuer == entry.issuer.expose())
                     .map(|table| table.identifier_issuer.clone()),
             })
             .collect();

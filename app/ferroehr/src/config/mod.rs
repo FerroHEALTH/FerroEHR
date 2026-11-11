@@ -262,31 +262,22 @@ impl FerroEhrConfig {
     /// snapshot with it; [`Self::to_redacted_table`] renders it. No openEHR spec governs
     /// configuration — our own design/extension.
     ///
-    /// Redaction is a property of the leaf type rather than of a key-name scan:
-    /// every secret-bearing field is typed `ferrohealth-secret`'s `Secret`, whose
-    /// [`Serialize`] emits the fixed `***` placeholder, or
-    /// `SecretUrl`, whose [`Serialize`] masks the URL `userinfo`
-    /// component. Every URL key that may carry `userinfo` is a `SecretUrl`;
-    /// a URL key whose value is an identifier or is published
-    /// (`auth.issuer`, the `smart` URLs) is refused at boot when it
-    /// carries `userinfo`. A field therefore cannot leak by being renamed, and
-    /// the `redacted_json_masks_every_secret_field` test enumerates the current
-    /// secret set as the standing backstop. On top of the types, every string
-    /// leaf of the tree that holds a URL passes `ferrohealth-smart`'s
-    /// [`mask_userinfo`](ferrohealth_smart::config::mask_userinfo), so a URL in a key
-    /// that is not typed `SecretUrl`, or in a configuration no validation has
-    /// run over, is masked too. `[auth]` is the `ferrohealth-smart` section,
-    /// whose serialization writes each Basic password hash as `***`.
-    /// Non-secret identifiers, such as a Basic user's `user` and `scopes`, an
-    /// `issuer` without `userinfo`, or `auth.jwks_file` (a path), stay visible.
+    /// Redaction is a property of the leaf type alone: every secret-bearing
+    /// field is typed `ferrohealth-secret`'s `Secret`, whose [`Serialize`]
+    /// writes `ferrohealth_secret::REDACTED`, or `SecretUrl`, whose
+    /// [`Serialize`] masks the URL `userinfo` and query. Every URL key that may
+    /// carry `userinfo` is a `SecretUrl`, and no pass over the tree or key-name
+    /// scan follows the types. An issuer is an identifier, refused at boot when
+    /// it carries `userinfo`. The `redacted_json_masks_every_secret_field` and
+    /// `url_userinfo_reaches_no_rendering` tests enumerate the secret and URL
+    /// keys. Non-secret identifiers, such as a Basic user's `user` and
+    /// `scopes`, an `issuer`, or `auth.jwks_file` (a path), stay visible.
     ///
     /// # Errors
     /// [`ConfigError`] if the tree cannot be serialized to JSON.
     pub fn to_redacted_json(&self) -> Result<serde_json::Value, ConfigError> {
-        let mut tree = serde_json::to_value(self)
-            .map_err(|e| ConfigError::semantic(format!("rendering config as JSON: {e}")))?;
-        redact::mask_url_userinfo(&mut tree);
-        Ok(tree)
+        serde_json::to_value(self)
+            .map_err(|e| ConfigError::semantic(format!("rendering config as JSON: {e}")))
     }
 }
 
@@ -586,7 +577,7 @@ mod tests {
         let [issuer] = c.auth.shared.issuers() else {
             panic!("one issuer table from the env");
         };
-        assert_eq!(issuer.issuer, "https://idp");
+        assert_eq!(issuer.issuer.expose(), "https://idp");
         assert_eq!(
             issuer.kind,
             Some(ferrohealth_smart::kind::IssuerKind::Persons)
@@ -1384,7 +1375,7 @@ mod tests {
     fn a_served_smart_document_needs_an_issuer() {
         let mut c = standalone();
         c.auth.smart.discovery = true;
-        c.auth.smart.public_base_url = Some("https://cdr.example.com".to_owned());
+        c.auth.smart.public_base_url = Some(SecretUrl::new("https://cdr.example.com"));
         let err = c
             .validate()
             .expect_err("SMART without an [auth] issuer must refuse");

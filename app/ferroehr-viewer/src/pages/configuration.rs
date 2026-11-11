@@ -13,6 +13,7 @@
 //! only by editing the file and restarting, so nothing here can be changed.
 //! No openEHR spec governs configuration: our own design.
 
+use ferrohealth_secret::REDACTED;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
@@ -173,7 +174,7 @@ fn label_of(key: &str) -> String {
 
 /// A redacted value, as the CDR spells a secret it does not show.
 fn is_redacted(text: &str) -> bool {
-    text == "***" || text.contains("://***")
+    text == REDACTED || text.contains(&format!("://{REDACTED}"))
 }
 
 /// The words of a setting without a value.

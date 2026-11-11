@@ -267,7 +267,7 @@ impl Agreement {
         let nl = auth
             .issuers()
             .iter()
-            .any(|entry| entry.issuer == self.issuer && entry.profile == Preset::Nl);
+            .any(|entry| entry.issuer.expose() == self.issuer && entry.profile == Preset::Nl);
         if self.jurisdiction.is_empty() && nl {
             NL.to_owned()
         } else {

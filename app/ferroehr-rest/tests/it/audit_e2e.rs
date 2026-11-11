@@ -140,7 +140,7 @@ async fn audit_capture(suppress_login: bool) -> (SyslogTlsListener, AuditSender)
             ..StoreConfig::default()
         },
         syslog: Some(SyslogConfig {
-            url: format!("tls://127.0.0.1:{port}"),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(format!("tls://127.0.0.1:{port}")),
             tls: ferrohealth_config::tls::TlsClientSection {
                 trust_roots_file: Some(socket.ca_file.clone()),
                 ..ferrohealth_config::tls::TlsClientSection::default()
@@ -174,7 +174,7 @@ async fn audit_capture_fail_closed() -> AuditSender {
             ..StoreConfig::default()
         },
         syslog: Some(SyslogConfig {
-            url: format!("tls://127.0.0.1:{port}"),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(format!("tls://127.0.0.1:{port}")),
             ..SyslogConfig::default()
         }),
         suppress_login_events: true,

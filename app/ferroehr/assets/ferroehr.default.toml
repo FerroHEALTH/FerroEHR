@@ -180,7 +180,8 @@ product_scope = ""
 
 # The `[auth.issuer]` tables, each issuer with its own settings.
 #? [[auth.issuer]]
-# The issuer identifier.
+# The issuer identifier. It renders with any userinfo masked, as `SecretUrl`
+# renders itself.
 #? issuer = ""
 # Whose tokens the issuer signs; required, with no default.
 #? kind = "persons"
@@ -266,7 +267,8 @@ product_scope = ""
 # The client authentication of the introspection call.
 #? [auth.issuer.introspection.client]
 # The issuer whose metadata names the token endpoint; exclusive with
-# `token_endpoint`.
+# `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
+# itself.
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
 # userinfo and its query masked.
@@ -336,7 +338,8 @@ product_scope = ""
 # The client credentials grant whose token authorizes the call.
 #? [auth.issuer.introspection.bearer]
 # The issuer whose metadata names the token endpoint; exclusive with
-# `token_endpoint`.
+# `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
+# itself.
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
 # userinfo and its query masked.
@@ -573,7 +576,8 @@ min_version = "1.3"
 # The `[auth.attributes]` tables, at most one per `persons` issuer: where it
 # states its professionals' attributes.
 #? [[auth.attributes]]
-# The `[auth.issuer]` this table describes, of kind `persons`.
+# The `[auth.issuer]` this table describes, of kind `persons`, `patients` or
+# `machines`.
 #? issuer = ""
 # The default sources the table starts from.
 #? mapping = "iua"
@@ -627,7 +631,8 @@ min_version = "1.3"
 # Graph permission the deployment grants.
 #? [auth.idp.entra.credentials]
 # The issuer whose metadata names the token endpoint; exclusive with
-# `token_endpoint`.
+# `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
+# itself.
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
 # userinfo and its query masked.
@@ -896,7 +901,8 @@ user = ""
 # The client credentials grant.
 #? [authz.abac.remote.endpoint.credentials.oauth]
 # The issuer whose metadata names the token endpoint; exclusive with
-# `token_endpoint`.
+# `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
+# itself.
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
 # userinfo and its query masked.
@@ -967,7 +973,8 @@ user = ""
 # `oauth`.
 #? [authz.abac.remote.endpoint.credentials.onward]
 # The identifier of the issuer of the onward tokens, whose metadata names its
-# token endpoint unless `token_endpoint` is set.
+# token endpoint unless `token_endpoint` is set. It renders with any userinfo
+# masked, as `SecretUrl` renders itself.
 #? issuer = ""
 # Whose tokens the issuer signs: `persons` (a delegated exchange), `patients`
 # (a patient's own token) or `federation`; required, with no default.
@@ -1789,7 +1796,8 @@ full_verify_interval = "7d"
 # The client credentials grant.
 #? [audit.fhir_feed.endpoint.credentials.oauth]
 # The issuer whose metadata names the token endpoint; exclusive with
-# `token_endpoint`.
+# `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
+# itself.
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
 # userinfo and its query masked.
@@ -1860,7 +1868,8 @@ full_verify_interval = "7d"
 # `oauth`.
 #? [audit.fhir_feed.endpoint.credentials.onward]
 # The identifier of the issuer of the onward tokens, whose metadata names its
-# token endpoint unless `token_endpoint` is set.
+# token endpoint unless `token_endpoint` is set. It renders with any userinfo
+# masked, as `SecretUrl` renders itself.
 #? issuer = ""
 # Whose tokens the issuer signs: `persons` (a delegated exchange), `patients`
 # (a patient's own token) or `federation`; required, with no default.
@@ -2281,7 +2290,8 @@ region = "us-east-1"
 # The client credentials grant.
 #? [terminology.endpoint.credentials.oauth]
 # The issuer whose metadata names the token endpoint; exclusive with
-# `token_endpoint`.
+# `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
+# itself.
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
 # userinfo and its query masked.
@@ -2352,7 +2362,8 @@ region = "us-east-1"
 # `oauth`.
 #? [terminology.endpoint.credentials.onward]
 # The identifier of the issuer of the onward tokens, whose metadata names its
-# token endpoint unless `token_endpoint` is set.
+# token endpoint unless `token_endpoint` is set. It renders with any userinfo
+# masked, as `SecretUrl` renders itself.
 #? issuer = ""
 # Whose tokens the issuer signs: `persons` (a delegated exchange), `patients`
 # (a patient's own token) or `federation`; required, with no default.
@@ -2602,7 +2613,8 @@ region = "us-east-1"
 # The client credentials grant.
 #? [pixm.endpoint.credentials.oauth]
 # The issuer whose metadata names the token endpoint; exclusive with
-# `token_endpoint`.
+# `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
+# itself.
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
 # userinfo and its query masked.
@@ -2673,7 +2685,8 @@ region = "us-east-1"
 # `oauth`.
 #? [pixm.endpoint.credentials.onward]
 # The identifier of the issuer of the onward tokens, whose metadata names its
-# token endpoint unless `token_endpoint` is set.
+# token endpoint unless `token_endpoint` is set. It renders with any userinfo
+# masked, as `SecretUrl` renders itself.
 #? issuer = ""
 # Whose tokens the issuer signs: `persons` (a delegated exchange), `patients`
 # (a patient's own token) or `federation`; required, with no default.

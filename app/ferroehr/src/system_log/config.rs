@@ -15,6 +15,7 @@
 
 use ferrohealth_config::removed::Removed;
 use ferrohealth_config::units::{ByteSize, Duration};
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::endpoint::EndpointSection;
 use serde::{Deserialize, Serialize};
 
@@ -185,7 +186,7 @@ pub struct SyslogConfig {
     /// The Audit Record Repository, `tls://host:port`
     /// (`FERROEHR__AUDIT__SYSLOG__URL`): RFC 5425 TLS, on the §4.1 port 6514
     /// by default.
-    pub url: String,
+    pub url: SecretUrl,
     /// The TLS material of the connection to the ARR
     /// (`[audit.syslog.tls]`): the family's outbound TLS keys, the client
     /// identity for mutual TLS and the trust roots beside the platform's.
@@ -232,7 +233,10 @@ pub struct SyslogConfig {
 impl Default for SyslogConfig {
     fn default() -> Self {
         Self {
-            url: format!("tls://localhost:{}", ihe_atna::atna::syslog::TLS_PORT),
+            url: SecretUrl::new(format!(
+                "tls://localhost:{}",
+                ihe_atna::atna::syslog::TLS_PORT
+            )),
             tls: TlsClientSection::default(),
             spool_dir: None,
             spool_max_events: 100_000,
@@ -262,10 +266,10 @@ impl SyslogConfig {
             format!(
                 "audit.syslog.url ({}) must be a tls://host:port URL, such as tls://arr.example:6514 \
                  (RFC 5425 TLS)",
-                self.url
+                self.url.redacted()
             )
         };
-        let Ok(url) = url::Url::parse(self.url.trim()) else {
+        let Ok(url) = url::Url::parse(self.url.expose().trim()) else {
             return Err(refused());
         };
         if url.scheme() != "tls" || url.host_str().is_none_or(str::is_empty) || url.port().is_none()
@@ -596,7 +600,7 @@ mod tests {
     #[test]
     fn the_syslog_address_is_a_tls_url_with_a_port() {
         let with = |url: &str| SyslogConfig {
-            url: url.to_owned(),
+            url: SecretUrl::new(url),
             ..SyslogConfig::default()
         };
         assert!(with("tls://arr.example:6514").address().is_ok());

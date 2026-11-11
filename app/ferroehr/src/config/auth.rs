@@ -158,7 +158,7 @@ mod tests {
     fn section(issuer: &str) -> AuthSection {
         AuthSection {
             issuer: vec![IssuerEntry {
-                issuer: issuer.to_owned(),
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
                 kind: Some(IssuerKind::Machines),
                 audience: vec!["ferroehr".to_owned()],
                 ..IssuerEntry::default()

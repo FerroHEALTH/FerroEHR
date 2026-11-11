@@ -66,7 +66,9 @@ fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
         ..common::api_config(false)
     };
     cfg.auth.smart.discovery = smart_enabled;
-    cfg.auth.smart.public_base_url = Some("https://cdr.example.com".to_owned());
+    cfg.auth.smart.public_base_url = Some(ferrohealth_secret::secret_url::SecretUrl::new(
+        "https://cdr.example.com",
+    ));
     if patient_bound {
         cfg.auth.smart.patient_issuers = vec![issuer.to_owned()];
     }

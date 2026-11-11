@@ -1031,7 +1031,7 @@ mod tests {
             syslog: Some(SyslogConfig {
                 // A port nothing listens on is fine: the sink connects on the
                 // first send, which fails and is metered.
-                url: format!("tls://{}:{}", "127.0.0.1".to_owned(), 1),
+                url: ferrohealth_secret::secret_url::SecretUrl::new("tls://127.0.0.1:1"),
                 ..SyslogConfig::default()
             }),
             queue_capacity: 8,

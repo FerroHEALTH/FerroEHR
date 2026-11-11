@@ -242,7 +242,7 @@ pub(crate) const TEST_CLIENT: &str = "ferroehr-test-client";
 /// `audience`, whose first-party client is [`TEST_CLIENT`].
 pub(crate) fn entry(issuer: &str, audience: &str) -> IssuerEntry {
     IssuerEntry {
-        issuer: issuer.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
         kind: Some(IssuerKind::Persons),
         audience: vec![audience.to_owned()],
         first_party_clients: Some(vec![TEST_CLIENT.to_owned()]),

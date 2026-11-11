@@ -42,6 +42,7 @@ use crate::extensions::access::authn::Authenticator;
 use crate::state::AppState;
 
 use ferroehr::config::smart::SmartConfig;
+use ferrohealth_secret::secret_url::SecretUrl;
 
 /// The capability of the EHR launch context the `ehrId` claim conveys
 /// (master04 §Capabilities), which the route table binds `patient/` grants to.
@@ -114,8 +115,8 @@ fn absolute_base(cfg: &SmartConfig, base: &str) -> String {
     if base.starts_with("http://") || base.starts_with("https://") {
         return base.to_owned();
     }
-    match cfg.public_base_url.as_deref() {
-        Some(origin) => format!("{}{base}", origin.trim_end_matches('/')),
+    match cfg.public_base_url.as_ref() {
+        Some(origin) => format!("{}{base}", origin.expose().trim_end_matches('/')),
         None => base.to_owned(),
     }
 }
@@ -170,8 +171,8 @@ fn scopes_supported(cfg: &AppConfig) -> Vec<String> {
 pub fn discovery_path(cfg: &SmartConfig, rest_root: &str) -> String {
     let base = cfg
         .platform_base_url
-        .as_deref()
-        .unwrap_or(rest_root)
+        .as_ref()
+        .map_or(rest_root, SecretUrl::expose)
         .trim_end_matches('/');
     format!("{base}/.well-known/smart-configuration")
 }
@@ -315,7 +316,7 @@ mod tests {
         let mut cfg = AppConfig::default();
         cfg.auth.smart = SmartConfig {
             discovery: true,
-            public_base_url: Some("https://cdr.example.com".to_owned()),
+            public_base_url: Some(SecretUrl::new("https://cdr.example.com")),
             ..SmartConfig::default()
         };
         cfg
@@ -445,7 +446,7 @@ mod tests {
     #[test]
     fn discovery_path_honours_platform_base() {
         let mut c = SmartConfig {
-            platform_base_url: Some("/gateway/v1".to_owned()),
+            platform_base_url: Some(SecretUrl::new("/gateway/v1")),
             ..SmartConfig::default()
         };
         assert_eq!(
@@ -453,7 +454,7 @@ mod tests {
             "/gateway/v1/.well-known/smart-configuration"
         );
         // Trailing slash normalised.
-        c.platform_base_url = Some("/gateway/v1/".to_owned());
+        c.platform_base_url = Some(SecretUrl::new("/gateway/v1/"));
         assert_eq!(
             discovery_path(&c, "/ferroehr/rest"),
             "/gateway/v1/.well-known/smart-configuration"

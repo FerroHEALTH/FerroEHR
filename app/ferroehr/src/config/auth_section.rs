@@ -176,7 +176,7 @@ impl<'de, K: DeserializeSeed<'de>> Visitor<'de> for KeyOrOwn<'_, K> {
 #[cfg(test)]
 pub(crate) fn machines(issuer: &str) -> Vec<ferrohealth_smart::config::IssuerEntry> {
     vec![ferrohealth_smart::config::IssuerEntry {
-        issuer: issuer.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
         kind: Some(ferrohealth_smart::kind::IssuerKind::Machines),
         audience: vec!["ferroehr".to_owned()],
         ..ferrohealth_smart::config::IssuerEntry::default()
