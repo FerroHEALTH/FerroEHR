@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment.profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
-![Version: 25.0.1-rc3](https://img.shields.io/badge/Version-25.0.1--rc3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.7.0-rc3](https://img.shields.io/badge/AppVersion-5.7.0--rc3-informational?style=flat-square)
+![Version: 25.0.1-rc4](https://img.shields.io/badge/Version-25.0.1--rc4-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.7.0-rc3](https://img.shields.io/badge/AppVersion-5.7.0--rc3-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 25.0.1-rc3 \
+  --version 25.0.1-rc4 \
   --namespace ferroehr --create-namespace \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
@@ -62,7 +62,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `25.0.1-rc3` |
+| the **chart** (templates, defaults, this document) | `--version` | `25.0.1-rc4` |
 | the **server image** | `image.tag` | `5.7.0-rc3` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -74,7 +74,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:25.0.1-rc3 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:25.0.1-rc4 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -82,7 +82,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:25.0.1-rc3 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:25.0.1-rc3 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:25.0.1-rc4 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.7.0-rc3 \
   -R FerroHEALTH/FerroEHR

@@ -1485,12 +1485,12 @@ text in scope:
 - The audit record takes the purpose of use and the professional role from an IHE IUA token (#5323) and records a contact point's request message id (#5011).
 - The [crates](../crates.md) page says the `openehr-*` crates follow Cargo SemVer, judged by `cargo-semver-checks`, and that their next publish moves the line to 0.1.0 (#5353).
 - The quickstart compose file attached to a release carries a checksum (#5388).
-- Chart 25.0.1-rc3 carries `appVersion` 5.7.0-rc3.
+- Chart 25.0.1-rc4 carries `appVersion` 5.7.0-rc3.
 
 ### Read and kept on 2026-11-11, for 5.7.0-rc3
 
 - **The configuration pages:** [configuration](../installation/configuration.md) includes the generated reference, which `config-reference.sh` holds to the types, and `docs-claims` resolves every documented key.
-- **The installation pins:** the [Kubernetes installation](../installation/kubernetes.md), the chart README and [verifying releases](../verifying-releases.md) name chart 25.0.1-rc3 and image 5.7.0-rc3 in the book of main. The [Kubernetes installation](../installation/kubernetes.md) names FerroPIX 0.0.26.
+- **The installation pins:** the [Kubernetes installation](../installation/kubernetes.md), the chart README and [verifying releases](../verifying-releases.md) name chart 25.0.1-rc4 and image 5.7.0-rc3 in the book of main. The [Kubernetes installation](../installation/kubernetes.md) names FerroPIX 0.0.26.
 - **The landing page and the README** were aligned with the FerroPIX site in #5382 and make no claim this release changes beyond it.
 - **`SECURITY.md`, the crate READMEs, the [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the chart description** make no claim this release changes.
 
