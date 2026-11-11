@@ -24,14 +24,19 @@
 #   scripts/vendor/nl-role-codes.sh               the tree and the cache
 #   scripts/vendor/nl-role-codes.sh --test-inputs only the cached CodeSystem
 #                                                 the Wabvpz tests read
+#   scripts/vendor/nl-role-codes.sh --cache-key   the package and its pin, the
+#                                                 key CI caches the test
+#                                                 inputs under
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 TEST_INPUTS=false
+CACHE_KEY=false
 case "${1:-}" in
   "") ;;
   --test-inputs) TEST_INPUTS=true ;;
-  *) echo "usage: $0 [--test-inputs]" >&2; exit 2 ;;
+  --cache-key) CACHE_KEY=true ;;
+  *) echo "usage: $0 [--test-inputs | --cache-key]" >&2; exit 2 ;;
 esac
 # shellcheck source=scripts/vendor/lib/pinned.sh
 . "$ROOT/scripts/vendor/lib/pinned.sh"
@@ -47,6 +52,10 @@ RETRIEVED="2026-11-08"
 
 # The package tarball as published, kept in the cache.
 TARBALL="${PACKAGE}-${VERSION}.tgz"
+if [[ "$CACHE_KEY" == true ]]; then
+  echo "nl-role-codes-${PACKAGE}-${VERSION}-${PACKAGE_SHA256}"
+  exit 0
+fi
 # The manifest, read for its licence and never copied.
 MANIFEST_SHA256="b57d7f94a7400c07365959e5b245483acd5c4f2e8bd444e30de9e17e8a18e116"
 LICENSE="CC0-1.0"
