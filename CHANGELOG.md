@@ -1001,7 +1001,7 @@ Shipped with functional changes because: the advisory reaches only a deployment 
   both for TLS over TCP, which never selects AES-GCM-SIV (no TLS cipher suite
   is one), never opens a QUIC connection and never writes CMS, and the image
   never runs the `openssl` program or loads the legacy provider
-  (`security/vex/postgres-os.openvex.json`) (#5392).
+  (`security/vex/postgres-os.openvex.json`) (#5393).
 
 ## [5.7.0-rc2] - 2026-11-10
 

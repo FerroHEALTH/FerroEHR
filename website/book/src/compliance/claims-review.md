@@ -1484,7 +1484,7 @@ text in scope:
 - The family crates move to their newest releases, and every outbound client is built from the family endpoint table (#5320, #5324, #5325). The quickstart, the hosted sandbox and the chart pin FerroPIX 0.0.26 and FerroTERM 0.4.5 (#5351).
 - The audit record takes the purpose of use and the professional role from an IHE IUA token (#5323) and records a contact point's request message id (#5011).
 - The [crates](../crates.md) page says the `openehr-*` crates follow Cargo SemVer, judged by `cargo-semver-checks`, and that their next publish moves the line to 0.1.0 (#5353).
-- The quickstart compose file attached to a release carries a checksum (#5388).
+- The quickstart compose file attached to a release carries a checksum.
 - Chart 25.0.1-rc4 carries `appVersion` 5.7.0-rc3.
 
 ### Read and kept on 2026-11-11, for 5.7.0-rc3
