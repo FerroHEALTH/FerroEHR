@@ -1,0 +1,944 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Enterprise identity providers - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-d44a10dd.svg">
+        <link rel="shortcut icon" href="favicon-077e58b5.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-4e6e7992.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/ferroehr-153b2dd8.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-15dd34c7.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-ba2c1f30.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/identity-providers.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="enterprise-identity-providers"><a class="header" href="#enterprise-identity-providers">Enterprise identity providers</a></h1>
+<p>FerroEHR does not manage users. There is no user table, no user API, and no
+plan to add one: <strong>identity administration is delegated to your identity
+provider (IdP)</strong>, and the CDR consumes standard OAuth 2.0 bearer tokens. This page
+records that posture and walks through connecting an identity provider:
+<a href="#the-generic-standards-path">the generic standards path</a> first, then
+<strong>Microsoft Entra ID</strong> (Azure AD), <strong>AD FS</strong>, <strong>Okta</strong>, <strong>Keycloak</strong>, a SAML
+identity provider behind one of them, and the answer for plain-LDAP
+directories.</p>
+<ul>
+<li><a href="#the-posture-users-live-in-the-idp">The posture: users live in the IdP</a></li>
+<li><a href="#how-the-cdr-consumes-an-idp">How the CDR consumes an IdP</a></li>
+<li><a href="#who-the-caller-is">Who the caller is</a>
+<ul>
+<li><a href="#the-myhealtheu-contact-point-route">The MyHealth@EU contact-point route</a></li>
+</ul>
+</li>
+<li><a href="#the-generic-standards-path">The generic standards path</a></li>
+<li><a href="#microsoft-entra-id-azure-ad">Microsoft Entra ID (Azure AD)</a>
+<ul>
+<li><a href="#binding-and-provisioning-with-the-entra-preset">Binding and provisioning with the <code>entra</code> preset</a></li>
+</ul>
+</li>
+<li><a href="#ad-fs-on-premises-active-directory">AD FS (on-premises Active Directory)</a></li>
+<li><a href="#we-only-have-ldap">“We only have LDAP”</a></li>
+<li><a href="#okta">Okta</a></li>
+<li><a href="#keycloak">Keycloak</a></li>
+<li><a href="#a-saml-identity-provider-through-keycloak-or-entra-id">A SAML identity provider through Keycloak or Entra ID</a></li>
+<li><a href="#just-in-time-creation">Just-in-time creation</a></li>
+<li><a href="#serving-smart-apps">Serving SMART apps</a></li>
+</ul>
+<h2 id="the-posture-users-live-in-the-idp"><a class="header" href="#the-posture-users-live-in-the-idp">The posture: users live in the IdP</a></h2>
+<p>A clinical data repository is the wrong place to store credentials. A user
+store would make the CDR an authentication product (password lifecycle,
+lockout policy, MFA, recovery flows, and the largest new attack surface the
+product could grow) duplicating what a dedicated IdP already does under your
+existing governance. So the split is deliberate and permanent:</p>
+<ul>
+<li><strong>The IdP owns identities</strong>: accounts, passwords, MFA, group/role
+membership, lifecycle (joiners/movers/leavers), and session policy.</li>
+<li><strong>The CDR owns authorization</strong>: it validates the token, mines roles from
+its claims, and enforces <a href="security.html#authorization">RBAC/ABAC and per-EHR access
+control</a> on every request.</li>
+</ul>
+<p>The HTTP Basic user list in <code>ferroehr.toml</code> holds persons only, and it is not
+a user store: each Basic user maps to the <code>PERSON</code> that carries its binding
+key, which the identity provider provisions through SCIM
+(<a href="installation/party-binding-migration.html">bootstrap and migration</a>). A
+machine authenticates with OAuth 2.0 client credentials under a declared
+<code>[[authz.system_client]]</code>, and most people authenticate with bearer tokens
+from the IdP.</p>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>The viewer follows the same rule: it authenticates against the same
+credentials the CDR accepts (the same OIDC issuer, or Basic) and has no
+user-management screens. To create, disable, or re-role a user, use your IdP’s
+own administration surface.</p>
+</blockquote>
+<h2 id="how-the-cdr-consumes-an-idp"><a class="header" href="#how-the-cdr-consumes-an-idp">How the CDR consumes an IdP</a></h2>
+<p>Three things do all the work:</p>
+<ol>
+<li><strong>Token validation</strong> (<code>[auth]</code>): the server reads the issuer’s metadata
+and key set at boot and validates each bearer token’s signature
+(asymmetric algorithms only), <code>iss</code>, <code>exp</code>/<code>nbf</code>, <code>aud</code> and <code>typ</code>; the
+audience list is mandatory, so a server with none refuses to boot rather
+than accepting another service’s token. See the
+<a href="security.html#authentication">bearer settings table</a>.</li>
+<li><strong>Role mining</strong> (<code>[[auth.issuer]]</code>): <code>FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS</code>
+(default <code>["roles","groups","entitlements"]</code>, the RFC 9068 §2.2.3.1
+carriers; a Keycloak realm adds <code>realm_access.roles</code>) names the
+JWT claim paths whose values become the caller’s roles for the
+<a href="security.html#authorization">role layer</a>. A path may be dotted to walk nested
+claims, and a claim holding a single string is accepted as readily as an
+array.</li>
+<li><strong>SMART on openEHR scopes</strong>: every route requires a scope from the
+token’s <code>scope</code> claim (<code>user/composition-*.cruds</code>, <code>user/aql-*.s</code> and so
+on; see <a href="smart-app-launch.html">SMART App Launch</a>). Your IdP has to mint
+them, for example as Keycloak client scopes assigned to the client. A token
+with roles and no SMART on openEHR scope authenticates and is then refused
+with <code>403</code> on every route.</li>
+</ol>
+<p>Everything below is those three pointed at a different issuer.</p>
+<h2 id="who-the-caller-is"><a class="header" href="#who-the-caller-is">Who the caller is</a></h2>
+<p><code>ferrohealth-smart</code> classifies every token by its issuer’s <code>kind</code> and
+profile, and the server acts on the kind:</p>
+<ul>
+<li><strong>A person</strong> signs in at a <code>persons</code> issuer through a first-party client,
+or with HTTP Basic. The login is bound to the <code>PERSON</code> carrying its key,
+and the person commits under that <code>PERSON</code>.</li>
+<li><strong>A delegated person</strong> reaches the server through a client or an RFC 8693
+actor that the issuer’s profile lists in <code>delegates</code>. The token’s subject is
+the person, so the request is bound and committed exactly as the person’s
+own; the client and the actor do not change who committed. The access
+record carries <code>acting_mode = delegated</code>, the client and the actor chain.</li>
+<li><strong>A Keycloak impersonation</strong> is a delegated person. Keycloak 26.8 puts the
+administrator who impersonates a user into an RFC 8693 <code>act</code> claim of every
+token of the impersonation session, <code>{"sub": &lt;the administrator's user id&gt;, "preferred_username": …}</code>, which “is always present and cannot be
+disabled” (Keycloak 26.8.0 release notes, <em>Track impersonation across
+token lifecycle and downstream services</em>). An impersonation is therefore
+refused like any undeclared actor, unless the issuer’s <code>delegates</code> lists
+the administrator as an actor (<code>{ sub = "&lt;user id&gt;" }</code>). Then the request is
+bound to the impersonated user and commits as that user, and the access
+record names the administrator as the actor (EHDS Annex II 3.2(b) asks
+for the natural person who accessed). Keycloak’s <code>act</code> names no issuer,
+so the actor is recorded under the token’s issuer. The <code>impersonator</code>
+claim (<code>id</code>, <code>username</code>) of Keycloak’s built-in IMPERSONATOR_ID and
+IMPERSONATOR_USERNAME session note mappers repeats <code>act</code> and decides
+nothing. To refuse every impersonation, add those mappers and set
+<code>impersonation_marker = "impersonator"</code> on the issuer: a token carrying
+the claim is refused before any actor is read. A Keycloak older than 26.8
+writes no <code>act</code>, so there the marker is the only way to see an
+impersonation at all.</li>
+<li><strong>A guest</strong>, by the profile’s <code>guest</code> markers (Entra ID marks one with
+<code>acct = 1</code> or an <code>idp</code> other than the issuer), is refused with <code>403</code>
+(<code>refused-guest</code>) unless the issuer’s <code>[[auth.party]]</code> table sets
+<code>guests = true</code>. Admit guests only for people acting under your own
+responsibility (GDPR Art. 9(3) and Art. 29), such as contractors.</li>
+<li><strong>A system caller</strong> is an app-only token by the profile’s <code>app_only</code>
+markers: <code>sub</code> equal to the client claim under <code>rfc9068</code>, <code>idtyp = app</code>
+without <code>scp</code> under <code>entra</code>, and the listed service-account subjects under
+<code>keycloak</code>. A Basic user is never one. A system caller acts for no person, so
+it holds <code>system/</code> scopes only, and a token with a <code>user/</code> or <code>patient/</code> scope
+is refused with <code>403</code>. It reads under its <code>system/</code> scopes. It commits into an
+EHR only as a client an <code>[[authz.system_client]]</code> table declares
+(<a href="installation/config-auth.html#authzimport-and-authzsystem_client">configuration</a>),
+under the committer <code>PARTY_IDENTIFIED{name = &lt;client&gt;, identifiers = [{issuer = &lt;iss&gt;, id = &lt;client&gt;, type = "client"}]}</code> with no <code>external_ref</code>.
+<ul>
+<li>Each COMPOSITION it commits is of a template its <code>writes</code> lists, or the
+commit is refused with <code>403</code>.</li>
+<li>It names a facility of its <code>facilities</code> in
+<code>context.health_care_facility.identifiers</code>, or, for a COMPOSITION with no
+context, in <code>feeder_audit.originating_system_audit.location.identifiers</code>.
+Otherwise it is refused with <code>422</code> naming the element; the server fills
+neither.</li>
+<li>A device act names the device in <code>composer</code>, with an identifier of one of
+the client’s <code>device_identifier_issuers</code> that is also
+<code>feeder_audit.originating_system_audit.system_id</code>, and is accepted only
+from a <code>device</code> client. Every other COMPOSITION records a person’s act: it
+is accepted only from a <code>relay</code> client (<code>403</code> otherwise) and names the
+professional by an identifier in <code>composer</code> or in the <code>performer</code> of a
+context participation (<code>422</code> otherwise). An organisation <code>composer</code> is
+refused with <code>422</code>.</li>
+</ul>
+</li>
+<li><strong>A verified external person or organisation</strong> of a <code>federation</code> issuer is
+admitted only under the <code>[[authz.federation.agreement]]</code> of its issuer and
+accessor, and refused with <code>403</code> without one or under the other accessor’s.
+Its rights come from the agreement, never from a role:
+<ul>
+<li>it holds only the <code>patient/</code> scopes the agreement <code>reads</code> (beside
+<code>openid</code>, <code>profile</code>, <code>fhirUser</code>, <code>online_access</code> and <code>launch</code>), so a token
+with any other scope is refused, and it reaches only the EHR of its
+launch context, which needs the issuer in <code>[auth.smart] patient_issuers</code>;</li>
+<li>it is an access-service caller by its kind, so an opted-out EHR answers
+<code>404</code> as an unknown one does (EHDS Art. 10(1)). Only an external person
+under an agreement with <code>opt_out_override</code> reaches one, under an emergency
+purpose, recorded as an override; an organisation never does;</li>
+<li>a read under an agreement with a <code>consent</code> condition needs the consent
+decision reference for the patient (Wabvpz Art. 1(j) and Art. 15a(1)):
+the token carries it in the claim or <code>authorization_details</code> member its
+<code>[[auth.federation]]</code> table maps to <code>consent.reference</code>, as one string
+(a coded value refuses the token with <code>401</code>), and its <code>patient/</code> grant
+holds it to the launch-context patient. A read without it is refused with
+<code>403</code>, and the access record carries the reference with the other
+external fields;</li>
+<li>under an NL agreement, Wabvpz Art. 15f holds an insurer and an
+occupational or insurance physician out. A caller whose <code>nl.role</code> is the
+UZI role 01.008 (bedrijfsarts) or 01.048 (verzekeringsarts) is refused
+with <code>403</code> as <code>refused-wabvpz-role</code>, and a caller whose
+<code>nl.organisation_type</code> is missing or is not a care provider type of
+Nictiz’s <code>OrganisatieTypeCodelijst</code> is refused with <code>403</code> as
+<code>refused-wabvpz-organisation-type</code>, which is how an insurer is refused;</li>
+<li>a <code>chained</code> organisation request carries the requester’s correlation id
+in the claim or attested <code>authorization_details</code> member its
+<code>[[auth.federation]]</code> table maps to <code>correlation_id</code>, as one string; a
+request without it is refused with <code>403</code>, and a request header never
+stands in for it;</li>
+<li>a caller above its agreement’s <code>caller_rate</code> is answered <code>429</code> with
+<code>Retry-After</code> before any patient lookup, a MyHealth@EU contact point’s
+included;</li>
+<li>an external person commits only a COMPOSITION of a template the
+agreement’s <code>writes</code> lists; an organisation commits nothing, and neither
+attests or writes a demographic party. Neither deletes, except the
+discard of a dispensation described under
+<a href="#the-myhealtheu-contact-point-route">the MyHealth@EU contact-point route</a>;</li>
+<li>an external person’s commit records the server’s committer, a
+<code>PARTY_IDENTIFIED</code> with no <code>external_ref</code>: the asserted name as one
+string, the professional’s <code>hp_identifier</code> under the issuer
+<code>"&lt;country_code&gt;:&lt;issuing_authority_name&gt;"</code> with type <code>hp_identifier</code>,
+and the token’s <code>iss</code> and <code>sub</code> with type <code>oauth2</code>. The country must be
+an upper-case ISO 3166-1 alpha-2 code, and the issuing authority is
+NFC-normalised with its white space trimmed and collapsed and may hold no
+<code>:</code>, control or bidi character. A missing or failing field is refused
+with <code>403</code> naming it. Map the authority with a <code>constant</code> source in the
+<code>[[auth.federation]]</code> table when the token does not carry it;</li>
+<li>the COMPOSITION names the healthcare provider the token asserts in
+<code>EVENT_CONTEXT.health_care_facility</code>, or with no context in
+<code>feeder_audit.originating_system_audit.location</code>: a <code>DV_IDENTIFIER</code> with
+the <code>provider.healthcare_provider_identifier</code> as <code>id</code> and the
+<code>provider.issuing_authority_name</code> as <code>issuer</code>. The server writes no
+facility and refuses a composition without it with <code>422</code> (EHDS
+Art. 13(4)). This is the domestic form; the MyHealth@EU contact-point
+form follows.</li>
+</ul>
+</li>
+<li><strong>Attestations</strong> come only from a person bound to a professional <code>PERSON</code>.
+A patient, a representative, a system caller and an unbound caller are
+refused with <code>403</code> (RM common master04 §Attestation).</li>
+</ul>
+<h3 id="the-myhealtheu-contact-point-route"><a class="header" href="#the-myhealtheu-contact-point-route">The MyHealth@EU contact-point route</a></h3>
+<p>A <code>federation</code> issuer with <code>contact_point = true</code> in its <code>[[auth.federation]]</code>
+table is a MyHealth@EU national contact point (NCPeH-A’s authorization
+server). Its person agreement names the service it serves in <code>ehdsi_service</code>
+(<code>patient_summary</code>, <code>eprescription</code> or <code>orcd</code>), and its issuer goes into
+<code>[auth.smart] patient_issuers</code>. Every request runs with a sender-constrained token
+(<code>sender_constraint = "required"</code>). On every patient-data route:</p>
+<ul>
+<li>The token carries the patient of the treatment relationship confirmation
+in <code>ehdsi.patient.id</code>, as <code>system|value</code>, the patient identifier’s
+assigning authority and value, the form every family resource server
+reads. A token without it, or with a value of another form (an empty
+system or one with whitespace, or a value holding a control character,
+<code>|</code>, <code>^</code>, <code>&amp;</code>, <code>~</code> or a backslash), is refused with <code>403</code> whose <code>detail</code> opens with
+<code>ERROR_SEC_DATA_INTEGRITY_NOT_ENSURED</code> (MyHealth@EU Requirements Catalogue
+10.0.0 requirement 11.01.02), recorded as <code>refused-trc-missing</code>, before
+the EHR index is asked.</li>
+<li>The patient is resolved to its EHR through the deployment’s
+<a href="installation/config-integrations.html#pixm">EHR index</a>, compared on the value and the
+assigning authority, and the request must name that EHR: the route’s
+<code>{ehr_id}</code>, or a query’s <code>ehr_id</code>. The EHR stands in for the launch
+context the token does not carry (eHDSI XCA Profile 8.0.1 §4.2.1).</li>
+<li>Another patient’s EHR, an EHR the server does not hold, an EHR an
+opted-out patient’s record keeps out of reach, a TRC patient no EHR
+belongs to, and a request that names no EHR all get one answer, <code>404</code> of
+type <a href="using-the-api/problems.html#trc-patient-mismatch"><code>trc-patient-mismatch</code></a>
+whose <code>detail</code> opens with the service’s <code>*_NOT_FOUND</code> code
+(<code>ERROR_PS_NOT_FOUND</code>, <code>ERROR_EP_NOT_FOUND</code> or <code>ERROR_ORCD_NOT_FOUND</code>),
+which the contact point answers as “No Data”. Each is recorded as a
+<code>refused-trc-patient-mismatch</code> security event, once per request and never
+summarised (eHDSI XCA Profile 8.0.1 §4.2.2).</li>
+<li>Where the agreement sets <code>discard</code>, the person may discard a dispensation
+of a template its <code>writes</code> lists, as a logical delete
+(<code>DELETE /ehr/{ehr_id}/composition/{preceding_version_uid}</code>), within
+<code>discard_window</code> of its first commit (MyHealth@EU Requirements
+Catalogue 10.0.0, requirement 07.04). The eHDSI point of care is a name
+only, so the dispensation’s <code>EVENT_CONTEXT.health_care_facility</code> must
+carry every identifier the discarding token names its point of care by:
+the <code>provider.healthcare_provider_identifier</code> under the
+<code>provider.issuing_authority_name</code>, and the same identifier under the issuer
+<code>urn:oasis:names:tc:xspa:1.0:subject:organization-id</code>, the HCPO’s
+<code>organization-id</code> (eHDSI SAML Profile 10.0.0 §2.3). Any other discard is
+refused with <code>403</code>.</li>
+<li>The committer of a contact point’s caller names the professional by the HP
+Identity Assertion’s <code>NameID</code>: a <code>DV_IDENTIFIER</code> with the assertion’s issuer
+(<code>ehdsi.assertion.issuer</code>, NCP-B) as <code>issuer</code>, the <code>NameID</code>
+(<code>ehdsi.professional.hp_identifier</code>) as <code>id</code>, and
+<code>hp_identifier:&lt;NameID format&gt;</code> as <code>type</code>, such as
+<code>hp_identifier:urn:oasis:names:tc:SAML:1.1:nameid-format:X509SubjectName</code>,
+because one string under two formats names two identifiers (eHDSI SAML
+Profile 10.0.0 §2.1). The token’s <code>iss</code> and <code>sub</code> follow with type
+<code>oauth2</code>, as on a domestic route. A discard is a logical delete under the
+same committer.</li>
+<li>A contact point’s COMPOSITION carries, in
+<code>EVENT_CONTEXT.health_care_facility.identifiers</code>, the provider’s identifier
+under <code>provider.issuing_authority_name</code> and, as a second <code>DV_IDENTIFIER</code>,
+the HCPO’s <code>organization-id</code> under the issuer
+<code>urn:oasis:names:tc:xspa:1.0:subject:organization-id</code>. A commit without the
+second is refused with <code>422</code>; the server writes neither.</li>
+<li>A token that carries permissions (<code>ehdsi.professional.permissions</code>) records
+a dispensation and discards one only with <code>PPD-046</code> among them, as the code
+or its <code>urn:oasis:names:tc:xspa:1.0:subject:hl7:permission:</code> URN (eHDSI SAML
+Profile 10.0.0 §2.5); otherwise it is refused with <code>403</code>.</li>
+</ul>
+<h2 id="the-generic-standards-path"><a class="header" href="#the-generic-standards-path">The generic standards path</a></h2>
+<p>Every walk-through on this page configures the same three things: an issuer
+of kind <code>persons</code> that signs your professionals’ access tokens, the
+<code>[[auth.party]]</code> table their logins are bound through, and a SCIM client that
+provisions their <code>PERSON</code>s. Configure them first against a standards-only
+authorization server; the vendor sections after this one are the same
+configuration through a preset (<code>entra</code>, <code>keycloak</code>, <code>okta</code>), each listing
+the preset’s deviations with their sources. Every preset key can be set on
+the issuer table, which wins over the preset.</p>
+<ol>
+<li>
+<p><strong>The issuer.</strong> The <code>rfc9068</code> profile is the default: an RFC 9068 access
+token with <code>typ</code> <code>at+jwt</code>, the client in <code>client_id</code> and the scopes in
+<code>scope</code>.</p>
+<pre><code class="language-toml">[[auth.issuer]]
+issuer = "https://as.example.com"
+kind = "persons"
+audience = ["ferroehr"]
+first_party_clients = ["ferroehr-viewer"]
+</code></pre>
+</li>
+<li>
+<p><strong>The binding, on <code>sub</code>.</strong> OpenID Connect Core 1.0 §5.7 names <code>iss</code> with
+<code>sub</code> as the only stable identifier of an end-user, so the <code>rfc9068</code>
+profile binds on <code>sub</code>. The <code>[[auth.party]]</code> table names the identifier
+the key is matched against:</p>
+<pre><code class="language-toml">[[auth.party]]
+issuer = "https://as.example.com"
+identifier_issuer = "urn:example:staff-login"
+identifier_type = "uuid"
+</code></pre>
+<p>An <code>email</code>, <code>phone_number</code>, <code>preferred_username</code> or <code>name</code> is never a key.</p>
+</li>
+<li>
+<p><strong>The SCIM client.</strong> Your authorization server issues the provisioning
+client an access token by the client credentials grant (RFC 6749 §4.4), or
+in exchange for a client assertion (RFC 7523 §2.2). Declare the
+authorization server as an issuer of kind <code>machines</code>, and the client in
+<a href="installation/config-auth.html#authscim"><code>[[auth.scim.client]]</code></a> with the
+<code>binding_issuer</code> of step 2. The SCIM client sends the key as
+<code>urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier</code>
+(RFC 7644).</p>
+</li>
+<li>
+<p><strong>An onward caller.</strong> A service that calls FerroEHR for a signed-in
+professional, such as FerroBRIDGE, exchanges the professional’s token at
+the authorization server by RFC 8693 token exchange. List the service in
+the issuer’s <code>delegates</code> (<code>{ client = "&lt;its client id&gt;" }</code>, or <code>{ sub }</code> for
+an RFC 8693 actor): the request is bound to the professional, and the
+access record names the service.</p>
+</li>
+</ol>
+<p><a href="security/committer.html">Who is the committer</a> shows what the server records
+for each of these callers.</p>
+<h2 id="microsoft-entra-id-azure-ad"><a class="header" href="#microsoft-entra-id-azure-ad">Microsoft Entra ID (Azure AD)</a></h2>
+<p>Entra ID exposes a standards-compliant OIDC issuer per tenant.</p>
+<ol>
+<li>
+<p><strong>Register an application</strong> (Entra admin center → App registrations).
+Note the <em>Directory (tenant) ID</em> and the <em>Application (client) ID</em>.</p>
+</li>
+<li>
+<p><strong>Define app roles</strong> (App registration → App roles): create roles named
+after the CDR roles you use (for example <code>USER</code>, <code>CLINICAL</code>, <code>ADMIN</code>) and
+assign users/groups to them (Enterprise applications → your app → Users
+and groups). Entra puts assigned app roles in the token’s <code>roles</code> claim.</p>
+</li>
+<li>
+<p><strong>Expose an audience</strong>: either use the client ID as the audience or add an
+<em>Application ID URI</em> (for example <code>api://ferroehr</code>).</p>
+</li>
+<li>
+<p><strong>Point the CDR at the tenant issuer</strong> and mine the <code>roles</code> claim:</p>
+<pre><code class="language-bash">export FERROEHR__AUTH__ISSUER__0__ISSUER=https://login.microsoftonline.com/&lt;tenant-id&gt;/v2.0
+export FERROEHR__AUTH__ISSUER__0__KIND=persons
+# Entra ID mints no RFC 9068 tokens (`typ` JWT, the scopes in `scp`), which
+# the `entra` profile reads.
+export FERROEHR__AUTH__ISSUER__0__PROFILE=entra
+export FERROEHR__AUTH__ISSUER__0__AUDIENCE=api://ferroehr
+export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=&lt;the client id of your app&gt;
+export FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS=roles
+# Its roles may grant the administrator role.
+export FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=https://login.microsoftonline.com/&lt;tenant-id&gt;/v2.0
+</code></pre>
+</li>
+<li>
+<p><strong>Verify</strong>: request a token for the app (any OAuth2 client credential or
+auth-code flow) and call the API. Read the status codes as a diagnostic:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Status</th><th>What it tells you</th></tr>
+</thead>
+<tbody>
+<tr><td><code>200</code>-family</td><td>roles arrived and the operation was permitted</td></tr>
+<tr><td><code>401</code></td><td>no credential, or one the server rejected (the body deliberately never says which)</td></tr>
+<tr><td><code>403</code></td><td>the token is valid but carries no role or SMART on openEHR scope the operation needs: a clinical call needs a matching scope and, unless every SMART on openEHR scope it holds is a <code>system/</code> scope, at least one role, an admin call needs the admin role and the product scope</td></tr>
+<tr><td><code>400</code></td><td>the <code>Authorization</code> header itself is malformed; no credential was ever read</td></tr>
+<tr><td><code>503</code></td><td>the CDR could not read your issuer’s key set again, so the token was never judged: check network egress, not the token</td></tr>
+</tbody>
+</table>
+</div>
+</li>
+</ol>
+<blockquote class="blockquote-tag blockquote-tag-important">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Important</p>
+<p>A role must arrive in a <strong>role claim</strong>, not in <code>scope</code>. The OAuth2 <code>scope</code>
+claim grants a client delegated authority
+(<a href="https://www.rfc-editor.org/rfc/rfc6749#section-3.3">RFC 6749 §3.3</a>) and says
+nothing about the subject’s roles, so it is not a role source. If your IdP is
+configured to put role names in <code>scope</code>, map them into <code>roles</code> (or another
+entry of <code>ROLE_CLAIMS</code>) instead.</p>
+</blockquote>
+<blockquote class="blockquote-tag blockquote-tag-tip">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"></path></svg>Tip</p>
+<p>Group-based deployments can emit the <code>groups</code> claim instead and list it in
+<code>ROLE_CLAIMS</code>, but group claims arrive as object IDs unless you configure
+group names, so app roles usually read better in policy.</p>
+</blockquote>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>Two configuration mistakes are boot errors rather than runtime surprises, so
+you will find them the first time you start the server: an issuer that is not
+an <code>https</code> URL with no query or fragment, and an empty audience list. Both are
+deliberate: the second is what stops this server accepting a token minted for
+a different service. An issuer the server cannot reach at boot refuses the
+start too.</p>
+</blockquote>
+<h3 id="binding-and-provisioning-with-the-entra-preset"><a class="header" href="#binding-and-provisioning-with-the-entra-preset">Binding and provisioning with the <code>entra</code> preset</a></h3>
+<p>The <code>entra</code> preset is the generic path with Entra ID’s deviations, each from
+Microsoft’s <em>Access token claims reference</em> (claims) or <em>Optional claims
+reference</em> (optional):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Preset key</th><th>Value</th><th>Source</th></tr>
+</thead>
+<tbody>
+<tr><td><code>person_key</code></td><td><code>oid</code></td><td>claims, <code>oid</code>: “The immutable identifier for the requestor”; <code>sub</code> is a pairwise value per application and never a key</td></tr>
+<tr><td><code>tenant_claim</code></td><td><code>tid</code></td><td>claims, <code>tid</code></td></tr>
+<tr><td><code>token_types</code></td><td><code>["JWT"]</code></td><td>claims, header <code>typ</code> “always <code>JWT</code>”</td></tr>
+<tr><td><code>scope_claim</code>, <code>app_only_scope_claim</code></td><td><code>scp</code> (string), <code>roles</code> (array)</td><td>claims, <code>scp</code> and <code>roles</code></td></tr>
+<tr><td><code>client_claims</code></td><td><code>["azp"]</code></td><td>claims, <code>azp</code></td></tr>
+<tr><td><code>app_only</code></td><td><code>idtyp = "app"</code>, and no <code>scp</code></td><td>optional, <code>idtyp</code>; claims, <code>scp</code> “Only included for user tokens”</td></tr>
+<tr><td><code>guest</code></td><td>an <code>idp</code> other than the issuer, or <code>acct = 1</code></td><td>claims, <code>idp</code>; optional, <code>acct</code></td></tr>
+<tr><td><code>expect</code></td><td><code>ver = "2.0"</code></td><td>claims, <code>ver</code></td></tr>
+<tr><td><code>user_claims</code></td><td><code>["acct"]</code></td><td>optional, <code>acct</code>, emitted only when the registration asks for it</td></tr>
+<tr><td><code>unstable_claims</code></td><td><code>upn</code>, <code>unique_name</code></td><td>claims, <code>unique_name</code>; optional, <code>upn</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Binding on <code>oid</code> is FerroEHR’s choice on Microsoft’s “immutable identifier”
+wording. For it to work, the app registration of FerroEHR’s API, and of
+every service such as FerroBRIDGE that calls it, needs:</p>
+<ul>
+<li>the optional claims <code>acct</code> (the guest marker: the preset requires it on
+every user token, so a registration without it is refused at the first
+token, naming the claim), <code>idtyp</code> (the app-only marker), <code>given_name</code> and
+<code>family_name</code>, and the <code>profile</code> scope that <code>oid</code> needs;</li>
+<li><code>"requestedAccessTokenVersion": 2</code> in the manifest’s <code>api</code> attribute
+(<em>Understand the app manifest</em>): FerroEHR accepts v2.0 tokens only, and a
+null value defaults to version 1.</li>
+</ul>
+<p>Cross-tenant synchronisation and converted guests: a member-type user of
+another tenant carries <code>acct = 0</code>, but an <code>idp</code> naming their home tenant. The
+preset treats them as a guest by <code>idp</code>, so they bind only where the
+<code>[[auth.party]]</code> table sets <code>guests = true</code>, and never as staff.</p>
+<p>A person in more groups than fit in a token (the groups overage: “150 for
+SAML tokens, 200 for JWT tokens”, claims) carries no <code>groups</code> claim, and the
+login is refused with <code>403</code> (<code>refused-groups-unavailable</code>) unless the issuer
+sets <code>adapter = "idp-entra"</code> with an <code>[auth.idp.entra]</code> table, which reads the
+groups from Microsoft Graph. Provision only the groups assigned to the
+application to stay under the limit.</p>
+<p><strong>Provisioning through SCIM.</strong> The non-gallery enterprise application, its
+Tenant URL <code>https://&lt;host&gt;/scim/v2/</code> and the steps on FerroEHR’s side are in
+<a href="installation/config-auth.html#provision-from-microsoft-entra-id">Provision from Microsoft Entra ID</a>.
+On the Entra side:</p>
+<ul>
+<li><strong>Authentication.</strong> Use the OAuth 2.0 client credentials grant against your
+own authorization server, or Workload Identity Federation, in which Entra
+presents a signed client assertion your authorization server exchanges.
+Never leave the Secret Token blank: Entra then sends its own test token,
+which every non-gallery application of the tenant receives.</li>
+<li><strong>Attribute mappings.</strong> Replace the tutorial’s <code>mailNickname</code> to
+<code>externalId</code> with <code>objectId</code> to <code>externalId</code>, because a mail nickname “may
+not be unique in the directory” (<em>Develop a SCIM endpoint</em>). Map <code>objectId</code>
+to <code>urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier</code>
+as well, and <code>userPrincipalName</code> to <code>userName</code>.</li>
+<li><strong>Matching precedence.</strong> Set <code>externalId</code> first and <code>userName</code> second.</li>
+<li><strong>Remove every other attribute</strong> the FerroEHR mapping does not carry:
+“Schema discovery isn’t currently supported on custom non-gallery SCIM
+application” (<em>Develop a SCIM endpoint</em>), so Entra cannot learn FerroEHR’s
+schema and sends what its defaults name.</li>
+</ul>
+<h2 id="ad-fs-on-premises-active-directory"><a class="header" href="#ad-fs-on-premises-active-directory">AD FS (on-premises Active Directory)</a></h2>
+<p>AD FS 2016+ speaks OIDC. This is also the supported path for on-premises
+Active Directory in general: front AD with AD FS (or another OIDC-capable
+broker) rather than pointing anything at LDAP.</p>
+<ol>
+<li>
+<p><strong>Create an Application Group</strong> (AD FS Management → Application Groups →
+<em>Web API</em> template, or <em>Server application + Web API</em> for interactive
+clients). The Web API’s <em>identifier</em> becomes the token audience.</p>
+</li>
+<li>
+<p><strong>Issue role claims</strong>: on the Web API’s <em>Issuance Transform Rules</em>, add a
+rule mapping AD group membership to the <code>role</code> claim (template: <em>Send
+Group Membership as a Claim</em>), one rule per CDR role.</p>
+</li>
+<li>
+<p><strong>Point the CDR at the AD FS issuer</strong> and mine the <code>role</code> claim:</p>
+<pre><code class="language-bash">export FERROEHR__AUTH__ISSUER__0__ISSUER=https://adfs.example.com/adfs
+export FERROEHR__AUTH__ISSUER__0__KIND=persons
+export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
+# AD FS mints no RFC 9068 tokens: name the type and the claims its tokens carry.
+export FERROEHR__AUTH__ISSUER__0__TOKEN_TYPES=JWT
+export FERROEHR__AUTH__ISSUER__0__REQUIRED_CLAIMS=iss,sub,aud,exp
+export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=&lt;the client id of your app&gt;
+export FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS=role
+export FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=https://adfs.example.com/adfs
+</code></pre>
+<p>Discovery works out of the box (<code>https://adfs.example.com/adfs/.well-known/openid-configuration</code>).</p>
+</li>
+<li>
+<p><strong>Verify</strong> with the same status table as above: <code>401</code> without a token, <code>403</code>
+with a token that lacks the required role.</p>
+</li>
+</ol>
+<blockquote class="blockquote-tag blockquote-tag-note">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p>
+<p>AD FS emits a single string for one role and an array for several; the
+role-mining layer accepts both shapes on any configured claim path.</p>
+</blockquote>
+<h2 id="we-only-have-ldap"><a class="header" href="#we-only-have-ldap">“We only have LDAP”</a></h2>
+<p>The CDR does not speak LDAP, by design: LDAP bind would put password
+handling back inside the CDR. Front the directory with an OIDC-capable
+broker and connect that instead:</p>
+<ul>
+<li><strong>Active Directory</strong> → AD FS (above) or Entra ID (if synced).</li>
+<li><strong>Generic LDAP</strong> → Keycloak with LDAP user federation (the
+<a href="security.html#authentication">Keycloak example</a> then applies verbatim), or
+any other OIDC provider that can federate LDAP.</li>
+</ul>
+<p>The broker owns the LDAP bind; the CDR sees only signed tokens.</p>
+<h2 id="okta"><a class="header" href="#okta">Okta</a></h2>
+<p>The <code>okta</code> preset reads Okta’s access tokens (Okta, <em>OpenID Connect &amp; OAuth
+2.0 API</em>, the reserved claims of the access token):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Preset key</th><th>Value</th><th>Source</th></tr>
+</thead>
+<tbody>
+<tr><td><code>person_key</code></td><td><code>uid</code></td><td><code>uid</code>: “A unique identifier for the user”</td></tr>
+<tr><td><code>client_claims</code></td><td><code>["cid"]</code></td><td><code>cid</code>: “Client ID of the client that requested the access token”</td></tr>
+<tr><td><code>scope_claim</code></td><td><code>scp</code> (array)</td><td><code>scp</code>: “Array of scopes that are granted to this access token”</td></tr>
+<tr><td><code>app_only</code></td><td>no <code>uid</code></td><td><code>uid</code> “isn’t included in the access token if there is no user bound to it”</td></tr>
+<tr><td><code>token_types</code></td><td>none</td><td>the page names no <code>typ</code>, so an <code>okta</code> issuer fails to load until you set <code>token_types</code> to what your Okta server writes</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-toml">[[auth.issuer]]
+issuer = "https://example.okta.com/oauth2/default"
+kind = "persons"
+profile = "okta"
+token_types = ["&lt;the typ header your server writes&gt;"]
+audience = ["api://ferroehr"]
+first_party_clients = ["&lt;the viewer's client id&gt;"]
+</code></pre>
+<p>Read the <code>typ</code> header of one of your server’s access tokens and set it in
+<code>token_types</code>; the preset deliberately names none.</p>
+<h2 id="keycloak"><a class="header" href="#keycloak">Keycloak</a></h2>
+<p>The <code>keycloak</code> preset reads Keycloak 26.8 access tokens: <code>azp</code> as the client,
+<code>scope</code> as a string, <code>typ</code> <code>JWT</code> (confirm it against your own server), and no
+app-only marker until you list your service accounts. Configure a realm for
+binding as follows.</p>
+<ol>
+<li>
+<p><strong>Two realms.</strong> An issuer has one <code>kind</code>, so professionals sign in at one
+realm (<code>kind = "persons"</code>) and patients at another (<code>kind = "patients"</code>).</p>
+</li>
+<li>
+<p><strong>The binding on <code>sub</code>.</strong> Keycloak’s <code>sub</code> is the user id, which no user
+can change. A user-profile attribute can be the key instead only when its
+<em>Who can edit</em> permission is <em>Admin</em> (<code>"permissions": { "edit": ["admin"] }</code>,
+Server Administration Guide, <em>Managing user attributes</em>).</p>
+</li>
+<li>
+<p><strong>Service accounts.</strong> “A client’s service account is a user account with
+username <code>service-account-CLIENT_ID</code>”, so its <code>sub</code> is a user id. List
+every service account of the realm by its <code>sub</code> in the issuer’s
+<code>app_only</code>; the empty list refuses the issuer at load. On a realm with
+just-in-time creation an unlisted service account would be read as a
+person, so the list must be complete.</p>
+<pre><code class="language-toml">[[auth.issuer]]
+issuer = "https://keycloak.example.com/realms/staff"
+kind = "persons"
+profile = "keycloak"
+audience = ["ferroehr"]
+first_party_clients = ["ferroehr-viewer"]
+app_only = [{ subjects = ["&lt;the sub of service-account-lab&gt;"] }]
+</code></pre>
+</li>
+<li>
+<p><strong>The audience for an onward caller.</strong> Keycloak’s standard token exchange
+requires “the requester client set as an audience in the <code>aud</code> claim” of
+the subject token (<em>Securing applications</em>, token exchange). Add an
+audience mapper to the client scope your professionals’ tokens carry that
+puts the bridge’s or gateway’s client in <code>aud</code>, and let the onward caller
+name FerroEHR’s client id in the <code>audience</code> parameter. List the onward
+client in <code>delegates</code>.</p>
+</li>
+<li>
+<p><strong>No impersonation on a binding realm.</strong> “Any user with the
+<code>impersonation</code> role in the realm can impersonate a user” (<em>Impersonating
+users</em>). Check that no user or group holds the realm <code>impersonation</code> role,
+or the fine-grained admin permission <code>impersonate</code>, and that no client
+holds the legacy token exchange’s impersonation permission; disable the
+legacy token exchange. Where an administrator must keep impersonation, add
+the built-in user session note mappers IMPERSONATOR_ID and
+IMPERSONATOR_USERNAME to the inbound client scope and set
+<code>impersonation_marker = "impersonator"</code>, so every impersonation is
+refused. Whether Keycloak 26.8 adds those mappers by default is not
+verified here; check the client scope. Keycloak 26.8 also writes an RFC
+8693 <code>act</code> claim into every impersonation token, so an impersonator your
+<code>delegates</code> does not list is refused even without the marker
+(<a href="#who-the-caller-is">Who the caller is</a>).</p>
+</li>
+<li>
+<p><strong>Realm hardening.</strong> On a binding or just-in-time realm: no
+self-registration, no social or other brokered identity provider without
+an explicit allow-list, and no automatic account linking (the first login
+flow’s “automatically set existing user”, or linking by email). Each of
+them would let a person choose which account, and so which <code>PERSON</code>, a
+login reaches.</p>
+</li>
+<li>
+<p><strong>SCIM.</strong> Keycloak 26.8 promotes its SCIM API to supported, as a service
+provider for its own realm’s users and groups (release notes, <em>SCIM API
+(supported)</em>). It provisions nothing outbound, so it cannot create
+FerroEHR’s <code>PERSON</code>s or <code>GROUP</code>s: a deployment needs an upstream SCIM
+client, such as its identity governance or HR system, or just-in-time
+creation. Enabling Keycloak’s own SCIM adds a second SCIM endpoint to the
+deployment, which FerroEHR does not read.</p>
+</li>
+</ol>
+<h2 id="a-saml-identity-provider-through-keycloak-or-entra-id"><a class="header" href="#a-saml-identity-provider-through-keycloak-or-entra-id">A SAML identity provider through Keycloak or Entra ID</a></h2>
+<p>FerroEHR never sees SAML. It is an OAuth 2.0 resource server and validates
+only access tokens, so a SAML 2.0 identity provider reaches it through an
+authorization server that brokers it:</p>
+<ul>
+<li><strong>Keycloak</strong> brokers it by Web Browser SSO (OASIS SAML V2.0 Profiles §4.1)
+as the service provider, and issues its own OpenID Connect tokens after the
+login. Set the identity provider’s <em>Principal Type</em> to the Subject <code>NameID</code>
+with the persistent format (<code>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</code>,
+Keycloak’s default <em>NameID Policy Format</em>) or to an immutable attribute, so
+the brokered user’s Keycloak <code>sub</code> stays the same from login to login.
+Keycloak refuses a Subject <code>NameID</code> principal with the transient format.
+Map the name attributes to <code>given_name</code>, <code>family_name</code> and <code>name</code> for
+just-in-time creation, and the group attribute to the group claim.</li>
+<li><strong>Entra ID</strong> federates the SAML identity provider for its tenant, and the
+<code>entra</code> preset reads the tokens it issues as above.</li>
+</ul>
+<p>Never bind on <code>email</code>, <code>phone_number</code>, <code>preferred_username</code>, <code>name</code>, <code>upn</code> or
+<code>unique_name</code>, whatever the SAML assertion maps them from (OpenID Connect
+Core 1.0 §5.7).</p>
+<h2 id="just-in-time-creation"><a class="header" href="#just-in-time-creation">Just-in-time creation</a></h2>
+<p>An issuer can let a professional with no party work at their first login:
+FerroEHR then creates a provisional <code>PERSON</code> from the access token and binds
+the login to it, as
+<a href="installation/config-auth.html#just-in-time-creation">the configuration reference</a>
+describes. It is off by default. What each identity provider must do for it:</p>
+<ul>
+<li><strong>Put the name claims in the access token.</strong> FerroEHR reads the person’s
+data from the access token only (RFC 9068 §2.2.2 lets an authorization
+server include resource owner attributes there), never from an ID token or
+the userinfo endpoint. A generic issuer emits the OpenID Connect Core 1.0
+§5.1 claims your mapped attributes name (<code>name</code>, <code>given_name</code>,
+<code>family_name</code>).</li>
+<li><strong>Microsoft Entra ID (the <code>entra</code> preset):</strong> add the optional claims
+<code>given_name</code> and <code>family_name</code> to the access token of your app
+registration and request the <code>profile</code> scope: Entra documents both as v2.0
+optional claims that “Requires the <code>profile</code> scope” (Microsoft identity
+platform, <em>Optional claims reference</em>). Admit logins by group
+(<code>admit_groups</code>, the object ids in <code>groups</code>) or by the <code>idp</code> claim, which
+“records the identity provider that authenticated the subject of the
+token” and differs from the issuer for a guest (<em>Access token claims
+reference</em>). The key is the object id <code>oid</code>, never <code>upn</code> or <code>email</code>, which
+Entra calls mutable.</li>
+<li><strong>Keycloak (the <code>keycloak</code> preset):</strong> the built-in <code>profile</code> client scope
+maps the name claims; check that its mappers add them to the access token.
+Make the name attributes administrator-controlled as the key is: in the
+realm’s user profile, set the attribute’s <em>Who can edit</em> permission to
+<em>Admin</em> only (<code>"permissions": { "edit": ["admin"] }</code> in the JSON editor),
+which Keycloak defines as writable only from the administrative context
+(Server Administration Guide, <em>Managing user attributes</em>, Permission). A
+professional who could edit their own name could change what their first
+login writes.</li>
+</ul>
+<p>The <code>userName</code> comes from <code>user_name_claim</code>, or the key when it is unset, and
+never from a claim the user can change. SCIM completes a provisional <code>PERSON</code>
+later: a client whose <code>binding_issuer</code> is the issuer’s <code>identifier_issuer</code>
+finds it by <code>userName</code>, sets the <code>externalId</code>, and a complete <code>PUT</code> makes it
+<code>complete</code>.</p>
+<h2 id="serving-smart-apps"><a class="header" href="#serving-smart-apps">Serving SMART apps</a></h2>
+<p>If your IdP is also the authorization server for SMART App Launch apps, the same
+<code>[auth]</code> issuer does double duty: the CDR validates the tokens those apps come
+back with, and the discovery document it serves is built from that issuer’s
+metadata, so the server it <em>advertises</em> to apps is the one it <em>accepts</em> tokens
+from. See <a href="smart-app-launch.html">SMART App Launch</a>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="security/committer.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="smart-app-launch.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="security/committer.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="smart-app-launch.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-09f2665d.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/mermaid-eefea253.min.js"></script>
+        <script src="theme/mermaid-init-ccf746f1.js"></script>
+        <script src="theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>
