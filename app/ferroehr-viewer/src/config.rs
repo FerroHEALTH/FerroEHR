@@ -16,6 +16,7 @@ use std::path::Path;
 use ferrohealth_config::loader::Loader;
 use ferrohealth_config::tls::TlsClientSection;
 use ferrohealth_config::tls::TlsVersion;
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_server::section::ServerSection;
 use ferrohealth_session::config::{OidcSection, SessionSection};
 use ferrohealth_telemetry::section::TelemetrySection;
@@ -371,20 +372,22 @@ fn finish(mut cfg: ViewerConfig) -> Result<ViewerConfig, ConfigError> {
     if !cfg.auth.public_base_url.is_empty() {
         let public = public_origin(&cfg.auth.public_base_url)?;
         if cfg.oidc.redirect_uri.is_empty() {
-            cfg.oidc.redirect_uri = public
-                .join(ferrohealth_session::paths::CALLBACK)
-                .map_err(|_unjoined| {
-                    ConfigError::Invalid(format!(
-                        "auth.public_base_url `{}` takes no callback path",
-                        cfg.auth.public_base_url
-                    ))
-                })?
-                .to_string();
+            cfg.oidc.redirect_uri = SecretUrl::new(
+                public
+                    .join(ferrohealth_session::paths::CALLBACK)
+                    .map_err(|_unjoined| {
+                        ConfigError::Invalid(format!(
+                            "auth.public_base_url `{}` takes no callback path",
+                            cfg.auth.public_base_url
+                        ))
+                    })?
+                    .to_string(),
+            );
         }
         // NOTE: OpenID Connect RP-Initiated Logout 1.0 §3: the provider returns the operator to the
         // registered URI, here the viewer's own signed-out page.
         if cfg.oidc.post_logout_redirect_uri.is_none() {
-            cfg.oidc.post_logout_redirect_uri = Some(
+            cfg.oidc.post_logout_redirect_uri = Some(SecretUrl::new(
                 public
                     .join(crate::session::SIGNED_OUT_PAGE)
                     .map_err(|_unjoined| {
@@ -394,7 +397,7 @@ fn finish(mut cfg: ViewerConfig) -> Result<ViewerConfig, ConfigError> {
                         ))
                     })?
                     .to_string(),
-            );
+            ));
         }
     }
 
@@ -751,11 +754,15 @@ mod tests {
         ]);
         let loaded = load_sources(None, &env).unwrap();
         assert_eq!(
-            loaded.oidc.redirect_uri,
+            loaded.oidc.redirect_uri.expose(),
             "http://localhost:3000/auth/callback"
         );
         assert_eq!(
-            loaded.oidc.post_logout_redirect_uri.as_deref(),
+            loaded
+                .oidc
+                .post_logout_redirect_uri
+                .as_ref()
+                .map(ferrohealth_secret::secret_url::SecretUrl::expose),
             Some("http://localhost:3000/sign-in?signed-out=1"),
             "RP-Initiated Logout 1.0 §3"
         );

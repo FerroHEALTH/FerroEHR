@@ -235,8 +235,9 @@ ferrohealth-smart = { version = "=0.18.0", default-features = false, features = 
 # The operator consoles' OpenID Connect sign-in and session (FerroAUTH, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
-# ferrohealth-smart's relying party. Verified on crates.io 2026-11-10.
-ferrohealth-session = { version = "=0.12.0", default-features = false }
+# ferrohealth-smart's relying party; 0.13 types the provider issuer and the
+# redirect URIs as `SecretUrl`. Verified on crates.io 2026-11-11.
+ferrohealth-session = { version = "=0.13.0", default-features = false }
 # The policy decision of the FerroHEALTH family (FerroAUTH, the same
 # Licensor's BUSL-1.1 code): the attribute-based request over the subject
 # ferrohealth-smart authenticates, the Cedar engine (`cedar`) and the remote
