@@ -48,6 +48,9 @@ definition
                 credentials matches {
                     ITEM_TREE[id8] matches {
                         items matches {
+                            ELEMENT[id90] occurrences matches {1..*} matches {
+                                value matches { DV_CODED_TEXT[id91] }
+                            }
                             ELEMENT[id9] occurrences matches {1..3} matches {
                                 value matches {
                                     DV_CODED_TEXT[id30] matches {
@@ -97,6 +100,7 @@ terminology
             ["id6"] = <text = <"Migration grant"> description = <"What the migration may do.">>
             ["id7"] = <text = <"Kind"> description = <"The kind of the grant, which is the name of the capability.">>
             ["id8"] = <text = <"Grant"> description = <"What the capability grants, held in its credentials.">>
+            ["id90"] = <text = <"Operation"> description = <"An operation the capability grants, a code of FerroEHR's operation terminology ferroehr-operations.">>
             ["id9"] = <text = <"Operation"> description = <"An operation the migration may run.">>
             ["id10"] = <text = <"Subject namespace"> description = <"The EHR_STATUS.subject.external_ref.namespace of the EHRs the migration may touch.">>
             ["id11"] = <text = <"Rate"> description = <"The rate the migration may send requests at.">>

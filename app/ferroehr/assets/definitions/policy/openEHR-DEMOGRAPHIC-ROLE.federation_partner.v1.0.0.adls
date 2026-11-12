@@ -48,6 +48,9 @@ definition
                 credentials matches {
                     ITEM_TREE[id8] matches {
                         items matches {
+                            ELEMENT[id90] occurrences matches {1..*} matches {
+                                value matches { DV_CODED_TEXT[id91] }
+                            }
                             ELEMENT[id9] occurrences matches {1} matches {
                                 value matches { DV_TEXT[id40] }
                             }
@@ -155,6 +158,7 @@ terminology
             ["id6"] = <text = <"Agreement"> description = <"The terms of the agreement for one accessor.">>
             ["id7"] = <text = <"Kind"> description = <"The kind of the grant, which is the name of the capability.">>
             ["id8"] = <text = <"Grant"> description = <"What the capability grants, held in its credentials.">>
+            ["id90"] = <text = <"Operation"> description = <"An operation the capability grants, a code of FerroEHR's operation terminology ferroehr-operations.">>
             ["id9"] = <text = <"Agreement name"> description = <"The name of the agreement.">>
             ["id10"] = <text = <"Agreement version"> description = <"The version of the agreement.">>
             ["id11"] = <text = <"Jurisdiction"> description = <"The ISO 3166-1 alpha-2 code of the jurisdiction the agreement is made under.">>

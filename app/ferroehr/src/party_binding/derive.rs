@@ -105,6 +105,9 @@ pub(crate) struct Facts {
     pub(crate) performer: Option<String>,
     /// The `time_validity` of a `ROLE`.
     pub(crate) validity: Option<Value>,
+    /// What makes the version a policy party, whatever the mapping
+    /// ([`crate::party_binding::policy_mark::policy_content`]).
+    pub(crate) policy: Option<crate::party_binding::policy_mark::PolicyContent>,
 }
 
 impl Facts {
@@ -118,6 +121,7 @@ impl Facts {
             .map(canonical_key);
         let mut facts = Self {
             template,
+            policy: crate::party_binding::policy_mark::policy_content(body),
             ..Self::default()
         };
         facts.relationships(kind, body, mapping);

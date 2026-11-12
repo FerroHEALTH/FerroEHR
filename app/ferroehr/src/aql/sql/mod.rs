@@ -39,8 +39,9 @@
 //! same DDL. It carries none of the EHR gates (the population gate, the
 //! `ehr_ids` scope, the per-EHR access decision, the ABAC patient scope),
 //! because the `party` schema has no `ehr` relation and a party is no EHR's
-//! content; the restriction mark and `LATEST_VERSION` ride the head join as
-//! for every root. No openEHR spec governs AQL over a demographic repository:
+//! content; the restriction mark, the policy-party mark of a caller who is no
+//! administrator (`gates`) and `LATEST_VERSION` ride the head join as for
+//! every root. No openEHR spec governs AQL over a demographic repository:
 //! our own design.
 //!
 //! Every column is named through the schema catalog ([`crate::db::iden`]),
@@ -57,7 +58,6 @@ mod from;
 mod gates;
 mod head;
 mod jsonpath;
-mod policy;
 mod predicate;
 mod scope;
 mod select;
@@ -139,9 +139,9 @@ pub enum PolicyParties {
     /// Every party is served: an administrator's query, or one on a
     /// deployment whose mapping recognises no policy party.
     Served,
-    /// The query leaves out every version of a party whose root is of a
-    /// policy archetype or a specialisation of one, or that holds an acts-for
-    /// relationship inline.
+    /// The query leaves out every version of a party that ever had a policy
+    /// version ([`crate::party_binding::policy_mark`]): its head row carries
+    /// the mark (`vo_head.policy_party_at`) the commit of such a version sets.
     Hidden,
 }
 
@@ -440,7 +440,7 @@ impl<'a> Builder<'a> {
             sub_ctr: 0,
             streaming: false,
             presence_only: false,
-            gates: gates::Gates::current(),
+            gates: gates::Gates::current(ir.domain, ctx.policy_parties),
             step_bindings: Vec::new(),
         }
     }
@@ -539,8 +539,6 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
     if clinical {
         b.apply_ehr_scope();
         b.apply_population_gate();
-    } else {
-        b.hide_policy_parties();
     }
     b.bind_select_paths()?;
     let columns = b.build_select()?;

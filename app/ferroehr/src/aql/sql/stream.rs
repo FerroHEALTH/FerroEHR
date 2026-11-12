@@ -483,8 +483,7 @@ impl Builder<'_> {
         let root_node_needed = root.archetype.is_some()
             || root.name.is_some()
             || !root.standard.is_empty()
-            || root_node_referenced(self.ir, plan.root)
-            || self.hides_policy_parties();
+            || root_node_referenced(self.ir, plan.root);
         if !root_node_needed {
             self.q.and_where(
                 col(v, VersionRow::LifecycleState)
