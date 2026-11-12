@@ -7,8 +7,7 @@
 //! Its sections are `[authz.party_binding.person]`,
 //! `[authz.party_binding.professional_role]`, `[authz.party_binding.group]`,
 //! `[authz.party_binding.membership]` and
-//! `[authz.party_binding.representation]`, beside the policy sections of
-//! [`super::policy`].
+//! `[authz.party_binding.representation]`.
 //!
 //! It names the templates a professional's `PERSON`, the professional `ROLE`
 //! and a group's `GROUP` are valid against, the identifier selectors of the
@@ -240,8 +239,6 @@ pub struct Sections<'a> {
     pub membership: Option<&'a MembershipSection>,
     /// `representation`.
     pub representation: Option<&'a RepresentationSection>,
-    /// The policy sections.
-    pub policy: super::policy::PolicySections<'a>,
 }
 
 impl Sections<'_> {
@@ -254,7 +251,6 @@ impl Sections<'_> {
             && self.group.is_none()
             && self.membership.is_none()
             && self.representation.is_none()
-            && self.policy.is_empty()
     }
 
     /// The boot refusals a configuration can be judged by alone, each naming
@@ -298,7 +294,6 @@ impl Sections<'_> {
         if let Some(representation) = self.representation {
             representation_errors(representation, &mut errors);
         }
-        self.policy.errors(&mut errors);
         errors
     }
 
@@ -432,8 +427,8 @@ impl Sections<'_> {
     }
 
     /// Returns the mapping the side table is derived under, with the key
-    /// selectors held to `key_issuers` and the protected parties writable by
-    /// `admin_role`.
+    /// selectors held to `key_issuers`, the built-in policy parties
+    /// recognised, and the protected parties writable by `admin_role`.
     ///
     /// # Errors
     /// [`SelectorError`] when a selector path does not compile, which
@@ -488,11 +483,11 @@ impl Sections<'_> {
                 representation.relationship_codes.clone(),
             );
         }
-        self.policy.apply(mapping)
+        Ok(mapping.with_policy())
     }
 
     /// Returns the definitions a demographic write of a mapped node is
-    /// validated against.
+    /// validated against, the built-in policy definitions included.
     #[must_use]
     pub fn mapped_templates(&self) -> MappedPartyTemplates {
         let mut templates = MappedPartyTemplates::default();
@@ -508,7 +503,7 @@ impl Sections<'_> {
         if let Some(membership) = self.membership {
             templates = templates.with_membership_archetype(membership.archetype_id.clone());
         }
-        self.policy.mapped_templates(templates)
+        templates.with_policy()
     }
 }
 

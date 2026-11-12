@@ -14,7 +14,10 @@ with its selector unique indexes, the protection of the parties it relies on
 judged in that commit (`protect`), the first fill and refill under the
 mapping's digest with the replica leases (`fill`), and the
 `ferrohealth-smart` `PartySource` over it, no cache; the mapping's
-configuration is `config::binding::person`),
+configuration is `config::binding::person`; `policy` recognises the policy
+parties by archetype and carries their default definitions from
+`assets/definitions/policy/`, which `service::demographic::policy_definitions`
+seeds at boot when absent),
 `origins` (the
 `[origins]` register of recognised data origins, EHDS Annex II 3.4),
 `licence`, `ids`, `extensions`, `banner`, `decommission` (the `ferroehr db

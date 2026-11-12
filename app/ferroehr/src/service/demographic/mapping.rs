@@ -4,7 +4,7 @@
 //! The boot rules of the shared party mapping that read its templates.
 //!
 //! Every template and archetype the mapping names must be in the definition
-//! store, rooted at its class (`PERSON`, `ROLE`, `GROUP`, `AGENT` or
+//! store, rooted at its class (`PERSON`, `ROLE`, `GROUP` or
 //! `PARTY_RELATIONSHIP`), with every mapped path present and of an RM type
 //! that can carry its source: a selector a `DV_IDENTIFIER`, a name a
 //! `DV_TEXT`. Every relationship type code of the representation archetype
@@ -154,49 +154,7 @@ impl FerroEhrService {
                 }
             }
         }
-        self.policy_mapping_errors(sections, &mut errors).await?;
         Ok(errors)
-    }
-
-    /// Pushes the refusals of the policy definitions: the `AGENT` template
-    /// with a `DV_IDENTIFIER` at its client selector, each policy `ROLE`
-    /// template, and the acts-for archetype, each rooted at its class.
-    async fn policy_mapping_errors(
-        &self,
-        sections: &Sections<'_>,
-        errors: &mut Vec<String>,
-    ) -> Result<(), ServiceError> {
-        let policy = &sections.policy;
-        if let Some(agent) = policy.agent {
-            let at = "authz.party_binding.agent";
-            if let Some(wt) = self
-                .mapped_definition_of(at, &agent.template_id, "AGENT", errors)
-                .await?
-            {
-                path_errors(
-                    &wt,
-                    at,
-                    "client",
-                    &agent.client.path,
-                    Carries::Identifier,
-                    errors,
-                );
-            }
-        }
-        for (_, key, role) in policy.roles() {
-            self.mapped_definition_of(&key, &role.template_id, "ROLE", errors)
-                .await?;
-        }
-        if let Some(acts_for) = policy.acts_for {
-            self.mapped_definition_of(
-                "authz.party_binding.acts_for",
-                &acts_for.archetype_id,
-                "PARTY_RELATIONSHIP",
-                errors,
-            )
-            .await?;
-        }
-        Ok(())
     }
 
     /// The definition `id` resolves to when it is stored and rooted at

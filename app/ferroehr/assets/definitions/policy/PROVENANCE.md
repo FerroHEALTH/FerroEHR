@@ -1,35 +1,33 @@
 # Policy definitions: provenance
 
-Six ADL 2 archetypes of FerroEHR's default demographic definitions, which a
-deployment loads with `ferroehr definitions load` before `serve` so that a
-mapping of its policy parties finds them at boot. A party of one of them is
-a policy party, which only an administrator writes and reads; the book's
+Six ADL 2 archetypes, the defaults of FerroEHR's authorization model. The
+binary carries them (`ferroehr::party_binding::policy::DEFINITIONS`), and
+each boot stores one when no definition of its id is stored, never over a
+stored one. FerroEHR recognises a policy party by these archetypes (or a
+specialisation of one) under any template, and no configuration key names
+them; a deployment versions or replaces the templates through the
+definition API. A party of one of them is a
+policy party, which only an administrator writes and reads; the book's
 "Operational policy" page describes the model.
 
 1. `openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0.adls`: the `AGENT` of a software
    system, identified by a `DV_IDENTIFIER` in `details` whose issuer is the
-   token issuer and whose id is its OAuth 2.0 `client_id`. Named by
-   `[authz.party_binding.agent] template_id`; its identifier is at
-   `/details[id2]/items[id3]`.
+   token issuer and whose id is its OAuth 2.0 `client_id`, at
+   `/details[id2]/items[id3]`, type `client_id`.
 2. `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1.0.0.adls`: the
    relationship from a system's `AGENT` to the provider's `ORGANISATION` it
-   acts for, held in the `AGENT`'s `relationships`. Named by
-   `[authz.party_binding.acts_for] archetype_id` in its interface form,
-   `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1`.
+   acts for, held in the `AGENT`'s `relationships`, recognised in its
+   interface form, `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1`.
 3. `openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0.adls`: what a system
-   commits, one `CAPABILITY` per origin (relay or device). Named by
-   `[authz.party_binding.system_client_role] template_id`.
+   commits, one `CAPABILITY` per origin (relay or device).
 4. `openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0.adls`: a migration's
-   operations, subject namespaces, rate and trusted creating systems. Named
-   by `[authz.party_binding.data_migration_role] template_id`.
+   operations, subject namespaces, rate and trusted creating systems.
 5. `openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0.adls`: the terms of a
    partner's data-sharing agreement, one `CAPABILITY` per accessor (person or
-   organisation). Named by
-   `[authz.party_binding.federation_partner_role] template_id`.
+   organisation).
 6. `openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls`: a privilege a person
    holds beyond clinical access (subject audit, access service, identifier
-   reader, import). Named by `[authz.party_binding.privileged_role]
-   template_id`.
+   reader, import).
 
 ## Source
 

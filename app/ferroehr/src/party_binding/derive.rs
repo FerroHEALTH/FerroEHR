@@ -89,8 +89,6 @@ pub(crate) struct Facts {
     pub(crate) groups: Vec<Uuid>,
     /// Whether an inline relationship is of the representation archetype.
     pub(crate) represents: bool,
-    /// Whether an inline relationship is of the acts-for archetype.
-    pub(crate) acts_for: bool,
     /// The representation relationships with a container target.
     pub(crate) representations: Vec<Representation>,
     /// The selector identifiers of a `PERSON` of a mapped template, distinct
@@ -159,7 +157,6 @@ impl Facts {
                 .and_then(Value::as_str)
                 .map(str::to_lowercase);
             let is = |of: Option<&String>| of.is_some() && of == archetype.as_ref();
-            self.acts_for |= is(mapping.acts_for.as_ref());
             if is(mapping.representation.as_ref()) {
                 self.represents = true;
                 if let Some(subject) = target {

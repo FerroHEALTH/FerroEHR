@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The policy parties (#5434) over a real PostgreSQL 18: the default policy
-//! definitions of `deploy/definitions/policy/` load, the mapping the book's
-//! "Operational policy" page documents passes the boot rules over them, each
-//! worked example on that page fits its definition, and only an
-//! administrator writes a policy party (the system `AGENT`, a policy `ROLE`,
-//! an acts-for relationship inline or of its own). No openEHR spec governs
-//! who writes a party: our own design.
+//! definitions are seeded when absent and never overwritten, no
+//! configuration key names them, each worked example on the book's
+//! "Operational policy" page fits its definition, a deployment's own
+//! version or specialisation of a policy archetype is recognised by
+//! archetype, and only an administrator writes or reads a policy party (the
+//! system `AGENT`, a policy `ROLE`, an acts-for relationship inline or of its
+//! own). No openEHR spec governs who writes a party: our own design.
 
 use std::collections::HashMap;
 
@@ -18,22 +19,15 @@ use crate::fixtures::{at, delete_precondition, if_match, object, written_vo};
 use ferroehr::config::FerroEhrConfig;
 use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
+use ferroehr::party_binding::policy::{PolicyKind, PolicyRole};
 use ferroehr::party_binding::protect;
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::definition::load::SourceFormat;
+use ferroehr::service::definition::load::{Loaded, SourceFormat};
+use ferroehr::service::demographic::policy_definitions::Seeded;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
 
-/// The policy definitions, in the order the lanes load them.
-const POLICY_SET: [&str; 6] = [
-    "openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0.adls",
-    "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1.0.0.adls",
-    "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0.adls",
-    "openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0.adls",
-    "openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0.adls",
-    "openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls",
-];
 /// The acts-for archetype, in the interface form a relationship carries.
 const ACTS_FOR: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1";
 /// The example ids of the book page, each replaced by the id of the party
@@ -79,14 +73,6 @@ fn body(name: &str, ids: &[(&str, VoId)]) -> Value {
     serde_json::from_str(&text).unwrap_or_else(|e| panic!("the example {name} parses: {e}"))
 }
 
-/// The text of the policy definition `file`.
-fn definition(file: &str) -> String {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../deploy/definitions/policy")
-        .join(file);
-    std::fs::read_to_string(path).expect("the policy definition is readable")
-}
-
 /// The configuration of `toml`.
 fn config(toml: &str) -> FerroEhrConfig {
     let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp file");
@@ -94,22 +80,21 @@ fn config(toml: &str) -> FerroEhrConfig {
     ferroehr::config::assemble(Some(file.path()), &HashMap::new(), &[]).expect("assembles")
 }
 
-/// A service over a fresh database holding the policy definitions.
+/// A service over a fresh database holding the policy definitions, seeded
+/// as a boot seeds them.
 async fn loaded() -> (testkit::TestDb, FerroEhrService) {
     let (db, svc) = crate::fixtures::service().await;
-    for file in POLICY_SET {
-        svc.definition_load(SourceFormat::Adl2, &definition(file))
-            .await
-            .unwrap_or_else(|e| panic!("{file} loads: {e:?}"));
-    }
+    svc.seed_policy_definitions()
+        .await
+        .expect("the policy definitions are seeded");
     (db, svc)
 }
 
-/// A service holding the policy definitions with the book's mapping
+/// A service holding the policy definitions with the mapping of `toml`
 /// installed, as the server installs it.
-async fn mapped() -> (testkit::TestDb, FerroEhrService) {
+async fn mapped_by(toml: &str) -> (testkit::TestDb, FerroEhrService) {
     let (db, svc) = loaded().await;
-    let config = config(&example("mapping"));
+    let config = config(toml);
     let sections = config.authz.party_binding.sections();
     let mapping = sections
         .binding_mapping(&[], ADMIN)
@@ -120,74 +105,86 @@ async fn mapped() -> (testkit::TestDb, FerroEhrService) {
     (db, svc)
 }
 
-#[tokio::test]
-async fn the_book_mapping_passes_the_boot_rules_over_the_policy_definitions() {
-    let (_db, svc) = loaded().await;
-    let config = config(&example("mapping"));
-    let sections = config.authz.party_binding.sections();
-    assert_eq!(sections.errors(&[], &[]), Vec::<String>::new());
-    let errors = svc
-        .party_mapping_errors(&sections)
-        .await
-        .expect("the store answers");
-    assert!(errors.is_empty(), "{errors:?}");
+/// A service holding the policy definitions under an empty configuration:
+/// the policy parties need no key.
+async fn mapped() -> (testkit::TestDb, FerroEhrService) {
+    mapped_by("").await
 }
 
 #[tokio::test]
-async fn each_policy_refusal_names_its_key() {
-    let (_db, svc) = loaded().await;
-    let wrong = example("mapping")
-        .replace(
-            "template_id = \"openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0\"",
-            "template_id = \"openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0\"",
-        )
-        .replace(
-            "archetype_id = \"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1\"",
-            "archetype_id = \"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.unknown.v1\"",
-        )
-        .replace(
-            "template_id = \"openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0\"",
-            "template_id = \"openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0\"",
-        );
-    let refused = config(&wrong);
-    let sections = refused.authz.party_binding.sections();
-    let static_errors = sections.errors(&[], &[]);
-    assert!(
-        static_errors.iter().any(|e| e.contains(
-            "authz.party_binding.data_migration_role and \
-             authz.party_binding.system_client_role name one template"
-        )),
-        "{static_errors:?}"
-    );
-    let errors = svc
-        .party_mapping_errors(&sections)
+async fn the_policy_definitions_are_seeded_once_and_never_overwritten() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let first = svc
+        .seed_policy_definitions()
         .await
-        .expect("the store answers");
-    let joined = errors.join("\n");
-    assert!(
-        joined.contains("authz.party_binding.agent names")
-            && joined.contains("rooted at ROLE, not AGENT"),
-        "{joined}"
+        .expect("a first boot seeds them");
+    assert_eq!(
+        first.len(),
+        ferroehr::party_binding::policy::DEFINITIONS.len()
     );
     assert!(
-        joined.contains("authz.party_binding.acts_for names"),
-        "{joined}"
-    );
-
-    let moved = example("mapping").replace(
-        "client = { path = \"/details[id2]/items[id3]\"",
-        "client = { path = \"/details[id2]/items[id9]\"",
-    );
-    let moved = config(&moved);
-    let errors = svc
-        .party_mapping_errors(&moved.authz.party_binding.sections())
-        .await
-        .expect("the store answers");
-    assert!(
-        errors
+        first
             .iter()
-            .any(|e| e.starts_with("authz.party_binding.agent client:")),
-        "{errors:?}"
+            .all(|seeded| matches!(seeded, Seeded::Stored(_))),
+        "{first:?}"
+    );
+    let again = svc
+        .seed_policy_definitions()
+        .await
+        .expect("a second boot keeps them");
+    assert!(
+        again.iter().all(|seeded| matches!(seeded, Seeded::Kept(_))),
+        "{again:?}"
+    );
+}
+
+/// A deployment that stored its own text under a default policy id before
+/// the first boot keeps it: the seed neither overwrites nor refuses it.
+#[tokio::test]
+async fn a_deployments_text_under_a_policy_id_is_kept() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let (_, agent) = ferroehr::party_binding::policy::DEFINITIONS[0];
+    let changed = agent.replace("System agent", "Integration engine");
+    assert_ne!(changed, agent, "the definition names its root");
+    svc.definition_load(SourceFormat::Adl2, &changed)
+        .await
+        .expect("the deployment's AGENT");
+    let seeded = svc
+        .seed_policy_definitions()
+        .await
+        .expect("the boot seeds the rest");
+    assert!(matches!(&seeded[0], Seeded::Kept(_)), "{seeded:?}");
+    assert_eq!(
+        svc.definition_load(SourceFormat::Adl2, &changed)
+            .await
+            .expect("the deployment's text is stored"),
+        Loaded::Unchanged("openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0".to_owned())
+    );
+}
+
+/// The policy parties have no configuration key: each section a policy
+/// mapping would take is refused as an unknown key.
+#[test]
+fn no_configuration_key_names_a_policy_party() {
+    for section in [
+        "agent",
+        "acts_for",
+        "system_client_role",
+        "data_migration_role",
+        "federation_partner_role",
+        "privileged_role",
+    ] {
+        let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp file");
+        file.write_str(&format!(
+            "[authz.party_binding.{section}]\ntemplate_id = \"x\"\n"
+        ))
+        .expect("write");
+        ferroehr::config::assemble(Some(file.path()), &HashMap::new(), &[])
+            .expect_err("no policy key exists");
+    }
+    assert!(
+        !ferroehr::config::DEFAULT_TEMPLATE.contains("acts_for"),
+        "the reference names no policy key"
     );
 }
 
@@ -279,18 +276,14 @@ async fn delete(svc: &FerroEhrService, kind: PartyKind, uid: &str) -> Result<(),
     .map(|_| ())
 }
 
-/// Asserts `refused` is the `403` of a policy party, naming the template or
-/// archetype that makes it one.
+/// Asserts `refused` is the `403` of a policy party, naming the archetype
+/// that makes it one.
 fn assert_policy_refusal<T: std::fmt::Debug>(refused: Result<T, ServiceError>) {
     let refused = refused.expect_err("a policy party is written by an administrator only");
     assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
     let text = refused.to_string();
     assert!(
-        text.contains("is a policy party of the template openehr-demographic-")
-            || text.contains(
-                "is a policy party of the archetype \
-                 openehr-demographic-party_relationship.acts_for.v1"
-            ),
+        text.contains("is a policy party of the archetype openehr-demographic-"),
         "{text}"
     );
 }
@@ -668,19 +661,25 @@ async fn a_professional_credentials_capability_is_never_read_as_a_grant() {
         .await
         .expect("the professional ROLE loads");
     let config = config(&format!(
-        "{}\n[authz.party_binding.professional_role]\ntemplate_id = \"{professional}\"\n",
-        example("mapping")
+        "[authz.party_binding.professional_role]\ntemplate_id = \"{professional}\"\n"
     ));
     let sections = config.authz.party_binding.sections();
     let mapping = sections
         .binding_mapping(&[], ADMIN)
         .expect("the mapping compiles");
-    assert_eq!(mapping.policy_role(professional), None);
-    for (kind, _, role) in sections.policy.roles() {
-        assert_ne!(
-            mapping.policy_role(&role.template_id),
-            None,
-            "{kind:?} is a grant"
+    assert!(mapping.names_policy());
+    assert_eq!(
+        PolicyKind::of("openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1"),
+        None
+    );
+    assert_eq!(
+        PolicyKind::of("openEHR-DEMOGRAPHIC-CAPABILITY.individual_credentials.v0"),
+        None
+    );
+    for kind in PolicyRole::ALL {
+        assert_eq!(
+            PolicyKind::of(kind.archetype_id()),
+            Some(PolicyKind::Role(kind))
         );
     }
     let svc = svc
@@ -715,4 +714,80 @@ async fn a_professional_credentials_capability_is_never_read_as_a_grant() {
     as_clinician(svc.party_get(PartyKind::Role, at(role.to_string()), None))
         .await
         .expect("a professional ROLE is no policy party");
+}
+
+/// The system client `ROLE` example under another template: `template_id`
+/// and the root archetype id `archetype`.
+fn system_client_under(template_id: &str, archetype: &str, agent: VoId) -> Value {
+    let mut role = body("system-client-role", &[(AGENT, agent)]);
+    role["archetype_node_id"] = json!(archetype);
+    role["archetype_details"]["archetype_id"]["value"] = json!(archetype);
+    role["archetype_details"]["template_id"]["value"] = json!(template_id);
+    role
+}
+
+/// A deployment versions the system client `ROLE` and builds a specialised
+/// one under another id, through the definition upload the REST route
+/// calls: both are recognised by their archetype and guarded, and a boot
+/// keeps them.
+#[tokio::test]
+async fn a_deployments_version_and_specialisation_are_policy_parties() {
+    let (_db, svc) = mapped().await;
+    let (_, shipped) = ferroehr::party_binding::policy::DEFINITIONS[2];
+    let version = shipped.replace(
+        "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0",
+        "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.1.0",
+    );
+    assert_ne!(version, shipped, "the definition names its id");
+    let version_id = svc
+        .template_adl2_upload(&version)
+        .await
+        .expect("the deployment uploads a new version");
+    let specialised = crate::adl2_fixture::adl2_source(
+        "archetype",
+        "openEHR-DEMOGRAPHIC-ROLE.system_client-hospital.v1.0.0",
+        Some("openEHR-DEMOGRAPHIC-ROLE.system_client.v1"),
+    );
+    let specialised_id = svc
+        .template_adl2_upload(&specialised)
+        .await
+        .expect("the deployment uploads a specialisation");
+
+    let (agent, _) = as_admin(create(&svc, PartyKind::Agent, &body("agent", &[])))
+        .await
+        .expect("an administrator creates the AGENT");
+    for (template_id, archetype) in [
+        (
+            version_id.as_str(),
+            "openEHR-DEMOGRAPHIC-ROLE.system_client.v1",
+        ),
+        (
+            specialised_id.as_str(),
+            "openEHR-DEMOGRAPHIC-ROLE.system_client-hospital.v1",
+        ),
+    ] {
+        let role = system_client_under(template_id, archetype, agent);
+        assert_policy_refusal(as_clinician(create(&svc, PartyKind::Role, &role)).await);
+        let (vo, _) = as_admin(create(&svc, PartyKind::Role, &role))
+            .await
+            .unwrap_or_else(|e| panic!("an administrator grants under {template_id}: {e:?}"));
+        assert_policy_refusal(
+            as_clinician(svc.party_get(PartyKind::Role, at(vo.to_string()), None)).await,
+        );
+    }
+
+    let seeded = svc
+        .seed_policy_definitions()
+        .await
+        .expect("a boot after the uploads");
+    assert!(
+        seeded.iter().all(|s| matches!(s, Seeded::Kept(_))),
+        "{seeded:?}"
+    );
+    for text in [&version, &specialised] {
+        assert!(matches!(
+            svc.definition_load(SourceFormat::Adl2, text).await,
+            Ok(Loaded::Unchanged(_))
+        ));
+    }
 }

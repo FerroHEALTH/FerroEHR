@@ -11,8 +11,9 @@
 //! Only an administrator writes one through the demographic API, so nobody
 //! can plant a key-bearing `PERSON`, grant themselves the professional
 //! `ROLE` or point a colleague's `PERSON` at their own login. The policy
-//! parties ([`super::policy`]) are protected too: an `AGENT` of the agent
-//! template, a `ROLE` of a policy role template, and any party holding an
+//! parties ([`super::policy`]) are protected too, recognised by archetype: an
+//! `AGENT` or a `ROLE` whose root is of a policy archetype or a
+//! specialisation of one, and any party holding an
 //! acts-for relationship, inline or as a `PARTY_RELATIONSHIP` of its own.
 //! Only an administrator writes one, never a SCIM client, so no other
 //! caller can grant itself or anyone a capability. A SCIM client
@@ -142,15 +143,17 @@ pub(crate) async fn check(
         return Ok(());
     }
     let (current, previous) = versions(tx, vo_id).await?;
-    let before = match previous {
+    let mut before = match previous {
         Some(sys_version) => read(tx, mapping, kind, vo_id, sys_version).await?,
         None => Protected::default(),
     };
-    let after = match (current, facts) {
+    let mut after = match (current, facts) {
         (Some(_), Some(facts)) => protected(mapping, kind, facts),
         (Some(sys_version), None) => read(tx, mapping, kind, vo_id, sys_version).await?,
         (None, _) => Protected::default(),
     };
+    mark_policy(tx, mapping, (vo_id, previous), &mut before).await?;
+    mark_policy(tx, mapping, (vo_id, current), &mut after).await?;
     if !(before.protected() || after.protected()) {
         return Ok(());
     }
@@ -368,9 +371,8 @@ fn label(selector: &str) -> &'static str {
 }
 
 /// Refuses the read of the party or relationship `vo_id` by a caller who is
-/// no administrator when one of its versions is a policy party: its root of
-/// the agent or a policy role template, or a node of the acts-for archetype.
-/// It reads the nodes, so no body is parsed.
+/// no administrator when one of its versions is a policy party
+/// ([`policy_node`]).
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) naming the template or archetype; a
@@ -383,34 +385,7 @@ pub(crate) async fn check_read(
     if !mapping.names_policy() || administrator(mapping) {
         return Ok(());
     }
-    let templates: Vec<String> = mapping
-        .agent
-        .iter()
-        .map(|agent| agent.template.clone())
-        .chain(mapping.policy_roles.keys().cloned())
-        .collect();
-    let found: Option<String> = sqlx::query_scalar(
-        "WITH held AS ( \
-           SELECT n.num, n.rm_type, n.archetype, \
-                  lower(CASE WHEN n.rm_version IS NULL OR (n.data -> 'archetype_details') IS NOT NULL \
-                             THEN n.data -> 'archetype_details' \
-                             ELSE ext.node_archetype_details(n.archetype, n.rm_version, v.template_id) \
-                        END -> 'template_id' ->> 'value') AS template \
-           FROM version v \
-           JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id AND n.sys_version = v.content_key \
-           WHERE v.vo_id = $1 AND (n.num = 0 OR n.rm_type = 'PARTY_RELATIONSHIP')) \
-         SELECT CASE WHEN num = 0 AND template = ANY($2) THEN 'the template ' || template \
-                     ELSE 'the archetype ' || archetype END \
-         FROM held \
-         WHERE (num = 0 AND template = ANY($2)) \
-            OR (rm_type = 'PARTY_RELATIONSHIP' AND archetype = $3) \
-         LIMIT 1",
-    )
-    .bind(vo_id)
-    .bind(&templates)
-    .bind(mapping.acts_for.as_deref())
-    .fetch_optional(&mut *conn)
-    .await?;
+    let found = policy_node(conn, vo_id, None).await?;
     match found {
         Some(definition) => Err(ServiceError::not_permitted(format!(
             "{vo_id} is a policy party of {definition}: only an administrator reads it"
@@ -488,72 +463,85 @@ async fn read(
     .fetch_optional(&mut *tx)
     .await?
     .flatten();
-    let acts_for = match &mapping.acts_for {
-        Some(archetype) => holds_relationship(tx, vo_id, sys_version, archetype).await?,
-        None => false,
-    };
     let facts = Facts {
         template: template
             .as_deref()
             .map(crate::templates::identity::canonical_key),
-        acts_for,
         ..Facts::default()
     };
     Ok(protected(mapping, kind, &facts))
 }
 
-/// Whether the version `sys_version` of `vo_id` holds a `PARTY_RELATIONSHIP`
-/// of the canonical archetype `archetype`, as its root or inline, read from
-/// its nodes so no body is parsed (#5220).
-async fn holds_relationship(
+/// Marks `protected`, what the version `sys_version` of `vo_id` holds, as a
+/// policy party when `mapping` recognises policy parties and it is one
+/// ([`policy_node`]); a version without a body is none.
+async fn mark_policy(
     tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    (vo_id, sys_version): (VoId, Option<i32>),
+    protected: &mut Protected,
+) -> Result<(), ServiceError> {
+    if mapping.names_policy()
+        && let Some(sys_version) = sys_version
+    {
+        protected.policy = policy_node(tx, vo_id, Some(sys_version)).await?;
+        protected.whole |= protected.policy();
+    }
+    Ok(())
+}
+
+/// The archetype that makes the version `sys_version` of `vo_id` (any of its
+/// versions when `None`) a policy party: its root's archetype, or the
+/// archetype of a `PARTY_RELATIONSHIP` it holds inline, being a policy
+/// archetype or a specialisation of it within one major version
+/// ([`crate::party_binding::policy::PolicyKind::of`]). It reads the root node
+/// rows and only the relationships' node ids from them.
+async fn policy_node(
+    conn: &mut PgConnection,
     vo_id: VoId,
-    sys_version: i32,
-    archetype: &str,
-) -> Result<bool, ServiceError> {
-    Ok(sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM version v \
-         JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id AND n.sys_version = v.content_key \
-         WHERE v.vo_id = $1 AND v.sys_version = $2 \
-           AND n.rm_type = 'PARTY_RELATIONSHIP' AND n.archetype = $3)",
+    sys_version: Option<i32>,
+) -> Result<Option<String>, ServiceError> {
+    use crate::party_binding::policy::PolicyKind;
+    let rows = sqlx::query(
+        "SELECT n.archetype, \
+                ARRAY(SELECT held #>> '{}' FROM jsonb_path_query(n.data, \
+                      '$.relationships[*].archetype_node_id') AS held) AS held \
+         FROM version v \
+         JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id \
+                    AND n.sys_version = v.content_key AND n.num = 0 \
+         WHERE v.vo_id = $1 AND ($2::int IS NULL OR v.sys_version = $2)",
     )
     .bind(vo_id)
     .bind(sys_version)
-    .bind(archetype)
-    .fetch_one(&mut *tx)
-    .await?)
+    .fetch_all(&mut *conn)
+    .await?;
+    for row in rows {
+        let root: Option<String> = row.try_get("archetype")?;
+        if let Some(root) = root.filter(|root| PolicyKind::of(root).is_some()) {
+            return Ok(Some(format!("the archetype {root}")));
+        }
+        let held: Vec<Option<String>> = row.try_get("held")?;
+        let inline = held
+            .iter()
+            .flatten()
+            .find(|id| PolicyKind::of(id) == Some(PolicyKind::ActsFor));
+        if let Some(id) = inline {
+            return Ok(Some(format!("the archetype {}", id.to_ascii_lowercase())));
+        }
+    }
+    Ok(None)
 }
 
 /// What `facts`, held by a party of `kind`, hold that is protected.
 fn protected(mapping: &BindingMapping, kind: Kind, facts: &Facts) -> Protected {
     let mut protected = Protected::default();
-    if let Some(template) = &facts.template {
-        let policy = match kind {
-            Kind::Agent => mapping
-                .agent
-                .as_ref()
-                .is_some_and(|a| &a.template == template),
-            Kind::Role => mapping.policy_roles.contains_key(template),
-            _ => false,
-        };
-        if policy {
-            protected.policy = Some(format!("the template {template}"));
-        }
-    }
-    if protected.policy.is_none()
-        && facts.acts_for
-        && let Some(archetype) = &mapping.acts_for
-    {
-        protected.policy = Some(format!("the archetype {archetype}"));
-    }
-    protected.whole = protected.policy();
     let Some(template) = &facts.template else {
         return protected;
     };
     match kind {
-        Kind::Role => protected.whole |= mapping.professional_role.as_ref() == Some(template),
+        Kind::Role => protected.whole = mapping.professional_role.as_ref() == Some(template),
         Kind::Group => {
-            protected.whole |= mapping
+            protected.whole = mapping
                 .group
                 .as_ref()
                 .is_some_and(|g| &g.template == template);
@@ -570,7 +558,7 @@ fn protected(mapping: &BindingMapping, kind: Kind, facts: &Facts) -> Protected {
                     identifier.canonical(),
                 ));
             }
-            protected.whole = facts.represents || protected.policy();
+            protected.whole = facts.represents;
         }
         _ => {}
     }

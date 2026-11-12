@@ -119,7 +119,7 @@ async fn a_source_the_upload_refuses_is_refused_and_not_stored() {
 /// The default demographic definitions, each under `deploy/definitions/` in
 /// the order the lanes load them, with the name of the compose config that
 /// carries its copy.
-const DEFAULT_SET: [(&str, &str); 13] = [
+const DEFAULT_SET: [(&str, &str); 7] = [
     (
         "professional/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls",
         "ferroehr-definition-person",
@@ -147,30 +147,6 @@ const DEFAULT_SET: [(&str, &str); 13] = [
     (
         "provider/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls",
         "ferroehr-definition-provider",
-    ),
-    (
-        "policy/openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0.adls",
-        "ferroehr-definition-agent",
-    ),
-    (
-        "policy/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1.0.0.adls",
-        "ferroehr-definition-acts-for",
-    ),
-    (
-        "policy/openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0.adls",
-        "ferroehr-definition-system-client-role",
-    ),
-    (
-        "policy/openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0.adls",
-        "ferroehr-definition-data-migration-role",
-    ),
-    (
-        "policy/openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0.adls",
-        "ferroehr-definition-federation-partner-role",
-    ),
-    (
-        "policy/openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls",
-        "ferroehr-definition-privileged-role",
     ),
 ];
 

@@ -399,7 +399,8 @@ the `provider`, the security floors (assurance, `ehr_access_default`, the
 cohort thresholds), break-glass (`emergency_access_role`,
 `emergency_purpose_codes`) and the Basic users' password hashes. A key that
 moves into the party store is removed and refused as an unknown key, like
-any other. No openEHR spec governs configuration: our own design.
+any other. The policy parties add no configuration key, required or
+optional. No openEHR spec governs configuration: our own design.
 
 **The model.**
 
@@ -442,12 +443,35 @@ any other. No openEHR spec governs configuration: our own design.
   access rights that "take into account the origins and categories" are what
   the grants express.
 
-**Who writes and reads a policy party.** A policy party is an `AGENT` of the
-`[authz.party_binding.agent]` template, a `ROLE` of a policy role template
-(`system_client_role`, `data_migration_role`, `federation_partner_role`,
-`privileged_role`), or a party holding a `PARTY_RELATIONSHIP` of the
-`[authz.party_binding.acts_for]` archetype (or such a relationship on our
-own relationship routes). Only a caller holding `admin_role` creates,
+**Recognised by archetype, seeded as defaults.** Definitions are versioned
+and a deployment models its own way, so nothing is locked in the binary.
+FerroEHR recognises a policy party by its root archetype (or, for acts-for,
+the archetype of a relationship it holds): `openEHR-DEMOGRAPHIC-AGENT.system.v1`,
+`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1` and
+`openEHR-DEMOGRAPHIC-ROLE.{system_client,data_migration,federation_partner,privileged}.v1`,
+or an ADL 2 specialisation of one within the same major version
+(`party_binding::policy::PolicyKind::of`; AM `ADL2/master09.01-spec_overview.adoc`
+§Specialisation: "All possible data instance arrangements that conform to the
+specialised archetype must also conform to all of its parents"; BASE
+`base_types` §Archetype Identifiers, `domain_concept = concept_name { '-'
+specialisation }`). It reads the credentials by the archetype's node ids,
+which every template and version on the archetype keeps; those ids and the
+archetype ids are the documented contract (the book's "Operational policy"
+page), and a breaking change to them is a new archetype major version. The
+binary carries a default template of each (`party_binding::policy::DEFINITIONS`,
+from `app/ferroehr/assets/definitions/policy/`); each boot stores one
+through the normal definition path only when no definition of its id is
+stored, never overwriting, never refusing a deployment's change and never
+re-seeding over it (`seed_policy_definitions`). After that they are ordinary
+definitions, versioned and replaced through the definition API, and every
+write of a policy party is validated against its own template. The
+recognition runs with or without a party mapping and enters no mapping
+digest, since it derives no side-table row yet. **Our own design.**
+
+**Who writes and reads a policy party.** A policy party is an `AGENT` or a
+`ROLE` whose root archetype is a policy archetype or a specialisation, under
+any template, or a party holding an acts-for relationship (or such a
+relationship on our own relationship routes). Only a caller holding `admin_role` creates,
 updates or deletes one, on its own route or inside a demographic
 `CONTRIBUTION`; any other caller, a SCIM client included, is `403` naming
 the template or archetype. `party_binding::protect` judges the version
@@ -455,8 +479,8 @@ before and after the write in the commit's transaction, so a policy party is
 never planted, changed, deleted or turned into an ordinary one by anyone
 else. Reads are an administrator's too: the Demographic API reads of a
 party or relationship any of whose versions is a policy party are `403` to
-any other caller (`protect::check_read`, read from the node rows, no body
-parsed); demographic AQL is tracked on #5450. **Our own design:** the RM's
+any other caller (`protect::check_read`, read from the root node rows and the
+relationships' node ids, no body parsed); demographic AQL is tracked on #5450. **Our own design:** the RM's
 `ACCESS_CONTROL_SETTINGS` is "Currently implementation dependent" and the
 Demographic API defines no access rule for its operations.
 
@@ -470,8 +494,8 @@ grant more than the operator allows. **Our own design.**
 design:** no specification governs break-glass when the policy store is
 down.
 
-**The definitions** ship under `deploy/definitions/policy/` with a
-`PROVENANCE.md`: the `AGENT` and the acts-for relationship adapt CKM's
+**The default definitions** sit under `app/ferroehr/assets/definitions/policy/`
+with a `PROVENANCE.md`: the `AGENT` and the acts-for relationship adapt CKM's
 `ORGANISATION.organisation.v0` (CKM publishes no `AGENT` or
 `PARTY_RELATIONSHIP` archetype), the system-client, migration and privileged
 `ROLE`s adapt `ROLE.individual_provider.v0`, the federation-partner `ROLE`
@@ -485,8 +509,9 @@ professional `ROLE` keeps CKM's meaning of a capability: its `CAPABILITY` is
 qualifications, carries no grant kind, and is never read as a grant, since
 only the policy role templates are. Every CKM source is a v0 draft, so each
 `derived_from` names its CKM citeable id and modification time. The
-definitions load wherever the default set loads and ride every release as
-assets.
+deployment-modelled definitions (professional, care team, representation,
+patient, provider) stay under `deploy/definitions/`, load wherever the
+default set loads and ride every release as assets.
 
 ## Templates, validation, FLAT
 

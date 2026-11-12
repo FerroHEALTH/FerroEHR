@@ -28,7 +28,6 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 pub mod jit;
 pub mod person;
-pub mod policy;
 
 /// The `[authz.party_binding]` table.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -58,18 +57,6 @@ pub struct PartyBindingConfig {
     pub membership: Option<person::MembershipSection>,
     /// The representation `PARTY_RELATIONSHIP` archetype.
     pub representation: Option<person::RepresentationSection>,
-    /// The system `AGENT` template.
-    pub agent: Option<Box<policy::AgentSection>>,
-    /// The acts-for `PARTY_RELATIONSHIP` archetype.
-    pub acts_for: Option<Box<policy::ActsForSection>>,
-    /// The `ROLE` template of a system client's grant.
-    pub system_client_role: Option<Box<person::RoleSection>>,
-    /// The `ROLE` template of a data migration's grant.
-    pub data_migration_role: Option<Box<person::RoleSection>>,
-    /// The `ROLE` template of a federation partner's agreement.
-    pub federation_partner_role: Option<Box<person::RoleSection>>,
-    /// The `ROLE` template of a person's privilege.
-    pub privileged_role: Option<Box<person::RoleSection>>,
     /// What FerroEHR does for each `persons` issuer beyond the lookup
     /// (`[[authz.party_binding.issuer]]`): just-in-time creation.
     pub issuer: Vec<jit::IssuerBinding>,
@@ -94,14 +81,6 @@ impl PartyBindingConfig {
             group: self.group.as_ref(),
             membership: self.membership.as_ref(),
             representation: self.representation.as_ref(),
-            policy: policy::PolicySections {
-                agent: self.agent.as_deref(),
-                acts_for: self.acts_for.as_deref(),
-                system_client_role: self.system_client_role.as_deref(),
-                data_migration_role: self.data_migration_role.as_deref(),
-                federation_partner_role: self.federation_partner_role.as_deref(),
-                privileged_role: self.privileged_role.as_deref(),
-            },
         }
     }
 }
@@ -119,12 +98,6 @@ impl Default for PartyBindingConfig {
             group: None,
             membership: None,
             representation: None,
-            agent: None,
-            acts_for: None,
-            system_client_role: None,
-            data_migration_role: None,
-            federation_partner_role: None,
-            privileged_role: None,
             issuer: Vec::new(),
             provisional_report_after: ferrohealth_config::units::Duration::from_days(30),
             provisional_report_days: ferrohealth_config::removed::Removed::default(),

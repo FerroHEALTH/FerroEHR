@@ -1311,45 +1311,6 @@ provisional_report_after = "30d"
 # `subject_relationship` group.
 #? relationship_codes = {}
 
-# The system `AGENT` template.
-#? [authz.party_binding.agent]
-# An operational template rooted at `AGENT`.
-#? template_id = ""
-
-# The client identifier: the `DV_IDENTIFIER` whose issuer is the token issuer
-# and whose id is the OAuth 2.0 `client_id`.
-#? [authz.party_binding.agent.client]
-# The openEHR path.
-#? path = ""
-# The `DV_IDENTIFIER.type`.
-#? type = ""
-
-# The acts-for `PARTY_RELATIONSHIP` archetype.
-#? [authz.party_binding.acts_for]
-# A `PARTY_RELATIONSHIP` archetype whose `source` is a system's `AGENT` and
-# whose `target` is the provider's `ORGANISATION`.
-#? archetype_id = ""
-
-# The `ROLE` template of a system client's grant.
-#? [authz.party_binding.system_client_role]
-# An operational template rooted at `ROLE`.
-#? template_id = ""
-
-# The `ROLE` template of a data migration's grant.
-#? [authz.party_binding.data_migration_role]
-# An operational template rooted at `ROLE`.
-#? template_id = ""
-
-# The `ROLE` template of a federation partner's agreement.
-#? [authz.party_binding.federation_partner_role]
-# An operational template rooted at `ROLE`.
-#? template_id = ""
-
-# The `ROLE` template of a person's privilege.
-#? [authz.party_binding.privileged_role]
-# An operational template rooted at `ROLE`.
-#? template_id = ""
-
 # What FerroEHR does for each `persons` issuer beyond the lookup
 # (`[authz.party_binding.issuer]`): just-in-time creation.
 #? [[authz.party_binding.issuer]]

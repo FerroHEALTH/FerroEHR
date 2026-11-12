@@ -119,12 +119,6 @@ services:
       - /etc/ferroehr/definitions/representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls
       - /etc/ferroehr/definitions/patient/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls
       - /etc/ferroehr/definitions/provider/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls
-      - /etc/ferroehr/definitions/policy/openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0.adls
-      - /etc/ferroehr/definitions/policy/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1.0.0.adls
-      - /etc/ferroehr/definitions/policy/openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0.adls
-      - /etc/ferroehr/definitions/policy/openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0.adls
-      - /etc/ferroehr/definitions/policy/openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0.adls
-      - /etc/ferroehr/definitions/policy/openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls
     environment:
       FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
       FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}

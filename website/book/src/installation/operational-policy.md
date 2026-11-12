@@ -30,7 +30,8 @@ store, or before it can trust anything:
 - the token issuers with their keys and trust bounds, `[auth] product_scope`,
   and `[authz.rbac] admin_role` with `role_issuers`: the authority that
   writes policy parties;
-- the party mapping (`[authz.party_binding]`), which is digest-locked;
+- the party mapping of the deployment's own people (`[authz.party_binding]`),
+  which is digest-locked; the policy parties take no key;
 - the provider the instance acts for (`[authz.party_binding] provider`);
 - the security floors: the assurance minimum, `ehr_access_default` and the
   cohort thresholds;
@@ -94,18 +95,21 @@ versions is set inactive, never deleted, because it is their committer.
 
 ## Who writes and reads a policy party
 
-The rule keys on the definition a party is written under. A policy party is:
+The rule keys on the archetype a party is built on, so a renamed, versioned
+or specialised template is guarded too. A policy party is:
 
-- an `AGENT` of the `[authz.party_binding.agent]` template;
-- a `ROLE` of one of the four policy role templates;
+- an `AGENT` whose root archetype is the system `AGENT` archetype or a
+  specialisation of it, under any template;
+- a `ROLE` whose root archetype is one of the four policy `ROLE` archetypes
+  or a specialisation, under any template;
 - any party holding an acts-for relationship, and an acts-for
   `PARTY_RELATIONSHIP` written on FerroEHR's own relationship routes.
 
 Only a caller holding `[authz.rbac] admin_role` creates, updates or deletes
 one, through its own route or in a `POST /demographic/contribution`. Any
-other caller is answered `403`, and the answer names the template or
-archetype, for example `the AGENT … is a policy party of the template
-openehr-demographic-agent.system.v1.0.0: only an administrator writes it`. A
+other caller is answered `403`, and the answer names the archetype, for
+example `the AGENT … is a policy party of the archetype
+openehr-demographic-agent.system.v1: only an administrator writes it`. A
 SCIM client never writes one, even for a `PERSON` it provisioned, and
 neither does a holder of a `demographic_clients` grant, so no client grants
 itself a capability. The rule judges the version before the write as well
@@ -115,51 +119,86 @@ policy party, nor turn one into an ordinary party.
 Only an administrator reads one too: `GET` of the party, of
 `/demographic/versioned_party/{id}` and its `revision_history` and
 `version` reads, and of its tags answer `403` to any other caller, naming
-the template, when any version of the party is a policy party. Every
+the archetype, when any version of the party is a policy party. Every
 other party stays readable as before. AQL over the demographic store does
 not apply this rule yet ([#5450](https://github.com/FerroHEALTH/FerroEHR/issues/5450)).
 
 Every write and every read is an access record of the Demographic API, with
 its committer, as any demographic access is.
 
-## The mapping
+## The policy archetypes
 
-FerroEHR ships one definition per kind under `deploy/definitions/policy/`,
-listed on [Default demographic definitions](default-demographic-definitions.md),
-and loads them in the quickstart, the hosted sandbox and the Helm chart's
-default `definitions.files`. A mapping that names them:
+FerroEHR recognises a policy party by its root archetype, never by its
+template. A party is a system `AGENT`, a policy `ROLE` or an acts-for
+relationship when its root archetype, or the archetype of a relationship it
+holds, is one of the archetypes below or an ADL 2 specialisation of one
+(`openEHR-DEMOGRAPHIC-ROLE.system_client-hospital.v1` specialises
+`openEHR-DEMOGRAPHIC-ROLE.system_client.v1`), at any minor version of the
+same major version. You version, rename or constrain the templates built on
+these archetypes, or build your own, and they stay policy parties: openEHR
+expects data of a specialised archetype to conform to its parent (AM ADL 2
+§Specialisation). No configuration key names them.
 
-<!-- policy-example: mapping -->
-```toml
-[authz.party_binding.agent]
-template_id = "openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0"
-client = { path = "/details[id2]/items[id3]", type = "client_id" }
+| Kind | Archetype |
+|---|---|
+| System `AGENT` | `openEHR-DEMOGRAPHIC-AGENT.system.v1` |
+| Acts-for relationship | `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1` |
+| System client `ROLE` | `openEHR-DEMOGRAPHIC-ROLE.system_client.v1` |
+| Data migration `ROLE` | `openEHR-DEMOGRAPHIC-ROLE.data_migration.v1` |
+| Federation partner `ROLE` | `openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1` |
+| Privileged `ROLE` | `openEHR-DEMOGRAPHIC-ROLE.privileged.v1` |
 
-[authz.party_binding.acts_for]
-archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1"
+**Default definitions.** The binary carries a default template of each,
+version `1.0.0` (for example `openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0`).
+At boot FerroEHR stores each one through the normal definition path only
+when no definition of its id is stored. It never overwrites a stored
+definition, never refuses one you changed, and never seeds over your change.
+After that they are ordinary definitions: upload a new version, a renamed or
+a specialised template through the definition API, as for any other. Every
+write of a policy party is validated against its own template. The sources
+and every change from them are in
+`app/ferroehr/assets/definitions/policy/PROVENANCE.md`.
 
-[authz.party_binding.system_client_role]
-template_id = "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0"
+**The contract.** The archetype ids above and the node ids below are what
+FerroEHR reads, and every template and version built on an archetype keeps
+them. A breaking change to them is a new archetype major version (`.v2`),
+which FerroEHR does not take for the `.v1` kind. Each grant is a
+`CAPABILITY` at `/capabilities[id6]`, its kind the coded `name`, its
+credentials at `/capabilities[id6]/credentials[id8]`, and its `time_validity` the day bounds.
 
-[authz.party_binding.data_migration_role]
-template_id = "openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0"
-
-[authz.party_binding.federation_partner_role]
-template_id = "openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0"
-
-[authz.party_binding.privileged_role]
-template_id = "openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0"
-```
-
-Boot refuses a template the definition store lacks, one rooted at another
-class, an `AGENT` template with no `DV_IDENTIFIER` at the `client` path, and
-two role keys naming one template. Every write of a policy party is
-validated against its definition. The keys are described on
-[Authentication & access](config-auth.md#the-party-mapping).
-
-A mapping change moves the party mapping's digest, so adding these keys to a
-running deployment takes the same step as any other mapping change
-(`ferroehr party-binding refill`).
+| Archetype | Field | Node path | Type |
+|---|---|---|---|
+| `AGENT.system` | Client identifier (`issuer` the token issuer, `id` the `client_id`, `type` `client_id`) | `/details[id2]/items[id3]` | `DV_IDENTIFIER` |
+| `AGENT.system` | Name | `/identities[id4]/details[id5]/items[id6]` | `DV_TEXT` |
+| `PARTY_RELATIONSHIP.acts_for` | Type (its `name`) | `at10` acts for | `DV_CODED_TEXT` |
+| `PARTY_RELATIONSHIP.acts_for` | Agreement reference | `/details[id3]/items[id4]` | `DV_TEXT` |
+| every policy `ROLE` | Kind of grant (the capability's `name`) | `/capabilities[id6]/name` | `DV_CODED_TEXT` |
+| `ROLE.system_client` | Kind | `at10` relay, `at11` device | |
+| `ROLE.system_client` | Template written | `/capabilities[id6]/credentials[id8]/items[id9]` | `DV_TEXT` |
+| `ROLE.system_client` | Facility: issuer, identifier, identifier prefix | `/capabilities[id6]/credentials[id8]/items[id10]/items[id11]`, `[id12]`, `[id13]` | `DV_TEXT` |
+| `ROLE.system_client` | Device identifier issuer | `/capabilities[id6]/credentials[id8]/items[id14]` | `DV_TEXT` |
+| `ROLE.system_client` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id15]`, `[id16]`, `[id17]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
+| `ROLE.data_migration` | Kind | `at10` data migration | |
+| `ROLE.data_migration` | Operation | `/capabilities[id6]/credentials[id8]/items[id9]`: `at20` import EHR, `at21` import EHR extract, `at22` export EHR extract | `DV_CODED_TEXT` |
+| `ROLE.data_migration` | Subject namespace | `/capabilities[id6]/credentials[id8]/items[id10]` | `DV_TEXT` |
+| `ROLE.data_migration` | Rate: requests per second, burst | `/capabilities[id6]/credentials[id8]/items[id11]/items[id12]`, `[id13]` | `DV_COUNT` |
+| `ROLE.data_migration` | Trusted creating system | `/capabilities[id6]/credentials[id8]/items[id14]` | `DV_TEXT` |
+| `ROLE.data_migration` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id15]`, `[id16]`, `[id17]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
+| `ROLE.federation_partner` | Kind (accessor) | `at10` person, `at11` organisation | |
+| `ROLE.federation_partner` | Agreement name, version, jurisdiction, exchange | `/capabilities[id6]/credentials[id8]/items[id9]`, `[id10]`, `[id11]`, `[id12]` | `DV_TEXT` |
+| `ROLE.federation_partner` | Purpose | `/capabilities[id6]/credentials[id8]/items[id13]`: `at20` care, `at21` keuring | `DV_CODED_TEXT` |
+| `ROLE.federation_partner` | Legal ground: GDPR Art. 6(1), Art. 9(2), national provision | `/capabilities[id6]/credentials[id8]/items[id14]/items[id15]`, `[id16]`, `[id17]` | `DV_TEXT` |
+| `ROLE.federation_partner` | Consent source | `/capabilities[id6]/credentials[id8]/items[id18]`: `at30` Mitz, `at31` local | `DV_CODED_TEXT` |
+| `ROLE.federation_partner` | Read scope, template written | `/capabilities[id6]/credentials[id8]/items[id19]`, `[id20]` | `DV_TEXT` |
+| `ROLE.federation_partner` | Discard, discard window | `/capabilities[id6]/credentials[id8]/items[id21]`, `[id22]` | `DV_BOOLEAN`, `DV_DURATION` |
+| `ROLE.federation_partner` | MyHealth@EU service | `/capabilities[id6]/credentials[id8]/items[id23]`: `at40` Patient Summary, `at41` ePrescription, `at42` original clinical document | `DV_CODED_TEXT` |
+| `ROLE.federation_partner` | Caller rate: requests per second, burst | `/capabilities[id6]/credentials[id8]/items[id24]/items[id25]`, `[id26]` | `DV_COUNT` |
+| `ROLE.federation_partner` | Opt-out override | `/capabilities[id6]/credentials[id8]/items[id27]` | `DV_BOOLEAN` |
+| `ROLE.federation_partner` | Access class | `/capabilities[id6]/credentials[id8]/items[id28]`: `at50` automated, `at51` chained | `DV_CODED_TEXT` |
+| `ROLE.federation_partner` | Chained log retention | `/capabilities[id6]/credentials[id8]/items[id29]` | `DV_DURATION` |
+| `ROLE.federation_partner` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id30]`, `[id31]`, `[id32]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
+| `ROLE.privileged` | Kind (privilege) | `at10` subject audit, `at11` access service, `at12` identifier reader, `at13` import | |
+| `ROLE.privileged` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id9]`, `[id10]`, `[id11]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
 
 ## Worked examples
 

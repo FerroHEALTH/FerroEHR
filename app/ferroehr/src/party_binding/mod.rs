@@ -399,12 +399,8 @@ pub struct BindingMapping {
     /// The role whose holder may write a protected party
     /// ([`protect`]), compared case-insensitively.
     admin_role: Option<String>,
-    /// The system `AGENT` template with its client selector.
-    agent: Option<policy::AgentSelectors>,
-    /// The policy `ROLE` templates, by canonical template id, with their kind.
-    policy_roles: BTreeMap<String, policy::PolicyRole>,
-    /// The canonical archetype id of an acts-for `PARTY_RELATIONSHIP`.
-    acts_for: Option<String>,
+    /// Whether the policy parties are recognised and guarded.
+    policy: bool,
 }
 
 impl BindingMapping {
@@ -482,45 +478,18 @@ impl BindingMapping {
         self
     }
 
-    /// Returns this mapping naming `template_id` as the system `AGENT`
-    /// template, whose client identifier `client` selects.
+    /// Returns this mapping recognising the policy parties ([`policy`]) by
+    /// their archetypes, which the protection then guards.
     #[must_use]
-    pub fn with_agent(mut self, template_id: &str, client: IdentifierSelector) -> Self {
-        self.agent = Some(policy::AgentSelectors {
-            template: canonical_key(template_id),
-            client,
-        });
+    pub fn with_policy(mut self) -> Self {
+        self.policy = true;
         self
     }
 
-    /// Returns this mapping naming `template_id` as the policy `ROLE`
-    /// template of `kind`.
-    #[must_use]
-    pub fn with_policy_role(mut self, kind: policy::PolicyRole, template_id: &str) -> Self {
-        self.policy_roles.insert(canonical_key(template_id), kind);
-        self
-    }
-
-    /// Returns this mapping naming `archetype_id` as the acts-for
-    /// `PARTY_RELATIONSHIP` archetype.
-    #[must_use]
-    pub fn with_acts_for(mut self, archetype_id: &str) -> Self {
-        self.acts_for = Some(canonical_key(archetype_id));
-        self
-    }
-
-    /// Whether the mapping names a policy party: the system `AGENT`, a policy
-    /// `ROLE` or the acts-for relationship.
+    /// Whether the mapping recognises the policy parties.
     #[must_use]
     pub fn names_policy(&self) -> bool {
-        self.agent.is_some() || !self.policy_roles.is_empty() || self.acts_for.is_some()
-    }
-
-    /// The kind of the policy `ROLE` template `template_id` (in any case),
-    /// when the mapping names it.
-    #[must_use]
-    pub fn policy_role(&self, template_id: &str) -> Option<policy::PolicyRole> {
-        self.policy_roles.get(&canonical_key(template_id)).copied()
+        self.policy
     }
 
     /// The binding-key selector of the person template `template_id`, in any
@@ -539,15 +508,13 @@ impl BindingMapping {
     }
 
     /// Whether the mapping names `template_id` (in any case) as a person,
-    /// role, group, agent or policy role template.
+    /// role or group template.
     #[must_use]
     pub fn names_template(&self, template_id: &str) -> bool {
         let key = canonical_key(template_id);
         self.persons.contains_key(&key)
             || self.professional_role.as_ref() == Some(&key)
             || self.group.as_ref().is_some_and(|g| g.template == key)
-            || self.agent.as_ref().is_some_and(|a| a.template == key)
-            || self.policy_roles.contains_key(&key)
     }
 
     /// The canonical id of the professional role template, when the mapping
@@ -624,21 +591,6 @@ impl BindingMapping {
         for (code, mapped) in &self.relationship_codes {
             line(&["relationship", code, mapped]);
         }
-        if let Some(agent) = &self.agent {
-            let client = &agent.client;
-            line(&[
-                "agent",
-                &agent.template,
-                client.path(),
-                client.identifier_type(),
-            ]);
-        }
-        for (template, kind) in &self.policy_roles {
-            line(&["policy_role", kind.as_str(), template]);
-        }
-        if let Some(acts_for) = &self.acts_for {
-            line(&["acts_for", acts_for]);
-        }
         sha2::Sha256::digest(text.as_bytes()).iter().fold(
             String::with_capacity(64),
             |mut hex, byte| {
@@ -655,6 +607,15 @@ impl BindingMapping {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_policy_moves_no_digest() {
+        assert_eq!(
+            BindingMapping::default().with_policy().digest(),
+            BindingMapping::default().digest(),
+            "the policy derives no row, so it moves no digest"
+        );
+    }
 
     #[test]
     fn a_path_parses_into_its_steps_and_reads_the_element_value() {
