@@ -494,7 +494,14 @@ never planted, changed, deleted or turned into an ordinary one by anyone
 else. Reads are an administrator's too: the Demographic API reads of a
 party or relationship any of whose versions is a policy party are `403` to
 any other caller (`protect::check_read`, read from the root node rows and the
-relationships' node ids, no body parsed); demographic AQL is tracked on #5450. **Our own design:** the RM's
+relationships' node ids, no body parsed). Demographic AQL by such a caller
+leaves out every version whose root is of a policy archetype or holds an
+acts-for relationship inline (`aql::sql::policy`, #5450): one predicate of
+the statement, on the root row's `arch_entity`, `arch_major` and
+`arch_concept` and on its inline `relationships`, so counts and paging see
+only what the caller may read and no extra statement runs; the inline ids are
+matched by `PolicyKind::id_pattern`, a test pinned to `PolicyKind::of`.
+**Our own design:** the RM's
 `ACCESS_CONTROL_SETTINGS` is "Currently implementation dependent" and the
 Demographic API defines no access rule for its operations.
 

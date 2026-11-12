@@ -73,12 +73,6 @@ pub struct PartyBindingConfig {
     /// provisional `PERSON`.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub provisional_report_after: ferrohealth_config::units::Duration,
-    /// Retired in v5.7.0: refused at load, naming `provisional_report_after`.
-    #[serde(skip_serializing)]
-    pub provisional_report_days: ferrohealth_config::removed::Removed,
-    /// Retired in v5.7.0: refused at load, binding has no switch.
-    #[serde(skip_serializing)]
-    pub enabled: ferrohealth_config::removed::Removed,
 }
 
 impl PartyBindingConfig {
@@ -168,8 +162,6 @@ impl Default for PartyBindingConfig {
             }),
             issuer: Vec::new(),
             provisional_report_after: ferrohealth_config::units::Duration::from_days(30),
-            provisional_report_days: ferrohealth_config::removed::Removed::default(),
-            enabled: ferrohealth_config::removed::Removed::default(),
         }
     }
 }

@@ -57,6 +57,7 @@ mod from;
 mod gates;
 mod head;
 mod jsonpath;
+mod policy;
 mod predicate;
 mod scope;
 mod select;
@@ -119,6 +120,43 @@ pub struct SqlCtx {
     /// `archetype_lineage` read); an empty index leaves the predicate at exact
     /// + ADL 1.4 concept-prefix matching.
     pub archetype_lineage: Arc<ArchetypeLineage>,
+    /// Whether a demographic query serves the policy parties
+    /// ([`crate::party_binding::policy`]) or leaves them out; a clinical query
+    /// reads no party, so it never applies there.
+    pub policy_parties: PolicyParties,
+}
+
+/// Whether a demographic query serves the policy parties
+/// ([`crate::party_binding::policy`]).
+///
+/// The service decides it per request: only an administrator reads a policy
+/// party, through the Demographic API (`party_binding::protect::check_read`)
+/// and through AQL alike. No openEHR spec governs who reads a party, and
+/// QUERY master03 §FROM gives semantics to the clinical repository only: our
+/// own design.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PolicyParties {
+    /// Every party is served: an administrator's query, or one on a
+    /// deployment whose mapping recognises no policy party.
+    Served,
+    /// The query leaves out every version of a party whose root is of a
+    /// policy archetype or a specialisation of one, or that holds an acts-for
+    /// relationship inline.
+    Hidden,
+}
+
+impl PolicyParties {
+    /// What the running request reads under `mapping`: the policy parties
+    /// are hidden when the mapping recognises them and the request is no
+    /// administrator's (`party_binding::protect::administrator`).
+    #[must_use]
+    pub fn of_request(mapping: &crate::party_binding::BindingMapping) -> Self {
+        if mapping.names_policy() && !crate::party_binding::protect::administrator(mapping) {
+            Self::Hidden
+        } else {
+            Self::Served
+        }
+    }
 }
 
 /// Which EHRs a query may read rows from under the caller's per-EHR access
@@ -501,6 +539,8 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
     if clinical {
         b.apply_ehr_scope();
         b.apply_population_gate();
+    } else {
+        b.hide_policy_parties();
     }
     b.bind_select_paths()?;
     let columns = b.build_select()?;

@@ -34,10 +34,10 @@ const ACTS_FOR: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1";
 /// The example ids of the book page, each replaced by the id of the party
 /// the test commits: the provider, the partner, the `AGENT`, the
 /// professional's `PERSON` and the system client's `ROLE`.
-const PROVIDER: &str = "9d2f4a7e-3c1b-4e8a-9f60-2b7d5c8e1a40";
+pub(crate) const PROVIDER: &str = "9d2f4a7e-3c1b-4e8a-9f60-2b7d5c8e1a40";
 const PARTNER: &str = "7c4e9a2b-1f6d-4b3e-9c8a-5d2e0f7b1a36";
-const AGENT: &str = "5b8e2c91-7d4a-4f3e-8a1c-6e9f0b2d4c73";
-const PERSON: &str = "3e7a1d5c-9b2f-4c8e-a6d0-1f4b8e2c7a95";
+pub(crate) const AGENT: &str = "5b8e2c91-7d4a-4f3e-8a1c-6e9f0b2d4c73";
+pub(crate) const PERSON: &str = "3e7a1d5c-9b2f-4c8e-a6d0-1f4b8e2c7a95";
 const ROLE: &str = "e41c7b2a-6d3f-4a9e-8b05-2f7d1c9e3a68";
 /// The administrator role of the tests.
 const ADMIN: &str = "ADMIN";
@@ -66,7 +66,7 @@ fn example(name: &str) -> String {
 }
 
 /// The JSON example `name` with each example id replaced by its party.
-fn body(name: &str, ids: &[(&str, VoId)]) -> Value {
+pub(crate) fn body(name: &str, ids: &[(&str, VoId)]) -> Value {
     let mut text = example(name);
     for (example_id, id) in ids {
         text = text.replace(example_id, &id.to_string());
@@ -110,7 +110,7 @@ async fn mapped_by(toml: &str) -> (testkit::TestDb, FerroEhrService) {
 
 /// A service holding the policy definitions under an empty configuration:
 /// the policy parties need no key.
-async fn mapped() -> (testkit::TestDb, FerroEhrService) {
+pub(crate) async fn mapped() -> (testkit::TestDb, FerroEhrService) {
     mapped_by("").await
 }
 
@@ -219,12 +219,12 @@ async fn as_caller<F: Future>(subject: &str, roles: &[&str], fut: F) -> F::Outpu
 }
 
 /// Runs `fut` as a clinician: a caller who is no administrator.
-async fn as_clinician<F: Future>(fut: F) -> F::Output {
+pub(crate) async fn as_clinician<F: Future>(fut: F) -> F::Output {
     as_caller("clinician", &["CLINICIAN"], fut).await
 }
 
 /// Runs `fut` as an administrator.
-async fn as_admin<F: Future>(fut: F) -> F::Output {
+pub(crate) async fn as_admin<F: Future>(fut: F) -> F::Output {
     as_caller("admin", &[ADMIN], fut).await
 }
 
@@ -240,7 +240,7 @@ fn version<T: serde::de::DeserializeOwned>(
 }
 
 /// Creates `body` as a party of `kind`.
-async fn create(
+pub(crate) async fn create(
     svc: &FerroEhrService,
     kind: PartyKind,
     body: &Value,
@@ -251,7 +251,7 @@ async fn create(
 }
 
 /// Commits `body` as the next version of `vo` after `uid`.
-async fn update(
+pub(crate) async fn update(
     svc: &FerroEhrService,
     kind: PartyKind,
     vo: VoId,
@@ -297,7 +297,7 @@ fn text(value: &str) -> Value {
 }
 
 /// A plain `PARTY` of `class` named `name`, of no mapped template.
-fn plain(class: &str, archetype: &str, name: &str) -> Value {
+pub(crate) fn plain(class: &str, archetype: &str, name: &str) -> Value {
     json!({
         "_type": class, "archetype_node_id": archetype, "name": text(name),
         "archetype_details": { "_type": "ARCHETYPED",
@@ -314,7 +314,7 @@ fn plain(class: &str, archetype: &str, name: &str) -> Value {
 
 /// The parties the examples refer to, which any caller writes: the
 /// provider and the partner `ORGANISATION`s and a professional's `PERSON`.
-async fn referred(svc: &FerroEhrService) -> [(VoId, String); 3] {
+pub(crate) async fn referred(svc: &FerroEhrService) -> [(VoId, String); 3] {
     let organisation = "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0";
     let provider = plain("ORGANISATION", organisation, "Example hospital");
     let partner = plain("ORGANISATION", organisation, "Regional care network");
@@ -722,7 +722,7 @@ async fn a_professional_credentials_capability_is_never_read_as_a_grant() {
 
 /// The system client `ROLE` example under another template: `template_id`
 /// and the root archetype id `archetype`.
-fn system_client_under(template_id: &str, archetype: &str, agent: VoId) -> Value {
+pub(crate) fn system_client_under(template_id: &str, archetype: &str, agent: VoId) -> Value {
     let mut role = body("system-client-role", &[(AGENT, agent)]);
     role["archetype_node_id"] = json!(archetype);
     role["archetype_details"]["archetype_id"]["value"] = json!(archetype);

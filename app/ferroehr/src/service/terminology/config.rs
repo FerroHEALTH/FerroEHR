@@ -16,7 +16,6 @@
 //! NOTE: no openEHR spec governs the transport, the authentication or the
 //! configuration of that client — our own design.
 
-use ferrohealth_config::removed::Removed;
 use ferrohealth_smart::config::endpoint::EndpointSection;
 use serde::{Deserialize, Serialize};
 
@@ -48,12 +47,6 @@ pub struct TerminologyServerConfig {
     /// On a binding the server cannot resolve: `accept` (the default) or
     /// `refuse`. A resolved non-member is refused under either setting.
     pub on_error: OnError,
-    /// Retired in v5.7.0: refused at load, naming `api.terminology`.
-    #[serde(skip_serializing)]
-    pub api_enabled: Removed,
-    /// Retired in v5.7.0: refused at load, naming the keys of `[terminology]`.
-    #[serde(skip_serializing)]
-    pub server: Removed,
 }
 
 impl TerminologyServerConfig {

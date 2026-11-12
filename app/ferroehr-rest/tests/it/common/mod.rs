@@ -529,7 +529,6 @@ pub(crate) fn local_audit() -> ferroehr::system_log::config::AuditConfig {
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..ferroehr::system_log::config::StoreConfig::default()
         },
         ..ferroehr::system_log::config::AuditConfig::default()
     }

@@ -55,11 +55,10 @@ The section keys:
 The keys `audience`, `algorithms`, `token_profile`, `clock_skew_seconds`,
 `jwks_max_age_seconds`, `jwks_refresh_interval_seconds`, `jwks_file`,
 `timeout_ms`, `mode`, `introspection`, `role_claims`, `acting_for_claim`,
-`client_tokens` and `ca_file`, which v5.6 read in `[auth]`, are refused in
-v5.7.0 naming what replaces each: the first ones live on each
-`[[auth.issuer]]` table, the caller classification replaces
-`acting_for_claim` and `client_tokens`, and `[auth.tls]` replaces `ca_file`.
-From v5.8.0 they are unknown keys.
+`client_tokens` and `ca_file`, which v5.6 read in `[auth]`, are unknown keys
+and refuse the start: the first ones live on each `[[auth.issuer]]` table,
+the caller classification replaces `acting_for_claim` and `client_tokens`,
+and `[auth.tls]` replaces `ca_file`.
 
 ### `[[auth.issuer]]`: the trusted issuers
 
@@ -738,8 +737,8 @@ Each `[[auth.scim.client]]` table declares one provisioning client:
 | `scope` | The one scope a token of the client must hold. SMART on openEHR defines none for SCIM, so the value is yours to choose. |
 | `binding_issuer` | The identifier issuer of the binding keys the client provisions: the `identifier_issuer` of an `[[auth.party]]` table. Each User belongs to the one client whose `binding_issuer` issues its key, so no two clients share one. |
 
-The table's presence turns the endpoint on; `enabled` is a retired key and
-refuses the start. The start is refused when the table is present without
+The table's presence turns the endpoint on; it has no `enabled` key, and
+setting one refuses the start. The start is refused when the table is present without
 `public_base_url` or without a client, and for a client that misses a key, is declared twice,
 shares a `binding_issuer`, names an issuer that is not of kind `machines`, or
 names a `binding_issuer` no `[[auth.party]]` table carries. It is refused too
