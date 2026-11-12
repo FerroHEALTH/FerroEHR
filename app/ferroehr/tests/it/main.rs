@@ -95,6 +95,7 @@ mod party_mapping;
 mod party_mapping_templates;
 mod persistence;
 mod policy_parties;
+mod policy_parties_aql;
 mod privacy_leak;
 mod privacy_policy;
 mod privacy_rules;

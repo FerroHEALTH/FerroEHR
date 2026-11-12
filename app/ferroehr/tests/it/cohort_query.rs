@@ -618,6 +618,7 @@ fn the_two_statements_never_cross_the_boundary() {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     let ast = openehr_query::parser::parse_str(COHORT_AQL).expect("the AQL parses");
     let params = Params::default();
