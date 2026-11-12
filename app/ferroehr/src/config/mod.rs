@@ -322,6 +322,14 @@ mod tests {
         f
     }
 
+    /// The refusal `assemble` gives a file carrying `content`, as text.
+    pub(super) fn file_refusal(content: &str) -> String {
+        let file = toml_file(content);
+        assemble(Some(file.path()), &env(&[]), &[])
+            .expect_err(content)
+            .to_string()
+    }
+
     pub(super) fn assemble_ok(
         file: Option<&Path>,
         env: &HashMap<String, String>,

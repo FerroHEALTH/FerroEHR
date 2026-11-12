@@ -125,8 +125,7 @@ impl FerroEhrService {
         address: UidAddress,
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let (vo_id, version) = (address.vo_id, address.tree());
-        let at = self.gated_at(vo_id, version_at_time.as_deref()).await?;
+        let (vo_id, version, at) = self.gated_address(address, version_at_time).await?;
         let mut resp = self.read_party(kind, vo_id, version, at).await?;
         // Attach the party's stored ITEM_TAGs for the item-tag response headers
         // (person_get.yaml). A deleted read carries no metadata → no-op.
@@ -424,8 +423,7 @@ impl FerroEhrService {
         address: UidAddress,
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let (vo_id, version) = (address.vo_id, address.tree());
-        let at = self.gated_at(vo_id, version_at_time.as_deref()).await?;
+        let (vo_id, version, at) = self.gated_address(address, version_at_time).await?;
         self.read_relationship(vo_id, version, at).await
     }
 
@@ -563,6 +561,20 @@ impl FerroEhrService {
         Ok(ServiceResponse::plain(
             self.relationship_version(vo_id, version).await?,
         ))
+    }
+
+    /// The versioned object and tree position `address` names, with the
+    /// instant `version_at_time` names, once its read passes
+    /// [`Self::policy_read_gate`].
+    async fn gated_address(
+        &self,
+        address: UidAddress,
+        version_at_time: Option<String>,
+    ) -> Result<(VoId, Option<TreeId>, Option<jiff::Timestamp>), ServiceError> {
+        let at = self
+            .gated_at(address.vo_id, version_at_time.as_deref())
+            .await?;
+        Ok((address.vo_id, address.tree(), at))
     }
 
     /// The instant `version_at_time` names, once the read of `vo_id` passes
