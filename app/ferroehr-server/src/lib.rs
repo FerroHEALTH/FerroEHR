@@ -24,7 +24,6 @@ use std::time::Duration;
 use anyhow::Context as _;
 use clap::{Parser, Subcommand};
 use ferroehr::aql::subject::ehr_subject;
-use ferroehr::config::access_delay::AccessDelayPolicy;
 use ferroehr::config::deployment::{DatabaseFacts, DeploymentPosture, DeploymentProfile};
 use ferroehr::config::management::EndpointLevels;
 use ferroehr::config::management::ManagementConfig;
@@ -47,8 +46,9 @@ use ferroehr::usage_report::product::{self as usage_product, EventKind, FerroEhr
 use ferroehr::usage_report::store::PgStore;
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr_rest::config::AppConfig;
+use ferroehr_rest::extensions::access::authz::content::ContentRules;
 use ferroehr_rest::extensions::access::authz::{
-    AuthzHandle, AuthzResolvers, ContentRules, ResolveError, build_engine,
+    AuthzHandle, AuthzResolvers, ResolveError, build_engine,
 };
 use ferroehr_rest::extensions::management::{LogFilter, Observability};
 use ferrohealth_health::lifecycle::Lifecycle;
@@ -482,11 +482,11 @@ fn assemble_service(
         .with_origins(config.origins())
         .with_identifier_protection_opt(identifiers.map(Arc::new))
         .with_query_config(&config.record.query)
-        .with_access_delay(
-            AccessDelayPolicy::from_config(config)
-                .map_err(ferroehr::system_log::AuditError::CategoryMap)?,
-        )
+        .with_required_category_map(DeploymentPosture::requires_category_map(config))
         .with_ehr_index(ehr_index);
+    service
+        .policy_registers()
+        .set_cedar_check(ferroehr_rest::extensions::access::authz::cedar::check());
     if let Some(sender) = audit_sender {
         service = service.with_audit(sender);
     }
@@ -519,20 +519,16 @@ fn wire_authz(
     if !config.auth.shared.enabled {
         return Ok(None);
     }
-    // `validate` has already refused a category map that does not compile.
+    let registers = Arc::clone(service.policy_registers());
     let content = ContentRules {
-        categories: config
-            .audit
-            .categories
-            .compile()
-            .map_err(ferroehr::system_log::AuditError::CategoryMap)
-            .context("compiling the [audit.categories] map for the ABAC category attribute")?,
+        registers: Some(Arc::clone(&registers)),
         origins: config.origins(),
         system_id: config.api.system_id.clone(),
     };
     let authz = build_authz(
         &config.authz,
         &config.api.base_path,
+        &registers,
         authz_resolvers(pool.clone(), Arc::clone(service), content),
     )?;
     if let Some(handle) = &authz {
@@ -582,9 +578,6 @@ fn log_resolved_posture(
             fail_mode = ?audit.fail_mode,
             resolve_subject = audit.resolve_subject,
             retention = %audit.store.horizon().describe(),
-            category_map = AuditPosture::of(audit)
-                .category_map
-                .map_or_else(|| "invalid".to_owned(), |digest| digest.to_string()),
             "IHE ATNA audit enabled"
         );
     }
@@ -1061,19 +1054,17 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
 
     service.unheld_written_templates(&config.authz).await??;
     let binding_lease = party_binding::prepare(&service, &config).await?;
-    // The retention register keys category periods on the map in force, so it
-    // is mirrored before the listener takes traffic. `validate` has already
-    // refused a map that does not compile.
-    let category_map = config
-        .audit
-        .categories
-        .compile()
-        .map_err(ferroehr::system_log::AuditError::CategoryMap)
-        .context("compiling the [audit.categories] map")?;
+    // The policy registers in force before the listener takes traffic, and the
+    // retention register keyed on the category register in force.
     service
-        .mirror_category_map(&category_map)
+        .read_policy_registers()
         .await
-        .context("mirroring the [audit.categories] map into the retention register")?;
+        .context("reading the operational-policy registers")?;
+    service.policy_registers().spawn_listener();
+    service
+        .mirror_category_map()
+        .await
+        .context("mirroring the audit category register into the retention register")?;
     // NOTE: EHDS Art. 3(3), a hold stops withholding at its limit; this only writes the record.
     service.spawn_access_delay_expiries(Duration::from_secs(60));
 
@@ -1191,9 +1182,11 @@ async fn start_audit(
 pub fn build_authz(
     config: &ferroehr::config::authz::AuthzConfig,
     base_path: &str,
+    registers: &Arc<ferroehr::policy_register::LiveRegisters>,
     resolvers: AuthzResolvers,
 ) -> anyhow::Result<Option<Arc<AuthzHandle>>> {
-    let engine = build_engine(&config.abac).context("building the ABAC policy engine")?;
+    let engine =
+        build_engine(&config.abac, registers).context("building the ABAC policy engine")?;
     Ok(AuthzHandle::build(config, base_path, engine, resolvers).map(Arc::new))
 }
 

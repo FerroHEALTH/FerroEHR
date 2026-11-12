@@ -186,7 +186,7 @@ impl FerroEhrService {
     /// components to support retention periods that "take into account the
     /// origins and categories of electronic health data"
     /// (`docs/law/eu/ehds/text.html`); `category` and `origin` are those
-    /// dimensions. A category is named as `[audit.categories]` names one and
+    /// dimensions. A category is named as the audit category register names one and
     /// stored as its `<system>|<code>` token; an origin is the id of a
     /// registered origin (`[[authz.origin]]`). `None` keys the period on every object
     /// of the kind, or of every origin. The register is where those answers
@@ -211,11 +211,8 @@ impl FerroEhrService {
         let category = period
             .category
             .map(|reference| {
-                let fallback = crate::system_log::categories::Classifier::default();
-                let map = self.audit.as_ref().map_or(
-                    &fallback,
-                    crate::system_log::sender::AuditSender::categories,
-                );
+                let categories = self.registers.categories();
+                let map = &categories.classifier;
                 if reference == crate::system_log::categories::NONE {
                     return Ok(reference.to_owned());
                 }
@@ -225,7 +222,7 @@ impl FerroEhrService {
                          Art. 14(1) by its code (Patient-Summaries, Electronic-Prescriptions, \
                          Electronic-Dispensations, Medical-Imaging, Laboratory-Reports, \
                          Discharge-Reports) or as <system>|<code>, or a national category \
-                         [audit.categories] national declares, or none"
+                         the audit category register declares, or none"
                     ))
                 })
             })
@@ -247,20 +244,19 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Mirror the `[audit.categories]` map into the retention register's
-    /// `category_map`, replacing the previous mirror whole, so the
+    /// Mirror the audit category register in force into the retention
+    /// register's `category_map`, replacing the previous mirror whole, so the
     /// `retention_due` view keys category periods on the map in force.
     ///
-    /// Called once at boot. No openEHR spec governs the map — our own
+    /// Called at boot; a write of the register mirrors its map in the same
+    /// transaction. No openEHR spec governs the map — our own
     /// design/extension.
     ///
     /// # Errors
     /// `exception` — a database fault (rolled back).
-    pub async fn mirror_category_map(
-        &self,
-        map: &crate::system_log::categories::Classifier,
-    ) -> Result<(), ServiceError> {
-        marks::replace_category_map(&self.pool, map.rows())
+    pub async fn mirror_category_map(&self) -> Result<(), ServiceError> {
+        let categories = self.registers.categories();
+        marks::replace_category_map(&self.pool, categories.classifier.rows())
             .await
             .map_err(ServiceError::Storage)
     }

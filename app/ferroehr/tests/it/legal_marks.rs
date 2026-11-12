@@ -27,6 +27,7 @@ use sqlx::PgPool;
 use ferroehr::error::ServiceError;
 use ferroehr::extensions::outbox::{OutboxDomain, reconcile};
 use ferroehr::ids::{EhrId, VoId};
+use ferroehr::policy_register::Register;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::storage::marks::RetentionPeriod;
@@ -563,9 +564,10 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
         "#,
     )
     .expect("the map parses");
-    svc.mirror_category_map(&map.compile().expect("the map compiles"))
+    let document = serde_json::to_string(&map).expect("the map serializes");
+    svc.put_policy_register(Register::AuditCategories, 0, &document)
         .await
-        .expect("mirror the map");
+        .expect("write the category register, which mirrors the map");
 
     declare_category_periods(&svc).await;
     let bad = svc
@@ -615,9 +617,10 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
         "#,
     )
     .expect("the map parses");
-    svc.mirror_category_map(&map.compile().expect("the map compiles"))
+    let document = serde_json::to_string(&map).expect("the map serializes");
+    svc.put_policy_register(Register::AuditCategories, 1, &document)
         .await
-        .expect("mirror the second map");
+        .expect("write the second category register version");
     let due = svc.retention_due(100).await.expect("due list");
     assert!(
         due.iter()

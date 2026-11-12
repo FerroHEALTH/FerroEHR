@@ -185,16 +185,6 @@ const DEMOGRAPHIC: Retired = Retired::replaced(
     SINCE,
 );
 const COHORT: Retired = Retired::replaced("cohort", "[privacy.cohort] (the same keys)", SINCE);
-const ACCESS_DELAY: Retired = Retired::replaced(
-    "access_delay",
-    concat!(
-        "[privacy.access_delay], present to turn the delay on: access_delay.hours is ",
-        "privacy.access_delay.max_delay (",
-        duration!(),
-        ", in whole hours), access_delay.enabled is retired, categories keeps its name"
-    ),
-    SINCE,
-);
 const SMART_ENABLED: Retired =
     Retired::replaced("auth.smart.enabled", "auth.smart.discovery", SINCE);
 const SMART_EPISODE: Retired =
@@ -222,11 +212,6 @@ const SCIM_DEACTIVATION_WINDOW_MINUTES: Retired = Retired::replaced(
 const SCIM_CONTACT_ERASURE_MINUTES: Retired = Retired::replaced(
     "auth.scim.contact_erasure_minutes",
     concat!("auth.scim.contact_erasure_delay, ", duration!()),
-    SINCE,
-);
-const CEDAR_RELOAD_SECS: Retired = Retired::replaced(
-    "authz.abac.cedar.reload_secs",
-    concat!("authz.abac.cedar.reload_interval, ", duration!()),
     SINCE,
 );
 const REMOTE_SERVER: Retired = Retired::replaced(
@@ -387,7 +372,7 @@ const MULTIMEDIA_ALLOW_HTTP: Retired = Retired::removed(
 /// Every key this module refuses, for the test that holds each to the one
 /// release it lives for.
 #[cfg(test)]
-pub(crate) const RETIRED: [Retired; 60] = [
+pub(crate) const RETIRED: [Retired; 58] = [
     TERMINOLOGY_API_ENABLED,
     TERMINOLOGY_SERVER,
     PROFILING_MAX_SECONDS,
@@ -411,7 +396,6 @@ pub(crate) const RETIRED: [Retired; 60] = [
     ORIGINS,
     DEMOGRAPHIC,
     COHORT,
-    ACCESS_DELAY,
     SMART_ENABLED,
     SMART_EPISODE,
     SMART_LAUNCH_BASE64_JSON,
@@ -419,7 +403,6 @@ pub(crate) const RETIRED: [Retired; 60] = [
     SCIM_MAX_RESULTS,
     SCIM_DEACTIVATION_WINDOW_MINUTES,
     SCIM_CONTACT_ERASURE_MINUTES,
-    CEDAR_RELOAD_SECS,
     REMOTE_SERVER,
     REMOTE_CONNECT_TIMEOUT_MS,
     REMOTE_REQUEST_TIMEOUT_MS,
@@ -493,7 +476,6 @@ fn root(config: &FerroEhrConfig, removals: &mut Removals) {
         (config.origins, &ORIGINS),
         (config.demographic, &DEMOGRAPHIC),
         (config.cohort, &COHORT),
-        (config.access_delay, &ACCESS_DELAY),
     ] {
         removals.check(removed, retired);
     }
@@ -519,7 +501,6 @@ fn auth(config: &FerroEhrConfig, removals: &mut Removals) {
 /// The retired keys inside `[authz]`.
 fn authz(config: &FerroEhrConfig, removals: &mut Removals) {
     let authz = &config.authz;
-    removals.check(authz.abac.cedar.reload_secs, &CEDAR_RELOAD_SECS);
     let remote = &authz.abac.remote;
     removals.check(remote.server, &REMOTE_SERVER);
     removals.check(remote.connect_timeout_ms, &REMOTE_CONNECT_TIMEOUT_MS);

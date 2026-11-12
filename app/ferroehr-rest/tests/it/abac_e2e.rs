@@ -33,12 +33,11 @@ use ferroehr::storage::version_repo::meta::VersionContent;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, start};
 use ferroehr_rest::config::AppConfig;
+use ferroehr_rest::extensions::access::authz::content::ContentRules;
 use ferroehr_rest::extensions::access::authz::request::{
     CATEGORY, ORIGIN, PATIENT, ResourceKind, TEMPLATE,
 };
-use ferroehr_rest::extensions::access::authz::{
-    AuthzHandle, AuthzResolvers, ContentRules, ResolveError,
-};
+use ferroehr_rest::extensions::access::authz::{AuthzHandle, AuthzResolvers, ResolveError};
 use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::{build_full, build_with};
 use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
@@ -844,9 +843,21 @@ async fn content_scoped_app(svc: Arc<FerroEhrService>, engine: RequireContent) -
     let categories: ferroehr::system_log::categories::CategoryMapConfig =
         serde_json::from_value(json!({ "templates": { IPS_TEMPLATE_ID: ["Patient-Summaries"] } }))
             .expect("the map parses");
+    let newest = svc
+        .policy_register(ferroehr::policy_register::Register::AuditCategories)
+        .await
+        .expect("read the category register")
+        .version;
+    svc.put_policy_register(
+        ferroehr::policy_register::Register::AuditCategories,
+        newest,
+        &serde_json::to_string(&categories).expect("the map serializes"),
+    )
+    .await
+    .expect("the category register takes the map");
     let resolvers = AuthzResolvers {
         content: Arc::new(ContentRules {
-            categories: categories.compile().expect("the map compiles"),
+            registers: Some(Arc::clone(svc.policy_registers())),
             ..ContentRules::default()
         }),
         ..service_resolvers(Arc::clone(&svc))

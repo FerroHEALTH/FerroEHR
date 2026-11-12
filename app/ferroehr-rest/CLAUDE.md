@@ -65,7 +65,7 @@ copy of any of it.
   `authn::gates`, the RBAC gate and the SMART route check run after it, and
   `authn::party`, the login binding, which also confines a bound
   representative to its subject's EHR (#5086);
-  `authz/` = the RBAC/ABAC engine, incl. a `cedar` policy path; `pep.rs` = the
+  `authz/` = the RBAC/ABAC engine, incl. the Cedar engine over the `cedar-policies` admin register; `pep.rs` = the
   policy-enforcement point; `ehr_access.rs`. Token checking, Basic
   verification and the SMART scope grammar come from `ferrohealth-smart`;
   never hand-rolled. 401 (unauthenticated) vs 403 (unauthorized) per

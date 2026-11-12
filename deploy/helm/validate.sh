@@ -963,9 +963,10 @@ fixture_gate
 # ── The declared posture and the audit horizon reach ferroehr.toml ────────────
 # A golden records whatever the render produced; this asserts what it must
 # produce. The default render declares its deployment profile explicitly, and
-# the audit-categories overlay renders the calendar-year horizon and a category
-# map whose keys need TOML quoting (spaces, dots). The values are read from the
-# ConfigMap's ferroehr.toml, the file the server actually loads.
+# the audit-categories overlay renders the calendar-year horizon and no category
+# map, which is the audit category admin register and no configuration key
+# (#5442). The values are read from the ConfigMap's ferroehr.toml, the file the
+# server actually loads.
 rendered_toml() {
   local values="$1"
   helm template "$RELEASE_NAME" "$CHART_DIR" -n "$NAMESPACE" -f "$values" \
@@ -980,15 +981,15 @@ config_keys_gate() {
   toml="$(rendered_toml "${CI_DIR}/audit-categories-values.yaml")"
   for want in \
     '^ *retention = "P3Y"$' \
-    '^ *sgb_v_309_controller = true$' \
-    '^ *\[audit\.categories\.templates\]$' \
-    '^ *"International Patient Summary" = \["Patient-Summaries"\]$' \
-    '^ *\[audit\.categories\.archetypes\]$' \
-    '^ *"openEHR-EHR-COMPOSITION\.encounter\.v1" = "none"$'; do
+    '^ *sgb_v_309_controller = true$'; do
     grep -qE "$want" <<<"$toml" || { red "  audit-categories render lacks a line matching: ${want}"; missing=1; }
   done
+  if grep -qE '^ *\[(audit\.categories|privacy\.access_delay|authz\.abac\.cedar)' <<<"$toml"; then
+    red "  audit-categories render carries a table the admin registers replace"
+    missing=1
+  fi
   if [[ "$missing" -eq 0 ]]; then
-    echo "  the default render declares sandbox; the audit overlay renders retention_years = 3 and a quoted category map"
+    echo "  the default render declares sandbox; the audit overlay renders retention_years = 3 and no register table"
   else
     FAIL=1
   fi
