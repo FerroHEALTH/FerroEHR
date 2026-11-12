@@ -7,6 +7,7 @@
 
 use std::fmt::Write as _;
 
+use crate::class::Class;
 use crate::model::{Key, Section, Shape, bare};
 
 // REUSE-IgnoreStart
@@ -39,11 +40,75 @@ pub(crate) fn template(sections: &[Section]) -> String {
          # also be set as FERROEHR__<TABLE>__<KEY>, such as\n\
          # FERROEHR__DATABASE__MAX_CONNECTIONS; `--set key=value` wins over it.\n",
     );
+    must_set(&mut out, sections);
     for section in sections {
         let mode = mode(section, sections);
         write_section(&mut out, section, mode, &section.keys);
     }
     out
+}
+
+/// Writes the block naming the keys a deployment holding real data sets,
+/// one line per table, with the counts that make a key added to the file
+/// visible.
+fn must_set(out: &mut String, sections: &[Section]) {
+    let lines: Vec<String> = sections
+        .iter()
+        .filter_map(|section| {
+            let names: Vec<String> = section
+                .keys
+                .iter()
+                .filter(|key| key.must_set)
+                .map(|key| bare(&key.name))
+                .collect();
+            (!names.is_empty()).then(|| format!("{} {}", header(section), names.join(", ")))
+        })
+        .collect();
+    let total: usize = sections.iter().map(|section| section.keys.len()).sum();
+    let required: usize = sections
+        .iter()
+        .flat_map(|section| &section.keys)
+        .filter(|key| key.must_set)
+        .count();
+    out.push_str("#\n# What you must set\n#\n");
+    comment(
+        out,
+        &format!(
+            "This file lists {total} keys. A deployment that holds real data sets the \
+             {required} below; every other key is optional and runs on the built-in default \
+             its line shows, or stays unset where its note says so."
+        ),
+    );
+    out.push_str("#\n");
+    for line in &lines {
+        let _ = writeln!(out, "#   {line}");
+    }
+    out.push_str("#\n");
+    comment(
+        out,
+        "Each note ends with why the key is in the file: infrastructure (what the server \
+         needs before it reaches its store), trust (what it trusts, its floors and its \
+         secrets), or nothing more for a tuning key.",
+    );
+}
+
+/// The closing note of `key`: whether it must be set, and its class.
+fn note(key: &Key) -> String {
+    let why = match key.class {
+        Class::Infrastructure => " (infrastructure)",
+        Class::Trust => " (trust)",
+        Class::Optional => "",
+    };
+    let what = if key.must_set {
+        "Must set"
+    } else if key.required {
+        "Required in its table"
+    } else if key.default.is_some() {
+        "Optional"
+    } else {
+        "Optional, unset by default"
+    };
+    format!("{what}{why}.")
 }
 
 /// How a section's lines are written.
@@ -96,7 +161,12 @@ fn write_section(out: &mut String, section: &Section, mode: Mode, keys: &[Key]) 
         let _ = writeln!(out, "{lead}{}", header(section));
     }
     for key in keys {
-        comment(out, &key.description);
+        let text = if key.description.is_empty() {
+            note(key)
+        } else {
+            format!("{} {}", key.description, note(key))
+        };
+        comment(out, &text);
         let name = bare(&key.name);
         let (lead, value) = match (&key.default, mode) {
             // NOTE: a secret's default renders masked, and a masked value is no

@@ -80,6 +80,7 @@ pub static NO_PERSON: PersonSection = PersonSection {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct PersonTemplate {
     /// An operational template in the definition store rooted at `PERSON`.
     pub template_id: String,
@@ -99,6 +100,7 @@ pub struct PersonTemplate {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct Selector {
     /// The openEHR path.
     pub path: String,
@@ -111,6 +113,7 @@ pub struct Selector {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct PersonAttribute {
     /// A SCIM attribute path, with the RFC 7644 §3.4.2.2 `valuePath` filter
     /// form (`emails[type eq "work"].value`).
@@ -193,6 +196,7 @@ impl PersonAttribute {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct RoleSection {
     /// An operational template rooted at `ROLE`.
     pub template_id: String,
@@ -202,6 +206,7 @@ pub struct RoleSection {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct GroupSection {
     /// An operational template rooted at `GROUP`.
     pub template_id: String,
@@ -215,6 +220,7 @@ pub struct GroupSection {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct MembershipSection {
     /// A `PARTY_RELATIONSHIP` archetype.
     pub archetype_id: String,
@@ -224,6 +230,7 @@ pub struct MembershipSection {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct RepresentationSection {
     /// A `PARTY_RELATIONSHIP` archetype whose `source` is the representative
     /// and whose `target` is the subject.
@@ -237,6 +244,7 @@ pub struct RepresentationSection {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct PatientSection {
     /// An operational template rooted at `PERSON`: the subject of an EHR and
     /// the target of a representation.

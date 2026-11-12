@@ -791,9 +791,6 @@ configs:
       [api.cors]
       allow_origins = ["*"]
 
-      [auth]
-      enabled = true
-
       # The issuer the Basic users bind under. A Basic user is a person and
       # maps to the PERSON carrying its binding key, which [[auth.party]]
       # places under the identifier issuer of a persons issuer. This one signs
@@ -927,9 +924,6 @@ configs:
       [api.cors]
       allow_origins = ["*"]
 
-      [auth]
-      enabled = true
-
       # The issuer the Basic users bind under. A Basic user is a person and
       # maps to the PERSON carrying its binding key, which [[auth.party]]
       # places under the identifier issuer of a persons issuer. This one signs
@@ -1044,7 +1038,6 @@ configs:
       [[auth.issuer]]
       issuer = "http://localhost:8180/quickstart"
       kind = "machines"
-      profile = "rfc9068"
       audience = ["http://localhost:8090/fhir"]
       token_types = ["JWT"]
       required_claims = ["iss", "exp", "aud", "sub"]

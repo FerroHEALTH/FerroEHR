@@ -30,6 +30,7 @@ const MAX_CONTACT_ERASURE_DELAY: Duration = Duration::from_days(30);
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct ScimConfig {
     /// The externally reachable origin the SCIM base URL hangs off, such as
     /// `https://cdr.example.com`; every `meta.location` and discovery document
@@ -38,21 +39,26 @@ pub struct ScimConfig {
     pub public_base_url: Option<SecretUrl>,
     /// The most resources one list response returns (RFC 7643 §5, the
     /// `ServiceProviderConfig` `filter.maxResults`).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub filter_max_results: u64,
     /// The most Users one client deactivates or deletes in one window; past
     /// it, a deactivation or a deletion is refused with `429`.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub max_deactivations: u32,
     /// The length of that window.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub deactivation_window: Duration,
     /// How long after a User's deletion the contacts of every version of its
     /// `PERSON` are erased (GDPR Art. 17), at most 30 days; `"0s"` erases them
     /// in the deletion itself. The name, the binding key and the identifiers
     /// stay.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub contact_erasure_delay: Duration,
     /// The most members one Group holds; an add past it is refused with
     /// `400`. Each membership change stores every membership of the Group
     /// again (RM demographic master02 §Versioning Semantics), so the cap bounds
     /// a Group's version storage.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub max_group_members: u32,
     /// The provisioning clients.
     pub client: Vec<ScimClient>,
@@ -92,6 +98,7 @@ impl Default for ScimConfig {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct ScimClient {
     /// The issuer of the client's access tokens: the deployment's own
     /// authorization server, an `[[auth.issuer]]` of kind `machines`. It

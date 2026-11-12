@@ -23,7 +23,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), but from EVERY source — this policy narrows ports, NOT sources (networkPolicy.ingressAllowAll=true). Set networkPolicy.ingressFrom for a PHI workload.
   labels:
-    helm.sh/chart: ferroehr-26.2.0
+    helm.sh/chart: ferroehr-27.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -51,7 +51,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-26.2.0
+    helm.sh/chart: ferroehr-27.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -72,7 +72,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-26.2.0
+    helm.sh/chart: ferroehr-27.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -101,7 +101,7 @@ kind: Secret
 metadata:
   name: ferroehr-env
   labels:
-    helm.sh/chart: ferroehr-26.2.0
+    helm.sh/chart: ferroehr-27.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -120,7 +120,7 @@ kind: Secret
 metadata:
   name: ferroehr-config
   labels:
-    helm.sh/chart: ferroehr-26.2.0
+    helm.sh/chart: ferroehr-27.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -150,7 +150,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-26.2.0
+    helm.sh/chart: ferroehr-27.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -168,16 +168,11 @@ data:
   # since the server refuses a TOML float on an integer key.
   ferroehr.toml: |
     [api]
-      admin = false
       base_path = "/ferroehr/rest/openehr/v1"
       body_limit = "16MiB"
-      openapi_ui = "private"
-      terminology = false
     
     [audit]
       enabled = true
-      [audit.store]
-        enabled = true
     
     [auth]
       enabled = true
@@ -217,12 +212,9 @@ data:
     
     [authz]
       system_client = []
-      [authz.abac]
-        enabled = false
       [authz.federation]
         agreement = []
       [authz.party_binding]
-        namespace = "demographic"
     
         [[authz.party_binding.basic_user]]
           key = "clinician"
@@ -231,43 +223,20 @@ data:
         [authz.party_binding.provider]
           id = "basic-auth"
           issuer = "urn:oid:2.999.7.9"
-      [authz.rbac]
-        admin_role = "ADMIN"
-        enabled = true
-        role_issuers = []
     
     [database]
-      acquire_timeout = "30s"
       max_connections = 10
-      migrations = "apply"
       min_connections = 0
-      statement_timeout = "1min"
     
     [deployment]
       profile = "sandbox"
-      spec_profile = "development"
     
     [management]
       base_path = "/management"
       enabled = true
-      [management.endpoints]
-        env = "off"
-        flamegraph = "off"
-        info = "off"
-        loggers = "off"
-        metrics = "off"
-        prometheus = "off"
     
     [record]
       subject_index = "local"
-      [record.multimedia]
-        bucket = "openehr-multimedia"
-        enabled = false
-        region = "us-east-1"
-      [record.signing]
-        enabled = true
-        mode = "digest"
-        verify_on_read = "strict"
     
     [server]
       max_concurrent_requests = 256
@@ -290,7 +259,7 @@ kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-26.2.0
+    helm.sh/chart: ferroehr-27.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -320,7 +289,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-26.2.0
+    helm.sh/chart: ferroehr-27.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -345,7 +314,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 545966f3643bf188c18e0d589f03ce9cb53c71ce3d521ea9f0be354467c74697
+        checksum/config: dc4d74f693f70cc3a7a5cb29c9b9bb2fb4ae48ead0f5133be9050ab25a8261c4
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

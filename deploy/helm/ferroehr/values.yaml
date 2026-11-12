@@ -594,20 +594,12 @@ metrics:
 config:
   # [deployment] — what this deployment is.
   deployment:
-    # The openEHR specification generation set the server runs — one coupled
-    # choice: "development" (RM 1.2.0 + BASE 1.3.0 + LANG 1.1.0, the default)
-    # or "stable" (the released generations: RM 1.1.0 + BASE 1.2.0 +
-    # LANG 1.0.0). stable → development is always safe; development → stable
-    # only for data that never used development-only constructs (refused
-    # loudly at read otherwise).
-    spec_profile: development
-
-  # The declared deployment posture, which the chart REFUSES to render
-  # without: there is no default, so every installation says which posture it
-  # runs (EHDS Annex II 1.2: installed following the manufacturer's
-  # instructions without affecting the product's characteristics).
-  # `sandbox` must not hold real patient data: the server names every missing
-  # separation on its boot banner, in the log and on /management/status, and
+    # The declared deployment posture, which the chart REFUSES to render
+    # without: there is no default, so every installation says which posture it
+    # runs (EHDS Annex II 1.2: installed following the manufacturer's
+    # instructions without affecting the product's characteristics).
+    # `sandbox` must not hold real patient data: the server names every missing
+    # separation on its boot banner, in the log and on /management/status, and
     # GET /ferroehr/rest/status reports the profile. `production` refuses to
     # boot while a separation is missing and not named in `accepts`. These
     # chart defaults leave several open (one DSN for every domain, an empty
@@ -651,36 +643,18 @@ config:
   # [api] — the openEHR REST API.
   api:
     base_path: /ferroehr/rest/openehr/v1
-    # Who may read the Swagger UI + the OpenAPI JSON: off, admin_only, private
-    # (any authenticated principal) or public. The documents list the whole
-    # enabled operation surface, so public discloses it anonymously.
-    openapi_ui: private
     # The largest body the clinical surface accepts, below
     # server.body_limit, which the bulk routes keep. Raise it if
     # compositions embed large DV_MULTIMEDIA data. Over-limit is 413.
     body_limit: 16MiB
-    # The ADMIN API group (physical, irreversible delete). Off ⇒ routes 405.
-    admin: false
-    # The terminology extension API; the server it asks is config.terminology.
-    terminology: false
     # [api.cors] — absent sends no CORS header. Production lists its origins:
     #   cors:
     #     allow_origins: [https://app.example.com]
 
   # [database] — pool bounds (the DSN itself is the FERROEHR__DATABASE__URL secret, above).
   database:
-    # apply | verify — whether the server runs its embedded migrations at boot.
-    # `verify` issues no DDL and refuses to boot against a database that has not
-    # been migrated, which is what lets the runtime DSN be ferroehr_clinical only.
-    # Pair it with migrations.job.enabled (see the Migrations section above).
-    migrations: apply
     max_connections: 10
     min_connections: 0
-    acquire_timeout: 30s
-    # The backstop the HTTP request timeout cannot be: dropping a handler future
-    # does not cancel the statement PostgreSQL is running. Above
-    # record.query.timeout so the engine's typed 408 fires first.
-    statement_timeout: 1min
 
   # [telemetry]: the console, the request log and the OpenTelemetry export
   # (the family's shared section). json is correct for cluster log collectors;
@@ -733,23 +707,14 @@ config:
 
   # [authz] — coarse RBAC (on with auth) + ABAC (off).
   authz:
-    rbac:
-      enabled: true
-      admin_role: ADMIN
-      # The persons issuers whose role claims may grant admin_role and the
-      # other privileged roles; a token of any other issuer never holds them.
-      role_issuers: []
-    abac:
-      enabled: false
     # The party binding. `provider` (issuer and id, in NL the URA) is required
     # once auth admits a credential: every access record of a bound person and
     # every version a person commits name it (EHDS Art. 13(4), Annex II 3.2(a)).
     # basic_user maps each Basic user to the binding key its PERSON carries.
-    #   provider: { issuer: "urn:oid:2.16.528.1.1007.3.3", id: "12345678" }
-    #   basic_user:
-    #     - { user: clinician, key_issuer: urn:example:staff-login, key: "<binding key>" }
-    party_binding:
-      namespace: demographic
+    #   party_binding:
+    #     provider: { issuer: "urn:oid:2.16.528.1.1007.3.3", id: "12345678" }
+    #     basic_user:
+    #       - { user: clinician, key_issuer: urn:example:staff-login, key: "<binding key>" }
     # Each OAuth client-credentials client that commits: its issuer and
     # client_id, the provider it acts for, the facilities and templates it may
     # commit, and its origins (relay | device).
@@ -797,44 +762,10 @@ config:
   management:
     enabled: true
     base_path: /management
-    endpoints:
-      # off | public | private | admin_only
-      info: "off"
-      metrics: "off"
-      prometheus: "off"
-      env: "off"
-      loggers: "off"
-      # On-demand CPU flamegraph of the running server (pprof sampling; caps
-      # under [management.profiling] — see the configuration reference).
-      flamegraph: "off"
 
   # [record] — the record itself: the subject index, signing, the query
-  # engine, the change feed and multimedia.
-  record:
-    # [record.signing] — VERSION signing. On/digest by default (the STANDARD
-    # "Signing" capability). pgp mode requires key_file (a mounted
-    # config.files key) + the secrets.signingKeyPassphrase secret, and FAILS
-    # CLOSED at boot.
-    signing:
-      enabled: true
-      # digest | pgp
-      mode: digest
-      # off | warn | strict — read-time verification of OUR OWN signatures.
-      # Defaults to strict when signing is enabled (a served version whose
-      # stored signature no longer recomputes is a 5xx integrity fault); set
-      # warn (log + meter, still serve) or off (never check) to opt out.
-      # Client-supplied signatures are always stored verbatim and never
-      # re-verified.
-      verify_on_read: "strict"
-    # [record.multimedia] — DV_MULTIMEDIA externalization → S3. Our own
-    # extension; no openEHR spec governs it. Off by default (inline behaviour
-    # byte-identical). WARNING: offloaded blobs are PHI — bucket must be
-    # private, encrypted, HTTPS (an http:// url is plain HTTP, dev only).
-    # Credentials are the secrets.multimedia* secrets.
-    multimedia:
-      enabled: false
-      bucket: openehr-multimedia
-      region: us-east-1
+  # engine, the change feed and multimedia. Every key has a server default.
+  #   record:
     # [record.change_feed] — the commit-event outbox and its cursor feed. Our
     # own extension; no openEHR spec governs it. Off until a reader is named:
     # FerroBRIDGE reads the feed (scope __ferroehr.outbox) and delivers the
@@ -868,16 +799,6 @@ config:
   # ([audit.syslog] classic DICOM/syslog, [audit.fhir_feed] RESTful ATNA).
   audit:
     enabled: true
-    store:
-      enabled: true
-      # How long records are kept, a calendar period (P3Y, P1096D); unset
-      # (null) keeps them forever. The server refuses a horizon outside the
-      # floors and ceilings of the jurisdictions its identifier rules name
-      # (three years EU-wide, five NL, one CH, at most three DE for a declared
-      # SGB V § 309 controller, who sets P3Y with sgb_v_309_controller: true).
-      # -- (string)
-      # @default -- unset
-      retention: null
 
   # [terminology] — the outbound FHIR terminology server; absent, none is
   # asked. Not defaulted here: with `terminology.enabled` +

@@ -13,10 +13,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct RecordConfig {
     /// `subject_index`: who holds the subject-to-EHR cross-reference, the
     /// IHE patient identity source of `[pixm]` (`pixm`) or the in-instance
     /// map (`local`). No default: an unset index refuses the start.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = true)))]
     pub subject_index: Option<crate::service::ehr_index::config::SubjectIndex>,
     /// `[record.versioning]`: the answer to an identical re-send.
     pub versioning: crate::config::versioning::VersioningConfig,
@@ -26,6 +28,7 @@ pub struct RecordConfig {
     pub query: crate::service::query::config::QueryConfig,
     /// `[record.change_feed]`: the commit-event outbox readers and their
     /// retention.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub change_feed: crate::extensions::outbox::config::OutboxConfig,
     /// `[record.multimedia]`: `DV_MULTIMEDIA` externalization to object
     /// storage. It keeps `enabled`, because its store applies while it is

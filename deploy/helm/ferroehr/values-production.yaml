@@ -101,16 +101,14 @@ config:
 
 
   auth:
-    enabled: true
     # Your identity provider. The server reads its metadata and signing keys
     # at boot (RFC 8414 §3, OpenID Connect Discovery 1.0 §4).
     issuer:
-      # One table per issuer: `kind` says whose tokens it signs, `profile`
-      # the preset of their shape, and a persons token is admitted only
-      # through a client in `first_party_clients`.
+      # One table per issuer: `kind` says whose tokens it signs, and a
+      # persons token is admitted only through a client in
+      # `first_party_clients`.
       - issuer: https://idp.example.com/realms/ferroehr
         kind: persons
-        profile: rfc9068
         audience: [ferroehr]
         first_party_clients: [ferroehr-viewer]
     # The issuer's logins bind to the PERSON carrying their `sub` under this
@@ -137,6 +135,9 @@ config:
             user_name: { path: "/details[id2]/items[id3]", type: scim_user_name }
             external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
     rbac:
+      # Stated, as every separation this overlay claims (validate.sh checks
+      # the render names it).
+      enabled: true
       role_issuers: [https://idp.example.com/realms/ferroehr]
       # An EHR without ACCESS_CONTROL_SETTINGS admits no one until its settings
       # are authored.
@@ -154,9 +155,9 @@ config:
   # own (extraEnv below).
 
   audit:
-    enabled: true
     # Refuse an auditable operation with 503 when its record cannot be queued.
     fail_mode: closed
+    # The local store, stated as a claimed separation.
     store:
       enabled: true
   pixm:

@@ -126,8 +126,6 @@ services:
       # the same failure mode as upstream's Tomcat admission window — instead
       # of shed errors tripping the stress envelope's error-rate arm.
       FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS: ${FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS:-256}
-      # The conformance catalogue uploads operational templates up to 5.4 MB.
-      FERROEHR__SERVER__BODY_LIMIT: "64MiB"
       # Per-caller request-rate limiting ([server.caller_rate]). On, exactly as a
       # production deployment runs it, so the functional catalogue exercises the
       # real posture. The MEASUREMENT overlay (docker/sut-measurement.yml)
