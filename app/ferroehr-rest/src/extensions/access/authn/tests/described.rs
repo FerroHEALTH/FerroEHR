@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The issuer the SMART discovery document describes: `[auth.smart]
-//! described_issuer`, else the one issuer that serves a user launch and whose
+//! The issuer the SMART discovery document describes, chosen by
+//! `ferrohealth-smart`'s `describe`: `[auth] described_issuer`, else the one
+//! issuer that serves a user launch and whose
 //! metadata FerroEHR has, never a `machines` issuer and never by the order of
 //! the `[[auth.issuer]]` tables. SMART App Launch 2.2.0, Conformance,
 //! §Metadata requires the `authorization_endpoint` a user launch starts at;
@@ -69,6 +70,9 @@ async fn authenticator(
         auth: ferroehr::config::auth_section::AuthConfig {
             shared: Box::new(AuthSection {
                 issuer: entries,
+                described_issuer: described.map(|issuer| {
+                    ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned())
+                }),
                 ..AuthSection::default()
             }),
             ..ferroehr::config::auth_section::AuthConfig::default()
@@ -76,8 +80,6 @@ async fn authenticator(
         ..AppConfig::default()
     };
     config.auth.smart.discovery = served;
-    config.auth.smart.described_issuer =
-        described.map(|issuer| ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()));
     Authenticator::new(&config, None, None, memory()).await
 }
 
@@ -176,7 +178,7 @@ async fn several_eligible_issuers_without_the_key_are_refused() {
     else {
         panic!("several eligible issuers without described_issuer are refused");
     };
-    assert!(message.contains("auth.smart.described_issuer"), "{message}");
+    assert!(message.contains("auth.described_issuer"), "{message}");
     assert!(message.contains(&persons.uri()), "{message}");
     assert!(message.contains(&patients.uri()), "{message}");
 }
@@ -222,7 +224,7 @@ async fn a_named_machines_issuer_is_refused() {
     else {
         panic!("a named machines issuer is refused");
     };
-    assert!(message.contains("auth.smart.described_issuer"), "{message}");
+    assert!(message.contains("auth.described_issuer"), "{message}");
     assert!(message.contains("machines issuer"), "{message}");
 }
 
@@ -241,8 +243,7 @@ async fn a_named_unknown_issuer_is_refused() {
     };
     assert!(
         message.contains(
-            "auth.smart.described_issuer names https://elsewhere.example, which is no [auth] \
-             issuer"
+            "described_issuer names https://elsewhere.example, which is no trusted issuer"
         ),
         "{message}"
     );
@@ -265,7 +266,7 @@ async fn a_named_issuer_without_metadata_is_refused() {
     else {
         panic!("a named issuer without metadata is refused");
     };
-    assert!(message.contains("auth.smart.described_issuer"), "{message}");
+    assert!(message.contains("auth.described_issuer"), "{message}");
     assert!(message.contains("issuer_metadata_file"), "{message}");
 }
 
