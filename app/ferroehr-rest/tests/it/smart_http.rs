@@ -179,6 +179,33 @@ async fn a_bound_issuer_declares_patient_permission() {
     assert!(capabilities(&doc).contains(&"permission-patient"));
 }
 
+/// A `machines` issuer signs client credentials tokens only, so the document
+/// describes the `persons` issuer beside it, whichever table comes first, and
+/// carries that issuer's authorization and token endpoints (SMART App Launch
+/// 2.2.0, Conformance, §Metadata).
+#[tokio::test]
+async fn discovery_describes_the_persons_issuer_beside_a_machines_issuer() {
+    let machines = issuer().await;
+    let persons = issuer().await;
+    let mut cfg = config(&persons.uri(), true, false);
+    cfg.auth.shared = common::trusting(vec![
+        ferrohealth_smart::config::IssuerEntry {
+            kind: Some(ferrohealth_smart::kind::IssuerKind::Machines),
+            ..common::entry(&machines.uri(), AUDIENCE)
+        },
+        common::entry(&persons.uri(), AUDIENCE),
+    ])
+    .shared;
+    let (_pg, app) = common::app(cfg).await;
+    let (status, doc) = common::send_json(&app, get(DISCOVERY, None)).await;
+    assert_eq!(status, StatusCode::OK, "{doc}");
+    assert_eq!(
+        doc["authorization_endpoint"],
+        format!("{}/authorize", persons.uri())
+    );
+    assert_eq!(doc["token_endpoint"], format!("{}/token", persons.uri()));
+}
+
 #[tokio::test]
 async fn discovery_absent_when_disabled() {
     let issuer = issuer().await;

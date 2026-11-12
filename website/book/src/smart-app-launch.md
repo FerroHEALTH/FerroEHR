@@ -116,10 +116,11 @@ GET /ferroehr/rest/.well-known/smart-configuration
 ```
 
 (relative to the REST root, or to `[auth.smart] platform_base_url` when set). The
-document is built from the metadata of one `[auth]` issuer, read at boot: the
-first introspected issuer, else the issuer `[auth.smart] issuer_metadata_file`
-names, else the first issuer whose metadata is read from it, else the first
-issuer. It carries the
+document is built from the metadata of one `[auth]` issuer, read at boot:
+`[auth.smart] described_issuer`, else the one issuer that is not of kind
+`machines` and whose metadata FerroEHR has. Several such issuers without
+`described_issuer`, or none, refuse the start
+([the described issuer](installation/config-auth.md#the-described-issuer)). It carries the
 authorization, token, registration, introspection and revocation endpoints,
 the grant types and client authentication methods it supports, and its
 `jwks_uri`. It therefore needs an issuer whose metadata names a

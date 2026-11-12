@@ -520,6 +520,11 @@ impl FerroEhrConfig {
                 .flat_map(|scim| scim.errors(resolved.as_ref()))
                 .map(ConfigError::semantic),
         );
+        if let Some(named) = &self.auth.smart.described_issuer
+            && let Some(resolved) = &resolved
+        {
+            errors.extend(described_issuer_error(named, resolved).map(ConfigError::semantic));
+        }
         if self.auth.smart.discovery && !auth::has_bearer(&self.auth.shared) {
             errors.push(ConfigError::semantic(
                 "auth.smart.discovery = true requires an [auth] issuer: the discovery document is \
@@ -610,5 +615,65 @@ fn multimedia_endpoint_errors(
     match config.endpoint_url() {
         Ok(_) => Vec::new(),
         Err(e) => vec![ConfigError::semantic(e.to_string())],
+    }
+}
+
+/// The refusal of `[auth.smart] described_issuer` when it names no `[auth]`
+/// issuer, or a `machines` issuer, which signs client credentials tokens only
+/// and so serves no user launch (SMART App Launch 2.2.0, Conformance,
+/// §Metadata: `authorization_endpoint`). Which issuer a resource server
+/// describes is not governed by SMART: our own design.
+fn described_issuer_error(
+    named: &ferrohealth_secret::secret_url::SecretUrl,
+    resolved: &ferrohealth_smart::config::Resolved,
+) -> Option<String> {
+    match resolved.kinds.get(named.expose()) {
+        None => Some(format!(
+            "auth.smart.described_issuer names {named}, which is no [auth] issuer"
+        )),
+        Some(ferrohealth_smart::kind::IssuerKind::Machines) => Some(format!(
+            "auth.smart.described_issuer names the machines issuer {named}: a machines issuer \
+             signs client credentials tokens only, so the discovery document cannot send a user \
+             launch to it; name a persons, patients or federation issuer"
+        )),
+        Some(_) => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ferrohealth_secret::secret_url::SecretUrl;
+    use ferrohealth_smart::config::AuthSection;
+
+    use super::*;
+
+    /// `[auth.smart] described_issuer` names an `[auth]` issuer that serves a
+    /// user launch: an unknown issuer and a `machines` issuer, which signs
+    /// client credentials tokens only, are refused before any issuer is read,
+    /// and a `persons` issuer passes.
+    #[test]
+    fn the_described_issuer_names_a_user_facing_auth_issuer() {
+        let mut issuer = crate::config::auth_section::machines("https://as.example/machines");
+        issuer.extend(crate::config::auth_section::machines(
+            "https://as.example/persons",
+        ));
+        issuer[1].kind = Some(ferrohealth_smart::kind::IssuerKind::Persons);
+        let resolved = auth::resolve(&AuthSection {
+            issuer,
+            ..AuthSection::default()
+        })
+        .expect("two issuers resolve");
+        let unknown =
+            described_issuer_error(&SecretUrl::new("https://elsewhere.example"), &resolved)
+                .expect("an unknown issuer is refused");
+        assert!(unknown.contains("which is no [auth] issuer"), "{unknown}");
+        let machines =
+            described_issuer_error(&SecretUrl::new("https://as.example/machines"), &resolved)
+                .expect("a machines issuer is refused");
+        assert!(machines.contains("names the machines issuer"), "{machines}");
+        assert!(
+            described_issuer_error(&SecretUrl::new("https://as.example/persons"), &resolved)
+                .is_none()
+        );
     }
 }

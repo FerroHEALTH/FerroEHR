@@ -1681,8 +1681,7 @@ mod tests {
     async fn a_jwks_file_issuer_takes_its_metadata_from_the_configured_file() {
         let options = SmartOptions::default();
         let without = with_metadata_file(None).await.expect("authenticator");
-        let document = without.smart_configuration(&options).expect("a document");
-        assert!(document.get("token_endpoint").is_none(), "{document}");
+        assert!(without.smart_configuration(&options).is_none());
 
         let good = MetadataFile::new(
             "good",
@@ -1751,6 +1750,7 @@ mod tests {
         assert!(message.contains("repeats a member name"), "{message}");
     }
 
+    mod described;
     mod outcome_status;
     mod remote_issuer;
 }
