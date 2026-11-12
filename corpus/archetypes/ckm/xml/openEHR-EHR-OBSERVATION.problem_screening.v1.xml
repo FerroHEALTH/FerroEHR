@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1115,11 +1115,11 @@ No utilizar para registrar detalles sobre una lista de selección simple en la q
       </items>
       <items code="at0023">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Comment</items>
@@ -1127,7 +1127,7 @@ No utilizar para registrar detalles sobre una lista de selección simple en la q
       </items>
       <items code="at0027">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Any problems or diagnoses?</items>
@@ -1136,15 +1136,15 @@ No utilizar para registrar detalles sobre una lista de selección simple en la q
       </items>
       <items code="at0031">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Screening purpose</items>
@@ -1172,11 +1172,11 @@ For example: pre-admission screening or the name of the actual questionnaire.</i
       </items>
       <items code="at0044">
         <items id="text">Unsure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Unsure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nb">
@@ -1222,11 +1222,11 @@ For example: pre-admission screening or the name of the actual questionnaire.</i
       </items>
       <items code="at0023">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Kommentar</items>
@@ -1234,7 +1234,7 @@ For example: pre-admission screening or the name of the actual questionnaire.</i
       </items>
       <items code="at0027">
         <items id="text">Ukjent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Problemer eller diagnoser?</items>
@@ -1243,15 +1243,15 @@ For example: pre-admission screening or the name of the actual questionnaire.</i
       </items>
       <items code="at0031">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Ukjent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Kartleggingsformål</items>
@@ -1278,11 +1278,11 @@ For example: pre-admission screening or the name of the actual questionnaire.</i
       </items>
       <items code="at0044">
         <items id="text">Usikker</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Usikker</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="de">
@@ -1328,11 +1328,11 @@ For example: pre-admission screening or the name of the actual questionnaire.</i
       </items>
       <items code="at0023">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Nein</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Kommentar</items>
@@ -1340,7 +1340,7 @@ For example: pre-admission screening or the name of the actual questionnaire.</i
       </items>
       <items code="at0027">
         <items id="text">Unbekannt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Irgendwelche Probleme oder Diagnosen?</items>
@@ -1349,15 +1349,15 @@ For example: pre-admission screening or the name of the actual questionnaire.</i
       </items>
       <items code="at0031">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Nein</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Unbekannt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Zweck des Screenings</items>
@@ -1385,11 +1385,11 @@ Zum Beispiel: Screening vor der Aufnahme oder der Name des eigentlichen Fragebog
       </items>
       <items code="at0044">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nl">
@@ -1435,11 +1435,11 @@ Zum Beispiel: Screening vor der Aufnahme oder der Name des eigentlichen Fragebog
       </items>
       <items code="at0023">
         <items id="text">*Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">*Nee</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">*Opmerking</items>
@@ -1447,7 +1447,7 @@ Zum Beispiel: Screening vor der Aufnahme oder der Name des eigentlichen Fragebog
       </items>
       <items code="at0027">
         <items id="text">*Onbekend</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">*Aanwezig?</items>
@@ -1456,15 +1456,15 @@ Zum Beispiel: Screening vor der Aufnahme oder der Name des eigentlichen Fragebog
       </items>
       <items code="at0031">
         <items id="text">*Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">*Nee</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">*Onbekend</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">*Doel van vragenlijst</items>
@@ -1492,11 +1492,11 @@ For example: pre-admission screening or the name of the actual questionnaire.(en
       </items>
       <items code="at0044">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="ca">
@@ -1542,11 +1542,11 @@ For example: pre-admission screening or the name of the actual questionnaire.(en
       </items>
       <items code="at0023">
         <items id="text">Sí</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Observacions</items>
@@ -1554,7 +1554,7 @@ For example: pre-admission screening or the name of the actual questionnaire.(en
       </items>
       <items code="at0027">
         <items id="text">Desconegut</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Cap problema o diagnòstic?</items>
@@ -1563,15 +1563,15 @@ For example: pre-admission screening or the name of the actual questionnaire.(en
       </items>
       <items code="at0031">
         <items id="text">Sí</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Desconegut</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Propòsit de la detecció</items>
@@ -1599,11 +1599,11 @@ Per exemple: detecció de preadmissió o el nom del sondeig actual.</items>
       </items>
       <items code="at0044">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="fr">
@@ -1649,11 +1649,11 @@ Per exemple: detecció de preadmissió o el nom del sondeig actual.</items>
       </items>
       <items code="at0023">
         <items id="text">Oui</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Non</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Commentaire</items>
@@ -1661,7 +1661,7 @@ Per exemple: detecció de preadmissió o el nom del sondeig actual.</items>
       </items>
       <items code="at0027">
         <items id="text">Inconnu</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Des problèmes ou des diagnostics ?</items>
@@ -1670,15 +1670,15 @@ Per exemple: detecció de preadmissió o el nom del sondeig actual.</items>
       </items>
       <items code="at0031">
         <items id="text">Oui</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Non</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Inconnu</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Objectif du dépistage</items>
@@ -1706,11 +1706,11 @@ Par exemple : la sélection préalable à l'admission ou le nom du questionnaire
       </items>
       <items code="at0044">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="es">
@@ -1756,11 +1756,11 @@ Par exemple : la sélection préalable à l'admission ou le nom du questionnaire
       </items>
       <items code="at0023">
         <items id="text">Si</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Comentario</items>
@@ -1768,7 +1768,7 @@ Par exemple : la sélection préalable à l'admission ou le nom du questionnaire
       </items>
       <items code="at0027">
         <items id="text">Desconocido</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Algún problema o diagnóstico?</items>
@@ -1777,15 +1777,15 @@ Par exemple : la sélection préalable à l'admission ou le nom du questionnaire
       </items>
       <items code="at0031">
         <items id="text">Si</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Desconocido</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Propósito de la detección/cribaje</items>
@@ -1813,11 +1813,11 @@ Por ejemplo: detección de pre admisión o nombre del cuestionario actual.</item
       </items>
       <items code="at0044">
         <items id="text">Dudoso</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Dudoso</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_bindings terminology="SNOMED-CT">
@@ -1872,4 +1872,3 @@ Por ejemplo: detección de pre admisión o nombre del cuestionario actual.</item
     </term_bindings>
   </ontology>
 </archetype>
-

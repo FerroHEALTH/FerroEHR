@@ -1,0 +1,405 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-ACTION.intravenous_fluid_administration.v1
+
+concept
+	[at0000]	-- Intravenous fluid administration
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Jasmin Buck">
+			>
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			author = <
+				["name"] = <"Leonardo Derjachadurian">
+				["organisation"] = <"Particular">
+			>
+			accreditation = <"Medical doctor, Internal medicine specialist">
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"2007-10-04">
+	>
+	details = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لتسجيل إعطاء أمر بسائل داخل الوريد">
+			use = <"">
+			keywords = <"داخل الوريد", "سائل", "إعطاء">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record the administration of an intravenous fluid order.">
+			use = <"">
+			keywords = <"intravenous", "fluid", "administration">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Dokumentation der intravenösen Verabreichung einer verordneten Flüssigkeit.">
+			use = <"">
+			keywords = <"intravenös", "Flüssigkeit", "Verabreichung">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			purpose = <"Para registrar la administración de un fluido intravenoso">
+			use = <"">
+			keywords = <"intravenoso", "fluido", "administración">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <"Heather Leslie, Ocean Informatics, Australia (Editor)", "Ian McNicoll, Ocean Informatics, United Kingdom (Editor)">
+	other_details = <
+		["MD5-CAM-1.0.1"] = <"0C7112890FA7C3E09934F945FD77310B">
+	>
+
+definition
+	ACTION[at0000] matches {	-- Intravenous fluid administration
+		ism_transition matches {
+			ISM_TRANSITION[at0003] matches {	-- Plan IV fluid administration
+				current_state matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[openehr::524]}
+					}
+				}
+				careflow_step matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[local::at0003]}		-- Plan IV fluid administration
+					}
+				}
+			}
+			ISM_TRANSITION[at0004] matches {	-- Order IV fluids
+				current_state matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[openehr::524]}
+					}
+				}
+				careflow_step matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[local::at0004]}		-- Order IV fluids
+					}
+				}
+			}
+			ISM_TRANSITION[at0001] matches {	-- Postpone IV fluid administration
+				current_state matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[openehr::527]}
+					}
+				}
+				careflow_step matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[local::at0001]}		-- Postpone IV fluid administration
+					}
+				}
+			}
+			ISM_TRANSITION[at0007] matches {	-- Cancel administration of IV fluids
+				current_state matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[openehr::528]}
+					}
+				}
+				careflow_step matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[local::at0007]}		-- Cancel administration of IV fluids
+					}
+				}
+			}
+			ISM_TRANSITION[at0005] matches {	-- Schedule start of IV fluid administration
+				current_state matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[openehr::529]}
+					}
+				}
+				careflow_step matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[local::at0005]}		-- Schedule start of IV fluid administration
+					}
+				}
+			}
+			ISM_TRANSITION[at0006] matches {	-- Commence administration of IV fluids
+				current_state matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[openehr::245]}
+					}
+				}
+				careflow_step matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[local::at0006]}		-- Commence administration of IV fluids
+					}
+				}
+			}
+			ISM_TRANSITION[at0009] matches {	-- Monitor administration of IV fluids
+				current_state matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[openehr::245]}
+					}
+				}
+				careflow_step matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[local::at0009]}		-- Monitor administration of IV fluids
+					}
+				}
+			}
+			ISM_TRANSITION[at0002] matches {	-- Suspend IV fluid administration
+				current_state matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[openehr::530]}
+					}
+				}
+				careflow_step matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[local::at0002]}		-- Suspend IV fluid administration
+					}
+				}
+			}
+			ISM_TRANSITION[at0008] matches {	-- Abort administration of IV fluids
+				current_state matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[openehr::531]}
+					}
+				}
+				careflow_step matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[local::at0008]}		-- Abort administration of IV fluids
+					}
+				}
+			}
+			ISM_TRANSITION[at0010] matches {	-- Complete administration of IV fluids
+				current_state matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[openehr::532]}
+					}
+				}
+				careflow_step matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[local::at0010]}		-- Complete administration of IV fluids
+					}
+				}
+			}
+		}
+		description matches {
+			allow_archetype ITEM_TREE matches {
+				include
+					archetype_id/value matches {/openEHR-EHR-ITEM_TREE\.intravenous_fluids\.v1/}
+				exclude
+					archetype_id/value matches {/.*/}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["ar-sy"] = <
+			items = <
+				["at0000"] = <
+					text = <"*Intravenous fluid administration(en)">
+					description = <"*Record of intravenous fluid administration.(en)">
+				>
+				["at0001"] = <
+					text = <"*Postpone IV fluid administration(en)">
+					description = <"*IV fluid administration has been postponed.(en)">
+				>
+				["at0002"] = <
+					text = <"*Suspend IV fluid administration(en)">
+					description = <"*IV fluid administration has been suspended.(en)">
+				>
+				["at0003"] = <
+					text = <"*Plan IV fluid administration(en)">
+					description = <"*IV fluid administration has been planned.(en)">
+				>
+				["at0004"] = <
+					text = <"*Order IV fluids(en)">
+					description = <"*IV fluid administration has been ordered.(en)">
+				>
+				["at0005"] = <
+					text = <"*Schedule start of IV fluid administration(en)">
+					description = <"*Start of IV fluid administration has been scheduled.(en)">
+				>
+				["at0006"] = <
+					text = <"*Commence administration of IV fluids(en)">
+					description = <"*IV fluid administration has been commenced.(en)">
+				>
+				["at0007"] = <
+					text = <"*Cancel administration of IV fluids(en)">
+					description = <"*IV fluid administration has been cancelled.(en)">
+				>
+				["at0008"] = <
+					text = <"*Abort administration of IV fluids(en)">
+					description = <"*IV fluid administration has been aborted.(en)">
+				>
+				["at0009"] = <
+					text = <"*Monitor administration of IV fluids(en)">
+					description = <"*IV fluid administration has been monitored.(en)">
+				>
+				["at0010"] = <
+					text = <"*Complete administration of IV fluids(en)">
+					description = <"*IV fluid administration has been completed.(en)">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Intravenous fluid administration">
+					description = <"Record of intravenous fluid administration.">
+				>
+				["at0001"] = <
+					text = <"Postpone IV fluid administration">
+					description = <"IV fluid administration has been postponed.">
+				>
+				["at0002"] = <
+					text = <"Suspend IV fluid administration">
+					description = <"IV fluid administration has been suspended.">
+				>
+				["at0003"] = <
+					text = <"Plan IV fluid administration">
+					description = <"IV fluid administration has been planned.">
+				>
+				["at0004"] = <
+					text = <"Order IV fluids">
+					description = <"IV fluid administration has been ordered.">
+				>
+				["at0005"] = <
+					text = <"Schedule start of IV fluid administration">
+					description = <"Start of IV fluid administration has been scheduled.">
+				>
+				["at0006"] = <
+					text = <"Commence administration of IV fluids">
+					description = <"IV fluid administration has been commenced.">
+				>
+				["at0007"] = <
+					text = <"Cancel administration of IV fluids">
+					description = <"IV fluid administration has been cancelled.">
+				>
+				["at0008"] = <
+					text = <"Abort administration of IV fluids">
+					description = <"IV fluid administration has been aborted.">
+				>
+				["at0009"] = <
+					text = <"Monitor administration of IV fluids">
+					description = <"IV fluid administration has been monitored.">
+				>
+				["at0010"] = <
+					text = <"Complete administration of IV fluids">
+					description = <"IV fluid administration has been completed.">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"*Intravenous fluid administration(en)">
+					description = <"*Record of intravenous fluid administration.(en)">
+				>
+				["at0001"] = <
+					text = <"*Postpone IV fluid administration(en)">
+					description = <"*IV fluid administration has been postponed.(en)">
+				>
+				["at0002"] = <
+					text = <"*Suspend IV fluid administration(en)">
+					description = <"*IV fluid administration has been suspended.(en)">
+				>
+				["at0003"] = <
+					text = <"*Plan IV fluid administration(en)">
+					description = <"*IV fluid administration has been planned.(en)">
+				>
+				["at0004"] = <
+					text = <"*Order IV fluids(en)">
+					description = <"*IV fluid administration has been ordered.(en)">
+				>
+				["at0005"] = <
+					text = <"*Schedule start of IV fluid administration(en)">
+					description = <"*Start of IV fluid administration has been scheduled.(en)">
+				>
+				["at0006"] = <
+					text = <"*Commence administration of IV fluids(en)">
+					description = <"*IV fluid administration has been commenced.(en)">
+				>
+				["at0007"] = <
+					text = <"*Cancel administration of IV fluids(en)">
+					description = <"*IV fluid administration has been cancelled.(en)">
+				>
+				["at0008"] = <
+					text = <"*Abort administration of IV fluids(en)">
+					description = <"*IV fluid administration has been aborted.(en)">
+				>
+				["at0009"] = <
+					text = <"*Monitor administration of IV fluids(en)">
+					description = <"*IV fluid administration has been monitored.(en)">
+				>
+				["at0010"] = <
+					text = <"*Complete administration of IV fluids(en)">
+					description = <"*IV fluid administration has been completed.(en)">
+				>
+			>
+		>
+		["es-ar"] = <
+			items = <
+				["at0000"] = <
+					text = <"*Intravenous fluid administration(en)">
+					description = <"*Record of intravenous fluid administration.(en)">
+				>
+				["at0001"] = <
+					text = <"*Postpone IV fluid administration(en)">
+					description = <"*IV fluid administration has been postponed.(en)">
+				>
+				["at0002"] = <
+					text = <"*Suspend IV fluid administration(en)">
+					description = <"*IV fluid administration has been suspended.(en)">
+				>
+				["at0003"] = <
+					text = <"*Plan IV fluid administration(en)">
+					description = <"*IV fluid administration has been planned.(en)">
+				>
+				["at0004"] = <
+					text = <"*Order IV fluids(en)">
+					description = <"*IV fluid administration has been ordered.(en)">
+				>
+				["at0005"] = <
+					text = <"*Schedule start of IV fluid administration(en)">
+					description = <"*Start of IV fluid administration has been scheduled.(en)">
+				>
+				["at0006"] = <
+					text = <"*Commence administration of IV fluids(en)">
+					description = <"*IV fluid administration has been commenced.(en)">
+				>
+				["at0007"] = <
+					text = <"*Cancel administration of IV fluids(en)">
+					description = <"*IV fluid administration has been cancelled.(en)">
+				>
+				["at0008"] = <
+					text = <"*Abort administration of IV fluids(en)">
+					description = <"*IV fluid administration has been aborted.(en)">
+				>
+				["at0009"] = <
+					text = <"*Monitor administration of IV fluids(en)">
+					description = <"*IV fluid administration has been monitored.(en)">
+				>
+				["at0010"] = <
+					text = <"*Complete administration of IV fluids(en)">
+					description = <"*IV fluid administration has been completed.(en)">
+				>
+			>
+		>
+	>

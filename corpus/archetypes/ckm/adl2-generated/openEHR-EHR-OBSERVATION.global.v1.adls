@@ -1,0 +1,510 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=74bc8b80-f50f-4c77-9898-a7fdc4ce20be; build_uid=2813c05a-d20d-4db5-bb71-6655a484db16)
+    openEHR-EHR-OBSERVATION.global.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"19/03/2007">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sam Heard, Ocean Informatics, Australia", "Ian McNicoll, Ocean Informatics, UK">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C06AD0F6844BCDD58E325F8AC07AECAA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To document an overall impression of the patient as part of examination.">
+            keywords = <"Global", "General assessment", "complexion", "appearance", "behaviour", "hydration", "mood">
+            use = <"Use in conjunction with Conscious state OBSERVATION.">
+            misuse = <"">
+            copyright = <"copyright (c) 2010 openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Global assessment
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0064] matches {    -- Normal statements
+                                        value matches {
+                                            DV_TEXT[at9050]
+                                        }
+                                    }
+                                    ELEMENT[at0067] occurrences matches {0..1} matches {    -- Clinical description
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                    CLUSTER[at0089] occurrences matches {0..1} matches {    -- Skin complexion
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0044] matches {    -- Complexion
+                                                value matches {
+                                                    DV_CODED_TEXT[at9032] matches {
+                                                        defining_code matches {[ac9005]}    -- Complexion (synthesised)
+                                                    }
+                                                    DV_TEXT[at9033]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0129] occurrences matches {0..1} matches {    -- Sweating and hydration
+                                        items cardinality matches {1..*; unordered} matches {
+                                            allow_archetype CLUSTER[at0128] occurrences matches {0..1} matches {    -- Sweat
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.fluid(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                                exclude
+                                                    archetype_id/value matches {/.*/}
+                                            }
+                                            allow_archetype CLUSTER[at0116] occurrences matches {0..1} matches {    -- Hydration
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.hydration(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0065] occurrences matches {0..1} matches {    -- Appearance
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0058] occurrences matches {0..1} matches {    -- Nutrition
+                                                value matches {
+                                                    DV_CODED_TEXT[at9034] matches {
+                                                        defining_code matches {[ac9000]}    -- Nutrition (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0046] matches {    -- Physique
+                                                value matches {
+                                                    DV_CODED_TEXT[at9035] matches {
+                                                        defining_code matches {[ac9001]}    -- Physique (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0042] occurrences matches {0..1} matches {    -- Posture
+                                                value matches {
+                                                    DV_TEXT[at9036]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0011] occurrences matches {0..1} matches {    -- Self care
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Cleanliness
+                                                value matches {
+                                                    DV_TEXT[at9037]
+                                                }
+                                            }
+                                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Grooming
+                                                value matches {
+                                                    DV_TEXT[at9038]
+                                                }
+                                            }
+                                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Odour
+                                                value matches {
+                                                    DV_TEXT[at9039]
+                                                }
+                                            }
+                                            ELEMENT[at0036] occurrences matches {0..1} matches {    -- State of dress
+                                                value matches {
+                                                    DV_TEXT[at9040]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0038] occurrences matches {0..1} matches {    -- Behaviour
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0103] occurrences matches {0..1} matches {    -- Mood description
+                                                value matches {
+                                                    DV_TEXT[at9041]
+                                                }
+                                            }
+                                            ELEMENT[at0040] occurrences matches {0..1} matches {    -- Unusual behaviour details
+                                                value matches {
+                                                    DV_TEXT[at9042]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0069] occurrences matches {0..1} matches {    -- Function
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0062] occurrences matches {0..1} matches {    -- Speech
+                                                value matches {
+                                                    DV_TEXT[at9043]
+                                                }
+                                            }
+                                            ELEMENT[at0045] occurrences matches {0..1} matches {    -- Involuntary movements
+                                                value matches {
+                                                    DV_TEXT[at9044]
+                                                }
+                                            }
+                                            ELEMENT[at0032] occurrences matches {0..1} matches {    -- Handedness
+                                                value matches {
+                                                    DV_CODED_TEXT[at9045] matches {
+                                                        defining_code matches {[ac9002]}    -- Handedness (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0092] matches {    -- Smells of
+                                        items cardinality matches {1; unordered} matches {
+                                            ELEMENT[at0095] matches {    -- Smell
+                                                value matches {
+                                                    DV_CODED_TEXT[at9046] matches {
+                                                        defining_code matches {[ac9006]}    -- Smell (synthesised)
+                                                    }
+                                                    DV_TEXT[at9047]
+                                                }
+                                            }
+                                            ELEMENT[at0096] matches {    -- Description
+                                                value matches {
+                                                    DV_TEXT[at9048]
+                                                }
+                                            }
+                                            ELEMENT[at0098] matches {    -- Degree
+                                                value matches {
+                                                    DV_ORDINAL[at9049] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0099]}],    -- Absent
+                                                            [{1}, {[at0100]}],    -- Mild
+                                                            [{2}, {[at0101]}],    -- Moderate
+                                                            [{3}, {[at0102]}]    -- Marked
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0125] matches {    -- Body site
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0105] matches {    -- Obvious abnormality on inspection
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.inspection(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.gait(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.issue(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Global assessment">
+                description = <"General assessment of the whole patient by the clinician.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"@ internal @">
+            >
+            ["at0010"] = <
+                text = <"Cleanliness">
+                description = <"Subjective description of cleanliness.">
+            >
+            ["at0011"] = <
+                text = <"Self care">
+                description = <"Inspection of patient's hygiene.">
+            >
+            ["at0012"] = <
+                text = <"Grooming">
+                description = <"Subjective description of patient's grooming.">
+            >
+            ["at0014"] = <
+                text = <"Odour">
+                description = <"Subjective description of patient's body odour, with respect to self-care.">
+            >
+            ["at0032"] = <
+                text = <"Handedness">
+                description = <"Observation of dominant hand.">
+            >
+            ["at0033"] = <
+                text = <"Left-handed">
+                description = <"Subject has left-hand dominance.">
+            >
+            ["at0034"] = <
+                text = <"Right-handed">
+                description = <"Subject has right-hand dominance.">
+            >
+            ["at0036"] = <
+                text = <"State of dress">
+                description = <"Description of patient's state and condition of clothing.">
+            >
+            ["at0038"] = <
+                text = <"Behaviour">
+                description = <"Description of observed behaviours.">
+            >
+            ["at0040"] = <
+                text = <"Unusual behaviour details">
+                description = <"Description of observed unusual, abnormal or inappropriate behaviour.">
+            >
+            ["at0042"] = <
+                text = <"Posture">
+                description = <"Description of posture.">
+            >
+            ["at0044"] = <
+                text = <"Complexion">
+                description = <"Finding of skin complexion.">
+            >
+            ["at0045"] = <
+                text = <"Involuntary movements">
+                description = <"Clinical description of generalised abnormal body movements.">
+            >
+            ["at0046"] = <
+                text = <"Physique">
+                description = <"Description of physical stature.">
+            >
+            ["at0047"] = <
+                text = <"Thin">
+                description = <"Subject appears thin.">
+            >
+            ["at0048"] = <
+                text = <"Tall">
+                description = <"Subject appears taller than average.">
+            >
+            ["at0049"] = <
+                text = <"Short">
+                description = <"Subject appears smaller than average.">
+            >
+            ["at0050"] = <
+                text = <"Normal weight for height">
+                description = <"Subject appears to have normal weight for height.">
+            >
+            ["at0051"] = <
+                text = <"Slightly overweight for height">
+                description = <"Subject appears slightly overweight for height.">
+            >
+            ["at0052"] = <
+                text = <"Slightly underweight for height">
+                description = <"Subject appears slightly underweight for height.">
+            >
+            ["at0053"] = <
+                text = <"Overweight for height">
+                description = <"Subject appears overweight for height.">
+            >
+            ["at0054"] = <
+                text = <"Underweight for height">
+                description = <"Subject appears underweight for height.">
+            >
+            ["at0055"] = <
+                text = <"Obese">
+                description = <"Subject appears overweight.">
+            >
+            ["at0056"] = <
+                text = <"Morbidly obese">
+                description = <"Subject is overweight to the point of ill health.">
+            >
+            ["at0057"] = <
+                text = <"Average height">
+                description = <"Subject appears to be of average height.">
+            >
+            ["at0058"] = <
+                text = <"Nutrition">
+                description = <"Description of state of nutrition.">
+            >
+            ["at0059"] = <
+                text = <"Well nourished">
+                description = <"Subject is well-nourished but not overweight.">
+            >
+            ["at0060"] = <
+                text = <"Under nourished">
+                description = <"Subject appears under-nourished.">
+            >
+            ["at0062"] = <
+                text = <"Speech">
+                description = <"Clinical descripton of speech.">
+            >
+            ["at0064"] = <
+                text = <"Normal statements">
+                description = <"General statements about normal appearance and behaviour.">
+            >
+            ["at0065"] = <
+                text = <"Appearance">
+                description = <"Findings of general appearance.">
+            >
+            ["at0066"] = <
+                text = <"Cachectic">
+                description = <"Subject appears to have general wasting.">
+            >
+            ["at0067"] = <
+                text = <"Clinical description">
+                description = <"General description of the global impression of the patient.">
+            >
+            ["at0068"] = <
+                text = <"Anorexic">
+                description = <"Subject appears morbidly thin.">
+            >
+            ["at0069"] = <
+                text = <"Function">
+                description = <"General aspect of subject's function.">
+            >
+            ["at0089"] = <
+                text = <"Skin complexion">
+                description = <"Findings related to overall skin appearance.">
+            >
+            ["at0092"] = <
+                text = <"Smells of">
+                description = <"Details of clinically significant smells.">
+            >
+            ["at0095"] = <
+                text = <"Smell">
+                description = <"The name of the smell.">
+            >
+            ["at0096"] = <
+                text = <"Description">
+                description = <"Text description of the smell.">
+            >
+            ["at0098"] = <
+                text = <"Degree">
+                description = <"The extent of the smell detected.">
+            >
+            ["at0099"] = <
+                text = <"Absent">
+                description = <"The smell is absent.">
+            >
+            ["at0100"] = <
+                text = <"Mild">
+                description = <"The smell is mild.">
+            >
+            ["at0101"] = <
+                text = <"Moderate">
+                description = <"The smell is moderate.">
+            >
+            ["at0102"] = <
+                text = <"Marked">
+                description = <"The smell is strong.">
+            >
+            ["at0103"] = <
+                text = <"Mood description">
+                description = <"Description of readily apparent mood disturbance.">
+            >
+            ["at0105"] = <
+                text = <"Obvious abnormality on inspection">
+                description = <"Details of other obvious abnormalities by simple inspection.">
+            >
+            ["at0111"] = <
+                text = <"Pale">
+                description = <"Subject appears pale.">
+            >
+            ["at0116"] = <
+                text = <"Hydration">
+                description = <"Details of skin hydration.">
+            >
+            ["at0118"] = <
+                text = <"Flushed">
+                description = <"Subject appears flushed.">
+            >
+            ["at0119"] = <
+                text = <"Jaundiced">
+                description = <"Subject appears jaundiced.">
+            >
+            ["at0120"] = <
+                text = <"Clammy">
+                description = <"Subject's skin feels clammy.">
+            >
+            ["at0121"] = <
+                text = <"Sweaty">
+                description = <"Subject appears sweaty.">
+            >
+            ["at0122"] = <
+                text = <"Centrally cyanosed">
+                description = <"Subject appears centrally cyanosed.">
+            >
+            ["at0123"] = <
+                text = <"Peripherally cyanosed">
+                description = <"Subject appears peripherally cyanosed.">
+            >
+            ["at0124"] = <
+                text = <"Mottled">
+                description = <"Subject's skin appears mottled.">
+            >
+            ["at0125"] = <
+                text = <"Body site">
+                description = <"Location of the smell.">
+            >
+            ["at0126"] = <
+                text = <"Smells of alcohol">
+                description = <"The subject smells of alcohol.">
+            >
+            ["at0127"] = <
+                text = <"Smells of ketones">
+                description = <"The subject smells of ketones.">
+            >
+            ["at0128"] = <
+                text = <"Sweat">
+                description = <"Detailed findings related to sweat.">
+            >
+            ["at0129"] = <
+                text = <"Sweating and hydration">
+                description = <"Findings related to sweating and hydration.">
+            >
+            ["ac9005"] = <
+                text = <"Complexion (synthesised)">
+                description = <"Finding of skin complexion. (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Nutrition (synthesised)">
+                description = <"Description of state of nutrition. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Physique (synthesised)">
+                description = <"Description of physical stature. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Handedness (synthesised)">
+                description = <"Observation of dominant hand. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Smell (synthesised)">
+                description = <"The name of the smell. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Degree (synthesised)">
+                description = <"The extent of the smell detected. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0099", "at0100", "at0101", "at0102">
+        >
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0033", "at0034">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0047", "at0048", "at0049", "at0050", "at0051", "at0052", "at0053", "at0054", "at0057">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0059", "at0060", "at0066", "at0056", "at0055", "at0068">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0126", "at0127">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0111", "at0118", "at0119", "at0120", "at0121", "at0122", "at0123", "at0124">
+        >
+    >

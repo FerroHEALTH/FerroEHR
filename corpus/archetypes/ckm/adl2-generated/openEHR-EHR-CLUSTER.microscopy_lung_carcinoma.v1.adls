@@ -1,0 +1,393 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3ec344a2-ffba-48a2-a361-88ad9e4e4a25; build_uid=9e8cfd65-e023-4acd-a754-e70322ca0f65)
+    openEHR-EHR-CLUSTER.microscopy_lung_carcinoma.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"17/06/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Koray Atalag, University of Auckland, New Zealand", "Matt Cordell, NEHTA, Australia", "Sam Heard, Ocean Informatics, Australia", "Heather Leslie, Ocean Informatics, Australia", "David McKillop, NEHTA, Australia", "Cathy Richardson, NEHTA, Australia">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"The Royal College of Pathologists. Dataset for lung cancer histopathology reports [Internet]. 2007 Sep ;[cited 2009 Jul 27 ] ">
+        ["2"] = <"Available from: http://www.rcpath.org/index.asp?PageID=1159">
+        ["3"] = <"College of American Pathologists. Histopathology Lung protocol [Internet]. [cited 2009 Jul 27 ]">
+        ["4"] = <"Available from: http://www.cap.org/apps/docs/committees/cancer/cancer_protocols/2005/lung05_pw.pdf">
+        ["5"] = <"Royal College of Pathologists of Australasia. Lung Cancer Structured Reporting Protocol (1st Edition 2010). [Internet]. 2010;[cited 2010 Mar 21 ]">
+        ["6"] = <"Available from: http://www.rcpa.edu.au//static/File/Asset%20library/public%20documents/Publications/StructuredReporting/LUNG%20CANCER%20STRUCTURED%20PATHOLOGY%20REPORTING%20PROTOCOL%20for%20web.pdf">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B0DF91653DEA872B04F5768E63D8AA06">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record detailed findings about lung cancer found on microscopic histopathological examination.">
+            keywords = <"histopathology", "cancer", "laboratory", "lung", "lab", "malignancy", "bronchial", "pathology", "respiratory">
+            use = <"To record detailed findings about microscopic examination of tissue related to lung cancer.
+Use as a component archetype in the context of a suite of archetypes that make up a histopathology report i.e. OBSERVATION.lab_test.histopathology.">
+            misuse = <"Not designed to be used within any other archetype other than OBSERVATION.lab_test.histopathology.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Microscopic findings - Lung cancer
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0269] occurrences matches {0..1} matches {    -- Local tissue invasion findings
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0270] occurrences matches {0..1} matches {    -- Visceral pleural invasion
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_invasion\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0271] occurrences matches {0..1} matches {    -- Arterial invasion
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_invasion\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0272] occurrences matches {0..1} matches {    -- Venous invasion
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_invasion\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0273] occurrences matches {0..1} matches {    -- Lymphatic invasion
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_invasion\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0274] occurrences matches {0..1} matches {    -- Perineural invasion
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_invasion\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0238] matches {    -- Direct tissue invasion
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_invasion\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+            CLUSTER[at0244] occurrences matches {0..1} matches {    -- Bronchial resection margin findings
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0246] occurrences matches {0..1} matches {    -- Bronchial resection margin
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_resection_margins\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0281] occurrences matches {0..1} matches {    -- Nature of involvement
+                        value matches {
+                            DV_CODED_TEXT[at9016] matches {
+                                defining_code matches {[ac9013]}    -- Nature of involvement (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0285] occurrences matches {0..1} matches {    -- Extent of invasion
+                        value matches {
+                            DV_CODED_TEXT[at9017] matches {
+                                defining_code matches {[ac9014]}    -- Extent of invasion (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0275] occurrences matches {0..1} matches {    -- Vascular resection margin findings
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0276] occurrences matches {0..1} matches {    -- Vascular resection margin
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_resection_margins\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0277] occurrences matches {0..1} matches {    -- Nature of involvement
+                        value matches {
+                            DV_CODED_TEXT[at9018] matches {
+                                defining_code matches {[ac9015]}    -- Nature of involvement (synthesised)
+                            }
+                            DV_TEXT[at9019]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0289] occurrences matches {0..1} matches {    -- Other resection margin findings
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0290] matches {    -- Other resection margin
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_resection_margins\.v1\..*/}
+                    }
+                }
+            }
+            CLUSTER[at0252] occurrences matches {0..1} matches {    -- In-situ carcinoma findings
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0251] occurrences matches {0..1} matches {    -- In-situ carcinoma
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9001]}    -- In-situ carcinoma (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0256] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0030] occurrences matches {0..1} matches {    -- Lymph node findings
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0087] matches {    -- Lymph node details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.lymph_node_metastases\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+            CLUSTER[at0179] occurrences matches {0..1} matches {    -- Additional findings
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0250] matches {    -- Additional finding
+                        value matches {
+                            DV_CODED_TEXT[at9008] matches {
+                                defining_code matches {[ac9002]}    -- Additional finding (synthesised)
+                            }
+                            DV_TEXT[at9009]
+                        }
+                    }
+                    ELEMENT[at0220] matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Microscopic findings - Lung cancer">
+                description = <"Microscopic anatomical pathology findings related to lung cancer.">
+            >
+            ["at0030"] = <
+                text = <"Lymph node findings">
+                description = <"Findings related to the lymph node involvement by tumour.">
+            >
+            ["at0087"] = <
+                text = <"Lymph node details">
+                description = <"Details of lymph node metastasis.">
+            >
+            ["at0179"] = <
+                text = <"Additional findings">
+                description = <"Additional histopathological findings.">
+            >
+            ["at0220"] = <
+                text = <"Description">
+                description = <"A text description of additional histopathological findings.">
+            >
+            ["at0238"] = <
+                text = <"Direct tissue invasion">
+                description = <"Details of direct invasion of local tissue by tumour.">
+            >
+            ["at0244"] = <
+                text = <"Bronchial resection margin findings">
+                description = <"Findings related to bronchial surgical resection margin.">
+            >
+            ["at0246"] = <
+                text = <"Bronchial resection margin">
+                description = <"Details of bronchial surgical resection margin.">
+            >
+            ["at0250"] = <
+                text = <"Additional finding">
+                description = <"Findings of an additional histopathological finding.">
+            >
+            ["at0251"] = <
+                text = <"In-situ carcinoma">
+                description = <"Finding of in-situ carcinoma.">
+            >
+            ["at0252"] = <
+                text = <"In-situ carcinoma findings">
+                description = <"Findings related to in-situ carcinoma.">
+            >
+            ["at0253"] = <
+                text = <"Present">
+                description = <"In-situ carcinoma is present.">
+            >
+            ["at0254"] = <
+                text = <"Absent">
+                description = <"In-situ carcinoma is absent.">
+            >
+            ["at0255"] = <
+                text = <"Indeterminate">
+                description = <"Presence of in-situ carcinoma has not been determined.">
+            >
+            ["at0256"] = <
+                text = <"Description">
+                description = <"A text description of in-situ carcinoma.">
+            >
+            ["at0258"] = <
+                text = <"Metaplasia">
+                description = <"Metaplasia is present.">
+            >
+            ["at0259"] = <
+                text = <"Inflammation">
+                description = <"Inflammation is present.">
+            >
+            ["at0260"] = <
+                text = <"Emphysema">
+                description = <"Emphysema is present.">
+            >
+            ["at0261"] = <
+                text = <"Interstitial fibrosis">
+                description = <"Interstitial fibrosis is present.">
+            >
+            ["at0269"] = <
+                text = <"Local tissue invasion findings">
+                description = <"Findings related to local tissue invasion.">
+            >
+            ["at0270"] = <
+                text = <"Visceral pleural invasion">
+                description = <"Details of visceral pleural invasion by tumour.">
+            >
+            ["at0271"] = <
+                text = <"Arterial invasion">
+                description = <"Details of arterial invasion by tumour.">
+            >
+            ["at0272"] = <
+                text = <"Venous invasion">
+                description = <"Details of venous invasion by tumour.">
+            >
+            ["at0273"] = <
+                text = <"Lymphatic invasion">
+                description = <"Details of lymphatic invasion by tumour.">
+            >
+            ["at0274"] = <
+                text = <"Perineural invasion">
+                description = <"Details of perineural invasion by tumour.">
+            >
+            ["at0275"] = <
+                text = <"Vascular resection margin findings">
+                description = <"Findings related to vascular surgical resection margin.">
+            >
+            ["at0276"] = <
+                text = <"Vascular resection margin">
+                description = <"Details of vascular surgical resection margin.">
+            >
+            ["at0277"] = <
+                text = <"Nature of involvement">
+                description = <"If the vascular margin is involved by tumour, the nature of that involvement.">
+            >
+            ["at0278"] = <
+                text = <"Tumour thrombus present in the lumen of the vessel">
+                description = <"Tumour thrombus is present in the lumen of the vessel.">
+            >
+            ["at0279"] = <
+                text = <"Vessel wall involved by tumour">
+                description = <"Vessel wall is involved by tumour.">
+            >
+            ["at0280"] = <
+                text = <"Indeterminate">
+                description = <"The nature of vascular involvement at the resection margin has not been determined.">
+            >
+            ["at0281"] = <
+                text = <"Nature of involvement">
+                description = <"If the bronchial margin is involved by tumour, the nature of that involvement.">
+            >
+            ["at0282"] = <
+                text = <"Invasive carcinoma">
+                description = <"Invasive carcinoma involvement of the bronchial margin.">
+            >
+            ["at0283"] = <
+                text = <"In-situ carcinoma">
+                description = <"In-situ carcinoma involvement of the bronchial margin.">
+            >
+            ["at0284"] = <
+                text = <"Indeterminate">
+                description = <"The nature of bronchial margin involvement has not  been determined.">
+            >
+            ["at0285"] = <
+                text = <"Extent of invasion">
+                description = <"If the tumour is invasive, the extent of invasion at the bronchial resection margin.">
+            >
+            ["at0286"] = <
+                text = <"Limited to bronchial tissue">
+                description = <"Invasion at the bronchial margin is limited to bronchial tissue.">
+            >
+            ["at0287"] = <
+                text = <"Infiltrates peri-bronchial soft tissue">
+                description = <"Invasion at the bronchial margin infiltrates per-bronchial soft tissue.">
+            >
+            ["at0288"] = <
+                text = <"Indeterrminate">
+                description = <"Extent of invasion at bronchial margin has not been determined.">
+            >
+            ["at0289"] = <
+                text = <"Other resection margin findings">
+                description = <"Findings related to other resection margins.">
+            >
+            ["at0290"] = <
+                text = <"Other resection margin">
+                description = <"Details of other resection margin.">
+            >
+            ["ac9013"] = <
+                text = <"Nature of involvement (synthesised)">
+                description = <"If the bronchial margin is involved by tumour, the nature of that involvement. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Extent of invasion (synthesised)">
+                description = <"If the tumour is invasive, the extent of invasion at the bronchial resection margin. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Nature of involvement (synthesised)">
+                description = <"If the vascular margin is involved by tumour, the nature of that involvement. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"In-situ carcinoma (synthesised)">
+                description = <"Finding of in-situ carcinoma. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Additional finding (synthesised)">
+                description = <"Findings of an additional histopathological finding. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0258", "at0259", "at0260", "at0261">
+        >
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0282", "at0283", "at0284">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0253", "at0254", "at0255">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0278", "at0279", "at0280">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0286", "at0287", "at0288">
+        >
+    >

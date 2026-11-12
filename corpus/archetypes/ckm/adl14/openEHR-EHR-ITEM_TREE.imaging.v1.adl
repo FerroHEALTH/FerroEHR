@@ -1,0 +1,156 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-ITEM_TREE.imaging.v1
+
+concept
+	[at0000]	-- Imaging data
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.com">
+		["date"] = <"9/01/2007">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Data for the description of the action or instruction related to imaging">
+			use = <"">
+			keywords = <"Xray", "scan", "MRI", "CT", "nuclear", "ultrasound">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <>
+	other_details = <
+		["MD5-CAM-1.0.1"] = <"855F946B99085AA480CB25F1696291DB">
+		["references"] = <"">
+	>
+
+definition
+	ITEM_TREE[at0000] occurrences matches {0..*} matches {	-- Tree
+		items cardinality matches {1..*; ordered} matches {
+			CLUSTER[at0002] occurrences matches {0..1} matches {	-- Clinical information
+				items cardinality matches {1; unordered} matches {
+					ELEMENT[at0003] matches {	-- Findings
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+			CLUSTER[at0004] occurrences matches {1..*} matches {	-- Imaging
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0005] matches {	-- Imaging procedure
+						value matches {
+							DV_TEXT matches {*}
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0011, 	-- Xray
+									at0012, 	-- CT scan
+									at0013, 	-- Perfusion scan
+									at0014, 	-- Ultrasound
+									at0015]	-- Echocardiogram
+								}
+							}
+						}
+					}
+					ELEMENT[at0007] occurrences matches {0..1} matches {	-- Anatomical site
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0006] occurrences matches {0..*} matches {	-- Views
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+			CLUSTER[at0008] occurrences matches {0..1} matches {	-- Process
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0009] occurrences matches {0..1} matches {	-- Date of imaging
+						value matches {
+							DV_DATE_TIME matches {*}
+						}
+					}
+					ELEMENT[at0010] occurrences matches {0..1} matches {	-- Location
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Imaging data">
+					description = <"Data recorded about an imaging action or instruction">
+				>
+				["at0002"] = <
+					text = <"Clinical information">
+					description = <"Clinical information relevant to the imaging investigation">
+				>
+				["at0003"] = <
+					text = <"Findings">
+					description = <"Clinical findings relevant to the imaging investigation">
+				>
+				["at0004"] = <
+					text = <"Imaging">
+					description = <"Information about the imaging">
+				>
+				["at0005"] = <
+					text = <"Imaging procedure">
+					description = <"The type of imaging">
+				>
+				["at0006"] = <
+					text = <"Views">
+					description = <"The imaging views">
+				>
+				["at0007"] = <
+					text = <"Anatomical site">
+					description = <"The anatomical site (or object) for imaging">
+				>
+				["at0008"] = <
+					text = <"Process">
+					description = <"The process of the imaging investigation">
+				>
+				["at0009"] = <
+					text = <"Date of imaging">
+					description = <"The date the imaging is to be or was carried out.">
+				>
+				["at0010"] = <
+					text = <"Location">
+					description = <"The location where the imaging is to be or was carried out">
+				>
+				["at0011"] = <
+					text = <"Xray">
+					description = <"Plain radiograph">
+				>
+				["at0012"] = <
+					text = <"CT scan">
+					description = <"Computerised tomography">
+				>
+				["at0013"] = <
+					text = <"Perfusion scan">
+					description = <"*">
+				>
+				["at0014"] = <
+					text = <"Ultrasound">
+					description = <"*">
+				>
+				["at0015"] = <
+					text = <"Echocardiogram">
+					description = <"*">
+				>
+			>
+		>
+	>

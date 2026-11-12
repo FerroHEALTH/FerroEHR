@@ -1,0 +1,379 @@
+﻿archetype (adl_version=1.4; uid=2bcae1d1-42b7-4f97-8d06-e7232f318f93)
+	openEHR-EHR-OBSERVATION.substance_use-tobacco.v0
+specialise
+	openEHR-EHR-OBSERVATION.substance_use.v1
+
+concept
+	[at0000.1]	-- Tobacco Use
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"?">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"6/05/2009">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"This is an archetype used to record details of the use of all common forms of tobacco. ">
+			use = <"Use to record details of the use of all common forms of tobacco.  This includes use at specific point in time, over intervals of time, and use of mathematical functions such as average or minimum eg average consumption over a week.  
+Other types of tobacco use are not included here, but may be added added as a revision as required, or added via a specialisation for groups with need for additional choices.  
+A typical use would be to record usage in an tobacco usage diary.">
+			keywords = <"substance", "addiction", "consumption", "use", "tobacco", "cigarette", "cigar", "smoking", "chewing", "pipe">
+			misuse = <"Not to be used for recording persistent and summary details about the use of the substance - this should be captured using the EVALUATION.substance_use_summary-tobacco archetype.  ">
+			copyright = <"© 2011 openEHR Foundation, openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"يستخدم هذا النموذج لتسيل تفاصيل استخدام جميع الأشكال الشائعة من التبغ">
+			use = <"يستخدم لتسجيل استخدام جميع الأشكال المعتادة من التبغ. و ذلك يتضمن الاستخدام عند نقطة زمنية معينة, خلال فترة معينة, و استخدام الدوالّ الرياضية مثل المتوسط أو الحد الأدني, مثلا متوسط الاستهلاك خلال أسبوع. 
+لم يتم إدراج الأنواع الأخرى من استخدام التبغ هنا, و لكن من المحتمل أو تضاف من خلال المراجعة أو التخصيص للمجموعات التي تتطلب الخيارات الإضافية.
+الاستخدام النمطي يتضمن تسجيل الاستخدام في ملاحظات يومية عن استخدام التبغ.">
+			keywords = <"*substance(en)", "*addiction(en)", "*consumption(en)", "*use(en)", "*tobacco(en)", "*cigarette(en)", "*cigar(en)", "*smoking(en)", "*chewing(en)", "*pipe(en)">
+			misuse = <"لا يتم استخدام النموذج لتسجيل التفاصيل المتكررة أو الملخصة عن استخدام المواد. يمكن استخدام نموذج تقييم. ملخص استخدام المواد - التبغ. ">
+			copyright = <"© 2011 openEHR Foundation, openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Sam Heard, Ocean Informatics, Australia", ...>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"2490518A638DCB7392A5EC5B8DDE131F">
+		["build_uid"] = <"d47aa0dc-9180-48a4-be3d-7a7eaf7bab17">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Tobacco Use
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0004] occurrences matches {0..1} matches {	-- Substance
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {[local::at0.2]}		-- Tobacco
+											}
+										}
+									}
+									CLUSTER[at0010] occurrences matches {0..1} matches {	-- Consumption details
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0011] occurrences matches {0..1} matches {	-- Form
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0.3, 	-- Cigarettes - manufactured
+															at0.4, 	-- Cigarettes - roll-your-own
+															at0.5, 	-- Cigars
+															at0.6]	-- Pipe
+														}
+													}
+												}
+											}
+											ELEMENT[at0018] occurrences matches {0..1} matches {	-- Method of use
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+											ELEMENT[at0005] occurrences matches {0..1} matches {	-- Frequency
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0006, 	-- Daily use
+															at0007, 	-- Weekly use
+															at0008, 	-- Irregular use
+															at0009]	-- No use
+														}
+													}
+												}
+											}
+											ELEMENT[at0012] occurrences matches {0..*} matches {*}
+											ELEMENT[at0012.1] occurrences matches {0..*} matches {	-- Number smoked
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::382]>
+														list = <
+															["1"] = <
+																units = <"/h">
+															>
+															["2"] = <
+																units = <"/d">
+															>
+															["3"] = <
+																units = <"/wk">
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0012.2] occurrences matches {0..*} matches {	-- Grams of tobacco
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::347]>
+														list = <
+															["1"] = <
+																units = <"gm/d">
+															>
+															["2"] = <
+																units = <"gm/wk">
+															>
+														>
+													>
+												}
+											}
+										}
+									}
+									ELEMENT[at0013] occurrences matches {0..1} matches {	-- Triggers
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									allow_archetype CLUSTER[at0014] occurrences matches {0..*} matches {	-- Readiness for change
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.change\.v1/}
+									}
+									ELEMENT[at0016] occurrences matches {0..1} matches {	-- Evidence of dependence
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.2"] = <
+					text = <"Tobacco">
+					description = <"Tobacco used">
+				>
+				["at0.3"] = <
+					text = <"Cigarettes - manufactured">
+					description = <"Commercial, manufactured cigarettes">
+				>
+				["at0.4"] = <
+					text = <"Cigarettes - roll-your-own">
+					description = <"Home-made, roll-your-own cigarettes">
+				>
+				["at0.5"] = <
+					text = <"Cigars">
+					description = <"Commercial cigars">
+				>
+				["at0.6"] = <
+					text = <"Pipe">
+					description = <"Tobacco smoked within a pipe">
+				>
+				["at0000"] = <
+					text = <"Substance Use">
+					description = <"Generic archetype to record the actual use or consumption of a defined substance at the present time, a specific time or over a period of time. ">
+				>
+				["at0000.1"] = <
+					text = <"Tobacco Use">
+					description = <"Archetype to record the actual use or consumption of a tobacco at the present time, a specific time or over a period of time. ">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Any event">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Substance">
+					description = <"Identification of substance ">
+				>
+				["at0005"] = <
+					text = <"Frequency">
+					description = <"Frequency of use of tobacco">
+				>
+				["at0006"] = <
+					text = <"Daily use">
+					description = <"Used every day">
+				>
+				["at0007"] = <
+					text = <"Weekly use">
+					description = <"Used at least weekly">
+				>
+				["at0008"] = <
+					text = <"Irregular use">
+					description = <"Used irregularly">
+				>
+				["at0009"] = <
+					text = <"No use">
+					description = <"Not used at all">
+				>
+				["at0010"] = <
+					text = <"Consumption details">
+					description = <"Details about the consumption of tobacco">
+				>
+				["at0011"] = <
+					text = <"Form">
+					description = <"Form of tobacco used">
+				>
+				["at0012"] = <
+					text = <"Amount">
+					description = <"Amount of substance consumed.  Data type can be further specified in specialised archetypes or in templates">
+				>
+				["at0012.1"] = <
+					text = <"Number smoked">
+					description = <"Number of units containing tobacco consumed eg cigarettes or cigars">
+				>
+				["at0012.2"] = <
+					text = <"Grams of tobacco">
+					description = <"Weight of tobacco consumed eg in a pipe">
+				>
+				["at0013"] = <
+					text = <"Triggers">
+					description = <"Identified triggers which stimulate or cause use">
+				>
+				["at0014"] = <
+					text = <"Readiness for change">
+					description = <"Details about the readiness to change use or consumption of tobacco">
+				>
+				["at0016"] = <
+					text = <"Evidence of dependence">
+					description = <"Description of any evidence of dependence on tobacco">
+				>
+				["at0018"] = <
+					text = <"Method of use">
+					description = <"Method of use or consumption of tobacco">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0.2"] = <
+					text = <"التبغ">
+					description = <"التبغ المستخدَم">
+				>
+				["at0.3"] = <
+					text = <"السجائر - المصنَّعة ">
+					description = <"السجائر المصنَّعة التجارية">
+				>
+				["at0.4"] = <
+					text = <"السجائر الملفوفة يدويا">
+					description = <"سجائر ملفوفة يدويا, مصنوعة بالمنزل">
+				>
+				["at0.5"] = <
+					text = <"السيجار">
+					description = <"السيجار التجاري">
+				>
+				["at0.6"] = <
+					text = <"الغليون">
+					description = <"تبغ يتم تدخينه باستخدام الغليون">
+				>
+				["at0000"] = <
+					text = <"استخدام المواد">
+					description = <"نموذج جنيس (غير محدود الملكية) لتسجيل الاستخدام الفعلي أو الاستهلاك لمادة معينة في الوقت الحالي, أو في وقت معين, أو في فترة زمنية معينة  ">
+				>
+				["at0000.1"] = <
+					text = <"استخدام التبغ">
+					description = <"نموذج لتسجيل الاستخدام الفعلي للتبغ أو استهلاك التبغ في الوقت الحالي, أو في وقت محدد أو خلال فترة زمنية">
+				>
+				["at0001"] = <
+					text = <"سلسلة الوقائع">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"إحدى الوقائع">
+					description = <"إحدى الوقائع">
+				>
+				["at0003"] = <
+					text = <"شجرة">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"المادة">
+					description = <"تعريف المادة">
+				>
+				["at0005"] = <
+					text = <"التكرار">
+					description = <"تكرار استخدام التبغ">
+				>
+				["at0006"] = <
+					text = <"استخدام يومي">
+					description = <"يتم استخدامه يوميا">
+				>
+				["at0007"] = <
+					text = <"استخدام أسبوعي">
+					description = <"يتم استخدامه أسبوعيا">
+				>
+				["at0008"] = <
+					text = <"استخدام غير منتظم">
+					description = <"يتم استخدامه بشكل غير منتظم">
+				>
+				["at0009"] = <
+					text = <"لا يتم استخدامه">
+					description = <"لا يتم استخدامه على الإطلاق">
+				>
+				["at0010"] = <
+					text = <"تفاصيل الاستهلاك">
+					description = <"تفاصيل عن استهلاك التبغ">
+				>
+				["at0011"] = <
+					text = <"الشكل">
+					description = <"شكل التبغ المستخدم">
+				>
+				["at0012"] = <
+					text = <"الكمية">
+					description = <"كمية المادة المستخدمة. من الممكن زيادة تحديد نوع البيانات في نماذج مخصّصَة أو في قوالب . ">
+				>
+				["at0012.1"] = <
+					text = <"العدد الذي يتم تدخينه">
+					description = <"عدد الوحدات المحتوية على التبغ التي يتم استهلاكها, مثل السجائر أو السيجار">
+				>
+				["at0012.2"] = <
+					text = <"عدد جرامات التبغ">
+					description = <"وزن التبغ المستهلك, مثلا في التبغ">
+				>
+				["at0013"] = <
+					text = <"المثيرات - المحفزات">
+					description = <"المحفزات - المثيرات التي تتسبب في أو تنبه للاستخدام">
+				>
+				["at0014"] = <
+					text = <"الاستعداد للتغيير">
+					description = <"تفاصيل حول الاستعداد لتغيير استخدام أو استهلاك التبغ">
+				>
+				["at0016"] = <
+					text = <"بيّنة الاعتماد">
+					description = <"وصف أي بينة على الاعتماد على التبغ">
+				>
+				["at0018"] = <
+					text = <"طريقة الاستخدام">
+					description = <"طريقة استخدام أو استهلاك التبغ">
+				>
+			>
+		>
+	>

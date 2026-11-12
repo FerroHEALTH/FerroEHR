@@ -1,0 +1,134 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-OBSERVATION.imaging.v1
+
+concept
+	[at0000]	-- Imaging test
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.com">
+		["date"] = <"26/03/2006">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording findings found at diagnostic imaging">
+			use = <"">
+			keywords = <"Xray", "X-ray", "radiology", "scan", "ultrasound", "MRI", "CT", "CAT", "nuclear">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <"Ian McNicoll, Ocean Informatics, UK", ...>
+	other_details = <
+		["references"] = <"">
+		["MD5-CAM-1.0.1"] = <"A849E59155FED3EC7586362A2F1641D9">
+	>
+
+definition
+	OBSERVATION[at0000] matches {	-- Imaging test
+		data matches {
+			HISTORY[at0001] matches {	-- history
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..*} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									allow_archetype CLUSTER[at0025] occurrences matches {0..*} matches {	-- Imaging details
+										include
+											archetype_id/value matches {/.*/}
+									}
+									ELEMENT[at0020] occurrences matches {0..1} matches {	-- Overall findings
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0024] occurrences matches {0..1} matches {	-- Imaging quality
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0009] matches {	-- Tree
+				items cardinality matches {0..*; unordered} matches {
+					CLUSTER[at0010] occurrences matches {0..1} matches {	-- Identification
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0011] occurrences matches {0..1} matches {	-- Request identification
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0022] occurrences matches {0..1} matches {	-- Study identifier
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Imaging test">
+					description = <"To record the result of an imaging test.">
+				>
+				["at0001"] = <
+					text = <"history">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0009"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0010"] = <
+					text = <"Identification">
+					description = <"*">
+				>
+				["at0011"] = <
+					text = <"Request identification">
+					description = <"Identifier used on the request">
+				>
+				["at0020"] = <
+					text = <"Overall findings">
+					description = <"Summary of imaging findings.">
+				>
+				["at0022"] = <
+					text = <"Study identifier">
+					description = <"The identifier of the study which may be the DICOM accession number">
+				>
+				["at0024"] = <
+					text = <"Imaging quality">
+					description = <"Information on the quality of the imaging that may influence reporting.">
+				>
+				["at0025"] = <
+					text = <"Imaging details">
+					description = <"Details of imaging reported.">
+				>
+			>
+		>
+	>

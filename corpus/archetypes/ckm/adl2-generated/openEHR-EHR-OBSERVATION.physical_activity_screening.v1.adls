@@ -1,9 +1,21 @@
-archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=059ae212-19c9-47a8-bc0c-47ab023332ef; build_uid=7350916b-407b-4efb-97df-d08fd9a8e340)
-    openEHR-EHR-OBSERVATION.physical_activity_screening.v1.0.0
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=059ae212-19c9-47a8-bc0c-47ab023332ef; build_uid=90360241-f6ec-4412-89e0-a25e2f333306)
+    openEHR-EHR-OBSERVATION.physical_activity_screening.v1.0.1
 
 language
     original_language = <[ISO_639-1::en]>
     translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Claudia Tesoro Calvo">
+                ["organisation"] = <"University Hospital Basel">
+                ["email"] = <"claudia.tesorocalvo@usb.ch">
+            >
+            accreditation = <"University Hospital Basel">
+            other_details = <
+                ["other_contributors"] = <"Maren Diepenbruck, University Hospital Basel, Switzerland">
+            >
+        >
         ["nb"] = <
             language = <[ISO_639-1::nb]>
             author = <
@@ -32,9 +44,37 @@ description
         ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
     >
     other_details = <
-        ["MD5-CAM-1.0.1"] = <"F12CCBA8D8BE26E749FFE89C6FDF53D9">
+        ["MD5-CAM-1.0.1"] = <"4895032A0F245BA0C5968C386E972A03">
     >
     details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Schaffung eines Rahmens für die Erfassung von Antworten auf vordefinierte Screening-Fragen zum breiten Spektrum körperlicher Aktivitäten.">
+            keywords = <"Screening, Fragebogen, Bewegung, Aktivität, körperlich, Fitness, sitzende Lebensweise", ...>
+            use = <"Verwenden, um einen Rahmen für die Erfassung von Antworten auf vordefinierte Screening-Fragen zum breiten Spektrum körperlicher Aktivitäten zu schaffen.
+
+Häufige Anwendungsfälle umfassen unter anderem die systematische Befragung in jedem Beratungsgespräch. Zum Beispiel:
+
+- Waren Sie jemals körperlich aktiv?
+- Sind Sie im organisierten Sport aktiv?
+
+Die Semantik dieses Archetyps ist bewusst offen gehalten. Abfragen dieses Archetyps sind in der Regel nur im Kontext des jeweiligen spezifischen Templates sinnvoll oder sicher. In einem Template wird jedes Datenelement normalerweise in die jeweils gestellte Frage umbenannt. Wo für häufige Anwendungsfälle Wertesätze vorgeschlagen wurden, können diese für die lokale Verwendung angepasst werden, indem die Datentypauswahl DV_TEXT oder DV_BOOLEAN verwendet wird, um jedem spezifischen Anwendungsfall zu entsprechen.
+
+Über die EVENT-Struktur aus dem Referenzmodell kann festgelegt werden, ob sich die Fragen auf einen Zeitpunkt oder einen Zeitraum beziehen. Verwenden Sie eine separate Instanz dieses Archetyps, um zwei Arten von Fragebögen zu unterscheiden: solche über körperliche Aktivität, die zu einem beliebigen Zeitpunkt in der Vergangenheit ausgeübt wurde, und solche über körperliche Aktivität innerhalb eines bestimmten Zeitintervalls. Ein Beispiel ist der Unterschied zwischen „Haben Sie jemals regelmässig trainiert?“ und „Haben Sie in den letzten 4 Wochen trainiert?“.
+
+Die Quelle der Informationen in einer Fragebogenantwort kann je nach Kontext variieren. Sie lässt sich jedoch mithilfe des Elements „Information provider“ im Referenzmodell spezifisch identifizieren.
+
+Dieser Archetyp wurde als Screening-Instrument oder zur Erfassung einfacher Daten im Fragebogenformat konzipiert, etwa für den Einsatz in einem Krankheitsregister. Wenn der Screening-Fragebogen das Vorhandensein körperlicher Aktivität ergibt, wird empfohlen, dass das klinische System die spezifischen Details zur körperlichen Aktivität mit Archetypen erfasst und dauerhaft speichert, die für den jeweiligen klinischen Zweck spezifisch sind.">
+            misuse = <"Nicht zur Erfassung eines Trainingstagebuchs verwenden. Verwenden Sie hierfür andere relevante Archetypen.
+
+Nicht zur Erfassung validierter Fragebögen wie IPAQ oder GPAQ verwenden. Verwenden Sie hierfür einen geeigneten Archetyp.
+
+Nicht zur Erfassung des tatsächlichen körperlichen Aktivitätsniveaus einer Person zu einem bestimmten Zeitpunkt oder über einen bestimmten Zeitraum verwenden. Verwenden Sie hierfür OBSERVATION.physical_activity.
+
+Nicht zur Erfassung einer Zusammenfassung der typischen körperlichen Aktivität einer Person verwenden. Verwenden Sie hierfür EVALUATION.physical_activity_summary.
+
+Nicht zur Erfassung von Aktivitäten des täglichen Lebens (ATL) verwenden. Verwenden Sie hierfür OBSERVATION.functional_ability.">
+        >
         ["nb"] = <
             language = <[ISO_639-1::nb]>
             purpose = <"For å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om fysisk aktivitet.">
@@ -183,6 +223,109 @@ definition
 
 terminology
     term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Fragebogen zum Screening der körperlichen Aktivität">
+                description = <"Reihe von Fragen und zugehörigen Antworten zum Screening der körperlichen Aktivität.">
+                comment = <"Die Antworten können selbstberichtet sein.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardmäßiger, nicht näher beschriebener Zeitpunkt oder Intervall Ereignis welches in einem Template oder bei der Anwendung genauer definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Name der körperlichen Aktivität">
+                description = <"Name einer bestimmten körperlichen Aktivität oder einer Gruppe körperlicher Aktivitäten.">
+                comment = <"Zum Beispiel: Spielt Fussball, geht in Einkaufszentren spazieren. Kodierung von ‘Name der körperlichen Aktivität’ mit einer Terminologie wird nach Möglichkeit bevorzugt.">
+            >
+            ["at0005"] = <
+                text = <"Bestimmte körperliche Aktivität?">
+                description = <"Gibt es eine Vorgeschichte zu dieser körperlichen Aktivität?">
+                comment = <"In einem Template würde das Datenelement normalerweise in die spezifische gestellte Frage umbenannt. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem die Datentypauswahl DV_TEXT oder DV_BOOLEAN verwendet wird, um jedem spezifischen Anwendungsfall zu entsprechen.">
+            >
+            ["at0021"] = <
+                text = <"Erweiterung">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Körperliche Aktivität">
+                description = <"Details zu einer bestimmten körperlichen Aktivität oder einer Gruppe körperlicher Aktivitäten, die für den Zweck des Screenings relevant sind.">
+                comment = <"Verwenden Sie separate Instanzen dieses CLUSTER, um zwischen bestimmten Aktivitäten oder Gruppen von Aktivitäten zu unterscheiden.">
+            >
+            ["at0023"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Nein">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Unbekannt">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Zweck des Screenings">
+                description = <"Der Kontext oder Grund für das Screening.">
+                comment = <"Dieses Datenelement soll bei einer späteren Abfrage den Erhebungskontext für die Frage/Antwort-Gruppen bereitstellen. Es ist nicht vorgesehen, dass dieses Datenelement der Person angezeigt wird; es wird lediglich in den Daten gespeichert.
+Zum Beispiel: Screening vor der Aufnahme oder der Name des eigentlichen Fragebogens.">
+            >
+            ["at0035"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Beschreibung zu einer spezifischen Frage zur körperlichen Aktivität, die nicht in den übrigen Feldern abgedeckt wurde.">
+            >
+            ["at0036"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Zusätzliche Angaben oder Fragen zur spezifischen körperlichen Aktivität.">
+            >
+            ["at0037"] = <
+                text = <"Zeitangabe">
+                description = <"Angabe des Zeitpunkts im Zusammenhang mit der körperlichen Aktivität.">
+                comment = <"Das Datenelement ‘Zeitangabe’ wurde bewusst locker modelliert, um die unzähligen Möglichkeiten zu unterstützen, mit denen es in Fragebögen verwendet werden kann, um zu erfassen, wann eine Aktivität ausgeübt wurde. Die spezifische und beabsichtigte Semantik kann in einem Template weiter geklärt werden. Zum Beispiel: das tatsächliche Datum und/oder die Uhrzeit; die Start- und Endzeit der körperlichen Aktivität; der Zeitraum, in dem die körperliche Aktivität ausgeübt wurde; die Dauer der körperlichen Aktivität; das Alter der Person zum Zeitpunkt der körperlichen Aktivität; oder die Zeitdauer seit der Ausübung der körperlichen Aktivität. Unter Verwendung des Datentyps DV_DATE_TIME ist ein Teildatum zulässig, um nur ein Jahr zu erfassen.">
+            >
+            ["at0039"] = <
+                text = <"Irgendeine körperliche Aktivität?">
+                description = <"Gibt es eine Vorgeschichte körperlicher Aktivität, die für den Zweck des Screenings relevant ist?">
+                comment = <"In einem Template würde das Datenelement normalerweise in die spezifische gestellte Frage umbenannt. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem die Datentypauswahl DV_TEXT oder DV_BOOLEAN verwendet wird, um jedem spezifischen Anwendungsfall zu entsprechen.">
+            >
+            ["at0040"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Nein">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Unbekannt">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Strukturierte Angaben oder Fragen zum Screening auf körperliche Aktivität.">
+            >
+            ["at0044"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung der Geschichte von körperlichen Aktivitäten, die für das Screening relevant sind.">
+            >
+            ["at0045"] = <
+                text = <"Unsicher">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Unsicher">
+                description = <"">
+            >
+            ["ac9016"] = <
+                text = <"Irgendeine körperliche Aktivität? (synthesised)">
+                description = <"Gibt es eine Vorgeschichte körperlicher Aktivität, die für den Zweck des Screenings relevant ist? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Bestimmte körperliche Aktivität? (synthesised)">
+                description = <"Gibt es eine Vorgeschichte zu dieser körperlichen Aktivität? (synthesised)">
+            >
+        >
         ["nb"] = <
             ["at0000"] = <
                 text = <"Kartleggingsspørsmål om fysisk aktivitet">

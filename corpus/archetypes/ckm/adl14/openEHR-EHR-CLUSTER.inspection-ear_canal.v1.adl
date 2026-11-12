@@ -1,0 +1,379 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-CLUSTER.inspection-ear_canal.v1
+specialise
+	openEHR-EHR-CLUSTER.inspection.v1
+
+concept
+	[at0000.1]	-- Inspection of Ear Canal
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Ian McNicoll">
+		["organisation"] = <"Ocean Informatics">
+		["date"] = <"02/11/2007">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"An archetype for recording the findings on inspection of the ear canal">
+			use = <"For use with the exam clusters for recording findings on inspection of the ear canal">
+			keywords = <"inspect", "visual", "ear", "canal", "wax", "discharge">
+			misuse = <"Should only be used in the exam observation">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <"Heather Leslie", ...>
+	other_details = <
+		["references"] = <"">
+	>
+
+definition
+	CLUSTER[at0000.1] matches {	-- Inspection of Ear Canal
+		items cardinality matches {0..*; unordered} matches {
+			CLUSTER[at0001] occurrences matches {0..1} matches {	-- Normal statements
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0002] occurrences matches {0..1} matches {	-- Normal statement
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0.60, 	-- Ear canal normal
+									at0.66]	-- No foreign body
+								}
+							}
+						}
+					}
+				}
+			}
+			ELEMENT[at0048] occurrences matches {0..1} matches {	-- Clinical Description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0006] occurrences matches {0..*} matches {	-- Findings
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0036] occurrences matches {0..1} matches {	-- Colour description
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					CLUSTER[at0005] occurrences matches {0..1} matches {	-- Location
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0022] occurrences matches {0..*} matches {	-- Description
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {[local::]}
+									}
+								}
+							}
+						}
+					}
+					CLUSTER[at0018] occurrences matches {0..1} matches {	-- Shape or distribution
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0019] occurrences matches {0..1} matches {	-- Description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0020] occurrences matches {0..1} matches {	-- Symmetrical
+								value matches {
+									DV_BOOLEAN matches {
+										value matches {True, False}
+									}
+								}
+							}
+						}
+					}
+					ELEMENT[at0051] occurrences matches {0..1} matches {	-- Contour
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0027] occurrences matches {0..1} matches {	-- Overlying skin or surface
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0024] occurrences matches {0..1} matches {	-- Surrounds
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					CLUSTER[at0028] occurrences matches {0..1} matches {	-- Edge
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0033] occurrences matches {0..1} matches {	-- Description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0029] occurrences matches {0..1} matches {	-- Definition
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0030, 	-- Well defined
+											at0031, 	-- Moderately defined
+											at0032]	-- Poorly defined
+										}
+									}
+								}
+							}
+						}
+					}
+					ELEMENT[at0034] occurrences matches {0..1} matches {	-- Translucent
+						value matches {
+							DV_BOOLEAN matches {
+								value matches {True, False}
+							}
+						}
+					}
+					CLUSTER[at0.62] occurrences matches {0..1} matches {	-- Foreign body
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0.63] occurrences matches {0..1} matches {	-- Present
+								value matches {
+									DV_BOOLEAN matches {
+										value matches {True, False}
+									}
+								}
+							}
+							ELEMENT[at0.64] occurrences matches {0..1} matches {	-- Name/Identification
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0.52] occurrences matches {0..1} matches {	-- Description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+						}
+					}
+					ELEMENT[at0.54] occurrences matches {0..1} matches {	-- Presence of Wax
+						value matches {
+							0|[local::at0.56], 	-- No wax present
+							1|[local::at0.57], 	-- Scant wax present
+							2|[local::at0.58], 	-- Moderate wax present
+							3|[local::at0.59]; 	-- Profuse wax present
+							0  	-- assumed value
+						}
+					}
+					CLUSTER[at0.55] occurrences matches {0..1} matches {	-- Discharge
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0.65] occurrences matches {0..1} matches {	-- Present 
+								value matches {
+									DV_BOOLEAN matches {
+										value matches {True, False}
+									}
+								}
+							}
+							CLUSTER[at0.61] occurrences matches {0..1} matches {	-- Detail
+								items cardinality matches {0..*; unordered} matches {
+									allow_archetype CLUSTER[at0.67] occurrences matches {0..*} matches {
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.fluid\.v1/}
+									}
+								}
+							}
+							use_node ELEMENT occurrences matches {0..1} /items[at0048]	-- /items[Clinical Description]
+						}
+					}
+					CLUSTER[at0049] occurrences matches {0..1} matches {	-- Detail
+						items cardinality matches {0..*; unordered} matches {
+							allow_archetype CLUSTER[at0052] occurrences matches {0..1} matches {
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam\.v1/}
+							}
+						}
+					}
+				}
+			}
+			ELEMENT[at0050] occurrences matches {0..1} matches {	-- Drawing
+				value matches {
+					DV_MULTIMEDIA matches {
+						media_type matches {
+							[openEHR::
+							425, 
+							426, 
+							427, 
+							428, 
+							429]
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.52"] = <
+					text = <"Description">
+					description = <"A description of any foreign body in the ear canal">
+				>
+				["at0.53"] = <
+					text = <"Discharge">
+					description = <"*">
+				>
+				["at0.54"] = <
+					text = <"Presence of Wax">
+					description = <"The amount of wax visible">
+				>
+				["at0.55"] = <
+					text = <"Discharge">
+					description = <"The nature of any discharge in the ear canal">
+				>
+				["at0.56"] = <
+					text = <"No wax present">
+					description = <"*">
+				>
+				["at0.57"] = <
+					text = <"Scant wax present">
+					description = <"*">
+				>
+				["at0.58"] = <
+					text = <"Moderate wax present">
+					description = <"*">
+				>
+				["at0.59"] = <
+					text = <"Profuse wax present">
+					description = <"*">
+				>
+				["at0.60"] = <
+					text = <"Ear canal normal">
+					description = <"*">
+				>
+				["at0.61"] = <
+					text = <"Detail">
+					description = <"Detailed description of the discharge">
+				>
+				["at0.62"] = <
+					text = <"Foreign body">
+					description = <"Details of any foreign body present">
+				>
+				["at0.63"] = <
+					text = <"Present">
+					description = <"Foreign body is present">
+				>
+				["at0.64"] = <
+					text = <"Name/Identification">
+					description = <"Identify foreign body">
+				>
+				["at0.65"] = <
+					text = <"Present ">
+					description = <"Discharge present">
+				>
+				["at0.66"] = <
+					text = <"No foreign body">
+					description = <"*">
+				>
+				["at0.67"] = <
+					text = <"Cluster: Fluids">
+					description = <"*">
+				>
+				["at0000"] = <
+					text = <"Inspection">
+					description = <"The findings on physical examination by inspection">
+				>
+				["at0000.1"] = <
+					text = <"Inspection of Ear Canal">
+					description = <"The findings on physical examination of the ear canal by inspection!">
+				>
+				["at0001"] = <
+					text = <"Normal statements">
+					description = <"An optional group of statements about the normality of the inspection">
+				>
+				["at0002"] = <
+					text = <"Normal statement">
+					description = <"A specific statement about the normality of inspection">
+				>
+				["at0005"] = <
+					text = <"Location">
+					description = <"The location of any findings">
+				>
+				["at0006"] = <
+					text = <"Findings">
+					description = <"Specific findings on inspection of the ear canal">
+				>
+				["at0018"] = <
+					text = <"Shape or distribution">
+					description = <"The shape or distribution of the object inspected">
+				>
+				["at0019"] = <
+					text = <"Description">
+					description = <"Description of the ">
+				>
+				["at0020"] = <
+					text = <"Symmetrical">
+					description = <"Whether the distribution is symmetrical">
+				>
+				["at0022"] = <
+					text = <"Description">
+					description = <"Description of the location of the findings">
+				>
+				["at0024"] = <
+					text = <"Surrounds">
+					description = <"Description of immediate surrounds to object">
+				>
+				["at0027"] = <
+					text = <"Overlying skin or surface">
+					description = <"A description of the surface">
+				>
+				["at0028"] = <
+					text = <"Edge">
+					description = <"Findings about the edge of the object under inspection">
+				>
+				["at0029"] = <
+					text = <"Definition">
+					description = <"The nature of the edge of the object of examination">
+				>
+				["at0030"] = <
+					text = <"Well defined">
+					description = <"The edge is clearly defined">
+				>
+				["at0031"] = <
+					text = <"Moderately defined">
+					description = <"The edge is defined but less clear in places">
+				>
+				["at0032"] = <
+					text = <"Poorly defined">
+					description = <"The edge is not defined clearly in many places">
+				>
+				["at0033"] = <
+					text = <"Description">
+					description = <"Description of the edge or border of the object of inspection">
+				>
+				["at0034"] = <
+					text = <"Translucent">
+					description = <"Is the object of inspection translucent?">
+				>
+				["at0036"] = <
+					text = <"Colour description">
+					description = <"The colour of the object under inspection">
+				>
+				["at0048"] = <
+					text = <"Clinical Description">
+					description = <"Clinical description of the findings on inspection of the ear canal">
+				>
+				["at0049"] = <
+					text = <"Detail">
+					description = <"Other detailed examination of a finding on inspection of the ear canal">
+				>
+				["at0050"] = <
+					text = <"Drawing">
+					description = <"A drawing of the findings on inspection">
+				>
+				["at0051"] = <
+					text = <"Contour">
+					description = <"The contour of the object of inspection">
+				>
+				["at0052"] = <
+					text = <"Cluster: Exam">
+					description = <"Exam details">
+				>
+			>
+		>
+	>

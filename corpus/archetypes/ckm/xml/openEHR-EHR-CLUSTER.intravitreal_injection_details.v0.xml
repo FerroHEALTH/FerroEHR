@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -2153,8 +2153,7 @@
       </items>
       <items code="at0059">
         <items id="text">Surgical Masks</items>
-        <items id="description">&#xD;
-Use of surgical masks by clinicians and patients, or on the contrary, do not use mask but minimize speaking to reduce infection risk during procedure.</items>
+        <items id="description">Use of surgical masks by clinicians and patients, or on the contrary, do not use mask but minimize speaking to reduce infection risk during procedure.</items>
       </items>
       <items code="at0060">
         <items id="text">Sterile Gloves</items>
@@ -2347,4 +2346,3 @@ Use of surgical masks by clinicians and patients, or on the contrary, do not use
     </term_bindings>
   </ontology>
 </archetype>
-

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1659,8 +1659,7 @@ Use the specific archetypes for these purposes.</misuse>
       <items code="at0036">
         <items id="text">Frequency of test stimulus</items>
         <items id="description">Frequency of stimulus tested if applicable.</items>
-        <items id="comment">Provide further specification of 'Type of test stimulus', if a frequency is required. For example: frequency of pure tone or center frequency of narrowband noise.&#xD;
-</items>
+        <items id="comment">Provide further specification of 'Type of test stimulus', if a frequency is required. For example: frequency of pure tone or center frequency of narrowband noise.</items>
       </items>
       <items code="at0060">
         <items id="text">Item tree</items>
@@ -1795,7 +1794,7 @@ If the type of noise is a tone or a narrowband noise, use 'Frequency of test sti
       <items code="at0136">
         <items id="text">Curve sample</items>
         <items id="description">Data point of fitted loudness perception curve represented by a combination of a given response category and corresponding stimulus level.</items>
-        <items id="comment">These data points can be used to describe the curve through sampled data points or as fit parameters included in the curve equation. For example: response category of 2.5 CU, 25 CU and 50 CU. </items>
+        <items id="comment">These data points can be used to describe the curve through sampled data points or as fit parameters included in the curve equation. For example: response category of 2.5 CU, 25 CU and 50 CU.</items>
       </items>
       <items code="at0137">
         <items id="text">Stimulus level</items>
@@ -1870,9 +1869,8 @@ If the type of noise is a tone or a narrowband noise, use 'Frequency of test sti
       </items>
       <items code="at0157">
         <items id="text">No test result</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

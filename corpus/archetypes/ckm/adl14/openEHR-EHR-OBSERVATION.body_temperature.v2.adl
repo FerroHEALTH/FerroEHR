@@ -109,9 +109,9 @@ Heidi Koikkalainen, freshEHR">
 		["sl"] = <
 			language = <[ISO_639-1::sl]>
 			author = <
-				["name"] = <"Vanja Maravić, Lara Škufca">
+				["name"] = <"Vanja Maravić, Lara Škufca, Ana Milošev, Anđela Marjanović">
 				["organisation"] = <"Better Deutschland GmbH, Better d.o.o.">
-				["email"] = <"vanja.maravic@better.care, laras@better.care">
+				["email"] = <"vanja.maravic@better.care, laras@better.care, ana.milosev@better.care, andjela.marjanovic@better.care">
 			>
 		>
 		["fa"] = <
@@ -302,20 +302,20 @@ Este arquetipo no debe usarse para registrar la temperatura de una parte del cue
 		>
 		["ja"] = <
 			language = <[ISO_639-1::ja]>
-			purpose = <"深部体温の代用として計測された人の体温を記録するため。">
-			use = <"測定対象の個人の深部体温の代用として計測された体温を記録するために用いられる。
+			purpose = <"深部体温の代用として測定された人の体温を記録するため。">
+			use = <"測定対象の個人の深部体温の代用として測定された体温を記録するために用いられる。
 さらに状態データを表すために、追加のクラスタを内包することもできる。たとえば、環境条件や、月経周期の詳細、労作についての詳細を必要に応じて内包する。
 注意：計測された温度を正確に解釈するためにエンドユーザーに記録方法や部位を示す必要があるかもしれない。">
 			keywords = <"体温", "人体", "深部体温", "発熱", "低体温", "高体温">
-			misuse = <"このアーキタイプは、体温以外を計測するためには用いられない。
-このアーキタイプは、身体において独立した一部の温度を記録するためには用いられない。たとえば、糖尿病の慢性期管理の一環として、足底温を計測すること。">
+			misuse = <"このアーキタイプは、体温以外を測定するためには用いられない。
+このアーキタイプは、身体において独立した一部の温度を記録するためには用いられない。たとえば、糖尿病の慢性期管理の一環として、足底温を測定すること。">
 		>
 		["sl"] = <
 			language = <[ISO_639-1::sl]>
-			purpose = <"Za beleženje izmerjene telesne temperature osebe - kot nadomestek za temperaturo jedrnega dela telesa.">
-			use = <"Uporabljeno za beleženje meritve telesne temperature posameznika, ki je nadomestek za temperaturo jedrnega dela telesa posameznika.
+			purpose = <"Za beleženje izmerjene telesne temperature osebe - kot nadomestek za jedrno telesno temperaturo.">
+			use = <"Uporabljeno za beleženje meritve telesne temperature posameznika, ki je nadomestek za jedrno telesno temperaturo posameznika.
 
-Dodatne skupine (clustri) je mogoče vključiti za zagotovitev dodatnih podatkov o stanju - vključno z okoljskimi pogoji in podrobnostmi o naporu, kjer je primerno.
+Dodatne sklope je mogoče vključiti za zagotovitev dodatnih podatkov o stanju - vključno z okoljskimi pogoji in podrobnostmi o naporu, kjer je primerno.
 
 Prosimo, upoštevajte: Morda bo potrebno končnemu uporabniku prikazati mesto in metodo beleženja, da se olajša natančno interpretacijo zabeležene temperature.">
 			keywords = <"temperatura", "telo", "jedro", "vročina", "hipotermija", "hipertermija">
@@ -371,10 +371,10 @@ No s'ha d'utilitzar per registrar la temperatura d'una part del cos de manera a�
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"no.nasjonalikt">
-		["MD5-CAM-1.0.1"] = <"FD63E3431221A1986DD4866DBFB3C3B5">
-		["build_uid"] = <"3e41e976-b27e-4891-867c-9373e360473a">
+		["MD5-CAM-1.0.1"] = <"DA33968AFF5F8A0CE79B4EBBE43C6334">
+		["build_uid"] = <"9f3cec55-e68d-4c7f-8b64-131b7d79254f">
 		["ip_acknowledgements"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
-		["revision"] = <"2.1.10">
+		["revision"] = <"2.1.11">
 	>
 
 definition
@@ -503,7 +503,6 @@ definition
 			}
 		}
 	}
-
 
 ontology
 	terminologies_available = <"LNC205", "SNOMED-CT">
@@ -1985,47 +1984,47 @@ ontology
 				>
 				["at0003"] = <
 					text = <"任意のイベント">
-					description = <"デフォルトではテンプレートや実行時に明示的に定義される特定されない時点あるいは一定の間隔のイベント">
+					description = <"デフォルトではテンプレートや実行時に明示的に定義されるまで、特定されない時点あるいは一定の間隔のイベント">
 				>
 				["at0004"] = <
 					text = <"体温">
-					description = <"計測された体温">
+					description = <"測定された体温">
 				>
 				["at0020"] = <
 					text = <"Protocol">
 					description = <"@ internal @">
 				>
 				["at0021"] = <
-					text = <"計測部位">
-					description = <"*Simple description about the site of measurement.(en)">
+					text = <"測定部位">
+					description = <"測定部位についての簡単な記述。">
 				>
 				["at0022"] = <
 					text = <"口腔">
-					description = <"口腔内で計測された温度">
+					description = <"口腔内で測定された温度">
 				>
 				["at0023"] = <
 					text = <"外耳道">
-					description = <"外耳道内で計測された温度。">
+					description = <"外耳道内で測定された温度。">
 				>
 				["at0024"] = <
 					text = <"腋窩">
-					description = <"腕を脇につけた状態で測定された腋窩の皮膚から計測された温度。">
+					description = <"腕を脇につけた状態で測定された腋窩の皮膚から測定された温度。">
 				>
 				["at0025"] = <
 					text = <"直腸">
-					description = <"直腸内で計測された温度。">
+					description = <"直腸内で測定された温度。">
 				>
 				["at0026"] = <
 					text = <"鼻咽頭">
-					description = <"鼻咽頭内で計測された温度。">
+					description = <"鼻咽頭内で測定された温度。">
 				>
 				["at0027"] = <
 					text = <"膀胱">
-					description = <"膀胱内で計測された温度">
+					description = <"膀胱内で測定された温度">
 				>
 				["at0028"] = <
 					text = <"血管内">
-					description = <"血管系の内部で計測された温度。">
+					description = <"血管系の内部で測定された温度。">
 				>
 				["at0029"] = <
 					text = <"状態">
@@ -2053,56 +2052,56 @@ ontology
 				>
 				["at0041"] = <
 					text = <"熱応力についての記載">
-					description = <"計測された体温に影響を与えうる対象個人の状況についての叙述的記録">
+					description = <"測定された体温に影響を与えうる対象個人の状況についての叙述的記録">
 				>
 				["at0043"] = <
 					text = <"皮膚">
-					description = <"露出された皮膚で計測された温度。">
+					description = <"露出された皮膚で測定された温度。">
 				>
 				["at0051"] = <
 					text = <"膣">
-					description = <"膣内で計測された温度。">
+					description = <"膣内で測定された温度。">
 				>
 				["at0054"] = <
 					text = <"食道">
-					description = <"食道内で計測された温度。">
+					description = <"食道内で測定された温度。">
 				>
 				["at0055"] = <
-					text = <"鼠径ひだ状皮膚">
-					description = <"歌詞と腹壁の間にある鼠径ひだ状皮膚で計測された温度。">
+					text = <"鼠径溝">
+					description = <"下肢と腹壁の間にある鼠径溝で測定された温度。">
 				>
 				["at0056"] = <
 					text = <"環境条件">
-					description = <"体温を計測した時点での環境条件についての詳細。">
+					description = <"体温を測定した時点での環境条件についての詳細。">
 				>
 				["at0057"] = <
 					text = <"労作">
-					description = <"体温を計測した時点での労作状態についての詳細">
+					description = <"体温を測定した時点での労作状態についての詳細">
 				>
 				["at0059"] = <
 					text = <"機器">
-					description = <"*Details about the device used to measure body temperature.(en)">
+					description = <"体温の測定に用いた機器に関する詳細情報。">
 				>
 				["at0060"] = <
-					text = <"*Temple(en)">
-					description = <"*Temperature is measured at the temple, over the superficial temporal artery.(en)">
+					text = <"側頭部">
+					description = <"側頭部（浅側頭動脈の上）で測定された温度。">
 				>
 				["at0061"] = <
-					text = <"*Forehead(en)">
-					description = <"*Temperature is measured on the forehead.(en)">
+					text = <"前額部">
+					description = <"前額部で測定された温度。">
 				>
 				["at0062"] = <
-					text = <"*Extension(en)">
-					description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms.(en)">
-					comment = <"*For example: local information requirements; or additional metadata to align with FHIR.(en)">
+					text = <"Extension">
+					description = <"ローカルコンテンツでモデルを拡張するため、あるいは他の参照モデルや形式手法と整合させるために必要な追加情報。">
+					comment = <"例：ローカルな情報要件や、FHIR に適合させるための追加メタデータ。">
 				>
 				["at0063"] = <
 					text = <"コメント">
 					description = <"他のフィールドで記録されない体温についての追加コメント">
 				>
 				["at0064"] = <
-					text = <"*Structured measurement location(en)">
-					description = <"*Structured details about the location of measurement.(en)">
+					text = <"構造化された測定部位">
+					description = <"測定部位に関する構造化された詳細情報。">
 				>
 				["at0065"] = <
 					text = <"月経周期の日">
@@ -2110,8 +2109,8 @@ ontology
 					comment = <"月経初日をそれぞれの月経周期で1日目と考える。">
 				>
 				["at0066"] = <
-					text = <"*Confounding factors(en)">
-					description = <"*Additional issues or factors that may impact on the measurement of body temperature, not captured in other fields.(en)">
+					text = <"交絡因子">
+					description = <"他の項目には収まらない、体温の測定に影響する可能性のある問題や因子。">
 				>
 			>
 		>
@@ -2849,7 +2848,7 @@ ontology
 			items = <
 				["at0000"] = <
 					text = <"Telesna temperatura">
-					description = <"Meritev telesne temperature, ki je nadomestek za temperaturo jedrnega dela telesa.">
+					description = <"Meritev telesne temperature, ki je nadomestek za jedrno telesno temperaturo posameznika.">
 				>
 				["at0001"] = <
 					text = <"Tree">
@@ -2861,7 +2860,7 @@ ontology
 				>
 				["at0003"] = <
 					text = <"Katerikoli dogodek">
-					description = <"Privzeta, nedoločena točka v času ali intervalni dogodek, ki je lahko izrecno opredeljen v predlogi ali ob času izvajanja.">
+					description = <"Privzeta, nedoločena točka v času ali intervalni dogodek, ki je lahko izrecno opredeljen v predlogi ali med izvajanjem.">
 				>
 				["at0004"] = <
 					text = <"Temperatura">
@@ -2872,7 +2871,7 @@ ontology
 					description = <"@ internal @">
 				>
 				["at0021"] = <
-					text = <"Mesto merjenja">
+					text = <"Lokacija meritve">
 					description = <"Preprost opis mesta merjenja.">
 				>
 				["at0022"] = <
@@ -2912,11 +2911,11 @@ ontology
 					description = <"Stopnja izpostavljenosti posameznika v času merjenja.">
 				>
 				["at0031"] = <
-					text = <"Nago">
-					description = <"Brez oblačil, posteljnine ali pokrivala.">
+					text = <"Nag">
+					description = <"Brez oblačil ali posteljnine, oseba ni pokrita.">
 				>
 				["at0032"] = <
-					text = <"Zmanjšana oblačila/posteljnina">
+					text = <"Skromna oblačila/posteljnina">
 					description = <"Oseba je pokrita z manjšo količino oblačil ali posteljnine, kot je običajno za to okolje.">
 				>
 				["at0033"] = <
@@ -2924,12 +2923,12 @@ ontology
 					description = <"Oseba je pokrita s količino oblačil ali posteljnine, ki je primerna za to okolje.">
 				>
 				["at0034"] = <
-					text = <"Povečana oblačila/posteljnina">
+					text = <"Prekomerna oblačila/posteljnina">
 					description = <"Oseba je pokrita s povečano količino oblačil ali posteljnine, kot je običajno za to okolje.">
 				>
 				["at0041"] = <
 					text = <"Opis toplotnega stresa">
-					description = <"Pripovedni opis pogojev, ki so bili uporabljeni na subjektu in ki lahko vplivajo na izmerjeno telesno temperaturo.">
+					description = <"Pripovedni opis pogojev, ki lahko vplivajo na izmerjeno telesno temperaturo osebe.">
 				>
 				["at0043"] = <
 					text = <"Koža">
@@ -2969,15 +2968,15 @@ ontology
 				>
 				["at0062"] = <
 					text = <"Razširitev">
-					description = <"Dodatne informacije, potrebne za razširitev modela z lokalnimi vsebinami ali za uskladitev z drugimi referenčnimi modeli ali formalizmi.">
-					comment = <"Na primer: zahteve lokalnih informacij ali dodatni metapodatki za uskladitev z FHIR ali CIMI ekvivalenti.">
+					description = <"Dodatne informacije, potrebne za zajemanje lokalnega konteksta ali za uskladitev z drugimi referenčnimi modeli/formalizmi.">
+					comment = <"Na primer: informacije lokalnega bolnišničnega oddelka ali dodatni metapodatki za uskladitev z ekvivalenti FHIR ali CIMI.">
 				>
 				["at0063"] = <
 					text = <"Komentar">
 					description = <"Dodatni komentar o meritvah telesne temperature, ki ni zajet v drugih poljih.">
 				>
 				["at0064"] = <
-					text = <"Strukturirano mesto merjenja">
+					text = <"Strukturirana lokacija meritve">
 					description = <"Strukturirane podrobnosti o mestu merjenja.">
 				>
 				["at0065"] = <
@@ -2987,7 +2986,7 @@ ontology
 				>
 				["at0066"] = <
 					text = <"Moteči dejavniki">
-					description = <"Dodatna vprašanja ali dejavniki, ki lahko vplivajo na merjenje telesne temperature.">
+					description = <"Dodatne težave ali dejavniki, ki lahko vplivajo na merjenje telesne temperature, ki niso zajeti v drugih poljih.">
 				>
 			>
 		>

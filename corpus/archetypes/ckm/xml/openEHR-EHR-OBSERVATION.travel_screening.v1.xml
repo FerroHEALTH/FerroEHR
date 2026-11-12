@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -77,8 +77,7 @@ Die Verwendung dieses Schemas in einer Vorlage ermöglicht die Dokumentation ein
 Die EVENT-Struktur aus dem Referenzmodell kann verwendet werden, um anzugeben, ob sich die Fragen auf einen bestimmten Zeitpunkt oder auf einen Zeitraum beziehen. Verwenden Sie eine separate Instanz dieses Archetyps, um zwischen einem Fragebogen zu unterscheiden, der Informationen über Untersuchungen oder Tests aufzeichnet, die zu einem beliebigen Zeitpunkt in der Vergangenheit durchgeführt wurden, und einem Fragebogen, der Informationen über Untersuchungen oder Tests enthält, die innerhalb eines bestimmten Zeitintervalls durchgeführt wurden – zum Beispiel der Unterschied zwischen „Sind Sie jemals in ein Gebiet mit hoher Strahlungsaktivität gereist?“ und „Sind Sie in den letzten vier Wochen in ein Gebiet mit hoher Strahlungsaktivität gereist?“&#xD;
 Die Quelle der Informationen in einer Fragebogenantwort kann in verschiedenen Kontexten variieren, kann aber mit Hilfe des Elements "Informationsanbieter" im Referenzmodell spezifisch identifiziert werden.&#xD;
 &#xD;
-Dieser Archetyp wurde für die Verwendung als Screening-Instrument oder für die Aufzeichnung einfacher Daten im Fragebogenformat zur Verwendung in Situationen wie einem Krankheitsregister konzipiert. Wenn der Screening-Fragebogen angibt, dass eine Untersuchung durchgeführt wurde, können zusätzliche Details, die für die Persistenz als Teil einer klinischen Akte erforderlich sind, mit Hilfe spezifischer Archetypen für Testergebnisse erfasst werden.&#xD;
-</use>
+Dieser Archetyp wurde für die Verwendung als Screening-Instrument oder für die Aufzeichnung einfacher Daten im Fragebogenformat zur Verwendung in Situationen wie einem Krankheitsregister konzipiert. Wenn der Screening-Fragebogen angibt, dass eine Untersuchung durchgeführt wurde, können zusätzliche Details, die für die Persistenz als Teil einer klinischen Akte erforderlich sind, mit Hilfe spezifischer Archetypen für Testergebnisse erfasst werden.</use>
       <misuse>Nicht für die Aufzeichnung eines Reiseverlaufs zu verwenden - verwenden Sie zu diesem Zweck ADMIN_ENTRY.travel_event.</misuse>
       <copyright />
     </details>
@@ -89,8 +88,7 @@ Dieser Archetyp wurde für die Verwendung als Screening-Instrument oder für die
         </terminology_id>
         <code_string>nb</code_string>
       </language>
-      <purpose>For å lage et rammeverk for registrering av svar på forhåndsdefinerte kartleggingsspørsmål om reiseaktivitet til eller fra ett eller flere geografiske steder utenfor personens vanlige bosted.&#xD;
-</purpose>
+      <purpose>For å lage et rammeverk for registrering av svar på forhåndsdefinerte kartleggingsspørsmål om reiseaktivitet til eller fra ett eller flere geografiske steder utenfor personens vanlige bosted.</purpose>
       <keywords>reise, utenlandsreise, innenlands, lokal, nasjonal, internasjonal  ferie, ferietur, utenlandsferie, tur, sjøreise.</keywords>
       <use>Brukes til å lage et rammeverk for å registrere svar på forhåndsdefinerte kartleggingsspørsmål om reiseaktivitet til eller fra ett eller flere geografiske steder utenfor personens vanlige bosted, for eksempel for å kartlegge mulig opphold i et katastrofeområde eller mulig eksponering for et smittestoff.&#xD;
 &#xD;
@@ -954,27 +952,27 @@ Coding of the 'Travel activity' with a terminology is preferred, where possible.
       </items>
       <items code="at0028">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Screening purpose</items>
@@ -1003,11 +1001,11 @@ Coding of the 'Travel activity' with a terminology is preferred, where possible.
       </items>
       <items code="at0047">
         <items id="text">Unsure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Unsure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="de">
@@ -1068,27 +1066,27 @@ Wenn möglich, wird die Kodierung des Elementes "Bezeichnung der Reiseart" mit e
       </items>
       <items code="at0028">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Nein</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Unbekannt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Nein</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Unbekannt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Zweck des Screenings</items>
@@ -1117,19 +1115,17 @@ Wenn möglich, wird die Kodierung des Elementes "Bezeichnung der Reiseart" mit e
       </items>
       <items code="at0047">
         <items id="text">Unsicher</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Unsicher</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nb">
       <items code="at0000">
         <items id="text">Kartleggingsspørsmål om reiseaktivitet</items>
-        <items id="description">Spørsmål og tilhørende svar som brukes til å kartlegge reiseaktivitet til eller fra ett eller flere geografiske steder utenfor personens vanlige bosted.&#xD;
-&#xD;
-</items>
+        <items id="description">Spørsmål og tilhørende svar som brukes til å kartlegge reiseaktivitet til eller fra ett eller flere geografiske steder utenfor personens vanlige bosted.</items>
         <items id="comment">Svarene kan være selvrapportert.</items>
       </items>
       <items code="at0001">
@@ -1185,27 +1181,27 @@ Det er foretrukket å kode "Navn på reisetype" med terminologi der hvor det er 
       </items>
       <items code="at0028">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Ukjent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Ukjent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Kartleggingsformål</items>
@@ -1234,11 +1230,11 @@ Det er foretrukket å kode "Navn på reisetype" med terminologi der hvor det er 
       </items>
       <items code="at0047">
         <items id="text">Usikker</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Usikker</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_bindings terminology="SNOMED-CT">
@@ -1293,4 +1289,3 @@ Det er foretrukket å kode "Navn på reisetype" med terminologi der hvor det er 
     </term_bindings>
   </ontology>
 </archetype>
-

@@ -296,7 +296,6 @@ definition
 		}
 	}
 
-
 ontology
 	terminologies_available = <"LOINC", "SNOMED-CT">
 	term_definitions = <

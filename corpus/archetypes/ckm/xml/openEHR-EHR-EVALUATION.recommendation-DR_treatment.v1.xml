@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -49,9 +49,7 @@ The statement is considered only at the time it is registered. That is to say, t
       <keywords>*treatment(en)</keywords>
       <use>Se utiliza para registrar una sugerencia, consejo o propuesta sobre el tratamiento de la DR, para un instante específico de su historial clínico.&#xD;
 &#xD;
-La declaración se considera sólo en el momento en que se registra. Es decir, el tratamiento puede cambiar con el tiempo en función de la progresión de la enfermedad.&#xD;
-&#xD;
-</use>
+La declaración se considera sólo en el momento en que se registra. Es decir, el tratamiento puede cambiar con el tiempo en función de la progresión de la enfermedad.</use>
       <misuse>*(en)</misuse>
       <copyright>© openEHR Foundation(en)</copyright>
     </details>
@@ -407,4 +405,3 @@ La declaración se considera sólo en el momento en que se registra. Es decir, e
     </term_bindings>
   </ontology>
 </archetype>
-

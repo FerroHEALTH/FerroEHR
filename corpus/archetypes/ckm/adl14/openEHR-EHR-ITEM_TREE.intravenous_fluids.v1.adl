@@ -1,0 +1,316 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-ITEM_TREE.intravenous_fluids.v1
+
+concept
+	[at0000]	-- Intravenous fluids
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Jasmin Buck, Sebastian Garde">
+				["organisation"] = <"University of Heidelberg, Central Queensland University">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Dr Ian McNicoll">
+		["organisation"] = <"Ocean Informatics, UK">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"2012-09-18">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Dient der Dokumentation von Einzelheiten über eine verschriebene und verabreichte intravenöse Flüssigkeit.">
+			use = <"">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record details about intravenous fluids ordered and administered">
+			use = <"">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <>
+	other_details = <
+		["MD5-CAM-1.0.1"] = <"112FBC941E04AB8FA7705B45628F958E">
+	>
+
+definition
+	ITEM_TREE[at0000] occurrences matches {0..*} matches {	-- Intravenous fluids
+		items cardinality matches {0..*; unordered} matches {
+			ELEMENT[at0002] occurrences matches {0..1} matches {	-- Fluid type
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0012] occurrences matches {0..1} matches {	-- Route
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0013, 	-- Needle and syringe
+							at0014, 	-- Peripheral intravenous line
+							at0015, 	-- Central venous line
+							at0016, 	-- Peripherally inserted central catheter
+							at0017]	-- Implanted subcutaneous port
+						}
+					}
+				}
+			}
+			ELEMENT[at0018] occurrences matches {0..1} matches {	-- Form of therapy
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0019, 	-- Continuous IV drip
+							at0020]	-- Intermittent infusion
+						}
+					}
+				}
+			}
+			ELEMENT[at0022] occurrences matches {0..1} matches {	-- Volume
+				value matches {
+					C_DV_QUANTITY <
+						property = <[openehr::129]>
+						list = <
+							["1"] = <
+								units = <"ml">
+							>
+							["2"] = <
+								units = <"fl oz">
+							>
+							["3"] = <
+								units = <"l">
+							>
+							["4"] = <
+								units = <"cc">
+							>
+						>
+					>
+				}
+			}
+			ELEMENT[at0021] occurrences matches {0..1} matches {	-- Rate of flow
+				value matches {
+					C_DV_QUANTITY <
+						property = <[openehr::126]>
+						list = <
+							["1"] = <
+								units = <"ml/h">
+							>
+							["2"] = <
+								units = <"ml/m">
+							>
+							["3"] = <
+								units = <"ml/s">
+							>
+							["4"] = <
+								units = <"cfh">
+							>
+						>
+					>
+				}
+			}
+			CLUSTER[at0027] occurrences matches {0..1} matches {	-- Commencement of administration
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0026] occurrences matches {0..1} matches {	-- Time of commencement
+						value matches {
+							DV_DATE_TIME matches {*}
+						}
+					}
+					ELEMENT[at0028] occurrences matches {0..*} matches {	-- Commencement instruction
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+			CLUSTER[at0023] occurrences matches {0..1} matches {	-- Administration check
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0024] occurrences matches {0..1} matches {	-- Batch number
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {[local::]}
+							}
+						}
+					}
+					ELEMENT[at0025] occurrences matches {0..1} matches {	-- Use by date
+						value matches {
+							DV_DATE matches {*}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"intravenöse Flüssigkeit">
+					description = <"Einzelheiten über eine verschriebene und verabreichte intravenöse Flüssigkeit">
+				>
+				["at0002"] = <
+					text = <"Flüssigkeitsart">
+					description = <"Art der Flüssigkeit">
+				>
+				["at0012"] = <
+					text = <"Weg">
+					description = <"Weg der Verabreichung">
+				>
+				["at0013"] = <
+					text = <"Nadel und Spritze">
+					description = <"*">
+				>
+				["at0014"] = <
+					text = <"Periphärer intravenöser Katheter">
+					description = <"*">
+				>
+				["at0015"] = <
+					text = <"Zentraler Venenkatheter">
+					description = <"*">
+				>
+				["at0016"] = <
+					text = <"Periphär gelegter zentraler Katheter">
+					description = <"*">
+				>
+				["at0017"] = <
+					text = <"Implantierter subkutaner Zugang">
+					description = <"*">
+				>
+				["at0018"] = <
+					text = <"Therapieform">
+					description = <"*">
+				>
+				["at0019"] = <
+					text = <"Kontinuierlicher intravenöser Tropf">
+					description = <"*">
+				>
+				["at0020"] = <
+					text = <"Unterbrochene Infusion">
+					description = <"*">
+				>
+				["at0021"] = <
+					text = <"Durchfluss">
+					description = <"*">
+				>
+				["at0022"] = <
+					text = <"Volumen">
+					description = <"*">
+				>
+				["at0023"] = <
+					text = <"Verabreichungskontrolle">
+					description = <"*">
+				>
+				["at0024"] = <
+					text = <"Chargennummer">
+					description = <"*">
+				>
+				["at0025"] = <
+					text = <"Haltbarkeitsdatum">
+					description = <"*">
+				>
+				["at0026"] = <
+					text = <"Beginnzeitpunkt">
+					description = <"*">
+				>
+				["at0027"] = <
+					text = <"Beginn der Verabreichung">
+					description = <"*">
+				>
+				["at0028"] = <
+					text = <"Startanweisung">
+					description = <"*">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Intravenous fluids">
+					description = <"Details about intravenous fluids ordered and administered">
+				>
+				["at0002"] = <
+					text = <"Fluid type">
+					description = <"Type of fluid">
+				>
+				["at0012"] = <
+					text = <"Route">
+					description = <"Route of administration">
+				>
+				["at0013"] = <
+					text = <"Needle and syringe">
+					description = <"*">
+				>
+				["at0014"] = <
+					text = <"Peripheral intravenous line">
+					description = <"*">
+				>
+				["at0015"] = <
+					text = <"Central venous line">
+					description = <"*">
+				>
+				["at0016"] = <
+					text = <"Peripherally inserted central catheter">
+					description = <"*">
+				>
+				["at0017"] = <
+					text = <"Implanted subcutaneous port">
+					description = <"*">
+				>
+				["at0018"] = <
+					text = <"Form of therapy">
+					description = <"*">
+				>
+				["at0019"] = <
+					text = <"Continuous IV drip">
+					description = <"*">
+				>
+				["at0020"] = <
+					text = <"Intermittent infusion">
+					description = <"*">
+				>
+				["at0021"] = <
+					text = <"Rate of flow">
+					description = <"*">
+				>
+				["at0022"] = <
+					text = <"Volume">
+					description = <"*">
+				>
+				["at0023"] = <
+					text = <"Administration check">
+					description = <"*">
+				>
+				["at0024"] = <
+					text = <"Batch number">
+					description = <"*">
+				>
+				["at0025"] = <
+					text = <"Use by date">
+					description = <"*">
+				>
+				["at0026"] = <
+					text = <"Time of commencement">
+					description = <"*">
+				>
+				["at0027"] = <
+					text = <"Commencement of administration">
+					description = <"*">
+				>
+				["at0028"] = <
+					text = <"Commencement instruction">
+					description = <"*">
+				>
+			>
+		>
+	>

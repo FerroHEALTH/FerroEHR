@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -50,8 +50,8 @@ Chen DZ, Tham YC, Shen L, Chee SP. A Comparative Validation Study of Near Visual
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">A34D1A1096E66F3165981E8B16F0D91C</other_details>
-    <other_details id="build_uid">d8980f6c-07cf-4225-8ae6-6b616c58ea1a</other_details>
+    <other_details id="MD5-CAM-1.0.1">6DDF574B48E4DABA41B58EF810674487</other_details>
+    <other_details id="build_uid">d9bd40da-aee6-40ac-a0d6-1acaa53c954b</other_details>
     <other_details id="ip_acknowledgements">This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.</other_details>
     <other_details id="revision">0.0.1-alpha</other_details>
     <details>
@@ -61,50 +61,51 @@ Chen DZ, Tham YC, Shen L, Chee SP. A Comparative Validation Study of Near Visual
         </terminology_id>
         <code_string>nb</code_string>
       </language>
-      <purpose>*To record the results of visual acuity assessments, which are typically performed by quantifying the individual's ability to detect, resolve or identify visual differences or symbols. (en)</purpose>
-      <keywords>*eye (en)</keywords>
-      <keywords>*sight (en)</keywords>
-      <keywords>*vision (en)</keywords>
-      <keywords>*VA (en)</keywords>
-      <keywords>*ophthalmic (en)</keywords>
-      <keywords>*visual (en)</keywords>
-      <keywords>*Snellen (en)</keywords>
-      <keywords>*low contrast (en)</keywords>
-      <keywords>*defocus (en)</keywords>
-      <keywords>*pinhole (en)</keywords>
-      <keywords>*light perception (en)</keywords>
-      <keywords>*grating (en)</keywords>
-      <keywords>*BCVA (en)</keywords>
-      <keywords>*BRVA (en)</keywords>
-      <keywords>*EDTRS (en)</keywords>
-      <keywords>*logMAR (en)</keywords>
-      <keywords>*decimal (en)</keywords>
-      <keywords>*logRAD (en)</keywords>
-      <keywords>*reading (en)</keywords>
-      <use>*Use to record a single assessment of visual acuity per event.&#xD;
+      <purpose>For å registrere resultatet av visusundersøkelser, som vanligvis utføres ved å tallfeste individets evne til å oppdage, skille eller gjenkjenne visuelle forskjeller eller symboler.</purpose>
+      <keywords>øye</keywords>
+      <keywords>syn</keywords>
+      <keywords>synsstyrke</keywords>
+      <keywords>visus</keywords>
+      <keywords>VA</keywords>
+      <keywords>oftalmologisk</keywords>
+      <keywords>visuell</keywords>
+      <keywords>Snellen</keywords>
+      <keywords>lav kontrast</keywords>
+      <keywords>defokus</keywords>
+      <keywords>pinhole</keywords>
+      <keywords>lyssans</keywords>
+      <keywords>gitter</keywords>
+      <keywords>BCVA</keywords>
+      <keywords>BRVA</keywords>
+      <keywords>EDTRS</keywords>
+      <keywords>logMAR</keywords>
+      <keywords>desimal</keywords>
+      <keywords>logRAD</keywords>
+      <keywords>lesing</keywords>
+      <use>Brukes for å registrere én enkelt visusundersøkelse per hendelse.&#xD;
 &#xD;
-Use both for assessments attempting to identify the highest attainable visual acuity, as well as those where the visual acuity under special conditions is of interest.&#xD;
+Brukes både for undersøkelser som søker å finne den høyest oppnåelige visus, og for undersøkelser der visus under spesielle betingelser er av interesse.&#xD;
 &#xD;
-Use the 'Result'-cluster to record the primary notation of the assessment, typically only using one of the contained elements per event. &#xD;
+Bruk clusteret 'Resultat' for å registrere undersøkelsens primære notasjon, vanligvis ved å fylle ut kun ett av de underliggende elementene per hendelse.&#xD;
 &#xD;
-Use the 'Derived Results' Cluster to record any number of conversions or derivations into other notations.&#xD;
+Bruk clusteret 'Avledet resultat' for å registrere et vilkårlig antall omregninger eller avledninger til andre notasjoner.&#xD;
 &#xD;
-Use the 'Supplementary results'-SLOT for structured results not covered by other elements. &#xD;
+Bruk SLOT-en 'Supplerende resultater' for strukturerte resultater som ikke dekkes av andre elementer.&#xD;
 &#xD;
-Use the 'Visual aid per eye' SLOT to record what was positioned in front of the eye(s) during the assessment. &#xD;
-This allows flexible combination of aids to be recorded, including multiple corrections in front of the same eye. &#xD;
+Bruk SLOT-en 'Synshjelpemiddel per øye' for å registrere hva som var plassert foran øyet eller øynene under undersøkelsen.&#xD;
+Dette gjør det mulig å registrere fleksible kombinasjoner av hjelpemidler, inkludert flere korreksjoner foran samme øye.&#xD;
 &#xD;
-Population of 'Visual aid type' element is recommended under all circumstances. &#xD;
-Use the value "unaided" for uncorrected tests where nothing was positioned in front of the tested eye(s).&#xD;
+Det anbefales å fylle ut elementet 'Type synshjelpemiddel' i alle tilfeller.&#xD;
+Bruk verdien "uten korreksjon" for ukorrigerte undersøkelser der ingenting var plassert foran øyet eller øynene som ble undersøkt.&#xD;
 &#xD;
-Use this archetype for tests of minimum detectable, resolveable or recognizable visual acuity as well as reading acuity, but consider specifying this using the 'Perceptive Task' element.  (en)</use>
-      <misuse>*Not to be used to record multiple visual acuity tests in one event. &#xD;
+Bruk denne arketypen for undersøkelser av minste synbare, oppløsbare eller gjenkjennbare visus, så vel som lesevisus, men vurder å angi dette ved hjelp av elementet 'Perseptuell oppgave'.</use>
+      <misuse>Brukes ikke for å registrere flere visusundersøkelser i én hendelse.&#xD;
 &#xD;
-The "Result" cluster is not to be used to record the same visual acuity test in multiple converted units - only the primary notation is to be documented there.  If the same test result is to be converted to other units, use the "derived result" cluster for all conversion results. &#xD;
+Clusteret "Resultat" skal ikke brukes for å registrere den samme visusundersøkelsen i flere omregnede enheter - kun den primære notasjonen skal dokumenteres der. Dersom det samme resultatet skal omregnes til andre enheter, brukes clusteret "Avledet resultat" for alle omregnede resultater.&#xD;
 &#xD;
-Not to be used for assessments of fixation behaviour or observations of eye movements (e.g. fixes and follows, central steady maintained fixation). No appropriate archetype is available for this at the time of writing.&#xD;
+Brukes ikke for å registrere vurdering av fikseringsatferd eller observasjon av øyebevegelser (for eksempel fikserer og følger, sentral stabil vedvarende fiksering). Det finnes ingen egnet arketype for dette i skrivende stund.&#xD;
 &#xD;
-Not to be used for assessing light projection, use 'OBSERVATION.light_projection_test' instead. (en)</misuse>
+Brukes ikke for å registrere vurdering av lysprojeksjon; bruk 'OBSERVATION.light_projection_test' i stedet.</misuse>
       <copyright />
     </details>
     <details>
@@ -150,7 +151,7 @@ This allows flexible combination of aids to be recorded, including multiple corr
 Population of 'Visual aid type' element is recommended under all circumstances. &#xD;
 Use the value "unaided" for uncorrected tests where nothing was positioned in front of the tested eye(s).&#xD;
 &#xD;
-Use this archetype for tests of minimum detectable, resolveable or recognizable visual acuity as well as reading acuity, but consider specifying this using the 'Perceptive Task' element. </use>
+Use this archetype for tests of minimum detectable, resolveable or recognizable visual acuity as well as reading acuity, but consider specifying this using the 'Perceptive Task' element.</use>
       <misuse>Not to be used to record multiple visual acuity tests in one event. &#xD;
 &#xD;
 The "Result" cluster is not to be used to record the same visual acuity test in multiple converted units - only the primary notation is to be documented there.  If the same test result is to be converted to other units, use the "derived result" cluster for all conversion results. &#xD;
@@ -221,9 +222,9 @@ Not to be used for assessing light projection, use 'OBSERVATION.light_projection
       </terminology_id>
       <code_string>nb</code_string>
     </language>
-    <author id="name">Ingrid Heitmann, Arne Løberg Sæter</author>
-    <author id="organisation">Oslo universitetssykehus HF</author>
-    <author id="email">iheitman@ous-hf.no, arnelsa@gmail.com</author>
+    <author id="name">Ingrid Heitmann / Arne Løberg Sæter / Silje Ljosland Bakke</author>
+    <author id="organisation">Oslo universitetssykehus HF / Helse Vest IKT, Helse Vest IKT AS</author>
+    <author id="email">iheitman@ous-hf.no / arnelsa@gmail.com / silje.ljosland.bakke@helse-vest-ikt.no</author>
   </translations>
   <translations>
     <language>
@@ -4618,7 +4619,7 @@ Not to be used for assessing light projection, use 'OBSERVATION.light_projection
     <term_definitions language="en">
       <items code="at0000">
         <items id="text">Visual acuity test</items>
-        <items id="description">A test to quantify an individual's visual acuity as a measure of the ability to detect, resolve or recognize visual details. </items>
+        <items id="description">A test to quantify an individual's visual acuity as a measure of the ability to detect, resolve or recognize visual details.</items>
       </items>
       <items code="at0001">
         <items id="text">Event Series</items>
@@ -4635,11 +4636,11 @@ Not to be used for assessing light projection, use 'OBSERVATION.light_projection
       </items>
       <items code="at0012">
         <items id="text">Left eye</items>
-        <items id="description">The aid was positioned in front of the left eye.</items>
+        <items id="description">The left eye was examined.</items>
       </items>
       <items code="at0013">
         <items id="text">Right eye</items>
-        <items id="description">The aid was positioned in front of the left eye.</items>
+        <items id="description">The right eye was examined.</items>
       </items>
       <items code="at0014">
         <items id="text">Both eyes</items>
@@ -4722,7 +4723,7 @@ Not to be used for assessing light projection, use 'OBSERVATION.light_projection
         <items id="text">Best qualitative result</items>
         <items id="description">The highest level of visual function demonstrated by the individual during qualitative assessment.</items>
         <items id="comment">Not to be used for light projection testing. Use OBSERVATION.light_projection_test archetype for this purpose.&#xD;
-Higher ordinal values represent better visual function. </items>
+Higher ordinal values represent better visual function.</items>
       </items>
       <items code="at0193">
         <items id="text">Derived result</items>
@@ -4860,20 +4861,18 @@ Higher ordinal values represent better visual function. </items>
         <items id="description">The visual acuity measured and expressed as a metre Snellen ratio or M-Scale ratio.</items>
         <items id="comment">For Snellen ratio notation, the numerator is typically a reference distance of six meters, regardless of the real testing distance. &#xD;
 For M-Scale notation, the numerator should be equal to to the real testing distance. &#xD;
-To avoid ambiguity, populate the 'Testing distance' element, especially if the M-Scale notation is used.&#xD;
-</items>
+To avoid ambiguity, populate the 'Testing distance' element, especially if the M-Scale notation is used.</items>
       </items>
       <items code="at0296">
         <items id="text">Feet ratio result</items>
         <items id="description">The visual acuity measured and expressed as a feet Snellen ratio.</items>
         <items id="comment">A reference distance of 20 feet is often used as the default numerator.&#xD;
-Usethe 'Testing distance' element to avoid ambiguity. &#xD;
- </items>
+Usethe 'Testing distance' element to avoid ambiguity.</items>
       </items>
       <items code="at0297">
         <items id="text">logMAR result</items>
         <items id="description">The visual acuity measured and expressed as the base-10 logarithm of the minimum angle of resolution (MAR).</items>
-        <items id="comment">Sometimes referred to as 'logRAD' in reading acuity tests. </items>
+        <items id="comment">Sometimes referred to as 'logRAD' in reading acuity tests.</items>
       </items>
       <items code="at0299">
         <items id="text">N point font size notation result</items>
@@ -4916,22 +4915,20 @@ Usethe 'Testing distance' element to avoid ambiguity. &#xD;
         <items id="description">The visual acuity measured and expressed as the ETDRS letter score.</items>
         <items id="comment">Caution: The ETDRS score is inclusive of the 30 letters that may be presented at 1m distance, which are added to the results of testing at 4m distance. &#xD;
 See ETDRS report number 7 in References. &#xD;
-A letter score of 85 is equivalent to 20/20, 1.0 decimal, 0.0 logMAR. &#xD;
-</items>
+A letter score of 85 is equivalent to 20/20, 1.0 decimal, 0.0 logMAR.</items>
       </items>
       <items code="at0357">
         <items id="text">Derived ETDRS letter score result</items>
         <items id="description">Visual acuity as ETDRS notation, derived from the primary recording.</items>
         <items id="comment">Caution: The ETDRS score is inclusive of the 30 letters that may be presented at 1m distance, which are added to the results of testing at 4m distance. &#xD;
 See ETDRS report number 7 in References. &#xD;
-A letter score of 85 is equivalent to 20/20, 1.0 decimal, 0.0 logMAR. </items>
+A letter score of 85 is equivalent to 20/20, 1.0 decimal, 0.0 logMAR.</items>
       </items>
       <items code="at0370">
         <items id="text">Comparative label</items>
         <items id="description">Classification of the test and its result as 'best corrected', 'best recorded' visual acuity, or similar statements.</items>
         <items id="comment">These classifiers do not contain information on the actual correction used.&#xD;
-It is encouraged to record the specific aids used within 'Visual aid per eye' clusters.&#xD;
-</items>
+It is encouraged to record the specific aids used within 'Visual aid per eye' clusters.</items>
       </items>
       <items code="at0371">
         <items id="text">BCVA</items>
@@ -4946,8 +4943,7 @@ It is encouraged to record the specific aids used within 'Visual aid per eye' cl
         <items id="description">Information specifying the type of device, or lack of a device positioned in front of one of the eyes.</items>
         <items id="comment">Avoid using the generic value "Corrected" where the device or provenance of corrective values are known. &#xD;
 &#xD;
-Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available.&#xD;
-</items>
+Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available.</items>
       </items>
       <items code="at0374">
         <items id="text">Autorefraction-based correction</items>
@@ -5005,8 +5001,7 @@ Coding with a terminology is recommended. Free text entry should only be permitt
         <items id="text">Aided eye</items>
         <items id="description">The eye in front of which the visual aid was positioned.</items>
         <items id="comment">For monocular tests where the partner eye is fully occluded, the assumption is that the visual aid is positioned in front of the eye being tested. &#xD;
-In these circumstances automated population from the 'Eye examined' element is possible.&#xD;
-</items>
+In these circumstances automated population from the 'Eye examined' element is possible.</items>
       </items>
       <items code="at0410">
         <items id="text">Missed or additional optotypes</items>
@@ -5152,7 +5147,7 @@ Converted or derived values should be stored in the appropriate element in the '
       <items code="at0492">
         <items id="text">Cycles per degree result</items>
         <items id="description">The visual acuity measured and expressed as the number of pairs of black and white lines (cycles) that subtend an angle of one degree at the tested eye.</items>
-        <items id="comment">Used in grating based tests such as Teller acuity cards. </items>
+        <items id="comment">Used in grating based tests such as Teller acuity cards.</items>
       </items>
       <items code="at0493">
         <items id="text">Derived cycles per degree</items>
@@ -5201,7 +5196,7 @@ Converted or derived values should be stored in the appropriate element in the '
       <items code="at0512">
         <items id="text">Supplementary results</items>
         <items id="description">Additional structured details on visual acuity test result not captured in other data elements.</items>
-        <items id="comment">Examples include specifying the card scored in a Cardiff acuity test, or supplementary results on reading visual acuity tests. </items>
+        <items id="comment">Examples include specifying the card scored in a Cardiff acuity test, or supplementary results on reading visual acuity tests.</items>
       </items>
       <items code="at0513">
         <items id="text">Contrast category</items>
@@ -5499,7 +5494,7 @@ Where possible, population of quantitative elements on contrast is encouraged.</
         <items id="text">Perceptual task</items>
         <items id="description">The type of perceptual task endpoint that the result represents.</items>
         <items id="comment">Reading visual acuity expressed LogMAR is sometimes referred to as LogRAD. &#xD;
-Supplementary results of reading visual acuity tests can be recorded via the 'supplementary results' slot. </items>
+Supplementary results of reading visual acuity tests can be recorded via the 'supplementary results' slot.</items>
       </items>
       <items code="at0587">
         <items id="text">Minimum resolvable visual acuity</items>
@@ -5595,11 +5590,11 @@ Supplementary results of reading visual acuity tests can be recorded via the 'su
       </items>
       <items code="at0012">
         <items id="text">*Left eye(en)</items>
-        <items id="description">*The aid was positioned in front of the left eye. (en)</items>
+        <items id="description">*The left eye was examined. (en)</items>
       </items>
       <items code="at0013">
         <items id="text">*Right eye(en)</items>
-        <items id="description">*The aid was positioned in front of the left eye. (en)</items>
+        <items id="description">*The right eye was examined. (en)</items>
       </items>
       <items code="at0014">
         <items id="text">*Both eyes (en)</items>
@@ -5796,11 +5791,11 @@ Higher ordinal values represent better visual function.  (en)</items>
       </items>
       <items code="at0245">
         <items id="text">*Weber contrast (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0248">
         <items id="text">*Michelson contrast (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0256">
         <items id="text">*Ambient illuminance (en)</items>
@@ -6034,7 +6029,7 @@ Converted or derived values should be stored in the appropriate element in the '
       </items>
       <items code="at0465">
         <items id="text">*Visual aid details (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0466">
         <items id="text">*Power of cylinder (en)</items>
@@ -6188,7 +6183,7 @@ Where possible, population of quantitative elements on contrast is encouraged. (
       </items>
       <items code="at0518">
         <items id="text">*N 1 (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0519">
         <items id="text">*N 1.5 (en)</items>
@@ -6353,11 +6348,11 @@ Where possible, population of quantitative elements on contrast is encouraged. (
       </items>
       <items code="at0560">
         <items id="text">*Crowded (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0561">
         <items id="text">*Not Crowded (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0562">
         <items id="text">*Type of ancillary lighting used (en)</items>
@@ -6538,963 +6533,956 @@ Supplementary results of reading visual acuity tests can be recorded via the 'su
     </term_definitions>
     <term_definitions language="nb">
       <items code="at0000">
-        <items id="text">*Visual acuity test (en)</items>
-        <items id="description">*A test to quantify an individual's visual acuity as a measure of the ability to detect, resolve or recognize visual details.  (en)</items>
+        <items id="text">Visusundersøkelse</items>
+        <items id="description">En undersøkelse for å tallfeste et individs visus som et mål på evnen til å oppdage, skille eller gjenkjenne visuelle detaljer.</items>
       </items>
       <items code="at0001">
-        <items id="text">Event Series</items>
+        <items id="text">Hendelsesserie</items>
         <items id="description">@ internal @</items>
       </items>
       <items code="at0003">
-        <items id="text">Tree</items>
+        <items id="text">Tre</items>
         <items id="description">@ internal @</items>
       </items>
       <items code="at0007">
-        <items id="text">*Eye examined (en)</items>
-        <items id="description">*The eye which is being examined, or both eyes in case of a binocular test. (en)</items>
-        <items id="comment">*'Both eyes' may only be used for test of binocular visual acuity. (en)</items>
+        <items id="text">Undersøkt øye</items>
+        <items id="description">Øyet som ble undersøkt, eller begge øyne ved en binokulær undersøkelse.</items>
+        <items id="comment">'Begge øyne' skal kun brukes ved undersøkelse av binokulær visus.</items>
       </items>
       <items code="at0012">
         <items id="text">Venstre øye</items>
-        <items id="description">*The aid was positioned in front of the left eye. (en)</items>
+        <items id="description">Venstre øye ble undersøkt.</items>
       </items>
       <items code="at0013">
-        <items id="text">*Right eye(en)</items>
-        <items id="description">*The aid was positioned in front of the left eye. (en)</items>
+        <items id="text">Høyre øye</items>
+        <items id="description">Høyre øye ble undersøkt.</items>
       </items>
       <items code="at0014">
-        <items id="text">*Both eyes (en)</items>
-        <items id="description">*Both eyes were examined simultaneously. (en)</items>
+        <items id="text">Begge øyne</items>
+        <items id="description">Begge øyne ble undersøkt samtidig.</items>
       </items>
       <items code="at0020">
-        <items id="text">Tree</items>
+        <items id="text">Tre</items>
         <items id="description">@ internal @</items>
       </items>
       <items code="at0021">
-        <items id="text">*Optotype (en)</items>
-        <items id="description">*The type of symbol used to assess visual acuity. (en)</items>
-        <items id="comment">*Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available. (en)</items>
+        <items id="text">Optotype</items>
+        <items id="description">Typen symbol som brukes for å undersøke visus.</items>
+        <items id="comment">Koding med en terminologi anbefales. Fritekst bør kun tillates dersom det ikke finnes en egnet kodet verdi.</items>
       </items>
       <items code="at0023">
-        <items id="text">*Chart or Stimulus type (en)</items>
-        <items id="description">*The type of chart or card used to measure visual acuity. (en)</items>
-        <items id="comment">*Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available. (en)</items>
+        <items id="text">Type tavle eller stimulus</items>
+        <items id="description">Typen tavle eller kort som brukes for å måle visus.</items>
+        <items id="comment">Koding med en terminologi anbefales. Fritekst bør kun tillates dersom det ikke finnes en egnet kodet verdi.</items>
       </items>
       <items code="at0025">
-        <items id="text">*Chart or stimulus device details (en)</items>
-        <items id="description">*Details of the devices used provide a stimulus to be resolved by the eye being tested, such as a chart, projector or digital display. (en)</items>
+        <items id="text">Detaljer om tavle eller stimulusutstyr</items>
+        <items id="description">Detaljer om utstyret som brukes for å gi en stimulus som skal oppløses av øyet som undersøkes, for eksempel en tavle, en projektor eller en digital skjerm.</items>
       </items>
       <items code="at0040">
         <items id="text">Kommentar</items>
-        <items id="description">*Additional narrative about the measurement, not captured in other fields. (en)</items>
+        <items id="description">Ytterligere fritekst om målingen, som ikke omfattes av andre felt.</items>
       </items>
       <items code="at0041">
-        <items id="text">Tree</items>
+        <items id="text">Tre</items>
         <items id="description">@ internal @</items>
       </items>
       <items code="at0081">
-        <items id="text">*Testing distance category (en)</items>
-        <items id="description">*A categorisation of the testing distance. (en)</items>
-        <items id="comment">*Boundary definitions may vary, therefore population of the  'Testing distance' element is encouraged, especially for intermediate or near distances. (en)</items>
+        <items id="text">Kategori for undersøkelsesavstand</items>
+        <items id="description">En kategorisering av undersøkelsesavstanden.</items>
+        <items id="comment">Grensedefinisjonene kan variere, og det oppfordres derfor til å fylle ut elementet 'Undersøkelsesavstand', særlig ved mellomavstand og nær avstand.</items>
       </items>
       <items code="at0082">
-        <items id="text">*logMAR chart (en)</items>
-        <items id="description">*A logMAR chart was used. (en)</items>
+        <items id="text">logMAR-tavle</items>
+        <items id="description">En logMAR-tavle ble brukt.</items>
       </items>
       <items code="at0083">
-        <items id="text">Snellen</items>
-        <items id="description">*A Snellen chart was used. (en)</items>
+        <items id="text">Snellen-tavle</items>
+        <items id="description">En Snellen-tavle ble brukt.</items>
       </items>
       <items code="at0084">
-        <items id="text">*ETDRS chart (en)</items>
-        <items id="description">*An ETDRS chart was used. (en)</items>
+        <items id="text">ETDRS-tavle</items>
+        <items id="description">En ETDRS-tavle ble brukt.</items>
       </items>
       <items code="at0106">
-        <items id="text">*Letters (en)</items>
-        <items id="description">*Letter optotypes were used (en)</items>
+        <items id="text">Bokstaver</items>
+        <items id="description">Bokstavoptotyper ble brukt.</items>
       </items>
       <items code="at0107">
-        <items id="text">*Orientation-Type Optotypes (en)</items>
-        <items id="description">*Orientation-Type optotypes were used (en)</items>
+        <items id="text">Retningsoptotyper</items>
+        <items id="description">Retningsoptotyper ble brukt.</items>
       </items>
       <items code="at0108">
-        <items id="text">*Pictograms (en)</items>
-        <items id="description">*Pictogram optotypes were used. (en)</items>
+        <items id="text">Piktogrammer</items>
+        <items id="description">Piktogramoptotyper ble brukt.</items>
       </items>
       <items code="at0112">
-        <items id="text">*Confounding factors (en)</items>
-        <items id="description">*Description of any incidental factors related to the state of the subject which may affect clinical interpretation of the measurement. (en)</items>
-        <items id="comment">*Examples: 'Patient was confused', "Lid held open by hand" "Eccentric Fixation". (en)</items>
+        <items id="text">Konfunderende faktorer</items>
+        <items id="description">Beskrivelse av tilfeldige faktorer knyttet til individets tilstand som kan påvirke den kliniske tolkningen av målingen.</items>
+        <items id="comment">Eksempler: 'Pasienten var forvirret', "Øyelokket ble holdt åpent for hånd", "Eksentrisk fiksering".</items>
       </items>
       <items code="at0134">
         <items id="text">Uspesifisert hendelse</items>
-        <items id="description">Uspesifiserte hendelser.</items>
+        <items id="description">Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.</items>
       </items>
       <items code="at0141">
-        <items id="text">Andre detaljer</items>
-        <items id="description">Andre detaljer, som f.eks. cluster for registrering av benyttet refraksjon.</items>
+        <items id="text">Undersøkelse ikke utført</items>
+        <items id="description">Detaljer for eksplisitt å registrere at denne undersøkelsen ikke ble utført.</items>
       </items>
       <items code="at0143">
-        <items id="text">Digital foropter</items>
-        <items id="description">Benyttet digital foropter.</items>
-        <items id="comment">For eksempel: lokale informasjonskrav eller ekstra metadata for å tilpasse seg FHIR eller CIMI.</items>
+        <items id="text">Tilleggsinformasjon</items>
+        <items id="description">Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.</items>
+        <items id="comment">For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.</items>
       </items>
       <items code="at0151">
-        <items id="text">*Best qualitative result (en)</items>
-        <items id="description">*Measures of visual acuity that are qualitative, rather than quantitative. (en)</items>
-        <items id="comment">*Not to be used for light projection testing. Use OBSERVATION.light_projection_test archetype for this purpose.&#xD;
-Higher ordinal values represent better visual function.  (en)</items>
+        <items id="text">Beste kvalitative resultat</items>
+        <items id="description">Det høyeste nivået av synsfunksjon individet viste under kvalitativ undersøkelse.</items>
+        <items id="comment">Brukes ikke for undersøkelse av lysprojeksjon. Bruk arketypen OBSERVATION.light_projection_test til dette formålet.&#xD;
+Høyere ordinalverdier representerer bedre synsfunksjon.</items>
       </items>
       <items code="at0193">
-        <items id="text">*Derived result (en)</items>
-        <items id="description">*A grouping of calculated or estimated visual acuity result values derived by conversion from the primary recorded result. (en)</items>
+        <items id="text">Avledet resultat</items>
+        <items id="description">En gruppering av beregnede eller estimerte visusverdier som er avledet ved omregning fra det primært registrerte resultatet.</items>
       </items>
       <items code="at0206">
-        <items id="text">*Lea Symbols (en)</items>
-        <items id="description">*Lea symbol optotypes were used. (en)</items>
+        <items id="text">Lea-symboler</items>
+        <items id="description">Lea-symboloptotyper ble brukt.</items>
       </items>
       <items code="at0207">
-        <items id="text">*Kay pictures (en)</items>
-        <items id="description">*Kay picture optotypes were used. (en)</items>
+        <items id="text">Kay-bilder</items>
+        <items id="description">Kay-bildeoptotyper ble brukt.</items>
       </items>
       <items code="at0208">
-        <items id="text">*Allen pictures (en)</items>
-        <items id="description">*Allen picture optotypes were used. (en)</items>
+        <items id="text">Allen-bilder</items>
+        <items id="description">Allen-bildeoptotyper ble brukt.</items>
       </items>
       <items code="at0209">
-        <items id="text">*Auckland Optotypes (en)</items>
-        <items id="description">*Auckland  optotypes were used (en)</items>
+        <items id="text">Auckland-optotyper</items>
+        <items id="description">Auckland-optotyper ble brukt.</items>
       </items>
       <items code="at0210">
-        <items id="text">*Amsterdam pictures (en)</items>
-        <items id="description">*Amsterdam picture optotypes were used. (en)</items>
+        <items id="text">Amsterdam-bilder</items>
+        <items id="description">Amsterdam-bildeoptotyper ble brukt.</items>
       </items>
       <items code="at0211">
-        <items id="text">*Landolt C (en)</items>
-        <items id="description">*Landolt C optotypes were used (en)</items>
+        <items id="text">Landolt C</items>
+        <items id="description">Landolt C-optotyper ble brukt.</items>
       </items>
       <items code="at0212">
-        <items id="text">*Tumbling E (en)</items>
-        <items id="description">*Tumbling E optotypes were used (en)</items>
+        <items id="text">Tumbling E</items>
+        <items id="description">Tumbling E-optotyper ble brukt.</items>
       </items>
       <items code="at0213">
-        <items id="text">*Numbers (en)</items>
-        <items id="description">*Number optotypes were used (en)</items>
+        <items id="text">Tall</items>
+        <items id="description">Talloptotyper ble brukt.</items>
       </items>
       <items code="at0215">
-        <items id="text">*Lea numbers (en)</items>
-        <items id="description">*Lea number optotypes were used. (en)</items>
+        <items id="text">Lea-tall</items>
+        <items id="description">Lea-talloptotyper ble brukt.</items>
       </items>
       <items code="at0216">
-        <items id="text">*Sloan letters (en)</items>
-        <items id="description">*Sloan letter optotypes were used. (en)</items>
+        <items id="text">Sloan-bokstaver</items>
+        <items id="description">Sloan-bokstavoptotyper ble brukt.</items>
       </items>
       <items code="at0217">
-        <items id="text">*Cyrillic letters (en)</items>
-        <items id="description">*Cyrillic letter optotypes were used. (en)</items>
+        <items id="text">Kyrilliske bokstaver</items>
+        <items id="description">Kyrilliske bokstavoptotyper ble brukt.</items>
       </items>
       <items code="at0218">
-        <items id="text">*Snellen letters (en)</items>
-        <items id="description">*Snellen letter optotypes were used. (en)</items>
+        <items id="text">Snellen-bokstaver</items>
+        <items id="description">Snellen-bokstavoptotyper ble brukt.</items>
       </items>
       <items code="at0219">
-        <items id="text">*HOTV letters (en)</items>
-        <items id="description">*HOTV letter optotypes were used. (en)</items>
+        <items id="text">HOTV-bokstaver</items>
+        <items id="description">HOTV-bokstavoptotyper ble brukt.</items>
       </items>
       <items code="at0220">
-        <items id="text">*LRVC letters (en)</items>
-        <items id="description">*LRVC letter optotypes were used. (en)</items>
+        <items id="text">LRVC-bokstaver</items>
+        <items id="description">LRVC-bokstavoptotyper ble brukt.</items>
       </items>
       <items code="at0221">
-        <items id="text">*British letters (2003) (en)</items>
-        <items id="description">*British letter (2003) optotypes were used. (en)</items>
+        <items id="text">Britiske bokstaver (2003)</items>
+        <items id="description">Britiske bokstavoptotyper (2003) ble brukt.</items>
       </items>
       <items code="at0222">
-        <items id="text">*European-wide letters (en)</items>
-        <items id="description">*European-wide letter optotypes were used. (en)</items>
+        <items id="text">Europeiske bokstaver</items>
+        <items id="description">Europeiske bokstavoptotyper ble brukt.</items>
       </items>
       <items code="at0223">
-        <items id="text">*Near (en)</items>
-        <items id="description">*The test was performed at near distance. (en)</items>
+        <items id="text">Nær</items>
+        <items id="description">Undersøkelsen ble utført på nær avstand.</items>
       </items>
       <items code="at0224">
-        <items id="text">*Intermediate (en)</items>
-        <items id="description">*The test was performed at intermediate distance. (en)</items>
+        <items id="text">Mellomavstand</items>
+        <items id="description">Undersøkelsen ble utført på mellomavstand.</items>
       </items>
       <items code="at0225">
-        <items id="text">*Far (en)</items>
-        <items id="description">*The test was performed at far distance. (en)</items>
+        <items id="text">Lang</items>
+        <items id="description">Undersøkelsen ble utført på lang avstand.</items>
       </items>
       <items code="at0226">
-        <items id="text">*Stimulus method (en)</items>
-        <items id="description">*Information on the way the visual stimulus is displayed. (en)</items>
-        <items id="comment">*Allows for the capture of basic information where additional detail about the type or device name of the stimulus are unknown. (en)</items>
+        <items id="text">Stimulusmetode</items>
+        <items id="description">Informasjon om måten den visuelle stimulusen presenteres på.</items>
+        <items id="comment">Gjør det mulig å registrere grunnleggende informasjon når ytterligere detaljer om type eller utstyrsnavn for stimulusen er ukjent.</items>
       </items>
       <items code="at0227">
-        <items id="text">*Electronic chart display (en)</items>
-        <items id="description">*An electronic display. (en)</items>
+        <items id="text">Elektronisk tavleskjerm</items>
+        <items id="description">En elektronisk skjerm.</items>
       </items>
       <items code="at0231">
-        <items id="text">*Printed chart or card (en)</items>
-        <items id="description">*A printed chart or card. (en)</items>
+        <items id="text">Trykt tavle eller kort</items>
+        <items id="description">En trykt tavle eller et trykt kort.</items>
       </items>
       <items code="at0239">
-        <items id="text">*Golovin-Sitsev table (en)</items>
-        <items id="description">*A Golovin-Sitsev table was used. (en)</items>
+        <items id="text">Golovin-Sivtsev-tavle</items>
+        <items id="description">En Golovin-Sivtsev-tavle ble brukt.</items>
       </items>
       <items code="at0240">
-        <items id="text">*Monoyer chart (en)</items>
-        <items id="description">*A Monoyer chart was used. (en)</items>
+        <items id="text">Monoyer-tavle</items>
+        <items id="description">En Monoyer-tavle ble brukt.</items>
       </items>
       <items code="at0242">
-        <items id="text">*Keeler acuity cards (en)</items>
-        <items id="description">*Keeler acuity cards were used, a type of  grating-based preferential looking test. (en)</items>
+        <items id="text">Keeler-visuskort</items>
+        <items id="description">Keeler-visuskort ble brukt, en type gitterbasert blikkpreferansetest.</items>
       </items>
       <items code="at0244">
-        <items id="text">*Background luminance (en)</items>
-        <items id="description">*Background luminance of the visual stimulus, such as the white background on a chart. (en)</items>
-        <items id="comment">*Candela per square meter is equivalent the non-SI unit 'nit'. (en)</items>
+        <items id="text">Bakgrunnsluminans</items>
+        <items id="description">Luminansen i bakgrunnen til den visuelle stimulusen, for eksempel den hvite bakgrunnen på en tavle.</items>
+        <items id="comment">Candela per kvadratmeter tilsvarer den ikke-SI-baserte enheten 'nit'.</items>
       </items>
       <items code="at0245">
-        <items id="text">*Weber contrast (en)</items>
-        <items id="description"></items>
+        <items id="text">Weber-kontrast</items>
+        <items id="description">Differansen mellom luminansen til stimulusen og bakgrunnen, delt på bakgrunnsluminansen.</items>
       </items>
       <items code="at0248">
-        <items id="text">*Michelson contrast (en)</items>
-        <items id="description"></items>
+        <items id="text">Michelson-kontrast</items>
+        <items id="description">Differansen mellom høyeste og laveste luminans i stimulusen, delt på summen av dem.</items>
       </items>
       <items code="at0256">
-        <items id="text">*Ambient illuminance (en)</items>
-        <items id="description">*The ambient illuminance in the room where the visual acuity testing is taking place. (en)</items>
+        <items id="text">Belysningsstyrke i omgivelsene</items>
+        <items id="description">Belysningsstyrken i rommet der visusundersøkelsen utføres.</items>
       </items>
       <items code="at0262">
-        <items id="text">*Visual aid per eye (en)</items>
-        <items id="description">*A cluster describing what type of visual aid was used during the test, and which eye it was positioned in front of. &#xD;
- (en)</items>
-        <items id="comment">*Where multiple devices are positioned in front of the same eye, this cluster is expected to be used once for each. (en)</items>
+        <items id="text">Synshjelpemiddel per øye</items>
+        <items id="description">Et cluster som beskriver hvilken type synshjelpemiddel som ble brukt under undersøkelsen, og hvilket øye det var plassert foran.</items>
+        <items id="comment">Når flere hjelpemidler er plassert foran samme øye, forventes dette clusteret brukt én gang for hvert av dem.</items>
       </items>
       <items code="at0294">
-        <items id="text">*Decimal notation result (en)</items>
-        <items id="description">*The visual acuity measured and expressed as a decimal notation. (en)</items>
+        <items id="text">Resultat i desimalnotasjon</items>
+        <items id="description">Visus målt og uttrykt i desimalnotasjon.</items>
       </items>
       <items code="at0295">
-        <items id="text">*Metre ratio result (en)</items>
-        <items id="description">*The visual acuity measured and expressed as a metre Snellen ratio or M-Scale ratio. (en)</items>
-        <items id="comment">*For Snellen ratio notation, the numerator is typically a reference distance of six meters, regardless of the real testing distance. &#xD;
-For M-Scale notation, the numerator should be equal to to the real testing distance. &#xD;
-To avoid ambiguity, populate the 'Testing distance' element, especially if the M-Scale notation is used.&#xD;
- (en)</items>
+        <items id="text">Resultat som meterbrøk</items>
+        <items id="description">Visus målt og uttrykt som en Snellen-brøk i meter eller en brøk på M-skalaen.</items>
+        <items id="comment">For Snellen-brøk er telleren vanligvis en referanseavstand på seks meter, uavhengig av den faktiske undersøkelsesavstanden.&#xD;
+For notasjon på M-skalaen skal telleren være lik den faktiske undersøkelsesavstanden.&#xD;
+Fyll ut elementet 'Undersøkelsesavstand' for å unngå tvetydighet, særlig dersom M-skalaen brukes.</items>
       </items>
       <items code="at0296">
-        <items id="text">*Feet ratio result (en)</items>
-        <items id="description">*The visual acuity measured and expressed as a feet Snellen ratio. (en)</items>
-        <items id="comment">*A reference distance of 20 feet is often used as the default numerator.&#xD;
-Usethe 'Testing distance' element to avoid ambiguity. &#xD;
-  (en)</items>
+        <items id="text">Resultat som fotbrøk</items>
+        <items id="description">Visus målt og uttrykt som en Snellen-brøk i fot.</items>
+        <items id="comment">En referanseavstand på 20 fot brukes ofte som standard teller.&#xD;
+Bruk elementet 'Undersøkelsesavstand' for å unngå tvetydighet.</items>
       </items>
       <items code="at0297">
-        <items id="text">*logMAR result (en)</items>
-        <items id="description">*The visual acuity measured and expressed as the base-10 logarithm of the minimum angle of resolution (MAR). (en)</items>
-        <items id="comment">*Sometimes referred to as 'logRAD' in reading acuity tests.  (en)</items>
+        <items id="text">logMAR-resultat</items>
+        <items id="description">Visus målt og uttrykt som titallslogaritmen til minste oppløsningsvinkel (MAR).</items>
+        <items id="comment">Omtales noen ganger som 'logRAD' ved lesevisusundersøkelser.</items>
       </items>
       <items code="at0299">
-        <items id="text">*N point font size notation result (en)</items>
-        <items id="description">*The N point font size of the smallest recognized line or text. (en)</items>
-        <items id="comment">*Strictly not a unit of visual acuity but a measure of stimulus size. (en)</items>
+        <items id="text">Resultat i N-skriftstørrelse</items>
+        <items id="description">N-skriftstørrelsen til den minste linjen eller teksten som ble gjenkjent.</items>
+        <items id="comment">Strengt tatt ikke en visusenhet, men et mål på stimulusstørrelse.</items>
       </items>
       <items code="at0302">
-        <items id="text">*Jaeger font size notation result (en)</items>
-        <items id="description">*The Jaeger font size of the smallest recognized line of text. (en)</items>
-        <items id="comment">*Strictly not a unit of visual acuity but a measure of stimulus size. (en)</items>
+        <items id="text">Resultat i Jaeger-skriftstørrelse</items>
+        <items id="description">Jaeger-skriftstørrelsen til den minste tekstlinjen som ble gjenkjent.</items>
+        <items id="comment">Strengt tatt ikke en visusenhet, men et mål på stimulusstørrelse.</items>
       </items>
       <items code="at0319">
-        <items id="text">*Derived decimal notation result (en)</items>
-        <items id="description">*Visual acuity in decimal notation, derived from the primary recording. (en)</items>
+        <items id="text">Avledet resultat i desimalnotasjon</items>
+        <items id="description">Visus i desimalnotasjon, avledet fra den primære registreringen.</items>
       </items>
       <items code="at0320">
-        <items id="text">*Derived meter ratio result (en)</items>
-        <items id="description">*Visual acuity in metre ratio (Snellen or M-Score) notation, derived from the primary recording. (en)</items>
+        <items id="text">Avledet resultat som meterbrøk</items>
+        <items id="description">Visus som meterbrøk (Snellen eller M-skala), avledet fra den primære registreringen.</items>
       </items>
       <items code="at0321">
-        <items id="text">*Derived feet ratio result (en)</items>
-        <items id="description">*Visual acuity in feet (Snellen) ratio notation, derived from the primary recording. (en)</items>
+        <items id="text">Avledet resultat som fotbrøk</items>
+        <items id="description">Visus som Snellen-brøk i fot, avledet fra den primære registreringen.</items>
       </items>
       <items code="at0322">
-        <items id="text">*Derived logMAR result (en)</items>
-        <items id="description">*Visual acuity in logMAR notation, derived from the primary recording. (en)</items>
+        <items id="text">Avledet logMAR-resultat</items>
+        <items id="description">Visus i logMAR-notasjon, avledet fra den primære registreringen.</items>
       </items>
       <items code="at0333">
-        <items id="text">*Interpretation (en)</items>
-        <items id="description">*Interpretation of the results. (en)</items>
-        <items id="comment">*Not to be used for information about how the test was performed or patient circumstances affecting result. (en)</items>
+        <items id="text">Tolkning</items>
+        <items id="description">Tolkning av resultatene.</items>
+        <items id="comment">Brukes ikke for informasjon om hvordan undersøkelsen ble utført, eller om pasientforhold som påvirker resultatet.</items>
       </items>
       <items code="at0355">
-        <items id="text">*5-Score notation result (en)</items>
-        <items id="description">*The visual acuity measured and expressed using the logarithmic 5-score notation, widely used in China. (en)</items>
-        <items id="comment">*Defined as 5 minus the LogMAR result, part of the Chinese national standard GB11533-1989. (en)</items>
+        <items id="text">Resultat i 5-skår-notasjon</items>
+        <items id="description">Visus målt og uttrykt med den logaritmiske 5-skår-notasjonen, som er mye brukt i Kina.</items>
+        <items id="comment">Definert som 5 minus logMAR-resultatet, og inngår i den kinesiske nasjonale standarden GB11533-1989.</items>
       </items>
       <items code="at0356">
-        <items id="text">*ETDRS letter score (en)</items>
-        <items id="description">*The visual acuity measured and expressed as the ETDRS letter score. (en)</items>
-        <items id="comment">*Caution: The ETDRS score is inclusive of the 30 letters that may be presented at 1m distance, which are added to the results of testing at 4m distance. &#xD;
-See ETDRS report number 7 in References. &#xD;
-A letter score of 85 is equivalent to 20/20, 1.0 decimal, 0.0 logMAR. &#xD;
- (en)</items>
+        <items id="text">ETDRS-bokstavskår</items>
+        <items id="description">Visus målt og uttrykt som ETDRS-bokstavskår.</items>
+        <items id="comment">Merk: ETDRS-skåren inkluderer de 30 bokstavene som kan presenteres på 1 m avstand, og som legges til resultatene fra undersøkelsen på 4 m avstand.&#xD;
+Se ETDRS-rapport nummer 7 i referansene.&#xD;
+En bokstavskår på 85 tilsvarer 20/20, 1,0 desimal og 0,0 logMAR.</items>
       </items>
       <items code="at0357">
-        <items id="text">*Derived ETDRS letter score result (en)</items>
-        <items id="description">*Visual acuity as ETDRS notation, derived from the primary recording. (en)</items>
-        <items id="comment">*Caution: The ETDRS score is inclusive of the 30 letters that may be presented at 1m distance, which are added to the results of testing at 4m distance. &#xD;
-See ETDRS report number 7 in References. &#xD;
-A letter score of 85 is equivalent to 20/20, 1.0 decimal, 0.0 logMAR.  (en)</items>
+        <items id="text">Avledet resultat som ETDRS-bokstavskår</items>
+        <items id="description">Visus i ETDRS-notasjon, avledet fra den primære registreringen.</items>
+        <items id="comment">Merk: ETDRS-skåren inkluderer de 30 bokstavene som kan presenteres på 1 m avstand, og som legges til resultatene fra undersøkelsen på 4 m avstand.&#xD;
+Se ETDRS-rapport nummer 7 i referansene.&#xD;
+En bokstavskår på 85 tilsvarer 20/20, 1,0 desimal og 0,0 logMAR.</items>
       </items>
       <items code="at0370">
-        <items id="text">*Comparative label (en)</items>
-        <items id="description">*Classification of the test and its result as 'best corrected', 'best recorded' visual acuity, or similar statements. (en)</items>
-        <items id="comment">*These classifiers do not contain information on the actual correction used.&#xD;
-It is encouraged to record the specific aids used within 'Visual aid per eye' clusters.&#xD;
- (en)</items>
+        <items id="text">Sammenlignende merkelapp</items>
+        <items id="description">Klassifisering av undersøkelsen og resultatet som 'best korrigerte' eller 'best registrerte' visus, eller lignende utsagn.</items>
+        <items id="comment">Disse klassifikatorene inneholder ikke informasjon om den faktiske korreksjonen som ble brukt.&#xD;
+Det oppfordres til å registrere de spesifikke hjelpemidlene som ble brukt i clusteret 'Synshjelpemiddel per øye'.</items>
       </items>
       <items code="at0371">
-        <items id="text">*BCVA (en)</items>
-        <items id="description">*This result is classified as a Best Corrected Visual Acuity. (en)</items>
+        <items id="text">BCVA</items>
+        <items id="description">Dette resultatet er klassifisert som best korrigerte visus (Best Corrected Visual Acuity).</items>
       </items>
       <items code="at0372">
-        <items id="text">*BRVA (en)</items>
-        <items id="description">*This result is classified as a Best Recorded Visual Acuity. (en)</items>
+        <items id="text">BRVA</items>
+        <items id="description">Dette resultatet er klassifisert som best registrerte visus (Best Recorded Visual Acuity).</items>
       </items>
       <items code="at0373">
-        <items id="text">*Visual aid type (en)</items>
-        <items id="description">*Information specifying the type of device, or lack of a device positioned in front of one of the eyes. (en)</items>
-        <items id="comment">*Avoid using the generic value "Corrected" where the device or provenance of corrective values are known. &#xD;
+        <items id="text">Type synshjelpemiddel</items>
+        <items id="description">Informasjon som angir typen utstyr, eller fravær av utstyr, plassert foran ett av øynene.</items>
+        <items id="comment">Unngå å bruke den generiske verdien "Korrigert" når utstyret eller opphavet til korreksjonsverdiene er kjent.&#xD;
 &#xD;
-Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available.&#xD;
- (en)</items>
+Koding med en terminologi anbefales. Fritekst bør kun tillates dersom det ikke finnes en egnet kodet verdi.</items>
       </items>
       <items code="at0374">
-        <items id="text">*Autorefraction-based correction (en)</items>
-        <items id="description">*A correction with powers based on an autorefraction test. (en)</items>
+        <items id="text">Korreksjon basert på autorefraksjon</items>
+        <items id="description">En korreksjon med styrker basert på en autorefraksjonsmåling.</items>
       </items>
       <items code="at0375">
-        <items id="text">*Subjective refraction-based correction (en)</items>
-        <items id="description">*A correction with powers based on a subjective refraction. (en)</items>
+        <items id="text">Korreksjon basert på subjektiv refraksjon</items>
+        <items id="description">En korreksjon med styrker basert på en subjektiv refraksjon.</items>
       </items>
       <items code="at0376">
-        <items id="text">*Glasses (en)</items>
-        <items id="description">*Eyeglasses. (en)</items>
+        <items id="text">Briller</items>
+        <items id="description">Briller.</items>
       </items>
       <items code="at0377">
-        <items id="text">*Rigid contact lens (en)</items>
-        <items id="description">*A contact lens with a rigid optical center, including hybrid lenses. (en)</items>
+        <items id="text">Hard kontaktlinse</items>
+        <items id="description">En kontaktlinse med hardt optisk senter, inkludert hybridlinser.</items>
       </items>
       <items code="at0378">
-        <items id="text">*Soft contact lens (en)</items>
-        <items id="description">*A soft contact lens with a soft optical center. (en)</items>
+        <items id="text">Myk kontaktlinse</items>
+        <items id="description">En kontaktlinse med mykt optisk senter.</items>
       </items>
       <items code="at0381">
-        <items id="text">*Retinoscopy based correction (en)</items>
-        <items id="description">*A correction with powers based on a retinoscopy test. (en)</items>
+        <items id="text">Korreksjon basert på retinoskopi</items>
+        <items id="description">En korreksjon med styrker basert på en retinoskopiundersøkelse.</items>
       </items>
       <items code="at0382">
-        <items id="text">*Corrected (en)</items>
-        <items id="description">*Lenses without a known provenance or source of the powers. (en)</items>
+        <items id="text">Korrigert</items>
+        <items id="description">Linser der opphavet til eller kilden for styrkene ikke er kjent.</items>
       </items>
       <items code="at0383">
-        <items id="text">Fogging lens</items>
-        <items id="description">*A lens used to intentionally blur the vision in that eye while the other eye ist tested. (en)</items>
+        <items id="text">Tåkeleggingslinse</items>
+        <items id="description">En linse som brukes for bevisst å gjøre synet uskarpt på det ene øyet mens det andre øyet undersøkes.</items>
       </items>
       <items code="at0384">
-        <items id="text">*Pinhole occluder (en)</items>
-        <items id="description">*A device with one or multiple small holes that acting apertures. (en)</items>
+        <items id="text">Pinhole-okkluder</items>
+        <items id="description">Utstyr med ett eller flere små hull som fungerer som blenderåpninger.</items>
       </items>
       <items code="at0385">
-        <items id="text">*Subjective overrefraction-based correction (en)</items>
-        <items id="description">*A correction with values based on subjective overrefraction was used. (en)</items>
+        <items id="text">Korreksjon basert på subjektiv overrefraksjon</items>
+        <items id="description">En korreksjon med verdier basert på subjektiv overrefraksjon ble brukt.</items>
       </items>
       <items code="at0386">
-        <items id="text">*Unaided (en)</items>
-        <items id="description">*There is explicitly nothing in front of the eye during the visual acuity testing, also referred to as "uncorrected". (en)</items>
+        <items id="text">Uten korreksjon</items>
+        <items id="description">Det er eksplisitt ingenting foran øyet under visusundersøkelsen, også omtalt som "ukorrigert".</items>
       </items>
       <items code="at0395">
-        <items id="text">*Ancillary lighting details (en)</items>
-        <items id="description">*Details on the use of ancillary lighting sources, including brightness acuity testing and glare lights. (en)</items>
+        <items id="text">Detaljer om tilleggsbelysning</items>
+        <items id="description">Detaljer om bruk av tilleggslyskilder, inkludert blendingstesting og blendingslys.</items>
       </items>
       <items code="at0404">
-        <items id="text">*Projected chart (en)</items>
-        <items id="description">*A chart projector. (en)</items>
+        <items id="text">Projisert tavle</items>
+        <items id="description">En tavleprojektor.</items>
       </items>
       <items code="at0405">
-        <items id="text">*Aided eye (en)</items>
-        <items id="description">*The eye in front of which the visual aid was positioned. (en)</items>
-        <items id="comment">*For monocular tests where the partner eye is fully occluded, the assumption is that the visual aid is positioned in front of the eye being tested. &#xD;
-In these circumstances automated population from the 'Eye examined' element is possible.&#xD;
- (en)</items>
+        <items id="text">Øye med hjelpemiddel</items>
+        <items id="description">Øyet som synshjelpemiddelet var plassert foran.</items>
+        <items id="comment">Ved monokulære undersøkelser der det andre øyet er helt tildekket, antas det at synshjelpemiddelet er plassert foran øyet som undersøkes.&#xD;
+Under disse omstendighetene er automatisk utfylling fra elementet 'Undersøkt øye' mulig.</items>
       </items>
       <items code="at0410">
-        <items id="text">*Missed or additional optotypes (en)</items>
-        <items id="description">*Information on single optotypes where the main score was based on a whole line of optotypes. &#xD;
-Negative: Number incorrect optotypes in the last line that was marked as correct.&#xD;
-Positive: The number of correct optotypes in the first line that was marked as incorrect.&#xD;
-"Partial" code indicates some unspecified number of optotypes were missed in the smallest scored line. (en)</items>
+        <items id="text">Bommede eller ekstra optotyper</items>
+        <items id="description">Informasjon om enkeltoptotyper der hovedskåren var basert på en hel linje med optotyper.&#xD;
+Negativ: Antall uriktige optotyper i den siste linjen som ble markert som korrekt.&#xD;
+Positiv: Antall korrekte optotyper i den første linjen som ble markert som ikke korrekt.&#xD;
+Koden "Delvis" angir at et uspesifisert antall optotyper ble bommet i den minste skårede linjen.</items>
       </items>
       <items code="at0411">
-        <items id="text">*partial (en)</items>
-        <items id="description">*Some symbols were not read correctly in the smallest line that was scored as being successfully read. (en)</items>
+        <items id="text">Delvis</items>
+        <items id="description">Enkelte symboler ble ikke lest korrekt i den minste linjen som ble skåret som korrekt lest.</items>
       </items>
       <items code="at0412">
-        <items id="text">*Testing distance (en)</items>
-        <items id="description">*The distance between the tested eye and the (apparent) location of the stimulus. (en)</items>
-        <items id="comment">*The stimulus may be a virtual image. (en)</items>
+        <items id="text">Undersøkelsesavstand</items>
+        <items id="description">Avstanden mellom øyet som undersøkes og den (tilsynelatende) plasseringen av stimulusen.</items>
+        <items id="comment">Stimulusen kan være et virtuelt bilde.</items>
       </items>
       <items code="at0415">
-        <items id="text">*No improvement note (en)</items>
-        <items id="description">*A note indicating that the addition or use of another type of aid did not result in a better test result. (en)</items>
-        <items id="comment">*Used where a determination of the exact visual acuity with the additional correction (in another event) was not performed, typically because it was deemed irrelevant for lack of improvement.&#xD;
-Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available. (en)</items>
+        <items id="text">Merknad om ingen bedring</items>
+        <items id="description">En merknad som angir at tillegg eller bruk av en annen type hjelpemiddel ikke ga et bedre undersøkelsesresultat.</items>
+        <items id="comment">Brukes når nøyaktig visus med den ekstra korreksjonen (i en annen hendelse) ikke ble bestemt, vanligvis fordi det ble vurdert som irrelevant siden det ikke ga bedring.&#xD;
+Koding med en terminologi anbefales. Fritekst bør kun tillates dersom det ikke finnes en egnet kodet verdi.</items>
       </items>
       <items code="at0416">
-        <items id="text">*NI with additional pinhole (en)</items>
-        <items id="description">*No improvement with an additional pinhole placed in front of the tested eye. (en)</items>
+        <items id="text">Ingen bedring med ekstra pinhole</items>
+        <items id="description">Ingen bedring med en ekstra pinhole plassert foran øyet som undersøkes.</items>
       </items>
       <items code="at0417">
-        <items id="text">*NI with subjective refraction-based correction (en)</items>
-        <items id="description">*No improvement with corrective lenses based on subjective refraction. (en)</items>
+        <items id="text">Ingen bedring med korreksjon basert på subjektiv refraksjon</items>
+        <items id="description">Ingen bedring med korreksjonslinser basert på subjektiv refraksjon.</items>
       </items>
       <items code="at0418">
         <items id="text">Pupilltilstand</items>
-        <items id="description">*Statement describing the condition of the individual's pupils during the test. (en)</items>
-        <items id="comment">*The physical examination of the eye will be recorded using the CLUSTER.exam-eye family of archetypes. &#xD;
-Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available. (en)</items>
+        <items id="description">Utsagn som beskriver tilstanden til individets pupiller under undersøkelsen.</items>
+        <items id="comment">Den fysiske undersøkelsen av øyet registreres ved hjelp av arketypefamilien CLUSTER.exam-eye.&#xD;
+Koding med en terminologi anbefales. Fritekst bør kun tillates dersom det ikke finnes en egnet kodet verdi.</items>
       </items>
       <items code="at0419">
         <items id="text">Normal</items>
         <items id="description">Pupillen er i sin naturlige fysiologiske tilstand uten farmakologisk påvirkning eller patologiske endringer.</items>
       </items>
       <items code="at0420">
-        <items id="text">Medisinsk indusert mydriase</items>
-        <items id="description">Pupillen er utvidet på grunn av administrasjon av mydriatiske midler.</items>
+        <items id="text">Medikamentelt indusert mydriasis</items>
+        <items id="description">Pupillen var utvidet på grunn av tidligere administrasjon av mydriatiske midler.</items>
       </items>
       <items code="at0421">
-        <items id="text">Medisinsk indusert miose</items>
-        <items id="description">Pupillen er innsnevret på grunn av administrasjon av miotiske midler.</items>
+        <items id="text">Medikamentelt indusert miose</items>
+        <items id="description">Pupillen var innsnevret på grunn av tidligere administrasjon av miotiske midler.</items>
       </items>
       <items code="at0422">
         <items id="text">Patologisk pupilltilstand</items>
-        <items id="description">Pupillen var i en unormal fysiologisk tilstand på grunn av sykdom, traume eller strukturelle avvik.</items>
+        <items id="description">Pupillen var i en ikke-fysiologisk tilstand på grunn av sykdom, traume eller strukturelle avvik.</items>
       </items>
       <items code="at0461">
-        <items id="text">*Result (en)</items>
-        <items id="description">*A grouping of data elements to represent the primary notation of the visual acuity assessment result. (en)</items>
-        <items id="comment">*Typically, only one result should be populated.  &#xD;
-Converted or derived values should be stored in the appropriate element in the 'Derived result' cluster. (en)</items>
+        <items id="text">Resultat</items>
+        <items id="description">En gruppering av dataelementer som representerer den primære notasjonen for resultatet av visusundersøkelsen.</items>
+        <items id="comment">Vanligvis skal kun ett resultat fylles ut.&#xD;
+Omregnede eller avledede verdier skal lagres i det egnede elementet i clusteret 'Avledet resultat'.</items>
       </items>
       <items code="at0464">
-        <items id="text">*Power of sphere (en)</items>
-        <items id="description">*The refractive power that is equal in all meridians. (en)</items>
-        <items id="comment">*Used as the base correction upon which cylinder and axis are applied. (en)</items>
+        <items id="text">Sfærisk styrke</items>
+        <items id="description">Brytningsstyrken som er lik i alle meridianer.</items>
+        <items id="comment">Brukes som grunnkorreksjonen som sylinder og akse legges til.</items>
       </items>
       <items code="at0465">
-        <items id="text">*Visual aid details (en)</items>
-        <items id="description"></items>
+        <items id="text">Detaljer om synshjelpemiddel</items>
+        <items id="description">Strukturerte detaljer om utstyret som ble brukt som synshjelpemiddel under undersøkelsen, for eksempel en foropter, en prøvebrille, briller eller kontaktlinser.</items>
       </items>
       <items code="at0466">
-        <items id="text">*Power of cylinder (en)</items>
-        <items id="description">*The refractive power added to the spherical correction at the meridian 90° from the cylinder axis to compensate for astigmatism. (en)</items>
+        <items id="text">Sylinderstyrke</items>
+        <items id="description">Brytningsstyrken som legges til den sfæriske korreksjonen i meridianen 90° fra sylinderaksen for å kompensere for astigmatisme.</items>
       </items>
       <items code="at0467">
-        <items id="text">*Axis of cylinder (en)</items>
-        <items id="description">*The orientation of the cylinder in degrees. (en)</items>
-        <items id="comment">*By convention, the axis of the cylinder is defined by its medirian of zero power. (en)</items>
+        <items id="text">Sylinderakse</items>
+        <items id="description">Sylinderens orientering i grader.</items>
+        <items id="comment">Etter konvensjon defineres sylinderaksen av meridianen uten styrke.</items>
       </items>
       <items code="at0468">
-        <items id="text">*Near addition (en)</items>
-        <items id="description">*The additional spherical lens power for near vision. (en)</items>
+        <items id="text">Nærtillegg</items>
+        <items id="description">Den ekstra sfæriske linsestyrken for syn på nært hold.</items>
       </items>
       <items code="at0471">
-        <items id="text">*Physical object (en)</items>
-        <items id="description">*Physical objects other than charts or cards. (en)</items>
+        <items id="text">Fysisk objekt</items>
+        <items id="description">Andre fysiske objekter enn tavler eller kort.</items>
       </items>
       <items code="at0472">
-        <items id="text">*Berkeley rudimentary vision test (en)</items>
-        <items id="description">*Berkeley rudimentary vision test (BRVT) was used. (en)</items>
+        <items id="text">Berkeley rudimentary vision test</items>
+        <items id="description">Berkeley rudimentary vision test (BRVT) ble brukt.</items>
       </items>
       <items code="at0473">
-        <items id="text">*Near reading card (en)</items>
-        <items id="description">*A near reading card with segments of text was used. (en)</items>
+        <items id="text">Lesekort for nær avstand</items>
+        <items id="description">Et lesekort for nær avstand med tekstavsnitt ble brukt.</items>
       </items>
       <items code="at0474">
-        <items id="text">*LEA gratings acuity test (en)</items>
-        <items id="description">*LEA gratings were used, a type of a grating-based preferential looking test. (en)</items>
+        <items id="text">LEA gratings visustest</items>
+        <items id="description">LEA-gitre ble brukt, en type gitterbasert blikkpreferansetest.</items>
       </items>
       <items code="at0475">
-        <items id="text">*Teller acuity cards (en)</items>
-        <items id="description">*Teller acuity cards were used, a type of grating-based preferential looking test. (en)</items>
+        <items id="text">Teller-visuskort</items>
+        <items id="description">Teller-visuskort ble brukt, en type gitterbasert blikkpreferansetest.</items>
       </items>
       <items code="at0476">
-        <items id="text">*Cardiff acuity test (en)</items>
-        <items id="description">*The Cardiff acuity test was used, a type of vanishing optotype-based preferential looking test. (en)</items>
+        <items id="text">Cardiff-visustest</items>
+        <items id="description">Cardiff-visustesten ble brukt, en type blikkpreferansetest basert på forsvinnende optotyper.</items>
       </items>
       <items code="at0483">
-        <items id="text">*Allen picture test. (en)</items>
-        <items id="description">*An Allen picture test was used. (en)</items>
+        <items id="text">Allen-bildetest</items>
+        <items id="description">En Allen-bildetest ble brukt.</items>
       </items>
       <items code="at0484">
-        <items id="text">*Sheridan-Gardner test (en)</items>
-        <items id="description">*A Sheridan-Gardner test was used. (en)</items>
+        <items id="text">Sheridan-Gardner-test</items>
+        <items id="description">En Sheridan-Gardner-test ble brukt.</items>
       </items>
       <items code="at0485">
-        <items id="text">*Cambridge crowding cards (en)</items>
-        <items id="description">*A Cambridge crowding card test was used. (en)</items>
+        <items id="text">Cambridge crowding cards</items>
+        <items id="description">En test med Cambridge crowding cards ble brukt.</items>
       </items>
       <items code="at0486">
-        <items id="text">*MNREAD chart (en)</items>
-        <items id="description">*A Minnesota Low Vision Reading (MNREAD) reading acuity chart was used. (en)</items>
+        <items id="text">MNREAD-tavle</items>
+        <items id="description">En MNREAD-lesevisustavle (Minnesota Low Vision Reading) ble brukt.</items>
       </items>
       <items code="at0487">
-        <items id="text">*Radner reading chart (en)</items>
-        <items id="description">*A Radner reading chart was used. (en)</items>
+        <items id="text">Radner-lesetavle</items>
+        <items id="description">En Radner-lesetavle ble brukt.</items>
       </items>
       <items code="at0488">
-        <items id="text">*Freiburg visual acuity test (en)</items>
-        <items id="description">*A Freiburg visual acuity test (FrACT) was used. (en)</items>
+        <items id="text">Freiburg visusundersøkelse</items>
+        <items id="description">En Freiburg visusundersøkelse (FrACT) ble brukt.</items>
       </items>
       <items code="at0489">
-        <items id="text">*Sheridan Gardiner test (en)</items>
-        <items id="description">*A Sheridan Gardiner test was used. (en)</items>
+        <items id="text">Sheridan Gardiner-test</items>
+        <items id="description">En Sheridan Gardiner-test ble brukt.</items>
       </items>
       <items code="at0490">
-        <items id="text">*Integrated virtual chart display (en)</items>
-        <items id="description">*A chart presented as a virtual image inside a device, such as an autorefractor. (en)</items>
+        <items id="text">Integrert virtuell tavlevisning</items>
+        <items id="description">En tavle presentert som et virtuelt bilde inne i et instrument, for eksempel en autorefraktor.</items>
       </items>
       <items code="at0491">
-        <items id="text">*Cycles per centimetre result (en)</items>
-        <items id="description">*The number of cycles (line pairs) per centimetre of the finest grating pattern recognized by the individual. (en)</items>
-        <items id="comment">*Strictly not a unit of visual acuity but a measure of stimulus size. (en)</items>
+        <items id="text">Resultat i perioder per centimeter</items>
+        <items id="description">Antall perioder (linjepar) per centimeter i det fineste gittermønsteret individet gjenkjente.</items>
+        <items id="comment">Strengt tatt ikke en visusenhet, men et mål på stimulusstørrelse.</items>
       </items>
       <items code="at0492">
-        <items id="text">*Cycles per degree result (en)</items>
-        <items id="description">*The visual acuity measured and expressed as the number of pairs of black and white lines (cycles) that subtend an angle of one degree at the tested eye. (en)</items>
-        <items id="comment">*Used in grating based tests such as Teller acuity cards.  (en)</items>
+        <items id="text">Resultat i perioder per grad</items>
+        <items id="description">Visus målt og uttrykt som antall par av svarte og hvite linjer (perioder) som spenner over en vinkel på én grad ved øyet som undersøkes.</items>
+        <items id="comment">Brukes i gitterbaserte tester, som Teller-visuskort.</items>
       </items>
       <items code="at0493">
-        <items id="text">*Derived cycles per degree (en)</items>
-        <items id="description">*Visual acuity as cycles per degree, derived by conversion from the primary recording. (en)</items>
+        <items id="text">Avledet resultat i perioder per grad</items>
+        <items id="description">Visus i perioder per grad, avledet ved omregning fra den primære registreringen.</items>
       </items>
       <items code="at0494">
-        <items id="text">*NI with autorefraction-based correction (en)</items>
-        <items id="description">*No improvement withf corrective lenses based on an autorefraction test. (en)</items>
+        <items id="text">Ingen bedring med korreksjon basert på autorefraksjon</items>
+        <items id="description">Ingen bedring med korreksjonslinser basert på en autorefraksjonsmåling.</items>
       </items>
       <items code="at0495">
-        <items id="text">*NI with glasses (en)</items>
-        <items id="description">*No improvement with eyeglasses. (en)</items>
+        <items id="text">Ingen bedring med briller</items>
+        <items id="description">Ingen bedring med briller.</items>
       </items>
       <items code="at0496">
-        <items id="text">*NI with soft contact lens (en)</items>
-        <items id="description">*No improvement with a soft contact lens. (en)</items>
+        <items id="text">Ingen bedring med myk kontaktlinse</items>
+        <items id="description">Ingen bedring med en myk kontaktlinse.</items>
       </items>
       <items code="at0497">
-        <items id="text">*NI with retinoscopy-based correction (en)</items>
-        <items id="description">*No improvement with corrective lenses based on retinoscopy. (en)</items>
+        <items id="text">Ingen bedring med korreksjon basert på retinoskopi</items>
+        <items id="description">Ingen bedring med korreksjonslinser basert på retinoskopi.</items>
       </items>
       <items code="at0498">
-        <items id="text">*NI with rigid contact lens (en)</items>
-        <items id="description">*No improvement with a hard contact lens (en)</items>
+        <items id="text">Ingen bedring med hard kontaktlinse</items>
+        <items id="description">Ingen bedring med en hard kontaktlinse.</items>
       </items>
       <items code="at0499">
-        <items id="text">*Sonksen Silver test (en)</items>
-        <items id="description">*A Sonksen Silver test was used. (en)</items>
+        <items id="text">Sonksen Silver-test</items>
+        <items id="description">En Sonksen Silver-test ble brukt.</items>
       </items>
       <items code="at0500">
-        <items id="text">*Cycloplegia during refraction (en)</items>
-        <items id="description">*Information on whether the correction used was based on a measurement of the refractive error in a cycloplegic state. (en)</items>
+        <items id="text">Cykloplegi under refraksjon</items>
+        <items id="description">Informasjon om hvorvidt korreksjonen som ble brukt var basert på en måling av refraksjonsfeilen i cykloplegisk tilstand.</items>
       </items>
       <items code="at0501">
-        <items id="text">*Cycloplegic refraction (en)</items>
-        <items id="description">*The correction used was based on a measurement of refractive error in a cycloplegic state. (en)</items>
+        <items id="text">Cykloplegisk refraksjon</items>
+        <items id="description">Korreksjonen som ble brukt var basert på en måling av refraksjonsfeil i cykloplegisk tilstand.</items>
       </items>
       <items code="at0502">
-        <items id="text">*Non-cycloplegic refraction (en)</items>
-        <items id="description">*The correction used was based on a measurement of refractive error in a non-cycloplegic state. (en)</items>
+        <items id="text">Ikke-cykloplegisk refraksjon</items>
+        <items id="description">Korreksjonen som ble brukt var basert på en måling av refraksjonsfeil i ikke-cykloplegisk tilstand.</items>
       </items>
       <items code="at0510">
-        <items id="text">*NI with further correction (en)</items>
-        <items id="description">*No improvement with an unspecified further correction. (en)</items>
+        <items id="text">Ingen bedring med ytterligere korreksjon</items>
+        <items id="description">Ingen bedring med en uspesifisert ytterligere korreksjon.</items>
       </items>
       <items code="at0512">
-        <items id="text">*Supplementary results (en)</items>
-        <items id="description">*Additional structured details on visual acuity test result not captured in other data elements. (en)</items>
-        <items id="comment">*Examples include specifying the card scored in a Cardiff acuity test, or supplementary results on reading visual acuity tests.  (en)</items>
+        <items id="text">Supplerende resultater</items>
+        <items id="description">Ytterligere strukturerte detaljer om resultatet av visusundersøkelsen som ikke fanges opp av andre dataelementer.</items>
+        <items id="comment">Eksempler er å angi hvilket kort som ble skåret i en Cardiff-visustest, eller supplerende resultater fra lesevisusundersøkelser.</items>
       </items>
       <items code="at0513">
-        <items id="text">*Contrast category (en)</items>
-        <items id="description">*A statement on the contrast level of the test. (en)</items>
-        <items id="comment">*Note that the majority of visual acuity tests are performed under high contrast conditions.&#xD;
-Where possible, population of quantitative elements on contrast is encouraged. (en)</items>
+        <items id="text">Kontrastkategori</items>
+        <items id="description">Et utsagn om kontrastnivået i undersøkelsen.</items>
+        <items id="comment">Merk at de fleste visusundersøkelser utføres under forhold med høy kontrast.&#xD;
+Der det er mulig, oppfordres det til å fylle ut kvantitative elementer om kontrast.</items>
       </items>
       <items code="at0514">
-        <items id="text">*High-contrast (en)</items>
-        <items id="description">*The test was performed with high contrast. (en)</items>
+        <items id="text">Høy kontrast</items>
+        <items id="description">Undersøkelsen ble utført med høy kontrast.</items>
       </items>
       <items code="at0515">
-        <items id="text">*Low-contrast (en)</items>
-        <items id="description">*The test was performed with low contrast. (en)</items>
+        <items id="text">Lav kontrast</items>
+        <items id="description">Undersøkelsen ble utført med lav kontrast.</items>
       </items>
       <items code="at0516">
-        <items id="text">*Optotype presentation details (en)</items>
-        <items id="description">*Details on how the optotypes were presented, including statements on crowding. (en)</items>
+        <items id="text">Detaljer om presentasjon av optotyper</items>
+        <items id="description">Detaljer om hvordan optotypene ble presentert, inkludert utsagn om crowding.</items>
       </items>
       <items code="at0517">
-        <items id="text">*Defocus lens (en)</items>
-        <items id="description">*A lens used with the intention of adding refractive error. (en)</items>
+        <items id="text">Defokuslinse</items>
+        <items id="description">En linse som brukes med den hensikt å tilføre refraksjonsfeil.</items>
       </items>
       <items code="at0518">
-        <items id="text">*N 1 (en)</items>
-        <items id="description"></items>
+        <items id="text">N 1</items>
+        <items id="description">N-skriftstørrelse 1.</items>
       </items>
       <items code="at0519">
-        <items id="text">*N 1.5 (en)</items>
-        <items id="description">*N font size 1.5 (en)</items>
+        <items id="text">N 1.5</items>
+        <items id="description">N-skriftstørrelse 1,5.</items>
       </items>
       <items code="at0520">
-        <items id="text">*N 2 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 2</items>
+        <items id="description">N-skriftstørrelse 2.</items>
       </items>
       <items code="at0521">
-        <items id="text">*N 2.5 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 2.5</items>
+        <items id="description">N-skriftstørrelse 2,5.</items>
       </items>
       <items code="at0522">
-        <items id="text">*N 3 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 3</items>
+        <items id="description">N-skriftstørrelse 3.</items>
       </items>
       <items code="at0523">
-        <items id="text">*N 3.5 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 3.5</items>
+        <items id="description">N-skriftstørrelse 3,5.</items>
       </items>
       <items code="at0524">
-        <items id="text">*N 4 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 4</items>
+        <items id="description">N-skriftstørrelse 4.</items>
       </items>
       <items code="at0525">
-        <items id="text">*N 4.5 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 4.5</items>
+        <items id="description">N-skriftstørrelse 4,5.</items>
       </items>
       <items code="at0526">
-        <items id="text">*N 5 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 5</items>
+        <items id="description">N-skriftstørrelse 5.</items>
       </items>
       <items code="at0527">
-        <items id="text">*N 5.5 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 5.5</items>
+        <items id="description">N-skriftstørrelse 5,5.</items>
       </items>
       <items code="at0528">
-        <items id="text">*N 6 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 6</items>
+        <items id="description">N-skriftstørrelse 6.</items>
       </items>
       <items code="at0529">
-        <items id="text">*N 6.5 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 6.5</items>
+        <items id="description">N-skriftstørrelse 6,5.</items>
       </items>
       <items code="at0530">
-        <items id="text">*N 7.5 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 7.5</items>
+        <items id="description">N-skriftstørrelse 7,5.</items>
       </items>
       <items code="at0531">
-        <items id="text">*N 8 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 8</items>
+        <items id="description">N-skriftstørrelse 8.</items>
       </items>
       <items code="at0532">
-        <items id="text">*N 9 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 9</items>
+        <items id="description">N-skriftstørrelse 9.</items>
       </items>
       <items code="at0533">
-        <items id="text">*N 10 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 10</items>
+        <items id="description">N-skriftstørrelse 10.</items>
       </items>
       <items code="at0534">
-        <items id="text">*N 11 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 11</items>
+        <items id="description">N-skriftstørrelse 11.</items>
       </items>
       <items code="at0535">
-        <items id="text">*N 12 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 12</items>
+        <items id="description">N-skriftstørrelse 12.</items>
       </items>
       <items code="at0536">
-        <items id="text">*N 13 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 13</items>
+        <items id="description">N-skriftstørrelse 13.</items>
       </items>
       <items code="at0537">
-        <items id="text">*N 14 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 14</items>
+        <items id="description">N-skriftstørrelse 14.</items>
       </items>
       <items code="at0538">
-        <items id="text">*N 15 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 15</items>
+        <items id="description">N-skriftstørrelse 15.</items>
       </items>
       <items code="at0539">
-        <items id="text">*N 16 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 16</items>
+        <items id="description">N-skriftstørrelse 16.</items>
       </items>
       <items code="at0540">
-        <items id="text">*N 18 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 18</items>
+        <items id="description">N-skriftstørrelse 18.</items>
       </items>
       <items code="at0541">
-        <items id="text">*N 20 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 20</items>
+        <items id="description">N-skriftstørrelse 20.</items>
       </items>
       <items code="at0542">
-        <items id="text">*N 22 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 22</items>
+        <items id="description">N-skriftstørrelse 22.</items>
       </items>
       <items code="at0543">
-        <items id="text">*N 24 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 24</items>
+        <items id="description">N-skriftstørrelse 24.</items>
       </items>
       <items code="at0544">
-        <items id="text">*N 26 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 26</items>
+        <items id="description">N-skriftstørrelse 26.</items>
       </items>
       <items code="at0545">
-        <items id="text">*N 28 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 28</items>
+        <items id="description">N-skriftstørrelse 28.</items>
       </items>
       <items code="at0546">
-        <items id="text">*N 30 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 30</items>
+        <items id="description">N-skriftstørrelse 30.</items>
       </items>
       <items code="at0547">
-        <items id="text">*N 32 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 32</items>
+        <items id="description">N-skriftstørrelse 32.</items>
       </items>
       <items code="at0548">
-        <items id="text">*N 36 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 36</items>
+        <items id="description">N-skriftstørrelse 36.</items>
       </items>
       <items code="at0549">
-        <items id="text">*N 40 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 40</items>
+        <items id="description">N-skriftstørrelse 40.</items>
       </items>
       <items code="at0550">
-        <items id="text">*N 42 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 42</items>
+        <items id="description">N-skriftstørrelse 42.</items>
       </items>
       <items code="at0551">
-        <items id="text">*N 44 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 44</items>
+        <items id="description">N-skriftstørrelse 44.</items>
       </items>
       <items code="at0552">
-        <items id="text">*N 48 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 48</items>
+        <items id="description">N-skriftstørrelse 48.</items>
       </items>
       <items code="at0553">
-        <items id="text">*N 54 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 54</items>
+        <items id="description">N-skriftstørrelse 54.</items>
       </items>
       <items code="at0554">
-        <items id="text">*N 56 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 56</items>
+        <items id="description">N-skriftstørrelse 56.</items>
       </items>
       <items code="at0555">
-        <items id="text">*N 60 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 60</items>
+        <items id="description">N-skriftstørrelse 60.</items>
       </items>
       <items code="at0556">
-        <items id="text">*N 66 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 66</items>
+        <items id="description">N-skriftstørrelse 66.</items>
       </items>
       <items code="at0557">
-        <items id="text">*N 72 (en)</items>
-        <items id="description">*N font size (en)</items>
+        <items id="text">N 72</items>
+        <items id="description">N-skriftstørrelse 72.</items>
       </items>
       <items code="at0558">
-        <items id="text">*Crowdedness (en)</items>
-        <items id="description">*A categorical statement on whether a crowding effect is expected to be induced by the visual stimulus. (en)</items>
-        <items id="comment">*Additional detail on the degree of crowding, and presence of crowding bars can be recorded using the 'Optotype presentation details' SLOT. (en)</items>
+        <items id="text">Crowding</items>
+        <items id="description">Et kategorisk utsagn om hvorvidt den visuelle stimulusen forventes å framkalle en crowding-effekt.</items>
+        <items id="comment">Ytterligere detaljer om graden av crowding og forekomst av crowding-streker kan registreres ved hjelp av SLOT-en 'Detaljer om presentasjon av optotyper'.</items>
       </items>
       <items code="at0560">
-        <items id="text">*Crowded (en)</items>
-        <items id="description"></items>
+        <items id="text">Med crowding</items>
+        <items id="description">Stimulusen ble presentert på en måte som antas å framkalle en crowding-effekt.</items>
       </items>
       <items code="at0561">
-        <items id="text">*Not Crowded (en)</items>
-        <items id="description"></items>
+        <items id="text">Uten crowding</items>
+        <items id="description">Stimulusen ble presentert på en måte som antas ikke å framkalle en crowding-effekt.</items>
       </items>
       <items code="at0562">
-        <items id="text">*Type of ancillary lighting used (en)</items>
-        <items id="description">*Type of light sources used in addition to the typical room, stimulus or chart lighting. (en)</items>
-        <items id="comment">*Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available. (en)</items>
+        <items id="text">Type tilleggsbelysning som ble brukt</items>
+        <items id="description">Typen lyskilder som ble brukt i tillegg til vanlig rom-, stimulus- eller tavlebelysning.</items>
+        <items id="comment">Koding med en terminologi anbefales. Fritekst bør kun tillates dersom det ikke finnes en egnet kodet verdi.</items>
       </items>
       <items code="at0563">
-        <items id="text">*Glare light (en)</items>
-        <items id="description">*A light source, or multiple light sources were directed at the eye to induce glare. (en)</items>
+        <items id="text">Blendingslys</items>
+        <items id="description">En eller flere lyskilder ble rettet mot øyet for å framkalle blending.</items>
       </items>
       <items code="at0564">
-        <items id="text">*Brightness Acuity Test (en)</items>
-        <items id="description">*A handheld ganzfeld illumination device was used to simulate environmental brightness. (en)</items>
+        <items id="text">Brightness Acuity Test</items>
+        <items id="description">Et håndholdt ganzfeld-belysningsinstrument ble brukt for å simulere lysstyrke i omgivelsene.</items>
       </items>
       <items code="at0565">
-        <items id="text">*Comment (en)</items>
-        <items id="description">*Narrative comment about the specific visual aid used. (en)</items>
+        <items id="text">Kommentar</items>
+        <items id="description">Fritekstkommentar om det spesifikke synshjelpemiddelet som ble brukt.</items>
       </items>
       <items code="at0566">
-        <items id="text">*J1 (en)</items>
-        <items id="description">*Jaeger font size 1. (en)</items>
+        <items id="text">J1</items>
+        <items id="description">Jaeger-skriftstørrelse 1.</items>
       </items>
       <items code="at0567">
-        <items id="text">*J2 (en)</items>
-        <items id="description">*Jaeger font size 2. (en)</items>
+        <items id="text">J2</items>
+        <items id="description">Jaeger-skriftstørrelse 2.</items>
       </items>
       <items code="at0568">
-        <items id="text">*J3 (en)</items>
-        <items id="description">*Jaeger font size 3. (en)</items>
+        <items id="text">J3</items>
+        <items id="description">Jaeger-skriftstørrelse 3.</items>
       </items>
       <items code="at0569">
-        <items id="text">*J4 (en)</items>
-        <items id="description">*Jaeger font size 4. (en)</items>
+        <items id="text">J4</items>
+        <items id="description">Jaeger-skriftstørrelse 4.</items>
       </items>
       <items code="at0570">
-        <items id="text">*J5 (en)</items>
-        <items id="description">*Jaeger font size 5. (en)</items>
+        <items id="text">J5</items>
+        <items id="description">Jaeger-skriftstørrelse 5.</items>
       </items>
       <items code="at0571">
-        <items id="text">*J6 (en)</items>
-        <items id="description">*Jaeger font size 6. (en)</items>
+        <items id="text">J6</items>
+        <items id="description">Jaeger-skriftstørrelse 6.</items>
       </items>
       <items code="at0572">
-        <items id="text">*J7 (en)</items>
-        <items id="description">*Jaeger font size 7. (en)</items>
+        <items id="text">J7</items>
+        <items id="description">Jaeger-skriftstørrelse 7.</items>
       </items>
       <items code="at0573">
-        <items id="text">*J8 (en)</items>
-        <items id="description">*Jaeger font size 8. (en)</items>
+        <items id="text">J8</items>
+        <items id="description">Jaeger-skriftstørrelse 8.</items>
       </items>
       <items code="at0574">
-        <items id="text">*J9 (en)</items>
-        <items id="description">*Jaeger font size 9. (en)</items>
+        <items id="text">J9</items>
+        <items id="description">Jaeger-skriftstørrelse 9.</items>
       </items>
       <items code="at0575">
-        <items id="text">*J10 (en)</items>
-        <items id="description">*Jaeger font size 10. (en)</items>
+        <items id="text">J10</items>
+        <items id="description">Jaeger-skriftstørrelse 10.</items>
       </items>
       <items code="at0576">
-        <items id="text">*J11 (en)</items>
-        <items id="description">*Jaeger font size 11. (en)</items>
+        <items id="text">J11</items>
+        <items id="description">Jaeger-skriftstørrelse 11.</items>
       </items>
       <items code="at0577">
-        <items id="text">*J12 (en)</items>
-        <items id="description">*Jaeger font size 12. (en)</items>
+        <items id="text">J12</items>
+        <items id="description">Jaeger-skriftstørrelse 12.</items>
       </items>
       <items code="at0578">
-        <items id="text">*J13 (en)</items>
-        <items id="description">*Jaeger font size 13. (en)</items>
+        <items id="text">J13</items>
+        <items id="description">Jaeger-skriftstørrelse 13.</items>
       </items>
       <items code="at0579">
-        <items id="text">*J14 (en)</items>
-        <items id="description">*Jaeger font size 14. (en)</items>
+        <items id="text">J14</items>
+        <items id="description">Jaeger-skriftstørrelse 14.</items>
       </items>
       <items code="at0580">
-        <items id="text">*J15 (en)</items>
-        <items id="description">*Jaeger font size 15. (en)</items>
+        <items id="text">J15</items>
+        <items id="description">Jaeger-skriftstørrelse 15.</items>
       </items>
       <items code="at0581">
-        <items id="text">*J16 (en)</items>
-        <items id="description">*Jaeger font size 16. (en)</items>
+        <items id="text">J16</items>
+        <items id="description">Jaeger-skriftstørrelse 16.</items>
       </items>
       <items code="at0582">
-        <items id="text">*J17 (en)</items>
-        <items id="description">*Jaeger font size 17. (en)</items>
+        <items id="text">J17</items>
+        <items id="description">Jaeger-skriftstørrelse 17.</items>
       </items>
       <items code="at0583">
-        <items id="text">*J18 (en)</items>
-        <items id="description">*Jaeger font size 18. (en)</items>
+        <items id="text">J18</items>
+        <items id="description">Jaeger-skriftstørrelse 18.</items>
       </items>
       <items code="at0584">
-        <items id="text">*J19 (en)</items>
-        <items id="description">*Jaeger font size 19. (en)</items>
+        <items id="text">J19</items>
+        <items id="description">Jaeger-skriftstørrelse 19.</items>
       </items>
       <items code="at0585">
-        <items id="text">*J20 (en)</items>
-        <items id="description">*Jaeger font size 20. (en)</items>
+        <items id="text">J20</items>
+        <items id="description">Jaeger-skriftstørrelse 20.</items>
       </items>
       <items code="at0586">
-        <items id="text">*Perceptual task (en)</items>
-        <items id="description">*The type of perceptual task  endpoint that the result represents. (en)</items>
-        <items id="comment">*Reading visual acuity expressed LogMAR is sometimes referred to as LogRAD. &#xD;
-Supplementary results of reading visual acuity tests can be recorded via the 'supplementary results' slot.  (en)</items>
+        <items id="text">Perseptuell oppgave</items>
+        <items id="description">Typen perseptuelt endepunkt som resultatet representerer.</items>
+        <items id="comment">Lesevisus uttrykt i logMAR omtales noen ganger som logRAD.&#xD;
+Supplerende resultater fra lesevisusundersøkelser kan registreres via SLOT-en 'Supplerende resultater'.</items>
       </items>
       <items code="at0587">
-        <items id="text">*Minimum resolvable visual acuity (en)</items>
-        <items id="description">*A measurement of the ability to distinguish two separate objects as distinct. (en)</items>
+        <items id="text">Minste oppløsbare visus</items>
+        <items id="description">Et mål på evnen til å skille to atskilte objekter fra hverandre.</items>
       </items>
       <items code="at0588">
-        <items id="text">*Reading acuity (en)</items>
-        <items id="description">*A measurement of the smallest visual angle at which text can be read. (en)</items>
+        <items id="text">Lesevisus</items>
+        <items id="description">Et mål på den minste synsvinkelen der tekst kan leses.</items>
       </items>
       <items code="at0589">
-        <items id="text">*Light adaptation state (en)</items>
-        <items id="description">*The presumed adaptation state of the visual system during testing. (en)</items>
-        <items id="comment">*This is a categorical description of the individual's presumed retinal adaptation state, not a measurement of the ambient lighting. (en)</items>
+        <items id="text">Lysadaptasjonstilstand</items>
+        <items id="description">Den antatte adaptasjonstilstanden til synssystemet under undersøkelsen.</items>
+        <items id="comment">Dette er en kategorisk beskrivelse av individets antatte netthinneadaptasjon, ikke en måling av belysningen i omgivelsene.</items>
       </items>
       <items code="at0590">
-        <items id="text">*Photopic (en)</items>
-        <items id="description">*The individual is adapted to high luminance conditions. (en)</items>
+        <items id="text">Fotopisk</items>
+        <items id="description">Individet er adaptert til forhold med høy luminans.</items>
       </items>
       <items code="at0591">
-        <items id="text">*Mesopic (en)</items>
-        <items id="description">*The individual is in a transitional adaptation state between photopic and scotopic. (en)</items>
+        <items id="text">Mesopisk</items>
+        <items id="description">Individet er i en overgangstilstand mellom fotopisk og skotopisk adaptasjon.</items>
       </items>
       <items code="at0592">
-        <items id="text">*Scotopic (en)</items>
-        <items id="description">*The individual is adapted to low luminance conditions. (en)</items>
+        <items id="text">Skotopisk</items>
+        <items id="description">Individet er adaptert til forhold med lav luminans.</items>
       </items>
       <items code="at0593">
-        <items id="text">*N 7 (en)</items>
-        <items id="description">*N font size 7 (en)</items>
+        <items id="text">N 7</items>
+        <items id="description">N-skriftstørrelse 7.</items>
       </items>
       <items code="at0594">
-        <items id="text">*No light perception (en)</items>
-        <items id="description">*The individual was unable to identify the absence or presence of light. (en)</items>
+        <items id="text">Ingen lyssans</items>
+        <items id="description">Individet klarte ikke å identifisere fravær eller tilstedeværelse av lys.</items>
       </items>
       <items code="at0595">
-        <items id="text">*Light perception (en)</items>
-        <items id="description">*The individual correctly identified the absence or presence of light. (en)</items>
+        <items id="text">Lyssans</items>
+        <items id="description">Individet identifiserte korrekt fravær eller tilstedeværelse av lys.</items>
       </items>
       <items code="at0596">
-        <items id="text">*Hand Movement (en)</items>
-        <items id="description">*The individual perceived hand movements. (en)</items>
+        <items id="text">Håndbevegelser</items>
+        <items id="description">Individet oppfattet håndbevegelser.</items>
       </items>
       <items code="at0597">
-        <items id="text">*Count Fingers (en)</items>
-        <items id="description">*The individual correctly counted fingers. (en)</items>
+        <items id="text">Fingertelling</items>
+        <items id="description">Individet telte fingre korrekt.</items>
       </items>
       <items code="at0598">
-        <items id="text">*Bailey-Lovie chart (en)</items>
-        <items id="description">*A Bailey-Lovie chart was used. (en)</items>
+        <items id="text">Bailey-Lovie-tavle</items>
+        <items id="description">En Bailey-Lovie-tavle ble brukt.</items>
       </items>
       <items code="at0599">
-        <items id="text">*E-ETDRS test (en)</items>
-        <items id="description">*An electronic or computerized ETRDS testing protocol was used. (en)</items>
+        <items id="text">E-ETDRS-test</items>
+        <items id="description">En elektronisk eller datamaskinbasert ETDRS-undersøkelsesprotokoll ble brukt.</items>
       </items>
       <items code="at0600">
-        <items id="text">*ATS-HOTV test (en)</items>
-        <items id="description">*The Amblyopia Treatment Study HOTV testing protocol was used. (en)</items>
+        <items id="text">ATS-HOTV-test</items>
+        <items id="description">Undersøkelsesprotokollen HOTV fra Amblyopia Treatment Study ble brukt.</items>
       </items>
       <items code="at0601">
-        <items id="text">*Minimum detectable visual acuity (en)</items>
-        <items id="description">*A measurement of the ability to detect a visual object. (en)</items>
+        <items id="text">Minste synbare visus</items>
+        <items id="description">Et mål på evnen til å oppdage et visuelt objekt.</items>
       </items>
       <items code="at0602">
-        <items id="text">*Minimum recognizable visual acuity (en)</items>
-        <items id="description">*A measurement of the ability to recognize and identify a visual object. (en)</items>
+        <items id="text">Minste gjenkjennbare visus</items>
+        <items id="description">Et mål på evnen til å gjenkjenne og identifisere et visuelt objekt.</items>
       </items>
       <items code="at0603">
-        <items id="text">*Left eye (en)</items>
-        <items id="description">*The aid was positioned in front of the left eye. (en)</items>
+        <items id="text">Venstre øye</items>
+        <items id="description">Hjelpemiddelet var plassert foran venstre øye.</items>
       </items>
       <items code="at0604">
-        <items id="text">*Right eye (en)</items>
-        <items id="description">*The aid was positioned in front of the left eye. (en)</items>
+        <items id="text">Høyre øye</items>
+        <items id="description">Hjelpemiddelet var plassert foran høyre øye.</items>
       </items>
     </term_definitions>
     <term_bindings terminology="SNOMED-CT">
@@ -7549,4 +7537,3 @@ Supplementary results of reading visual acuity tests can be recorded via the 'su
     </term_bindings>
   </ontology>
 </archetype>
-

@@ -1,0 +1,599 @@
+﻿archetype (adl_version=1.4; uid=4893d690-2364-4e67-b6e2-df106a44eba3)
+	openEHR-EHR-EVALUATION.infectious_exposure.v0
+
+concept
+	[at0000]	-- Infectious exposure investigation
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Sarah Ballout, Natalia Strauch">
+				["organisation"] = <"Medizinische Hochschule Hannover">
+				["email"] = <"ballout.sarah@mh-hannover.de, Strauch.Natalia@mh-hannover.de">
+			>
+		>
+		["it"] = <
+			language = <[ISO_639-1::it]>
+			author = <
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Atomica Informatics">
+		["email"] = <"heather.leslie@atomicainformatics.com">
+		["date"] = <"2013-01-01">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Darstellung der Informationen zu einer Risikoeinschätzung für eine Person, die möglicherweise einem infektiösen Erreger ausgesetzt war.">
+			use = <"Verwenden Sie diesen Archetyp, um Informationen zu einer Risikoeinschätzung für eine Person darzustellen, die möglicherweise einem Infektionserreger ausgesetzt war, insbesondere im Zusammenhang mit einem Ausbruch einer Infektionskrankheit.">
+			keywords = <"Infektion", "ansteckend", "infektiös", "Ausbruch", "Exposition", "Virus", "Ansteckung", "Pandemie">
+			misuse = <"">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record details about a risk assessment for an individual who may have been exposed to an infectious agent.">
+			use = <"Use to record details about a risk assessment for an individual who may have been exposed to an infectious agent, especially in the context of an outbreak of infectious disease.">
+			keywords = <"infection, infectious, outbreak, exposure, virus, contagion, pandemic", ...>
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+		["it"] = <
+			language = <[ISO_639-1::it]>
+			purpose = <"*To record details about a risk assessment for an individual who may have been exposed to an infectious agent. (en)">
+			use = <"*Use to record details about a risk assessment for an individual who may have been exposed to an infectious agent, especially in the context of an outbreak of infectious disease. (en)">
+			keywords = <"*infection, infectious, outbreak, exposure, virus, contagion, pandemic (en)", ...>
+			misuse = <"">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"A8B155962EC067F1AC5B6CC80A5B0379">
+		["build_uid"] = <"ff9829e1-fb00-45b3-97cf-1e527e6b99fe">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	EVALUATION[at0000] matches {    -- Infectious exposure investigation
+		data matches {
+			ITEM_TREE[at0001] matches {    -- Tree
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0002] occurrences matches {0..1} matches {    -- Infectious agent
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0003] occurrences matches {0..1} matches {    -- Description
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					CLUSTER[at0005] occurrences matches {0..*} matches {    -- Specific exposure details
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0027] occurrences matches {0..1} matches {    -- Confirmed exposure?
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0028,    -- Confirmed
+											at0029]    -- Not confirmed
+										}
+									}
+								}
+							}
+							ELEMENT[at0024] occurrences matches {0..1} matches {    -- Exposure category
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0006] occurrences matches {0..1} matches {    -- Description of exposure
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0007] occurrences matches {0..*} matches {    -- Date/time of exposure
+								value matches {
+									DV_DATE_TIME matches {*}
+								}
+							}
+							ELEMENT[at0018] occurrences matches {0..1} matches {    -- Exposed anatomical location
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0019] occurrences matches {0..*} matches {    -- Anatomical location details
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1/}
+							}
+							ELEMENT[at0008] occurrences matches {0..1} matches {    -- Physical location category
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0026] occurrences matches {0..*} matches {    -- Structured location details
+								include
+									archetype_id/value matches {/.*/}
+							}
+							ELEMENT[at0009] occurrences matches {0..*} matches {    -- Specific physical location
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0020] occurrences matches {0..1} matches {    -- Activity category
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0021] occurrences matches {0..1} matches {    -- Activity description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0022] occurrences matches {0..*} matches {    -- Personal protective equipment
+								include
+									archetype_id/value matches {/.*/}
+							}
+							ELEMENT[at0011] occurrences matches {0..1} matches {    -- Duration of exposure
+								value matches {
+									DV_DURATION matches {*}
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0012] occurrences matches {0..1} matches {    -- Proximity of contact
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0015] occurrences matches {0..*} matches {    -- Source individual details
+								include
+									archetype_id/value matches {/.*/}
+							}
+							ELEMENT[at0025] occurrences matches {0..1} matches {    -- Case identifier
+								value matches {
+									DV_TEXT matches {*}
+									DV_IDENTIFIER matches {*}
+								}
+							}
+							ELEMENT[at0004] occurrences matches {0..1} matches {    -- Date of notification/report
+								value matches {
+									DV_DATE_TIME matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0016] occurrences matches {0..*} matches {    -- Contributory factors
+							}
+						}
+					}
+					ELEMENT[at0030] occurrences matches {0..1} matches {    -- Total number of exposures
+						value matches {
+							DV_COUNT matches {*}
+						}
+					}
+					ELEMENT[at0013] occurrences matches {0..1} matches {    -- Risk stratification
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					allow_archetype CLUSTER[at0017] occurrences matches {0..*} matches {    -- Exposed individual details
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0031] matches {    -- Item tree
+				items cardinality matches {0..*; unordered} matches {
+					allow_archetype CLUSTER[at0032] occurrences matches {0..*} matches {    -- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Infectious exposure investigation">
+					description = <"Risk assessment for an individual who may have been exposed to an infectious agent.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Infectious agent">
+					description = <"Identification of the organism, material, symptoms or condition to which the individual has been exposed.">
+				>
+				["at0003"] = <
+					text = <"Description">
+					description = <"Narrative description about the overall exposure.">
+				>
+				["at0004"] = <
+					text = <"Date of notification/report">
+					description = <"Date/time of notification or report to authorities.">
+				>
+				["at0005"] = <
+					text = <"Specific exposure details">
+					description = <"Details about a single exposure.">
+					comment = <"Multiple exposures can be recorded, using one instance of this cluster per exposure.">
+				>
+				["at0006"] = <
+					text = <"Description of exposure">
+					description = <"Details about the method of exposure.">
+					comment = <"For example: airborne, direct contact, or needle stick.">
+				>
+				["at0007"] = <
+					text = <"Date/time of exposure">
+					description = <"Date and time of exposure.">
+					comment = <" Can be cloned in template and renamed for specific Date/time at onset of exposure and cessation of exposure.">
+				>
+				["at0008"] = <
+					text = <"Physical location category">
+					description = <"Type of location.">
+				>
+				["at0009"] = <
+					text = <"Specific physical location">
+					description = <"Narrative description about the physical location of the exposure.">
+				>
+				["at0011"] = <
+					text = <"Duration of exposure">
+					description = <"The length of time of the exposure.">
+				>
+				["at0012"] = <
+					text = <"Proximity of contact">
+					description = <"Closeness of contact.">
+					comment = <"For example: direct contact; shared room; or shared ward.">
+				>
+				["at0013"] = <
+					text = <"Risk stratification">
+					description = <"Risk assessment about the exposure to the infectious agent.">
+				>
+				["at0015"] = <
+					text = <"Source individual details">
+					description = <"Structured details about the person who is the source of infection.">
+				>
+				["at0016"] = <
+					text = <"Contributory factors">
+					description = <"Factors which may have contributed to the infectious contact.">
+				>
+				["at0017"] = <
+					text = <"Exposed individual details">
+					description = <"Structured details about the person who has been exposed or infected.">
+				>
+				["at0018"] = <
+					text = <"Exposed anatomical location">
+					description = <"The place on the body where the exposed individual has been exposed.">
+					comment = <"For example: finger in a needle stick injury.">
+				>
+				["at0019"] = <
+					text = <"Anatomical location details">
+					description = <"Structured details about the exposed anatomical location.">
+				>
+				["at0020"] = <
+					text = <"Activity category">
+					description = <"The type of activity which resulted in exposure.">
+				>
+				["at0021"] = <
+					text = <"Activity description">
+					description = <"Narrative description about the activity which resulted in exposure.">
+				>
+				["at0022"] = <
+					text = <"Personal protective equipment">
+					description = <"Description about PPE used by the exposed individual at the time of exposure.">
+				>
+				["at0024"] = <
+					text = <"Exposure category">
+					description = <"The type of exposure.">
+				>
+				["at0025"] = <
+					text = <"Case identifier">
+					description = <"The identifier used to report the exposure.">
+				>
+				["at0026"] = <
+					text = <"Structured location details">
+					description = <"Structured details about the physical location of the exposure.">
+				>
+				["at0027"] = <
+					text = <"Confirmed exposure?">
+					description = <"Has exposure been confirmed?">
+				>
+				["at0028"] = <
+					text = <"Confirmed">
+					description = <"Exposure has been confirmed.">
+				>
+				["at0029"] = <
+					text = <"Not confirmed">
+					description = <"Exposured has not been confirmed.">
+				>
+				["at0030"] = <
+					text = <"Total number of exposures">
+					description = <"The total number of exposures to the infectious agent, or total number of infectious contacts.">
+				>
+				["at0031"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0032"] = <
+					text = <"Extension">
+					description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+					comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Ermittlung der infektiösen Exposition">
+					description = <"Risikoeinschätzung für eine Person, die möglicherweise einem Infektionserreger ausgesetzt war.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Infektionserreger">
+					description = <"Identifizierung des Organismus, Stoffes, der Symptome oder des Zustands, dem die Person ausgesetzt war.">
+				>
+				["at0003"] = <
+					text = <"Beschreibung">
+					description = <"Beschreibung der Gesamtexposition.">
+				>
+				["at0004"] = <
+					text = <"Datum der Meldung / des Berichts">
+					description = <"Datum/Uhrzeit der Mitteilung oder des Berichts an die Behörden.">
+				>
+				["at0005"] = <
+					text = <"Spezifische Details zur Exposition">
+					description = <"Details zu einer einzelnen Exposition.">
+					comment = <"Mehrere Expositionen können erfasst werden, wobei pro Exposition eine Instanz dieses Clusters verwendet wird.">
+				>
+				["at0006"] = <
+					text = <"Beschreibung der Exposition">
+					description = <"Angaben zur Expositionsmethode.">
+					comment = <"Zum Beispiel: Luftübertragung, direkter Kontakt oder Nadelstich.">
+				>
+				["at0007"] = <
+					text = <"Datum/Uhrzeit der Exposition">
+					description = <"Datum und Zeit der Exposition.">
+					comment = <"Kann in Template geklont und für ein bestimmtes Datum/eine bestimmte Uhrzeit bei Expositionsbeginn und -ende umbenannt werden.">
+				>
+				["at0008"] = <
+					text = <"Kategorie des physischen Ortes">
+					description = <"Art des Ortes">
+				>
+				["at0009"] = <
+					text = <"Spezifischer physischer Ort">
+					description = <"Beschreibung der physischer Ortes der Exposition.">
+				>
+				["at0011"] = <
+					text = <"Expositionsdauer">
+					description = <"Die Dauer der Exposition.">
+				>
+				["at0012"] = <
+					text = <"Nähe des Kontakts">
+					description = <"Enger Kontakt.">
+					comment = <"Zum Beispiel: direkter Kontakt, gemeinsamer Raum oder gemeinsame Station.">
+				>
+				["at0013"] = <
+					text = <"Risikoeinschätzung">
+					description = <"Risikoeinschätzung über die Exposition zum Infektionserreger.">
+				>
+				["at0015"] = <
+					text = <"Angaben zur Person als Quelle">
+					description = <"Strukturierte Angaben über die Person, von der die Exposition ausgeht.">
+				>
+				["at0016"] = <
+					text = <"Einflussfaktoren">
+					description = <"Faktoren, die zu dem infektiösen Kontakt beigetragen haben können.">
+				>
+				["at0017"] = <
+					text = <"Angaben zur exponierten Person">
+					description = <"Strukturierte Angaben über die Person, die exponiert oder infiziert wurde.">
+				>
+				["at0018"] = <
+					text = <"Exponierte anatomische Stelle">
+					description = <"Die Körperstelle, an der die gefährdete Person exponiert wurde.">
+					comment = <"Zum Beispiel: Finger bei einer Nadelstichverletzung.">
+				>
+				["at0019"] = <
+					text = <"Angaben zur anatomischen Stelle">
+					description = <"Strukturierte Angaben über die exponierte anatomische Stelle.">
+				>
+				["at0020"] = <
+					text = <"Art der Tätigkeit">
+					description = <"Die Art der Tätigkeit, die zur Exposition führte.">
+				>
+				["at0021"] = <
+					text = <"Beschreibung der Tätigkeit">
+					description = <"Beschreibung der Tätigkeit, die zur Exposition geführt hat.">
+				>
+				["at0022"] = <
+					text = <"Persönliche Schutzausrüstung">
+					description = <"Beschreibung der von der exponierten Person zum Zeitpunkt der Exposition verwendeter PSA.">
+				>
+				["at0024"] = <
+					text = <"Expositionskategorie">
+					description = <"Die Art der Exposition.">
+				>
+				["at0025"] = <
+					text = <"Fallkennung">
+					description = <"Die Kennung, die für die Angabe der Exposition verwendet wurde.">
+				>
+				["at0026"] = <
+					text = <"Strukturierte Angaben zum Ort">
+					description = <"Strukturierte Angaben über den physischen Ort der Exposition.">
+				>
+				["at0027"] = <
+					text = <"Bestätigte Exposition?">
+					description = <"Wurde die Exposition bestätigt?">
+				>
+				["at0028"] = <
+					text = <"Bestätigt">
+					description = <"Die Exposition wurde bestätigt.">
+				>
+				["at0029"] = <
+					text = <"Nicht bestätigt">
+					description = <"Die Exposition wurde nicht bestätigt.">
+				>
+				["at0030"] = <
+					text = <"Gesamtanzahl der Expositionen">
+					description = <"Die Gesamtanzahl der Expositionen gegenüber dem Infektionserreger oder die Gesamtzahl der infektiösen Kontakte.">
+				>
+				["at0031"] = <
+					text = <"*Item tree (en)">
+					description = <"@ internal @">
+				>
+				["at0032"] = <
+					text = <"Erweiterung">
+					description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+					comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+				>
+			>
+		>
+		["it"] = <
+			items = <
+				["at0000"] = <
+					text = <"Indagine sull'esposizione infettiva">
+					description = <"*Risk assessment for an individual who may have been exposed to an infectious agent. (en)">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Agente patogeno">
+					description = <"Identificazione dell'organismo, del materiale, dei sintomi o della condizione a cui l'individuo è stato esposto. ">
+				>
+				["at0003"] = <
+					text = <"Descrizione">
+					description = <"Descrizione narrativa dell'esposizione complessiva. ">
+				>
+				["at0004"] = <
+					text = <"Data di notifica/rapporto">
+					description = <"Data/ora della notifica o della segnalazione alle autorità. ">
+				>
+				["at0005"] = <
+					text = <"*Specific exposure details(en)">
+					description = <"*Dettagli su una singola esposizione. ">
+					comment = <"È possibile registrare più esposizioni, utilizzando un'istanza di questo cluster per esposizione. ">
+				>
+				["at0006"] = <
+					text = <"Descrizione dell'esposizione">
+					description = <"Dettagli sul metodo di esposizione. ">
+					comment = <"Ad esempio: in aria, a contatto diretto o ad ago.">
+				>
+				["at0007"] = <
+					text = <"Data/ora dell'esposizione">
+					description = <"Data e ora dell'esposizione">
+					comment = <"Può essere clonato nel template e rinominato per una data e un'ora specifiche all'inizio dell'esposizione e alla fine dell'esposizione.">
+				>
+				["at0008"] = <
+					text = <"Categoria di luogo fisico">
+					description = <"Tipo di posizione">
+				>
+				["at0009"] = <
+					text = <"Luogo fisico specifico">
+					description = <"Descrizione narrativa del luogo fisico dell'esposizione.">
+				>
+				["at0011"] = <
+					text = <"Durata dell'esposizione">
+					description = <"Durata dell'esposizione.">
+				>
+				["at0012"] = <
+					text = <"Prossimità del contatto">
+					description = <"Vicinanza di contatto.">
+					comment = <"Per esempio: contatto diretto, stanza condivisa o reparto condiviso. ">
+				>
+				["at0013"] = <
+					text = <"Stratificazione del rischio">
+					description = <"Valutazione del rischio dell'esposizione all'agente infettivo.">
+				>
+				["at0015"] = <
+					text = <"Dettagli individuali dell'origine">
+					description = <"Dettagli strutturati sulla persona che è la fonte dell'infezione.">
+				>
+				["at0016"] = <
+					text = <"Fattori collaterali">
+					description = <"Fattori che possono aver contribuito al contatto infettivo.">
+				>
+				["at0017"] = <
+					text = <"Dettagli dell'individuo esposto">
+					description = <"Dettagli strutturati sulla persona che è stata esposta o infettata.">
+				>
+				["at0018"] = <
+					text = <"Porzione anatomica esposta">
+					description = <"Il punto del corpo in cui l'individuo esposto è stato esposto.">
+					comment = <"Ad esempio: dito in una ferita da puntura d'ago.">
+				>
+				["at0019"] = <
+					text = <"Dettagli sulla porzione anatomica">
+					description = <"Dettagli strutturati sulla porzione anatomica esposta.">
+				>
+				["at0020"] = <
+					text = <"Categoria attività">
+					description = <"Il tipo di attività che ha portato all'esposizione. ">
+				>
+				["at0021"] = <
+					text = <"Descrizione attività">
+					description = <"Descrizione narrativa dell'attività che ha portato all'esposizione.">
+				>
+				["at0022"] = <
+					text = <"Dispositivi di protezione individuale">
+					description = <"Descrizione dei DPI utilizzati dall'individuo esposto al momento dell'esposizione. ">
+				>
+				["at0024"] = <
+					text = <"Categoria d'esposizione">
+					description = <"Il tipo di esposizione.">
+				>
+				["at0025"] = <
+					text = <"Identificatore del caso">
+					description = <"L'identificatore utilizzato per segnalare l'esposizione.">
+				>
+				["at0026"] = <
+					text = <"Dettagli strutturati della posizione">
+					description = <"Dettagli strutturati sulla posizione fisica dell'esposizione.">
+				>
+				["at0027"] = <
+					text = <"Esposizione confermata?">
+					description = <"L'esposizione è stata confermata?">
+				>
+				["at0028"] = <
+					text = <"Confermata">
+					description = <"L'esposizione è stata confermata.">
+				>
+				["at0029"] = <
+					text = <"Non confermata">
+					description = <"L'esposizione non è stata confermata. ">
+				>
+				["at0030"] = <
+					text = <"*Total number of exposures(en)">
+					description = <"Numero totale di esposizioni.">
+				>
+				["at0031"] = <
+					text = <"*Item tree (en)">
+					description = <"@ internal @">
+				>
+				["at0032"] = <
+					text = <"*Extension (en)">
+					description = <"*">
+					comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+				>
+			>
+		>
+	>

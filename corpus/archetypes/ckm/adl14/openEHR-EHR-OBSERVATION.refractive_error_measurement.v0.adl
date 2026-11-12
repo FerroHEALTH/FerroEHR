@@ -1,0 +1,1012 @@
+﻿archetype (adl_version=1.4; uid=0425d1b2-593c-46b3-ba9e-462bf11a0b1f)
+	openEHR-EHR-OBSERVATION.refractive_error_measurement.v0
+
+concept
+	[at0000]	-- Refractive error measurement
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			author = <
+				["name"] = <"Thomas Baerland">
+				["organisation"] = <"Oslo Universitetssykehus / DIPS ASA">
+				["email"] = <"tba@dips.no">
+			>
+			accreditation = <"?">
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Ian McNicoll">
+		["organisation"] = <"Ocean Informatics, UK">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"2012-07-18">
+	>
+	details = <
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			purpose = <"*For recording the results of a measurement of refractive error, which is commonly referred to as performing a refraction.  (en)">
+			use = <"*Use to record the results and contextual parameters of a measurement of refractive error. 
+
+Use to record both subjective and objective measurements of a refractive error.
+
+Use to record both examiner-led subjective refration and autorefractometer-based subjective refraction. 
+
+Use to record the result of static retinoscopy,  (en)">
+			keywords = <"*eye (en)", "*sight (en)", "*vision (en)", "*ophthalmic (en)", "*visual (en)", "*refraction (en)", "*refraction (en)">
+			misuse = <"*Not to be used to record a spectacle or contact lens prescription. 
+
+Not to be used to record the correction used during other tests, such as visual acuity tests. 
+
+Not to be used to record the results of an overrefraction, which is a measurement of the residual refractive error while a correction is being used. No appropriate Archetype is available at this time.
+
+Not to be used to record the results of measurements of accomodative capabilty, including dynamic retinoscopy. No appropriate Archetype is available at this time. (en)">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording the results of a measurement of refractive error, which is commonly referred to as performing a refraction. ">
+			use = <"Use to record the results and contextual parameters of a measurement of refractive error. 
+
+Use to record both subjective and objective measurements of a refractive error.
+
+Use to record both examiner-led subjective refration and autorefractometer-based subjective refraction. 
+
+Use to record the result of static retinoscopy, ">
+			keywords = <"eye", "sight", "vision", "ophthalmic", "visual", "refraction", "refraction">
+			misuse = <"Not to be used to record a spectacle or contact lens prescription. 
+
+Not to be used to record the correction used during other tests, such as visual acuity tests. 
+
+Not to be used to record the results of an overrefraction, which is a measurement of the residual refractive error while a correction is being used. No appropriate Archetype is available at this time.
+
+Not to be used to record the results of measurements of accomodative capabilty, including dynamic retinoscopy. No appropriate Archetype is available at this time.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"in_development">
+	other_contributors = <"Gustavo M Bacelar-Silva, Brazil", "Lars Fuhrmann, Germany">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"">
+		["current_contact"] = <"Ian McNicoll, Ocean Informatics, UK, ian.mcnicoll@oceaninformatics.com">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"C3FA1DBDEF7F71166FE21F9BEC436AC7">
+		["build_uid"] = <"6d9cbdbf-8776-4332-8ffb-5cfde3f28805">
+		["ip_acknowledgements"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+		["revision"] = <"0.0.1-alpha">
+	>
+
+definition
+	OBSERVATION[at0000] matches {    -- Refractive error measurement
+		data matches {
+			HISTORY[at0001] matches {    -- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					POINT_EVENT[at0134] occurrences matches {0..*} matches {    -- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {    -- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0144] matches {    -- Eye examined
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0145,    -- Right eye
+													at0146]    -- Left eye
+												}
+											}
+										}
+									}
+									ELEMENT[at0162] occurrences matches {0..1} matches {    -- Sphere
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::685]>
+												list = <
+													["1"] = <
+														units = <"[diop]">
+													>
+												>
+											>
+										}
+									}
+									ELEMENT[at0163] occurrences matches {0..1} matches {    -- Cylinder
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::685]>
+												list = <
+													["1"] = <
+														units = <"[diop]">
+													>
+												>
+											>
+										}
+									}
+									ELEMENT[at0164] occurrences matches {0..1} matches {    -- Axis of cylinder
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::497]>
+												list = <
+													["1"] = <
+														units = <"deg">
+													>
+												>
+											>
+										}
+									}
+									ELEMENT[at0167] occurrences matches {0..1} matches {    -- Spherical equivalent
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::685]>
+												list = <
+													["1"] = <
+														units = <"[diop]">
+													>
+												>
+											>
+										}
+									}
+									ELEMENT[at0066] occurrences matches {0..*} matches {    -- Interpretation
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0040] occurrences matches {0..1} matches {    -- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									allow_archetype CLUSTER[at0140] occurrences matches {0..*} matches {    -- Examination not done
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1/}
+									}
+								}
+							}
+						}
+						state matches {
+							ITEM_TREE[at0041] matches {    -- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0149] occurrences matches {0..1} matches {    -- Method
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0150,    -- Automated objective refractometry
+													at0151,    -- Manual subjective refraction
+													at0152,    -- Automated subjective refraction
+													at0155,    -- Retinoscopy
+													at0235]    -- Direct ophthalmoscope refraction
+												}
+											}
+										}
+									}
+									ELEMENT[at0165] occurrences matches {0..1} matches {    -- Targeted Distance
+										value matches {
+											DV_QUANTITY matches {*}
+										}
+									}
+									ELEMENT[at0204] occurrences matches {0..1} matches {    -- Targeted Distance category
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0205,    -- Infinity
+													at0206,    -- Far
+													at0207,    -- Intermediate
+													at0208]    -- Near
+												}
+											}
+										}
+									}
+									allow_archetype CLUSTER[at0025] occurrences matches {0..1} matches {    -- Device Details
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1/}
+									}
+									ELEMENT[at0112] occurrences matches {0..*} matches {    -- Confounding Factors
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0154] occurrences matches {0..1} matches {    -- Accommodative state
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0236,    -- Complete medical cycloplegia
+													at0243,    -- Near-complete medical cycloplegia
+													at0237,    -- Partial medical cycloplegia
+													at0238,    -- No medical cycloplegia
+													at0239,    -- Accomodation impossible
+													at0240]    -- Pathological cycloplegia
+												}
+											}
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0172] occurrences matches {0..*} matches {    -- Pupil state
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0174,    -- Normal
+													at0175,    -- Medically induced mydriasis
+													at0176,    -- Medically induced miosis
+													at0177]    -- Pathological Pupil state
+												}
+											}
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0173] occurrences matches {0..1} matches {    -- Assumed pupil diameter
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::122]>
+												list = <
+													["1"] = <
+														units = <"mm">
+													>
+												>
+											>
+										}
+									}
+									ELEMENT[at0210] occurrences matches {0..1} matches {    -- Assumed vertex distance
+										value matches {
+											DV_QUANTITY matches {*}
+										}
+									}
+									ELEMENT[at0168] occurrences matches {0..1} matches {    -- Set interpupillary distance
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::122]>
+												list = <
+													["1"] = <
+														units = <"mm">
+													>
+												>
+											>
+										}
+									}
+									CLUSTER[at0217] occurrences matches {0..1} matches {    -- Autorefractometer details
+										items cardinality matches {1..*; unordered} matches {
+											ELEMENT[at0231] occurrences matches {0..1} matches {    -- Sub-cycle integration method
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0232,    -- Median
+															at0233]    -- Typical
+														}
+													}
+												}
+											}
+											ELEMENT[at0234] occurrences matches {0..1} matches {    -- Optical zone
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0241,    -- Central Area
+															at0242]    -- Expanded Area
+														}
+													}
+												}
+											}
+											CLUSTER[at0225] occurrences matches {0..1} matches {    -- Sub-cycle results
+												items cardinality matches {1..*; unordered} matches {
+													ELEMENT[at0228] occurrences matches {0..1} matches {    -- Sphere
+														value matches {
+															C_DV_QUANTITY <
+																property = <[openehr::685]>
+																list = <
+																	["1"] = <
+																		units = <"[diop]">
+																	>
+																>
+															>
+														}
+													}
+													ELEMENT[at0229] occurrences matches {0..1} matches {    -- Cylinder
+														value matches {
+															C_DV_QUANTITY <
+																property = <[openehr::685]>
+																list = <
+																	["1"] = <
+																		units = <"[diop]">
+																	>
+																>
+															>
+														}
+													}
+													ELEMENT[at0230] occurrences matches {0..1} matches {    -- Axis of cylinder
+														value matches {
+															C_DV_QUANTITY <
+																property = <[openehr::497]>
+																list = <
+																	["1"] = <
+																		units = <"deg">
+																	>
+																>
+															>
+														}
+													}
+												}
+											}
+										}
+									}
+									CLUSTER[at0216] occurrences matches {0..1} matches {    -- Retinoscopy details
+										items cardinality matches {1..*; unordered} matches {
+											CLUSTER[at0219] occurrences matches {0..1} matches {    -- By neutralisation point
+												items cardinality matches {1..*; unordered} matches {
+													ELEMENT[at0220] occurrences matches {0..1} matches {    -- Angle of sweep direction
+														value matches {
+															DV_QUANTITY matches {*}
+														}
+													}
+													ELEMENT[at0221] occurrences matches {0..1} matches {    -- Angle of streak
+														value matches {
+															DV_QUANTITY matches {*}
+														}
+													}
+													ELEMENT[at0223] occurrences matches {0..1} matches {    -- Power of sphere held
+														value matches {
+															DV_QUANTITY matches {*}
+														}
+													}
+												}
+											}
+											ELEMENT[at0224] occurrences matches {0..1} matches {    -- Working distance
+												value matches {
+													DV_QUANTITY matches {*}
+												}
+											}
+										}
+									}
+									CLUSTER[at0244] occurrences matches {0..1} matches {    -- Examiner-led subjective refraction details
+										items cardinality matches {1..*; unordered} matches {
+											ELEMENT[at0153] occurrences matches {0..*} matches {    -- Utilized techniques
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0157,    -- Cross-Cylinder
+															at0158,    -- Stenopeic slit
+															at0159,    -- Duochrome test
+															at0160,    -- Correction for room length
+															at0161]    -- Binocular balancing
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0020] matches {    -- Tree
+				items cardinality matches {0..*; unordered} matches {
+					allow_archetype CLUSTER[at0141] occurrences matches {0..*} matches {    -- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	terminologies_available = <"SNOMED-CT", ...>
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Refractive error measurement">
+					description = <"Measurements of the refractive error of an individual's eyes, which would need to be corrected for light to be appropriately focused on the retina. ">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0020"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0025"] = <
+					text = <"Device Details">
+					description = <"Details of the device used to measure refraction.">
+				>
+				["at0040"] = <
+					text = <"Comment">
+					description = <"Any additional narrative comment.
+">
+				>
+				["at0041"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0066"] = <
+					text = <"Interpretation">
+					description = <"Interpretation of the results.">
+					comment = <"Not to be used for information about how the test was performed or patient circumstances affecting result.">
+				>
+				["at0112"] = <
+					text = <"Confounding Factors">
+					description = <"Patient circumstances which affect interpretation of the result. Often termed 'reliability' in opthalmological documentation.">
+					comment = <"Examples: 'Patient was confused', 'Low light conditions'.">
+				>
+				["at0134"] = <
+					text = <"Any event">
+					description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+				>
+				["at0140"] = <
+					text = <"Examination not done">
+					description = <"Details to explicitly record that this test was not performed.">
+				>
+				["at0141"] = <
+					text = <"Extension">
+					description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+					comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+				>
+				["at0144"] = <
+					text = <"Eye examined">
+					description = <"Identification of the eye which was tested.">
+				>
+				["at0145"] = <
+					text = <"Right eye">
+					description = <"Assessment of the right eye was performed.">
+				>
+				["at0146"] = <
+					text = <"Left eye">
+					description = <"Assessment of the left eye was performed.">
+				>
+				["at0149"] = <
+					text = <"Method">
+					description = <" The type of method that was used to perform the measurement.">
+				>
+				["at0150"] = <
+					text = <"Automated objective refractometry">
+					description = <"The measurement was performed by automated objective refractomery, commonly refered to as autorefractometry.">
+				>
+				["at0151"] = <
+					text = <"Manual subjective refraction">
+					description = <"Subjective refraction was performed by a human examiner based on patient feedback.">
+				>
+				["at0152"] = <
+					text = <"Automated subjective refraction">
+					description = <"Subjective refraction was perfomed in an automated manner based on patient feedback.">
+				>
+				["at0153"] = <
+					text = <"Utilized techniques">
+					description = <"">
+				>
+				["at0154"] = <
+					text = <"Accommodative state">
+					description = <"The individuals assumed accommodative function during the measurement of refractive error. 
+">
+					comment = <"Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available.">
+				>
+				["at0155"] = <
+					text = <"Retinoscopy">
+					description = <"The measurement was perfomed by retinoscopy.">
+				>
+				["at0157"] = <
+					text = <"Cross-Cylinder">
+					description = <"">
+				>
+				["at0158"] = <
+					text = <"Stenopeic slit">
+					description = <"">
+				>
+				["at0159"] = <
+					text = <"Duochrome test">
+					description = <"">
+				>
+				["at0160"] = <
+					text = <"Correction for room length">
+					description = <"">
+				>
+				["at0161"] = <
+					text = <"Binocular balancing">
+					description = <"">
+				>
+				["at0162"] = <
+					text = <"Sphere">
+					description = <"The refractive error that is equal in all meridians.">
+				>
+				["at0163"] = <
+					text = <"Cylinder">
+					description = <"The refractive error added to the spherical error at the meridian 90° from the cylinder axis, reflecting the degree of cylindrical astigmatism.">
+				>
+				["at0164"] = <
+					text = <"Axis of cylinder">
+					description = <"The orientation of the cylinder of the refractive error in degrees.">
+				>
+				["at0165"] = <
+					text = <"Targeted Distance">
+					description = <"The (virtual or real) distance between the eye and the object from which the light rays should be focused on the retina if the measured refractive error is corrected. ">
+				>
+				["at0167"] = <
+					text = <"Spherical equivalent">
+					description = <"The calculated spherical equivalent of the refractive error.">
+				>
+				["at0168"] = <
+					text = <"Set interpupillary distance">
+					description = <"The interpupillary distance which was set in the device used to measure the refractive error.">
+					comment = <"Not an observation or measurement of the tested individual's true interpupillary distance, but rather a recording of the interpupillary distance which was set in the testing device (such as a phoropter) during the measurement of refractive error. 
+Measurements of Interpupillary distances will be recorded in another archetype. ">
+				>
+				["at0172"] = <
+					text = <"Pupil state">
+					description = <"Statement describing the condition of the individual's pupils during the measurement.">
+					comment = <"Comment: The physical examination of the eye will be recorded using the CLUSTER.exam-eye family of archetypes. 
+Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available.">
+				>
+				["at0173"] = <
+					text = <"Assumed pupil diameter">
+					description = <"The diameter of the pupil which is assumed to have been present during the measurement of refractive error">
+					comment = <"Typically based on an observation or measurement of pupil diameter which may be recorded in a separate OBSERVATION. ">
+				>
+				["at0174"] = <
+					text = <"Normal">
+					description = <"The pupil is in its natural physiological state without pharmacological intervention or pathological changes.">
+				>
+				["at0175"] = <
+					text = <"Medically induced mydriasis">
+					description = <"The pupil was dilated due to prior administration of mydriatic agents.">
+				>
+				["at0176"] = <
+					text = <"Medically induced miosis">
+					description = <"The pupil was constricted due to prior administration of miotic agents.">
+				>
+				["at0177"] = <
+					text = <"Pathological Pupil state">
+					description = <"The pupil was in an unphysiological state due to disease, trauma, or structural abnormalities.">
+				>
+				["at0204"] = <
+					text = <"Targeted Distance category">
+					description = <"A categorisation of the targeted distance. ">
+				>
+				["at0205"] = <
+					text = <"Infinity">
+					description = <"">
+				>
+				["at0206"] = <
+					text = <"Far">
+					description = <"">
+				>
+				["at0207"] = <
+					text = <"Intermediate">
+					description = <"">
+				>
+				["at0208"] = <
+					text = <"Near">
+					description = <"">
+				>
+				["at0210"] = <
+					text = <"Assumed vertex distance">
+					description = <"The vertex distance that was assumed or measured as a basis for the measurement of refractive error.">
+				>
+				["at0216"] = <
+					text = <"Retinoscopy details">
+					description = <"Detailed information typically only produced during retinoscopy.">
+					comment = <"###Might be better off in a separate CLUSTER Archetype that can be slotted in here####">
+				>
+				["at0217"] = <
+					text = <"Autorefractometer details">
+					description = <"Detailed information typically only produced by autorefractometers">
+					comment = <"###Might be better off in a separate CLUSTER Archetype that can be slotted in here####">
+				>
+				["at0219"] = <
+					text = <"By neutralisation point">
+					description = <"">
+				>
+				["at0220"] = <
+					text = <"Angle of sweep direction">
+					description = <"">
+				>
+				["at0221"] = <
+					text = <"Angle of streak">
+					description = <"">
+				>
+				["at0223"] = <
+					text = <"Power of sphere held">
+					description = <"">
+				>
+				["at0224"] = <
+					text = <"Working distance">
+					description = <"">
+				>
+				["at0225"] = <
+					text = <"Sub-cycle results">
+					description = <"">
+				>
+				["at0228"] = <
+					text = <"Sphere">
+					description = <"The refractive error that is equal in all meridians.">
+				>
+				["at0229"] = <
+					text = <"Cylinder">
+					description = <"The refractive error added to the spherical error at the meridian 90° from the cylinder axis, reflecting the degree of cylindrical astigmatism.">
+				>
+				["at0230"] = <
+					text = <"Axis of cylinder">
+					description = <"The orientation of the cylinder of the refractive error in degrees.">
+				>
+				["at0231"] = <
+					text = <"Sub-cycle integration method">
+					description = <"">
+				>
+				["at0232"] = <
+					text = <"Median">
+					description = <"">
+				>
+				["at0233"] = <
+					text = <"Typical">
+					description = <"">
+				>
+				["at0234"] = <
+					text = <"Optical zone">
+					description = <"">
+				>
+				["at0235"] = <
+					text = <"Direct ophthalmoscope refraction">
+					description = <"The refractive error was estimated via a direct ophthalmoscope.">
+				>
+				["at0236"] = <
+					text = <"Complete medical cycloplegia">
+					description = <"Due to use of cycloplegic eye drops, the ability to accomodate was considered functionally abolished.">
+				>
+				["at0237"] = <
+					text = <"Partial medical cycloplegia">
+					description = <"Due to use of cycloplegic eye drops, the ability to accomodate was considered reduced, but not to a complete or near-complete degree.">
+				>
+				["at0238"] = <
+					text = <"No medical cycloplegia">
+					description = <"Medical cycloplegia was not used.">
+				>
+				["at0239"] = <
+					text = <"Accomodation impossible">
+					description = <"Accommodation was deemd impossible for other reasons, such as the absence of the natural lens.">
+				>
+				["at0240"] = <
+					text = <"Pathological cycloplegia">
+					description = <"A reduced abiliy to accommodate was present for pathological reasons.">
+				>
+				["at0241"] = <
+					text = <"Central Area">
+					description = <"">
+				>
+				["at0242"] = <
+					text = <"Expanded Area">
+					description = <"">
+				>
+				["at0243"] = <
+					text = <"Near-complete medical cycloplegia">
+					description = <"Due to use of cycloplegic eye drops, the ability to accomodate was considered strongly reduced, but not abolished.">
+				>
+				["at0244"] = <
+					text = <"Examiner-led subjective refraction details">
+					description = <"Detailed information typically only produced during examiner-led subjective refraction. 
+">
+					comment = <"###Might be better off in a separate CLUSTER Archetype that can be slotted in here####">
+				>
+			>
+		>
+		["nb"] = <
+			items = <
+				["at0000"] = <
+					text = <"*Refractive error measurement (en)">
+					description = <"*Measurements of the refractive error of an individual's eyes, which would need to be corrected for light to be appropriately focused on the retina.  (en)">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0020"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0025"] = <
+					text = <"Utstyrsdetaljer">
+					description = <"Detaljer om utstyret brukt til visustesting.">
+				>
+				["at0040"] = <
+					text = <"Kommentar">
+					description = <"Ytterligere fritekstkommentar om refraksjonsundersøkelsen.">
+				>
+				["at0041"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0066"] = <
+					text = <"Tolkning">
+					description = <"*Interpretation of the results. (en)">
+					comment = <"*Not to be used for information about how the test was performed or patient circumstances affecting result. (en)">
+				>
+				["at0112"] = <
+					text = <"Konfunderende faktorer">
+					description = <"Pasientfeilkilder som innvirker på tolkning av reultatet.">
+					comment = <"Eksempel: Pasient med nedsatt bevissthet eller manglende samarbeidsevne.">
+				>
+				["at0134"] = <
+					text = <"Uspesifisert hendelse">
+					description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+				>
+				["at0140"] = <
+					text = <"Undersøkelse ikke utført">
+					description = <"Detaljert om hvorfor undersøkelsen ikke ble utført.">
+				>
+				["at0141"] = <
+					text = <"Tilleggsinformasjon">
+					description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+					comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+				>
+				["at0144"] = <
+					text = <"*Eye examined (en)">
+					description = <"Identifikasjon av hvilket øye som blir undersøkt.">
+				>
+				["at0145"] = <
+					text = <"Høyre øye">
+					description = <"Undersøkelse av pasientens høyre øye ble utført.">
+				>
+				["at0146"] = <
+					text = <"Venstre øye">
+					description = <"Undersøkelse av pasientens venstre øye ble utført.">
+				>
+				["at0149"] = <
+					text = <"*Method (en)">
+					description = <"* The type of method that was used to perform the measurement. (en)">
+				>
+				["at0150"] = <
+					text = <"*Automated objective refractometry (en)">
+					description = <"*The measurement was performed by automated objective refractomery, commonly refered to as autorefractometry. (en)">
+				>
+				["at0151"] = <
+					text = <"*Manual subjective refraction (en)">
+					description = <"*Subjective refraction was performed by a human examiner based on patient feedback. (en)">
+				>
+				["at0152"] = <
+					text = <"*Automated subjective refraction (en)">
+					description = <"*Subjective refraction was perfomed in an automated manner based on patient feedback. (en)">
+				>
+				["at0153"] = <
+					text = <"*Utilized techniques (en)">
+					description = <"">
+				>
+				["at0154"] = <
+					text = <"*Accommodative state (en)">
+					description = <"*The individuals assumed accommodative function during the measurement of refractive error. 
+ (en)">
+					comment = <"*Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available. (en)">
+				>
+				["at0155"] = <
+					text = <"*Retinoscopy (en)">
+					description = <"*The measurement was perfomed by retinoscopy. (en)">
+				>
+				["at0157"] = <
+					text = <"*Cross-Cylinder (en)">
+					description = <"">
+				>
+				["at0158"] = <
+					text = <"*Stenopeic slit (en)">
+					description = <"">
+				>
+				["at0159"] = <
+					text = <"*Duochrome test (en)">
+					description = <"">
+				>
+				["at0160"] = <
+					text = <"*Correction for room length (en)">
+					description = <"">
+				>
+				["at0161"] = <
+					text = <"*Binocular balancing (en)">
+					description = <"">
+				>
+				["at0162"] = <
+					text = <"*Sphere (en)">
+					description = <"*The refractive error that is equal in all meridians. (en)">
+				>
+				["at0163"] = <
+					text = <"*Cylinder (en)">
+					description = <"*The refractive error added to the spherical error at the meridian 90° from the cylinder axis, reflecting the degree of cylindrical astigmatism. (en)">
+				>
+				["at0164"] = <
+					text = <"*Axis of cylinder (en)">
+					description = <"*The orientation of the cylinder of the refractive error in degrees. (en)">
+				>
+				["at0165"] = <
+					text = <"*Targeted Distance (en)">
+					description = <"*The (virtual or real) distance between the eye and the object from which the light rays should be focused on the retina if the measured refractive error is corrected.  (en)">
+				>
+				["at0167"] = <
+					text = <"*Spherical equivalent (en)">
+					description = <"*The calculated spherical equivalent of the refractive error. (en)">
+				>
+				["at0168"] = <
+					text = <"*Set interpupillary distance (en)">
+					description = <"">
+					comment = <"*Not an observation or measurement of the tested individual's true interpupillary distance, but rather a recording of the interpupillary distance which was set in the testing device (such as a phoropter) during the measurement of refractive error. 
+Measurements of Interpupillary distances will be recorded in another archetype.  (en)">
+				>
+				["at0172"] = <
+					text = <"*Pupil state (en)">
+					description = <"*Statement describing the condition of the individual's pupils during the measurement. (en)">
+					comment = <"*Comment: The physical examination of the eye will be recorded using the CLUSTER.exam-eye family of archetypes. 
+Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available. (en)">
+				>
+				["at0173"] = <
+					text = <"*Assumed pupil diameter (en)">
+					description = <"*The diameter of the pupil which is assumed to have been present during the measurement of refractive error (en)">
+					comment = <"*Typically based on an observation or measurement of pupil diameter which may be recorded in a separate OBSERVATION.  (en)">
+				>
+				["at0174"] = <
+					text = <"*Normal (en)">
+					description = <"*The pupil is in its natural physiological state without pharmacological intervention or pathological changes. (en)">
+				>
+				["at0175"] = <
+					text = <"*Medically induced mydriasis (en)">
+					description = <"*The pupil was dilated due to prior administration of mydriatic agents. (en)">
+				>
+				["at0176"] = <
+					text = <"*Medically induced miosis (en)">
+					description = <"*The pupil was constricted due to prior administration of miotic agents. (en)">
+				>
+				["at0177"] = <
+					text = <"*Pathological Pupil state (en)">
+					description = <"*The pupil was in an unphysiological state due to disease, trauma, or structural abnormalities. (en)">
+				>
+				["at0204"] = <
+					text = <"*Targeted Distance category (en)">
+					description = <"*A categorisation of the targeted distance.  (en)">
+				>
+				["at0205"] = <
+					text = <"*Infinity (en)">
+					description = <"">
+				>
+				["at0206"] = <
+					text = <"*Far (en)">
+					description = <"">
+				>
+				["at0207"] = <
+					text = <"*Intermediate (en)">
+					description = <"">
+				>
+				["at0208"] = <
+					text = <"*Near (en)">
+					description = <"">
+				>
+				["at0210"] = <
+					text = <"*Assumed vertex distance (en)">
+					description = <"*The vertex distance that was assumed or measured as a basis for the measurement of refractive error. (en)">
+				>
+				["at0216"] = <
+					text = <"*Retinoscopy details (en)">
+					description = <"*Detailed information typically only produced during retinoscopy. (en)">
+					comment = <"*###Might be better off in a separate CLUSTER Archetype that can be slotted in here#### (en)">
+				>
+				["at0217"] = <
+					text = <"*Autorefractometer details (en)">
+					description = <"*Detailed information typically only produced by autorefractometers (en)">
+					comment = <"*###Might be better off in a separate CLUSTER Archetype that can be slotted in here#### (en)">
+				>
+				["at0219"] = <
+					text = <"*By neutralisation point (en)">
+					description = <"">
+				>
+				["at0220"] = <
+					text = <"*Angle of sweep direction (en)">
+					description = <"">
+				>
+				["at0221"] = <
+					text = <"*Angle of streak (en)">
+					description = <"">
+				>
+				["at0223"] = <
+					text = <"*Power of sphere held (en)">
+					description = <"">
+				>
+				["at0224"] = <
+					text = <"*Working distance (en)">
+					description = <"">
+				>
+				["at0225"] = <
+					text = <"*Sub-cycle results (en)">
+					description = <"">
+				>
+				["at0228"] = <
+					text = <"*Sphere (en)">
+					description = <"*The refractive error that is equal in all meridians. (en)">
+				>
+				["at0229"] = <
+					text = <"*Cylinder (en)">
+					description = <"*The refractive error added to the spherical error at the meridian 90° from the cylinder axis, reflecting the degree of cylindrical astigmatism. (en)">
+				>
+				["at0230"] = <
+					text = <"*Axis of cylinder (en)">
+					description = <"*The orientation of the cylinder of the refractive error in degrees. (en)">
+				>
+				["at0231"] = <
+					text = <"*Sub-cycle integration method (en)">
+					description = <"">
+				>
+				["at0232"] = <
+					text = <"*Median (en)">
+					description = <"">
+				>
+				["at0233"] = <
+					text = <"*Typical (en)">
+					description = <"">
+				>
+				["at0234"] = <
+					text = <"*Optical zone (en)">
+					description = <"">
+				>
+				["at0235"] = <
+					text = <"*Direct ophthalmoscope refraction (en)">
+					description = <"*The refractive error was estimated via a direct ophthalmoscope. (en)">
+				>
+				["at0236"] = <
+					text = <"*Complete medical cycloplegia (en)">
+					description = <"*Due to use of cycloplegic eye drops, the ability to accomodate was considered functionally abolished. (en)">
+				>
+				["at0237"] = <
+					text = <"*Partial medical cycloplegia (en)">
+					description = <"*Due to use of cycloplegic eye drops, the ability to accomodate was considered reduced, but not to a complete or near-complete degree. (en)">
+				>
+				["at0238"] = <
+					text = <"*No medical cycloplegia (en)">
+					description = <"*Medical cycloplegia was not used. (en)">
+				>
+				["at0239"] = <
+					text = <"*Accomodation impossible (en)">
+					description = <"*Accommodation was deemd impossible for other reasons, such as the absence of the natural lens. (en)">
+				>
+				["at0240"] = <
+					text = <"*Pathological cycloplegia (en)">
+					description = <"*A reduced abiliy to accommodate was present for pathological reasons. (en)">
+				>
+				["at0241"] = <
+					text = <"*Central Area (en)">
+					description = <"">
+				>
+				["at0242"] = <
+					text = <"*Expanded Area (en)">
+					description = <"">
+				>
+				["at0243"] = <
+					text = <"*Near-complete medical cycloplegia (en)">
+					description = <"*Due to use of cycloplegic eye drops, the ability to accomodate was considered strongly reduced, but not abolished. (en)">
+				>
+				["at0244"] = <
+					text = <"*Examiner-led subjective refraction details (en)">
+					description = <"*Detailed information typically only produced during examiner-led subjective refraction. 
+ (en)">
+					comment = <"*###Might be better off in a separate CLUSTER Archetype that can be slotted in here#### (en)">
+				>
+			>
+		>
+	>
+	term_bindings = <
+		["SNOMED-CT"] = <
+			items = <
+				["at0000"] = <[SNOMED-CT::252886007]>
+				["at0040"] = <[SNOMED-CT::117364006]>
+				["at0066"] = <[SNOMED-CT::366060000]>
+			>
+		>
+	>

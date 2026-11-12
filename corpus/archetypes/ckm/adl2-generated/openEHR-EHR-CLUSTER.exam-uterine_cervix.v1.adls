@@ -1,0 +1,591 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.exam-uterine_cervix.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.exam.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es-cl"] = <
+            language = <[ISO_639-1::es-cl]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics, Australia">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"02/ 04/2007">
+    >
+    lifecycle_state = <"Rejected">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"66CB4160984D2B0A3C3B4D04919B4A03">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A cluster for recording findings regarding the uterine cervix on physical examination.">
+            keywords = <"examination", "physical", "cervix", "uterine">
+            use = <"">
+            misuse = <"">
+            copyright = <"copyright (c) 2010 openEHR Foundation">
+        >
+        ["es-cl"] = <
+            language = <[ISO_639-1::es-cl]>
+            purpose = <"A cluster for recording findings regarding the uterine cervix on physical examination.">
+            keywords = <"examination", "physical", "cervix", "uterine">
+            use = <"">
+            misuse = <"">
+            copyright = <"copyright (c) 2010 openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Examination of the cervix
+        items matches {
+            CLUSTER[at0008.1] matches {    -- Findings
+                items matches {
+                    allow_archetype CLUSTER[at0.49] occurrences matches {0..1} matches {    -- Size
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.physical_properties(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    CLUSTER[at0.48] occurrences matches {0..1} matches {    -- Labour-specific findings
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0.14] occurrences matches {0..1} matches {    -- Effacement
+                                value matches {
+                                    DV_ORDINAL[at0.9009] matches {
+                                        [value, symbol] matches {
+                                            [{0}, {[at0.15]}],    -- Uneffaced
+                                            [{5}, {[at0.26]}],    -- Ripe
+                                            [{10}, {[at0.16]}],    -- 10% effaced
+                                            [{20}, {[at0.17]}],    -- 20% effaced
+                                            [{30}, {[at0.18]}],    -- 30% effaced
+                                            [{40}, {[at0.19]}],    -- 40% effaced
+                                            [{50}, {[at0.20]}],    -- Partially (50%) effaced
+                                            [{60}, {[at0.21]}],    -- 60% effaced
+                                            [{70}, {[at0.22]}],    -- 70% effaced
+                                            [{80}, {[at0.23]}],    -- 80% effaced
+                                            [{90}, {[at0.24]}],    -- 90% effaced
+                                            [{100}, {[at0.25]}]    -- Fully effaced
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.40] occurrences matches {0..1} matches {    -- Thickness
+                                value matches {
+                                    DV_CODED_TEXT[at0.9010] matches {
+                                        defining_code matches {[ac0.9003]}    -- Thickness (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.45] occurrences matches {0..1} matches {    -- Application to presenting part
+                                value matches {
+                                    DV_CODED_TEXT[at0.9011] matches {
+                                        defining_code matches {[ac0.9004]}    -- Application to presenting part (synthesised)
+                                    }
+                                }
+                            }
+                            CLUSTER[at0.27] occurrences matches {0..2} matches {    -- Cervical os
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0.32] occurrences matches {0..1} matches {    -- Site
+                                        value matches {
+                                            DV_CODED_TEXT[at0.9012] matches {
+                                                defining_code matches {[ac0.9005]}    -- Site (synthesised)
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0.31] occurrences matches {0..1} matches {    -- Dilation
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0.28] occurrences matches {0..1} matches {    -- Estimate
+                                                value matches {
+                                                    DV_QUANTITY[at0.9013] matches {
+                                                        property matches {[at0.9006]}    -- Length
+                                                        magnitude matches {|0.0..10.0|}
+                                                        units matches {"cm"}
+                                                        precision matches {1}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0.35] occurrences matches {0..1} matches {    -- Number of finger tips admitted
+                                                value matches {
+                                                    DV_COUNT[at0.9014]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0.29] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at0.9015]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0.51] occurrences matches {0..1} matches {    -- Vaginal fluid
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.bodily_substance(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    before [at0009]
+                    ELEMENT[at0.8] occurrences matches {0..1} matches {    -- Position
+                        value matches {
+                            DV_CODED_TEXT[at0.9007] matches {
+                                defining_code matches {[ac0.9000]}    -- Position (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0.36] occurrences matches {0..1} matches {    -- Consistency
+                        value matches {
+                            DV_CODED_TEXT[at0.9008] matches {
+                                defining_code matches {[ac0.9001]}    -- Consistency (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.10"] = <
+                text = <"To the right">
+                description = <"The cervix is deviated to the right.">
+            >
+            ["at0.11"] = <
+                text = <"To the left">
+                description = <"The cervix is deviated to the left.">
+            >
+            ["at0.12"] = <
+                text = <"Anterior">
+                description = <"The cervix is anterior near the pubis.">
+            >
+            ["at0.13"] = <
+                text = <"Posterior">
+                description = <"The cervix is at the back near the sacrum.">
+            >
+            ["at0.14"] = <
+                text = <"Effacement">
+                description = <"The effacement of the uterine cervix in late pregnancy or labour.">
+            >
+            ["at0.15"] = <
+                text = <"Uneffaced">
+                description = <"The cervix has not changed its form.">
+            >
+            ["at0.16"] = <
+                text = <"10% effaced">
+                description = <"The cervix is effaced to about 10%.">
+            >
+            ["at0.17"] = <
+                text = <"20% effaced">
+                description = <"The cervix is effaced to about 20%.">
+            >
+            ["at0.18"] = <
+                text = <"30% effaced">
+                description = <"The cervix is effaced to about 30%.">
+            >
+            ["at0.19"] = <
+                text = <"40% effaced">
+                description = <"The cervix is effaced to about 40%.">
+            >
+            ["at0.20"] = <
+                text = <"Partially (50%) effaced">
+                description = <"The cervix is partially effaced to about 50%.">
+            >
+            ["at0.21"] = <
+                text = <"60% effaced">
+                description = <"The cervix is effaced to about 60%.">
+            >
+            ["at0.22"] = <
+                text = <"70% effaced">
+                description = <"The cervix is effaced to about 70%.">
+            >
+            ["at0.23"] = <
+                text = <"80% effaced">
+                description = <"The cervix is effaced to about 80%.">
+            >
+            ["at0.24"] = <
+                text = <"90% effaced">
+                description = <"The cervix is effaced to about 90%.">
+            >
+            ["at0.25"] = <
+                text = <"Fully effaced">
+                description = <"The cervix is fully effaced to 100%.">
+            >
+            ["at0.26"] = <
+                text = <"Ripe">
+                description = <"The cervix is ripe and beginning to efface.">
+            >
+            ["at0.27"] = <
+                text = <"Cervical os">
+                description = <"The outlet of the uterus.">
+            >
+            ["at0.28"] = <
+                text = <"Estimate">
+                description = <"The dilation of the os.">
+            >
+            ["at0.29"] = <
+                text = <"Description">
+                description = <"Findings about the cervical os.">
+            >
+            ["at0.31"] = <
+                text = <"Dilation">
+                description = <"Dilation of cervix.">
+            >
+            ["at0.32"] = <
+                text = <"Site">
+                description = <"Identify part of cervix which is being examined.">
+            >
+            ["at0.33"] = <
+                text = <"External os">
+                description = <"External opening of the cervix to the vagina.">
+            >
+            ["at0.34"] = <
+                text = <"Internal os">
+                description = <"Internal opening of the cervix to the uterus.">
+            >
+            ["at0.35"] = <
+                text = <"Number of finger tips admitted">
+                description = <"Number of finger tips that are able to be admitted into the internal or external os.">
+            >
+            ["at0.36"] = <
+                text = <"Consistency">
+                description = <"Consistency of cervix.">
+            >
+            ["at0.37"] = <
+                text = <"Soft">
+                description = <"Soft.">
+            >
+            ["at0.38"] = <
+                text = <"Firm">
+                description = <"Firm.">
+            >
+            ["at0.40"] = <
+                text = <"Thickness">
+                description = <"Cervical thickness.">
+            >
+            ["at0.41"] = <
+                text = <"Thick">
+                description = <"Thick.">
+            >
+            ["at0.42"] = <
+                text = <"Thin">
+                description = <"Thin.">
+            >
+            ["at0.43"] = <
+                text = <"Paper-thin">
+                description = <"Very thin.">
+            >
+            ["at0.44"] = <
+                text = <"Oedematous">
+                description = <"Thickened and swollen.">
+            >
+            ["at0.45"] = <
+                text = <"Application to presenting part">
+                description = <"Application of cervix to fetal presenting part.">
+            >
+            ["at0.46"] = <
+                text = <"Loosely applied">
+                description = <"Not moulded to presenting part.">
+            >
+            ["at0.47"] = <
+                text = <"Tightly applied">
+                description = <"Moulded to presenting part.">
+            >
+            ["at0.48"] = <
+                text = <"Labour-specific findings">
+                description = <"Findings related to labour.">
+            >
+            ["at0.49"] = <
+                text = <"Size">
+                description = <"Details of cervical size.">
+            >
+            ["at0.51"] = <
+                text = <"Vaginal fluid">
+                description = <"Details of vaginal fluid.">
+            >
+            ["at0.8"] = <
+                text = <"Position">
+                description = <"The position in relation to the normal anatomical position.">
+            >
+            ["at0.9"] = <
+                text = <"Central">
+                description = <"The cervix is central and in the normal position.">
+            >
+            ["at0000.1"] = <
+                text = <"Examination of the cervix">
+                description = <"Examination findings on physical examination of the uterine cervix.">
+            >
+            ["at0008.1"] = <
+                text = <"Findings">
+                description = <"Clinical findings.">
+            >
+            ["at0.9006"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac0.9000"] = <
+                text = <"Position (synthesised)">
+                description = <"The position in relation to the normal anatomical position. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Consistency (synthesised)">
+                description = <"Consistency of cervix. (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Effacement (synthesised)">
+                description = <"The effacement of the uterine cervix in late pregnancy or labour. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Thickness (synthesised)">
+                description = <"Cervical thickness. (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"Application to presenting part (synthesised)">
+                description = <"Application of cervix to fetal presenting part. (synthesised)">
+            >
+            ["ac0.9005"] = <
+                text = <"Site (synthesised)">
+                description = <"Identify part of cervix which is being examined. (synthesised)">
+            >
+        >
+        ["es-cl"] = <
+            ["at0.10"] = <
+                text = <"A la derecha">
+                description = <"El cuello está desviado a la derecha">
+            >
+            ["at0.11"] = <
+                text = <"A la izquierda">
+                description = <"El cuello está desviado a la izquierda">
+            >
+            ["at0.12"] = <
+                text = <"Anterior">
+                description = <"El cuello está anterior, cerca del pubis">
+            >
+            ["at0.13"] = <
+                text = <"Posterior">
+                description = <"El cuello está posterior, cerca del sacro">
+            >
+            ["at0.14"] = <
+                text = <"Borramiento">
+                description = <"El borramiento del cuello uterino en embarazo o trabajo de parto avanzados">
+            >
+            ["at0.15"] = <
+                text = <"Largo">
+                description = <"El cuello no ha cambiado su forma">
+            >
+            ["at0.16"] = <
+                text = <"10% borrado">
+                description = <"El cuello se ha borrado cerca de un 10%">
+            >
+            ["at0.17"] = <
+                text = <"20% borrado">
+                description = <"El cuello se ha borrado cerca de un 20%">
+            >
+            ["at0.18"] = <
+                text = <"30% borrado">
+                description = <"El cuello se ha borrado cerca de un 30%">
+            >
+            ["at0.19"] = <
+                text = <"40% borrado">
+                description = <"El cuello se ha borrado cerca de un 40%">
+            >
+            ["at0.20"] = <
+                text = <"Parcialmente borrado (50%)">
+                description = <"El cuello se ha borrado parcialmente hasta un 50%">
+            >
+            ["at0.21"] = <
+                text = <"60% borrado">
+                description = <"El cuello se ha borrado cerca de un 60%">
+            >
+            ["at0.22"] = <
+                text = <"70% borrado">
+                description = <"El cuello se ha borrado cerca de un 70%">
+            >
+            ["at0.23"] = <
+                text = <"80% borrado">
+                description = <"El cuello se ha borrado cerca de un 80%">
+            >
+            ["at0.24"] = <
+                text = <"90% borrado">
+                description = <"El cuello se ha borrado cerca de un 90%">
+            >
+            ["at0.25"] = <
+                text = <"Completamente borrado">
+                description = <"El cuello se ha borrado en un 100%">
+            >
+            ["at0.26"] = <
+                text = <"Blando">
+                description = <"El cuello está blando y comienza a borrarse">
+            >
+            ["at0.27"] = <
+                text = <"Orificio cervical">
+                description = <"La salida del utero">
+            >
+            ["at0.28"] = <
+                text = <"Estimado">
+                description = <"La dilatación del orificio cervical">
+            >
+            ["at0.29"] = <
+                text = <"*Description(en)">
+                description = <"*Findings about the cervical os.(en)">
+            >
+            ["at0.31"] = <
+                text = <"Dilatación">
+                description = <"Dilatación del cuello">
+            >
+            ["at0.32"] = <
+                text = <"Lugar">
+                description = <"Identifica la parte del cuello que está siendo examinada">
+            >
+            ["at0.33"] = <
+                text = <"OCE">
+                description = <"Orificio cervical externo (se abre a la vagina)">
+            >
+            ["at0.34"] = <
+                text = <"OCI">
+                description = <"Orificio cervical interno (se abre al útero)">
+            >
+            ["at0.35"] = <
+                text = <"Cantidad de dedos que pasan">
+                description = <"Número de dedos que pasan  por el orificio cervical interno o externo">
+            >
+            ["at0.36"] = <
+                text = <"Consistencia">
+                description = <"Consistencia del cuello">
+            >
+            ["at0.37"] = <
+                text = <"Suave">
+                description = <"Suave">
+            >
+            ["at0.38"] = <
+                text = <"Firme">
+                description = <"Firme">
+            >
+            ["at0.40"] = <
+                text = <"Grosor">
+                description = <"Grosor cervical">
+            >
+            ["at0.41"] = <
+                text = <"Grueso">
+                description = <"Grueso">
+            >
+            ["at0.42"] = <
+                text = <"Delgado">
+                description = <"Delgado">
+            >
+            ["at0.43"] = <
+                text = <"Muy delgado">
+                description = <"Muy delgado">
+            >
+            ["at0.44"] = <
+                text = <"Edematoso">
+                description = <"Engrosado e hinchado">
+            >
+            ["at0.45"] = <
+                text = <"Aplicación a polo presentado">
+                description = <"Aplicación del cuello al polo fetal presentado">
+            >
+            ["at0.46"] = <
+                text = <"Aplicado libremente">
+                description = <"No moldeado al polo fetal presentado">
+            >
+            ["at0.47"] = <
+                text = <"Aplicado firmemente">
+                description = <"Moldeado al polo fetal presentado">
+            >
+            ["at0.48"] = <
+                text = <"*Labour-specific findings(en)">
+                description = <"*Findings related to labour.(en)">
+            >
+            ["at0.49"] = <
+                text = <"*Size(en)">
+                description = <"*Details of cervical size.(en)">
+            >
+            ["at0.51"] = <
+                text = <"*Vaginal fluid(en)">
+                description = <"*Details of vaginal fluid.(en)">
+            >
+            ["at0.8"] = <
+                text = <"Posición">
+                description = <"La posición en relación a la posición anatómica normal">
+            >
+            ["at0.9"] = <
+                text = <"Central">
+                description = <"El cuello está central y en la posición normal">
+            >
+            ["at0000.1"] = <
+                text = <"Examen del cuello">
+                description = <"Hallazgos del examen físico del cuello uterino">
+            >
+            ["at0008.1"] = <
+                text = <"*Findings(en)">
+                description = <"*Clinical findings.(en)">
+            >
+            ["at0.9006"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"Posición (synthesised)">
+                description = <"La posición en relación a la posición anatómica normal (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Consistencia (synthesised)">
+                description = <"Consistencia del cuello (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Borramiento (synthesised)">
+                description = <"El borramiento del cuello uterino en embarazo o trabajo de parto avanzados (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Grosor (synthesised)">
+                description = <"Grosor cervical (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"Aplicación a polo presentado (synthesised)">
+                description = <"Aplicación del cuello al polo fetal presentado (synthesised)">
+            >
+            ["ac0.9005"] = <
+                text = <"Lugar (synthesised)">
+                description = <"Identifica la parte del cuello que está siendo examinada (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9006"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.9", "at0.10", "at0.11", "at0.12", "at0.13">
+        >
+        ["ac0.9005"] = <
+            id = <"ac0.9005">
+            members = <"at0.33", "at0.34">
+        >
+        ["ac0.9003"] = <
+            id = <"ac0.9003">
+            members = <"at0.41", "at0.42", "at0.43", "at0.44">
+        >
+        ["ac0.9004"] = <
+            id = <"ac0.9004">
+            members = <"at0.46", "at0.47">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.37", "at0.38">
+        >
+        ["ac0.9002"] = <
+            id = <"ac0.9002">
+            members = <"at0.15", "at0.26", "at0.16", "at0.17", "at0.18", "at0.19", "at0.20", "at0.21", "at0.22", "at0.23", "at0.24", "at0.25">
+        >
+    >

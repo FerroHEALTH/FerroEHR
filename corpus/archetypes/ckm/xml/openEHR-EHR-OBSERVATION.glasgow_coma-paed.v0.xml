@@ -1,0 +1,2093 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2007-13-03</original_author>
+    <original_author id="name">Heather Leslie</original_author>
+    <original_author id="organisation">Ocean Informatics</original_author>
+    <original_author id="email">heather.leslie@oceaninformatics.com</original_author>
+    <other_contributors>Ian McNicoll, Ocean Informatics, UK</other_contributors>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Teasdale G, Jennett B. Assessment of coma and impaired consciousness. A practical scale. Lancet 1974,2:81-84.&#xD;
+&#xD;
+Teasdale GM, Murray L. Revisiting the Glasgow Coma Scale and Coma Score. Intensive Care Medicine. 2000; 26: 153-154.&#xD;
+&#xD;
+Worrall K. Use of the Glasgow coma scale in infants. Paediatric nursing 2004;16(4):45-50.&#xD;
+&#xD;
+Tatman A, Warren A, Williams A, Powell JE, Whitehouse W. Development of a modified paediatric coma scale in intensive care clinical practice. Archives of disease in childhood 1997;77(6):519.</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">29AF19A1A1211C26E939E3570C3956B2</other_details>
+    <other_details id="build_uid">d714c85e-4b24-48ab-886a-f1b85930823c</other_details>
+    <other_details id="revision">0.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Para registrar observações clínicas sobre a capacidade de resposta a estímulos de um sujeito, como uma avaliação objetiva do estado consciência de uma criança.&#xD;
+&#xD;
+Também conhecido como JGCS (James 'GCS).</purpose>
+      <keywords>resposta</keywords>
+      <keywords>motor</keywords>
+      <keywords>verbal</keywords>
+      <keywords>olho</keywords>
+      <keywords>estímulo</keywords>
+      <keywords>glasgow</keywords>
+      <keywords>coma</keywords>
+      <keywords>escala</keywords>
+      <keywords>neurológico</keywords>
+      <keywords>capacidade de resposta</keywords>
+      <keywords>MV</keywords>
+      <keywords>consciente</keywords>
+      <keywords>pediátrico</keywords>
+      <keywords>JGCS</keywords>
+      <use>Use em qualquer situação clínica para avaliar o nível de consciência de um sujeito, com exceção de bebês e crianças pequenas.&#xD;
+Os três valores de resposta são considerados separadamente e sua soma. O valor mínimo possível da pontuação total é 3 e o máximo possível é 15.&#xD;
+A pontuação total pode ser calculada como a soma das pontuações registradas para cada uma das respostas oculares, motoras e verbais.&#xD;
+A pontuação OMV pode ser derivada como um composto de cada uma das pontuações de resposta registradas, por exemplo, O3 M2 V4 representa o estado consciente de um sujeito que abre os olhos para a fala, tem uma resposta extensora à dor e emite sons incompreensíveis.&#xD;
+Se qualquer resposta ocular, motora ou verbal não puder ser avaliada - por exemplo, se o sujeito estiver intubado e não puder responder verbalmente, ou paralisado e incapaz de fornecer uma resposta motora - a pontuação registrada para a resposta será 1 e um modificador deve ser anexado. Se o sujeito estiver intubado, o componente de resposta verbal pode ser representado como V1t, em que t = tubo ou V1Intubado. Se o sujeito apresentar um inchaço ou lesões faciais / oculares graves e não conseguir abrir os olhos, o componente de resposta ocular poderá ser representado como O1c, onde c = fechado (no inglês closed). Freqüentemente, o numérico é omitido, de modo que o componente de resposta ocular pode ser expresso mais simplesmente como Oc, por exemplo, Oc M2 V4.&#xD;
+O suporte à decisão clínica deve basear-se em cada um dos registros específicos de respostas ocular, motora e verbal e nas declarações explícitas de que uma resposta não pode ser avaliada, em vez da pontuação OMV derivada e composta.</use>
+      <misuse>Não deve ser usado para avaliar adultos - use o OBSERVATION.glasgow_coma.v1.adl para garantir que as opções de resposta ocular, motora e verbal sejam adequadas.</misuse>
+      <copyright>© copyright (c) 2010 openEHR Foundation, openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sl</code_string>
+      </language>
+      <purpose>Za opazovanje odzivnosti pacienta pri ocenjevanju zavesti le tega. &#xD;
+&#xD;
+Lestvica je znana tudi kot JGCS (James GCS)</purpose>
+      <keywords>odziv</keywords>
+      <keywords>motorika</keywords>
+      <keywords>govor</keywords>
+      <keywords>oči</keywords>
+      <keywords>glasgow</keywords>
+      <keywords>lestvica za oceno zavesti</keywords>
+      <keywords>nevrološka ocena</keywords>
+      <keywords>EMV</keywords>
+      <keywords>lestvica</keywords>
+      <keywords>coma scale</keywords>
+      <use>Se uporablja v situacijah, ko je potrebno oceniti zavest pacienta. Lestvica je prilagojena oceni zavesti pri otrocih in tudi tistih otrocih, ki so mlajši od 2 let.&#xD;
+Opazujejo se tri področja: govr, gibanje in premikanje oči. &#xD;
+Rezultat je seštevek vseh faktorjev iz vseh treh področij opazovanja&#xD;
+odzivnosti in njihov rezultat</use>
+      <misuse>Se ne uporablja za oceno zavesti odraslih. V ta namen se uporablja OBSERVATION.glasgow_coma.v1.adl.</misuse>
+      <copyright>© copyright (c) 2010 openEHR Foundation, openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record clinical observations regarding responsiveness of a subject to stimuli as an objective assessment of the conscious state of a child subject. &#xD;
+&#xD;
+Also known as JGCS (James' GCS).</purpose>
+      <keywords>response</keywords>
+      <keywords>motor</keywords>
+      <keywords>verbal</keywords>
+      <keywords>eye</keywords>
+      <keywords>stimulus</keywords>
+      <keywords>glasgow</keywords>
+      <keywords>coma</keywords>
+      <keywords>scale</keywords>
+      <keywords>neurological</keywords>
+      <keywords>responsiveness</keywords>
+      <keywords>EMV</keywords>
+      <keywords>conscious</keywords>
+      <keywords>paediatric</keywords>
+      <keywords>JGCS</keywords>
+      <use>Use in any clinical situation to assess the level of consciousness of a subject, with the exception of infants and young children.&#xD;
+The three response values are considered separately as well as their sum. The minimum possible Total score value is 3 and the maximum possible is 15.&#xD;
+The Total score can be derived as the sum of the recorded scores for each of the eye, motor and verbal responses. &#xD;
+The EMV score can be derived as a composite from each of the recorded response scores, for example E3 M2 V4 represents the conscious state of a subject who opens eyes to speech, has an extensor response to pain and utters incomprehensible sounds.&#xD;
+If any one of the eye, motor or verbal responses cannot be assessed - for example if the subject is intubated and not able to respond verbally, or paralysed and not able to provide a motor response - the score recorded for the response is 1 and a modifier attached. If the subject is intubated the verbal response component can be represented as V1t, where t = tube, or V1Intubated. If the subject has severe facial/eye swelling or injuries and can't open their eyes, the eye response component can be represented as E1c, where c=closed. Often the numeric one is omitted, so the eye response component can be expressed more simply as Ec, for example Ec M2 V4.&#xD;
+Clinical Decision support should be based upon each of the specific records of eye, motor and verbal responses and the explicit statements that a response cannot be assessed, rather than the derived and composite EMV score.</use>
+      <misuse>Not to be used for assessing adults- use the OBSERVATION.glasgow_coma.v1.adl to ensure that the eye, motor and verbal response choices are appropriate.</misuse>
+      <copyright>© copyright (c) 2010 openEHR Foundation, openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>pt-br</code_string>
+    </language>
+    <author id="name">Adriana Kitajima; Débora Farage, Fernanda Maia; Clovis Puttini; Ana Rodrigues</author>
+    <author id="organisation">CORE Consulting</author>
+    <author id="email">adrianakitajima@gmail.com</author>
+    <accreditation>HAOC</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sl</code_string>
+    </language>
+    <author id="name">mag. Biljana Prinčič</author>
+    <author id="organisation">Marand d.o.o., Ljubljana, Slovenija</author>
+    <author id="email">biljana.princic@marand.si</author>
+  </translations>
+  <uid>
+    <value>cefbbda5-4372-48fb-8fbe-8e44f2f49c00</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-OBSERVATION.glasgow_coma-paed.v0</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000.1</concept>
+  <parent_archetype_id>
+    <value>openEHR-EHR-OBSERVATION.glasgow_coma.v1</value>
+  </parent_archetype_id>
+  <definition>
+    <rm_type_name>OBSERVATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000.1</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>HISTORY</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>events</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0002</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ITEM_TREE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0003</node_id>
+                <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                  <rm_attribute_name>items</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0009</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_ORDINAL">
+                        <rm_type_name>DV_ORDINAL</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <list>
+                          <value>1</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0010</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>2</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0011</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>3</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0012</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>4</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0013</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0034</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_BOOLEAN</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>value</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_PRIMITIVE_OBJECT">
+                            <rm_type_name>BOOLEAN</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <item xsi:type="C_BOOLEAN">
+                              <true_valid>true</true_valid>
+                              <false_valid>false</false_valid>
+                            </item>
+                          </children>
+                        </attributes>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0038</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0008.1</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_ORDINAL">
+                        <rm_type_name>DV_ORDINAL</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <list>
+                          <value>1</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0019</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>2</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0020</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>3</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0021</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>4</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0022</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>5</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0023</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>6</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0024</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0.41</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_ORDINAL">
+                        <rm_type_name>DV_ORDINAL</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <list>
+                          <value>1</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.42</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>2</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.43</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>3</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.44</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>4</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.45</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>5</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.46</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>6</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.47</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0036</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_BOOLEAN</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>value</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_PRIMITIVE_OBJECT">
+                            <rm_type_name>BOOLEAN</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <item xsi:type="C_BOOLEAN">
+                              <true_valid>true</true_valid>
+                              <false_valid>false</false_valid>
+                            </item>
+                          </children>
+                        </attributes>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0040</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0007.1</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_ORDINAL">
+                        <rm_type_name>DV_ORDINAL</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <list>
+                          <value>1</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0014</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>2</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0015</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>3</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0016</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>4</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0017</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>5</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0018</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0.48</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_ORDINAL">
+                        <rm_type_name>DV_ORDINAL</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <list>
+                          <value>1</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.50</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>2</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.51</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>3</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.52</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>4</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.53</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>5</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.54</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0.49</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_ORDINAL">
+                        <rm_type_name>DV_ORDINAL</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <list>
+                          <value>1</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.55</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>2</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.56</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>3</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.57</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>4</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.58</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>5</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.59</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0.60</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_ORDINAL">
+                        <rm_type_name>DV_ORDINAL</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <list>
+                          <value>1</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.61</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>2</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.62</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>3</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.63</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>4</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.64</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>5</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0.65</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0035</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_BOOLEAN</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>value</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_PRIMITIVE_OBJECT">
+                            <rm_type_name>BOOLEAN</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <item xsi:type="C_BOOLEAN">
+                              <true_valid>true</true_valid>
+                              <false_valid>false</false_valid>
+                            </item>
+                          </children>
+                        </attributes>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0039</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0026</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_COUNT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>magnitude</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_PRIMITIVE_OBJECT">
+                            <rm_type_name>INTEGER</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <item xsi:type="C_INTEGER">
+                              <range>
+                                <lower_included>true</lower_included>
+                                <upper_included>true</upper_included>
+                                <lower_unbounded>false</lower_unbounded>
+                                <upper_unbounded>false</upper_unbounded>
+                                <lower>3</lower>
+                                <upper>15</upper>
+                              </range>
+                            </item>
+                          </children>
+                        </attributes>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0030</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </occurrences>
+                    <node_id>at0037</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <cardinality>
+                    <is_ordered>false</is_ordered>
+                    <is_unique>false</is_unique>
+                    <interval>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </interval>
+                  </cardinality>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0.41">
+        <items id="text">Best motor response - infant (M)</items>
+        <items id="description">Best motor response to stumulus in infant less than 2 years old.</items>
+      </items>
+      <items code="at0.42">
+        <items id="text">No response</items>
+        <items id="description">No motor response; limbs flaccid.</items>
+      </items>
+      <items code="at0.43">
+        <items id="text">Extensor response</items>
+        <items id="description">Abnormal extension to pain.</items>
+      </items>
+      <items code="at0.44">
+        <items id="text">Flexor response</items>
+        <items id="description">Abnormal flexion to pain.</items>
+      </items>
+      <items code="at0.45">
+        <items id="text">Withdrawal response</items>
+        <items id="description">Withdraws in response to painful stimulus.</items>
+      </items>
+      <items code="at0.46">
+        <items id="text">Withdraws to touch</items>
+        <items id="description">Withdraws in response to touch.</items>
+      </items>
+      <items code="at0.47">
+        <items id="text">Moves spontaneously</items>
+        <items id="description">Moves spontaneously and purposefully.</items>
+      </items>
+      <items code="at0.48">
+        <items id="text">Best verbal response - child (V)</items>
+        <items id="description">Best verbal response to stimulus in a child older than 2 years.</items>
+      </items>
+      <items code="at0.49">
+        <items id="text">Best verbal response - infant (V)</items>
+        <items id="description">Best verbal response to stimulus in a infant younger than 2 years.</items>
+      </items>
+      <items code="at0.50">
+        <items id="text">No response</items>
+        <items id="description">No verbal response.</items>
+      </items>
+      <items code="at0.51">
+        <items id="text">Incomprehensible words or nonspecific sounds</items>
+        <items id="description">Moans or groans, but no recognisable words.</items>
+      </items>
+      <items code="at0.52">
+        <items id="text">Inappropriate words</items>
+        <items id="description">Intelligible speech, but inappropriate words.</items>
+      </items>
+      <items code="at0.53">
+        <items id="text">Confused</items>
+        <items id="description">Converses, but confused and disoriented in their environment.</items>
+      </items>
+      <items code="at0.54">
+        <items id="text">Oriented, appropriate</items>
+        <items id="description">Converses, oriented to their environment.</items>
+      </items>
+      <items code="at0.55">
+        <items id="text">No response</items>
+        <items id="description">No verbal response.</items>
+      </items>
+      <items code="at0.56">
+        <items id="text">Moans</items>
+        <items id="description">Occasionally whimpers or moans.</items>
+      </items>
+      <items code="at0.57">
+        <items id="text">Cries</items>
+        <items id="description">Cries inappropriately.</items>
+      </items>
+      <items code="at0.58">
+        <items id="text">Irritable cries</items>
+        <items id="description">Less than usual ability or spontaneous irritable cry.</items>
+      </items>
+      <items code="at0.59">
+        <items id="text">Coos and babbles</items>
+        <items id="description">The infant is alert babbles, coos or says words or sentences to&#xD;
+their usual ability.</items>
+      </items>
+      <items code="at0.60">
+        <items id="text">Best grimace response (G)</items>
+        <items id="description">Best grimace response in response to pain. May be used instead of verbal response for intubated patients.</items>
+      </items>
+      <items code="at0.61">
+        <items id="text">No response</items>
+        <items id="description">No grimace response to pain.</items>
+      </items>
+      <items code="at0.62">
+        <items id="text">Mild grimace</items>
+        <items id="description">Mild grimace or some change in facial expression to pain.</items>
+      </items>
+      <items code="at0.63">
+        <items id="text">Vigorous grimace</items>
+        <items id="description">Vigorous grimace to pain.</items>
+      </items>
+      <items code="at0.64">
+        <items id="text">Less than usual spontaneous activity</items>
+        <items id="description">Less than usual spontaneous ability or only responds to touch.</items>
+      </items>
+      <items code="at0.65">
+        <items id="text">Normal spontaneous facial/oro-motor activity</items>
+        <items id="description">Spontaneous normal facial/oromotor activity.</items>
+      </items>
+      <items code="at0000">
+        <items id="text">Glasgow Coma Scale</items>
+        <items id="description">Fifteen point scale used to assess the level of consciousness of a subject. Also known as the Modified Glasgow Coma Scale.</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">Paediatric Glasgow Coma Scale</items>
+        <items id="description">Fifteen point scale used to assess the level of consciousness of a child subject. Also known as the Modified Glasgow Coma Scale for Infants and Children.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Event Series</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Any event</items>
+        <items id="description">Any event.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Best verbal response (V)</items>
+        <items id="description">Best verbal response to stimulus.</items>
+      </items>
+      <items code="at0007.1">
+        <items id="text">Best verbal response - adult (V)</items>
+        <items id="description">Best verbal response to stimulus in an adult.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Best motor response (M)</items>
+        <items id="description">Best motor response to stimulus.</items>
+      </items>
+      <items code="at0008.1">
+        <items id="text">Best motor response - child (M)</items>
+        <items id="description">Best motor response to stimulus in child over 2 years old.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Best eye response (E)</items>
+        <items id="description">Best eye response to stimulus.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">No response</items>
+        <items id="description">Does not open eyes.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Eyes open in response to pain</items>
+        <items id="description">Opens eyes in response to painful stimuli in limbs.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Eyes open in response to speech</items>
+        <items id="description">Opens eyes in response to any verbal approach.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Spontaneous eye opening</items>
+        <items id="description">Opens eyes spontaneously.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">No response</items>
+        <items id="description">No verbal response.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Incomprehensible sounds</items>
+        <items id="description">Moans or groans, but no recognisable words.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Inappropriate speech</items>
+        <items id="description">Intelligible speech, but no conversational exchange.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Confused conversation</items>
+        <items id="description">Converses, but confused and disoriented in their environment.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Oriented</items>
+        <items id="description">Converses, oriented to their environment.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">No response</items>
+        <items id="description">No motor response; limbs flaccid.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Extensor response</items>
+        <items id="description">Abnormal extension to pain.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Flexor response</items>
+        <items id="description">Abnormal flexion to pain.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Withdrawal response</items>
+        <items id="description">Flexion withdrawal response to pain.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Localises pain</items>
+        <items id="description">Localised movement in response to pain.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Obeys commands</items>
+        <items id="description">Follows simple verbal commands.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Total score</items>
+        <items id="description">The sum of the 3 ordinal scores for each component parameter.</items>
+      </items>
+      <items code="at0030">
+        <items id="text">EMV profile</items>
+        <items id="description">Eye Motor Verbal profile expressing each component individually. This can be derived as a combination of the preceding elements.</items>
+      </items>
+      <items code="at0034">
+        <items id="text">Not able to test eye response</items>
+        <items id="description">Not possible to test eye responses - for example in the case of associated severe facial/eye swelling or damage.</items>
+      </items>
+      <items code="at0035">
+        <items id="text">Not able to test verbal response</items>
+        <items id="description">Not possible to test verbal responses - for example in the case of associated intubation.</items>
+      </items>
+      <items code="at0036">
+        <items id="text">Not able to test motor response</items>
+        <items id="description">Not possible to test motor responses - for example in the case of associated limb paralysis.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Comment</items>
+        <items id="description">Comment about measurement of the Scale, especially if it was not possible to assess a response.</items>
+      </items>
+      <items code="at0038">
+        <items id="text">Reason for inability to test eye response</items>
+        <items id="description">Reason for inability to test eye response.</items>
+      </items>
+      <items code="at0039">
+        <items id="text">Reason for inability to test verbal response</items>
+        <items id="description">Reason for inability to test verbal response.</items>
+      </items>
+      <items code="at0040">
+        <items id="text">Reason for inability to test motor response</items>
+        <items id="description">Reason for inability to test motor response.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="sl">
+      <items code="at0.41">
+        <items id="text">Gibanje (otroci mlajši od 2 let)</items>
+        <items id="description">Gibanje (otroci mlajši od 2 let)</items>
+      </items>
+      <items code="at0.42">
+        <items id="text">Ni odziva</items>
+        <items id="description">Ni odziva</items>
+      </items>
+      <items code="at0.43">
+        <items id="text">Iztegnjena drža</items>
+        <items id="description">Iztegnjena drža kot odziv na bolečino</items>
+      </items>
+      <items code="at0.44">
+        <items id="text">Pokrčena drža</items>
+        <items id="description">Pokrčena drža kot odziv na bolečino</items>
+      </items>
+      <items code="at0.45">
+        <items id="text">Reakcija na bolečino</items>
+        <items id="description">Reakcija na bolečino</items>
+      </items>
+      <items code="at0.46">
+        <items id="text">Reakcija na dotik</items>
+        <items id="description">Reakcija na dotik</items>
+      </items>
+      <items code="at0.47">
+        <items id="text">Spontano</items>
+        <items id="description">Se giblje spontano in z namenom</items>
+      </items>
+      <items code="at0.48">
+        <items id="text">Govor (otroci mlajši od 2 let)</items>
+        <items id="description">Opazovanje govora pri otrocih starejših od 2 let</items>
+      </items>
+      <items code="at0.49">
+        <items id="text">Govor (otroci mlajši od 30 dni)</items>
+        <items id="description">Opazovanje govora pri otrocih mlajših od 30 let</items>
+      </items>
+      <items code="at0.50">
+        <items id="text">Ni odziva</items>
+        <items id="description">Ni odziva pri govoru</items>
+      </items>
+      <items code="at0.51">
+        <items id="text">Nerazločljivi glasovi</items>
+        <items id="description">Godrnjanje</items>
+      </items>
+      <items code="at0.52">
+        <items id="text">Odgovarja nerazumljive besede</items>
+        <items id="description">Odgovarja nerazumljive besede</items>
+      </items>
+      <items code="at0.53">
+        <items id="text">Zmeden, dezorientiran</items>
+        <items id="description">Govori, vendar je zmeden</items>
+      </items>
+      <items code="at0.54">
+        <items id="text">Orientiran, normalen pogovor</items>
+        <items id="description">Orientiran, normalen pogovor</items>
+      </items>
+      <items code="at0.55">
+        <items id="text">Ni odziva</items>
+        <items id="description">Ni verbalnega odziva</items>
+      </items>
+      <items code="at0.56">
+        <items id="text">Stokanje</items>
+        <items id="description">Občasno zastoka</items>
+      </items>
+      <items code="at0.57">
+        <items id="text">Jokanje</items>
+        <items id="description">Joka brez razloga</items>
+      </items>
+      <items code="at0.58">
+        <items id="text">Razdražljiv jok</items>
+        <items id="description">Spontan razdražljiv jok</items>
+      </items>
+      <items code="at0.59">
+        <items id="text">Živahen</items>
+        <items id="description">Dojenček je živahen in poskuša komunicirati</items>
+      </items>
+      <items code="at0.60">
+        <items id="text">Izgled obraza</items>
+        <items id="description">Izgled obraza (grimase)</items>
+      </items>
+      <items code="at0.61">
+        <items id="text">Ni odziva</items>
+        <items id="description">Se ne odziva na bolečino s spakovanjem obraza</items>
+      </items>
+      <items code="at0.62">
+        <items id="text">Majhno spakovanje</items>
+        <items id="description">Majhno spakovanje</items>
+      </items>
+      <items code="at0.63">
+        <items id="text">Močno spakovanje</items>
+        <items id="description">Močno spakovanje</items>
+      </items>
+      <items code="at0.64">
+        <items id="text">Samo na dotik</items>
+        <items id="description">Spakovanje samo na dotik</items>
+      </items>
+      <items code="at0.65">
+        <items id="text">Normalen</items>
+        <items id="description">Ima normalen izgled obraza</items>
+      </items>
+      <items code="at0000">
+        <items id="text">Lestvica za oceno zavesti</items>
+        <items id="description">Glasgow Coma Scale - 15 točkovna lestvica za oceno zavesti</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">Lestvica za oceno zavesti v pediatriji</items>
+        <items id="description">Pediatrična Glasgow Coma Scale - 15 točkovna lestvica za oceno zavesti pri otrocih in novorojenčkih</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*Event Series(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*Any event(en)</items>
+        <items id="description">*Any event(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Tree(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Govor</items>
+        <items id="description">Opazovanje govora pri otrocih mlajših od 2 leti</items>
+      </items>
+      <items code="at0007.1">
+        <items id="text">Govor odrasli</items>
+        <items id="description">Opazovanje govora pri odraslih</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Gibanje</items>
+        <items id="description">Gibanje pri starejših</items>
+      </items>
+      <items code="at0008.1">
+        <items id="text">Gibanje</items>
+        <items id="description">Gibanje pri otrocih do 2 let</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Odpiranje oči</items>
+        <items id="description">Opazovanje odpiranja oči</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Ni odziva</items>
+        <items id="description">Ne odpira oči</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Na bolečino</items>
+        <items id="description">Oči odpira samo na bolečino</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Na govor</items>
+        <items id="description">Odpira oči kot odgovor na nagovarjanje</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Spontano</items>
+        <items id="description">Spontano odpira oči</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Ni odziva</items>
+        <items id="description">Ni verbalnega odziva</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Nerazločljiv govor</items>
+        <items id="description">Godrnja, Mrmlja</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Neprimeren govor</items>
+        <items id="description">Odgovarja nerazumljive besede</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Zmeden pogovor</items>
+        <items id="description">Govori, vendar je zmeden</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Orientiran, normalen pogovor</items>
+        <items id="description">Se pogovarja in je orientiran</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Ni odziva</items>
+        <items id="description">Ni odziva v gibanju</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Iztegnjena drža</items>
+        <items id="description">Nenormalna iztegnjena drža na bolečino</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Pokrčena drža</items>
+        <items id="description">nenormalna pokrčena drža na bolečino</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Reakcija na bolečino</items>
+        <items id="description">Reakcija n abolečino</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Lokalizira bolečino</items>
+        <items id="description">Lokalizira bolečino</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Uboga verbalna navodila</items>
+        <items id="description">Uboga verbalna navodila</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Ocena</items>
+        <items id="description">Seštevek 3 ocen za vsako komponento ocenjevanja</items>
+      </items>
+      <items code="at0030">
+        <items id="text">EMV profil</items>
+        <items id="description">Eye Motor Verbal profil, ki ocenjuje vasko komponento posebej</items>
+      </items>
+      <items code="at0034">
+        <items id="text">Ni možno oceniti odzivnosti oči</items>
+        <items id="description">Ni možno oceniti odzivnosti oči</items>
+      </items>
+      <items code="at0035">
+        <items id="text">Ni možno oceniti govora</items>
+        <items id="description">Ni možno oceniti govora</items>
+      </items>
+      <items code="at0036">
+        <items id="text">Ni možno oceniti gibanja</items>
+        <items id="description">Ni možno oceniti gibanja</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Opomba</items>
+        <items id="description">Opombe glede meritve, opazovanja</items>
+      </items>
+      <items code="at0038">
+        <items id="text">Razlog za ne zmožnost ocene odzivnosti oči</items>
+        <items id="description">Razlog za ne zmožnost ocene odzivnosti oči</items>
+      </items>
+      <items code="at0039">
+        <items id="text">Razlog za ne zmožnost ocene govora</items>
+        <items id="description">Razlog za ne zmožnost ocene govora</items>
+      </items>
+      <items code="at0040">
+        <items id="text">Razon za ne zmožnost ocene gibanja</items>
+        <items id="description">Razon za ne zmožnost ocene gibanja</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="pt-br">
+      <items code="at0.41">
+        <items id="text">Melhor resposta motora - bebê (M)</items>
+        <items id="description">Melhor resposta motora ao estímulo em bebês com menos de 2 anos.</items>
+      </items>
+      <items code="at0.42">
+        <items id="text">Sem resposta</items>
+        <items id="description">Sem resposta motora; membros flácidos.</items>
+      </items>
+      <items code="at0.43">
+        <items id="text">Resposta do extensora</items>
+        <items id="description">Extensão anormal à dor.</items>
+      </items>
+      <items code="at0.44">
+        <items id="text">Resposta flexora</items>
+        <items id="description">Flexão anormal à dor.</items>
+      </items>
+      <items code="at0.45">
+        <items id="text">Resposta de retirada</items>
+        <items id="description">Retira em resposta a estímulos dolorosos.</items>
+      </items>
+      <items code="at0.46">
+        <items id="text">Retira ao tocar</items>
+        <items id="description">Retira em resposta ao toque.</items>
+      </items>
+      <items code="at0.47">
+        <items id="text">Move-se espontaneamente</items>
+        <items id="description">Move-se espontaneamente e de propósito.</items>
+      </items>
+      <items code="at0.48">
+        <items id="text">Melhor resposta verbal - criança (V)</items>
+        <items id="description">Melhor resposta verbal ao estímulo em uma criança com mais de 2 anos.</items>
+      </items>
+      <items code="at0.49">
+        <items id="text">Melhor resposta verbal - bebê (V)</items>
+        <items id="description">Melhor resposta verbal ao estímulo em um bebê com menos de 2 anos.</items>
+      </items>
+      <items code="at0.50">
+        <items id="text">Sem resposta</items>
+        <items id="description">Sem resposta verbal.</items>
+      </items>
+      <items code="at0.51">
+        <items id="text">Palavras incompreensíveis ou sons inespecíficos</items>
+        <items id="description">Gemidos ou lamento, mas nenhuma palavra reconhecível.</items>
+      </items>
+      <items code="at0.52">
+        <items id="text">Palavras inapropriadas</items>
+        <items id="description">Discurso compreensível, mas com palavras inapropriadas.</items>
+      </items>
+      <items code="at0.53">
+        <items id="text">Confusão</items>
+        <items id="description">Conversa, mas confuso e desorientado em seu ambiente.</items>
+      </items>
+      <items code="at0.54">
+        <items id="text">Orientado, apropriado</items>
+        <items id="description">Conversas, orientadas para o ambiente.</items>
+      </items>
+      <items code="at0.55">
+        <items id="text">Sem resposta</items>
+        <items id="description">Sem resposta verbal.</items>
+      </items>
+      <items code="at0.56">
+        <items id="text">Gemidos</items>
+        <items id="description">Ocasionalmente choraminga ou geme.</items>
+      </items>
+      <items code="at0.57">
+        <items id="text">Choro</items>
+        <items id="description">Chora de forma inadequada.</items>
+      </items>
+      <items code="at0.58">
+        <items id="text">Choro irritável</items>
+        <items id="description">Capacidade abaixo do normal ou choro irritável espontâneo.</items>
+      </items>
+      <items code="at0.59">
+        <items id="text">Murmúrio e balbucio</items>
+        <items id="description">O bebê está balbuciando alerta, murmurando ou diz palavras ou frases em sua habilidade usual.</items>
+      </items>
+      <items code="at0.60">
+        <items id="text">Melhor resposta de careta (C)</items>
+        <items id="description">Melhor resposta de careta em resposta à dor. Pode ser usado em vez de resposta verbal para pacientes intubados.</items>
+      </items>
+      <items code="at0.61">
+        <items id="text">Sem resposta</items>
+        <items id="description">Nenhuma resposta de careta à dor.</items>
+      </items>
+      <items code="at0.62">
+        <items id="text">Careta suave</items>
+        <items id="description">Careta leve ou alguma mudança na expressão facial para dor.</items>
+      </items>
+      <items code="at0.63">
+        <items id="text">Careta vigorosa</items>
+        <items id="description">Careta vigorosa para a dor.</items>
+      </items>
+      <items code="at0.64">
+        <items id="text">Atividade espontânea menor que o usual</items>
+        <items id="description">Capacidade espontânea menor que o usual ou responde apenas ao toque.</items>
+      </items>
+      <items code="at0.65">
+        <items id="text">Atividade facial / oromotora espontânea normal</items>
+        <items id="description">Atividade facial / oromotora normal espontânea.</items>
+      </items>
+      <items code="at0000">
+        <items id="text">Escala de Coma de Glasgow</items>
+        <items id="description">Escala de quinze pontos usada para avaliar o nível de consciência de um sujeito. Também conhecida como Escala de coma modificada de Glasgow.</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">Escala de coma de Glasgow Pediátrica</items>
+        <items id="description">Escala de quinze pontos usada para avaliar o nível de consciência de uma criança. Também conhecida como Escala de coma de Glasgow modificada para bebês e crianças.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Event Series</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Qualquer evento</items>
+        <items id="description">Qualquer evento</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Melhor resposta verbal (V)</items>
+        <items id="description">Melhor resposta verbal ao estímulo.</items>
+      </items>
+      <items code="at0007.1">
+        <items id="text">Melhor resposta verbal - adulto (V)</items>
+        <items id="description">Melhor resposta verbal ao estímulo em um adulto.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Melhor resposta motora (M)</items>
+        <items id="description">Melhor resposta motora ao estímulo.</items>
+      </items>
+      <items code="at0008.1">
+        <items id="text">Melhor resposta motora - criança (M)</items>
+        <items id="description">Melhor resposta motora ao estímulo em criança acima de 2 anos.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Melhor resposta ocular (O)</items>
+        <items id="description">Melhor resposta ocular ao estímulo.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Sem resposta</items>
+        <items id="description">Não abre os olhos.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Olhos abertos em resposta à dor</items>
+        <items id="description">Abre os olhos em resposta a estímulos dolorosos nos membros.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Olhos abertos em resposta à fala</items>
+        <items id="description">Abre os olhos em resposta a qualquer abordagem verbal.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Abertura ocular espontânea</items>
+        <items id="description">Abre os olhos espontaneamente.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Sem resposta</items>
+        <items id="description">Sem resposta verbal.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Sons incompreensíveis</items>
+        <items id="description">Gemidos ou gemidos, mas nenhuma palavra reconhecível.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Discurso inadequado</items>
+        <items id="description">Discurso compreensível, mas mas nenhuma troca de conversação.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Conversa confusa</items>
+        <items id="description">Conversa, mas confuso e desorientado em seu ambiente.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Orientado</items>
+        <items id="description">Conversa orientada para o ambiente.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Sem resposta</items>
+        <items id="description">Sem resposta motora; membros flácidos.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Resposta extensora</items>
+        <items id="description">Extensão anormal à dor.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Resposta flexora</items>
+        <items id="description">Flexão anormal à dor.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Resposta de retirada</items>
+        <items id="description">Resposta de retirada da flexão à dor.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Localiza a dor</items>
+        <items id="description">Movimento localizado em resposta à dor.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Obedece a comandos</items>
+        <items id="description">Segue comandos verbais simples.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Pontuação total</items>
+        <items id="description">A soma das três pontuações ordinais para cada parâmetro do componente.</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Perfil OMV</items>
+        <items id="description">Perfil ocular, motor e verbal que expressa cada componente individualmente. Isso pode ser derivado como uma combinação dos elementos anteriores.</items>
+      </items>
+      <items code="at0034">
+        <items id="text">Não é possível testar a resposta ocular</items>
+        <items id="description">Não é possível testar as respostas oculares - por exemplo, no caso de inchaço ou dano facial / ocular grave associado.</items>
+      </items>
+      <items code="at0035">
+        <items id="text">Não é possível testar a resposta verbal</items>
+        <items id="description">Não é possível testar respostas verbais - por exemplo, no caso de intubação associada.</items>
+      </items>
+      <items code="at0036">
+        <items id="text">Não é possível testar a resposta motora</items>
+        <items id="description">Não é possível testar as respostas motoras - por exemplo, no caso de paralisia de membro associada.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Comentário</items>
+        <items id="description">Comentário sobre a medição da Escala, especialmente se não foi possível avaliar uma resposta.</items>
+      </items>
+      <items code="at0038">
+        <items id="text">Motivo da incapacidade de testar a resposta ocular</items>
+        <items id="description">Motivo da incapacidade de testar a resposta ocular.</items>
+      </items>
+      <items code="at0039">
+        <items id="text">Motivo da incapacidade de testar a resposta verbal</items>
+        <items id="description">Motivo da incapacidade de testar a resposta verbal.</items>
+      </items>
+      <items code="at0040">
+        <items id="text">Motivo da incapacidade de testar a resposta motora</items>
+        <items id="description">Motivo da incapacidade de testar a resposta motora</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

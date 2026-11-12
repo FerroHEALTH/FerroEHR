@@ -1,0 +1,917 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-OBSERVATION.heart_rate-pulse.v1
+specialise
+	openEHR-EHR-OBSERVATION.heart_rate.v1
+
+concept
+	[at0000.1]	-- Pulse
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Jasmin Buck, Sebastian Garde">
+				["organisation"] = <"University of Heidelberg, Central Queensland University">
+			>
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+		["ru"] = <
+			language = <[ISO_639-1::ru]>
+			author = <
+				["name"] = <"Vyacheslav Mavrin">
+				["organisation"] = <"JSC Comsoft">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.com">
+		["date"] = <"2006-03-26">
+	>
+	details = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لتسجيل تفاصيل حول معدل و نظم القلب.">
+			use = <"يستخدم لتسجيل الخصائص التي تم قياسها فيما يتعلق بمعدل و نظم القلب, بما في ذلك بيان بسيط حول وجود نبض و معدل ضربات القلب. و لا يتم استخدام هذه القراءات بالملاحظة المباشرة للقلب ذاته, و إنما يتنم استنباطها من مصادر بديلة تتضمن التسمع المباشر للقلب أو تخطيط كهربية القلب بما يعكس النشاط الكهربي للقلب.
+معدل و نظم القلب ( أو تخصيصهما إلى النبض) عادة ما يتم تسجيلهم على أنهم يمثلون واحدا من العلامات الحياتية – و التي تتكون من ضغط الدم, التنفس, درجة الحرارة, و قياس التأكسج. و يوجد نماذج إضافية مخصصة لكل نوع من هذه المفاهيم.">
+			keywords = <"المعدل", "معدل القلب", "النظم">
+			misuse = <"لا يستخدم لتسجيل استنتاجات حول معدل و نظم القلب الذي تم قياسهما. و ينبغي تسجيل بيانات مثل (المريض يعاني من الرجفان الأذيني) أو (يعاني من تسرع ضربات القلب) في نماذج أخرى مخصصة و متعلقة بتقييم حالة المريض.
+لا تستخدم لتسجيل معدل القلب الميكانيكي, أو النظم أو الخصائص الأخرى – و يتم تسجيل ذلك باستخدام تخصيص لهذا النموذج يسمى ملاحظة. معدل القلب – النبض.
+لا يستخدم لتسجيل تفاصيل فحص أو تقييم أكثر شمولا للجهاز القلبي الوريدي. و يمكن أن تستخدم نماذج معينة أخرى لتسجيل خصائص مثل نبض قمة القلب, النفخات, و الموجودات عند التسمع, إلى آخره.
+المفاهيم الأخرى مثل أقصى معدل للقلب, أو معدل القلب المستهدف ينبغي أن يتم تسجيلها في نماذج أخرى متعلقة بتقييم المجهود.">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record the the measurement of the pulse rate and describe related characteristics.">
+			use = <"Use to record the measurement of pulse rate and related characteristics, including a simple statement of presence or absence of a pulse.
+
+Pulse is commonly recorded as one component of Vital signs - comprising Blood Pressure, Respirations, Temperature, and Oximetry. There are additional specific archetypes for each of these concepts.
+
+Measurements such as average or maximum pulse rate over a period of time can be recorded using this archetype's interval event model within a template or at run-time.">
+			keywords = <"rate", "heart rate", "rhythm", "beat", "pulse">
+			misuse = <"Not to be used to record the rate, rhythm and related characteristics about the heart rate - this is recorded using the parent of this archetype OBSERVATION.heart_rate.
+
+Not to be used to record the heart rate in the context of an Electrocardiograph interpretation or report - this will be recorded using the OBSERVATION.ecg archetype.
+
+Not to be used to record other details of the broader cardiovascular examination or assessment.  Other specific archetypes will be used to record characteristics such as apex beat, murmurs, auscultatory findings etc.  
+
+Not to be used to record fetal heart rate - this is recorded using the OBSERVATION.fetal_heart archetype.
+
+Concepts such as Target Pulse Rate should be recorded in separate archetypes specifically related to goals and exercise assessment.">
+			copyright = <"© openEHR Foundation">
+		>
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Dokumentation der Frequenz und des Rhythmus des Herzens.">
+			use = <"Zur allgemeinen Dokumentation der Herzfrequenz, besonders der elektrischen Frequenz.">
+			keywords = <"Frequenz", "Herzfrequenz", "Rhythmus">
+			misuse = <"Zur Dokumentation der mechanischen Frequenz Puls benutzen (OSBSERVATION.heart_reate-pulse.v1).">
+			copyright = <"© openEHR Foundation">
+		>
+		["ru"] = <
+			language = <[ISO_639-1::ru]>
+			purpose = <"Для записи информации о частоте  и ритме  сердцечных сокращений.">
+			use = <"Используется для записи измеренных характеристик, связанных с темпом и ритма сердца, в том числе простая констатация наличия сердечного ритма. Эти характеристики не регистрируются путем прямого наблюдения самого сердца, а подразумевают альтернативные источники, включая прямую аускультацию сердца или электрокардиограф, отражающий электрическую активность сердца.
+Частота и ритм сердечных сокращений  (или специализация этого архетипа - Пульс), как правило, регистрируются в качестве одного из компонентов жизненно важных признаков - включая кровяное давление, дыхание, температуру и оксиметрию. Для каждого из этих понятий существуют специальные архетипы. ">
+			keywords = <"ЧСС", "ритм", "сердечный ритм", "частотат сердечных сокращений">
+			misuse = <"Не следует использовать для записи выводов о измеряемых частоте и ритме сердечных сокращений. Такого рода заявления, как, например, пациент находится в состоянии фибрилляция предсердий или тахикардии, должны быть записаны в других специальных архетипах, относящихся к категории ОЦЕНКА.
+Не следует использовать для записи механической частоты сердечных сокращений, ритма и связанные с ними характеристик - это записывается используя специализацию этого архетипа - OBSERVATION.heart_rate-pulse.
+Не используется для записи другой информации обширной системы обследования или оценки сердечно-сосудистой системы. Другие специфические архетипы используются для записи таких характеристик, как верхушечный толчок, шумы, результаты аускультаци и т.д.
+Такие понятия, как максимальная или целевая частота сердечных сокращений, должны записываться в отдельных архетипах, предназначенных специально для осуществления оценки.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <"Koray Atalag, University of Auckland, New Zealand", "Rong Chen, Cambio Healthcare Systems, Sweden", "Stephen Chu, NeHTA, Australia", "Angela de Zwart, Orion Health, New Zealand", "Graham Denyer, Australian Antarctic Division, Australia", "Paul Donaldson, Nursing Informatics Australia, Australia", "Sebastian Garde, Ocean Informatics, Germany", "Sam Heard, Ocean Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Eugene Igras, IRIS Systems, Inc., Canada", "Athanasios Kleontas, Ergobyte Informatics, Greece", "Shinji Kobayashi, Ehime University, Japan", "Robert Legan, NEHTA, Australia", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Rohan Martin, Ambulance Victoria, Australia", "Ian McNicoll, Ocean Informatics, United Kingdom (Editor)", "Jeroen Meintjens, Medisch Centrum Alkmaar, Netherlands", "Monica Merchat, Hospital Cardiac Electrophysiology, MS Health Informatics Student, former ICU nurse, former Anesthesia Technician, United States", "Arturo Romero, SESCAM, Spain">
+	other_details = <
+		["MD5-CAM-1.0.1"] = <"D134D7B194074ECADE281CDBE3541997">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Pulse
+		data matches {
+			HISTORY[at0002] matches {	-- history
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0003] occurrences matches {0..*} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0001] matches {	-- structure
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at1005.1] occurrences matches {0..1} matches {	-- Pulse Present?
+										value matches {
+											DV_BOOLEAN matches {
+												value matches {True, False}
+											}
+										}
+									}
+									ELEMENT[at0004.1] occurrences matches {0..1} matches {	-- Pulse Rate
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::382]>
+												list = <
+													["1"] = <
+														units = <"/min">
+														magnitude = <|>=0.0|>
+														precision = <|0|>
+													>
+												>
+											>
+										}
+									}
+									ELEMENT[at0005.1] occurrences matches {0..1} matches {	-- Regularity
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0006, 	-- Regular
+													at0007, 	-- Regularly irregular
+													at0008]	-- Irregularly irregular
+												}
+											}
+										}
+									}
+									ELEMENT[at0.36] occurrences matches {0..1} matches {	-- Volume
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0.27] occurrences matches {0..1} matches {	-- Character
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at1022.1] occurrences matches {0..1} matches {	-- Clinical Description
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at1023.1] occurrences matches {0..*} matches {	-- Clinical Interpretation
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0009.1] occurrences matches {0..1} matches {	-- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+						state matches {
+							ITEM_TREE[at0012] matches {	-- List
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0013.1] occurrences matches {0..1} matches {	-- Position
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at1003, 	-- Standing
+													at1001, 	-- Sitting
+													at1002, 	-- Reclining
+													at1000; 	-- Lying
+													at1001]	-- assumed value
+												}
+											}
+										}
+									}
+									ELEMENT[at1018.1] occurrences matches {0..1} matches {	-- Confounding Factors
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									allow_archetype CLUSTER[at1017.1] occurrences matches {0..*} matches {	-- Exertion
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.level_of_exertion(-[a-zA-Z0-9_]+)*\.v1/}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0010] matches {	-- List
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at1019.1] occurrences matches {0..1} matches {	-- Method
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0.2] occurrences matches {0..1} matches {	-- Location of measurement
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					allow_archetype CLUSTER[at1013] occurrences matches {0..1} matches {	-- Device
+						include
+							archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1/}
+						exclude
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	terminologies_available = <"SNOMED-CT", "LOINC">
+	term_definitions = <
+		["ar-sy"] = <
+			items = <
+				["at0.2"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0.27"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0.36"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0000"] = <
+					text = <"معدل و نظم القلب">
+					description = <"خصائص معدل و نبض القلب.">
+				>
+				["at0000.1"] = <
+					text = <"*Heart Rate!(en)">
+					description = <"*Measurement of the heart rate and description of associated characteristics.!(en)">
+				>
+				["at0001"] = <
+					text = <"*structure(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"*history(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0003"] = <
+					text = <"إحدى الوقائع">
+					description = <" 
+واقعة جنيسة - غير محدودة الملكية - و غير محددة.
+">
+				>
+				["at0004"] = <
+					text = <"المعدل">
+					description = <" 
+معدل ضربات القلب و يتم قياسه بضربة للدقيقة.
+">
+				>
+				["at0004.1"] = <
+					text = <"*! - Heart Rate(en)">
+					description = <"*The rate of the heart in beats per minute.(en)">
+				>
+				["at0005"] = <
+					text = <"  نمط المعدل">
+					description = <" 
+النَّظْم الملحوظ لضربات القلب.
+">
+				>
+				["at0005.1"] = <
+					text = <"*! - Regularity(en)">
+					description = <"*The observed regularity of the pulse.(en)">
+				>
+				["at0006"] = <
+					text = <"منتظم">
+					description = <" 
+نَظْم القلب منتظم
+">
+				>
+				["at0007"] = <
+					text = <"  غير منتظم كالمعتاد">
+					description = <" 
+نظم القلب غير منتظم كالمعتاد
+">
+				>
+				["at0008"] = <
+					text = <"  غير منتظم على غير العادة">
+					description = <" 
+نظم القلب غير طبيعي بصورة مشوشة – فوضوية
+">
+				>
+				["at0009"] = <
+					text = <"تعليق">
+					description = <" 
+تعليق حول معدل القلب و النظم
+">
+				>
+				["at0009.1"] = <
+					text = <"*! - Comment(en)">
+					description = <"*Comment about the pulse.(en)">
+				>
+				["at0010"] = <
+					text = <"*List(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0012"] = <
+					text = <"*List(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0013"] = <
+					text = <"الوضع">
+					description = <" 
+وضع المريض عند قياس النبض
+">
+				>
+				["at0013.1"] = <
+					text = <"*! - Position(en)">
+					description = <"*The position of the patient when the pulse was recorded.(en)">
+				>
+				["at1000"] = <
+					text = <"مستلقٍ">
+					description = <"مستلقٍ">
+				>
+				["at1001"] = <
+					text = <"جالس">
+					description = <" 
+جالس على السرير أو على كرسي
+">
+				>
+				["at1002"] = <
+					text = <"مضجع">
+					description = <" 
+الشخص مضجع بزاوية 45 درجة و الأرجل مرتفعة
+">
+				>
+				["at1003"] = <
+					text = <"واقف">
+					description = <" 
+واقف معتدل
+">
+				>
+				["at1005"] = <
+					text = <"  يوجد نبض">
+					description = <" 
+معدل ضربات القلب موجود - بمعني أن المعدل أكثر من صفر.
+">
+				>
+				["at1005.1"] = <
+					text = <"*! - Heart Beat Present?(en)">
+					description = <"*Is a heart beat present?(en)">
+				>
+				["at1013"] = <
+					text = <"الجهيزة">
+					description = <" 
+تفاصيل حول الجهيزة المستخدمة لقياس معدل و نظم القلب.
+">
+				>
+				["at1017"] = <
+					text = <"المجهود">
+					description = <" 
+تفاصيل حول المجهود الجسماني الذي يتم فعله في لحظة تسجيل معدل أو / و نظم ضربات القلب.
+">
+				>
+				["at1017.1"] = <
+					text = <"*! - Exertion(en)">
+					description = <"*Details about physical exertion being undertaken at the time of measuring the pulse.(en)">
+				>
+				["at1018"] = <
+					text = <"  العوامل المربكة">
+					description = <" 
+تعليق حول و تسجيل للعوامل الأخرى التي قد تؤثر على قياس معدل القلب و النظم. مثلا: مستوى القلق, الألم, الحمى (ارتفاع درجة الحرارة)... إلى آخره
+">
+				>
+				["at1018.1"] = <
+					text = <"*! - Confounding Factors(en)">
+					description = <"*Narrative description about any incidental factors that may be contributing to the pulse observations.(en)">
+				>
+				["at1019"] = <
+					text = <"الطريقة">
+					description = <" 
+مصدر نبض القلب و نظمه الذين يتم تسجيلهما.
+">
+				>
+				["at1019.1"] = <
+					text = <"*! - Method(en)">
+					description = <"*Method used to measure the pulse.(en)">
+				>
+				["at1022"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at1022.1"] = <
+					text = <"*! - Clinical Description(en)">
+					description = <"*Narrative description of the pulse.(en)">
+				>
+				["at1023"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at1023.1"] = <
+					text = <"*! - Clinical Interpretation(en)">
+					description = <"*Single word, phrase or brief description representing the pulse findings.(en)">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0.2"] = <
+					text = <"Location of measurement">
+					description = <"The body site where the pulse was measured.">
+				>
+				["at0.27"] = <
+					text = <"Character">
+					description = <"The shape of the pulse wave on palpation.">
+					comment = <"For example, bounding, thready, slow-rising, water-hammer, collapsing etc.">
+				>
+				["at0.36"] = <
+					text = <"Volume">
+					description = <"The size or amplitude of the pulse.">
+				>
+				["at0000"] = <
+					text = <"Heart Rate">
+					description = <"Measurement of the heart rate and description of associated characteristics.">
+				>
+				["at0000.1"] = <
+					text = <"Pulse">
+					description = <"Measurement of the pulse rate and description of associated characteristics.">
+				>
+				["at0001"] = <
+					text = <"structure">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"history">
+					description = <"@ internal @">
+				>
+				["at0003"] = <
+					text = <"Any event">
+					description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+				>
+				["at0004"] = <
+					text = <"Heart Rate">
+					description = <"The rate of the heart in beats per minute.">
+				>
+				["at0004.1"] = <
+					text = <"Pulse Rate">
+					description = <"The rate of the pulse in beats per minute.">
+				>
+				["at0005"] = <
+					text = <"Regularity">
+					description = <"The observed regularity of the pulse.">
+				>
+				["at0005.1"] = <
+					text = <"Regularity">
+					description = <"The observed regularity of the pulse.">
+				>
+				["at0006"] = <
+					text = <"Regular">
+					description = <"Pulse is regular.">
+				>
+				["at0007"] = <
+					text = <"Regularly irregular">
+					description = <"Pulse is regularly irregular.">
+				>
+				["at0008"] = <
+					text = <"Irregularly irregular">
+					description = <"Pulse is irregular in a chaotic manner.">
+				>
+				["at0009"] = <
+					text = <"Comment">
+					description = <"Comment about the pulse.">
+				>
+				["at0009.1"] = <
+					text = <"Comment">
+					description = <"Comment about the pulse.">
+				>
+				["at0010"] = <
+					text = <"List">
+					description = <"@ internal @">
+				>
+				["at0012"] = <
+					text = <"List">
+					description = <"@ internal @">
+				>
+				["at0013"] = <
+					text = <"Position">
+					description = <"The position of the patient when the pulse was recorded.">
+				>
+				["at0013.1"] = <
+					text = <"Position">
+					description = <"The position of the patient when the pulse was recorded.">
+				>
+				["at1000"] = <
+					text = <"Lying">
+					description = <"Lying flat at the time of pulse measurement.">
+				>
+				["at1001"] = <
+					text = <"Sitting">
+					description = <"Sitting (for example on bed or chair) at the time of pulse measurement.">
+				>
+				["at1002"] = <
+					text = <"Reclining">
+					description = <"Reclining at the time of pulse measurement.">
+				>
+				["at1003"] = <
+					text = <"Standing">
+					description = <"Standing at the time of pulse measurement.">
+				>
+				["at1005"] = <
+					text = <"Heart Beat Present?">
+					description = <"Is a heart beat present?">
+					comment = <"The heart beat is present is implied as true if rate >0.">
+				>
+				["at1005.1"] = <
+					text = <"Pulse Present?">
+					description = <"Is a pulse present?">
+				>
+				["at1013"] = <
+					text = <"Device">
+					description = <"Details about the device used to observe the heart rate and rhythm.">
+				>
+				["at1017"] = <
+					text = <"Exertion">
+					description = <"Details about physical exertion being undertaken at the time of measuring the pulse.">
+				>
+				["at1017.1"] = <
+					text = <"Exertion">
+					description = <"Details about physical exertion being undertaken at the time of measuring the pulse.">
+				>
+				["at1018"] = <
+					text = <"Confounding Factors">
+					description = <"Narrative description about any incidental factors that may be contributing to the pulse observations.">
+					comment = <"For example, presence of a pacemaker, level of anxiety; pain or fever etc.">
+				>
+				["at1018.1"] = <
+					text = <"Confounding Factors">
+					description = <"Narrative description about any incidental factors that may be contributing to the pulse observations.">
+				>
+				["at1019"] = <
+					text = <"Method">
+					description = <"Method used to measure the pulse.">
+					comment = <"For example, palpation or electronic monitoring.">
+				>
+				["at1019.1"] = <
+					text = <"Method">
+					description = <"Method used to measure the pulse.">
+				>
+				["at1022"] = <
+					text = <"Clinical Description">
+					description = <"Narrative description of the pulse.">
+				>
+				["at1022.1"] = <
+					text = <"Clinical Description">
+					description = <"Narrative description of the pulse.">
+				>
+				["at1023"] = <
+					text = <"Clinical Interpretation">
+					description = <"Single word, phrase or brief description representing the pulse findings.">
+					comment = <"Coding with a terminology is preferred, where possible. Examples include: Bradycardia, Extrasystoles or Sinus rhythm. Multiple statements are allowed. ">
+				>
+				["at1023.1"] = <
+					text = <"Clinical Interpretation">
+					description = <"Single word, phrase or brief description representing the pulse findings.">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0.2"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0.27"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0.36"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0000"] = <
+					text = <"*Heart rate and rhythm(en)">
+					description = <"*The characteristics of the heart rate and rhythm.(en)">
+				>
+				["at0000.1"] = <
+					text = <"*Heart Rate!(en)">
+					description = <"*Measurement of the heart rate and description of associated characteristics.!(en)">
+				>
+				["at0001"] = <
+					text = <"Structure">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0003"] = <
+					text = <"*Any event(en)">
+					description = <"*Default and unspecified event.(en)">
+				>
+				["at0004"] = <
+					text = <"*Rate(en)">
+					description = <"*The rate of the heart in beats per minute.(en)">
+				>
+				["at0004.1"] = <
+					text = <"*! - Heart Rate(en)">
+					description = <"*The rate of the heart in beats per minute.(en)">
+				>
+				["at0005"] = <
+					text = <"*Rhythm pattern(en)">
+					description = <"*The observed rhythm of the heartbeat.(en)">
+				>
+				["at0005.1"] = <
+					text = <"*! - Regularity(en)">
+					description = <"*The observed regularity of the pulse.(en)">
+				>
+				["at0006"] = <
+					text = <"*Regular(en)">
+					description = <"*Heart rhythm is regular.(en)">
+				>
+				["at0007"] = <
+					text = <"*Regularly Irregular(en)">
+					description = <"*Heart rhythm is regularly irregular.(en)">
+				>
+				["at0008"] = <
+					text = <"Unregulär unregulär">
+					description = <"Unregulär in einer chaotischen Art und Weise">
+				>
+				["at0009"] = <
+					text = <"*Comment(en)">
+					description = <"*Comment about the heart rate and rhythm.(en)">
+				>
+				["at0009.1"] = <
+					text = <"*! - Comment(en)">
+					description = <"*Comment about the pulse.(en)">
+				>
+				["at0010"] = <
+					text = <"List">
+					description = <"@ internal @">
+				>
+				["at0012"] = <
+					text = <"List">
+					description = <"@ internal @">
+				>
+				["at0013"] = <
+					text = <"Position">
+					description = <"Die Position des Patienten während der Messung der Herzfrequenz">
+				>
+				["at0013.1"] = <
+					text = <"*! - Position(en)">
+					description = <"*The position of the patient when the pulse was recorded.(en)">
+				>
+				["at1000"] = <
+					text = <"*Lying(en)">
+					description = <"*Lying supine.(en)">
+				>
+				["at1001"] = <
+					text = <"Sitzend">
+					description = <"Auf dem Bett oder einem Stuhl sitzend">
+				>
+				["at1002"] = <
+					text = <"Liegesitz">
+					description = <"Person sitzt im 45° Winkel mit erhöhten Beinen">
+				>
+				["at1003"] = <
+					text = <"Stehend">
+					description = <"Aufrecht stehend">
+				>
+				["at1005"] = <
+					text = <"*Heart rate present(en)">
+					description = <"*The heart rate is present (implied true if rate >0).(en)">
+				>
+				["at1005.1"] = <
+					text = <"*! - Heart Beat Present?(en)">
+					description = <"*Is a heart beat present?(en)">
+				>
+				["at1013"] = <
+					text = <"*Device(en)">
+					description = <"*Details about the device used to measure heart rate and rhythm.(en)">
+				>
+				["at1017"] = <
+					text = <"*Exertion(en)">
+					description = <"*Details about physical exertion being undertaken at the time of recording heart rate and/or rhythm.(en)">
+				>
+				["at1017.1"] = <
+					text = <"*! - Exertion(en)">
+					description = <"*Details about physical exertion being undertaken at the time of measuring the pulse.(en)">
+				>
+				["at1018"] = <
+					text = <"*Confounding factors(en)">
+					description = <"*Comment on and record other incidental factors that may be contributing to the heart rate and rhythm measurement. For example, level of anxiety; pain or fever etc.(en)">
+				>
+				["at1018.1"] = <
+					text = <"*! - Confounding Factors(en)">
+					description = <"*Narrative description about any incidental factors that may be contributing to the pulse observations.(en)">
+				>
+				["at1019"] = <
+					text = <"*Method(en)">
+					description = <"*Source of heart rate and rhythm record.(en)">
+				>
+				["at1019.1"] = <
+					text = <"*! - Method(en)">
+					description = <"*Method used to measure the pulse.(en)">
+				>
+				["at1022"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at1022.1"] = <
+					text = <"*! - Clinical Description(en)">
+					description = <"*Narrative description of the pulse.(en)">
+				>
+				["at1023"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at1023.1"] = <
+					text = <"*! - Clinical Interpretation(en)">
+					description = <"*Single word, phrase or brief description representing the pulse findings.(en)">
+				>
+			>
+		>
+		["ru"] = <
+			items = <
+				["at0.2"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0.27"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0.36"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0000"] = <
+					text = <"Частота и ритм сердечных сокращений">
+					description = <"Характеристики частоты и ритма сердечных сокращений.">
+				>
+				["at0000.1"] = <
+					text = <"*Heart Rate!(en)">
+					description = <"*Measurement of the heart rate and description of associated characteristics.!(en)">
+				>
+				["at0001"] = <
+					text = <"Дерево">
+					description = <"@ внутреннийl @">
+				>
+				["at0002"] = <
+					text = <"История">
+					description = <"@ внутреннийl @">
+				>
+				["at0003"] = <
+					text = <"Любое событие">
+					description = <"По умолчанию неопределённое событие.">
+				>
+				["at0004"] = <
+					text = <"Частота">
+					description = <"Частота сердечных сокращений в минуту.">
+				>
+				["at0004.1"] = <
+					text = <"*! - Heart Rate(en)">
+					description = <"*The rate of the heart in beats per minute.(en)">
+				>
+				["at0005"] = <
+					text = <"Характер ритма">
+					description = <"Наблюдаемый ритм сердцебиений.">
+				>
+				["at0005.1"] = <
+					text = <"*! - Regularity(en)">
+					description = <"*The observed regularity of the pulse.(en)">
+				>
+				["at0006"] = <
+					text = <"Регулярный">
+					description = <"Сердечный ритм регулярный.">
+				>
+				["at0007"] = <
+					text = <"Постоянно нерегулярный">
+					description = <"Сердечный ритм неправильный постоянно.">
+				>
+				["at0008"] = <
+					text = <"Непостоянно нерегулярный">
+					description = <"Сердечный ритм неправильный в хаотичном порядке.">
+				>
+				["at0009"] = <
+					text = <"Комментарий">
+					description = <"Комментарий о частоте и ритме сердечных сокращений.">
+				>
+				["at0009.1"] = <
+					text = <"*! - Comment(en)">
+					description = <"*Comment about the pulse.(en)">
+				>
+				["at0010"] = <
+					text = <"Дерево">
+					description = <"@ внутреннийl @">
+				>
+				["at0012"] = <
+					text = <"Дерево">
+					description = <"@ внутреннийl @">
+				>
+				["at0013"] = <
+					text = <"Положение">
+					description = <"Положение пациента в момент записи сердцебиений.">
+				>
+				["at0013.1"] = <
+					text = <"*! - Position(en)">
+					description = <"*The position of the patient when the pulse was recorded.(en)">
+				>
+				["at1000"] = <
+					text = <"Лёжа">
+					description = <"Лёжа на спине.">
+				>
+				["at1001"] = <
+					text = <"Сидя">
+					description = <"Сидя на кровати или на стуле.">
+				>
+				["at1002"] = <
+					text = <"Наклон">
+					description = <"Пациент лежит под углом в 45 градусов с поднятыми ногами.">
+				>
+				["at1003"] = <
+					text = <"Стоя">
+					description = <"Стоя прямо.">
+				>
+				["at1005"] = <
+					text = <"ЧСС в настоящее время">
+					description = <"Частота сердечных сокращений в настоящий момент (подразумевается истинно, если скорость> 0).">
+				>
+				["at1005.1"] = <
+					text = <"*! - Heart Beat Present?(en)">
+					description = <"*Is a heart beat present?(en)">
+				>
+				["at1013"] = <
+					text = <"Устройство">
+					description = <"Подробная информация об устройстве, используемом для измерения частоты сердечных сокращений и ритма.">
+				>
+				["at1017"] = <
+					text = <"Нагрузка">
+					description = <"Подробная информация о физических нагрузках, проводимых во время записи частоты сердечных сокращений и/или ритма.">
+				>
+				["at1017.1"] = <
+					text = <"*! - Exertion(en)">
+					description = <"*Details about physical exertion being undertaken at the time of measuring the pulse.(en)">
+				>
+				["at1018"] = <
+					text = <"Искажающие факторы">
+					description = <"Комментирование и запись других случайные факторов, которые могут вносить свой вклад в измерение частоты сердечных сокращений и ритма. Например, уровень тревожности, боль или лихорадка и т.д.">
+				>
+				["at1018.1"] = <
+					text = <"*! - Confounding Factors(en)">
+					description = <"*Narrative description about any incidental factors that may be contributing to the pulse observations.(en)">
+				>
+				["at1019"] = <
+					text = <"Метод">
+					description = <"Источник записси частоты сердечных сокращений и ритма.">
+				>
+				["at1019.1"] = <
+					text = <"*! - Method(en)">
+					description = <"*Method used to measure the pulse.(en)">
+				>
+				["at1022"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at1022.1"] = <
+					text = <"*! - Clinical Description(en)">
+					description = <"*Narrative description of the pulse.(en)">
+				>
+				["at1023"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at1023.1"] = <
+					text = <"*! - Clinical Interpretation(en)">
+					description = <"*Single word, phrase or brief description representing the pulse findings.(en)">
+				>
+			>
+		>
+	>
+	term_bindings = <
+		["SNOMED-CT"] = <
+			items = <
+				["at0.2"] = <[SNOMED-CT::397987002]>
+				["at0.27"] = <[SNOMED-CT::271639008]>
+				["at0.36"] = <[SNOMED-CT::248642002]>
+				["at0004"] = <[SNOMED-CT::364075005]>
+				["at0004.1"] = <[SNOMED-CT::78564009]>
+				["at0005"] = <[SNOMED-CT::364074009]>
+				["at0006"] = <[SNOMED-CT::248649006]>
+				["at0007"] = <[SNOMED-CT::248652003]>
+				["at0008"] = <[SNOMED-CT::248651005]>
+				["at0013"] = <[SNOMED-CT::422431001]>
+				["at1000"] = <[SNOMED-CT::40199007]>
+				["at1001"] = <[SNOMED-CT::33586001]>
+				["at1002"] = <[SNOMED-CT::272580008]>
+				["at1003"] = <[SNOMED-CT::10904000]>
+				["at1019"] = <[SNOMED-CT::386053000]>
+			>
+		>
+		["LOINC"] = <
+			items = <
+				["at0004"] = <[LOINC::8893-0]>
+				["at0013"] = <[LOINC::8361-8]>
+			>
+		>
+	>

@@ -1,0 +1,342 @@
+﻿archetype (adl_version=1.4; uid=eb188154-58ed-484c-8159-a30bb7219297)
+	openEHR-EHR-OBSERVATION.chest_expansion.v1
+
+concept
+	[at0000]	-- Measurement of chest and expansion
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Jasmin Buck, Sebastian Garde">
+				["organisation"] = <"University of Heidelberg, Central Queensland University">
+			>
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			author = <
+				["name"] = <"Dr. Leonardo Der Jachadurian">
+				["organisation"] = <"Bitios.com">
+			>
+			accreditation = <"Medical Doctor (Internal Medicine Specialist)">
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.biz">
+		["date"] = <"26/03/2006">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Dokumentation des Brustumfangs - in spezialisierter Form zuzüglich der Atmungspase">
+			use = <"*">
+			keywords = <"Einatmen", "Ausatmen", "Brustumfang", "Ausmaß">
+			misuse = <"*">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording the measured dimensions of the chest - specialised to add the state of respiration during breathing.">
+			use = <"*">
+			keywords = <"inspiration", "expiration", "chest expansion", "expansion">
+			misuse = <"*">
+			copyright = <"© openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لتسجيل الأبعاد المقاسة للصدر - مخصصة لتضيف حالة التنفس خلال التنفس">
+			use = <"*">
+			keywords = <"الشهيق", "الزفير", "تمدد الصدر", "التمدد">
+			misuse = <"*">
+			copyright = <"© openEHR Foundation">
+		>
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			purpose = <"Para registrar las mediciones de las dimensiones del tórax, especializado para agregar el estado de la respiración durante el ciclo respiratorio.">
+			use = <"*">
+			keywords = <"inspiración", "espiración", "expansión torácica", "expansión">
+			misuse = <"*">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["build_uid"] = <"a9a4f9a9-1ce7-423c-b2cc-10271f1be93a">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"23302F3D4561F13E86BB62109F953ED5">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	OBSERVATION[at0000] matches {	-- Measurement of chest and expansion
+		data matches {
+			HISTORY[at0001] matches {	-- history
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..*} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {1; unordered} matches {
+									ELEMENT[at0011] occurrences matches {0..1} matches {	-- Circumference
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::122]>
+												list = <
+													["1"] = <
+														units = <"cm">
+														magnitude = <|0.0..200.0|>
+														precision = <|1|>
+													>
+												>
+											>
+										}
+									}
+								}
+							}
+						}
+						state matches {
+							ITEM_LIST[at0005] matches {	-- list
+								items cardinality matches {0..*; ordered} matches {
+									ELEMENT[at0006] occurrences matches {0..1} matches {	-- Respiratory phase
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0007, 	-- Inspiration
+													at0008, 	-- Expiration
+													at0009; 	-- Random
+													at0009]	-- assumed value
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					INTERVAL_EVENT[at0010] occurrences matches {0..*} matches {	-- Chest expansion
+						math_function matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {[openehr::522]}
+							}
+						}
+						data matches {
+							use_node ITEM_TREE /data[at0001]/events[at0002]/data[at0003]
+						}
+						state matches {
+							use_node ITEM_LIST /data[at0001]/events[at0002]/state[at0005]
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Messung des Brustumfangs">
+					description = <"Messung von Umfang und Ausdehnung des Brustkorbes">
+				>
+				["at0001"] = <
+					text = <"Verlauf">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"beliebiges Ereignis">
+					description = <"zeitliches Ereignis">
+				>
+				["at0003"] = <
+					text = <"Baum">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Liste">
+					description = <"@ internal @">
+				>
+				["at0006"] = <
+					text = <"Atmungsphase">
+					description = <"Die Phase der Atmung, während der die Messung vorgenommen wurde">
+				>
+				["at0007"] = <
+					text = <"Einatmen">
+					description = <"Die Einatmungsphase der Atmung">
+				>
+				["at0008"] = <
+					text = <"Ausatmen">
+					description = <"Die Ausatmungsphase der Atmung">
+				>
+				["at0009"] = <
+					text = <"Zufällig">
+					description = <"Keine Beachtung der Atmungsphase">
+				>
+				["at0010"] = <
+					text = <"Ausdehnung des Brustkorbes">
+					description = <"Die Ausdehnung des Brustumfangs von vollkommenem Ausatmen bis vollkommenem Einatmen">
+				>
+				["at0011"] = <
+					text = <"Umfang">
+					description = <"der Umfang des Brustkorbes">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Measurement of chest and expansion">
+					description = <"Measurement of the chest circumference and expansion">
+				>
+				["at0001"] = <
+					text = <"history">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Timing event">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"list">
+					description = <"@ internal @">
+				>
+				["at0006"] = <
+					text = <"Respiratory phase">
+					description = <"The phase of respiration during which the measurement is taken">
+				>
+				["at0007"] = <
+					text = <"Inspiration">
+					description = <"The inspiratory phase of respiration">
+				>
+				["at0008"] = <
+					text = <"Expiration">
+					description = <"The expiratory phase of respiration">
+				>
+				["at0009"] = <
+					text = <"Random">
+					description = <"No account is taken of respiratory phase">
+				>
+				["at0010"] = <
+					text = <"Chest expansion">
+					description = <"The difference in chest circumference from full expiration to full inspiration">
+				>
+				["at0011"] = <
+					text = <"Circumference">
+					description = <"The circumference of the chest">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0000"] = <
+					text = <"قياس الصدر و التمدد">
+					description = <"قياس محيط الصدر و التمدد">
+				>
+				["at0001"] = <
+					text = <"*history(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"إحدى الوقائع">
+					description = <"واقعة زمنية">
+				>
+				["at0003"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0005"] = <
+					text = <"*list(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0006"] = <
+					text = <"الطور التنفسي">
+					description = <"طور التنفس الذي يتم أخذ القياس في أثنائه">
+				>
+				["at0007"] = <
+					text = <"الشهيق">
+					description = <"طور الشهيق التنفسي">
+				>
+				["at0008"] = <
+					text = <"الزفير">
+					description = <"طور الزفير التنفسي">
+				>
+				["at0009"] = <
+					text = <"عشوائي">
+					description = <"لم يتم أخذ الطور التنفسي في الاعتبار">
+				>
+				["at0010"] = <
+					text = <"تمدد الصدر">
+					description = <"الفرق في محيط الصدر من الزفير الكلي إلى الشهيق الكلي">
+				>
+				["at0011"] = <
+					text = <"المحيط">
+					description = <"محيط الصدر">
+				>
+			>
+		>
+		["es-ar"] = <
+			items = <
+				["at0000"] = <
+					text = <"Medición del tórax y expansión">
+					description = <"Medición de la circunferencia del tórax y la expansión.">
+				>
+				["at0001"] = <
+					text = <"*history(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"Cualquier evento">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0005"] = <
+					text = <"*list(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0006"] = <
+					text = <"Fase respiratoria">
+					description = <"La fase de la respiración durante la cual la medición fue realizada.">
+				>
+				["at0007"] = <
+					text = <"Inspiración">
+					description = <"La fase inspiratoria de la respiración.">
+				>
+				["at0008"] = <
+					text = <"Espiración">
+					description = <"La fase espiratoria o exhalatoria de la respiración.">
+				>
+				["at0009"] = <
+					text = <"Aleatorio">
+					description = <"No se toma en cuenta al momento del ciclo respiratorio.">
+				>
+				["at0010"] = <
+					text = <"Expansión torácica">
+					description = <"La diferencia en la circunferencia torácica desde la espiración completa hasta la máxima inspiración.">
+				>
+				["at0011"] = <
+					text = <"Circunferencia">
+					description = <"La circunferencia del tórax.">
+				>
+			>
+		>
+	>

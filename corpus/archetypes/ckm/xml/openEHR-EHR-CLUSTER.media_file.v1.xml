@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -94,11 +94,7 @@ Das Datenelement „Inhalt“ ermöglicht mithilfe des Multimedia-Datentyps die 
 &#xD;
 Wenn mehr als eine Mediendatei erfasst wurde, z. B. „Vorher“- und „Nachher“-Bilder einer Wunde, verwenden Sie eine Instanz dieses Archetyps, um jede Mediendatei darzustellen.&#xD;
 &#xD;
-Wenn eine Reihe von Mediendateien als einzelnes Element dargestellt wird, z. B. ein CT-Scan, kann eine Instanz dieses Archetyps verwendet werden, um einen URI-Pfad zu der Gruppe darzustellen.&#xD;
-&#xD;
-&#xD;
-&#xD;
-</use>
+Wenn eine Reihe von Mediendateien als einzelnes Element dargestellt wird, z. B. ein CT-Scan, kann eine Instanz dieses Archetyps verwendet werden, um einen URI-Pfad zu der Gruppe darzustellen.</use>
       <misuse>Nicht zur Darstellung von Informationen, Lehr- oder Schulungsmaterial verwenden, die außerhalb des Gesundheitsprozesses generiert werden, z. B. Broschüren zur Patientenaufklärung, die dem Patienten oder der Pflegeperson zur Verfügung gestellt werden. Verwenden Sie für diesen Zweck den Archetyp CLUSTER.information_resource.&#xD;
 &#xD;
 Nicht zur Darstellung von Referenz auf eine externe digitale Ressource, die als Quelle für maßgebliche Informationen oder Experteninformationen verwendet wird. Verwenden Sie für diesen Zweck den Archetyp CLUSTER.knowledge_base_reference.</misuse>
@@ -189,9 +185,7 @@ Om mer än en mediefil har registrerats, såsom "före" och "efter" bilder av et
 Om en serie av mediefiler representeras av ett enda objekt, till exempel en datortomografi, kan en instans av denna arketyp användas för att representera en URI sträng till filen.</use>
       <misuse>Ska inte användas för innehåll som information, instruktions- eller undervisningsmaterial som utdelats till en patient eller deras vårdgivare, till exempel som utbildningsbroschyrer. Använd CLUSTER.information_resource för detta syfte.&#xD;
 &#xD;
-Ska inte användas för att registrera en referens till en databas. Använd CLUSTER.knowledge_base_reference för detta syfte.&#xD;
-&#xD;
-</misuse>
+Ska inte användas för att registrera en referens till en databas. Använd CLUSTER.knowledge_base_reference för detta syfte.</misuse>
       <copyright />
     </details>
     <details>
@@ -1219,4 +1213,3 @@ Hvis filen lagres et sted utenfor den elektroniske journalen, kan adressen til f
     </term_definitions>
   </ontology>
 </archetype>
-

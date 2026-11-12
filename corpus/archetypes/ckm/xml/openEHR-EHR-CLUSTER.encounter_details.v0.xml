@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -15,12 +15,12 @@
     <lifecycle_state>in_development</lifecycle_state>
     <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
     <other_details id="custodian_organisation">openEHR Foundation</other_details>
-    <other_details id="references"></other_details>
+    <other_details id="references" />
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">922DC591626640BA904282CD5180A0C3</other_details>
-    <other_details id="build_uid">dbc7bd56-6b0b-4b53-a924-16a1239ab339</other_details>
+    <other_details id="MD5-CAM-1.0.1">7DD0941945A54679866050B7EA64E131</other_details>
+    <other_details id="build_uid">a0110921-5a6e-4007-b266-c5e8e70c303f</other_details>
     <other_details id="revision">0.0.1-alpha</other_details>
     <details>
       <language>
@@ -30,17 +30,17 @@
         <code_string>nb</code_string>
       </language>
       <purpose>For å registrere detaljer om en klinisk kontakt.</purpose>
-      <keywords>innleggelse, utskrivning, overføring, besøk, opphold, sykehusinnleggelse, innlagt, kontakt, død</keywords>
+      <keywords>innleggelse, utskrivning, overføring, besøk, opphold, sykehusinnleggelse, innlagt, kontakt, død, poliklinikk, dagbehandling, konsultasjon, videokonsultasjon, telefonkontakt, hjemmekonsultasjon, time</keywords>
       <use>Brukes til å registrere detaljer om en klinisk kontakt mellom en pasient og helsetjenester.&#xD;
 &#xD;
-I konteksten av denne arketypen så tolkes klinisk kontakt i vid forstand, og inkluderer enhver kontakt mellom en pasient og helsetjenester som det er behov for å registrere. Dette inkluderer, men er ikke begrenset til, fastlegebesøk, polikliniske besøk, døgnbehandling, akuttinnleggelser, hjemmebesøk eller psykisk helsehjelp.&#xD;
+I konteksten av denne arketypen tolkes begrepet kontakt vidt og omfatter enhver kontakt mellom en pasient og helsetjenesten som det er behov for å registrere. Dette inkluderer, men er ikke begrenset til, fastlegebesøk, polikliniske besøk, døgnbehandling, akuttinnleggelser, hjemmebesøk, video- og telefonkonsultasjoner, eller psykisk helsehjelp.&#xD;
 &#xD;
-Som følge av dette så har både konseptet og dataelementene blitt gitt veldig generiske navn. Det forventes at disse ikke vil passe i alle myndighetsområder eller bruksområder, og må endres i templatet for å bedre passe den aktuelle bruken.&#xD;
+Som følge av dette har både konseptet og dataelementene blitt gitt veldig generiske navn. Det forventes at disse ikke vil passe i alle myndighetsområder eller bruksområder, og må endres i templatet for å bedre tilpasses den aktuelle bruken.&#xD;
 &#xD;
-Del-episode slotten er designet for å motta gjentagende utgaver av dette clusteret for å modellere del-kontakter. For eksempel, en instans av dette clusteret kan brukes for å registrere et sykehusopphold, og en del-episode kan brukes for å registrere innleggelse ved akuttmottaket, men en annen del-episode kan brukes for å registrere overføringen til en annen avdeling. Disse clusterne kan deles videre opp som nødvendig for å registrere nødvendige kontakter.&#xD;
+SLOT for delepisoder er utformet for å motta gjentagende forekomster av dette clusteret for å modellere delkontakter ved behov. For eksempel kan én forekomst av clusteret brukes til å registrere et sykehusopphold, én delepisode kan brukes til å registrere innleggelsen via akuttmottaket. En annen delepisode kan brukes til å registrere en overføring til en annen avdeling. Disse clusterne kan videre deles opp etter behov for å registrere mer spesifikke kontakter.&#xD;
 &#xD;
-Opphav, opphavskategori, destinasjon og destinasjonskategori er ment for å gi alternativer for hvordan man registrerer hvor pasienten kom fra og hvor de dro til. Opphavskategori og destinasjonskategori  er ment for å gi generell informasjon om hvor en pasient kom fra og hvor de dro til, mens opphav og destinasjon slottene er ment for å identifisere spesifikke organisasjoner og/eller lokasjoner.</use>
-      <misuse>Skal ikke brukes til planlegging av fremtidige kliniske kontakter. På tidspunktet for utarbeidelsen er det ennå ikke avklart hvilken arketype som bør brukes til dette formålet.</misuse>
+Opphav, opphavskategori, destinasjon og destinasjonskategori gir ulike muligheter til å registrere hvor pasienten kom fra før kontakten, og hvor pasienten ble sendt videre etter kontakten. Opphavskategori og destinasjonskategori brukes til å registrere generell informasjon om henholdsvis opphav og destinasjon, mens SLOT for opphav og destinasjon brukes til å identifisere spesifikke organisasjoner og/eller lokasjoner.</use>
+      <misuse>Brukes ikke for planlegging av fremtidige kliniske kontakter. På tidspunktet for utarbeidelsen er det ennå ikke avklart hvilken arketype som bør brukes til dette formålet.</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -366,7 +366,7 @@ Source, Source category, Destination and Destination category are intended to pr
         </occurrences>
         <node_id>at0019</node_id>
         <includes>
-          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.inpatient_episode_details\.v0/}</string_expression>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.encounter_details\.v0|openEHR-EHR-CLUSTER\.encounter_details\.v1/}</string_expression>
           <expression xsi:type="EXPR_BINARY_OPERATOR">
             <type>Boolean</type>
             <operator>2007</operator>
@@ -379,7 +379,7 @@ Source, Source category, Destination and Destination category are intended to pr
             <right_operand xsi:type="EXPR_LEAF">
               <type>C_STRING</type>
               <item xsi:type="C_STRING">
-                <pattern>openEHR-EHR-CLUSTER\.inpatient_episode_details\.v0</pattern>
+                <pattern>openEHR-EHR-CLUSTER\.encounter_details\.v0|openEHR-EHR-CLUSTER\.encounter_details\.v1</pattern>
               </item>
               <reference_type>constraint</reference_type>
             </right_operand>
@@ -632,7 +632,7 @@ Source, Source category, Destination and Destination category are intended to pr
     </term_definitions>
     <term_definitions language="nb">
       <items code="at0000">
-        <items id="text">Klinisk kontakt detaljer</items>
+        <items id="text">Detaljer om klinisk kontakt</items>
         <items id="description">Detaljer om en klinisk kontakt.</items>
       </items>
       <items code="at0001">
@@ -650,21 +650,21 @@ Source, Source category, Destination and Destination category are intended to pr
       </items>
       <items code="at0004">
         <items id="text">Start</items>
-        <items id="description">Dato/dato‑tidspunkt for når den kliniske kontakten startet.</items>
-        <items id="comment">For eksempel, innlagt i døgninstitusjon, overført til annen avdeling.</items>
+        <items id="description">Dato eller dato og klokkeslett for når den kliniske kontakten startet.</items>
+        <items id="comment">For eksempel tidspunktet individet ble innlagt i døgninstitusjon eller overført til annen avdeling.</items>
       </items>
       <items code="at0005">
         <items id="text">Stopp</items>
-        <items id="description">Dato/dato‑tidspunkt for når den kliniske kontakten sluttet.</items>
+        <items id="description">Dato eller dato og klokkeslett for når den kliniske kontakten sluttet.</items>
       </items>
       <items code="at0019">
         <items id="text">Del-episode</items>
         <items id="description">Detaljer om en del‑episode som utgjør en del av den opprinnelige kliniske kontakten.</items>
-        <items id="comment">Dette SLOT-et er ment for å legge inn detaljer om del‑episoder ved bruk av nestede instanser av denne arketypen. Eksempler på del‑episoder kan være overføringer til annen avdeling eller endringer av rom/seng</items>
+        <items id="comment">Dette SLOT-et er ment for å registrere detaljer om del‑episoder ved å gjenbruke denne arketypen for underordnede episoder (nøsting). Eksempler på del‑episoder kan være overføringer til annen avdeling eller endringer av rom/seng.</items>
       </items>
       <items code="at0020">
         <items id="text">Kommentar</items>
-        <items id="description">Tekstlig tilleggsinformasjon om den kliniske kontakten som ikke er registrert i andre felt. </items>
+        <items id="description">Ytterligere fritekst om den kliniske kontakten som ikke er registrert/omfattet i andre felter.</items>
       </items>
       <items code="at0021">
         <items id="text">Opphav</items>
@@ -672,27 +672,26 @@ Source, Source category, Destination and Destination category are intended to pr
       </items>
       <items code="at0022">
         <items id="text">Opphavskategori</items>
-        <items id="description">Typen sted pasienten var før den kliniske kontakten.</items>
-        <items id="comment">Koding av opphavskategori med en terminologi er foretrukket om mulig. For eksempel, hjem, sykehjem, eller skadested.</items>
+        <items id="description">Type sted pasienten kom fra før den kliniske kontakten.</items>
+        <items id="comment">Koding av opphavskategori med en terminologi er foretrukket om mulig. For eksempel hjem, sykehjem, eller skadested.</items>
       </items>
       <items code="at0045">
         <items id="text">Destinasjon</items>
-        <items id="description">Stedet/organisasjonen pasienten dro til etter den kliniske kontakten.</items>
+        <items id="description">Stedet/organisasjonen pasienten ble utskrevet/overflyttet til etter den kliniske kontakten.</items>
       </items>
       <items code="at0046">
-        <items id="text">Klinisk kontakt ID</items>
+        <items id="text">Identifikator</items>
         <items id="description">En identifikator for den kliniske kontakten.</items>
       </items>
       <items code="at0047">
         <items id="text">Destinasjonskategori</items>
-        <items id="description">Typen sted pasienten dro til etter kliniske kontakten.</items>
-        <items id="comment">Koding av destinasjonskategori med en terminologi er foretrukket om mulig. For eksempel, hjem, sykehjem, eller annen helseinstitusjon.</items>
+        <items id="description">Typen sted pasienten ble utskrevet/overflyttet til etter den kliniske kontakten.</items>
+        <items id="comment">Koding av destinasjonskategori med en terminologi er foretrukket om mulig. For eksempel hjem, sykehjem, eller annen helseinstitusjon.</items>
       </items>
       <items code="at0048">
         <items id="text">Ytterligere detaljer</items>
-        <items id="description">Ytterligere detaljer om den kliniske kontakten.</items>
+        <items id="description">Ytterligere strukturerte detaljer om den kliniske kontakten.</items>
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

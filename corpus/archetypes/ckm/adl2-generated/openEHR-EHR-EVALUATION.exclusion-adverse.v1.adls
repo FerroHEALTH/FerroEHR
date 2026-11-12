@@ -1,0 +1,123 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-EVALUATION.exclusion-adverse.v1.0.0
+
+specialize
+    openEHR-EHR-EVALUATION.exclusion.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2/03/2010">
+    >
+    other_contributors = <"Sam Heard, Ocean Informatics, Australia", ...>
+    lifecycle_state = <"Rejected">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D47FCE09EC12909957E6472903C70172">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To positively record the absence or exclusion of any adverse reactions within the health record.">
+            keywords = <"exclusion", "no", "nil", "significant", "relevant">
+            use = <"Use to record the positive exclusion or absence of adverse reactions within the health record. This archetype avoids the need to use terminology to express negation about any item within the health record.
+This archetype is only to be used to record 'point in time' information. It is not to be used for a persistent storage of information as as the patient should always be questioned about previous experience of adverse reactions prior to administration of any substance.
+">
+            misuse = <"Do not use to record the exclusion or absence of adverse reactions, problems, diagnoses or interventions - use specific specialisations of this archetype.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Exclusion statement - Adverse Reaction
+        /data[at0001]/items cardinality matches {0..*; unordered} matches {
+            ELEMENT[at0002.1] matches {    -- Global Statement
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000]}    -- Global Statement (synthesised)
+                    }
+                }
+            }
+            after [at0002]
+            ELEMENT[at0.7] occurrences matches {0..1} matches {    -- No known adverse reaction to
+                value matches {
+                    DV_TEXT[at0.9002]
+                }
+            }
+            ELEMENT[at0.8] occurrences matches {0..1} matches {    -- No known allergic reaction to
+                value matches {
+                    DV_TEXT[at0.9003]
+                }
+            }
+            ELEMENT[at0.9] occurrences matches {0..1} matches {    -- No known hypersensitivity reaction to
+                value matches {
+                    DV_TEXT[at0.9004]
+                }
+            }
+            ELEMENT[at0.10] occurrences matches {0..1} matches {    -- No known intolerance to
+                value matches {
+                    DV_TEXT[at0.9005]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.10"] = <
+                text = <"No known intolerance to">
+                description = <"Positive statement about intolerances to substances that are explicitly known to have not been identified at the time of recording.">
+            >
+            ["at0.3"] = <
+                text = <"No known adverse reactions">
+                description = <"No known adverse reactions to any substance.">
+            >
+            ["at0.4"] = <
+                text = <"No known allergic reactions">
+                description = <"No known allergic reactions to any substance.">
+            >
+            ["at0.5"] = <
+                text = <"No known hypersensitivity reactions">
+                description = <"No known hypersensitivity reaction to any substance.">
+            >
+            ["at0.6"] = <
+                text = <"No known intolerances">
+                description = <"*">
+            >
+            ["at0.7"] = <
+                text = <"No known adverse reaction to">
+                description = <"Positive statement about adverse reactions to substances that are explicitly known to have not been identified at the time of recording.">
+            >
+            ["at0.8"] = <
+                text = <"No known allergic reaction to">
+                description = <"Positive statement about allergic reactions to substances that are explicitly known to have not been identified at the time of recording.">
+            >
+            ["at0.9"] = <
+                text = <"No known hypersensitivity reaction to">
+                description = <"Positive statement about hypersensitivity reactions to substances that are explicitly known to have not been identified at the time of recording.">
+            >
+            ["at0000.1"] = <
+                text = <"Exclusion statement - Adverse Reaction">
+                description = <"Statements about Adverse Reactions that need to be positively recorded as absent or excluded.">
+            >
+            ["at0002.1"] = <
+                text = <"Global Statement">
+                description = <"Global statements about the exclusion. This can be used to capture any information that is needed to be explicitly recorded as being absent or excluded within the record.">
+            >
+            ["ac0.9000"] = <
+                text = <"Global Statement (synthesised)">
+                description = <"Global statements about the exclusion. This can be used to capture any information that is needed to be explicitly recorded as being absent or excluded within the record. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.3", "at0.4", "at0.5", "at0.6">
+        >
+    >

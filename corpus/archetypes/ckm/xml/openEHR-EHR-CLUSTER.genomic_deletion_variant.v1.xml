@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -39,9 +39,9 @@ Sequence Variant Nomenclature - DNA Recommendations - Deletion Variant [Internet
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">4FB63ECCC6FB04AA640F8B2F731487A4</other_details>
-    <other_details id="build_uid">9e865cfb-29dc-4b7f-a816-be2c9c225026</other_details>
-    <other_details id="revision">1.0.3</other_details>
+    <other_details id="MD5-CAM-1.0.1">05B715B12F42BE1DD6F0510EF2E6820A</other_details>
+    <other_details id="build_uid">174d53b5-39e0-4142-bcf7-b55e00ab17fd</other_details>
+    <other_details id="revision">1.0.5</other_details>
     <details>
       <language>
         <terminology_id>
@@ -49,7 +49,7 @@ Sequence Variant Nomenclature - DNA Recommendations - Deletion Variant [Internet
         </terminology_id>
         <code_string>de</code_string>
       </language>
-      <purpose>Zur Darstellung von Informationen über die in einer Sequenz beobachteten "Deletion variant" menschlicher DNA.</purpose>
+      <purpose>Zur Erfassung von Informationen über die in einer Sequenz beobachteten Deletionsvariante menschlicher DNA.</purpose>
       <keywords>Deletion</keywords>
       <keywords>Variation</keywords>
       <keywords>genetisch</keywords>
@@ -59,14 +59,42 @@ Sequence Variant Nomenclature - DNA Recommendations - Deletion Variant [Internet
       <keywords>Chromosom</keywords>
       <keywords>Mutation</keywords>
       <keywords>Nukleotid</keywords>
-      <use>Verwenden Sie diesen Archetyp, um die Details einer "Deletion variant" menschlicher DNA darzustellen, die in einer genomischen Sequenz beobachtet wurde.&#xD;
+      <use>Zu verwenden für die Erfassung von Details einer Deletionsvariante menschlicher DNA, die in einer genomischen Sequenz beobachtet wurde.&#xD;
 &#xD;
 Dieser Archetyp wurde speziell für die Verwendung im SLOT "Structured variant" innerhalb des Archetyps CLUSTER.genomic_variant_result entwickelt, kann aber auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern dies klinisch angemessen ist.&#xD;
 &#xD;
 In den Beispielen in diesem Archetyp sollen Nukleotide in Kleinbuchstaben nur die veränderten Positionen der DNA-Sequenz hervorheben.&#xD;
 &#xD;
 Alle Definitionen und Beispiele in diesem Archetyp folgen dem HGVS-Standard.</use>
-      <misuse>Nicht zur Darstellung von Informationen über Varianten nicht-menschlicher DNA oder jeglicher Art von RNA oder Protein.</misuse>
+      <misuse>Nicht zur Erfassung von Informationen über Varianten nicht-menschlicher DNA oder jeglicher Art von RNA oder Protein.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sv</code_string>
+      </language>
+      <purpose>Att registrera uppgifter om en deletionsvariant i humant DNA som observerats i en genomisk sekvens.</purpose>
+      <keywords>deletion</keywords>
+      <keywords>deletionsvariant</keywords>
+      <keywords>variation</keywords>
+      <keywords>genetik</keywords>
+      <keywords>genomik</keywords>
+      <keywords>variant</keywords>
+      <keywords>DNA</keywords>
+      <keywords>kromosom</keywords>
+      <keywords>mutation</keywords>
+      <keywords>nukleotid</keywords>
+      <use>Används för att registrera uppgifter om en deletionsvariant i humant DNA som observerats i en genomisk sekvens.&#xD;
+&#xD;
+Används för att nästlas i SLOT ”Structured variant” i arketypen CLUSTER.genomic_variant_result. Arketypen kan även användas i andra ENTRY- eller CLUSTER-arketyper när det är kliniskt lämpligt.&#xD;
+&#xD;
+I exemplen i den här arketypen markerar nukleotider utskrivna i gemener endast de positioner i DNA-sekvensen som har förändrats.&#xD;
+&#xD;
+Alla definitioner och exempel i arketypen följer HGVS-nomenklaturen.</use>
+      <misuse>Ska inte användas för att registrera varianter i DNA från andra arter än människa eller varianter i RNA eller protein.</misuse>
       <copyright />
     </details>
     <details>
@@ -130,9 +158,20 @@ All definitions and examples in this archetype follow the HGVS nomenclature.</us
       </terminology_id>
       <code_string>de</code_string>
     </language>
-    <author id="name">Aurelie Tomczak, Natalia Strauch</author>
-    <author id="organisation">Institute of Pathology, University Hospital Heidelberg, Germany, Medizinische Hochschule Hannover</author>
-    <author id="email">au.tomczak@yahoo.com, Strauch.Natalia@mh-hannover.de</author>
+    <author id="name">Aurelie Tomczak, Natalia Strauch, Alina Rehberg, Hendrik Heiser</author>
+    <author id="organisation">Institute of Pathology, University Hospital Heidelberg, Germany, Medizinische Hochschule Hannover, CISTEC AG</author>
+    <author id="email">au.tomczak@yahoo.com, Strauch.Natalia@mh-hannover.de, rehberg.alina@mh-hannover.de, hendrik.heiser@cistec.com</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sv</code_string>
+    </language>
+    <author id="name">Manna Vosta</author>
+    <author id="organisation">Karolinska University Hospital</author>
+    <author id="email">manna.vosta@regionstockholm.se</author>
   </translations>
   <translations>
     <language>
@@ -376,30 +415,55 @@ All definitions and examples in this archetype follow the HGVS nomenclature.</us
     </term_definitions>
     <term_definitions language="de">
       <items code="at0000">
-        <items id="text">Genomic deletion variant</items>
-        <items id="description">Eine menschliche genetische Sequenzänderung, bei der im Vergleich zu einer genomischen Referenzsequenz ein oder mehrere Nukleotide nicht vorhanden sind (deleted).</items>
-        <items id="comment">For example: changing "AGAAtCACA" to "AGAA_CACA".</items>
+        <items id="text">Genomische Deletionsvariante</items>
+        <items id="description">Eine menschliche genetische Sequenzänderung, bei der im Vergleich zu einer genomischen Referenzsequenz ein oder mehrere Nukleotide nicht vorhanden sind (deletiert).</items>
+        <items id="comment">Zum Beispiel: Änderung von "AGAAtCACA" in "AGAA_CACA".</items>
       </items>
       <items code="at0001">
-        <items id="text">Start position</items>
-        <items id="description">Position of the deleted nucleotide or the first nucleotide of the deleted range.</items>
-        <items id="comment">For example: for a variant where the reference sequence "AGAatcACA" is changed to "AGA___ACA" the start position is 4.</items>
+        <items id="text">Startposition</items>
+        <items id="description">Position des deletierten Nukleotids oder des ersten Nukleotids des deletierten Bereichs.</items>
+        <items id="comment">Zum Beispiel: Bei einer Variante, bei der die Referenzsequenz „AGAatcACA“ in „AGA___ACA“ geändert wird, ist die Startposition 4.</items>
       </items>
       <items code="at0005">
-        <items id="text">End position</items>
-        <items id="description">Position of the last nucleotide of the deleted range.</items>
-        <items id="comment">For example: for a variant where the reference sequence "AGAatcACA" is changed to "AGA___ACA" the end position is 6.</items>
+        <items id="text">Endposition</items>
+        <items id="description">Position des letzten Nukleotids des deletierten Bereichs.</items>
+        <items id="comment">Zum Beispiel: Bei einer Variante, bei der die Referenzsequenz „AGAatcACA“ in „AGA___ACA“ geändert wird, ist die Endposition 6.</items>
       </items>
       <items code="at0008">
-        <items id="text">Deleted sequence</items>
-        <items id="description">The deleted nucleotide or sequence.</items>
-        <items id="comment">For example: for a variant where the reference sequence "AGAatcACA" is changed to "AGA___ACA" the deleted sequence is "ATC".</items>
+        <items id="text">Deletierte Sequenz</items>
+        <items id="description">Das deletierte Nukleotid oder die deletierte Sequenz.</items>
+        <items id="comment">Zum Beispiel: Bei einer Variante, bei der die Referenzsequenz „AGAatcACA“ in „AGA___ACA“ geändert wird, lautet die deletierte Sequenz „ATC“.</items>
       </items>
       <items code="at0009">
-        <items id="text">Reference sequence</items>
-        <items id="description">The sequence file used as a reference to describe this variant.</items>
+        <items id="text">Referenzsequenz</items>
+        <items id="description">Die Sequenzdatei, die als Referenz zur Beschreibung dieser Variante dient.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="sv">
+      <items code="at0000">
+        <items id="text">Genomisk deletionsvariant</items>
+        <items id="description">En genetisk sekvensförändring hos människa där en eller flera nukleotider saknas jämfört med en genomisk referenssekvens.</items>
+        <items id="comment">Exempelvis ändras ”AGAAtCACA” till ”AGAA_CACA”.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Startposition</items>
+        <items id="description">Positionen för den borttagna nukleotiden eller den första nukleotiden i det borttagna området.</items>
+        <items id="comment">Exempelvis om referenssekvensen ”AGAatcACA” ändras till ”AGA___ACA” är startpositionen 4.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Slutposition</items>
+        <items id="description">Positionen för den sista nukleotiden i det borttagna området.</items>
+        <items id="comment">Exempelvis om referenssekvensen ”AGAatcACA” ändras till ”AGA___ACA” är slutpositionen 6.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Borttagen sekvens</items>
+        <items id="description">Den borttagna nukleotiden eller sekvensen.</items>
+        <items id="comment">Exempelvis om referenssekvensen ”AGAatcACA” ändras till ”AGA___ACA” är den borttagna sekvensen ”ATC”.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Referenssekvens</items>
+        <items id="description">Sekvensfilen som används som referens för att beskriva varianten.</items>
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

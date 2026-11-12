@@ -1,0 +1,460 @@
+﻿archetype (adl_version=1.4; uid=97e5ac0b-feb6-42ec-9961-8c8265f337e0)
+	openEHR-EHR-OBSERVATION.operation_record.v1
+
+concept
+	[at0000]	-- Operation Record
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"unknown">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record details pertaining to open or keyhole operation performed">
+			use = <"">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["references"] = <"">
+		["build_uid"] = <"38724f69-5ffa-4764-948a-ee2f8a756dcf">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"48125F9C3EBD960D574F4EB4B433C797">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	OBSERVATION[at0000] matches {	-- Operation Record
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									CLUSTER[at0004] occurrences matches {0..1} matches {	-- Incision
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0009] occurrences matches {0..1} matches {	-- Skin incision
+												value matches {
+													DV_TEXT matches {*}
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0010, 	-- Midline
+															at0011, 	-- Transverse
+															at0012]	-- Classical
+														}
+													}
+												}
+											}
+											ELEMENT[at0014] occurrences matches {0..1} matches {	-- Location of incision
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+											ELEMENT[at0013] occurrences matches {0..1} matches {	-- Time of knife to skin
+												value matches {
+													DV_DATE_TIME matches {
+														value matches {yyyy-??-??T??:??:??}
+													}
+												}
+											}
+											ELEMENT[at0054] occurrences matches {0..1} matches {	-- Comment
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+										}
+									}
+									CLUSTER[at0037] occurrences matches {0..*} matches {	-- Operative details
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0036] occurrences matches {0..1} matches {	-- Overall Technique
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+											CLUSTER[at0047] occurrences matches {0..1} matches {	-- Details of surgery performed
+												items cardinality matches {0..*; unordered} matches {
+													ELEMENT[at0044] occurrences matches {0..1} matches {	-- Approach
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+													ELEMENT[at0049] occurrences matches {0..1} matches {	-- Method
+														value matches {
+															DV_CODED_TEXT matches {
+																defining_code matches {[local::]}
+															}
+														}
+													}
+													ELEMENT[at0045] occurrences matches {0..1} matches {	-- Description
+														value matches {
+															DV_CODED_TEXT matches {
+																defining_code matches {[local::]}
+															}
+														}
+													}
+													ELEMENT[at0050] occurrences matches {0..1} matches {	-- Comment
+														value matches {
+															DV_CODED_TEXT matches {
+																defining_code matches {[local::]}
+															}
+														}
+													}
+												}
+											}
+											CLUSTER[at0042] occurrences matches {0..*} matches {	-- Haemostasis
+												items cardinality matches {0..*; unordered} matches {
+													ELEMENT[at0043] occurrences matches {0..*} matches {	-- Method
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+													ELEMENT[at0046] occurrences matches {0..1} matches {	-- Comment
+														value matches {
+															DV_CODED_TEXT matches {
+																defining_code matches {[local::]}
+															}
+														}
+													}
+												}
+											}
+											CLUSTER[at0052] occurrences matches {0..*} matches {	-- Operation-specific details
+												items cardinality matches {0..*; unordered} matches {
+													allow_archetype CLUSTER[at0055] occurrences matches {0..1} matches {
+														include
+															archetype_id/value matches {/.*/}
+													}
+													ELEMENT[at0053] occurrences matches {0..1} matches {	-- Comment
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+												}
+											}
+											ELEMENT[at0038] occurrences matches {0..1} matches {	-- Comment
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+										}
+									}
+									CLUSTER[at0005] occurrences matches {0..1} matches {	-- Closure
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0015] occurrences matches {0..1} matches {	-- Number of Closure layers
+												value matches {
+													DV_COUNT matches {*}
+												}
+											}
+											CLUSTER[at0016] occurrences matches {0..*} matches {	-- Layer closure detail
+												items cardinality matches {0..*; unordered} matches {
+													ELEMENT[at0017] occurrences matches {0..1} matches {	-- Layer
+														value matches {
+															DV_CODED_TEXT matches {
+																defining_code matches {
+																	[local::
+																	at0020, 	-- Peritoneum
+																	at0021, 	-- Sheath
+																	at0022, 	-- Fat
+																	at0023]	-- Skin
+																}
+															}
+															DV_TEXT matches {*}
+														}
+													}
+													ELEMENT[at0018] occurrences matches {0..1} matches {	-- Method of closure
+														value matches {
+															DV_CODED_TEXT matches {
+																defining_code matches {
+																	[local::
+																	at0024, 	-- Suture - continuous
+																	at0025, 	-- Staples
+																	at0026, 	-- Suture - subcutaneous
+																	at0027]	-- Suture - interrupted
+																}
+															}
+														}
+													}
+													ELEMENT[at0019] occurrences matches {0..1} matches {	-- Material used
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+													ELEMENT[at0030] occurrences matches {0..1} matches {	-- Comment
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+												}
+											}
+											CLUSTER[at0032] occurrences matches {0..1} matches {	-- Drains
+												items cardinality matches {0..*; unordered} matches {
+													ELEMENT[at0034] occurrences matches {0..1} matches {	-- Type
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+													ELEMENT[at0033] occurrences matches {0..1} matches {	-- Location
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+													ELEMENT[at0035] occurrences matches {0..1} matches {	-- Comment
+														value matches {
+															DV_CODED_TEXT matches {
+																defining_code matches {[local::]}
+															}
+														}
+													}
+												}
+											}
+											ELEMENT[at0051] occurrences matches {0..1} matches {	-- Comment
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+										}
+									}
+									CLUSTER[at0006] occurrences matches {0..1} matches {	-- Intra-Operative Issues
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0007] occurrences matches {0..1} matches {	-- Complication
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+											ELEMENT[at0008] occurrences matches {0..1} matches {	-- Issue or difficulty
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+											ELEMENT[at0031] occurrences matches {0..1} matches {	-- Comment
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Operation Record">
+					description = <"Record of details pertaining to open or keyhole operation performed">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Incision">
+					description = <"*">
+				>
+				["at0005"] = <
+					text = <"Closure">
+					description = <"*">
+				>
+				["at0006"] = <
+					text = <"Intra-Operative Issues">
+					description = <"*">
+				>
+				["at0007"] = <
+					text = <"Complication">
+					description = <"Identify any complications incurred in performing the surgery">
+				>
+				["at0008"] = <
+					text = <"Issue or difficulty">
+					description = <"Identify any issue or difficulty faced during surgery">
+				>
+				["at0009"] = <
+					text = <"Skin incision">
+					description = <"Details about skin incision">
+				>
+				["at0010"] = <
+					text = <"Midline">
+					description = <"*">
+				>
+				["at0011"] = <
+					text = <"Transverse">
+					description = <"*">
+				>
+				["at0012"] = <
+					text = <"Classical">
+					description = <"*">
+				>
+				["at0013"] = <
+					text = <"Time of knife to skin">
+					description = <"*">
+				>
+				["at0014"] = <
+					text = <"Location of incision">
+					description = <"Location of incision">
+				>
+				["at0015"] = <
+					text = <"Number of Closure layers">
+					description = <"*">
+				>
+				["at0016"] = <
+					text = <"Layer closure detail">
+					description = <"*">
+				>
+				["at0017"] = <
+					text = <"Layer">
+					description = <"Name of layer">
+				>
+				["at0018"] = <
+					text = <"Method of closure">
+					description = <"Method of closure">
+				>
+				["at0019"] = <
+					text = <"Material used">
+					description = <"Details about closure material">
+				>
+				["at0020"] = <
+					text = <"Peritoneum">
+					description = <"*">
+				>
+				["at0021"] = <
+					text = <"Sheath">
+					description = <"*">
+				>
+				["at0022"] = <
+					text = <"Fat">
+					description = <"*">
+				>
+				["at0023"] = <
+					text = <"Skin">
+					description = <"*">
+				>
+				["at0024"] = <
+					text = <"Suture - continuous">
+					description = <"*">
+				>
+				["at0025"] = <
+					text = <"Staples">
+					description = <"*">
+				>
+				["at0026"] = <
+					text = <"Suture - subcutaneous">
+					description = <"*">
+				>
+				["at0027"] = <
+					text = <"Suture - interrupted">
+					description = <"*">
+				>
+				["at0030"] = <
+					text = <"Comment">
+					description = <"Additional comment about closure">
+				>
+				["at0031"] = <
+					text = <"Comment">
+					description = <"Additional comment about operative issues">
+				>
+				["at0032"] = <
+					text = <"Drains">
+					description = <"Detail about drains inserted">
+				>
+				["at0033"] = <
+					text = <"Location">
+					description = <"Location of drain">
+				>
+				["at0034"] = <
+					text = <"Type">
+					description = <"Type of drain">
+				>
+				["at0035"] = <
+					text = <"Comment">
+					description = <"Comment about drains">
+				>
+				["at0036"] = <
+					text = <"Overall Technique">
+					description = <"Details of operative technique performed">
+				>
+				["at0037"] = <
+					text = <"Operative details">
+					description = <"*">
+				>
+				["at0038"] = <
+					text = <"Comment">
+					description = <"Overall comment about the operation performed">
+				>
+				["at0042"] = <
+					text = <"Haemostasis">
+					description = <"Details about haemostasis methods used">
+				>
+				["at0043"] = <
+					text = <"Method">
+					description = <"Method of haemostasis">
+				>
+				["at0044"] = <
+					text = <"Approach">
+					description = <"Surgical approach">
+				>
+				["at0045"] = <
+					text = <"Description">
+					description = <"Details of surgery performed">
+				>
+				["at0046"] = <
+					text = <"Comment">
+					description = <"*">
+				>
+				["at0047"] = <
+					text = <"Details of surgery performed">
+					description = <"*">
+				>
+				["at0049"] = <
+					text = <"Method">
+					description = <"Details of method performed">
+				>
+				["at0050"] = <
+					text = <"Comment">
+					description = <"Comments about surgery performed">
+				>
+				["at0051"] = <
+					text = <"Comment">
+					description = <"Comments about closure">
+				>
+				["at0052"] = <
+					text = <"Operation-specific details">
+					description = <"Further details about operation that are very specific to purpose">
+				>
+				["at0053"] = <
+					text = <"Comment">
+					description = <"Comment on operation-specific details">
+				>
+				["at0054"] = <
+					text = <"Comment">
+					description = <"Comment about the incision and opening phase of surgical operation">
+				>
+				["at0055"] = <
+					text = <"Any operation-specific details">
+					description = <"Cluster for further details about operation that are very specific to purpose">
+				>
+			>
+		>
+	>

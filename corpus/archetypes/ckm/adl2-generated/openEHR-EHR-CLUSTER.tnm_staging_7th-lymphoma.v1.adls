@@ -1,0 +1,84 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1b57e75f-e012-4cb6-88ad-88de554a2c95; build_uid=3659ed6d-5b52-4fd3-90dd-d4711dc3fdb5)
+    openEHR-EHR-CLUSTER.tnm_staging_7th-lymphoma.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.tnm_staging_7th.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics Scotland">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"27/07/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie Ocean Informatics Australia", "Sam Heard Ocean Informatics Australia", "Koray Atalag, University of Auckland, New Zealand">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Sobin LH. TNM Classification of Malignant Tumours 7th Edition.  John Wiley and Sons; 2009.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"DCE9833A508821FBDAEE7962F3D6FAED">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the classification and grading of lymphoma using the TNM classification 7th Edition.">
+            keywords = <"tumour", "TNM", "malignancy", "cancer", "staging", "classification", "grade", "grading", "stage", "lymph node", "metastasis", "lymphoma">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Tumour - TNM staging Lymphoma  7th Edition
+        /items[at0014]/value matches {
+            DV_CODED_TEXT[at9008.1] matches {
+                defining_code matches {[ac0.9000]}    -- Stage grouping (synthesised)
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.52"] = <
+                text = <"Stage I">
+                description = <"Stage I - as per AJCC Cancer staging 7th Edition.">
+            >
+            ["at0.53"] = <
+                text = <"Stage II">
+                description = <"Stage II - as per AJCC Cancer staging 7th Edition.">
+            >
+            ["at0.54"] = <
+                text = <"Stage III">
+                description = <"Stage III - as per AJCC Cancer staging 7th Edition.">
+            >
+            ["at0.55"] = <
+                text = <"Stage IV">
+                description = <"Stage IV - as per AJCC Cancer staging 7th Edition.">
+            >
+            ["at0000.1"] = <
+                text = <"Tumour - TNM staging Lymphoma  7th Edition">
+                description = <"For the classification and grading of prostate cancer using the TNM classification 7th Edition.">
+            >
+            ["ac0.9000"] = <
+                text = <"Stage grouping (synthesised)">
+                description = <"The TNM Stage grouping. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.52", "at0.53", "at0.54", "at0.55">
+        >
+    >

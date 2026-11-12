@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -61,10 +61,10 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">292840701D3FA6B7194CE29922FF897D</other_details>
-    <other_details id="build_uid">05b7a7d8-0092-4703-9698-06ca53ca2d1a</other_details>
+    <other_details id="MD5-CAM-1.0.1">44B35DE9CCD227A28F34FED2D010BFF0</other_details>
+    <other_details id="build_uid">c57fb048-473d-476f-a5dd-6c58ce3866a9</other_details>
     <other_details id="ip_acknowledgements">This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.</other_details>
-    <other_details id="revision">2.1.0</other_details>
+    <other_details id="revision">2.1.1</other_details>
     <details>
       <language>
         <terminology_id>
@@ -157,39 +157,6 @@ Inte utformad för att representera diagnostisk säkerhet - använd dataelemente
         <terminology_id>
           <value>ISO_639-1</value>
         </terminology_id>
-        <code_string>nb</code_string>
-      </language>
-      <purpose>For å registrere en kontekstspesifikk eller tidsspesifikk kvalifikator for et problem eller en diagnose.</purpose>
-      <keywords>problem</keywords>
-      <keywords>aktivt</keywords>
-      <keywords>inaktivt</keywords>
-      <keywords>status</keywords>
-      <keywords>episode</keywords>
-      <keywords>tilstand</keywords>
-      <keywords>aktiv</keywords>
-      <keywords>inaktiv</keywords>
-      <keywords>remisjon</keywords>
-      <keywords>kronisk</keywords>
-      <keywords>akutt</keywords>
-      <use>Brukes for å registrere en kontekstspesifikk eller tidsspesifikk kvalifikator som gir ytterligere detaljer som er relevante på tidspunktet man registrerer et problem eller en diagnose. Kvalifikatoren er ikke nødvendigvis passende på et annet tidspunkt eller i en annen klinisk sammenheng.&#xD;
-&#xD;
-Denne arketypen skal brukes i SLOTet "Status" i arketypen EVALUATION.problem_diagnosis (Problem/diagnose). Intensjonen er at EVALUATION.problem_diagnosis-arketypen skal inneholde all informasjonen som gjelder i alle sammenhenger, i motsetning til denne arketypen som skal inneholde informasjonen som avhenger av brukssammenheng.&#xD;
-&#xD;
-VIKTIG INFORMASJON FOR IMPLEMENTERING:&#xD;
-- Det er ikke meningen eller implisert at alle disse kvalifikatorene skal brukes i den samme sammenhengen eller det samme tidsperioden. I motsetning til den vanlige måten å lage arketyper på, er denne arketypen laget for å samle flere vanlige kvalifikatorer på ett sted for å forsøksvis oppnå et visst nivå av standardisering innenfor et ganske innfløkt område av klinisk praksis. Det erkjennes at dataelementene i denne arketypen omfatter mange forskjellige, og til dels også konkurrerende, konsepter. Dette ble gjort hovedsakelig for å unngå behov for å ha mange arketyper for kvalifikatorer, der hver av dem kun inneholder ett eller to dataelementer.&#xD;
-- Noen av disse dataelementene er potensielt direkte motstridende dersom de brukes samtidig og i den samme sammenhengen. For eksempel gir det ikke mening å ha et "inaktivt" problem innenfor en "pågående" episode. Av den grunn bør disse kvalifikatorene brukes med stor omhu, siden de i praksis vil brukes for varierende formål, og interoperabilitet kan ikke garanteres med mindre det er definert klare retningslinjer for bruk innenfor de kliniske omstendighetene der "Problem/diagnose"- og "Problem/diagnose-kvalifikatorer"-arketypeparet brukes.&#xD;
-&#xD;
-Fullstendig DRG-koding vil kreve DRG-relaterte dataelementer fra denne arketypen, i kombinasjon med elementer fra andre arketyper.</use>
-      <misuse>Brukes ikke for å representere differensialdiagnoser. Bruk arketypen EVALUATION.differential_diagnosis for dette formålet.&#xD;
-&#xD;
-Brukes ikke for å representere diagnostisk sikkerhet. Bruk elementet "Diagnostisk sikkerhet" i arketypen EVALUATION.problem_diagnosis.</misuse>
-      <copyright />
-    </details>
-    <details>
-      <language>
-        <terminology_id>
-          <value>ISO_639-1</value>
-        </terminology_id>
         <code_string>pt-br</code_string>
       </language>
       <purpose>Para gravar um contexto clínico específico ou qualificador de tempo específico para um problema ou diagnóstico específico.</purpose>
@@ -246,23 +213,6 @@ Not to be used to represent diagnostic certainty - use the 'Diagnostic certainty
         <terminology_id>
           <value>ISO_639-1</value>
         </terminology_id>
-        <code_string>sl</code_string>
-      </language>
-      <purpose>Za zapisovanje različnih statusov, ki se ponavadi uporablja za aplikacijskimi in kliničnimi sporočili, ki so odvisna od definirane vsebine&#xD;
-&#xD;
-</purpose>
-      <keywords>problem</keywords>
-      <keywords>aktiven</keywords>
-      <keywords>ni aktiven</keywords>
-      <use>Za dodeljevanje pravic EVALUATION.problem_diagnosis.v1 archetype, dodaja informacije za povezovanje. </use>
-      <misuse>It should not be assumed that these qualifiers are safely interoperable unless further definition and alignment is agreed between all sharing parties. A problem which has been defined as 'Inactive' during a hospital admission cannot be assumed to be regarded as 'Inactive' in a primary care setting , where a much longer term perspective is being taken. Similarly terms such as Initial, Interim and Final, whilst helpful to the human observer are unlikely to be precisely enough defined to be safely computable e.g. for decision support. </misuse>
-      <copyright>© openEHR Foundation</copyright>
-    </details>
-    <details>
-      <language>
-        <terminology_id>
-          <value>ISO_639-1</value>
-        </terminology_id>
         <code_string>it</code_string>
       </language>
       <purpose>Registrare un qualificatore specifico del contesto clinico o temporale per un problema o una diagnosi specifici.</purpose>
@@ -279,6 +229,34 @@ La codifica DRG completa richiederà che i data element relativi al DRG di quest
       <misuse>Da non utilizzare per rappresentare una diagnosi differenziale - utilizzare a questo scopo l'archetipo EVALUATION.differential_diagnosis.&#xD;
 &#xD;
 Da non utilizzare per rappresentare la certezza diagnostica - utilizzare l'elemento di dati "Certezza diagnostica" all'interno dell'archetipo EVALUATION.problem_diagnosis.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>fr</code_string>
+      </language>
+      <purpose>Pour enregistrer un qualificatif propre à un contexte clinique ou à un moment donné pour un problème ou un diagnostic spécifié.</purpose>
+      <keywords>problème</keywords>
+      <keywords>actif</keywords>
+      <keywords>inactif</keywords>
+      <keywords>statut</keywords>
+      <keywords>épisode</keywords>
+      <keywords>diagnostic</keywords>
+      <use>À utiliser pour enregistrer un qualificatif pertinent, propre à un contexte clinique ou à un moment donné, qui apporte des informations complémentaires au moment de l’enregistrement ou dans le contexte clinique dans lequel un problème ou un diagnostic est enregistré. Ce qualificatif peut ne pas être approprié à un autre moment ou dans un autre contexte clinique.&#xD;
+&#xD;
+Cet archétype est conçu pour être inclus dans le SLOT « Status » de l’archétype EVALUATION.problem_diagnosis. L’objectif est que l’archétype EVALUATION.problem_diagnosis contienne toutes les informations applicables dans tous les contextes, tandis que le présent archétype décrit uniquement les informations qui dépendent du contexte d’utilisation.&#xD;
+&#xD;
+Notes importantes pour l’implémentation&#xD;
+- Il n’est ni prévu ni sous-entendu qu’un ou plusieurs de ces qualificatifs, voire leur ensemble, soient utilisés dans un même contexte ou au cours d’une même période. Contrairement à la conception habituelle des archétypes, cet archétype a été délibérément conçu pour regrouper en un seul endroit plusieurs qualificatifs couramment utilisés, dans le but d’apporter une certaine standardisation dans un domaine particulièrement hétérogène de la pratique clinique. Il est reconnu que les éléments de données contenus dans cet archétype recouvrent de nombreux concepts différents, parfois même concurrents. Ce choix a principalement été fait afin d’éviter la nécessité de créer plusieurs archétypes de qualificatifs ne contenant chacun qu’un ou deux éléments de données.&#xD;
+- Certains de ces éléments de données peuvent être directement contradictoires s’ils sont utilisés simultanément dans un même contexte. Par exemple, il ne serait pas cohérent qu’un problème soit qualifié d’« Inactif » alors que le « Statut de l’épisode » est « En cours ». Ces qualificatifs de statut doivent donc être utilisés avec une extrême prudence, car ils sont appliqués de manière variable dans la pratique. L’interopérabilité ne peut être garantie que si des règles d’utilisation sont clairement définies au sein de la communauté clinique dans laquelle la paire d’archétypes « Problème/Diagnostic » et « Qualificatif du problème/diagnostic » est susceptible d’être partagée.&#xD;
+&#xD;
+Le codage DRG complet nécessite de combiner les éléments de données relatifs aux DRG contenus dans cet archétype avec des éléments de données provenant d’autres archétypes.</use>
+      <misuse>À ne pas utiliser pour enregistrer un diagnostic différentiel  - utiliser à cette fin l’archétype EVALUATION.differential_diagnosis.&#xD;
+&#xD;
+À ne pas utiliser pour enregistrer la certitude diagnostique - utiliser l’élément de données « Certitude diagnostique » de l’archétype EVALUATION.problem_diagnosis.</misuse>
       <copyright />
     </details>
     <details>
@@ -306,8 +284,7 @@ Da non utilizzare per rappresentare la certezza diagnostica - utilizzare l'eleme
 &#xD;
 - 如果在同一上下文/语境当中同时使用其中的一些数据元，它们可能会发生直接的冲突。例如，“无效”问题与“进行中/正在进行”的服务节段（Episode）的并存会讲不通/缺乏合理性。因此，应当极其小心地运用这些状态限定词，因为它们在实践当中的运用变化不定，除非在相应的临床社区内明确定义用法指南，否则无法保证互操作性；在临床社区当中，可能会共享“问题/诊断”与“问题/诊断限定词”原始型对。&#xD;
 &#xD;
-完整的 DRG 编码将需要当前原始型之中与 DRG 相关的数据元结合来自其他原始型的数据元。&#xD;
-</use>
+完整的 DRG 编码将需要当前原始型之中与 DRG 相关的数据元结合来自其他原始型的数据元。</use>
       <misuse>并非旨在用于表达鉴别诊断 - 对此，请采用评价型鉴别诊断原始型 EVALUATION.differential_diagnosis。&#xD;
 &#xD;
 并非旨在用于表达诊断确定性 - 对此，请采用评价型问题/诊断原始型 EVALUATION.problem_diagnosis 之中的诊断确定性数据元 "Diagnostic certainty"。</misuse>
@@ -346,34 +323,6 @@ Not to be used to represent diagnostic certainty - use the 'Diagnostic certainty
         <terminology_id>
           <value>ISO_639-1</value>
         </terminology_id>
-        <code_string>ca</code_string>
-      </language>
-      <purpose>Registrar un qualificador clínic específic del context o específic del temps per a un problema o diagnòstic especificat.</purpose>
-      <keywords>problema</keywords>
-      <keywords>actiu</keywords>
-      <keywords>inactiu</keywords>
-      <keywords>estat</keywords>
-      <keywords>episodi</keywords>
-      <keywords>diagnòstic</keywords>
-      <use>S'utilitza per registrar un qualificador específic de context o específic de temps que proporciona detalls addicionals que són rellevants en el moment de registrar o dins del context clínic on es registra un problema o diagnòstic. El qualificador pot no ser apropiat en un altre moment o en un altre context clínic.&#xD;
-&#xD;
-Aquest arquetip està dissenyat per a ser inclòs en el SLOTd'estat en l'arquetip EVALUATION.problem_diagnosis. La intenció és que l'arquetip EVALUATION.problem_diagnosis contingui tota la informació que s'aplica en tots els contextos, en contrast amb aquest arquetip descrivint només informació que depèn del context d'ús.&#xD;
-&#xD;
-NOTES IMPORTANTS PER A LA IMPLEMENTACIÓ:&#xD;
-- No es pretén ni implica que cap o tots aquests qualificadors s'utilitzin en el mateix context o període de temps. En contrast amb el disseny habitual d'arquetips, aquest arquetip ha estat dissenyat deliberadament per recollir una sèrie de qualificadors comuns en un sol lloc en un esforç per intentar una estandardització simple dins d'una àrea molt desordenada de la pràctica clínica. Es reconeix que els elements de dades continguts en aquest arquetip abasten molts conceptes diferents, i de vegades fins i tot contraposats. Això s'ha fet principalment per evitar la necessitat de múltiples arquetips qualificadors, cadascun dels quals conté només un o dos elements de dades.&#xD;
-- Alguns d'aquests elements de dades són potencialment conflictius directament si s'utilitzen simultàniament dins del mateix context, per exemple, no tindria sentit tenir un problema "inactiu" juntament amb un episodi que està "en curs". Com a tal, aquests qualificadors d'estat s'han d'utilitzar amb cura extrema, ja que s'apliquen de manera variable en la pràctica i la interoperabilitat no es pot assegurar tret que les directrius d'ús es defineixin clarament dins de la comunitat clínica en la qual es poden compartir el parell d'arquetips "Problema/Diagnòstic".&#xD;
-&#xD;
-La codificació completa del DRG requerirà els elements de dades relacionats amb el DRG d'aquest arquetip en combinació amb els elements de dades d'altres arquetips.</use>
-      <misuse>No utilitzar-se per representar un diagnòstic diferencial - utilitzar l'arquetip EVALUATION.differential_diagnosis per a aquest propòsit.&#xD;
-&#xD;
-No s'ha d'utilitzar per representar la certesa diagnòstica - utilitzeu l'element de dades de "certesa diagnòstica" dins de l'arquetip EVALUATION.problem_diagnosis.</misuse>
-      <copyright />
-    </details>
-    <details>
-      <language>
-        <terminology_id>
-          <value>ISO_639-1</value>
-        </terminology_id>
         <code_string>es</code_string>
       </language>
       <purpose>Registrar un calificador específico del contexto clínico o del tiempo para un problema o diagnóstico concreto.</purpose>
@@ -395,6 +344,82 @@ La codificación DRG completa requerirá los elementos de datos relacionados con
       <misuse>No debe utilizarse para representar un diagnóstico diferencial - utilice el arquetipo EVALUATION.differential_diagnosis para este fin.&#xD;
 &#xD;
 No debe utilizarse para representar la certeza diagnóstica - utilice el elemento de datos "Certeza diagnóstica" dentro del arquetipo EVALUATION.problem_diagnosis.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å registrere en kontekstspesifikk eller tidsspesifikk kvalifikator for et problem eller en diagnose.</purpose>
+      <keywords>problem</keywords>
+      <keywords>aktivt</keywords>
+      <keywords>inaktivt</keywords>
+      <keywords>status</keywords>
+      <keywords>episode</keywords>
+      <keywords>tilstand</keywords>
+      <keywords>aktiv</keywords>
+      <keywords>inaktiv</keywords>
+      <keywords>remisjon</keywords>
+      <keywords>kronisk</keywords>
+      <keywords>akutt</keywords>
+      <use>Brukes for å registrere en kontekstspesifikk eller tidsspesifikk kvalifikator som gir ytterligere detaljer som er relevante på tidspunktet man registrerer et problem eller en diagnose. Kvalifikatoren er ikke nødvendigvis passende på et annet tidspunkt eller i en annen klinisk sammenheng.&#xD;
+&#xD;
+Denne arketypen skal brukes i SLOTet "Status" i arketypen EVALUATION.problem_diagnosis (Problem/diagnose). Intensjonen er at EVALUATION.problem_diagnosis-arketypen skal inneholde all informasjonen som gjelder i alle sammenhenger, i motsetning til denne arketypen som skal inneholde informasjonen som avhenger av brukssammenheng.&#xD;
+&#xD;
+VIKTIG INFORMASJON FOR IMPLEMENTERING:&#xD;
+- Det er ikke meningen eller implisert at alle disse kvalifikatorene skal brukes i den samme sammenhengen eller det samme tidsperioden. I motsetning til den vanlige måten å lage arketyper på, er denne arketypen laget for å samle flere vanlige kvalifikatorer på ett sted for å forsøksvis oppnå et visst nivå av standardisering innenfor et ganske innfløkt område av klinisk praksis. Det erkjennes at dataelementene i denne arketypen omfatter mange forskjellige, og til dels også konkurrerende, konsepter. Dette ble gjort hovedsakelig for å unngå behov for å ha mange arketyper for kvalifikatorer, der hver av dem kun inneholder ett eller to dataelementer.&#xD;
+- Noen av disse dataelementene er potensielt direkte motstridende dersom de brukes samtidig og i den samme sammenhengen. For eksempel gir det ikke mening å ha et "inaktivt" problem innenfor en "pågående" episode. Av den grunn bør disse kvalifikatorene brukes med stor omhu, siden de i praksis vil brukes for varierende formål, og interoperabilitet kan ikke garanteres med mindre det er definert klare retningslinjer for bruk innenfor de kliniske omstendighetene der "Problem/diagnose"- og "Problem/diagnose-kvalifikatorer"-arketypeparet brukes.&#xD;
+&#xD;
+Fullstendig DRG-koding vil kreve DRG-relaterte dataelementer fra denne arketypen, i kombinasjon med elementer fra andre arketyper.</use>
+      <misuse>Brukes ikke for å representere differensialdiagnoser. Bruk arketypen EVALUATION.differential_diagnosis for dette formålet.&#xD;
+&#xD;
+Brukes ikke for å representere diagnostisk sikkerhet. Bruk elementet "Diagnostisk sikkerhet" i arketypen EVALUATION.problem_diagnosis.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sl</code_string>
+      </language>
+      <purpose>Za zapisovanje različnih statusov, ki se ponavadi uporablja za aplikacijskimi in kliničnimi sporočili, ki so odvisna od definirane vsebine</purpose>
+      <keywords>problem</keywords>
+      <keywords>aktiven</keywords>
+      <keywords>ni aktiven</keywords>
+      <use>Za dodeljevanje pravic EVALUATION.problem_diagnosis.v1 archetype, dodaja informacije za povezovanje.</use>
+      <misuse>It should not be assumed that these qualifiers are safely interoperable unless further definition and alignment is agreed between all sharing parties. A problem which has been defined as 'Inactive' during a hospital admission cannot be assumed to be regarded as 'Inactive' in a primary care setting , where a much longer term perspective is being taken. Similarly terms such as Initial, Interim and Final, whilst helpful to the human observer are unlikely to be precisely enough defined to be safely computable e.g. for decision support.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ca</code_string>
+      </language>
+      <purpose>Registrar un qualificador clínic específic del context o específic del temps per a un problema o diagnòstic especificat.</purpose>
+      <keywords>problema</keywords>
+      <keywords>actiu</keywords>
+      <keywords>inactiu</keywords>
+      <keywords>estat</keywords>
+      <keywords>episodi</keywords>
+      <keywords>diagnòstic</keywords>
+      <use>S'utilitza per registrar un qualificador específic de context o específic de temps que proporciona detalls addicionals que són rellevants en el moment de registrar o dins del context clínic on es registra un problema o diagnòstic. El qualificador pot no ser apropiat en un altre moment o en un altre context clínic.&#xD;
+&#xD;
+Aquest arquetip està dissenyat per a ser inclòs en el SLOTd'estat en l'arquetip EVALUATION.problem_diagnosis. La intenció és que l'arquetip EVALUATION.problem_diagnosis contingui tota la informació que s'aplica en tots els contextos, en contrast amb aquest arquetip descrivint només informació que depèn del context d'ús.&#xD;
+&#xD;
+NOTES IMPORTANTS PER A LA IMPLEMENTACIÓ:&#xD;
+- No es pretén ni implica que cap o tots aquests qualificadors s'utilitzin en el mateix context o període de temps. En contrast amb el disseny habitual d'arquetips, aquest arquetip ha estat dissenyat deliberadament per recollir una sèrie de qualificadors comuns en un sol lloc en un esforç per intentar una estandardització simple dins d'una àrea molt desordenada de la pràctica clínica. Es reconeix que els elements de dades continguts en aquest arquetip abasten molts conceptes diferents, i de vegades fins i tot contraposats. Això s'ha fet principalment per evitar la necessitat de múltiples arquetips qualificadors, cadascun dels quals conté només un o dos elements de dades.&#xD;
+- Alguns d'aquests elements de dades són potencialment conflictius directament si s'utilitzen simultàniament dins del mateix context, per exemple, no tindria sentit tenir un problema "inactiu" juntament amb un episodi que està "en curs". Com a tal, aquests qualificadors d'estat s'han d'utilitzar amb cura extrema, ja que s'apliquen de manera variable en la pràctica i la interoperabilitat no es pot assegurar tret que les directrius d'ús es defineixin clarament dins de la comunitat clínica en la qual es poden compartir el parell d'arquetips "Problema/Diagnòstic".&#xD;
+&#xD;
+La codificació completa del DRG requerirà els elements de dades relacionats amb el DRG d'aquest arquetip en combinació amb els elements de dades d'altres arquetips.</use>
+      <misuse>No utilitzar-se per representar un diagnòstic diferencial - utilitzar l'arquetip EVALUATION.differential_diagnosis per a aquest propòsit.&#xD;
+&#xD;
+No s'ha d'utilitzar per representar la certesa diagnòstica - utilitzeu l'element de dades de "certesa diagnòstica" dins de l'arquetip EVALUATION.problem_diagnosis.</misuse>
       <copyright />
     </details>
   </description>
@@ -476,6 +501,18 @@ No debe utilizarse para representar la certeza diagnóstica - utilice el element
     <author id="name">Francesca Frexia</author>
     <author id="organisation">CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy</author>
     <author id="email">francesca.frexia@crs4.it</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>fr</code_string>
+    </language>
+    <author id="name">Jonas Bucher</author>
+    <author id="organisation">Cistec AG</author>
+    <author id="email">jonas.bucher@cistec.com</author>
+    <other_details id="other_contributors">Jean-Pierre Messerli, jean-pierre.messerli@jpm-consulting.ch</other_details>
   </translations>
   <translations>
     <language>
@@ -1785,11 +1822,11 @@ Preliminary or working diagnoses are intended to represent the single most likel
       </items>
       <items code="at0108">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">Comment</items>
@@ -1998,11 +2035,11 @@ In addition, the free text choice permits use of other local value sets, as requ
       </items>
       <items code="at0108">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">*Comment (en)</items>
@@ -2222,11 +2259,11 @@ Além disso, a opção de texto livre permite o uso de outros conjuntos de valor
       </items>
       <items code="at0108">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">*Comment (en)</items>
@@ -2457,11 +2494,11 @@ Coding with a terminology is preferred, where possible. (en)</items>
       </items>
       <items code="at0108">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">Kommentar</items>
@@ -2544,8 +2581,7 @@ Koding med en terminologi er foretrukket hvis mulig.</items>
       </items>
       <items code="at0064">
         <items id="text">주요 진단</items>
-        <items id="description">입원 환자 진료의 삽화 또는 요양 진료의 삽화, 의료기관 방문을 야기하는데 주요하게 책임이 있는 것으로 결정된 진단.&#xD;
-</items>
+        <items id="description">입원 환자 진료의 삽화 또는 요양 진료의 삽화, 의료기관 방문을 야기하는데 주요하게 책임이 있는 것으로 결정된 진단.</items>
       </items>
       <items code="at0066">
         <items id="text">이차 진단</items>
@@ -2671,11 +2707,11 @@ Koding med en terminologi er foretrukket hvis mulig.</items>
       </items>
       <items code="at0108">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">*Comment (en)</items>
@@ -2908,11 +2944,11 @@ Falls es nötig sein sollte, erlaubt das Freitextfeld die Benutzung von lokalen 
       </items>
       <items code="at0108">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">Nein</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">Kommentar</items>
@@ -2932,7 +2968,7 @@ Coding with a terminology is preferred, where possible. (en)</items>
       </items>
       <items code="at0001">
         <items id="text">Episodicità</items>
-        <items id="description">Categoria di questo episodio per il problema/diagnosi identificati. </items>
+        <items id="description">Categoria di questo episodio per il problema/diagnosi identificati.</items>
         <items id="comment">Ad esempio: "Nuovo" permetterà ai medici di distinguere un nuovo episodio acuto di otite media che può essere sorto subito dopo una diagnosi precedente, per distinguerlo da una diagnosi irrisolta o "in corso" di otite media cronica. Il trattamento di episodi ricorrenti, nuovi e acuti di una patologia, può differire significativamente dalla stessa patologia che non si risolve o non risponde al trattamento. In molte situazioni il clinico non sarà in grado di dirlo, e quindi indeterminato può essere appropriato.</items>
       </items>
       <items code="at0003">
@@ -3013,7 +3049,7 @@ Le diagnosi preliminari o di lavoro sono destinate a rappresentare la scelta pi�
       </items>
       <items code="at0073">
         <items id="text">Diagnosi di ammissione?</items>
-        <items id="description">Il problema o la diagnosi erano presenti al momento del ricovero? </items>
+        <items id="description">Il problema o la diagnosi erano presenti al momento del ricovero?</items>
         <items id="comment">*Record as True or 'Yes' if the problem or diagnosis was present on admission. This data element is a requirement from DRG reporting in some countries. (en)</items>
       </items>
       <items code="at0076">
@@ -3027,12 +3063,12 @@ Le diagnosi preliminari o di lavoro sono destinate a rappresentare la scelta pi�
       </items>
       <items code="at0083">
         <items id="text">Fase risolutoria</items>
-        <items id="description">Fase di guarigione per un problema acuto o una diagnosi. </items>
-        <items id="comment">Per esempio: tracking del progresso della risoluzione di un'infezione dell'orecchio medio. </items>
+        <items id="description">Fase di guarigione per un problema acuto o una diagnosi.</items>
+        <items id="comment">Per esempio: tracking del progresso della risoluzione di un'infezione dell'orecchio medio.</items>
       </items>
       <items code="at0084">
         <items id="text">Risolto</items>
-        <items id="description">Il problema o la diagnosi ha completato le normali fasi di recupero o di guarigione e possono essere considerati risolti. </items>
+        <items id="description">Il problema o la diagnosi ha completato le normali fasi di recupero o di guarigione e possono essere considerati risolti.</items>
       </items>
       <items code="at0085">
         <items id="text">In risoluzione</items>
@@ -3122,11 +3158,11 @@ Le diagnosi preliminari o di lavoro sono destinate a rappresentare la scelta pi�
       </items>
       <items code="at0108">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">*Comment (en)</items>
@@ -3347,11 +3383,11 @@ Preliminära eller fungerande diagnoser är avsedda att representera det mest tr
       </items>
       <items code="at0108">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">*Comment (en)</items>
@@ -3572,11 +3608,11 @@ Coding with a terminology is preferred, where possible. (en)</items>
       </items>
       <items code="at0108">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">*Comment (en)</items>
@@ -3811,11 +3847,11 @@ Coding with a terminology is preferred, where possible. (en)</items>
       </items>
       <items code="at0108">
         <items id="text">是</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">否</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">备注</items>
@@ -4036,11 +4072,11 @@ A més, l'elecció de text lliure permet l'ús d'altres conjunts de valors local
       </items>
       <items code="at0108">
         <items id="text">Sí</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">Comentaris</items>
@@ -4261,11 +4297,11 @@ Además, la opción de texto libre permite el uso de otros conjuntos de valores 
       </items>
       <items code="at0108">
         <items id="text">Sí</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">Comentario</items>
@@ -4276,6 +4312,232 @@ Además, la opción de texto libre permite el uso de otros conjuntos de valores 
         <items id="description">*A high‑level grouping of the problem or diagnosis. (en)</items>
         <items id="comment">*For example: 'Cancer', 'Mental health and/or addiction', 'Infectious disease', 'Rare disease'. &#xD;
 Coding with a terminology is preferred, where possible. (en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="fr">
+      <items code="at0000">
+        <items id="text">Qualificatif du problème/diagnostic</items>
+        <items id="description">Qualificatif contextuel ou temporel d’un problème ou diagnostic spécifié.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Statut de l’épisode</items>
+        <items id="description">Catégorie de l’épisode actuel du problème ou du diagnostic identifié.</items>
+        <items id="comment">Par exemple, « Nouvel épisode » permet aux cliniciens de distinguer un nouvel épisode aigu d’otite moyenne, pouvant survenir peu après un diagnostic antérieur, d’une otite moyenne chronique non résolue ou « En cours ». Le traitement d’épisodes récurrents, nouveaux et aigus d’une affection peut différer considérablement de celui de la même affection qui ne se résout pas ou ne répond pas au traitement. Dans de nombreuses situations, le clinicien ne sera pas en mesure de faire cette distinction ; « Indéterminé » peut alors être approprié.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Actif/Inactif?</items>
+        <items id="description">Catégorie permettant de répartir les problèmes et les diagnostics entre les listes des problèmes actifs et inactifs.</items>
+        <items id="comment">Les éléments de données « Actif/Inactif » et « Actuel/Antérieur » ont une incidence clinique similaire, mais représentent des concepts légèrement différents. Les deux sont couramment utilisés dans différents contextes cliniques, mais généralement pas simultanément. Si le qualificatif « Actuel/Antérieur » est saisi, cet élément de données est probablement redondant. Une affection peut toutefois être actuelle tout en étant inactive, par exemple un asthme ne provoquant pas de symptômes aigus.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Statut diagnostique</items>
+        <items id="description">Étape ou phase du processus diagnostique.</items>
+        <items id="comment">Le statut est généralement déterminé par la combinaison du stade d’avancement du diagnostic et du degré de certitude clinique résultant des examens diagnostiques et des éléments cliniques disponibles. Cet élément de données et « Certitude diagnostique » dans EVALUATION.problem_diagnosis constituent deux axes importants du processus diagnostique. Lorsque les deux éléments sont proposés aux utilisateurs, le logiciel doit présenter uniquement des combinaisons valides afin d’éviter la sélection de combinaisons contradictoires.&#xD;
+&#xD;
+Les diagnostics préliminaires ou de travail visent à représenter le diagnostic considéré comme le plus probable parmi l’ensemble des diagnostics différentiels envisagés.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Préliminaire</items>
+        <items id="description">Diagnostic initial, généralement associé à un faible degré de certitude clinique. Il peut être modifié lorsque des résultats d’examens ou des avis complémentaires deviennent disponibles.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">De travail</items>
+        <items id="description">Diagnostic provisoire reposant sur un degré raisonnable de certitude clinique, mais dans l’attente de résultats d’examens ou d’avis cliniques complémentaires. Il peut encore être modifié lorsque ces résultats ou avis deviennent disponibles.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Établi</items>
+        <items id="description">Diagnostic définitif et étayé, reposant sur un degré élevé de certitude clinique et pouvant inclure des éléments cliniques issus des résultats d’examens. Il n’est pas censé être modifié.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Actif</items>
+        <items id="description">Le problème ou le diagnostic est actuellement actif et cliniquement pertinent.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Inactif</items>
+        <items id="description">Le problème ou le diagnostic n’est pas complètement résolu, mais est inactif ou considéré comme moins pertinent dans le contexte clinique actuel.</items>
+      </items>
+      <items code="at0034">
+        <items id="text">Nouveau</items>
+        <items id="description">Nouvelle occurrence d’un problème ou d’un diagnostic, qu’il soit nouveau ou préexistant. Un indicateur « Première survenue » peut être enregistré séparément afin de distinguer la première survenue des suivantes.</items>
+      </items>
+      <items code="at0035">
+        <items id="text">En cours</items>
+        <items id="description">La situation, le problème ou le diagnostic persiste sans survenue de nouvel épisode aigu.</items>
+      </items>
+      <items code="at0060">
+        <items id="text">Actuel/Antérieur?</items>
+        <items id="description">Catégorie permettant de répartir les problèmes et les diagnostics entre les listes des problèmes actuels et des antécédents.</items>
+        <items id="comment">Les éléments de données « Actuel/Antérieur » et « Actif/Inactif » ont une incidence clinique similaire, mais représentent des concepts légèrement différents. Les deux sont couramment utilisés dans différents contextes cliniques, mais généralement pas simultanément. Si le qualificatif « Actif/Inactif » est saisi, cet élément de données est probablement redondant. Une affection peut toutefois être actuelle tout en étant inactive, par exemple un asthme ne provoquant pas de symptômes aigus.</items>
+      </items>
+      <items code="at0061">
+        <items id="text">Antérieur</items>
+        <items id="description">Problème ou diagnostic survenu dans le passé.</items>
+      </items>
+      <items code="at0062">
+        <items id="text">Actuel</items>
+        <items id="description">Problème ou diagnostic présent actuellement.</items>
+      </items>
+      <items code="at0063">
+        <items id="text">Catégorie diagnostique</items>
+        <items id="description">Catégorie du problème ou du diagnostic dans le cadre d’un épisode de soins et/ou d’un contexte de soins local spécifique.</items>
+        <items id="comment">Cet élément de données contient un jeu de valeurs couramment utilisé pour la catégorisation diagnostique. Dans les contextes de soins organisés par épisodes, notamment dans les soins secondaires, il est courant de catégoriser ou d’organiser les diagnostics selon leur relation avec le diagnostic principal pris en charge au cours de l’épisode de soins. Ces catégories peuvent également être utilisées à des fins de codage clinique, de reporting et de facturation. Dans certains pays, la catégorie diagnostique peut être associée au système des DRG.&#xD;
+&#xD;
+En outre, la possibilité de saisir du texte libre permet d’utiliser d’autres jeux de valeurs locaux selon les besoins.</items>
+      </items>
+      <items code="at0064">
+        <items id="text">Diagnostic principal</items>
+        <items id="description">Diagnostic considéré comme le motif principal d’un épisode de soins hospitaliers, d’un épisode de soins en établissement résidentiel ou d’une consultation dans un établissement de santé.</items>
+      </items>
+      <items code="at0066">
+        <items id="text">Diagnostic secondaire</items>
+        <items id="description">Problème ou diagnostic présent simultanément au problème ou au diagnostic principal. Peut également être considéré comme une comorbidité.</items>
+      </items>
+      <items code="at0070">
+        <items id="text">Indéterminé</items>
+        <items id="description">Il n’est pas possible de déterminer si cette occurrence du problème ou du diagnostic correspond à un nouvel épisode ou à la poursuite d’un épisode en cours.</items>
+      </items>
+      <items code="at0071">
+        <items id="text">Occurrence</items>
+        <items id="description">Catégorie de l'occurrence de ce problème ou diagnostic.</items>
+        <items id="comment">Cet élément de données peut compléter le qualificatif « Nouvel épisode » du jeu de valeurs « Statut de l’épisode ». Une affection telle que l’asthme peut présenter de nouveaux épisodes récurrents, séparés par des périodes de résolution. Il peut toutefois être important de distinguer le tout premier épisode d’asthme de tous les épisodes ultérieurs.</items>
+      </items>
+      <items code="at0073">
+        <items id="text">Présent à l’admission?</items>
+        <items id="description">Le problème ou le diagnostic était-il présent à l’admission ?</items>
+        <items id="comment">Enregistrer « Vrai » ou « Oui » si le problème ou le diagnostic était présent à l’admission. Cet élément de données est requis pour la déclaration des données DRG dans certains pays.</items>
+      </items>
+      <items code="at0076">
+        <items id="text">Complication</items>
+        <items id="description">Évolution défavorable d’un problème ou d’un diagnostic.</items>
+      </items>
+      <items code="at0077">
+        <items id="text">Profil évolutif</items>
+        <items id="description">Catégorie caractérisant le problème ou le diagnostic selon sa rapidité d’apparition, sa durée et/ou sa persistance.</items>
+        <items id="comment">La définition des formes aiguës et chroniques varie selon le diagnostic.</items>
+      </items>
+      <items code="at0079">
+        <items id="text">Chronique</items>
+        <items id="description">Problème ou diagnostic ayant des effets persistants ou de longue durée, ou qui évolue au fil du temps.</items>
+      </items>
+      <items code="at0081">
+        <items id="text">Aigu</items>
+        <items id="description">Problème ou diagnostic se caractérisant par une apparition rapide, une évolution brève, ou les deux.</items>
+      </items>
+      <items code="at0083">
+        <items id="text">Phase de résolution</items>
+        <items id="description">Phase de résolution ou de guérison d’un problème ou d’un diagnostic aigu.</items>
+        <items id="comment">Par exemple : suivi de l’évolution vers la guérison d’une otite moyenne.</items>
+      </items>
+      <items code="at0084">
+        <items id="text">Résolue</items>
+        <items id="description">Le problème ou le diagnostic a achevé les phases normales de rétablissement ou de guérison et peut être considéré comme résolu.</items>
+      </items>
+      <items code="at0085">
+        <items id="text">En voie de résolution</items>
+        <items id="description">Le problème ou le diagnostic progresse de manière satisfaisante à travers les étapes normales de rétablissement ou de guérison vers sa résolution.</items>
+      </items>
+      <items code="at0086">
+        <items id="text">Pas en voie de résolution</items>
+        <items id="description">Le problème ou le diagnostic ne progresse pas de manière satisfaisante à travers les étapes normales de rétablissement ou de guérison vers sa résolution.</items>
+      </items>
+      <items code="at0087">
+        <items id="text">Indéterminée</items>
+        <items id="description">Il n’est pas possible de déterminer l’état de résolution ou de guérison du problème ou du diagnostic.</items>
+      </items>
+      <items code="at0088">
+        <items id="text">Réfuté</items>
+        <items id="description">Diagnostic précédemment enregistré qui a été réévalué cliniquement ou infirmé avec un degré élevé de certitude clinique. Ce statut est utilisé pour corriger une erreur dans le dossier de santé.</items>
+      </items>
+      <items code="at0089">
+        <items id="text">Statut de rémission</items>
+        <items id="description">Statut de la rémission d’un diagnostic incurable.</items>
+        <items id="comment">Par exemple : statut d’un diagnostic oncologique ou hématologique.</items>
+      </items>
+      <items code="at0090">
+        <items id="text">En rémission</items>
+        <items id="description">Aucun signe ou symptôme persistant de la maladie n’a été identifié.</items>
+      </items>
+      <items code="at0092">
+        <items id="text">Pas en rémission</items>
+        <items id="description">Aucune diminution des signes ou des symptômes de la maladie n’a été identifiée.</items>
+      </items>
+      <items code="at0093">
+        <items id="text">Indéterminé</items>
+        <items id="description">Il n’est pas possible de déterminer si une diminution des signes ou des symptômes de la maladie a été observée.</items>
+      </items>
+      <items code="at0094">
+        <items id="text">Aigu sur chronique</items>
+        <items id="description">Problème ou diagnostic associé à une exacerbation aiguë d’une affection chronique.</items>
+      </items>
+      <items code="at0095">
+        <items id="text">Première occurrence</items>
+        <items id="description">Il s’agit de la toute première occurrence de ce problème ou diagnostic.</items>
+      </items>
+      <items code="at0096">
+        <items id="text">Récurrence</items>
+        <items id="description">Nouvelle occurrence du même problème ou diagnostic après la résolution d’un épisode précédent.</items>
+      </items>
+      <items code="at0097">
+        <items id="text">En rechute</items>
+        <items id="description">Le problème ou le diagnostic s’est aggravé après une période d’amélioration temporaire.</items>
+      </items>
+      <items code="at0098">
+        <items id="text">Niveau de contrôle</items>
+        <items id="description">Catégorie indiquant le niveau de contrôle du problème ou du diagnostic dans le cadre de la prise en charge actuelle.</items>
+      </items>
+      <items code="at0099">
+        <items id="text">Contrôlé</items>
+        <items id="description">Le problème ou le diagnostic est contrôlé dans le cadre de la prise en charge actuelle.</items>
+      </items>
+      <items code="at0100">
+        <items id="text">Indéterminé</items>
+        <items id="description">Il n’est pas possible de déterminer si le problème ou le diagnostic est contrôlé dans le cadre de la prise en charge actuelle.</items>
+      </items>
+      <items code="at0101">
+        <items id="text">Non contrôlé</items>
+        <items id="description">Le problème ou le diagnostic n’est pas contrôlé dans le cadre de la prise en charge actuelle.</items>
+      </items>
+      <items code="at0102">
+        <items id="text">Évolution</items>
+        <items id="description">Catégorie décrivant l’évolution au cours d’un problème ou d’un diagnostic chronique.</items>
+      </items>
+      <items code="at0103">
+        <items id="text">En amélioration</items>
+        <items id="description">Le problème ou le diagnostic est en amélioration.</items>
+      </items>
+      <items code="at0104">
+        <items id="text">Stable</items>
+        <items id="description">Le problème ou le diagnostic est inchangé.</items>
+      </items>
+      <items code="at0105">
+        <items id="text">En aggravation</items>
+        <items id="description">Le problème ou le diagnostic est en aggravation.</items>
+      </items>
+      <items code="at0106">
+        <items id="text">Indéterminé</items>
+        <items id="description">Il n’est pas possible de déterminer l’évolution du problème ou du diagnostic.</items>
+      </items>
+      <items code="at0107">
+        <items id="text">Raison d'un épisode en cours</items>
+        <items id="description">Raison pour laquelle un problème ou un diagnostic ne se résout pas comme prévu.</items>
+        <items id="comment">Par exemple : traitement incomplet ou échec du traitement.</items>
+      </items>
+      <items code="at0108">
+        <items id="text">Oui</items>
+        <items id="description" />
+      </items>
+      <items code="at0109">
+        <items id="text">Non</items>
+        <items id="description" />
+      </items>
+      <items code="at0110">
+        <items id="text">Commentaire</items>
+        <items id="description">Informations complémentaires concernant les qualificatifs du problème ou du diagnostic, non consignées dans les autres champs.</items>
+      </items>
+      <items code="at0111">
+        <items id="text">Catégorie de l’affection</items>
+        <items id="description">Regroupement de haut niveau du problème ou du diagnostic.</items>
+        <items id="comment">Par exemple : « Cancer », « Santé mentale et/ou addiction », « Maladie infectieuse », « Maladie rare ». Dans la mesure du possible, il est préférable de coder cette information à l’aide d’une terminologie.</items>
       </items>
     </term_definitions>
     <term_bindings terminology="SNOMED-CT">
@@ -4370,4 +4632,3 @@ Coding with a terminology is preferred, where possible. (en)</items>
     </term_bindings>
   </ontology>
 </archetype>
-

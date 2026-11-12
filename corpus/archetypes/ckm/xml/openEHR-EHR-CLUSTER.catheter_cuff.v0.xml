@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -61,7 +61,7 @@ Not to be used to document insertion equipment, inflation procedures, or procedu
       </terminology_id>
       <code_string>nb</code_string>
     </language>
-    <author id="name"></author>
+    <author id="name" />
   </translations>
   <uid>
     <value>b851a462-7ac1-40d3-ab72-fa1007861ea5</value>
@@ -396,4 +396,3 @@ Not to be used to document insertion equipment, inflation procedures, or procedu
     </term_definitions>
   </ontology>
 </archetype>
-
