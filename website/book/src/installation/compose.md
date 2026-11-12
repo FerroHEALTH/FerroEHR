@@ -196,12 +196,11 @@ evaluation, not for production:
 
 - **Basic auth with one user:** `ferroehr` / `ferroehr` (stored as an Argon2id
   hash), carrying the `ADMIN` and `USER` roles.
-- **The user is a professional `PERSON`:** the `ferroehr-definitions` one-shot
-  loads the
-  [default demographic definitions](default-demographic-definitions.md)
-  (`ferroehr definitions load`, copies of `deploy/definitions/`) before the
-  server starts. The party mapping names all five, so SCIM Users, Groups and
-  representation work, and the `ferroehr-provision` service then creates the user's `PERSON` through
+- **The user is a professional `PERSON`:** the server stores the
+  [default demographic definitions](default-demographic-definitions.md) as
+  it boots, and the configuration sets no mapping key, so the default party
+  mapping names them and SCIM Users, Groups and representation work. The
+  `ferroehr-provision` service then creates the user's `PERSON` through
   `/scim/v2/Users`, with a client credentials token the development
   `identity-issuer` signs for the client `quickstart-scim`. It stays up and
   reports healthy once the login is bound, so `docker compose up --wait`

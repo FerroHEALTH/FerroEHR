@@ -1,7 +1,7 @@
 # Healthcare provider ORGANISATION definition: provenance
 
-One ADL 2 archetype of FerroEHR's default demographic definitions, which a
-deployment loads with `ferroehr definitions load` before `serve`:
+One ADL 2 archetype of FerroEHR's default demographic definitions, which the
+binary carries and stores at boot when absent:
 
 - `openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls`: a
   healthcare provider's `ORGANISATION`. It is the provider a system acts for,

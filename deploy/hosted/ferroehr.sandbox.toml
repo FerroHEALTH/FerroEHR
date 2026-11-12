@@ -77,41 +77,6 @@ user = "ferroehr"
 key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr"
 
-# The party mapping over the professional PERSON and ROLE pair the
-# ferroehr-definitions one-shot loads (deploy/definitions/professional/): the
-# key is written under the identifier_type the [[auth.party]] table above
-# looks logins up under, beside `userName` and `externalId` at one element.
-[[authz.party_binding.person.template]]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
-default = true
-key = { path = "/details[id2]/items[id3]", type = "login" }
-user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
-external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.formatted"
-name = true
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
-
-[authz.party_binding.professional_role]
-template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
-
-# The care-team GROUP a SCIM Group is provisioned as, the membership its
-# members hold and the representation a representative acts through: the
-# rest of FerroEHR's default demographic definitions (deploy/definitions/),
-# which the ferroehr-definitions one-shot loads.
-[authz.party_binding.group]
-template_id = "openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0"
-external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
-display_name = "/identities[id4]/details[id5]/items[id6]"
-
-[authz.party_binding.membership]
-archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
-
-[authz.party_binding.representation]
-archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1"
-relationship_codes = { at10 = "254", at11 = "264" }
-
 # The SCIM endpoint the demo PERSON is provisioned through (RFC 7644 §3.3), as
 # an identity provider provisions people: the ferroehr-provision service of the
 # box's compose file holds the `sandbox-scim` client's client credentials

@@ -787,21 +787,20 @@ A Basic user is a person: each maps to the binding key of its `PERSON` under
 `config.authz.party_binding.basic_user`, under the identifier issuer of a
 `config.auth.party` table (see `deploy/helm/ci/basic-auth-values.yaml`).
 
-The templates a party mapping names must be in the definition store before
-the server boots, which refuses a mapping whose templates it lacks.
-`definitions.files` lists them, each a `name` ending in `.opt` (OPT 1.4) or
-`.adls` (ADL 2) and its `content`: the chart puts them in a ConfigMap of
-their own and runs `ferroehr definitions load` on them as an init container,
-with the server's image, configuration and secrets, in the order listed. A
-definition already stored with the same text is left alone, so the step runs
-at every pod start, and one stored under its id with other text fails the
-pod. The default `definitions.files` is FerroEHR's
-[default demographic definitions](default-demographic-definitions.md), so a
-mapping of the professional PERSON and ROLE, the care-team GROUP, the
-membership and the representation boots without a list of its own; setting
-`definitions.files` replaces the list, and `[]` loads nothing.
-`deploy/helm/ci/basic-auth-values.yaml` maps the professional PERSON and
-ROLE pair and provisions its user through `/scim/v2/Users` (see
+The server stores FerroEHR's
+[default demographic definitions](default-demographic-definitions.md) as it
+boots, and with no mapping key set the party mapping names them, so a chart
+install needs no list of definitions. A party mapping that names templates
+of your own needs them in the definition store before the server boots,
+which refuses a mapping whose templates it lacks. `definitions.files` lists
+them, each a `name` ending in `.opt` (OPT 1.4) or `.adls` (ADL 2) and its
+`content`: the chart puts them in a ConfigMap of their own and runs
+`ferroehr definitions load` on them as an init container, with the server's
+image, configuration and secrets, in the order listed. A definition already
+stored with the same text is left alone, so the step runs at every pod
+start, and one stored under its id with other text fails the pod. The list
+is empty by default. `deploy/helm/ci/basic-auth-values.yaml` keeps the
+default mapping and provisions its user through `/scim/v2/Users` (see
 [`[auth.scim]`](config-auth.md#authscim)).
 
 A `persons` issuer with `sender_constraint: required` runs on any number of

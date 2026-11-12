@@ -1221,11 +1221,12 @@ provisional_report_after = "30d"
 # The binding key the user's `PERSON` carries.
 #? key = ""
 
-# The person templates and attributes of the shared party mapping. Every
-# template and archetype the mapping names must be stored before boot; FerroEHR
-# ships a default set the book's "Default demographic definitions" page lists,
-# and a deployment may load its own.
-[authz.party_binding.person]
+# The person templates and attributes of the shared party mapping. Each mapping
+# section defaults to FerroEHR's default demographic definitions, which every
+# boot stores when no definition of their id is stored (the book's "Default
+# demographic definitions" page); a deployment with templates of its own sets
+# the section, and stores its templates before boot.
+#? [authz.party_binding.person]
 
 # `[authz.party_binding.person.template]`, one per template a professional's
 # `PERSON` may use.
@@ -1274,35 +1275,46 @@ provisional_report_after = "30d"
 # The professional `ROLE` template.
 #? [authz.party_binding.professional_role]
 # An operational template rooted at `ROLE`.
-#? template_id = ""
+#? template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
 
 # The provisioned `GROUP` template.
 #? [authz.party_binding.group]
 # An operational template rooted at `GROUP`.
-#? template_id = ""
+#? template_id = "openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0"
 # The path of the group's `displayName`, a `DV_TEXT` in `identities`.
-#? display_name = ""
+#? display_name = "/identities[id4]/details[id5]/items[id6]"
 
 # The group's `externalId`.
 #? [authz.party_binding.group.external_id]
 # The openEHR path.
-#? path = ""
+#? path = "/details[id2]/items[id3]"
 # The `DV_IDENTIFIER.type`.
-#? type = ""
+#? type = "scim_external_id"
 
 # The membership `PARTY_RELATIONSHIP` archetype.
 #? [authz.party_binding.membership]
 # A `PARTY_RELATIONSHIP` archetype.
-#? archetype_id = ""
+#? archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
 
 # The representation `PARTY_RELATIONSHIP` archetype.
 #? [authz.party_binding.representation]
 # A `PARTY_RELATIONSHIP` archetype whose `source` is the representative and
 # whose `target` is the subject.
-#? archetype_id = ""
+#? archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1"
 # Each relationship type code of the archetype, mapped to a code of the openEHR
 # `subject_relationship` group.
-#? relationship_codes = {}
+#? relationship_codes = { at10 = "254", at11 = "264" }
+
+# The patient's `PERSON` template.
+#? [authz.party_binding.patient]
+# An operational template rooted at `PERSON`: the subject of an EHR and the
+# target of a representation.
+#? template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0"
+# The path of the `ELEMENT` holding the patient's identifiers, each a
+# `DV_IDENTIFIER` in `details` of any type and issuer.
+#? identifier = "/details[id2]/items[id3]"
+# The path of the patient's name, a `DV_TEXT` in `identities`.
+#? name = "/identities[id6]/details[id7]/items[id8]"
 
 # What FerroEHR does for each `persons` issuer beyond the lookup
 # (`[authz.party_binding.issuer]`): just-in-time creation.

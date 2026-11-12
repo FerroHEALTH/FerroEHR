@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment.profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
-![Version: 26.1.0](https://img.shields.io/badge/Version-26.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.7.0](https://img.shields.io/badge/AppVersion-5.7.0-informational?style=flat-square)
+![Version: 26.2.0](https://img.shields.io/badge/Version-26.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.7.0](https://img.shields.io/badge/AppVersion-5.7.0-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 26.1.0 \
+  --version 26.2.0 \
   --namespace ferroehr --create-namespace \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
@@ -62,7 +62,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `26.1.0` |
+| the **chart** (templates, defaults, this document) | `--version` | `26.2.0` |
 | the **server image** | `image.tag` | `5.7.0` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -74,7 +74,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:26.1.0 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:26.2.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -82,7 +82,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:26.1.0 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:26.1.0 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:26.2.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.7.0 \
   -R FerroHEALTH/FerroEHR
@@ -154,31 +154,30 @@ enforces NetworkPolicy**. Check yours; several do not.
 
 ## Demographic definitions and the party mapping
 
-`definitions.files` defaults to FerroEHR's default demographic definitions:
-the professional `PERSON` and `ROLE`, a care-team `GROUP`, and the membership
-and representation `PARTY_RELATIONSHIP` archetypes, which the `definitions`
-init container stores before the server starts. Setting the list replaces
-it, so a deployment that loads its own templates lists those.
+The server stores FerroEHR's default demographic definitions as it boots,
+each one whose id the definition store does not hold, and with no mapping
+key set `config.authz.party_binding` maps them: the professional `PERSON`
+and `ROLE`, a care-team `GROUP`, the membership and representation
+`PARTY_RELATIONSHIP` archetypes and the patient `PERSON`. SCIM Users,
+Groups and representation work with no mapping key. A deployment with
+templates of its own sets the mapping section that names them and lists
+the files in `definitions.files`, which the `definitions` init container
+stores before the server starts; the list is empty by default.
 
-The party mapping under `config.authz.party_binding` is yours, and the chart
-ships none. A mapping that uses the whole default set, with SCIM Groups and
-representation, adds these tables beside its `person` and
-`professional_role` (each client's `config.auth.party` table also needs a
-`group_claim` and a `group_identifier_issuer`):
+A deployment whose people log in under another identifier type sets the
+`person` section, whose key carries that type:
 
 ```yaml
 config:
   authz:
     party_binding:
-      group:
-        template_id: openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0
-        external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
-        display_name: "/identities[id4]/details[id5]/items[id6]"
-      membership:
-        archetype_id: openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1
-      representation:
-        archetype_id: openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1
-        relationship_codes: { at10: "254", at11: "264" }
+      person:
+        template:
+          - template_id: openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0
+            default: true
+            key: { path: "/details[id2]/items[id3]", type: uuid }
+            user_name: { path: "/details[id2]/items[id3]", type: scim_user_name }
+            external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
 ```
 
 Set the mapping before the first start: the binding side table is filled
@@ -366,7 +365,7 @@ Kubernetes: `>=1.36.0-0`
 | database.party.migrateExistingSecretKey | string | `"FERROEHR__DATABASE__PARTY__MIGRATE_URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file. |
 | database.party.url | string | `""` | Inline party DSN (DEV/TEST ONLY). Ignored when `party.existingSecret` is set. |
 | database.url | string | `""` | Inline DSN (DEV/TEST ONLY — lands in a chart-managed Secret). Leave empty and use existingSecret in production. Ignored when existingSecret is set. |
-| definitions.files | list | FerroEHR's seven default demographic definitions (the book's "Default demographic definitions" page) | The definitions to load, in order: each `name` a file name ending in `.opt` (an OPT 1.4 template) or `.adls` (an ADL 2 archetype or template, its parents and slot fillers first) and its `content`. |
+| definitions.files | list | `[]` | The definitions to load, in order: each `name` a file name ending in `.opt` (an OPT 1.4 template) or `.adls` (an ADL 2 archetype or template, its parents and slot fillers first) and its `content`. |
 | extraEnv | list | `[]` | Extra raw env vars (list of {name,value} or {name,valueFrom}). Escape hatch for anything not surfaced above (array-valued keys via comma-separated values, one-off FERROEHR_* overrides). |
 | extraEnvFrom | list | `[]` | Extra envFrom sources (configMapRef/secretRef). |
 | extraVolumeMounts | list | `[]` | Mounts for extraVolumes, in the server container. |

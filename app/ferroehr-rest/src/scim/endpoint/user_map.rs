@@ -82,7 +82,7 @@ impl UserMap {
     /// path this mapping reads.
     pub(crate) fn new(binding: &PartyBindingConfig) -> Result<Self, String> {
         let template = binding
-            .person
+            .person()
             .template
             .iter()
             .find(|template| template.default)
@@ -100,7 +100,7 @@ impl UserMap {
             .map(|role| role.template_id.clone())
             .ok_or("SCIM creates each User's professional ROLE, so it needs [authz.party_binding.professional_role]")?;
         let mut attributes = Vec::new();
-        for attribute in &binding.person.attribute {
+        for attribute in &binding.person().attribute {
             let Some(scim) = attribute.scim.as_deref() else {
                 continue;
             };

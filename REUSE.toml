@@ -162,10 +162,10 @@ precedence = "override"
 SPDX-FileCopyrightText = ["openEHR Foundation", "Cadasto B.V."]
 SPDX-License-Identifier = "CC-BY-SA-3.0"
 
-# The default demographic definitions the lanes load before `serve` (the
+# The default demographic definitions the server stores at boot (the
 # professional PERSON and ROLE, the care-team GROUP, the membership and
 # representation PARTY_RELATIONSHIPs, the patient PERSON and the provider
-# ORGANISATION), and the policy definitions the server stores at boot (the
+# ORGANISATION) and the policy definitions it stores the same way (the
 # AGENT, the policy ROLEs and the acts-for PARTY_RELATIONSHIP), are
 # repo-authored adaptations of openEHR
 # CKM archetypes (CC-BY-SA 3.0), so they carry that licence and both copyright

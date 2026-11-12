@@ -90,46 +90,6 @@ services:
       retries: 20
       start_period: 10s
 
-  # Loads the default demographic definitions of deploy/definitions/ into the
-  # definition store, then exits, so the SUT boots with the templates its party
-  # mapping names and holds the whole default set. Same image and config as
-  # the SUT; a definition already stored is left alone.
-  ferroehr-definitions:
-    cap_drop: [ALL]
-    security_opt:
-      - no-new-privileges:true
-    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:local}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: runtime-from-source
-      args:
-        REVISION: ${REVISION:-}
-        CARGO_BUILD_JOBS: ${CARGO_BUILD_JOBS:-2}
-    depends_on:
-      ferroehr-postgres:
-        condition: service_healthy
-    command:
-      - definitions
-      - load
-      - /etc/ferroehr/definitions/professional/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls
-      - /etc/ferroehr/definitions/professional/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls
-      - /etc/ferroehr/definitions/care-team/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls
-      - /etc/ferroehr/definitions/care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls
-      - /etc/ferroehr/definitions/representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls
-      - /etc/ferroehr/definitions/patient/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls
-      - /etc/ferroehr/definitions/provider/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls
-    environment:
-      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
-      FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
-      FERROEHR__USAGE_REPORT__ENABLED: "false"
-    volumes:
-      - ./docker/ferroehr.dev.toml:/etc/ferroehr/ferroehr.toml:ro
-      - ./docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro
-      - ./deploy/definitions:/etc/ferroehr/definitions:ro
-    read_only: true
-    restart: "no"
-
   ferroehr:
     cap_drop: [ALL]
     security_opt:
@@ -150,9 +110,6 @@ services:
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
-      # The professional templates the party mapping names are stored first.
-      ferroehr-definitions:
-        condition: service_completed_successfully
     environment:
       # The server reads the file this names and searches for none.
       FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml

@@ -62,6 +62,7 @@
 //!   (`PARTY_REF.Type_validity`) + `…object_ref.adoc` (`OBJECT_REF.namespace`).
 
 pub mod adopt;
+pub mod default_definitions;
 pub mod group_provision;
 pub mod group_write;
 pub mod identifier;
@@ -69,7 +70,6 @@ pub mod jit;
 pub mod mapped_write;
 pub mod mapping;
 pub mod party_set;
-pub mod policy_definitions;
 pub mod precondition;
 pub mod provision;
 pub mod rekey;

@@ -26,6 +26,8 @@ use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer};
 use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::party_binding::shipped;
+
 pub mod jit;
 pub mod person;
 
@@ -44,11 +46,13 @@ pub struct PartyBindingConfig {
     pub namespace: String,
     /// The key each Basic user is bound by (`[[authz.party_binding.basic_user]]`).
     pub basic_user: Vec<BasicUserKey>,
-    /// The person templates and attributes of the shared party mapping. Every
-    /// template and archetype the mapping names must be stored before boot;
-    /// FerroEHR ships a default set the book's "Default demographic
-    /// definitions" page lists, and a deployment may load its own.
-    pub person: person::PersonSection,
+    /// The person templates and attributes of the shared party mapping. Each
+    /// mapping section defaults to FerroEHR's default demographic definitions,
+    /// which every boot stores when no definition of their id is stored (the
+    /// book's "Default demographic definitions" page); a deployment with
+    /// templates of its own sets the section, and stores its templates before
+    /// boot.
+    pub person: Option<person::PersonSection>,
     /// The professional `ROLE` template.
     pub professional_role: Option<person::RoleSection>,
     /// The provisioned `GROUP` template.
@@ -57,6 +61,8 @@ pub struct PartyBindingConfig {
     pub membership: Option<person::MembershipSection>,
     /// The representation `PARTY_RELATIONSHIP` archetype.
     pub representation: Option<person::RepresentationSection>,
+    /// The patient's `PERSON` template.
+    pub patient: Option<person::PatientSection>,
     /// What FerroEHR does for each `persons` issuer beyond the lookup
     /// (`[[authz.party_binding.issuer]]`): just-in-time creation.
     pub issuer: Vec<jit::IssuerBinding>,
@@ -72,15 +78,22 @@ pub struct PartyBindingConfig {
 }
 
 impl PartyBindingConfig {
+    /// The person section, empty when the table sets an empty one.
+    #[must_use]
+    pub fn person(&self) -> &person::PersonSection {
+        self.person.as_ref().unwrap_or(&person::NO_PERSON)
+    }
+
     /// The mapping sections of the table.
     #[must_use]
     pub fn sections(&self) -> person::Sections<'_> {
         person::Sections {
-            person: &self.person,
+            person: self.person(),
             professional_role: self.professional_role.as_ref(),
             group: self.group.as_ref(),
             membership: self.membership.as_ref(),
             representation: self.representation.as_ref(),
+            patient: self.patient.as_ref(),
         }
     }
 }
@@ -93,16 +106,90 @@ impl Default for PartyBindingConfig {
             // `committer.external_ref.namespace="demographic"` in its example.
             namespace: "demographic".to_owned(),
             basic_user: Vec::new(),
-            person: person::PersonSection::default(),
-            professional_role: None,
-            group: None,
-            membership: None,
-            representation: None,
+            // The default mapping names the shipped definitions of
+            // `deploy/definitions/`, which every boot stores when absent.
+            person: Some(person::PersonSection {
+                template: vec![person::PersonTemplate {
+                    template_id: shipped::PROFESSIONAL_PERSON.to_owned(),
+                    key: selector(IDENTIFIER, "login"),
+                    user_name: Some(selector(IDENTIFIER, "scim_user_name")),
+                    external_id: Some(selector(IDENTIFIER, "scim_external_id")),
+                    default: true,
+                }],
+                attribute: vec![
+                    attribute(
+                        "name.formatted",
+                        true,
+                        "/identities[id4]/details[id5]/items[id6]",
+                    ),
+                    attribute(
+                        "name.givenName",
+                        false,
+                        "/identities[id4]/details[id5]/items[id7]",
+                    ),
+                    attribute(
+                        "name.familyName",
+                        false,
+                        "/identities[id4]/details[id5]/items[id8]",
+                    ),
+                    attribute(
+                        "emails[type eq \"work\"].value",
+                        false,
+                        "/contacts[id9]/addresses[id10]/details[id11]/items[id12]",
+                    ),
+                ],
+            }),
+            professional_role: Some(person::RoleSection {
+                template_id: shipped::PROFESSIONAL_ROLE.to_owned(),
+            }),
+            group: Some(person::GroupSection {
+                template_id: shipped::CARE_TEAM.to_owned(),
+                external_id: selector(IDENTIFIER, "scim_external_id"),
+                display_name: Some("/identities[id4]/details[id5]/items[id6]".to_owned()),
+            }),
+            membership: Some(person::MembershipSection {
+                archetype_id: shipped::MEMBERSHIP.to_owned(),
+            }),
+            representation: Some(person::RepresentationSection {
+                archetype_id: shipped::REPRESENTATION.to_owned(),
+                relationship_codes: BTreeMap::from([
+                    ("at10".to_owned(), "254".to_owned()),
+                    ("at11".to_owned(), "264".to_owned()),
+                ]),
+            }),
+            patient: Some(person::PatientSection {
+                template_id: shipped::PATIENT.to_owned(),
+                identifier: IDENTIFIER.to_owned(),
+                name: Some("/identities[id6]/details[id7]/items[id8]".to_owned()),
+            }),
             issuer: Vec::new(),
             provisional_report_after: ferrohealth_config::units::Duration::from_days(30),
             provisional_report_days: ferrohealth_config::removed::Removed::default(),
             enabled: ferrohealth_config::removed::Removed::default(),
         }
+    }
+}
+
+/// The identifier element of each default `PERSON` and `GROUP` definition.
+const IDENTIFIER: &str = "/details[id2]/items[id3]";
+
+/// The selector of the identifiers of `identifier_type` at `path`.
+fn selector(path: &str, identifier_type: &str) -> person::Selector {
+    person::Selector {
+        path: path.to_owned(),
+        identifier_type: identifier_type.to_owned(),
+    }
+}
+
+/// The attribute mapping the SCIM attribute `scim` to `path` of the default
+/// professional's `PERSON`.
+fn attribute(scim: &str, name: bool, path: &str) -> person::PersonAttribute {
+    person::PersonAttribute {
+        scim: Some(scim.to_owned()),
+        oidc: None,
+        jit: false,
+        name,
+        path: BTreeMap::from([(shipped::PROFESSIONAL_PERSON.to_owned(), path.to_owned())]),
     }
 }
 
@@ -310,7 +397,7 @@ fn unbound_persons(resolved: &Resolved, errors: &mut Vec<String>) {
 /// would ever match a party.
 fn key_types(binding: &PartyBindingConfig, resolved: &Resolved, errors: &mut Vec<String>) {
     let written: BTreeSet<&str> = binding
-        .person
+        .person()
         .template
         .iter()
         .map(|template| template.key.identifier_type.as_str())

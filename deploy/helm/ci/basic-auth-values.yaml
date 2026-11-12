@@ -73,17 +73,6 @@ config:
         - user: clinician
           key_issuer: urn:ferroehr:basic-user
           key: clinician
-      # The party mapping over the professional PERSON and ROLE pair
-      # `definitions.files` loads before the server starts.
-      person:
-        template:
-          - template_id: openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0
-            default: true
-            key: { path: "/details[id2]/items[id3]", type: login }
-            user_name: { path: "/details[id2]/items[id3]", type: scim_user_name }
-            external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
-      professional_role:
-        template_id: openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0
   # The SCIM endpoint `clinician` is provisioned through before the deploy
   # probe logs in (scripts/deploy-probes/kubernetes.sh).
   files:
@@ -107,7 +96,5 @@ config:
 ferropix:
   enabled: false
 
-# The professional PERSON and ROLE templates the party mapping names come
-# from the chart's default `definitions.files`, FerroEHR's default
-# demographic definitions, which the init container stores before the server
-# starts.
+# The party mapping is the default one, over FerroEHR's default demographic
+# definitions, which the server stores as it boots.

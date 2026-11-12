@@ -19,6 +19,7 @@ use ferrohealth_config::units::Duration;
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::Resolved;
 use ferrohealth_smart::kind::IssuerKind;
+use ferrohealth_smart::party::config::PartySection;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -104,6 +105,25 @@ pub struct ScimClient {
     /// `identifier_issuer` of an `[[auth.party]]` table; no two clients share
     /// one.
     pub binding_issuer: String,
+}
+
+impl ScimClient {
+    /// The issuer the client's Groups' `externalId`s are written under: the
+    /// `group_identifier_issuer` of the `[[auth.party]]` table whose
+    /// `identifier_issuer` is the client's `binding_issuer`, and when that
+    /// table sets none, the `binding_issuer` with `/groups` appended.
+    #[must_use]
+    pub fn group_issuer(&self, party: &[PartySection]) -> String {
+        party
+            .iter()
+            .find(|table| table.identifier_issuer == self.binding_issuer)
+            .map(|table| table.group_identifier_issuer.trim())
+            .filter(|issuer| !issuer.is_empty())
+            .map_or_else(
+                || format!("{}/groups", self.binding_issuer.trim_end_matches('/')),
+                str::to_owned,
+            )
+    }
 }
 
 impl ScimConfig {
@@ -279,6 +299,33 @@ mod tests {
             client: clients,
             ..ScimConfig::default()
         }
+    }
+
+    /// The group issuer is the table's `group_identifier_issuer` when it sets
+    /// one, and otherwise the `binding_issuer` with `/groups` appended.
+    #[test]
+    fn a_client_whose_table_sets_no_group_issuer_derives_one() {
+        let table = |identifier_issuer: &str, groups: &str| PartySection {
+            identifier_issuer: identifier_issuer.to_owned(),
+            group_identifier_issuer: groups.to_owned(),
+            ..PartySection::default()
+        };
+        let login = client("https://as.example", "entra", "urn:example:login");
+        assert_eq!(
+            login.group_issuer(&[table("urn:example:login", "")]),
+            "urn:example:login/groups"
+        );
+        assert_eq!(login.group_issuer(&[]), "urn:example:login/groups");
+        assert_eq!(
+            login.group_issuer(&[
+                table("urn:example:other", "urn:example:other-groups"),
+                table("urn:example:login", " urn:example:groups "),
+            ]),
+            "urn:example:groups",
+            "a configured group issuer stays settable"
+        );
+        let url = client("https://as.example", "entra", "https://idp.example/login/");
+        assert_eq!(url.group_issuer(&[]), "https://idp.example/login/groups");
     }
 
     #[test]
