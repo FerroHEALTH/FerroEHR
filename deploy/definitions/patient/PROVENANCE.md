@@ -1,7 +1,8 @@
 # Patient PERSON definition: provenance
 
-One ADL 2 archetype of FerroEHR's default demographic definitions, which a
-deployment loads with `ferroehr definitions load` before `serve`:
+One ADL 2 archetype of FerroEHR's default demographic definitions, which the
+binary carries and stores at boot when absent, named by the default of
+`[authz.party_binding.patient]`:
 
 - `openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls`: a patient's `PERSON`,
   the subject of an EHR and the target of a representation relationship. In

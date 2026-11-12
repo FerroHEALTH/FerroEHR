@@ -4,10 +4,12 @@
 //! A SCIM Group and the `GROUP` that holds it, both ways.
 //!
 //! A Group's `displayName` is its `GROUP`'s `PARTY_IDENTITY`, its `externalId`
-//! a `DV_IDENTIFIER` under the client's group issuer, the
-//! `group_identifier_issuer` of the `[[auth.party]]` table whose
-//! `identifier_issuer` is the client's `binding_issuer`, so the token's group
-//! claim of that client's people matches it. Each member is served with its
+//! a `DV_IDENTIFIER` under the client's group issuer
+//! ([`ScimClient::group_issuer`]): the `group_identifier_issuer` of the
+//! `[[auth.party]]` table whose `identifier_issuer` is the client's
+//! `binding_issuer`, so the token's group claim of that client's people
+//! matches it, or one derived from the `binding_issuer` when the table sets
+//! none. Each member is served with its
 //! `value`, the member User's `id`, its `$ref` and its `type`, and no
 //! `display`, which RFC 7643 §4.2 leaves optional. No openEHR spec governs
 //! SCIM: our own design.
@@ -41,7 +43,7 @@ impl GroupMap {
     ///
     /// # Errors
     /// The refusal naming what a mapped group lacks: the group template's
-    /// `display_name`, the membership archetype, or a client's group issuer.
+    /// `display_name` or the membership archetype.
     pub(crate) fn new(
         config: &AppConfig,
         scim: &ferroehr::config::scim::ScimConfig,
@@ -68,26 +70,16 @@ impl GroupMap {
                     .to_owned(),
             );
         }
-        let mut group_issuers = BTreeMap::new();
-        for client in &scim.client {
-            let issuer = config
-                .auth
-                .shared
-                .party
-                .iter()
-                .find(|party| party.identifier_issuer == client.binding_issuer)
-                .map(|party| party.group_identifier_issuer.trim())
-                .filter(|issuer| !issuer.is_empty())
-                .ok_or_else(|| {
-                    format!(
-                        "the [[auth.scim.client]] {:?} writes each Group's externalId under the \
-                         group_identifier_issuer of the [[auth.party]] table whose \
-                         identifier_issuer is its binding_issuer {:?}, and that table sets none",
-                        client.client_id, client.binding_issuer
-                    )
-                })?;
-            group_issuers.insert(client.binding_issuer.clone(), issuer.to_owned());
-        }
+        let group_issuers = scim
+            .client
+            .iter()
+            .map(|client| {
+                (
+                    client.binding_issuer.clone(),
+                    client.group_issuer(&config.auth.shared.party),
+                )
+            })
+            .collect();
         Ok(Some(Self {
             namespace: binding.namespace.clone(),
             group_issuers,

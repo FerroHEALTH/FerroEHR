@@ -37,13 +37,12 @@ while no minimum is set.
 With Basic users persons only, a new deployment has no machine login to
 start from, so it starts in this order:
 
-1. **Load the definitions the party mapping names.** Run
-   `ferroehr definitions load` on the templates and archetypes of
-   `[authz.party_binding]` before the server starts, since boot refuses a
-   mapping whose templates the store lacks. FerroEHR ships a set the
-   documented mapping names, the
-   [default demographic definitions](default-demographic-definitions.md),
-   and you may load your own instead.
+1. **Store the definitions the party mapping names.** The server stores
+   FerroEHR's [default demographic definitions](default-demographic-definitions.md)
+   as it boots, which the default mapping names. A mapping that names
+   templates of your own needs them stored first: run
+   `ferroehr definitions load` on them before the server starts, since boot
+   refuses a mapping whose templates the store lacks.
 2. **Declare the identity provider's SCIM client.** It is an OAuth 2.0
    client-credentials client (RFC 6749 §4.4) of the deployment's
    authorization server with the provisioning scope: an `[[auth.issuer]]`

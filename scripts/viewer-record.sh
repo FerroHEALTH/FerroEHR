@@ -104,15 +104,6 @@ else
     FERROEHR__TELEMETRY__FORMAT=json
     FERROEHR__AUTH__ISSUER__0__JWKS_FILE="$ROOT/deploy/hosted/basic-users-jwks.json"
     FERROEHR__AUTH__ISSUER__1__JWKS_FILE="$ROOT/docs/conformance/party/scim/jwks.json")
-  echo "── loading the default demographic definitions"
-  env "${SERVER_ENV[@]}" "$ROOT/target/debug/ferroehr" definitions load \
-    deploy/definitions/professional/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls \
-    deploy/definitions/professional/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls \
-    deploy/definitions/care-team/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls \
-    deploy/definitions/care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls \
-    deploy/definitions/representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls \
-    deploy/definitions/patient/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls \
-    deploy/definitions/provider/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls
   echo "── starting ferroehr on $CDR_URL"
   env "${SERVER_ENV[@]}" "$ROOT/target/debug/ferroehr" >"$WORK/ferroehr.log" 2>&1 &
   SERVER_PID=$!
