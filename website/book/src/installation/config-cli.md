@@ -174,11 +174,11 @@ never changes and a changed one takes a new version in its id.
 A deployment that maps its professionals to demographic parties runs it
 first, so the [party mapping](config-auth.md#the-party-mapping) finds its
 templates when the server boots: as a one-shot compose service, a Helm init
-container or a setup step. The repository's
-`deploy/definitions/professional/` holds the PERSON and ROLE pair the
-development lanes and the quickstart load, adapted from openEHR CKM
-archetypes; a production deployment loads the templates its own modelling
-chose.
+container or a setup step. FerroEHR ships the
+[default demographic definitions](default-demographic-definitions.md), the
+five archetypes the documented mapping names, which the quickstart, the
+hosted sandbox and the chart load and every release attaches; a deployment
+may load the templates its own modelling chose instead.
 
 ### `ferroehr party-binding refill`
 

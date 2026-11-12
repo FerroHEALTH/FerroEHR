@@ -342,6 +342,16 @@ check_compose_tags() {
   return "$rc"
 }
 
+# Each default demographic definition the release attaches stages with a
+# checksum that verifies (scripts/release/definition-assets.sh, #5428).
+check_definition_assets() {
+  local dir rc=0
+  dir="$(mktemp -d)"
+  bash scripts/release/definition-assets.sh stage "$dir" || rc=1
+  rm -rf "$dir"
+  return "$rc"
+}
+
 check_docs_claims() { bash scripts/checks/docs-claims.sh --all; }
 
 # The lockstep version the crates leg stamps answers the change since the
@@ -371,6 +381,7 @@ check_statement_version The ferroehr party statement's product version matches t
 check_citation CITATION.cff version matches the workspace version
 check_zenodo .zenodo.json is in sync with CITATION.cff
 check_compose_tags The compose files pin :main, and the attached quickstart this release
+check_definition_assets The default demographic definitions stage as release assets with their checksums
 check_docs_claims Documented keys resolve in their source
 check_crate_semver The openehr-* crate version answers the change by Cargo SemVer (cargo-semver-checks)
 EOF

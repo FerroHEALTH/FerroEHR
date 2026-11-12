@@ -1228,7 +1228,10 @@ provisional_report_after = "30d"
 # The binding key the user's `PERSON` carries.
 #? key = ""
 
-# The person templates and attributes of the shared party mapping.
+# The person templates and attributes of the shared party mapping. Every
+# template and archetype the mapping names must be stored before boot; FerroEHR
+# ships a default set the book's "Default demographic definitions" page lists,
+# and a deployment may load its own.
 [authz.party_binding.person]
 
 # `[authz.party_binding.person.template]`, one per template a professional's

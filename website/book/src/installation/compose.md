@@ -197,9 +197,11 @@ evaluation, not for production:
 - **Basic auth with one user:** `ferroehr` / `ferroehr` (stored as an Argon2id
   hash), carrying the `ADMIN` and `USER` roles.
 - **The user is a professional `PERSON`:** the `ferroehr-definitions` one-shot
-  loads the professional PERSON and ROLE templates the party mapping names
-  (`ferroehr definitions load`, copies of
-  `deploy/definitions/professional/`) before the server starts, and the
+  loads the
+  [default demographic definitions](default-demographic-definitions.md)
+  (`ferroehr definitions load`, copies of `deploy/definitions/`), among them
+  the professional PERSON and ROLE templates the party mapping names, before
+  the server starts, and the
   `ferroehr-provision` service then creates the user's `PERSON` through
   `/scim/v2/Users`, with a client credentials token the development
   `identity-issuer` signs for the client `quickstart-scim`. It stays up and

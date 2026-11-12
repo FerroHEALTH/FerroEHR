@@ -37,18 +37,25 @@ while no minimum is set.
 With Basic users persons only, a new deployment has no machine login to
 start from, so it starts in this order:
 
-1. **Declare the identity provider's SCIM client.** It is an OAuth 2.0
+1. **Load the definitions the party mapping names.** Run
+   `ferroehr definitions load` on the templates and archetypes of
+   `[authz.party_binding]` before the server starts, since boot refuses a
+   mapping whose templates the store lacks. FerroEHR ships a set the
+   documented mapping names, the
+   [default demographic definitions](default-demographic-definitions.md),
+   and you may load your own instead.
+2. **Declare the identity provider's SCIM client.** It is an OAuth 2.0
    client-credentials client (RFC 6749 §4.4) of the deployment's
    authorization server with the provisioning scope: an `[[auth.issuer]]`
    of kind `machines` that issues its tokens, and a `[[auth.scim.client]]`
    naming that issuer, the client, the scope and the `binding_issuer` its
    Users' keys are written under.
-2. **Provision the first person through `/scim/v2/`.** The identity
+3. **Provision the first person through `/scim/v2/`.** The identity
    provider, or you through that client, sends `POST /scim/v2/Users`
    (RFC 7644 §3.3). FerroEHR creates the `PERSON` and its professional
    `ROLE`, and issues the `PERSON`'s id itself (RFC 7643 §3.1: the `id` "is
    always issued by the service provider").
-3. **Only then map a Basic user**, by that person's binding key. A Basic
+4. **Only then map a Basic user**, by that person's binding key. A Basic
    user mapped before its `PERSON` exists is refused at its first request.
 
 The first administrator is a provisioned person whose token carries the

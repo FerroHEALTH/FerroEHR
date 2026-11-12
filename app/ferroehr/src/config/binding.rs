@@ -44,7 +44,10 @@ pub struct PartyBindingConfig {
     pub namespace: String,
     /// The key each Basic user is bound by (`[[authz.party_binding.basic_user]]`).
     pub basic_user: Vec<BasicUserKey>,
-    /// The person templates and attributes of the shared party mapping.
+    /// The person templates and attributes of the shared party mapping. Every
+    /// template and archetype the mapping names must be stored before boot;
+    /// FerroEHR ships a default set the book's "Default demographic
+    /// definitions" page lists, and a deployment may load its own.
     pub person: person::PersonSection,
     /// The professional `ROLE` template.
     pub professional_role: Option<person::RoleSection>,

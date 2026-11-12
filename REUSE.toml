@@ -162,12 +162,14 @@ precedence = "override"
 SPDX-FileCopyrightText = ["openEHR Foundation", "Cadasto B.V."]
 SPDX-License-Identifier = "CC-BY-SA-3.0"
 
-# The professional PERSON and ROLE definitions the lanes load before `serve`
-# are repo-authored adaptations of openEHR CKM archetypes (CC-BY-SA 3.0), so
-# they carry that licence and both copyright holders. Their PROVENANCE.md
-# names each source archetype and every change.
+# The default demographic definitions the lanes load before `serve` (the
+# professional PERSON and ROLE, the care-team GROUP and the membership and
+# representation PARTY_RELATIONSHIPs) are repo-authored adaptations of openEHR
+# CKM archetypes (CC-BY-SA 3.0), so they carry that licence and both copyright
+# holders. The PROVENANCE.md beside each names every source archetype and
+# every change.
 [[annotations]]
-path = "deploy/definitions/professional/*.adls"
+path = "deploy/definitions/*/*.adls"
 precedence = "override"
 SPDX-FileCopyrightText = ["openEHR Foundation", "Cadasto B.V."]
 SPDX-License-Identifier = "CC-BY-SA-3.0"

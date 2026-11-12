@@ -344,6 +344,15 @@ jobs:
           bash scripts/release/quickstart-compose.sh "$VERSION" docker-compose.yml
           sha256sum docker-compose.yml > docker-compose.yml.sha256sum
 
+      # The default demographic definitions of deploy/definitions/ ride along one
+      # asset each, with a sha256sum file beside each, so a deployment fetches
+      # the set this tag ships by version (#5428).
+      - name: Stage the default demographic definitions
+        run: |
+          set -euo pipefail
+          mkdir definition-assets
+          bash scripts/release/definition-assets.sh stage definition-assets
+
       - name: Create the GitHub release as a draft
         uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
@@ -357,6 +366,8 @@ jobs:
           # file pulls the images this tag published, and the two standalone
           # overlays are downloaded beside it, so a downloader never has to
           # clone the repo to run the release.
+          # The default demographic definitions ride along the same way, each
+          # with its checksum.
           files: |
             docker-compose.yml
             docker-compose.yml.sha256sum
@@ -364,6 +375,7 @@ jobs:
             docker-compose.observability.yml
             docker-compose.db-publish.yml
             ferroehr-${{ needs.plan.outputs.tag }}.spdx.json
+            definition-assets/*
             ferroehr-${{ needs.plan.outputs.tag }}-information-sheet.md
             ferroehr-${{ needs.plan.outputs.tag }}-instructions-for-use.md
           # Releases publish as OFFICIAL releases (owner sign-off
@@ -572,6 +584,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      # The tagged tree, for the list of the default demographic definitions.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
       # Refuse to publish a release whose assets are missing. After the publish
       # step the set is frozen for good, so this is the last moment the check is
       # worth anything.
@@ -622,6 +639,10 @@ jobs:
             "ferroehr-${TAG}-logging-performance.md"; do
             grep -Fxq "$asset" <<<"$assets" || missing="$missing $asset"
           done
+          # Each default demographic definition and its checksum.
+          while IFS= read -r asset; do
+            grep -Fxq "$asset" <<<"$assets" || missing="$missing $asset"
+          done < <(bash scripts/release/definition-assets.sh list)
           # The exploitability record (CRA Annex I Part I(2)(a)), and one SBOM
           # with its attestation bundle per published crate (Part II(1)).
           for asset in \
