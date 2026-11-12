@@ -52,6 +52,7 @@ pub enum PixmInvocation {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct PixmConfig {
     /// `[pixm.endpoint]`, the family's outbound endpoint: the FHIR base URL of
     /// the PIX Manager (`url`, the `[base]` of `[base]/Patient/$ihe-pix`, PIXm
@@ -61,6 +62,7 @@ pub struct PixmConfig {
     /// client credentials grant whose access token every request carries (IUA
     /// ITI-72 §3.72.4.2). Any `userinfo` in the URL is masked in every
     /// rendering.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
     pub endpoint: EndpointSection,
     /// The assigning authority of the clinical domain, an absolute URI such as
     /// `urn:oid:2.999.1`: the `targetSystem` of every ITI-83 query and the

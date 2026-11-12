@@ -29,6 +29,7 @@ pub const MAX_HOURS: u32 = 24 * 366;
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct AccessDelayConfig {
     /// The categories whose new compositions are held at creation, named as
     /// `[audit.categories]` names one: a priority category of Art. 14(1) by

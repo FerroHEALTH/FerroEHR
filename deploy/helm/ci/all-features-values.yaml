@@ -51,8 +51,6 @@ config:
   # PIXm URL. The client secret is secrets.ehrIndexClientSecret.
   privacy:
     subject_namespaces: [urn:oid:2.999.7.1]
-  server:
-    listen: "0.0.0.0:8080"
   telemetry:
     format: json
     filter: info,ferroehr=debug
@@ -60,18 +58,15 @@ config:
     otlp:
       endpoint: http://otel-collector:4317
       sample_ratio: 0.1
-      metrics: true
   auth:
-    enabled: true
     # A token issuer, the mechanism a real deployment supplies; the server reads
     # its metadata and key set at boot and accepts asymmetric algorithms only.
     issuer:
-      # One table per issuer: `kind` says whose tokens it signs, `profile`
-      # the preset of their shape, and a persons token is admitted only
-      # through a client in `first_party_clients`.
+      # One table per issuer: `kind` says whose tokens it signs, and a
+      # persons token is admitted only through a client in
+      # `first_party_clients`.
       - issuer: https://keycloak.example.com/realms/ferroehr
         kind: persons
-        profile: rfc9068
         audience: [ferroehr]
         first_party_clients: [ferroehr-viewer]
       # The machines issuer FerroBRIDGE's client credentials tokens come from
@@ -139,13 +134,8 @@ config:
         origins: [relay]
     rbac:
       role_issuers: [https://keycloak.example.com/realms/ferroehr]
-      enabled: true
-      admin_role: ADMIN
     abac:
       enabled: true
-      engine: cedar
-      organization_claim: organization_id
-      patient_claim: patient_id
       cedar:
         policy_dir: /etc/ferroehr
   # Microsoft Entra ID provisions the professionals through SCIM with a
@@ -153,7 +143,6 @@ config:
   # to the PERSON carrying their key under the same identifier issuer.
   management:
     enabled: true
-    base_path: /management
     listen: "0.0.0.0:9100"
     endpoints:
       info: admin_only
@@ -162,12 +151,10 @@ config:
       env: admin_only
       loggers: admin_only
   audit:
-    enabled: true
     source_id: ferroehr-prod
     fail_mode: closed
     enterprise_site_id: site-1
     store:
-      enabled: true
       # Five years in days: the default identifier rules name NL, whose
       # access-log floor is five years (Besluit vaststelling bewaartermijn
       # logging), and the server refuses a shorter retention at boot.
@@ -191,22 +178,18 @@ config:
           client_id: ferroehr
           scope: system/Patient.rs
   api:
-    base_path: /ferroehr/rest/openehr/v1
     openapi_ui: public
     admin: true
     terminology: true
   database:
     max_connections: 10
     min_connections: 0
-    acquire_timeout: "30s"
   record:
     signing:
-      enabled: true
       mode: pgp
       key_file: /etc/ferroehr/signing.asc
       verify_on_read: strict
     query:
-      plan_cache_capacity: 256
       timeout: "30000ms"
     change_feed:
       readers: [ferrobridge]
@@ -214,7 +197,6 @@ config:
       enabled: true
       threshold: "262144B"
       url: https://s3.example.com
-      bucket: openehr-multimedia
       region: eu-west-1
   terminology:
     # `endpoint.url` and `on_error` are INJECTED by the chart from the

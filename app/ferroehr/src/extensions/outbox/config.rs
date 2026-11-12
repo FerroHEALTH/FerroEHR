@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct OutboxConfig {
     /// The readers of the outbox feed, each a name matching
     /// `^[a-z][a-z0-9-]{0,62}$` (`ferrobridge`, for one). Boot registers each

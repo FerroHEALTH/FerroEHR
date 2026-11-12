@@ -51,6 +51,7 @@ impl ScanMode {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct IdentifierScanConfig {
     /// `strict` (refuse) or `warn` (accept and record)
     /// (`FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE`).
@@ -99,6 +100,7 @@ impl Default for IdentifierScanConfig {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct PrivacyConfig {
     /// The namespaces an `EHR_STATUS.subject.external_ref` may name
     /// (`FERROEHR__PRIVACY__SUBJECT_NAMESPACES`, comma-separated in the
@@ -111,6 +113,7 @@ pub struct PrivacyConfig {
     /// Declaring one is the same act as turning the rule on: from then on a
     /// subject reference must name a listed namespace and carry a UUID as its
     /// `id.value`.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = true)))]
     pub subject_namespaces: Vec<String>,
     /// Accept `PARTY_IDENTIFIED` / `PARTY_RELATED` carrying `name` or
     /// `identifiers` in clinical content

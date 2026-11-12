@@ -218,19 +218,14 @@ data:
   # since the server refuses a TOML float on an integer key.
   ferroehr.toml: |
     [api]
-      admin = false
       base_path = "/ferroehr/rest/openehr/v1"
       body_limit = "16MiB"
-      openapi_ui = "private"
-      terminology = false
     
     [audit]
       enabled = true
       [audit.categories]
         [audit.categories.archetypes]
         [audit.categories.templates]
-      [audit.store]
-        enabled = true
     
     [auth]
       enabled = true
@@ -255,12 +250,9 @@ data:
     
     [authz]
       system_client = []
-      [authz.abac]
-        enabled = false
       [authz.federation]
         agreement = []
       [authz.party_binding]
-        namespace = "demographic"
     
         [[authz.party_binding.basic_user]]
           key = "clinician"
@@ -285,43 +277,20 @@ data:
         [authz.party_binding.provider]
           id = "viewer"
           issuer = "urn:oid:2.999.7.9"
-      [authz.rbac]
-        admin_role = "ADMIN"
-        enabled = true
-        role_issuers = []
     
     [database]
-      acquire_timeout = "30s"
       max_connections = 10
-      migrations = "apply"
       min_connections = 0
-      statement_timeout = "1min"
     
     [deployment]
       profile = "sandbox"
-      spec_profile = "development"
     
     [management]
       base_path = "/management"
       enabled = true
-      [management.endpoints]
-        env = "off"
-        flamegraph = "off"
-        info = "off"
-        loggers = "off"
-        metrics = "off"
-        prometheus = "off"
     
     [record]
       subject_index = "local"
-      [record.multimedia]
-        bucket = "openehr-multimedia"
-        enabled = false
-        region = "us-east-1"
-      [record.signing]
-        enabled = true
-        mode = "digest"
-        verify_on_read = "strict"
     
     [server]
       max_concurrent_requests = 256
@@ -752,7 +721,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 136949aaef5299940507a92c769daa39521ed53aed29507cedce29015272e130
+        checksum/config: 8dcf764a16562c3710b09fa9df4c993d26e03ae76f76142e0bba8384c598998f
         # A changed definition list rolls the pods, so the init container loads it.
         checksum/definitions: 3755fd863c9f72a1eb98519a38f76b4769be6b893a23ca13c76471c8bbcdfcf4
       labels:

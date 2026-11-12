@@ -105,11 +105,8 @@ data:
   # since the server refuses a TOML float on an integer key.
   ferroehr.toml: |
     [api]
-      admin = false
       base_path = "/ferroehr/rest/openehr/v1"
       body_limit = "16MiB"
-      openapi_ui = "private"
-      terminology = false
     
     [audit]
       enabled = true
@@ -121,7 +118,6 @@ data:
           "International Patient Summary" = ["Patient-Summaries"]
           "Laboratory Report" = ["Laboratory-Reports"]
       [audit.store]
-        enabled = true
         retention = "P3Y"
         sgb_v_309_controller = true
     
@@ -133,7 +129,6 @@ data:
         first_party_clients = ["ferroehr-viewer"]
         issuer = "https://idp.example.com/realms/ferroehr"
         kind = "persons"
-        profile = "rfc9068"
     
       [[auth.party]]
         identifier_issuer = "urn:example:ferroehr-login"
@@ -142,12 +137,9 @@ data:
     
     [authz]
       system_client = []
-      [authz.abac]
-        enabled = false
       [authz.federation]
         agreement = []
       [authz.party_binding]
-        namespace = "demographic"
         [authz.party_binding.person]
     
           [[authz.party_binding.person.template]]
@@ -168,31 +160,18 @@ data:
           id = "audit-categories"
           issuer = "urn:oid:2.999.7.9"
       [authz.rbac]
-        admin_role = "ADMIN"
-        enabled = true
         role_issuers = ["https://idp.example.com/realms/ferroehr"]
     
     [database]
-      acquire_timeout = "30s"
       max_connections = 10
-      migrations = "apply"
       min_connections = 0
-      statement_timeout = "1min"
     
     [deployment]
       profile = "sandbox"
-      spec_profile = "development"
     
     [management]
       base_path = "/management"
       enabled = true
-      [management.endpoints]
-        env = "off"
-        flamegraph = "off"
-        info = "off"
-        loggers = "off"
-        metrics = "off"
-        prometheus = "off"
     
     [privacy]
       [privacy.identifier_scan]
@@ -200,14 +179,6 @@ data:
     
     [record]
       subject_index = "local"
-      [record.multimedia]
-        bucket = "openehr-multimedia"
-        enabled = false
-        region = "us-east-1"
-      [record.signing]
-        enabled = true
-        mode = "digest"
-        verify_on_read = "strict"
     
     [server]
       max_concurrent_requests = 256
@@ -612,7 +583,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: b1e1847d3040b8438363f70da13c869e51ea5a9c98d1efbddf99831be3aa9f5c
+        checksum/config: 347d22a6ec0cc08200442294c91c1d06da4c41b9d1b599c74cb3637b262e9abc
         # A changed definition list rolls the pods, so the init container loads it.
         checksum/definitions: 3755fd863c9f72a1eb98519a38f76b4769be6b893a23ca13c76471c8bbcdfcf4
       labels:

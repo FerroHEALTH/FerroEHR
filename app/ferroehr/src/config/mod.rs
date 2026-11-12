@@ -69,6 +69,9 @@ use crate::config::loader::{ConfigError, ConfigErrors};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = ["database.url"],
+    "x-ferroehr-class" = { "server": "infrastructure", "telemetry": "infrastructure", "usage_report": "infrastructure", "database": "infrastructure",
+    "database.max_connections": "optional", "database.min_connections": "optional", "database.acquire_timeout": "optional", "database.statement_timeout": "optional" })))]
 pub struct FerroEhrConfig {
     /// `[deployment]`: the declared posture, the openEHR specification set
     /// and the licence token.
@@ -227,10 +230,7 @@ impl Default for FerroEhrConfig {
     }
 }
 
-/// The shipped default `ferroehr.toml`: every key with its default.
-///
-/// `tools/config-reference` generates it from the configuration types, each
-/// key under its description (#5316).
+/// The shipped default `ferroehr.toml`, which `tools/config-reference` generates (#5316, #5455).
 pub const DEFAULT_TEMPLATE: &str = include_str!("../../assets/ferroehr.default.toml");
 
 impl FerroEhrConfig {

@@ -99,6 +99,7 @@ impl AbacConfig {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct CedarConfig {
     /// Directory of `*.cedar` policy files (required when `engine = cedar`).
     pub policy_dir: Option<PathBuf>,
@@ -121,6 +122,7 @@ pub struct RemoteConfig {
     /// timeout), the `retry` of a call that got no answer or a `5xx`, the TLS
     /// and the credential, such as the OAuth 2.0 client credentials grant.
     /// Any `userinfo` in the URL is masked in every rendering.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
     pub endpoint: EndpointSection,
     /// Retired in v5.7.0: refused at load, naming
     /// `endpoint.credentials.oauth`.

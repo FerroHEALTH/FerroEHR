@@ -639,7 +639,6 @@ data:
         [audit.categories.templates]
       [audit.fhir_feed]
       [audit.store]
-        enabled = true
         retention = "P1830D"
       [audit.syslog]
         url = "tls://arr.example.com:6514"
@@ -653,7 +652,6 @@ data:
         first_party_clients = ["ferroehr-viewer"]
         issuer = "https://keycloak.example.com/realms/ferroehr"
         kind = "persons"
-        profile = "rfc9068"
     
       [[auth.issuer]]
         audience = ["ferroehr-machines"]
@@ -681,15 +679,11 @@ data:
     [authz]
       [authz.abac]
         enabled = true
-        engine = "cedar"
-        organization_claim = "organization_id"
-        patient_claim = "patient_id"
         [authz.abac.cedar]
           policy_dir = "/etc/ferroehr"
       [authz.federation]
         agreement = []
       [authz.party_binding]
-        namespace = "demographic"
         [authz.party_binding.person]
     
           [[authz.party_binding.person.attribute]]
@@ -723,8 +717,6 @@ data:
           id = "all-features"
           issuer = "urn:oid:2.999.7.9"
       [authz.rbac]
-        admin_role = "ADMIN"
-        enabled = true
         role_issuers = ["https://keycloak.example.com/realms/ferroehr"]
     
       [[authz.system_client]]
@@ -736,15 +728,11 @@ data:
           issuer = "urn:oid:2.999.7.9"
     
     [database]
-      acquire_timeout = "30s"
       max_connections = 10
-      migrations = "apply"
       min_connections = 0
-      statement_timeout = "1min"
     
     [deployment]
       profile = "sandbox"
-      spec_profile = "development"
     
     [management]
       base_path = "/management"
@@ -752,7 +740,6 @@ data:
       listen = "0.0.0.0:9100"
       [management.endpoints]
         env = "admin_only"
-        flamegraph = "off"
         info = "admin_only"
         loggers = "admin_only"
         metrics = "admin_only"
@@ -777,22 +764,18 @@ data:
       [record.change_feed]
         readers = ["ferrobridge"]
       [record.multimedia]
-        bucket = "openehr-multimedia"
         enabled = true
         region = "eu-west-1"
         threshold = "262144B"
         url = "https://s3.example.com"
       [record.query]
-        plan_cache_capacity = 256
         timeout = "30000ms"
       [record.signing]
-        enabled = true
         key_file = "/etc/ferroehr/signing.asc"
         mode = "pgp"
         verify_on_read = "strict"
     
     [server]
-      listen = "0.0.0.0:8080"
       max_concurrent_requests = 256
       [server.caller_rate]
         burst = 2048
@@ -804,7 +787,6 @@ data:
       format = "json"
       [telemetry.otlp]
         endpoint = "http://otel-collector:4317"
-        metrics = true
         sample_ratio = 0.1
     
     [terminology]
@@ -1945,7 +1927,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: e665050352a343a5fc11867d7d42c43f199a7a28b330265e9eefdaff5a146a20
+        checksum/config: d5f89e538e0b024cc5bd48e2fbb3ff1cac14df9e7cb060b527fc0b211ccf793c
         # A changed definition list rolls the pods, so the init container loads it.
         checksum/definitions: 3755fd863c9f72a1eb98519a38f76b4769be6b893a23ca13c76471c8bbcdfcf4
         prometheus.io/scrape: "true"

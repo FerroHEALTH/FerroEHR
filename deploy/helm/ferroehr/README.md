@@ -301,46 +301,20 @@ Kubernetes: `>=1.36.0-0`
 | bridge.tolerations | list | `[]` | Tolerations. |
 | bridge.topologySpreadConstraints | list | `[]` | Topology spread for FerroBRIDGE's pods. Empty uses the chart's default: one replica per node, `ScheduleAnyway`, scoped to the ReplicaSet being rolled. Set it to replace that wholesale. |
 | bridge.usageReport.enabled | string | `nil` | FerroBRIDGE's usage report. Empty follows the top-level `usageReport.enabled`; true or false decides for FerroBRIDGE alone. The chart writes it into `[usage_report]` of config.toml, with the deployment `helm`, for a FerroBRIDGE release from 0.0.7 on; a release before it sends no report and refuses the section, so it gets none. |
-| config.api.admin | bool | `false` |  |
 | config.api.base_path | string | `"/ferroehr/rest/openehr/v1"` |  |
 | config.api.body_limit | string | `"16MiB"` |  |
-| config.api.openapi_ui | string | `"private"` |  |
-| config.api.terminology | bool | `false` |  |
 | config.audit.categories.archetypes | object | `{}` |  |
 | config.audit.categories.templates | object | `{}` |  |
 | config.audit.enabled | bool | `true` |  |
-| config.audit.store.enabled | bool | `true` |  |
-| config.audit.store.retention | string | unset |  |
 | config.auth.enabled | bool | `true` |  |
-| config.authz.abac.enabled | bool | `false` |  |
 | config.authz.federation.agreement | list | `[]` |  |
-| config.authz.party_binding.namespace | string | `"demographic"` |  |
-| config.authz.rbac.admin_role | string | `"ADMIN"` |  |
-| config.authz.rbac.enabled | bool | `true` |  |
-| config.authz.rbac.role_issuers | list | `[]` |  |
 | config.authz.system_client | list | `[]` |  |
-| config.database.acquire_timeout | string | `"30s"` |  |
 | config.database.max_connections | int | `10` |  |
-| config.database.migrations | string | `"apply"` |  |
 | config.database.min_connections | int | `0` |  |
-| config.database.statement_timeout | string | `"1min"` |  |
 | config.deployment.profile | string | unset: the chart refuses to render |  |
-| config.deployment.spec_profile | string | `"development"` |  |
 | config.files | object | `{}` |  |
 | config.management.base_path | string | `"/management"` |  |
 | config.management.enabled | bool | `true` |  |
-| config.management.endpoints.env | string | `"off"` |  |
-| config.management.endpoints.flamegraph | string | `"off"` |  |
-| config.management.endpoints.info | string | `"off"` |  |
-| config.management.endpoints.loggers | string | `"off"` |  |
-| config.management.endpoints.metrics | string | `"off"` |  |
-| config.management.endpoints.prometheus | string | `"off"` |  |
-| config.record.multimedia.bucket | string | `"openehr-multimedia"` |  |
-| config.record.multimedia.enabled | bool | `false` |  |
-| config.record.multimedia.region | string | `"us-east-1"` |  |
-| config.record.signing.enabled | bool | `true` |  |
-| config.record.signing.mode | string | `"digest"` |  |
-| config.record.signing.verify_on_read | string | `"strict"` |  |
 | config.server.caller_rate.burst | int | `2048` |  |
 | config.server.caller_rate.requests_per_second | int | `1024` |  |
 | config.server.max_concurrent_requests | int | `256` |  |

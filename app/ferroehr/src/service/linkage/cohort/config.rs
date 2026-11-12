@@ -42,6 +42,7 @@ pub const BIRTH_DATE_KEY: &str = "age_band";
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct PredicateBinding {
     /// The archetype HRID of the nearest archetyped ancestor of the ELEMENT
     /// (`openEHR-DEMOGRAPHIC-ADDRESS.address.v1`), matched case-insensitively
@@ -59,6 +60,7 @@ pub struct PredicateBinding {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct CohortConfig {
     /// The distinct-EHR floor a result set must reach to be served
     /// (`FERROEHR__PRIVACY__COHORT__SMALL_CELL_THRESHOLD`); `0` disables suppression.
