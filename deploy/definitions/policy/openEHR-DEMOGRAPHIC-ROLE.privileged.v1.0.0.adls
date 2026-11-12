@@ -14,13 +14,13 @@ description
         ["en"] = <
             language = <[ISO_639-1::en]>
             purpose = <"The ROLE a professional's PERSON performs to hold a privilege beyond clinical access: reading the access log of a subject, acting as an EHDS access service, reading protected national identifiers, or importing EHRs.">
-            use = <"One CAPABILITY per privilege, named by its kind; time_validity bounds it by day, for example the cover of an absent colleague. The administrator privilege and emergency access are never granted here: the identity provider and the configuration grant those. Adapted from the openEHR CKM archetypes the derived_from entry names: the ROLE and its CAPABILITY structure, with the credentials FerroEHR's own.">
+            use = <"One CAPABILITY per privilege, named by its kind; time_validity bounds it by day, for example the cover of an absent colleague. The administrator privilege and emergency access are never granted here: the identity provider and the configuration grant those. The ROLE is adapted from the openEHR CKM archetype the derived_from entry names. Its CAPABILITY, whose credentials hold an authorization grant, is FerroEHR's own design: the openEHR RM and CKM use CAPABILITY for the professional qualifications of a performer, and no openEHR specification gives it an authorization meaning.">
             copyright = <"© openEHR Foundation">
         >
     >
     other_details = <
         ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-        ["derived_from"] = <"openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0, openEHR-DEMOGRAPHIC-CAPABILITY.individual_credentials.v0 (openEHR CKM)">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0 (openEHR CKM 1013.1.482, modified 2019-08-09)">
     >
 
 definition

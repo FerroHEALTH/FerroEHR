@@ -280,6 +280,9 @@ paths.
 | `[authz.party_binding.group]` | `template_id`, `external_id`, `display_name` | The template of a SCIM Group's `GROUP`, its `externalId` selector and the path of its `displayName`. |
 | `[authz.party_binding.membership]` | `archetype_id` | The `PARTY_RELATIONSHIP` archetype of a group membership, as each membership's `archetype_node_id` carries it (the interface form of an ADL 2 id, `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1`). SCIM serves `/Groups` when the group table names a `display_name` and this table is set. |
 | `[authz.party_binding.representation]` | `archetype_id`, `relationship_codes` | The `PARTY_RELATIONSHIP` archetype a representative acts through, from the representative's `PERSON` to the subject's, and the code of the openEHR `subject_relationship` group each of its relationship types maps to. |
+| `[authz.party_binding.agent]` | `template_id`, `client` | The template of a system's `AGENT`, rooted at `AGENT`, and the `client` selector `{ path, type }` of the `DV_IDENTIFIER` whose issuer is the token issuer and whose id is the OAuth 2.0 `client_id`. A policy party: see [Operational policy](operational-policy.md). |
+| `[authz.party_binding.acts_for]` | `archetype_id` | The `PARTY_RELATIONSHIP` archetype from a system's `AGENT` to the provider's `ORGANISATION` it acts for, as each relationship's `archetype_node_id` carries it (`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1`). A party that holds one is a policy party. |
+| `[authz.party_binding.system_client_role]`, `data_migration_role`, `federation_partner_role`, `privileged_role` | `template_id` | The template, rooted at `ROLE`, of each kind of grant: what a system client commits, a data migration, a federation partner's agreement, and a privilege a professional holds. Two kinds never name one template. A `ROLE` of one is a policy party. |
 
 A worked example over FerroEHR's [default demographic
 definitions](default-demographic-definitions.md), with the Microsoft Entra
@@ -343,6 +346,9 @@ template carrying a selector identifier, its professional `ROLE`, a
 representation relationship, and a `GROUP` of the group template. Only an
 administrator (`authz.rbac.admin_role`) writes one through the demographic
 API, including the creation of a party that carries a selector identifier.
+The policy parties (a system's `AGENT`, a `ROLE` of a policy role template
+and an acts-for relationship) are an administrator's to write and to read,
+never a SCIM client's: see [Operational policy](operational-policy.md#who-writes-and-reads-a-policy-party).
 An administrator's version that leaves a protected identifier out is refused
 with `422`. A present binding key is immutable (RFC 7643 §2.2): a version
 that changes it is refused with `403`, and

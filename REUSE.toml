@@ -163,8 +163,10 @@ SPDX-FileCopyrightText = ["openEHR Foundation", "Cadasto B.V."]
 SPDX-License-Identifier = "CC-BY-SA-3.0"
 
 # The default demographic definitions the lanes load before `serve` (the
-# professional PERSON and ROLE, the care-team GROUP and the membership and
-# representation PARTY_RELATIONSHIPs) are repo-authored adaptations of openEHR
+# professional PERSON and ROLE, the care-team GROUP, the membership and
+# representation PARTY_RELATIONSHIPs, the patient PERSON, the provider
+# ORGANISATION, and the policy AGENT,
+# ROLEs and acts-for PARTY_RELATIONSHIP) are repo-authored adaptations of openEHR
 # CKM archetypes (CC-BY-SA 3.0), so they carry that licence and both copyright
 # holders. The PROVENANCE.md beside each names every source archetype and
 # every change.

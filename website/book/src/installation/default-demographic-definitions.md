@@ -3,15 +3,23 @@
 Party binding and SCIM provisioning write demographic parties under the
 templates and archetypes the [party mapping](config-auth.md#the-party-mapping)
 names, and the server refuses to boot while the definition store lacks one of
-them. FerroEHR ships a default set of five ADL 2 archetypes that the
-documented mapping names, so a deployment can load them and boot that mapping
-as it stands:
+them. FerroEHR ships a default set of thirteen ADL 2 archetypes that the
+documented mappings name, so a deployment can load them and boot those
+mappings as they stand:
 
-- a professional's `PERSON` and the professional `ROLE` it performs;
+- a professional's `PERSON` and the professional `ROLE` it performs, with
+  the professional's registrations and qualifications as its capabilities;
 - a care-team `GROUP`, which a SCIM Group is provisioned as;
 - the membership `PARTY_RELATIONSHIP` a member's `PERSON` holds to its
   `GROUP`;
-- the representation `PARTY_RELATIONSHIP` a representative acts through.
+- the representation `PARTY_RELATIONSHIP` a representative acts through;
+- a patient's `PERSON`, the subject a representation targets;
+- a healthcare provider's `ORGANISATION`, the provider a system acts for and
+  a federation partner;
+- the policy definitions of [Operational policy](operational-policy.md): a
+  system's `AGENT`, the acts-for `PARTY_RELATIONSHIP` to the provider it acts
+  for, and the system-client, data-migration, federation-partner and
+  privileged `ROLE`s.
 
 These are defaults. A deployment may load its own templates instead, or
 beside them, and point `[authz.party_binding]` at those. Nothing in FerroEHR
@@ -25,10 +33,18 @@ every release as an asset of its own, with a `.sha256sum` file beside it.
 | File | What it is for | The key that names it |
 |---|---|---|
 | [`openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls) | A professional's `PERSON`: the binding key, `userName` and `externalId` as identifiers in `details` (`/details[id2]/items[id3]`), the full, given and family name in `identities` (`/identities[id4]/details[id5]/items[id6]`, `id7`, `id8`), and a work email in `contacts` (`/contacts[id9]/addresses[id10]/details[id11]/items[id12]`). | `[[authz.party_binding.person.template]] template_id` and the `path` keys of `[[authz.party_binding.person.attribute]]` |
-| [`openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls) | The professional `ROLE` that makes a `PERSON` a professional while it is valid. | `[authz.party_binding.professional_role] template_id` |
+| [`openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls) | The professional `ROLE` that makes a `PERSON` a professional while it is valid, with a `CAPABILITY` per credential: the field of practice and each registration and qualification, as the CKM `individual_credentials` archetype records them (`/capabilities[id6]/credentials[id7]/items[id10]` is a registration). | `[authz.party_binding.professional_role] template_id` |
 | [`openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls) | A care team's `GROUP`: its `externalId` as an identifier in `details` (`/details[id2]/items[id3]`) and its `displayName` in `identities` (`/identities[id4]/details[id5]/items[id6]`). | `[authz.party_binding.group] template_id` |
 | [`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls) | The membership of a `PERSON` in a `GROUP`, held in the member's `relationships`, with an optional role in the team. | `[authz.party_binding.membership] archetype_id`, as `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1` |
 | [`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls) | The relationship from a representative's `PERSON` to the subject's, whose coded name is its type: `at10` (parent) or `at11` (guardian). | `[authz.party_binding.representation] archetype_id`, as `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1`, and its `relationship_codes` |
+| [`openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls) | A patient's `PERSON`: its patient identifiers (`/details[id2]/items[id3]`), date of birth (`id4`) and sex (`id5`) in `details`, its names in `identities`, each named by its usage (`/identities[id6]/details[id7]/items[id8]`, `id9`, `id10`), a postal and an electronic address, and its relationships to personal contacts, third-party payers and providers, each payer and provider with the patient identifiers it issues. | none: the party mapping maps professionals |
+| [`openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls) | A healthcare provider's `ORGANISATION`: its provider identifiers in `details` (`/details[id2]/items[id3]`, such as the Dutch URA, mandatory), its names named by their usage, and a postal and an electronic address. The acts-for relationship targets it, and a federation partner is one. | none |
+| [`openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0.adls) | A system's `AGENT`, identified by its OAuth 2.0 `client_id` under the token issuer (`/details[id2]/items[id3]`, type `client_id`). | `[authz.party_binding.agent] template_id` and `client` |
+| [`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1.0.0.adls) | The relationship from a system's `AGENT` to the provider's `ORGANISATION` it acts for. | `[authz.party_binding.acts_for] archetype_id`, as `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1` |
+| [`openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0.adls) | What a system commits: per origin, the templates it writes, the facilities and the device identifier issuers. | `[authz.party_binding.system_client_role] template_id` |
+| [`openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0.adls) | A data migration: its operations, subject namespaces, rate and trusted creating systems. | `[authz.party_binding.data_migration_role] template_id` |
+| [`openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0.adls) | The terms of a federation partner's agreement, per accessor. | `[authz.party_binding.federation_partner_role] template_id` |
+| [`openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls) | A privilege a professional holds beyond clinical access. | `[authz.party_binding.privileged_role] template_id` |
 
 The links above fetch the newest release's copy. To fetch the copy of a
 given release, replace `vX.Y.Z` with its tag:
@@ -40,7 +56,15 @@ for file in \
   openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls \
   openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls \
   openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls \
-  openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls; do
+  openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls; do
   curl -fsSLO "$base/$file"
   curl -fsSLO "$base/$file.sha256sum"
   sha256sum --check "$file.sha256sum"
@@ -55,14 +79,27 @@ The same files at a release tag are in the repository at
 - [`deploy/definitions/care-team/`](https://github.com/FerroHEALTH/FerroEHR/tree/main/deploy/definitions/care-team):
   the `GROUP` and the membership;
 - [`deploy/definitions/representation/`](https://github.com/FerroHEALTH/FerroEHR/tree/main/deploy/definitions/representation):
-  the representation.
+  the representation;
+- [`deploy/definitions/patient/`](https://github.com/FerroHEALTH/FerroEHR/tree/main/deploy/definitions/patient):
+  the patient `PERSON`;
+- [`deploy/definitions/provider/`](https://github.com/FerroHEALTH/FerroEHR/tree/main/deploy/definitions/provider):
+  the provider `ORGANISATION`;
+- [`deploy/definitions/policy/`](https://github.com/FerroHEALTH/FerroEHR/tree/main/deploy/definitions/policy):
+  the `AGENT`, the acts-for relationship and the four policy `ROLE`s.
 
 The links above point at `main`; replace `main` with a tag for that
 release's copy. Each directory's `PROVENANCE.md` names the openEHR CKM
 archetypes the files adapt and every change from them. openEHR CKM publishes
-no `GROUP` and no `PARTY_RELATIONSHIP` archetype, so those three adapt the
-CKM `ORGANISATION` archetype and its inline relationship, and the
-representation types are FerroEHR's own modelling. The files carry the
+no `GROUP`, no `AGENT` and no `PARTY_RELATIONSHIP` archetype, so the `GROUP`,
+the `AGENT`, the membership and the acts-for relationship adapt the CKM
+`ORGANISATION` archetype and its inline relationship, the representation
+adapts the person-to-person relationship of the CKM `PERSON` archetypes, and
+the representation types are FerroEHR's own modelling. Every CKM source is a
+v0 draft, so each file names it with its CKM id and modification time. The `CAPABILITY` of the
+professional `ROLE` is CKM's `individual_credentials`: the openEHR RM and
+CKM use a capability for a performer's qualifications. The `CAPABILITY` of
+each policy `ROLE`, which holds an authorization grant, is FerroEHR's own
+design. The files carry the
 CKM sources' licence, Creative Commons Attribution-ShareAlike 3.0.
 
 ## Loading them
@@ -75,12 +112,20 @@ ferroehr definitions load \
   openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls \
   openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls \
   openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls \
-  openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls
+  openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls
 ```
 
 A file stored already with the same text is left alone, so the step runs at
 every start ([`ferroehr definitions load`](config-cli.md#ferroehr-definitions-load)).
-The shipped deployments load all five:
+The shipped deployments load all thirteen:
 
 - the [Docker Compose quickstart](compose.md), through its
   `ferroehr-definitions` one-shot, which the Keycloak overlay keeps;
@@ -90,13 +135,16 @@ The shipped deployments load all five:
   list, so a deployment that loads its own templates lists those.
 
 The quickstart, the sandbox and the chart's `values-production.yaml` map
-only the `PERSON` and the `ROLE`. Loading the other three changes nothing
+only the professional `PERSON` and `ROLE`. Loading the others changes nothing
 until a mapping names them.
 
 ## The mapping that names them
 
 The worked example of [the party mapping](config-auth.md#the-party-mapping)
-maps all five, and boots on them as they stand. A test loads the files,
+maps the first five, and boots on them as they stand; the mapping on
+[Operational policy](operational-policy.md#the-mapping) maps the policy
+definitions, and a test boots it over them and commits every worked example
+on that page. A test loads the files,
 boots that example from the page and provisions a SCIM User, a Group with the
 User as its member and a representation through it, so the example and the
 files cannot drift apart.

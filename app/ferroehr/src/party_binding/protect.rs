@@ -87,15 +87,20 @@ struct Protected {
     /// that is the source of a representation relationship, or a policy
     /// party.
     whole: bool,
-    /// Whether the body is a policy party, which only an administrator
-    /// writes.
-    policy: bool,
+    /// The template or archetype that makes the body a policy party, which
+    /// only an administrator writes.
+    policy: Option<String>,
 }
 
 impl Protected {
     /// Whether the version is protected.
     fn protected(&self) -> bool {
         self.whole || !self.identifiers.is_empty()
+    }
+
+    /// Whether the body is a policy party.
+    fn policy(&self) -> bool {
+        self.policy.is_some()
     }
 
     /// The canonical binding keys `(issuer, value)` of the version.
@@ -149,9 +154,11 @@ pub(crate) async fn check(
     if !(before.protected() || after.protected()) {
         return Ok(());
     }
-    if (before.policy || after.policy) && !administrator(mapping) {
+    if let Some(definition) = after.policy.as_ref().or(before.policy.as_ref())
+        && !administrator(mapping)
+    {
         return Err(ServiceError::not_permitted(format!(
-            "the {} {vo_id} is a policy party: only an administrator writes it",
+            "the {} {vo_id} is a policy party of {definition}: only an administrator writes it",
             kind.as_str()
         )));
     }
@@ -360,6 +367,58 @@ fn label(selector: &str) -> &'static str {
     }
 }
 
+/// Refuses the read of the party or relationship `vo_id` by a caller who is
+/// no administrator when one of its versions is a policy party: its root of
+/// the agent or a policy role template, or a node of the acts-for archetype.
+/// It reads the nodes, so no body is parsed.
+///
+/// # Errors
+/// [`ServiceError::Forbidden`] (`403`) naming the template or archetype; a
+/// storage error when the versions cannot be read.
+pub(crate) async fn check_read(
+    conn: &mut PgConnection,
+    mapping: &BindingMapping,
+    vo_id: VoId,
+) -> Result<(), ServiceError> {
+    if !mapping.names_policy() || administrator(mapping) {
+        return Ok(());
+    }
+    let templates: Vec<String> = mapping
+        .agent
+        .iter()
+        .map(|agent| agent.template.clone())
+        .chain(mapping.policy_roles.keys().cloned())
+        .collect();
+    let found: Option<String> = sqlx::query_scalar(
+        "WITH held AS ( \
+           SELECT n.num, n.rm_type, n.archetype, \
+                  lower(CASE WHEN n.rm_version IS NULL OR (n.data -> 'archetype_details') IS NOT NULL \
+                             THEN n.data -> 'archetype_details' \
+                             ELSE ext.node_archetype_details(n.archetype, n.rm_version, v.template_id) \
+                        END -> 'template_id' ->> 'value') AS template \
+           FROM version v \
+           JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id AND n.sys_version = v.content_key \
+           WHERE v.vo_id = $1 AND (n.num = 0 OR n.rm_type = 'PARTY_RELATIONSHIP')) \
+         SELECT CASE WHEN num = 0 AND template = ANY($2) THEN 'the template ' || template \
+                     ELSE 'the archetype ' || archetype END \
+         FROM held \
+         WHERE (num = 0 AND template = ANY($2)) \
+            OR (rm_type = 'PARTY_RELATIONSHIP' AND archetype = $3) \
+         LIMIT 1",
+    )
+    .bind(vo_id)
+    .bind(&templates)
+    .bind(mapping.acts_for.as_deref())
+    .fetch_optional(&mut *conn)
+    .await?;
+    match found {
+        Some(definition) => Err(ServiceError::not_permitted(format!(
+            "{vo_id} is a policy party of {definition}: only an administrator reads it"
+        ))),
+        None => Ok(()),
+    }
+}
+
 /// Whether the running request may write a protected party: a write with no
 /// request committer is the server's own, and a request whose roles hold the
 /// mapping's administrator role is an administrator's.
@@ -467,18 +526,24 @@ async fn holds_relationship(
 
 /// What `facts`, held by a party of `kind`, hold that is protected.
 fn protected(mapping: &BindingMapping, kind: Kind, facts: &Facts) -> Protected {
-    let mut protected = Protected {
-        policy: facts.acts_for,
-        ..Protected::default()
-    };
+    let mut protected = Protected::default();
     if let Some(template) = &facts.template {
-        protected.policy |= match kind {
+        let policy = match kind {
             Kind::Agent => mapping.agent.as_ref().is_some_and(|a| &a.template == template),
             Kind::Role => mapping.policy_roles.contains_key(template),
             _ => false,
         };
+        if policy {
+            protected.policy = Some(format!("the template {template}"));
+        }
     }
-    protected.whole = protected.policy;
+    if protected.policy.is_none()
+        && facts.acts_for
+        && let Some(archetype) = &mapping.acts_for
+    {
+        protected.policy = Some(format!("the archetype {archetype}"));
+    }
+    protected.whole = protected.policy();
     let Some(template) = &facts.template else {
         return protected;
     };
@@ -502,7 +567,7 @@ fn protected(mapping: &BindingMapping, kind: Kind, facts: &Facts) -> Protected {
                     identifier.canonical(),
                 ));
             }
-            protected.whole = facts.represents || protected.policy;
+            protected.whole = facts.represents || protected.policy();
         }
         _ => {}
     }

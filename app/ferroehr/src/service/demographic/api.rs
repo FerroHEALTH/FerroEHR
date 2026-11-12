@@ -112,6 +112,8 @@ impl FerroEhrService {
     /// deleted current version reads `Null` (→ `204`).
     ///
     /// # Errors
+    /// - [`ServiceError::Forbidden`] (`403`) — a policy party and a caller who is
+    ///   no administrator.
     /// - [`ServiceError`] `precondition_violation` — `version_at_time` does not
     ///   parse.
     /// - [`ServiceError`] mapped from `404` — unknown id, wrong kind for the route,
@@ -124,6 +126,7 @@ impl FerroEhrService {
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
         let (vo_id, version) = (address.vo_id, address.tree());
+        self.policy_read_gate(vo_id).await?;
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
         let mut resp = self.read_party(kind, vo_id, version, at).await?;
         // Attach the party's stored ITEM_TAGs for the item-tag response headers
@@ -206,10 +209,13 @@ impl FerroEhrService {
     /// The `VERSIONED_PARTY` wrapper for a party (any of the five kinds).
     ///
     /// # Errors
+    /// - [`ServiceError::Forbidden`] (`403`) — a policy party and a caller who is
+    ///   no administrator.
     /// - [`ServiceError`] mapped from `404` — the id is not a party or holds no
     ///   versions.
     /// - [`ServiceError`] on a storage/database fault reading the version spine.
     pub async fn versioned_party_get(&self, vo_id: VoId) -> Result<ServiceResponse, ServiceError> {
+        self.policy_read_gate(vo_id).await?;
         let body = self.versioned_party(vo_id).await?;
         // ITS-REST overview §"ETag and Last-Modified" derives `Last-Modified`
         // from `VERSION.commit_audit.time_committed.value`, and the container
@@ -233,12 +239,15 @@ impl FerroEhrService {
     /// History).
     ///
     /// # Errors
+    /// - [`ServiceError::Forbidden`] (`403`) — a policy party and a caller who is
+    ///   no administrator.
     /// - [`ServiceError`] mapped from `404` — the id is not a party.
     /// - [`ServiceError`] on a storage/database fault reading the version spine.
     pub async fn versioned_party_revision_history(
         &self,
         vo_id: VoId,
     ) -> Result<ServiceResponse, ServiceError> {
+        self.policy_read_gate(vo_id).await?;
         Ok(ServiceResponse::plain(
             self.party_revision_history(vo_id).await?,
         ))
@@ -248,6 +257,8 @@ impl FerroEhrService {
     /// when absent), with `ETag`/`Location` metadata.
     ///
     /// # Errors
+    /// - [`ServiceError::Forbidden`] (`403`) — a policy party and a caller who is
+    ///   no administrator.
     /// - [`ServiceError`] `precondition_violation` — `version_at_time` does not
     ///   parse.
     /// - [`ServiceError`] mapped from `404` — the id is not a party or no version
@@ -258,6 +269,7 @@ impl FerroEhrService {
         vo_id: VoId,
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
+        self.policy_read_gate(vo_id).await?;
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
         self.party_version_at_time(vo_id, at).await
     }
@@ -265,6 +277,8 @@ impl FerroEhrService {
     /// The party `ORIGINAL_VERSION` named by `version_uid`.
     ///
     /// # Errors
+    /// - [`ServiceError::Forbidden`] (`403`) — a policy party and a caller who is
+    ///   no administrator.
     /// - [`ServiceError`] mapped from `404` — the id is not a party or holds no
     ///   such version.
     /// - [`ServiceError`] on a storage/database fault or a signing failure.
@@ -273,6 +287,7 @@ impl FerroEhrService {
         vo_id: VoId,
         version: TreeId,
     ) -> Result<ServiceResponse, ServiceError> {
+        self.policy_read_gate(vo_id).await?;
         Ok(ServiceResponse::plain(
             self.party_version(vo_id, version).await?,
         ))
@@ -319,6 +334,8 @@ impl FerroEhrService {
     /// The `ITEM_TAG`s on one party.
     ///
     /// # Errors
+    /// - [`ServiceError::Forbidden`] (`403`) — a policy party and a caller who is
+    ///   no administrator.
     /// - [`ServiceError`] on a storage/database fault reading the tag store.
     pub async fn party_tags_get(
         &self,
@@ -331,6 +348,7 @@ impl FerroEhrService {
         // existing target with no tags stays an empty 200 list.
         self.ensure_party_tag_target(kind, vo_id, version.as_ref())
             .await?;
+        self.policy_read_gate(vo_id).await?;
         self.party_tags(vo_id, tag_target_tail(version.as_ref()))
             .await
     }
@@ -396,6 +414,8 @@ impl FerroEhrService {
     /// `version_at_time`. A deleted current version reads `Null` (→ `204`).
     ///
     /// # Errors
+    /// - [`ServiceError::Forbidden`] (`403`) — a policy party and a caller who is
+    ///   no administrator.
     /// - [`ServiceError`] `precondition_violation` — `version_at_time` does not
     ///   parse.
     /// - [`ServiceError`] mapped from `404` — unknown id, wrong kind, or no version
@@ -407,6 +427,7 @@ impl FerroEhrService {
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
         let (vo_id, version) = (address.vo_id, address.tree());
+        self.policy_read_gate(vo_id).await?;
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
         self.read_relationship(vo_id, version, at).await
     }
@@ -475,6 +496,8 @@ impl FerroEhrService {
     /// The `VERSIONED_OBJECT` wrapper for a relationship.
     ///
     /// # Errors
+    /// - [`ServiceError::Forbidden`] (`403`) — a policy party and a caller who is
+    ///   no administrator.
     /// - [`ServiceError`] mapped from `404` — the id is not a relationship or holds
     ///   no versions.
     /// - [`ServiceError`] on a storage/database fault reading the version spine.
@@ -482,6 +505,7 @@ impl FerroEhrService {
         &self,
         vo_id: VoId,
     ) -> Result<ServiceResponse, ServiceError> {
+        self.policy_read_gate(vo_id).await?;
         Ok(ServiceResponse::plain(
             self.versioned_relationship(vo_id).await?,
         ))
@@ -491,12 +515,15 @@ impl FerroEhrService {
     /// History).
     ///
     /// # Errors
+    /// - [`ServiceError::Forbidden`] (`403`) — a policy party and a caller who is
+    ///   no administrator.
     /// - [`ServiceError`] mapped from `404` — the id is not a relationship.
     /// - [`ServiceError`] on a storage/database fault reading the version spine.
     pub async fn party_relationship_revision_history(
         &self,
         vo_id: VoId,
     ) -> Result<ServiceResponse, ServiceError> {
+        self.policy_read_gate(vo_id).await?;
         Ok(ServiceResponse::plain(
             self.relationship_revision_history(vo_id).await?,
         ))
@@ -506,6 +533,8 @@ impl FerroEhrService {
     /// latest when absent), with `ETag`/`Location` metadata.
     ///
     /// # Errors
+    /// - [`ServiceError::Forbidden`] (`403`) — a policy party and a caller who is
+    ///   no administrator.
     /// - [`ServiceError`] `precondition_violation` — `version_at_time` does not
     ///   parse.
     /// - [`ServiceError`] mapped from `404` — the id is not a relationship or no
@@ -516,6 +545,7 @@ impl FerroEhrService {
         vo_id: VoId,
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
+        self.policy_read_gate(vo_id).await?;
         let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
         self.relationship_version_at_time(vo_id, at).await
     }
@@ -523,6 +553,8 @@ impl FerroEhrService {
     /// The relationship `ORIGINAL_VERSION` named by `version_uid`.
     ///
     /// # Errors
+    /// - [`ServiceError::Forbidden`] (`403`) — a policy party and a caller who is
+    ///   no administrator.
     /// - [`ServiceError`] mapped from `404` — the id is not a relationship or holds
     ///   no such version.
     /// - [`ServiceError`] on a storage/database fault or a signing failure.
@@ -531,8 +563,20 @@ impl FerroEhrService {
         vo_id: VoId,
         version: TreeId,
     ) -> Result<ServiceResponse, ServiceError> {
+        self.policy_read_gate(vo_id).await?;
         Ok(ServiceResponse::plain(
             self.relationship_version(vo_id, version).await?,
         ))
+    }
+
+    /// Refuses the read of the party or relationship `vo_id` when it is a
+    /// policy party and the caller is no administrator
+    /// ([`crate::party_binding::protect::check_read`]).
+    async fn policy_read_gate(&self, vo_id: VoId) -> Result<(), ServiceError> {
+        if !self.binding.names_policy() {
+            return Ok(());
+        }
+        let mut conn = self.demographic_pool.acquire().await?;
+        crate::party_binding::protect::check_read(&mut conn, &self.binding, vo_id).await
     }
 }

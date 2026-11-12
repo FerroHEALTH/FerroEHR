@@ -380,6 +380,114 @@ mandatory audience list, an `https` issuer, an algorithm set bound to its key
 source, an HMAC entropy floor, the OWASP Argon2id parameter floor, and a policy
 rule per resource kind the PEP consults.
 
+### Operational policy as demographic data
+
+Who may do what is held in the party store, not in `ferroehr.toml`, so a
+change takes effect without a restart and every change is a version with its
+committer (#5433). The classes are the openEHR RM demographic package
+(`docs/specs/openehr/RM/docs/demographic/master02-demographic_package.adoc`
+and the class pages under `RM/docs/UML/classes/org.openehr.rm.demographic.*`);
+reading them as policy is our own design, and each own-design point below
+is labelled.
+
+**What stays in the configuration.** What the server needs before it can
+reach its store or trust anything: listeners, database, TLS, telemetry,
+audit sinks, signing, the issuers with their keys and trust bounds,
+`[auth] product_scope`, `[authz.rbac] admin_role` with `role_issuers` (the
+authority that writes policy parties), the party mapping (digest-locked),
+the `provider`, the security floors (assurance, `ehr_access_default`, the
+cohort thresholds), break-glass (`emergency_access_role`,
+`emergency_purpose_codes`) and the Basic users' password hashes. A key that
+moves into the party store is removed and refused as an unknown key, like
+any other. No openEHR spec governs configuration: our own design.
+
+**The model.**
+
+- *The actor* is an `AGENT` for a system ("any kind of agent, including
+  devices, software systems", `agent.adoc`), an `ORGANISATION` for a
+  provider or a federation partner, or a `PERSON`. It is identified by a
+  `DV_IDENTIFIER` in `PARTY.details` (§Party Identification: identifiers
+  given by organisations "are treated as any other attribute of a Party");
+  a system's `AGENT` carries its OAuth 2.0 `client_id` under the token
+  issuer.
+- *What it may do* is a `ROLE` it performs (`role.adoc`: `performer`,
+  `time_validity`, "Roles should have credentials qualifying the performer
+  to perform the role") whose `CAPABILITY.credentials` hold the grant, with
+  the capability's own `time_validity` (`capability.adoc`). **Our own
+  design:** the RM defines `credentials` as "the qualifications of the
+  performer of the role for this capability", and CKM's
+  `openEHR-DEMOGRAPHIC-CAPABILITY.individual_credentials.v0` records a
+  person's registrations and qualifications, which is how the default
+  professional `ROLE` uses it. Reading a capability as an authorization
+  grant is ours, and so is the capability archetype of each policy `ROLE`.
+- *Bounds finer than a day* go in the credentials as `DV_DATE_TIME`
+  elements, because `time_validity` is `DV_INTERVAL<DV_DATE>` on `ROLE`,
+  `CAPABILITY` and `PARTY_RELATIONSHIP` (the RM 1.1.0 BMM and the 1.2.0
+  text agree). **Our own design.**
+- *On whose behalf* is an acts-for `PARTY_RELATIONSHIP` from the system's
+  `AGENT` to the provider's `ORGANISATION`, stored in the `AGENT`, its
+  source (§Party Relationships: "stored as part of the data of the PARTY
+  designated as the source"), so it changes through the `AGENT`'s update.
+- *Management* is the standard ITS-REST 1.1.0 Demographic API
+  (`docs/specs/openehr/ITS-REST/specifications/demographic.openapi.yaml`,
+  `x-status: DEVELOPMENT`): the party routes, `POST
+  /demographic/contribution`, and `versioned_party` with its
+  `revision_history` as the grant history. No endpoint of our own. The
+  container ids are minted at commit, so a `ROLE`'s `performer` names an
+  `AGENT` committed before it.
+- *Audit:* every change carries `AUDIT_DETAILS.committer`
+  (`org.openehr.rm.common.audit_details.adoc`) and is an access record of the
+  Demographic API, which serves the EHDS access record of Regulation (EU)
+  2025/327 Annex II 3.2 (`docs/law/eu/ehds/text.html`), and Annex II 3.4's
+  access rights that "take into account the origins and categories" are what
+  the grants express.
+
+**Who writes and reads a policy party.** A policy party is an `AGENT` of the
+`[authz.party_binding.agent]` template, a `ROLE` of a policy role template
+(`system_client_role`, `data_migration_role`, `federation_partner_role`,
+`privileged_role`), or a party holding a `PARTY_RELATIONSHIP` of the
+`[authz.party_binding.acts_for]` archetype (or such a relationship on our
+own relationship routes). Only a caller holding `admin_role` creates,
+updates or deletes one, on its own route or inside a demographic
+`CONTRIBUTION`; any other caller, a SCIM client included, is `403` naming
+the template or archetype. `party_binding::protect` judges the version
+before and after the write in the commit's transaction, so a policy party is
+never planted, changed, deleted or turned into an ordinary one by anyone
+else. Reads are an administrator's too: the Demographic API reads of a
+party or relationship any of whose versions is a policy party are `403` to
+any other caller (`protect::check_read`, read from the node rows, no body
+parsed); demographic AQL is tracked on #5450. **Our own design:** the RM's
+`ACCESS_CONTROL_SETTINGS` is "Currently implementation dependent" and the
+Demographic API defines no access rule for its operations.
+
+**The grant ceiling.** `[authz.grants] allowed` bounds the kinds of grant
+the party store may hold, so a compromised administrator account cannot
+grant more than the operator allows. **Our own design.**
+
+**Break-glass stays in the configuration.** Emergency access (EHDS Art.
+11(5)) must work when the party store does not answer, so
+`emergency_access_role` and `emergency_purpose_codes` stay TOML. **Our own
+design:** no specification governs break-glass when the policy store is
+down.
+
+**The definitions** ship under `deploy/definitions/policy/` with a
+`PROVENANCE.md`: the `AGENT` and the acts-for relationship adapt CKM's
+`ORGANISATION.organisation.v0` (CKM publishes no `AGENT` or
+`PARTY_RELATIONSHIP` archetype), the system-client, migration and privileged
+`ROLE`s adapt `ROLE.individual_provider.v0`, the federation-partner `ROLE`
+adapts `ROLE.healthcare_provider_organisation.v0` (its performer is an
+organisation), and each grant `CAPABILITY` is ours. The provider and the
+partner are `ORGANISATION`s of `deploy/definitions/provider/` (CKM
+`ORGANISATION.organisation.v0` with its name, provider identifier and
+address archetypes), identified by a mandatory provider identifier. The
+professional `ROLE` keeps CKM's meaning of a capability: its `CAPABILITY` is
+`CAPABILITY.individual_credentials.v0`, a clinician's registrations and
+qualifications, carries no grant kind, and is never read as a grant, since
+only the policy role templates are. Every CKM source is a v0 draft, so each
+`derived_from` names its CKM citeable id and modification time. The
+definitions load wherever the default set loads and ride every release as
+assets.
+
 ## Templates, validation, FLAT
 
 OPT 1.4 XML ingestion → `openehr-am`; WebTemplate builder (`moka`-cached);
