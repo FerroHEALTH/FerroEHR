@@ -17,12 +17,17 @@ mapping's digest with the replica leases (`fill`), and the
 configuration is `config::binding::person`; `policy` recognises the policy
 parties by archetype and carries their default definitions from
 `assets/definitions/policy/`, which `service::demographic::policy_definitions`
-seeds at boot when absent),
+seeds at boot when absent; `grants` derives the system `AGENT`s and the
+policy `ROLE` capabilities into the side table in each commit, refuses a
+capability above `[authz.grants] allowed`, and keeps them in memory per
+replica (`LiveGrants`, invalidated through `NOTIFY`) for
+`Capabilities::current()`),
 `origins` (the
 `[origins]` register of recognised data origins, EHDS Annex II 3.4),
 `policy_register` (the operational-policy admin registers: the audit category
 map, the access delay and the Cedar policy set, versioned in the clinical
-`policy_register` table and read again on every request),
+`policy_register` table, held in memory and read again when `listen::Listened`
+says a write notified),
 `licence`, `ids`, `extensions`, `banner`, `decommission` (the `ferroehr db
 erase` operation: blobs first, then `db::erase_schema` drops every schema,
 behind a confirmation naming the instance), `manufacturer` (the one source of

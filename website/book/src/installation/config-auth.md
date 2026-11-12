@@ -565,6 +565,12 @@ own accessor kind; every agreement is listed on the boot line and in
 An organisation agreement on a MyHealth@EU `contact_point` issuer refuses the
 start.
 
+### `[authz.grants]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `allowed` | list of grant kinds | `["system_client.relay", "system_client.device"]` | The kinds of grant the policy parties may hold. A `ROLE` committed with a capability of a kind this list does not name is refused with `403`, and one already stored is never honoured, so a compromised administrator account grants no more than you allow. An empty list lets the party store grant nothing; an unknown kind refuses the start. Environment: `FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated. The kinds and how a request reads its grants are on [Operational policy](../operational-policy.md#the-grant-ceiling). |
+
 ### `[authz.rbac]`
 
 | Key | Type | Default | Description |

@@ -1446,6 +1446,12 @@ trusted_systems = []
 # token (RFC 9068 §2.2). Each client belongs to one origin at most.
 #? clients = []
 
+# The kinds of grant the policy parties may hold (`[authz.grants]`).
+[authz.grants]
+# The kinds of grant the party store may hold
+# (`FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated).
+allowed = ["system_client.relay", "system_client.device"]
+
 # The openEHR REST API: the base path, the system identifier, the `OPTIONS`
 # identity, the `OpenAPI` UI, CORS, the clinical body tier and the ADMIN and
 # terminology groups.

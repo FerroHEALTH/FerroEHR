@@ -243,6 +243,9 @@ pub struct FerroEhrService {
     /// under; empty in [`Self::new`], which derives no row, so every login is
     /// unbound until the mapping is installed.
     pub(in crate::service) binding: Arc<crate::party_binding::BindingMapping>,
+    /// The policy grants in force on the party pool, under the default
+    /// `[authz.grants] allowed` until the binary sets the configured one.
+    pub(in crate::service) grants: Arc<crate::party_binding::grants::live::LiveGrants>,
     /// Who may import and which wrapped committers an import may carry;
     /// [`Self::new`] lets every caller import with no wrapped-committer rule
     /// beyond its own issuer.
@@ -307,6 +310,9 @@ impl FerroEhrService {
             require_category_map: false,
             party_templates: Arc::default(),
             binding: Arc::default(),
+            grants: Arc::new(crate::party_binding::grants::live::LiveGrants::new(
+                pools.party.clone(),
+            )),
             import_policy: Arc::default(),
         }
     }
@@ -382,6 +388,9 @@ impl FerroEhrService {
     /// the same schema separation over the clinical credential.
     #[must_use]
     pub fn with_demographic_pool(mut self, pool: PgPool) -> Self {
+        let grants = crate::party_binding::grants::live::LiveGrants::new(pool.clone());
+        grants.set_ceiling((*self.grants.ceiling()).clone());
+        self.grants = Arc::new(grants);
         self.demographic_pool = pool;
         self
     }
@@ -573,6 +582,7 @@ impl FerroEhrService {
             outbox_enabled: self.outbox_enabled,
             skip_identical_resend: self.skip_identical_resend,
             binding: &self.binding,
+            grants: &self.grants,
             access_delay: self.registers.access_delay().policy.clone(),
             direct_origin: self.origins.direct_origin(
                 crate::versioning::committer::current_committer()

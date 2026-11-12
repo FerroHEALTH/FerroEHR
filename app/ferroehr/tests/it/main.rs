@@ -94,6 +94,7 @@ mod party_binding_source;
 mod party_mapping;
 mod party_mapping_templates;
 mod persistence;
+mod policy_grants;
 mod policy_parties;
 mod privacy_leak;
 mod privacy_policy;

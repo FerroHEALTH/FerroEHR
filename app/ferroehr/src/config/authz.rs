@@ -300,6 +300,53 @@ impl AbacConfig {
     }
 }
 
+/// The ceiling on what the policy parties may grant (`[authz.grants]`).
+///
+/// A grant is a `CAPABILITY` of a policy `ROLE` in the party store, which an
+/// administrator manages through the Demographic API. This key is the trust
+/// bound the store cannot raise: a commit of a capability of a kind it does
+/// not list is refused, and one already stored is never honoured, so a
+/// compromised administrator account grants no more than the operator
+/// allows. No openEHR spec gives a capability an authorization meaning: our
+/// own design.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(default, deny_unknown_fields)]
+pub struct GrantsConfig {
+    /// The kinds of grant the party store may hold
+    /// (`FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated).
+    ///
+    /// The kinds are `system_client.relay`, `system_client.device`,
+    /// `data_migration`, `federation_partner.person`,
+    /// `federation_partner.organisation`, `privileged.subject_audit`,
+    /// `privileged.access_service`, `privileged.identifier_reader` and
+    /// `privileged.import`. The default allows only the two system client
+    /// kinds, which let a system write the templates its grant names and
+    /// nothing else: a migration, a federation agreement and every privilege
+    /// reach data beyond one system's own writes, so each is allowed by name.
+    /// An empty list lets the store grant nothing.
+    pub allowed: Vec<crate::party_binding::grants::kind::GrantKind>,
+}
+
+impl Default for GrantsConfig {
+    fn default() -> Self {
+        Self {
+            allowed: vec![
+                crate::party_binding::grants::kind::GrantKind::SystemClientRelay,
+                crate::party_binding::grants::kind::GrantKind::SystemClientDevice,
+            ],
+        }
+    }
+}
+
+impl GrantsConfig {
+    /// The ceiling these kinds set.
+    #[must_use]
+    pub fn ceiling(&self) -> crate::party_binding::grants::kind::GrantCeiling {
+        crate::party_binding::grants::kind::GrantCeiling::new(self.allowed.iter().copied())
+    }
+}
+
 /// Authorization configuration: the coarse RBAC gate plus the opt-in ABAC
 /// policy layer.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -326,6 +373,8 @@ pub struct AuthzConfig {
     /// period and an access rule may name (`[[authz.origin]]`, EHDS Annex II
     /// 3.4).
     pub origin: Vec<crate::origins::RegisteredOrigin>,
+    /// The kinds of grant the policy parties may hold (`[authz.grants]`).
+    pub grants: GrantsConfig,
     /// Retired in v5.7.0: the `[authz.professional]` table, refused at load.
     #[serde(skip_serializing)]
     pub professional: ferrohealth_config::removed::Removed,

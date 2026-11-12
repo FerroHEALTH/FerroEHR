@@ -23,13 +23,13 @@ pub mod listen;
 
 use std::fmt;
 use std::str::FromStr;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, PoisonError, RwLock};
 
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::policy_register::access_delay::{AccessDelayPolicy, AccessDelayRegister};
+use crate::policy_register::listen::{CHANNEL, Listened};
 use crate::storage::error::StorageError;
 use crate::storage::policy_register as store;
 use crate::system_log::categories::{CategoryMapConfig, Classifier};
@@ -152,14 +152,9 @@ pub struct LiveRegisters {
     cedar_check: RwLock<Option<CedarCheck>>,
     /// Serializes the reads that install a new version.
     installing: tokio::sync::Mutex<()>,
-    /// Whether the listener ([`listen`]) is connected, so a request may trust
-    /// the registers in force until a notification marks them stale.
-    listening: AtomicBool,
-    /// Whether a notification arrived that no read has made up yet.
-    stale: AtomicBool,
-    /// The notifications received, and the wake of a task waiting on one.
-    notified: AtomicU64,
-    wake: tokio::sync::Notify,
+    /// The listener on [`CHANNEL`], which says when the registers in force
+    /// must be read again.
+    listened: Arc<Listened>,
 }
 
 impl fmt::Debug for LiveRegisters {
@@ -200,6 +195,7 @@ impl LiveRegisters {
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
         Self {
+            listened: Arc::new(Listened::new(pool.clone(), CHANNEL)),
             pool,
             categories: RwLock::new(Arc::new(CategoriesInForce {
                 version: 0,
@@ -218,10 +214,6 @@ impl LiveRegisters {
             audit: RwLock::new(None),
             cedar_check: RwLock::new(None),
             installing: tokio::sync::Mutex::new(()),
-            listening: AtomicBool::new(false),
-            stale: AtomicBool::new(false),
-            notified: AtomicU64::new(0),
-            wake: tokio::sync::Notify::new(),
         }
     }
 
@@ -272,11 +264,17 @@ impl LiveRegisters {
         }
     }
 
-    /// Whether the listener is connected; while it is not, every request reads
-    /// the registers.
+    /// The pool the registers are stored in.
     #[must_use]
-    pub fn is_listening(&self) -> bool {
-        self.listening.load(Ordering::Acquire)
+    pub(crate) fn pool(&self) -> &PgPool {
+        &self.pool
+    }
+
+    /// The listener that says when the registers in force must be read
+    /// again; [`Listened::spawn_listener`] starts it.
+    #[must_use]
+    pub fn listened(&self) -> &Arc<Listened> {
+        &self.listened
     }
 
     /// Read the registers when a notification marked them stale or the
@@ -286,16 +284,10 @@ impl LiveRegisters {
     /// # Errors
     /// As [`Self::refresh`].
     pub async fn refresh_if_stale(&self) -> Result<(), RegisterError> {
-        if self.must_read() {
+        if self.listened.must_read() {
             self.refresh().await?;
         }
         Ok(())
-    }
-
-    /// The pool the registers are stored in.
-    #[must_use]
-    pub(crate) fn pool(&self) -> &PgPool {
-        &self.pool
     }
 
     /// Read the newest stored version of every register, and install each one

@@ -105,6 +105,8 @@ pub(crate) struct Facts {
     pub(crate) performer: Option<String>,
     /// The `time_validity` of a `ROLE`.
     pub(crate) validity: Option<Value>,
+    /// What a policy `AGENT` or `ROLE` holds that the grant rows read.
+    pub(crate) grants: super::grants::derive::GrantFacts,
 }
 
 impl Facts {
@@ -118,6 +120,7 @@ impl Facts {
             .map(canonical_key);
         let mut facts = Self {
             template,
+            grants: super::grants::derive::GrantFacts::of(kind, body),
             ..Self::default()
         };
         facts.relationships(kind, body, mapping);

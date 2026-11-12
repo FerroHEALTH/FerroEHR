@@ -60,9 +60,9 @@ async fn replica(pool: &PgPool, abac: bool) -> (Arc<FerroEhrService>, Router) {
 /// Start `svc`'s register listener, as the binary does at boot, and wait
 /// until it is connected.
 async fn listening(svc: &Arc<FerroEhrService>) {
-    svc.policy_registers().spawn_listener();
+    svc.policy_registers().listened().spawn_listener();
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
-    while !svc.policy_registers().is_listening() {
+    while !svc.policy_registers().listened().is_listening() {
         assert!(
             std::time::Instant::now() < deadline,
             "the register listener did not connect"
@@ -76,6 +76,7 @@ async fn listening(svc: &Arc<FerroEhrService>) {
 async fn delivered(svc: &Arc<FerroEhrService>, seen: u64) {
     assert!(
         svc.policy_registers()
+            .listened()
             .notified_after(seen, Duration::from_secs(10))
             .await,
         "the register write's notification did not arrive"
@@ -246,7 +247,7 @@ async fn a_category_change_applies_on_the_next_request() {
         StatusCode::BAD_REQUEST,
         "no such category yet: {body}"
     );
-    let seen = b.policy_registers().notifications();
+    let seen = b.policy_registers().listened().notifications();
     let (status, body) = write(
         &writer,
         "audit-categories",
@@ -291,7 +292,7 @@ async fn an_access_delay_change_applies_on_the_next_request() {
     let (status, body) = hold(reader.clone()).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "the delay is off: {body}");
     let on = json!({ "enabled": true, "categories": [], "max_delay": "72h" });
-    let seen = b.policy_registers().notifications();
+    let seen = b.policy_registers().listened().notifications();
     let (status, body) = write(&writer, "access-delay", "\"0\"", &on).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     delivered(&b, seen).await;
@@ -301,7 +302,7 @@ async fn an_access_delay_change_applies_on_the_next_request() {
         StatusCode::NOT_FOUND,
         "the delay is on, so the hold reaches the EHR it names: {body}"
     );
-    let seen = b.policy_registers().notifications();
+    let seen = b.policy_registers().listened().notifications();
     let (status, body) = write(
         &writer,
         "access-delay",
@@ -342,7 +343,7 @@ async fn a_cedar_change_applies_on_the_next_request_and_a_bad_set_is_refused() {
     assert_eq!(status, StatusCode::FORBIDDEN, "no policy permits: {body}");
 
     let permit = json!({ "policies": "permit(principal, action, resource);" });
-    let seen = b.policy_registers().notifications();
+    let seen = b.policy_registers().listened().notifications();
     let (status, body) = write(&writer, "cedar-policies", "\"0\"", &permit).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     delivered(&b, seen).await;
@@ -400,7 +401,7 @@ async fn a_lost_listener_falls_back_to_a_read_on_every_request() {
             .expect("drop a listener's connection");
     }
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
-    while b.policy_registers().is_listening() {
+    while b.policy_registers().listened().is_listening() {
         assert!(
             std::time::Instant::now() < deadline,
             "the replica did not notice its lost listener"
