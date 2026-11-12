@@ -520,8 +520,9 @@ impl FerroEhrConfig {
                 .flat_map(|scim| scim.errors(resolved.as_ref()))
                 .map(ConfigError::semantic),
         );
-        if let Some(named) = &self.auth.smart.described_issuer
+        if self.auth.smart.discovery
             && let Some(resolved) = &resolved
+            && let Some(named) = &resolved.described_issuer
         {
             errors.extend(described_issuer_error(named, resolved).map(ConfigError::semantic));
         }
@@ -618,26 +619,24 @@ fn multimedia_endpoint_errors(
     }
 }
 
-/// The refusal of `[auth.smart] described_issuer` when it names no `[auth]`
+/// The refusal of `[auth] described_issuer` when `ferrohealth-smart`'s
+/// `describe` refuses it before any issuer is read: it names no `[auth]`
 /// issuer, or a `machines` issuer, which signs client credentials tokens only
 /// and so serves no user launch (SMART App Launch 2.2.0, Conformance,
-/// §Metadata: `authorization_endpoint`). Which issuer a resource server
-/// describes is not governed by SMART: our own design.
+/// §Metadata: `authorization_endpoint`).
 fn described_issuer_error(
     named: &ferrohealth_secret::secret_url::SecretUrl,
     resolved: &ferrohealth_smart::config::Resolved,
 ) -> Option<String> {
-    match resolved.kinds.get(named.expose()) {
-        None => Some(format!(
-            "auth.smart.described_issuer names {named}, which is no [auth] issuer"
-        )),
-        Some(ferrohealth_smart::kind::IssuerKind::Machines) => Some(format!(
-            "auth.smart.described_issuer names the machines issuer {named}: a machines issuer \
-             signs client credentials tokens only, so the discovery document cannot send a user \
-             launch to it; name a persons, patients or federation issuer"
-        )),
-        Some(_) => None,
-    }
+    use ferrohealth_smart::resource::described::{Candidate, Metadata, describe};
+    // NOTE: no issuer's metadata is read at load, so each is offered as available and the start judges it.
+    let candidates = resolved
+        .kinds
+        .iter()
+        .map(|(issuer, kind)| Candidate::new(issuer.clone(), *kind, Metadata::Available, ()));
+    describe(candidates, Some(named))
+        .err()
+        .map(|e| format!("auth.described_issuer is refused: {e}"))
 }
 
 #[cfg(test)]
@@ -647,7 +646,7 @@ mod tests {
 
     use super::*;
 
-    /// `[auth.smart] described_issuer` names an `[auth]` issuer that serves a
+    /// `[auth] described_issuer` names an `[auth]` issuer that serves a
     /// user launch: an unknown issuer and a `machines` issuer, which signs
     /// client credentials tokens only, are refused before any issuer is read,
     /// and a `persons` issuer passes.
@@ -666,7 +665,7 @@ mod tests {
         let unknown =
             described_issuer_error(&SecretUrl::new("https://elsewhere.example"), &resolved)
                 .expect("an unknown issuer is refused");
-        assert!(unknown.contains("which is no [auth] issuer"), "{unknown}");
+        assert!(unknown.contains("which is no trusted issuer"), "{unknown}");
         let machines =
             described_issuer_error(&SecretUrl::new("https://as.example/machines"), &resolved)
                 .expect("a machines issuer is refused");
