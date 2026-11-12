@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1203,7 +1203,7 @@ Not to be used to record details related to the overall findings, context or tec
     <term_definitions language="en">
       <items code="at0.0.1">
         <items id="text">Adnexal mass</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.0.13">
         <items id="text">Number of papillary projections</items>
@@ -1282,7 +1282,7 @@ Not to be used to record details related to the overall findings, context or tec
       </items>
       <items code="at0.1">
         <items id="text">Lesion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.10">
         <items id="text">Texture</items>
@@ -1321,7 +1321,7 @@ Not to be used to record details related to the overall findings, context or tec
       <items code="at0.2">
         <items id="text">Label</items>
         <items id="description">A label for the lesion.</items>
-        <items id="comment">Use to differentiate one lesion from another when there is more than one present within the context of the same body structure or region. </items>
+        <items id="comment">Use to differentiate one lesion from another when there is more than one present within the context of the same body structure or region.</items>
       </items>
       <items code="at0.20">
         <items id="text">Vascularisation</items>
@@ -1390,7 +1390,7 @@ Not to be used to record details related to the overall findings, context or tec
     <term_definitions language="nb">
       <items code="at0.0.1">
         <items id="text">Oppfylning i adneks</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.0.13">
         <items id="text">Antall papillære utspring</items>
@@ -1464,7 +1464,7 @@ Not to be used to record details related to the overall findings, context or tec
       </items>
       <items code="at0.1">
         <items id="text">*Lesion (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.10">
         <items id="text">Tekstur</items>
@@ -1577,7 +1577,7 @@ Not to be used to record details related to the overall findings, context or tec
     <term_definitions language="de">
       <items code="at0.0.1">
         <items id="text">Adnexal mass</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.0.13">
         <items id="text">Number of papillary projections</items>
@@ -1652,7 +1652,7 @@ Not to be used to record details related to the overall findings, context or tec
       </items>
       <items code="at0.1">
         <items id="text">*Lesion (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.10">
         <items id="text">Beschaffenheit</items>
@@ -1774,4 +1774,3 @@ Not to be used to record details related to the overall findings, context or tec
     </term_bindings>
   </ontology>
 </archetype>
-

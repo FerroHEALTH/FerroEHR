@@ -1,0 +1,288 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=cc50d8ab-ed2c-482e-97b4-987039240e36; build_uid=423b6aae-b302-4f67-857a-7f07b49c76e5)
+    openEHR-EHR-CLUSTER.medication_preparation.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"NEHTA">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2015-10-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Helse Bergen HF, Norway (Editor)", "John Bennett, NEHTA, Australia", "Sharmila Biswas, Australia", "Stephen Chu, NEHTA, Australia (Editor)", "Matthew Cordell, NEHTA, Australia", "Gail Easterbrook, Flinders Medical Centre, Australia", "David Evans, Queensland Health, Australia", "Sarah Gaunt, NEHTA, Australia", "Trina Gregory, cpc, Australia", "Sam Heard, Ocean Informatics, Australia (Editor)", "Mary Kelaher, NEHTA, Australia", "Robert L'egan, NEHTA, Australia", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Susan McIndoe, Royal District Nursing Service, Australia", "David McKillop, NEHTA, Australia", "Chris Mitchell, RACGP, Australia", "Stewart Morrison, NEHTA, Australia", "Chris Pearce, Melbourne East GP Network, Australia", "Camilla Preeston, Royal Australian College of General Practitioners, Australia", "Margaret Prichard, NEHTA, Australia", "Cathy Richardson, NEHTA, Australia", "Robyn Richards, NEHTA - Clinical Terminology, Australia", "John Taylor, NEHTA, Australia", "Richard Townley-O'Neill, NEHTA, Australia (Editor)", "Kylie Young, The Royal Australian College of General Practitioners, Australia", "Ian McNicoll, freshEHR Clinical Informatics Ltd., UK">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"openEHR Foundation Medication archetypes http://www.openehr.org/knowledge">
+        ["2"] = <"NEHTA's Therapeutic Good Use Data Group from the NEHTA Website http://www.nehta.gov.au">
+        ["3"] = <"Intermountain Healthcare Medication order model, Personal Communication to Sam Heard by Dr Stan Huff.">
+        ["4"] = <"Royal Australian College of General Practitioners. Fact Sheet: Medicines List. 2010.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D03646BED14AAB723C1DD0B10FED606F">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of a medication preparation, including ,where necessary, details of mutliple ingredients, in the context of an infusion or ad-hoc (extemperaneous) preparation. The majority of dose-based prescriptions will have their precise preparation determined by available ward stock, or by pharmacy supply, while with product-based prescribing, the medication name carries details of the form and strength of the preparation.">
+            keywords = <"medication", "order", "prescribe", "therapy", "substance", "drug", "therapeutic", "otc", "therapeutic good", "ad-hoc", "extemperaneous">
+            use = <"For recording details of a medication preparation with in the context of the original medication order INSTRUCTION and carrying the prescriber's intent, or in the context of a medication ACTION where it serves of a record of the prepartion actually supplied.">
+            misuse = <"Use in pharmacy stock-control is out-of-scope of the design of this archetype.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] occurrences matches {0..1} matches {    -- Medication preparation
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0071] matches {    -- Preparation form
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0115] occurrences matches {0..1} matches {    -- Preparation strength
+                value matches {
+                    DV_QUANTITY[at9003] matches {
+                        property matches {[at9000]}    -- Qualified real
+                        magnitude matches {|>=0.0|}
+                        units matches {"1"}
+                    }
+                }
+            }
+            ELEMENT[at0116] occurrences matches {0..1} matches {    -- Preparation strength unit
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            CLUSTER[at0117] occurrences matches {0..1} matches {    -- Preparation strength diluent
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0124] occurrences matches {0..1} matches {    -- Diluent amount
+                        value matches {
+                            DV_QUANTITY[at9005] matches {
+                                property matches {[at9000]}    -- Qualified real
+                                magnitude matches {|>=0.0|}
+                                units matches {"1"}
+                            }
+                        }
+                    }
+                    ELEMENT[at0125] occurrences matches {0..1} matches {    -- Diluent unit
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0142] occurrences matches {0..1} matches {    -- Compound category
+                value matches {
+                    DV_CODED_TEXT[at9018] matches {
+                        defining_code matches {[ac9017]}    -- Compound category (synthesised)
+                    }
+                }
+            }
+            CLUSTER[at0126] matches {    -- Ingredient
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0132] occurrences matches {0..1} matches {    -- Ingredient name
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0138] occurrences matches {0..1} matches {    -- Ingredient preparation
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.medication_preparation(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                    }
+                    ELEMENT[at0139] occurrences matches {0..1} matches {    -- Ingredient amount
+                        value matches {
+                            DV_QUANTITY[at9019] matches {
+                                property matches {[at9000]}    -- Qualified real
+                                magnitude matches {|>=0.0|}
+                                units matches {"1"}
+                            }
+                        }
+                    }
+                    ELEMENT[at0140] occurrences matches {0..1} matches {    -- Ingredient amount unit
+                        value matches {
+                            DV_TEXT[at9020]
+                        }
+                    }
+                    ELEMENT[at0127] occurrences matches {0..1} matches {    -- Role
+                        value matches {
+                            DV_CODED_TEXT[at9015] matches {
+                                defining_code matches {[ac9001]}    -- Role (synthesised)
+                            }
+                            DV_TEXT[at9016]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0133] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9017]
+                }
+            }
+            allow_archetype CLUSTER[at0141] occurrences matches {0..1} matches {    -- Preparation details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Medication preparation">
+                description = <"The strength and form of the overall preparation, including details of specific ingredients where required by an ad-hoc preparation or infusion.">
+                comment = <"This is commonly carried as part of the medicine name and provided by the medicines terminology but in some cases must be specified separately.">
+            >
+            ["at0071"] = <
+                text = <"Preparation form">
+                description = <"The formulation or presentation of the medication preparation.">
+                comment = <"e.g. 'Tablet', 'Capsule', 'Liquid'.">
+            >
+            ["at0074"] = <
+                text = <"Ingredient">
+                description = <"Details of an ingredient used to make up a mixed preparation or infuson.">
+                comment = <"This is not normally required other than where an ad-hoc mixture of infusion is being described.">
+            >
+            ["at0080"] = <
+                text = <"Therapeutic">
+                description = <"The chemical has a known and desired effect which is positive.">
+            >
+            ["at0081"] = <
+                text = <"Electrolyte">
+                description = <"This ingredient is an electrolyte.">
+            >
+            ["at0082"] = <
+                text = <"Toxic">
+                description = <"This chemical is toxic and has no therapeutic effect.">
+            >
+            ["at0083"] = <
+                text = <"Adjuvant">
+                description = <"The chemical is active but aids the therapeutic effect of another ingredient.">
+            >
+            ["at0084"] = <
+                text = <"Diluent">
+                description = <"Inert diluent.">
+            >
+            ["at0085"] = <
+                text = <"Propellent">
+                description = <"Inert propellent.">
+            >
+            ["at0086"] = <
+                text = <"Preservative">
+                description = <"The ingredient is present to prolong the life of the substance.">
+            >
+            ["at0087"] = <
+                text = <"Colouring">
+                description = <"The ingredient is used to colour the substance.">
+            >
+            ["at0115"] = <
+                text = <"Preparation strength">
+                description = <"The value of the strength of medication as a real number.">
+                comment = <" e.g. 1, 1.5, 0.125">
+            >
+            ["at0116"] = <
+                text = <"Preparation strength unit">
+                description = <"The dose unit of the overall preparation strength.">
+                comment = <"e.g 'tablet','mg'. Often coded using a reference terminology such as SNOMED CT.">
+            >
+            ["at0117"] = <
+                text = <"Preparation strength diluent">
+                description = <"The strength of any diluent used as part of the preparation.">
+                comment = <"e.g. Where a preparation strength is described as '5mg in 10ml', '10ml' is the diluent.">
+            >
+            ["at0124"] = <
+                text = <"Diluent amount">
+                description = <"The value of the amount of diluent as a real number.">
+                comment = <" e.g 1, 1.5, 0.125 or 1-2, 12.5-20.5">
+            >
+            ["at0125"] = <
+                text = <"Diluent unit">
+                description = <"The unit for the preparation diluent.">
+                comment = <"e.g. 'ml'.">
+            >
+            ["at0126"] = <
+                text = <"Ingredient">
+                description = <"Details of an ingredient used to make up a mixed preparation or infuson.">
+                comment = <"This is not normally required other than where an ad-hoc mixture or infusion is being described.">
+            >
+            ["at0127"] = <
+                text = <"Role">
+                description = <"The role of the ingredient within the mixture or infusion.">
+            >
+            ["at0132"] = <
+                text = <"Ingredient name">
+                description = <"The name of the medicine ingredient. This item should be coded if possible.">
+                comment = <"e.g. ">
+            >
+            ["at0133"] = <
+                text = <"Description">
+                description = <"A text description of the preparation  where it is not possible to describe this fully using numerical strengths and amounts.">
+            >
+            ["at0138"] = <
+                text = <"Ingredient preparation">
+                description = <"Details of ingredient preparation.">
+            >
+            ["at0139"] = <
+                text = <"Ingredient amount">
+                description = <"The value of the amount of the ingredient as a real number.">
+                comment = <" e.g. 1, 1.5, 0.125">
+            >
+            ["at0140"] = <
+                text = <"Ingredient amount unit">
+                description = <"The dose unit of the ingredient amount.">
+                comment = <"e.g 'tablet','mg'. Often coded using a reference terminology such as SNOMED CT.">
+            >
+            ["at0141"] = <
+                text = <"Preparation details">
+                description = <"Further details about the medicatin preparation.">
+                comment = <"e.g. detailed information about the drug class or intended routes.">
+            >
+            ["at0142"] = <
+                text = <"Compound category">
+                description = <"The nature of a compound product, consisting of multiple ingredients.">
+                comment = <"e.g co-codamol is a combination product, wile 50% white soft paraffin + 50% white soft paraffin is an ad-hoc mixture, whose composition is fully specified within the order. ">
+            >
+            ["at0143"] = <
+                text = <"Ad-hoc mixture">
+                description = <"The compound is composed of a mixture of ingredients specificied within this order.">
+            >
+            ["at0144"] = <
+                text = <"Combination product">
+                description = <"The preparation consists of a number of ingredients which are pre-combined by the manufacturer.">
+            >
+            ["at9000"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9017"] = <
+                text = <"Compound category (synthesised)">
+                description = <"The nature of a compound product, consisting of multiple ingredients. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Role (synthesised)">
+                description = <"The role of the ingredient within the mixture or infusion. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0080", "at0081", "at0082", "at0083", "at0084", "at0085", "at0086", "at0087", "at0074">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0143", "at0144">
+        >
+    >

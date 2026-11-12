@@ -1,0 +1,52 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3c76378e-5c86-44bc-962c-4d3efe5b2fbb; build_uid=f2ff7a49-98d0-4d88-9407-d7e29ffe5041)
+    openEHR-EHR-CLUSTER.tnm_staging_7th-breast.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.tnm_staging_7th.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics Scotland">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"27/07/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie Ocean Informatics Australia", "Sam Heard Ocean Informatics Australia", "Koray Atalag, University of Auckland, New Zealand">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Sobin LH. TNM Classification of Malignant Tumours 7th Edition.  John Wiley and Sons; 2009.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"E74D3BE87144A52EB04DE72B960C5A2E">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the classification and grading of breast cancer using the TNM classification 7th Edition.">
+            keywords = <"tumour", "TNM", "malignancy", "cancer", "staging", "classification", "grade", "grading", "stage", "lymph node", "metastasis", "breast">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1]    -- Tumour - Breast Cancer TNM staging 7th Edition
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Tumour - Breast Cancer TNM staging 7th Edition">
+                description = <"For the classification and grading of breast cancer using the TNM classification 7th Edition.">
+            >
+        >
+    >

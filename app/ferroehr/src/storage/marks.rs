@@ -586,27 +586,41 @@ pub async fn retention_policies(pool: &PgPool) -> Result<Vec<RetentionPolicyRow>
         .collect()
 }
 
-/// Replace the boot mirror of the `[audit.categories]` map (`category_map`)
-/// with `rows`, `(key kind, case-folded key, category)`, in one transaction.
-///
-/// The table lock serializes replicas booting at once, so the mirror is always
-/// one map whole. No openEHR spec governs the map — our own design/extension.
+/// Replace the mirror of the audit category register (`category_map`) with
+/// `rows`, `(key kind, case-folded key, category)`, in one transaction.
 ///
 /// # Errors
-/// [`StorageError::Database`] on a driver failure, including the CHECKs
-/// refusing a key kind, an unfolded key or a category spelling the register
-/// does not know.
+/// As [`replace_category_map_on`].
 pub async fn replace_category_map(
     pool: &PgPool,
     rows: &[(&str, String, String)],
 ) -> Result<(), StorageError> {
     let mut conn = acquire(pool).await?;
     let mut tx = conn.begin().await?;
+    replace_category_map_on(&mut tx, rows).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Replace the mirror of the audit category register (`category_map`) with
+/// `rows` on `conn`, inside the caller's transaction.
+///
+/// The table lock serializes replicas writing at once, so the mirror is always
+/// one map whole. No openEHR spec governs the map — our own design/extension.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure, including the CHECKs
+/// refusing a key kind, an unfolded key or a category spelling the register
+/// does not know.
+pub async fn replace_category_map_on(
+    conn: &mut PgConnection,
+    rows: &[(&str, String, String)],
+) -> Result<(), StorageError> {
     sqlx::query("LOCK TABLE category_map IN SHARE ROW EXCLUSIVE MODE")
-        .execute(&mut *tx)
+        .execute(&mut *conn)
         .await?;
     sqlx::query("DELETE FROM category_map")
-        .execute(&mut *tx)
+        .execute(&mut *conn)
         .await?;
     let kinds: Vec<&str> = rows.iter().map(|(kind, _, _)| *kind).collect();
     let keys: Vec<&str> = rows.iter().map(|(_, key, _)| key.as_str()).collect();
@@ -618,9 +632,8 @@ pub async fn replace_category_map(
     .bind(kinds)
     .bind(keys)
     .bind(categories)
-    .execute(&mut *tx)
+    .execute(&mut *conn)
     .await?;
-    tx.commit().await?;
     Ok(())
 }
 

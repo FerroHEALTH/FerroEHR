@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -33,9 +33,7 @@
       <purpose>Use to capture and report Oxford Shoulder Questionnaire (OSS) score details.</purpose>
       <use>Use to capture and report Oxford Shoulder Questionnaire score.&#xD;
 &#xD;
-While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists. &#xD;
-&#xD;
-</use>
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists.</use>
       <misuse>Not to be used unless the terms of copyright have been observed (if a copyright exists).</misuse>
       <copyright>© Clinical Models UK, Apperta Foundation</copyright>
     </details>
@@ -1656,7 +1654,7 @@ Have you had any trouble dressing yourself because of your shoulder?</items>
       </items>
       <items code="at0020">
         <items id="text">3 Vehicle use</items>
-        <items id="description">Patient-reported extent to which they are able to access vehicles due to pain in their shoulder. </items>
+        <items id="description">Patient-reported extent to which they are able to access vehicles due to pain in their shoulder.</items>
         <items id="comment">Questionnaire wording:&#xD;
 Have you had any trouble getting in and out of a car or using public transport because of your shoulder?</items>
       </items>
@@ -1949,4 +1947,3 @@ Have you been troubled by pain from your shoulder in bed at night?</items>
     </term_definitions>
   </ontology>
 </archetype>
-

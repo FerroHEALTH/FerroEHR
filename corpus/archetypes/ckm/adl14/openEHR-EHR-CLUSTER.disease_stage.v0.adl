@@ -17,7 +17,7 @@ description
 			language = <[ISO_639-1::en]>
 			purpose = <"To record details about the stage or phase of progression of a diagnosis.">
 			use = <"Use to record details about the stage or phase of progression of a diagnosis.">
-			misuse = <"">
+			misuse = <"Not to be used to record formal disease-specific staging or classification systems, for example those from FIGO, TNM or KDIGO. Use dedicated archetypes that explicitly model those systems.">
 			copyright = <"© openEHR Foundation">
 		>
 	>
@@ -30,7 +30,7 @@ description
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
 		["MD5-CAM-1.0.1"] = <"7027936068D610D8D22A1490CB193D60">
-		["build_uid"] = <"9c2a6717-f7d7-4ba9-b9eb-a76cb5ee35ae">
+		["build_uid"] = <"6e9c6cbd-1977-4ec9-9f2f-c49f37457bd8">
 		["revision"] = <"0.0.1-alpha">
 	>
 
@@ -49,7 +49,6 @@ definition
 			}
 		}
 	}
-
 
 ontology
 	term_definitions = <

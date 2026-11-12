@@ -1,0 +1,240 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.exam-nose.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.exam.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"02/11/2007">
+    >
+    other_contributors = <"Heather Leslie, Ocean Informatics, Australia", ...>
+    lifecycle_state = <"Rejected">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"DEC6EFA2C01EDB9C9BBDB2F812AAC7B5">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A generic cluster for recording findings on physical examination of the nose.">
+            keywords = <"examination", "physical", "nose", "turbinates", "smell">
+            use = <"To recording findings on physical examination of the nose, generally within an OBSERVATION archetype.">
+            misuse = <"">
+            copyright = <"copyright (c) 2010 openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Examination of nose
+        items matches {
+            CLUSTER[at0004] matches {
+                items matches {
+                    ELEMENT[at0005.1] matches {    -- Normal statement
+                        value matches {
+                            DV_CODED_TEXT[at9004.1] matches {
+                                defining_code matches {[at0.39]}    -- Nose examination normal
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0008.1] matches {    -- Findings
+                items matches {
+                    CLUSTER[at0.11] occurrences matches {0..1} matches {    -- External
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0.10] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_CODED_TEXT[at0.9000] matches {
+                                        defining_code
+                                    }
+                                }
+                            }
+                            allow_archetype CLUSTER[at0009] matches {
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam-generic(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.inspection(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.palpation(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.physical_properties(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.exam-bone(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.inspection-trauma(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            CLUSTER[at0.34] occurrences matches {0..1} matches {    -- Nares
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0.35] occurrences matches {0..1} matches {    -- Nares patent?
+                                        value matches {
+                                            DV_BOOLEAN[at0.9001] matches {
+                                                value matches {True, False}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0.38] occurrences matches {0..1} matches {    -- Nasal breathing?
+                                        value matches {
+                                            DV_BOOLEAN[at0.9002] matches {
+                                                value matches {True, False}
+                                            }
+                                        }
+                                    }
+                                    use_node ELEMENT[at0.9003] occurrences matches {0..1} /items[at0008.1]/items[at0.11]/items[at0.10]    -- Nares (synthesised)
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0.12] occurrences matches {0..1} matches {    -- Internal
+                        items cardinality matches {1..*; unordered} matches {
+                            use_node ELEMENT[at0.9004] occurrences matches {0..1} /items[at0008.1]/items[at0.11]/items[at0.10]    -- Internal (synthesised)
+                            CLUSTER[at0.14] occurrences matches {0..1} matches {    -- Nasal septum
+                                items cardinality matches {1..*; unordered} matches {
+                                    use_node ELEMENT[at0.9005] occurrences matches {0..1} /items[at0008.1]/items[at0.11]/items[at0.10]    -- Nasal septum (synthesised)
+                                    ELEMENT[at0.16] occurrences matches {0..1} matches {    -- Septal haematoma
+                                        value matches {
+                                            DV_BOOLEAN[at0.9006] matches {
+                                                value matches {True, False}
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0.40] occurrences matches {0..1} matches {    -- Septal detail
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.inspection\.v1\..*|openEHR-EHR-CLUSTER\.inspection-trauma\.v1\..*/}
+                                    }
+                                }
+                            }
+                            CLUSTER[at0.18] occurrences matches {0..1} matches {    -- Nasal mucosa
+                                items cardinality matches {1..*; unordered} matches {
+                                    use_node ELEMENT[at0.9007] occurrences matches {0..1} /items[at0008.1]/items[at0.11]/items[at0.10]    -- Nasal mucosa (synthesised)
+                                    allow_archetype CLUSTER[at0.41] occurrences matches {0..1} matches {    -- Mucosal detail
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.inspection(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                }
+                            }
+                            CLUSTER[at0.24] occurrences matches {0..1} matches {    -- Turbinates
+                                items cardinality matches {1..*; unordered} matches {
+                                    use_node ELEMENT[at0.9008] occurrences matches {0..1} /items[at0008.1]/items[at0.11]/items[at0.10]    -- Turbinates (synthesised)
+                                    allow_archetype CLUSTER[at0.42] occurrences matches {0..1} matches {    -- Turbinate detail
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.inspection(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                }
+                            }
+                            CLUSTER[at0.27] occurrences matches {0..1} matches {    -- Discharge
+                                items cardinality matches {1..*; unordered} matches {
+                                    use_node ELEMENT[at0.9009] occurrences matches {0..1} /items[at0008.1]/items[at0.11]/items[at0.10]    -- Discharge (synthesised)
+                                    allow_archetype CLUSTER[at0.43] occurrences matches {0..1} matches {    -- Discharge detail
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.bodily_substance(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.10"] = <
+                text = <"Description">
+                description = <"Clinical description of external aspect of nose.">
+            >
+            ["at0.11"] = <
+                text = <"External">
+                description = <"Findings on inspection of the external nose.">
+            >
+            ["at0.12"] = <
+                text = <"Internal">
+                description = <"Internal inspection of the nose.">
+            >
+            ["at0.14"] = <
+                text = <"Nasal septum">
+                description = <"Inspection of the nasal septum.">
+            >
+            ["at0.16"] = <
+                text = <"Septal haematoma">
+                description = <"Presence of septal haematoma.">
+            >
+            ["at0.18"] = <
+                text = <"Nasal mucosa">
+                description = <"Findings on inspection of the nasal mucosa.">
+            >
+            ["at0.24"] = <
+                text = <"Turbinates">
+                description = <"Inspection of the nasal turbinates.">
+            >
+            ["at0.27"] = <
+                text = <"Discharge">
+                description = <"Nasal discharge.">
+            >
+            ["at0.34"] = <
+                text = <"Nares">
+                description = <"Examination of the nares/nostrils.">
+            >
+            ["at0.35"] = <
+                text = <"Nares patent?">
+                description = <"Are the nares patent?">
+            >
+            ["at0.38"] = <
+                text = <"Nasal breathing?">
+                description = <"Is the patient breathing nasally?">
+            >
+            ["at0.39"] = <
+                text = <"Nose examination normal">
+                description = <"The nose was normal on examination.">
+            >
+            ["at0.40"] = <
+                text = <"Septal detail">
+                description = <"Detail about nasal septa.">
+            >
+            ["at0.41"] = <
+                text = <"Mucosal detail">
+                description = <"Detail about nasal mucosa.">
+            >
+            ["at0.42"] = <
+                text = <"Turbinate detail">
+                description = <"detail about turbinates.">
+            >
+            ["at0.43"] = <
+                text = <"Discharge detail">
+                description = <"Details of nasal discharge.">
+            >
+            ["at0000.1"] = <
+                text = <"Examination of nose">
+                description = <"For recording findings on physical examination of the nose.">
+            >
+            ["at0005.1"] = <
+                text = <"Normal statement">
+                description = <"A specific statement of normality.">
+            >
+            ["at0008.1"] = <
+                text = <"Findings">
+                description = <"Clinical findings.">
+            >
+            ["at0.9003"] = <
+                text = <"Nares (synthesised)">
+                description = <"Examination of the nares/nostrils. (synthesised)">
+            >
+            ["at0.9004"] = <
+                text = <"Internal (synthesised)">
+                description = <"Internal inspection of the nose. (synthesised)">
+            >
+            ["at0.9005"] = <
+                text = <"Nasal septum (synthesised)">
+                description = <"Inspection of the nasal septum. (synthesised)">
+            >
+            ["at0.9007"] = <
+                text = <"Nasal mucosa (synthesised)">
+                description = <"Findings on inspection of the nasal mucosa. (synthesised)">
+            >
+            ["at0.9008"] = <
+                text = <"Turbinates (synthesised)">
+                description = <"Inspection of the nasal turbinates. (synthesised)">
+            >
+            ["at0.9009"] = <
+                text = <"Discharge (synthesised)">
+                description = <"Nasal discharge. (synthesised)">
+            >
+        >
+    >

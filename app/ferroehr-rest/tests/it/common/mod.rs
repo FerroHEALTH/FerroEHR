@@ -57,6 +57,7 @@ const EXTENSION_ROOTS: &[&str] = &[
     "/admin/outbox",
     "/admin/party",
     "/admin/query",
+    "/admin/registers",
     "/admin/report",
     "/admin/research-objection",
     "/admin/restriction",
@@ -141,12 +142,16 @@ pub(crate) async fn router_for_profile(
 
 /// The assembled router over a real service with the given configuration —
 /// the same wiring as [`ferroehr_rest::build_with`], split open so tests can
-/// hand-tune `AppConfig` (auth modes, admin/extension toggles).
+/// hand-tune `AppConfig` (auth modes, admin/extension toggles). Every caller
+/// is looked up in the local party source over `service`, as the server does.
 pub(crate) async fn router_with(config: AppConfig, service: Arc<FerroEhrService>) -> Router {
+    let source = service
+        .party_source(config.party_binding.namespace.clone())
+        .with_creator(Arc::clone(&service));
     let authenticator = Authenticator::new(
         &config,
         None,
-        None,
+        Some(Arc::new(source)),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
     )
     .await

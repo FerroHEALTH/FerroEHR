@@ -17,7 +17,7 @@ mappings as they stand:
 - a healthcare provider's `ORGANISATION`, the provider a system acts for and
   a federation partner.
 
-The policy definitions of [Operational policy](operational-policy.md) are
+The policy definitions of [Operational policy](../operational-policy.md#the-policy-parties) are
 not in this set: the binary carries their defaults and stores each one at
 boot when no definition of its id is stored.
 

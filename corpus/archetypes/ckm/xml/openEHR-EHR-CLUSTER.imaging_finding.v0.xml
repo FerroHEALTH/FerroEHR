@@ -1,0 +1,676 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2020-03-27</original_author>
+    <original_author id="name">Heather Leslie</original_author>
+    <original_author id="organisation">Atomica Informatics, Australia</original_author>
+    <original_author id="email">heather.leslie@atomicainformatics.com</original_author>
+    <other_contributors>Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Heidi Aursand, Oslo universitetssykehus, Norway</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>SB Bhattacharyya, Bhattacharyyas Clinical Records Research &amp; Informatics LLP, India</other_contributors>
+    <other_contributors>Fatemeh Chalabianloo, Helse Bergen, Norway</other_contributors>
+    <other_contributors>Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Anca Heyd, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Evelyn Hovenga, EJSH Consulting, Australia</other_contributors>
+    <other_contributors>Nasjonal IKT, Norway</other_contributors>
+    <other_contributors>Silje Kaada, Helse-Bergen, Avdeling for immunologi og transfusjonsmedisin, Norway</other_contributors>
+    <other_contributors>Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway</other_contributors>
+    <other_contributors>Anjali Kulkarni, Karkinos, India</other_contributors>
+    <other_contributors>Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Heather Leslie, Atomica Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Ole Martin Sand, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Paul Miller, SCIMP NHS Scotland, United Kingdom</other_contributors>
+    <other_contributors>Lars Morgan Karlsen, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Mikael Nyström, Cambio Healthcare Systems AB, Sweden</other_contributors>
+    <other_contributors>Andrej Orel, Marand d.o.o., Slovenia</other_contributors>
+    <other_contributors>Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil</other_contributors>
+    <other_contributors>Natalia Strauch, Medizinische Hochschule Hannover, Germany</other_contributors>
+    <other_contributors>Norwegian Review Summary, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>Line Sæle, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>Nyree Taylor, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Anders Thurin, VGR, Sweden</other_contributors>
+    <other_contributors>John Tore Valand, Helse Bergen, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Wouter Zanen, Eurotranplant, Netherlands</other_contributors>
+    <other_contributors>Lin Zhang, Taikang Insurance Group, China</other_contributors>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references" />
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">53ED6F95BEBEE2249906207F9AC486D0</other_details>
+    <other_details id="build_uid">486f0f6f-f717-4bde-ae64-7439becbf8a1</other_details>
+    <other_details id="revision">0.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>*To record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. (en)</purpose>
+      <keywords>*finding, imaging, body, system, observation, diagnostic, radiology, image (en)</keywords>
+      <use>*Use to record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. &#xD;
+&#xD;
+In practice, the design intent is for the CLUSTER.imaging_exam family of archetypes to be used to record all detailed findings on radiological examination. The family of specialised archetypes, derived from the generic parent archetype, are intentionally designed to be inclusive of all reasonably anticipated and relevant findings for each structure or region.&#xD;
+&#xD;
+In situations where it is not possible to use one of the CLUSTER.imaging_exam family of archetypes, use this alternative CLUSTER.imaging_finding archetype to capture simple details about a single finding. In this way it is possible to record findings that are not yet available in an incomplete specialisation or to capture information about unanticipated or unexpected findings. &#xD;
+&#xD;
+This archetype has been designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or in 'Additional details' SLOT within a relevant CLUSTER.imaging_exam specialisation, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. (en)</use>
+      <misuse>*Not to be used to record clinical findings that are already modelled within one of the CLUSTER.imaging_exam family of archetypes. (en)</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sv</code_string>
+      </language>
+      <purpose>*To record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. (en)</purpose>
+      <keywords>*finding, imaging, body, system, observation, diagnostic, radiology, image (en)</keywords>
+      <use>*Use to record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. &#xD;
+&#xD;
+In practice, the design intent is for the CLUSTER.imaging_exam family of archetypes to be used to record all detailed findings on radiological examination. The family of specialised archetypes, derived from the generic parent archetype, are intentionally designed to be inclusive of all reasonably anticipated and relevant findings for each structure or region.&#xD;
+&#xD;
+In situations where it is not possible to use one of the CLUSTER.imaging_exam family of archetypes, use this alternative CLUSTER.imaging_finding archetype to capture simple details about a single finding. In this way it is possible to record findings that are not yet available in an incomplete specialisation or to capture information about unanticipated or unexpected findings. &#xD;
+&#xD;
+This archetype has been designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or in 'Additional details' SLOT within a relevant CLUSTER.imaging_exam specialisation, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. (en)</use>
+      <misuse>*Not to be used to record clinical findings that are already modelled within one of the CLUSTER.imaging_exam family of archetypes. (en)</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>*To record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. (en)</purpose>
+      <keywords>*finding, imaging, body, system, observation, diagnostic, radiology, image (en)</keywords>
+      <use>*Use to record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. &#xD;
+&#xD;
+In practice, the design intent is for the CLUSTER.imaging_exam family of archetypes to be used to record all detailed findings on radiological examination. The family of specialised archetypes, derived from the generic parent archetype, are intentionally designed to be inclusive of all reasonably anticipated and relevant findings for each structure or region.&#xD;
+&#xD;
+In situations where it is not possible to use one of the CLUSTER.imaging_exam family of archetypes, use this alternative CLUSTER.imaging_finding archetype to capture simple details about a single finding. In this way it is possible to record findings that are not yet available in an incomplete specialisation or to capture information about unanticipated or unexpected findings. &#xD;
+&#xD;
+This archetype has been designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or in 'Additional details' SLOT within a relevant CLUSTER.imaging_exam specialisation, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. (en)</use>
+      <misuse>*Not to be used to record clinical findings that are already modelled within one of the CLUSTER.imaging_exam family of archetypes. (en)</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes.</purpose>
+      <keywords>finding, imaging, body, system, observation, diagnostic, radiology, image</keywords>
+      <use>Use to record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. &#xD;
+&#xD;
+In practice, the design intent is for the CLUSTER.imaging_exam family of archetypes to be used to record all detailed findings on radiological examination. The family of specialised archetypes, derived from the generic parent archetype, are intentionally designed to be inclusive of all reasonably anticipated and relevant findings for each structure or region.&#xD;
+&#xD;
+In situations where it is not possible to use one of the CLUSTER.imaging_exam family of archetypes, use this alternative CLUSTER.imaging_finding archetype to capture simple details about a single finding. In this way it is possible to record findings that are not yet available in an incomplete specialisation or to capture information about unanticipated or unexpected findings. &#xD;
+&#xD;
+This archetype has been designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or in 'Additional details' SLOT within a relevant CLUSTER.imaging_exam specialisation, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.</use>
+      <misuse>Not to be used to record clinical findings that are already modelled within one of the CLUSTER.imaging_exam family of archetypes.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Natalia Strauch</author>
+    <author id="organisation">Medizinische Hochschule Hannover</author>
+    <author id="email">Strauch.Natalia@mh-hannover.de</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sv</code_string>
+    </language>
+    <author id="name">Åsa Skagerhult, Linda Aulin</author>
+    <author id="organisation">Region Östergötland, Region Stockholm</author>
+    <author id="email">asa.skagerhult@regionostergotland.se, linda.aulin@sll.se</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Vebjørn Arntzen</author>
+    <author id="organisation">Oslo University Hospital</author>
+    <author id="email">varntzen@ous-hf.no</author>
+  </translations>
+  <uid>
+    <value>670088a0-ca0b-469f-ad01-9724c24e7354</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-CLUSTER.imaging_finding.v0</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0024</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_CODE_PHRASE">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <terminology_id>
+                  <value>local</value>
+                </terminology_id>
+                <code_list>at0035</code_list>
+                <code_list>at0036</code_list>
+                <code_list>at0037</code_list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0028</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0033</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0034</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location\.v1/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-CLUSTER\.anatomical_location\.v1</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0014</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/.*/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>.*</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0003</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Imaging finding</items>
+        <items id="description">Details about a single finding identified on radiological examination.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Presence?</items>
+        <items id="description">The presence or absence of a clinically significant finding.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Comment</items>
+        <items id="description">Additional narrative about the imaging finding, not captured in other fields.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Additional details</items>
+        <items id="description">Additional structured details about imaging finding.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Finding</items>
+        <items id="description">Identification of a significant clinical finding, by name.</items>
+        <items id="comment">Coding of 'Finding' with a terminology, such as SNOMED CT, is recommended. For example: free fluid; or abscess.</items>
+      </items>
+      <items code="at0028">
+        <items id="text">Description</items>
+        <items id="description">Narrative description about the clinically significant finding.</items>
+      </items>
+      <items code="at0033">
+        <items id="text">Body site</items>
+        <items id="description">Simple description of anatomical location of the finding.</items>
+        <items id="comment">For example: Recto-uterine pouch. Coding of 'Body site' with a terminology, such as SNOMED CT, is desirable.</items>
+      </items>
+      <items code="at0034">
+        <items id="text">Structured body site</items>
+        <items id="description">Structured details about the area of the body under examination.</items>
+        <items id="comment">For example: details about a relative anatomical location, such as '2cm distal to the appendix'. If the body site has been fully identified in the 'Body site' data element, then this SLOT becomes redundant.</items>
+      </items>
+      <items code="at0035">
+        <items id="text">Present</items>
+        <items id="description">The finding is observed.</items>
+      </items>
+      <items code="at0036">
+        <items id="text">Absent</items>
+        <items id="description">The finding is not observed.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Indeterminate</items>
+        <items id="description">It is not possible to determine if the finding is present or absent.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Bildgebender Befund</items>
+        <items id="description">*Details about a single finding identified on radiological examination. (en)</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Vorhanden?</items>
+        <items id="description">*The presence or absence of a clinically significant finding. (en)</items>
+        <items id="hl7v2_mapping">OBX.2, OBX.5, OBX.6, OBX.7, OBX.8</items>
+        <items id="fhir_mapping">Observation.value[x]</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Kommentar</items>
+        <items id="description">*Additional narrative about the imaging finding, not captured in other fields. (en)</items>
+        <items id="hl7v2_mapping">NTE.3</items>
+        <items id="fhir_mapping">Observation.note</items>
+      </items>
+      <items code="at0014">
+        <items id="text">*Additional details (en)</items>
+        <items id="description">*Additional structured details about imaging finding. (en)</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Befund</items>
+        <items id="description">*Identification of a significant clinical finding, by name. (en)</items>
+        <items id="comment">*Coding of 'Finding' with a terminology, such as SNOMED CT, is recommended. For example: free fluid; or abscess. (en)</items>
+        <items id="hl7v2_mapping">OBX.3</items>
+        <items id="fhir_mapping">Observation.code</items>
+      </items>
+      <items code="at0028">
+        <items id="text">*Description (en)</items>
+        <items id="description">*Narrative description about the clinically significant finding. (en)</items>
+      </items>
+      <items code="at0033">
+        <items id="text">Körperstelle</items>
+        <items id="description">Beschreibung des beobachteten klinischen Befundes.</items>
+        <items id="comment">*For example: Recto-uterine pouch. Coding of 'Body site' with a terminology, such as SNOMED CT, is desirable. (en)</items>
+      </items>
+      <items code="at0034">
+        <items id="text">Körperstelle strukturiert</items>
+        <items id="description">*Structured details about the area of the body under examination. (en)</items>
+        <items id="comment">*For example: details about a relative anatomical location, such as '2cm distal to the appendix'. If the body site has been fully identified in the 'Body site' data element, then this SLOT becomes redundant. (en)</items>
+      </items>
+      <items code="at0035">
+        <items id="text">Vorhanden</items>
+        <items id="description">*The finding is observed. (en)</items>
+      </items>
+      <items code="at0036">
+        <items id="text">Nicht vorhanden</items>
+        <items id="description">*The finding is not observed. (en)</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Unbestimmt</items>
+        <items id="description">Es ist nicht möglich festzustellen, ob der Befund vorhanden ist oder nicht.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="sv">
+      <items code="at0000">
+        <items id="text">Bilddiagnostiskt fynd</items>
+        <items id="description">*Details about a single finding identified on radiological examination. (en)</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Förekomst?</items>
+        <items id="description">*The presence or absence of a clinically significant finding. (en)</items>
+        <items id="hl7v2_mapping">OBX.2, OBX.5, OBX.6, OBX.7, OBX.8</items>
+        <items id="fhir_mapping">Observation.value[x]</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Kommentar</items>
+        <items id="description">*Additional narrative about the imaging finding, not captured in other fields. (en)</items>
+        <items id="hl7v2_mapping">NTE.3</items>
+        <items id="fhir_mapping">Observation.note</items>
+      </items>
+      <items code="at0014">
+        <items id="text">*Additional details (en)</items>
+        <items id="description">*Additional structured details about imaging finding. (en)</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Namn på fynd</items>
+        <items id="description">*Identification of a significant clinical finding, by name. (en)</items>
+        <items id="comment">*Coding of 'Finding' with a terminology, such as SNOMED CT, is recommended. For example: free fluid; or abscess. (en)</items>
+        <items id="hl7v2_mapping">OBX.3</items>
+        <items id="fhir_mapping">Observation.code</items>
+      </items>
+      <items code="at0028">
+        <items id="text">*Description (en)</items>
+        <items id="description">*Narrative description about the clinically significant finding. (en)</items>
+      </items>
+      <items code="at0033">
+        <items id="text">Anatomisk lokalisation</items>
+        <items id="description">Enkel beskrivning av den anatomiska lokalisationen.</items>
+        <items id="comment">*For example: Recto-uterine pouch. Coding of 'Body site' with a terminology, such as SNOMED CT, is desirable. (en)</items>
+      </items>
+      <items code="at0034">
+        <items id="text">Strukturerad anatomisk lokalisation</items>
+        <items id="description">*Structured details about the area of the body under examination. (en)</items>
+        <items id="comment">*For example: details about a relative anatomical location, such as '2cm distal to the appendix'. If the body site has been fully identified in the 'Body site' data element, then this SLOT becomes redundant. (en)</items>
+      </items>
+      <items code="at0035">
+        <items id="text">Förekomst</items>
+        <items id="description">*The finding is observed. (en)</items>
+      </items>
+      <items code="at0036">
+        <items id="text">Avsaknad</items>
+        <items id="description">*The finding is not observed. (en)</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Obestämbar</items>
+        <items id="description">Det är inte möjligt att avgöra om förekomst av fyndet finns i bilden eller inte.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Bildefunn</items>
+        <items id="description">*Details about a single finding identified on radiological examination. (en)</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tilstedeværelse?</items>
+        <items id="description">*The presence or absence of a clinically significant finding. (en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Kommentar</items>
+        <items id="description">*Additional narrative about the imaging finding, not captured in other fields. (en)</items>
+      </items>
+      <items code="at0014">
+        <items id="text">*Additional details (en)</items>
+        <items id="description">*Additional structured details about imaging finding. (en)</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Funn</items>
+        <items id="description">*Identification of a significant clinical finding, by name. (en)</items>
+        <items id="comment">*Coding of 'Finding' with a terminology, such as SNOMED CT, is recommended. For example: free fluid; or abscess. (en)</items>
+      </items>
+      <items code="at0028">
+        <items id="text">*Description (en)</items>
+        <items id="description">*Narrative description about the clinically significant finding. (en)</items>
+      </items>
+      <items code="at0033">
+        <items id="text">Kroppsområde/organ</items>
+        <items id="description">Enkel beskrivelse av den anatomiske lokaliseringen av funnet.</items>
+        <items id="comment">*For example: Recto-uterine pouch. Coding of 'Body site' with a terminology, such as SNOMED CT, is desirable. (en)</items>
+      </items>
+      <items code="at0034">
+        <items id="text">Strukturert kroppsområde/organ</items>
+        <items id="description">*Structured details about the area of the body under examination. (en)</items>
+        <items id="comment">*For example: details about a relative anatomical location, such as '2cm distal to the appendix'. If the body site has been fully identified in the 'Body site' data element, then this SLOT becomes redundant. (en)</items>
+      </items>
+      <items code="at0035">
+        <items id="text">Til stede</items>
+        <items id="description">*The finding is observed. (en)</items>
+      </items>
+      <items code="at0036">
+        <items id="text">Fraværende</items>
+        <items id="description">*The finding is not observed. (en)</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Usikkert</items>
+        <items id="description">Det er ikke mulig å avgjøre om funnet er til stede eller fraværende.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

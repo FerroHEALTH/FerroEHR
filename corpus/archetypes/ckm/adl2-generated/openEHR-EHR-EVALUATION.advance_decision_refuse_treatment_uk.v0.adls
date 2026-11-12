@@ -1,0 +1,196 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6e3e8693-9c05-485e-8637-1bf93e345ad7; build_uid=e3b65eb1-fa49-4192-b307-c914962397a5)
+    openEHR-EHR-EVALUATION.advance_decision_refuse_treatment_uk.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2013-10-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Information Standards Board ISB Data Dictionary Available at http://www.datadictionary.nhs.uk/">
+        ["2"] = <"End of Life Care Co-ordination: Core Content Standard Specification Available at http://www.isb.nhs.uk/documents/isb-1580/amd-29-2012/index_html">
+        ["3"] = <"NHS Scotland Key Information Summary">
+        ["4"] = <"Leeds ePaccs team">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"29C818F376313D8F671592D855FD0451">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an advance decision to refuse treatment (ADRT) , a decision to refuse a specific treatment, made in
+advance by a person who has capacity to do so.">
+            keywords = <"DNACPR", "resuscitation", "EoL", "directive", "preference">
+            use = <"To record an advance decision to refuse treatment (ADRT) , a decision to refuse a specific treatment, made in
+advance by a person who has capacity to do so.">
+            misuse = <"This archetype should not be used to convey the results of other advanced directives, patient preferences or resusciation activity *e.g. suction) which falls short of full cardio-pulminary resuscitation.">
+            copyright = <"© Clinical Models UK, openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Advance decision to refuse treatment
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Decision status
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9000]}    -- Decision status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Date of decision
+                        value matches {
+                            DV_DATE_TIME[at9003]
+                        }
+                    }
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Informal carer awareness of decision
+                        value matches {
+                            DV_CODED_TEXT[at9004] matches {
+                                defining_code matches {[ac9001]}    -- Informal carer awareness of decision (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0010] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Discussion with healthcare professional
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[at0027]}    -- Decision to refuse treatment discussed with healthcare professional
+                            }
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Location of advance directive documentation
+                        value matches {
+                            DV_TEXT[at9007]
+                            DV_URI[at9008]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Advance decision to refuse treatment">
+                description = <"An advance decision to refuse treatment (ADRT) is a decision to refuse a specific treatment, made in
+ advance by a person who has capacity to do so.">
+            >
+            ["at0002"] = <
+                text = <"Date of decision">
+                description = <"The date at which the DNACPR decision was originally taken or last reviewed.">
+            >
+            ["at0003"] = <
+                text = <"Decision status">
+                description = <"The state of the decision to refuse treatment.">
+            >
+            ["at0004"] = <
+                text = <"Advanced decision to refuse treatment signed">
+                description = <"The subject has signed an advanced decision to refuse treatment.">
+            >
+            ["at0005"] = <
+                text = <"Has advance decision to refuse treatment (Mental Capacity Act 2005)">
+                description = <"The subject has signed an advance decision to refuse treatment (Mental Capacity Act 2005).">
+            >
+            ["at0011"] = <
+                text = <"Location of advance directive documentation">
+                description = <"The location of the original advanced directive document, either a text description or an electronic link.">
+            >
+            ["at0012"] = <
+                text = <"Informal carer awareness of decision">
+                description = <"Is the informal carer, or carers, aware of the advanced directive?">
+            >
+            ["at0013"] = <
+                text = <"Discussion with healthcare professional">
+                description = <"Has the advanced directive been discussed with a healthcare professional?">
+            >
+            ["at0021"] = <
+                text = <"Comment">
+                description = <"Other narrative comment pertinent to the advanced directive.">
+            >
+            ["at0022"] = <
+                text = <"Has advance decision to refuse life sustaining treatment (Mental Capacity Act 2005)">
+                description = <"The subject has signed an advance decision to refuse life sustaining treatment (Mental Capacity Act 2005).">
+            >
+            ["at0025"] = <
+                text = <"Informal carer not aware of advanced directive">
+                description = <"The informal carer is not aware of the subject's advanced directive.">
+            >
+            ["at0026"] = <
+                text = <"Informal carer aware of advanced directive">
+                description = <"The informal carer is aware of the subject's advanced directive.">
+            >
+            ["at0027"] = <
+                text = <"Decision to refuse treatment discussed with healthcare professional">
+                description = <"The subject has discussed their decision to refuse treatment with a healthcare professional.">
+            >
+            ["at0028"] = <
+                text = <"Advanced directive not signed">
+                description = <"The subject has not signed and advance directive or has rescinded an early directive.">
+            >
+            ["ac9000"] = <
+                text = <"Decision status (synthesised)">
+                description = <"The state of the decision to refuse treatment. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Informal carer awareness of decision (synthesised)">
+                description = <"Is the informal carer, or carers, aware of the advanced directive? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["RCD99"] = <
+            ["at0004"] = <http://RCD99.org/id/XaVy8>
+            ["at0005"] = <http://RCD99.org/id/XaYld>
+            ["at0022"] = <http://RCD99.org/id/XaYle>
+            ["at0027"] = <http://RCD99.org/id/XaYv4>
+        >
+        ["READ2"] = <
+            ["at0004"] = <http://READ2.org/id/9x2..>
+            ["at0005"] = <http://READ2.org/id/9NgG.>
+            ["at0022"] = <http://READ2.org/id/9NgG0>
+            ["at0027"] = <http://READ2.org/id/9NgK.>
+        >
+        ["SNOMED-CT"] = <
+            ["at0005"] = <http://snomed.info/id/816301000000100>
+            ["at0022"] = <http://snomed.info/id/816321000000109>
+            ["at0027"] = <http://snomed.info/id/820621000000107>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0025", "at0026">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005", "at0022", "at0028">
+        >
+    >

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1374,9 +1374,7 @@ With certain types of tumours, such as Hodgkin and other non-Hodgkin lymphomas, 
       <items code="at0006">
         <items id="text">Histopathologisches Grading (G)</items>
         <items id="description">Histopathologisches Grading des Tumors.</items>
-        <items id="comment">Die prätherapeutische histopathologische Beurteilung kann aus einer begrenzten Biopsie vor der formalen Resektion bestimmt werden. Die Codierung mit einem G-Code, der der identifizierten Art des Tumors und der anatomischen Lokalisation entspricht, wird erwartet. Zum Beispiel: "G2"; "GX" oder "niedriges Grading" zur Klassifizierung von Knochen- und Weichteilsarkomen. Dargestellt als "G" in der "TNM-Bewertung".&#xD;
-&#xD;
-</items>
+        <items id="comment">Die prätherapeutische histopathologische Beurteilung kann aus einer begrenzten Biopsie vor der formalen Resektion bestimmt werden. Die Codierung mit einem G-Code, der der identifizierten Art des Tumors und der anatomischen Lokalisation entspricht, wird erwartet. Zum Beispiel: "G2"; "GX" oder "niedriges Grading" zur Klassifizierung von Knochen- und Weichteilsarkomen. Dargestellt als "G" in der "TNM-Bewertung".</items>
       </items>
       <items code="at0007">
         <items id="text">Residualtumor (R)</items>
@@ -1402,8 +1400,7 @@ With certain types of tumours, such as Hodgkin and other non-Hodgkin lymphomas, 
       <items code="at0012">
         <items id="text">Lymphgefäßinvasion (L)</items>
         <items id="description">Die Beurteilung der Invasion in das lymphathische System.</items>
-        <items id="comment">Zum Beispiel: "L0 (Keine Lymphgefäßinvasion)". Dargestellt als "L" in der "TNM-Bewertung".&#xD;
-</items>
+        <items id="comment">Zum Beispiel: "L0 (Keine Lymphgefäßinvasion)". Dargestellt als "L" in der "TNM-Bewertung".</items>
       </items>
       <items code="at0013">
         <items id="text">LX</items>
@@ -1496,4 +1493,3 @@ With certain types of tumours, such as Hodgkin and other non-Hodgkin lymphomas, 
     </term_definitions>
   </ontology>
 </archetype>
-

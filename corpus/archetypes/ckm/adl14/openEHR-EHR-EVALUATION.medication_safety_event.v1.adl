@@ -448,7 +448,6 @@ definition
 		}
 	}
 
-
 ontology
 	terminologies_available = <"SafetyEventType", ...>
 	term_definitions = <

@@ -181,7 +181,7 @@ local store's column.
 ## H3: the category of the data is not recorded
 
 **Cause:** a template or archetype missing from the deployment's
-`[audit.categories]` map; a record type the classifier does not reach.
+audit category register; a record type the classifier does not reach.
 
 **Effect:** a record cannot say whether the access reached a patient
 summary, a prescription or a test result, which Annex II 3.2(c) asks for
@@ -225,8 +225,8 @@ archetypes whose data sit in one priority category, and a deployment's own
 map replaces it whole, so a map that misses a template the deployment uses
 yields `unclassified` records. Records in the
 demographic domain carry no classification, because no priority category
-lives there. The Helm chart carries a deployment's own map as
-`config.audit.categories`, empty by default, so the shipped map applies.
+lives there. A deployment's own map is the audit category register, an admin
+register at the shipped map until it is written.
 
 ## H4: a record misstates where the data came from
 
@@ -312,7 +312,7 @@ subject's records and nothing else. EHDS Art. 9(2) has the information
 provided "through electronic health data access services", which the Member
 States establish (Art. 4(1)); FerroEHR serves the log to such a service and
 has no patient-facing interface of its own. Where a deployment turns on the
-EHDS Art. 3(3) delay (`[privacy.access_delay]`), the subject-scoped read leaves out
+EHDS Art. 3(3) delay (the access-delay register), the subject-scoped read leaves out
 the records about a held composition until a professional releases it or the
 hold expires, and then serves them with their original times
 (`ehds-logging` 0.3.3); the syslog and FHIR feeds and the event stream are

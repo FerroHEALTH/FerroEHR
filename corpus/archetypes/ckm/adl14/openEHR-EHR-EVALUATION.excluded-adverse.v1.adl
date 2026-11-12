@@ -1,0 +1,138 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-EVALUATION.excluded-adverse.v1
+specialise
+	openEHR-EHR-EVALUATION.excluded.v1
+
+concept
+	[at0000.1]	-- Exclusion of adverse reaction caused by specific agent
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.com">
+		["date"] = <"23/04/2006">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording exclusion statements about allergies and adverse reactions to a particular agent">
+			use = <"">
+			keywords = <"allergy", "adverse", "reaction", "allergies", "medication">
+			misuse = <"Do not use as a general statement - use 'openEHR-EHR-EVALUATION.excluded' instead.">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"AuthorDraft">
+	other_contributors = <>
+	other_details = <
+		["MD5-CAM-1.0.1"] = <"8E963461595D0EA8A5956C3A763D53C2">
+		["references"] = <"">
+	>
+
+definition
+	EVALUATION[at0000.1] matches {	-- Exclusion of adverse reaction caused by specific agent
+		data matches {
+			ITEM_TREE[at0001] matches {	-- Tree
+				items cardinality matches {2..*; unordered} matches {
+					ELEMENT[at0002] matches {	-- Statement
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0006.1, 	-- No known adverse reactions to
+									at0013.1]	-- No known allergies to
+								}
+							}
+						}
+					}
+					ELEMENT[at0.7] matches {	-- Agent
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.7"] = <
+					text = <"Agent">
+					description = <"The agent that is referred to in the statement">
+				>
+				["at0000"] = <
+					text = <"General statement of exclusions or states">
+					description = <"A category of conditions or states which have been excluded">
+				>
+				["at0000.1"] = <
+					text = <"Exclusion of adverse reaction caused by specific agent">
+					description = <"A statement that there has been no known prior reaction to a specific agent">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Statement">
+					description = <"The statement about what is excluded">
+				>
+				["at0003"] = <
+					text = <"No significant illness">
+					description = <"The person has no significant medical condition">
+				>
+				["at0004"] = <
+					text = <"No significant past history">
+					description = <"The person has no significant past medical history">
+				>
+				["at0005"] = <
+					text = <"No significant family history">
+					description = <"The person has no relatives with significant health problems">
+				>
+				["at0006"] = <
+					text = <"No known adverse reactions">
+					description = <"The person has had no adverse reactions, including intolerances, sensitivities or allergies, to medications, food, animals or chemicals">
+				>
+				["at0006.1"] = <
+					text = <"No known adverse reactions to">
+					description = <"The person has had no adverse reactions to this agent">
+				>
+				["at0007"] = <
+					text = <"No known sensitivities">
+					description = <"No sensitivity to any medications, foods or substances">
+				>
+				["at0008"] = <
+					text = <"No known intolerances">
+					description = <"No known or recorded intolerances to medications, foods or other substances">
+				>
+				["at0009"] = <
+					text = <"No relevant past history">
+					description = <"No past problems or procedures relevant to the current situation">
+				>
+				["at0010"] = <
+					text = <"No hospitalisations">
+					description = <"No admissions to hospital">
+				>
+				["at0011"] = <
+					text = <"No major surgery">
+					description = <"No major operations or procedures">
+				>
+				["at0012"] = <
+					text = <"No relevant family history">
+					description = <"No family history relevant to the current situation">
+				>
+				["at0013"] = <
+					text = <"No known allergies">
+					description = <"No allergies known to any medications, foods or substances">
+				>
+				["at0013.1"] = <
+					text = <"No known allergies to">
+					description = <"No allergies known to the specific agent">
+				>
+			>
+		>
+	>

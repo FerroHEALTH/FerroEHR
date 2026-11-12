@@ -44,7 +44,7 @@ const ADMIN: &str = "ADMIN";
 /// The text of the book's "Operational policy" page.
 fn book_page() -> String {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../website/book/src/installation/operational-policy.md");
+        .join("../../website/book/src/operational-policy.md");
     std::fs::read_to_string(path).expect("the book page is readable")
 }
 

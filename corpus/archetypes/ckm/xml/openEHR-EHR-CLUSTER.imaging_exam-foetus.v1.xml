@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -717,7 +717,7 @@ Not to be used to record details related to the overall findings, context or tec
     <term_definitions language="en">
       <items code="at0.1">
         <items id="text">Fetus</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.10">
         <items id="text">Absent</items>
@@ -741,7 +741,7 @@ Not to be used to record details related to the overall findings, context or tec
       </items>
       <items code="at0.2">
         <items id="text">Embryo</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.7">
         <items id="text">Label</items>
@@ -805,7 +805,7 @@ Not to be used to record details related to the overall findings, context or tec
     <term_definitions language="nb">
       <items code="at0.1">
         <items id="text">Foster</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.10">
         <items id="text">Fraværende</items>
@@ -829,7 +829,7 @@ Not to be used to record details related to the overall findings, context or tec
       </items>
       <items code="at0.2">
         <items id="text">Embryo</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.7">
         <items id="text">Merkelapp</items>
@@ -893,7 +893,7 @@ Not to be used to record details related to the overall findings, context or tec
     <term_definitions language="de">
       <items code="at0.1">
         <items id="text">Foetus</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.10">
         <items id="text">Abwesend</items>
@@ -917,7 +917,7 @@ Not to be used to record details related to the overall findings, context or tec
       </items>
       <items code="at0.2">
         <items id="text">Embryo</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.7">
         <items id="text">Identifisering</items>
@@ -998,4 +998,3 @@ Not to be used to record details related to the overall findings, context or tec
     </term_bindings>
   </ontology>
 </archetype>
-

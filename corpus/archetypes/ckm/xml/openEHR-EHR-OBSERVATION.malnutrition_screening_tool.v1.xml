@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -578,11 +578,11 @@ For permission: Rightslink® by Copyright Clearance Center, https://s100.copyrig
       </items>
       <items code="at0005">
         <items id="text">Have you lost weight recently without trying?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Have you been eating poorly because of a decreased appetite?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">MST score</items>
@@ -590,19 +590,19 @@ For permission: Rightslink® by Copyright Clearance Center, https://s100.copyrig
       </items>
       <items code="at0020">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Unsure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Item tree</items>
@@ -615,23 +615,23 @@ For permission: Rightslink® by Copyright Clearance Center, https://s100.copyrig
       </items>
       <items code="at0031">
         <items id="text">Yes, 1-5 kg</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Yes, 6-10 kg</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Yes, 11-15 kg</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Yes, &gt;15 kg</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Yes, unsure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nb">
@@ -653,12 +653,12 @@ For permission: Rightslink® by Copyright Clearance Center, https://s100.copyrig
       </items>
       <items code="at0005">
         <items id="text">Har du/pasienten gått ned i vekt i det siste uten å ha gjort forsøk på det?</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Helsedirektoratet har i sin oversettelse lagt til pasient i spørsmålet, dette skiller seg fra spørsmålet i originalversjonen som har spørsmålsformuleringen: "Har du gått ned i vekt i det siste uten å ha gjort forsøk på det?".</items>
       </items>
       <items code="at0016">
         <items id="text">Har du/pasienten spist mindre enn vanlig på grunn av nedsatt matlyst?</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Helsedirektoratet har i sin oversettelse lagt til pasient i spørsmålet, dette skiller seg fra spørsmålet i originalversjonen som har spørsmålsformuleringen: "Har du/pasienten spist mindre enn vanlig på grunn av nedsatt matlyst?"</items>
       </items>
       <items code="at0019">
@@ -667,19 +667,19 @@ For permission: Rightslink® by Copyright Clearance Center, https://s100.copyrig
       </items>
       <items code="at0020">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Vet ikke</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Item tree</items>
@@ -692,25 +692,24 @@ For permission: Rightslink® by Copyright Clearance Center, https://s100.copyrig
       </items>
       <items code="at0031">
         <items id="text">Ja, 1-5 kg</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Ja, 6-10 kg</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Ja, 11-15 kg</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Ja, &gt;15 kg</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Ja, vet ikke hvor mange kilo</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

@@ -1,5 +1,5 @@
-archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0d76b26d-8cbd-4e0d-a7ac-e83bf4dfcae9; build_uid=d80acb5c-7ce4-4d47-991b-5e1eb8712f4d)
-    openEHR-EHR-CLUSTER.reference_sequence.v1.0.9
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0d76b26d-8cbd-4e0d-a7ac-e83bf4dfcae9; build_uid=4fd7a514-dc89-409f-ae98-7b7dc4591fb3)
+    openEHR-EHR-CLUSTER.reference_sequence.v1.1.1
 
 language
     original_language = <[ISO_639-1::en]>
@@ -7,9 +7,9 @@ language
         ["de"] = <
             language = <[ISO_639-1::de]>
             author = <
-                ["name"] = <"Natalia Strauch">
-                ["organisation"] = <"Medizinische Hochschule Hannover">
-                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+                ["name"] = <"Natalia Strauch, Alina Rehberg, Hendrik Heiser">
+                ["organisation"] = <"Medizinische Hochschule Hannover, CISTEC AG">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, rehberg.alina@mh-hannover.de, hendrik.heiser@cistec.com">
             >
         >
         ["sv"] = <
@@ -48,12 +48,12 @@ description
         ["1"] = <"den Dunnen JT, Dalgleish R, Maglott DR, Hart RK, Greenblatt MS, McGowan-Jordan J, Roux AF, Smith T, Antonarakis SE, Taschner PE. HGVS Recommendations for the Description of Sequence Variants: 2016 Update. Hum Mutat. 2016 Jun;37(6):564-9. doi: 10.1002/humu.22981. Epub 2016 Mar 25. PubMed PMID: 26931183.">
     >
     other_details = <
-        ["MD5-CAM-1.0.1"] = <"96CF5AA5A83A89FF4CCD34E3278102D1">
+        ["MD5-CAM-1.0.1"] = <"6D6FD73A4DBD7B445FC8728AE45E781A">
     >
     details = <
         ["de"] = <
             language = <[ISO_639-1::de]>
-            purpose = <"Zur Darstellung von Details zur Referenzsequenz, die zur Beschreibung von Varianten verwendet wird.">
+            purpose = <"Zur Erfassung von Details zur Referenzsequenz, die zur Beschreibung von Varianten verwendet wird.">
             keywords = <"genetische Befunde", "Referenzsequenz", "Gentest", "Identifikation von Varianten", "genomisch", "Variation">
             use = <"Dieser Archetyp wurde speziell für die Verwendung in den SLOTs \"Reference Genome\" und \"Transcript reference sequence\" innerhalb des Archetyps CLUSTER.genomic_variant_result und in den SLOTs \"Reference sequence\" innerhalb der anderen spezifischen Genetischen Varianten-Archetypen (z. B. CLUSTER.genomic_insertion_variant, CLUSTER.genomic_deletion_variant, usw.), kann aber auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern dies klinisch angemessen ist.">
             misuse = <"">
@@ -83,7 +83,7 @@ description
 
 definition
     CLUSTER[at0018] occurrences matches {1..*} matches {    -- Reference sequence
-        items cardinality matches {3..*} matches {
+        items cardinality matches {1..*; unordered} matches {
             ELEMENT[at0048] occurrences matches {0..1} matches {    -- Reference genome assembly
                 value matches {
                     DV_TEXT[at9007]
@@ -124,133 +124,133 @@ terminology
     term_definitions = <
         ["de"] = <
             ["at0018"] = <
-                text = <"Reference sequence">
+                text = <"Referenzsequenz">
                 description = <"Eine Datei mit Sequenzdaten, die als Referenz zur Beschreibung genetischer Varianten, die in einer analysierten Sequenz vorhanden sind, verwendet wird.">
             >
             ["at0019"] = <
-                text = <"Source name">
-                description = <"The name of the data source containing the reference sequence.">
+                text = <"Quelle">
+                description = <"Der Name der Datenquelle, die die Referenzsequenz enthält.">
             >
             ["at0020"] = <
-                text = <"Accession number">
-                description = <"A unique identifier to refer to a sequence record in a sequence repository.">
+                text = <"Zugangsnummer">
+                description = <"Eine eindeutige Kennung zur Referenzierung eines Sequenzdatensatzes in einem Sequenzrepositorium.">
             >
             ["at0021"] = <
-                text = <"Version number">
-                description = <"The version number of the data record of the reference sequence.">
-                comment = <"For example: \"hg38\", \"hg19\".">
+                text = <"Versionsnummer">
+                description = <"Die Versionsnummer des Datensatzes der Referenzsequenz.">
+                comment = <"Zum Beispiel: \"hg38\", \"hg19\".">
             >
             ["at0022"] = <
                 text = <"URL">
-                description = <"Network address.">
+                description = <"Netzwerkadresse.">
             >
             ["at0023"] = <
-                text = <"Chromosome label">
-                description = <"Chromosome identifier.">
+                text = <"Chromosomenlabel">
+                description = <"Chromosomenkennung.">
             >
             ["at0024"] = <
-                text = <"Chromosome 1">
-                description = <"Chromosome 1.">
+                text = <"Chromosom 1">
+                description = <"Chromosom 1.">
             >
             ["at0025"] = <
-                text = <"Chromosome 2">
-                description = <"Chromosome 2.">
+                text = <"Chromosom 2">
+                description = <"Chromosom 2.">
             >
             ["at0026"] = <
-                text = <"Chromosome 3">
-                description = <"Chromosome 3.">
+                text = <"Chromosom 3">
+                description = <"Chromosom 3.">
             >
             ["at0027"] = <
-                text = <"Chromosome 4">
-                description = <"Chromosome 4.">
+                text = <"Chromosom 4">
+                description = <"Chromosom 4.">
             >
             ["at0028"] = <
-                text = <"Chromosome 5">
-                description = <"Chromosome 5.">
+                text = <"Chromosom 5">
+                description = <"Chromosom 5.">
             >
             ["at0029"] = <
-                text = <"Chromosome 6">
-                description = <"Chromosome 6.">
+                text = <"Chromosom 6">
+                description = <"Chromosom 6.">
             >
             ["at0030"] = <
-                text = <"Chromosome 7">
-                description = <"Chromosome 7.">
+                text = <"Chromosom 7">
+                description = <"Chromosom 7.">
             >
             ["at0031"] = <
-                text = <"Chromosome 8">
-                description = <"Chromosome 8.">
+                text = <"Chromosom 8">
+                description = <"Chromosom 8.">
             >
             ["at0032"] = <
-                text = <"Chromosome 9">
-                description = <"Chromosome 9.">
+                text = <"Chromosom 9">
+                description = <"Chromosom 9.">
             >
             ["at0033"] = <
-                text = <"Chromosome 10">
-                description = <"Chromosome 10.">
+                text = <"Chromosom 10">
+                description = <"Chromosom 10.">
             >
             ["at0034"] = <
-                text = <"Chromosome 11">
-                description = <"Chromosome 11.">
+                text = <"Chromosom 11">
+                description = <"Chromosom 11.">
             >
             ["at0035"] = <
-                text = <"Chromosome 12">
-                description = <"Chromosome 12.">
+                text = <"Chromosom 12">
+                description = <"Chromosom 12.">
             >
             ["at0036"] = <
-                text = <"Chromosome 13">
-                description = <"Chromosome 13.">
+                text = <"Chromosom 13">
+                description = <"Chromosom 13.">
             >
             ["at0037"] = <
-                text = <"Chromosome 14">
-                description = <"Chromosome 14.">
+                text = <"Chromosom 14">
+                description = <"Chromosom 14.">
             >
             ["at0038"] = <
-                text = <"Chromosome 15">
-                description = <"Chromosome 15.">
+                text = <"Chromosom 15">
+                description = <"Chromosom 15.">
             >
             ["at0039"] = <
-                text = <"Chromosome 16">
-                description = <"Chromosome 16.">
+                text = <"Chromosom 16">
+                description = <"Chromosom 16.">
             >
             ["at0040"] = <
-                text = <"Chromosome 17">
-                description = <"Chromosome 17.">
+                text = <"Chromosom 17">
+                description = <"Chromosom 17.">
             >
             ["at0041"] = <
-                text = <"Chromosome 18">
-                description = <"Chromosome 18.">
+                text = <"Chromosom 18">
+                description = <"Chromosom 18.">
             >
             ["at0042"] = <
-                text = <"Chromosome 19">
-                description = <"Chromosome 19.">
+                text = <"Chromosom 19">
+                description = <"Chromosom 19.">
             >
             ["at0043"] = <
-                text = <"Chromosome 20">
-                description = <"Chromosome 20.">
+                text = <"Chromosom 20">
+                description = <"Chromosom 20.">
             >
             ["at0044"] = <
-                text = <"Chromosome 21">
-                description = <"Chromosome 21.">
+                text = <"Chromosom 21">
+                description = <"Chromosom 21.">
             >
             ["at0045"] = <
-                text = <"Chromosome 22">
-                description = <"Chromosome 22.">
+                text = <"Chromosom 22">
+                description = <"Chromosom 22.">
             >
             ["at0046"] = <
-                text = <"Chromosome X">
-                description = <"Chromosome X.">
+                text = <"Chromosom X">
+                description = <"Chromosom X.">
             >
             ["at0047"] = <
-                text = <"Chromosome Y">
-                description = <"Chromosome Y.">
+                text = <"Chromosom Y">
+                description = <"Chromosom Y.">
             >
             ["at0048"] = <
-                text = <"Reference genome assembly">
-                description = <"The reference genome assembled as a representative model of the human genome.">
+                text = <"Referenzgenom">
+                description = <"Das Referenzgenom, das als repräsentatives Modell des menschlichen Genoms assembliert wurde.">
             >
             ["ac9000"] = <
-                text = <"Chromosome label (synthesised)">
-                description = <"Chromosome identifier. (synthesised)">
+                text = <"Chromosomenlabel (synthesised)">
+                description = <"Chromosomenkennung. (synthesised)">
             >
         >
         ["sv"] = <

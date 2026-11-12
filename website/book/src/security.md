@@ -511,13 +511,14 @@ specification governs it; it is our own design.
 
 FerroEHR ships the software part. Whether the delay applies, to which data and
 for how long is the Member State's rule, and you configure it in
-[`[privacy.access_delay]`](installation/config-auth.md#privacyaccess_delay). It is off by
+[the access-delay register](installation/config-auth.md#the-access-delay-register), an
+[admin register](operational-policy.md#the-admin-registers). It is off by
 default, so the person's access stays immediate.
 
-- **What is held.** With the section on, every new COMPOSITION whose category
-  (the [`[audit.categories]`](installation/config-audit.md) map, template first,
-  then the root archetype) is listed in `privacy.access_delay.categories` is held from
-  the moment it is committed, for `privacy.access_delay.max_delay`. Only the first version
+- **What is held.** With the register on, every new COMPOSITION whose category
+  (the [audit category register](installation/config-audit.md#the-audit-category-register), template first,
+  then the root archetype) is listed in the register's `categories` is held from
+  the moment it is committed, for the register's `max_delay`. Only the first version
   is held: a composition the person has already seen stays visible when it is
   amended, and a professional holds an amendment by hand if it needs
   explaining. A composition the person commits is never held from them.
@@ -542,7 +543,7 @@ default, so the person's access stays immediate.
   controller releases with
   `POST /ferroehr/rest/extensions/v1/admin/access-delay/release`, and holds
   one by hand with `POST /ferroehr/rest/extensions/v1/admin/access-delay`, for
-  at most `privacy.access_delay.max_delay`
+  at most the access-delay register's `max_delay`
   ([the routes](operations-admin-apis.md#legal-marks-restriction-objection-and-retention)).
 - **The limit.** Every hold ends by itself when its period passes, released or
   not, because Art. 3(3) allows a delay "for a limited period of time" only.
@@ -660,17 +661,17 @@ without it.
 | `FERROEHR__AUTHZ__ABAC__ORGANIZATION_CLAIM` | `organization_id` | JWT claim for the organisation attribute |
 | `FERROEHR__AUTHZ__ABAC__PATIENT_CLAIM` | `patient_id` | JWT claim for the patient attribute (enables the subject gate) |
 | `FERROEHR__AUTHZ__ABAC__CHECK_DIRECTORY` | `false` | also submit DIRECTORY (FOLDER) operations to the policy engine |
-| `FERROEHR__AUTHZ__ABAC__CEDAR__POLICY_DIR` | — (required for `cedar`) | directory of `*.cedar` policy files |
-| `FERROEHR__AUTHZ__ABAC__CEDAR__RELOAD_INTERVAL` | off | optional policy hot-reload interval |
 | `FERROEHR__AUTHZ__ABAC__REMOTE__ENDPOINT__URL` | — (required for `remote`) | PDP base URL (must end with `/`) |
 | `FERROEHR__AUTHZ__ABAC__REMOTE__ENDPOINT__CONNECT_TIMEOUT` | `2s` | PDP connect timeout |
 | `FERROEHR__AUTHZ__ABAC__REMOTE__ENDPOINT__TIMEOUT` | `5s` | PDP request timeout |
 
-Two engines sit behind one interface. **Cedar** is the embedded default:
-policies live in `*.cedar` files, are schema-validated at boot against a
-shipped schema built from the resource-kind and access-mode sets themselves (an
-invalid policy set stops the server rather than silently denying), and need no
-external service. The **remote PDP** option consults an external policy server
+Two engines sit behind one interface. **Cedar** is the embedded default: its
+policy set is the [Cedar admin register](operational-policy.md#the-cedar-policy-register),
+written through the admin API and validated when it is written against a
+shipped schema built from the resource-kind and access-mode sets themselves (a
+set that does not validate is refused and the set in force keeps deciding), and
+it needs no external service. Until the register is written the set is empty
+and permits nothing. The **remote PDP** option consults an external policy server
 over HTTP for deployments that already run one; it additionally requires an
 `[authz.abac.policy.<kind>]` binding for every resource kind it will be asked
 about, and a missing one is a boot error rather than a first-request surprise.
@@ -694,7 +695,7 @@ the origins and categories of the data into account). On a composition read,
 write or delete, a contribution and a query, `resource.category` holds each
 EHDS category of the data, spelt as the access record spells it: the
 `<system>|<code>` token of a priority or national category,
-[`[audit.categories]`](installation/config-audit.md#auditcategories) classifying
+[audit category register](installation/config-audit.md#the-audit-category-register) classifying
 the template, then the root archetype; `none`; or `unclassified`.
 `resource.origin` holds each origin the data came from, as the version recorded
 it at commit: a `FEEDER_AUDIT` originating-system id, the registered origin of

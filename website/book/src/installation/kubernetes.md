@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DATABASE__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 25.2.0 -n ferroehr \
+  --version 26.1.0 -n ferroehr \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.7.0 \
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.2.0
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 26.1.0
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 25.2.0` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 26.1.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.7.0` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.2.0 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 26.1.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -280,22 +280,14 @@ says what it runs:
   `config.audit.store.retention` when the horizon must be exact in
   calendar years, such as `3` for a German SGB V § 309 controller with
   `config.audit.store.sgb_v_309_controller: true`.
-- **`config.audit.categories`:** an empty `templates` and `archetypes` map,
-  under which the [category map FerroEHR ships](config-audit.md#auditcategories)
-  applies: it classifies the published CKM templates and archetypes of one
-  priority category and records anything else as `unclassified`. Map your own
-  templates and root archetypes, which replaces the shipped map; the keys are template ids and
-  archetype ids, so quote a template id that contains spaces:
-
-```yaml
-config:
-  audit:
-    categories:
-      templates:
-        "International Patient Summary": [patient-summary]
-      archetypes:
-        openEHR-EHR-COMPOSITION.report-result.v1: [test-results]
-```
+- **The category map** is no chart value: it is the
+  [audit category register](config-audit.md#the-audit-category-register), an
+  [admin register](../operational-policy.md#the-admin-registers) you write
+  through the admin API once the server runs. Until then the
+  category map FerroEHR ships applies. The access delay and the Cedar policy
+  set are admin registers too; under `config:` their old tables
+  (`[audit.categories]`, `[privacy.access_delay]`, `[authz.abac.cedar]`) are
+  unknown keys the server refuses.
 
 The [Audit](config-audit.md) page has the category vocabulary and the
 retention floors and ceilings the server enforces at boot.
@@ -313,7 +305,7 @@ separation that profile checks made, except one it accepts by name:
 | `migrate_on_runtime_credential` | `config.database.migrations: verify`, with `migrations.job.enabled` preparing the schema on `database.migrateExistingSecret` |
 | `open_subject_namespace` | `config.privacy.subject_namespaces` declared |
 | `audit_off`, `audit_fails_open` | the audit trail on with its local store, `config.audit.fail_mode: closed` |
-| `no_category_map` | the shipped category map (the default), or `config.audit.categories` templates and archetypes of your own |
+| `no_category_map` | the shipped category map (the default), or templates and archetypes of your own in the audit category register, which refuses a write that opens the gap |
 | `open_ehr_access_default` | `config.authz.rbac.ehr_access_default: restricted` |
 | `auth_off` | OIDC authentication on |
 | `rbac_off` | the role gate on (`config.authz.rbac.enabled: true`, the chart's default) |
@@ -334,7 +326,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.2.0 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 26.1.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -842,7 +834,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 25.2.0 -n ferroehr --reuse-values \
+  --version 26.1.0 -n ferroehr --reuse-values \
   --set config.record.query.plan_cache_capacity=512
 ```
 
@@ -1022,7 +1014,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 25.2.0 -n ferroehr --reuse-values \
+  --version 26.1.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1397,7 +1389,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.2.0 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 26.1.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

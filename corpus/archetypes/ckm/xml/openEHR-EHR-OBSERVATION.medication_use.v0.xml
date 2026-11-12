@@ -1,0 +1,881 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2018-11-07</original_author>
+    <original_author id="name">Silje Ljosland Bakke</original_author>
+    <original_author id="organisation">Nasjonal IKT HF</original_author>
+    <original_author id="email">silje.ljosland.bakke@nasjonalikt.no</original_author>
+    <other_contributors>Silje Ljosland Bakke, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>Heather Leslie, Atomica Informatics, Australia</other_contributors>
+    <other_contributors>Ian McNicoll, FreshEHR Clinical Informatics, United Kingdom</other_contributors>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">7D2D31CA2427932320A54B0E119DB8EA</other_details>
+    <other_details id="build_uid">3fd18e75-1c78-43a1-a373-44844239b91a</other_details>
+    <other_details id="revision">0.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Darstellung von Informationen über die Verabreichung oder die Einnahme eines bestimmten Medikaments oder einer bestimmten Art/Klasse von Medikamenten bei oder während eines Ereignisses, wie z.B. einem bestimmten Zeitpunkt oder einer bestimmten Zeitdauer.</purpose>
+      <use>Zu Verwenden, um Informationen über die Verabreichung oder die Einnahme eines bestimmten Medikaments oder einer bestimmten Art/Klasse von Medikamenten bei oder während eines Ereignisses, wie z.B. einem bestimmten Zeitpunkt oder einer bestimmten Zeitdauer, zu erfassen.&#xD;
+&#xD;
+Dieser Archetyp wurde speziell für aggregierte Informationen entwickelt, wie man sie in Medikamenten-Tagebüchern und Berichtsdatensätzen finden kann.</use>
+      <misuse>Nicht zur Erfassung einer Verordnung für die Verabreichung oder Einnahme eines Medikaments verwenden - verwenden Sie dazu INSTRUCTION.medication_order.&#xD;
+&#xD;
+Nicht für die Dokumentation der Verabreichung oder die Einnahme eines Medikaments verwenden - verwenden Sie dazu ACTION.medication.&#xD;
+&#xD;
+Nicht für die Dokumentation einer Zusammenfassung der Verabreichung oder der Einnahme eines Medikaments über die Lebenszeit der Person verwenden - verwenden Sie zu diesem Zweck EVALUATION.medication_summary.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å registrere spørreskjemainformasjon om administrering og inntak av et spesifikt legemiddel eller en type eller klasse legemiddel ved eller i løpet av en hendelse, f.eks. et tidspunkt eller et tidsintervall.</purpose>
+      <use>Brukes for å registrere spørreskjemainformasjon om administrering og inntak av et spesifikt legemiddel eller en type eller klasse legemiddel ved eller i løpet av en hendelse, f.eks. et tidspunkt eller et tidsintervall.</use>
+      <misuse>Skal ikke brukes for å registrere en legemiddelordinering - bruk INSTRUCTION.medication_order for dette formålet.&#xD;
+&#xD;
+Skal ikke brukes for å dokumentere administrering eller inntak av et legemiddel - bruk ACTION.medication for dette formålet.&#xD;
+&#xD;
+Skal ikke brukes for å dokumentere et sammendrag av legemiddelinntak for individets levetid - bruk EVALUATION.medication_summary for dette formålet.</misuse>
+      <copyright>© openEHR Foundation, Nasjonal IKT HF, openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>For recording questionnaire information about the administration or consumption of any medication, a specified medication or type/class of medication at or during an event such as a specific point in time or duration of time.</purpose>
+      <use>Use for recording questionnaire information about the administration or consumption of any medication, a specified medication or type/class of medication at or during an event such as a specific point in time or duration of time.</use>
+      <misuse>Not to be used for recordning an order for a medication to be administered or consumed - use INSTRUCTION.medication_order for this purpose.&#xD;
+&#xD;
+Not to be used for recording the administration or consumption of a medication - use ACTION.medication for this purpose.&#xD;
+&#xD;
+Not to be used for recording a summary of administration or consumption of a medication over the lifetime of the individual - use EVALUATION.medication_summary for this purpose.</misuse>
+      <copyright>© openEHR Foundation, Nasjonal IKT HF, openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Kim Sommer, Natalia Strauch, Alina Rehberg</author>
+    <author id="organisation">Medizinische Hochschule Hannover</author>
+    <author id="email">sommer.kimkatrin@mh-hannover.de, Strauch.Natalia@mh-hannover.de, rehberg.alina@mh-hannover.de</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Silje Ljosland Bakke</author>
+    <author id="organisation">Nasjonal IKT HF, Helse Vest IKT AS</author>
+    <author id="email">silje.ljosland.bakke@nasjonalikt.no, silje.ljosland.bakke@helse-vest-ikt.no</author>
+  </translations>
+  <uid>
+    <value>85df04c8-2409-4385-8eee-89d495769dff</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-OBSERVATION.medication_use.v0</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>OBSERVATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>HISTORY</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0022</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>events</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0023</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ITEM_TREE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0001</node_id>
+                <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                  <rm_attribute_name>items</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0027</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>CLUSTER</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0026</node_id>
+                    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                      <rm_attribute_name>items</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>1</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>ELEMENT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>0</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id>at0002</node_id>
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>value</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>0</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>DV_TEXT</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                          </children>
+                        </attributes>
+                      </children>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>ELEMENT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>0</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id>at0003</node_id>
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>value</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>0</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                              <rm_attribute_name>defining_code</rm_attribute_name>
+                              <existence>
+                                <lower_included>true</lower_included>
+                                <upper_included>true</upper_included>
+                                <lower_unbounded>false</lower_unbounded>
+                                <upper_unbounded>false</upper_unbounded>
+                                <lower>1</lower>
+                                <upper>1</upper>
+                              </existence>
+                              <children xsi:type="C_CODE_PHRASE">
+                                <rm_type_name>CODE_PHRASE</rm_type_name>
+                                <occurrences>
+                                  <lower_included>true</lower_included>
+                                  <upper_included>true</upper_included>
+                                  <lower_unbounded>false</lower_unbounded>
+                                  <upper_unbounded>false</upper_unbounded>
+                                  <lower>1</lower>
+                                  <upper>1</upper>
+                                </occurrences>
+                                <node_id />
+                                <terminology_id>
+                                  <value>local</value>
+                                </terminology_id>
+                                <code_list>at0028</code_list>
+                                <code_list>at0029</code_list>
+                                <code_list>at0030</code_list>
+                              </children>
+                            </attributes>
+                          </children>
+                        </attributes>
+                      </children>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>CLUSTER</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>true</upper_unbounded>
+                          <lower>0</lower>
+                        </occurrences>
+                        <node_id>at0008</node_id>
+                        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                          <rm_attribute_name>items</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>ELEMENT</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id>at0021</node_id>
+                            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                              <rm_attribute_name>value</rm_attribute_name>
+                              <existence>
+                                <lower_included>true</lower_included>
+                                <upper_included>true</upper_included>
+                                <lower_unbounded>false</lower_unbounded>
+                                <upper_unbounded>false</upper_unbounded>
+                                <lower>0</lower>
+                                <upper>1</upper>
+                              </existence>
+                              <children xsi:type="C_COMPLEX_OBJECT">
+                                <rm_type_name>DV_TEXT</rm_type_name>
+                                <occurrences>
+                                  <lower_included>true</lower_included>
+                                  <upper_included>true</upper_included>
+                                  <lower_unbounded>false</lower_unbounded>
+                                  <upper_unbounded>false</upper_unbounded>
+                                  <lower>1</lower>
+                                  <upper>1</upper>
+                                </occurrences>
+                                <node_id />
+                              </children>
+                            </attributes>
+                          </children>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>ELEMENT</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>0</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id>at0024</node_id>
+                            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                              <rm_attribute_name>value</rm_attribute_name>
+                              <existence>
+                                <lower_included>true</lower_included>
+                                <upper_included>true</upper_included>
+                                <lower_unbounded>false</lower_unbounded>
+                                <upper_unbounded>false</upper_unbounded>
+                                <lower>0</lower>
+                                <upper>1</upper>
+                              </existence>
+                              <children xsi:type="C_COMPLEX_OBJECT">
+                                <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                                <occurrences>
+                                  <lower_included>true</lower_included>
+                                  <upper_included>true</upper_included>
+                                  <lower_unbounded>false</lower_unbounded>
+                                  <upper_unbounded>false</upper_unbounded>
+                                  <lower>1</lower>
+                                  <upper>1</upper>
+                                </occurrences>
+                                <node_id />
+                                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                                  <rm_attribute_name>defining_code</rm_attribute_name>
+                                  <existence>
+                                    <lower_included>true</lower_included>
+                                    <upper_included>true</upper_included>
+                                    <lower_unbounded>false</lower_unbounded>
+                                    <upper_unbounded>false</upper_unbounded>
+                                    <lower>1</lower>
+                                    <upper>1</upper>
+                                  </existence>
+                                  <children xsi:type="C_CODE_PHRASE">
+                                    <rm_type_name>CODE_PHRASE</rm_type_name>
+                                    <occurrences>
+                                      <lower_included>true</lower_included>
+                                      <upper_included>true</upper_included>
+                                      <lower_unbounded>false</lower_unbounded>
+                                      <upper_unbounded>false</upper_unbounded>
+                                      <lower>1</lower>
+                                      <upper>1</upper>
+                                    </occurrences>
+                                    <node_id />
+                                    <terminology_id>
+                                      <value>local</value>
+                                    </terminology_id>
+                                    <code_list>at0031</code_list>
+                                    <code_list>at0032</code_list>
+                                    <code_list>at0033</code_list>
+                                  </children>
+                                </attributes>
+                              </children>
+                            </attributes>
+                          </children>
+                          <cardinality>
+                            <is_ordered>false</is_ordered>
+                            <is_unique>false</is_unique>
+                            <interval>
+                              <lower_included>true</lower_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>true</upper_unbounded>
+                              <lower>1</lower>
+                            </interval>
+                          </cardinality>
+                        </attributes>
+                      </children>
+                      <cardinality>
+                        <is_ordered>false</is_ordered>
+                        <is_unique>false</is_unique>
+                        <interval>
+                          <lower_included>true</lower_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>true</upper_unbounded>
+                          <lower>1</lower>
+                        </interval>
+                      </cardinality>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0025</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <cardinality>
+                    <is_ordered>false</is_ordered>
+                    <is_unique>false</is_unique>
+                    <interval>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </interval>
+                  </cardinality>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0005</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0019</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Medication screening questionnaire</items>
+        <items id="description">Questionnaire information about the administration or consumption of any medication, a specified medication or type/class of medication at or during an event such as a specific point in time or duration of time.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Medication class name</items>
+        <items id="description">Name of class or type of medication.</items>
+        <items id="comment">For example: opioid; or analgesic.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Medication class in use?</items>
+        <items id="description">Is the individual using the medication, class or type of medication at or during the identified event?</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Specific medication</items>
+        <items id="description">Details about a specific medication or medication subclass of the medication class.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Extension</items>
+        <items id="description">Additional information required to capture local content or to align with other reference models/formalisms.</items>
+        <items id="comment">For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Medication name</items>
+        <items id="description">Name of medication or medication subclass.</items>
+        <items id="comment">For example: Oxycodone.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Event Series</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Any event</items>
+        <items id="description">Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Medication in use?</items>
+        <items id="description">Is the individual using the medication or subclass of medication at or during the identified event?</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Comment</items>
+        <items id="description">Additional narrative about the medication use during an identified event, not captured in other fields.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Specific medication class</items>
+        <items id="description">Details about the use of a specific class of medication.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Any medication use?</items>
+        <items id="description">Is the individual using any medication at or during the time of the event?</items>
+      </items>
+      <items code="at0028">
+        <items id="text">In use</items>
+        <items id="description">The individual uses or has used the medication class at or during the time of the event.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">Not in use</items>
+        <items id="description">The individual does not use or has not used the medication class at or during the time of the event.</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Unknown</items>
+        <items id="description">It is unknown whether the individual uses or has used the medication class at or during the time of the event.</items>
+      </items>
+      <items code="at0031">
+        <items id="text">In use</items>
+        <items id="description">The individual uses or has used the medication at or during the time of the event.</items>
+      </items>
+      <items code="at0032">
+        <items id="text">Not in use</items>
+        <items id="description">The individual does not use or has not used the medication at or during the time of the event.</items>
+      </items>
+      <items code="at0033">
+        <items id="text">Unknown</items>
+        <items id="description">It is unknown whether the individual uses or has used the medication at or during the time of the event.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Spørreskjema for legemiddelbruk</items>
+        <items id="description">Spørreskjemainformasjon om administrering og inntak av et spesifikt legemiddel eller en type eller klasse legemiddel ved eller i løpet av en hendelse, f.eks. et tidspunkt eller et tidsintervall.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Legemiddelklasse</items>
+        <items id="description">Navnet på klassen eller typen legemiddel.</items>
+        <items id="comment">For eksempel opioid eller smertestillende.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Legemiddelklasse i bruk?</items>
+        <items id="description">Bruker individet klassen eller typen legemiddel ved eller i løpet av hendelsen?</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Spesifikt legemiddel</items>
+        <items id="description">Detaljer om bruk av et spesifikt legemiddel eller en spesifikk underklasse av legemiddelklassen.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Ytterligere informasjon</items>
+        <items id="description">Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.</items>
+        <items id="comment">For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Legemiddelnavn</items>
+        <items id="description">Navn på legemiddelet eller underklassen av legemiddelklassen.</items>
+        <items id="comment">For eksempel oksykodon.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">*HISTORY (en)</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Uspesifisert hendelse</items>
+        <items id="description">Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Legemiddel i bruk?</items>
+        <items id="description">Bruker individet legemiddelet eller underklassen legemiddel ved eller i løpet av hendelsen?</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Kommentar</items>
+        <items id="description">Ytterligere fritekst om legemiddelbruken under hendelsen, som ikke fanges av andre felt.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Spesifikk legemiddelklasse</items>
+        <items id="description">Detaljer om bruk av en spesifikk legemiddelklasse.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Er noen legemidler i bruk?</items>
+        <items id="description">Bruker individet noen legemidler i det hele tatt ved eller i løpet av hendelsen?</items>
+      </items>
+      <items code="at0028">
+        <items id="text">I bruk</items>
+        <items id="description">Individet bruker eller har brukt legemiddelklassen ved eller i løpet av hendelsen.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">Ikke i bruk</items>
+        <items id="description">Individet bruker ikke eller har ikke brukt legemiddelklassen ved eller i løpet av hendelsen.</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Ukjent</items>
+        <items id="description">Det er ukjent hvorvidt individet bruker eller har brukt legemiddelklassen ved eller i løpet av hendelsen.</items>
+      </items>
+      <items code="at0031">
+        <items id="text">I bruk</items>
+        <items id="description">Individet bruker eller har brukt legemiddelet ved eller i løpet av hendelsen.</items>
+      </items>
+      <items code="at0032">
+        <items id="text">Ikke i bruk</items>
+        <items id="description">Individet bruker ikke eller har ikke brukt legemiddelet ved eller i løpet av hendelsen.</items>
+      </items>
+      <items code="at0033">
+        <items id="text">Ukjent</items>
+        <items id="description">Det er ukjent hvorvidt individet bruker eller har brukt legemiddelet ved eller i løpet av hendelsen.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Fragebogen zum Medikations-Screening</items>
+        <items id="description">Aggregierte Informationen über die Verabreichung oder die Einnahme eines bestimmten Medikaments oder einer bestimmten Art/Klasse von Medikamenten bei oder während eines Ereignisses, wie z.B. einem bestimmten Zeitpunkt oder einer bestimmten Zeitdauer.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Name der Medikamentenklasse</items>
+        <items id="description">Name der Klasse oder des Medikamententyps.</items>
+        <items id="comment">Zum Beispiel: Opioid; oder Analgetikum.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Medikamentenklasse in Verwendung?</items>
+        <items id="description">Wendet die Person das Medikament, die Klasse oder Art des Medikaments bei oder während des Zeitpunkts des Ergebnisses an?</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Spezifische Medikamente</items>
+        <items id="description">Details über ein spezifisches Medikament oder eine Medikamentenunterklasse der Medikamentenklasse.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Erweiterung</items>
+        <items id="description">Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.</items>
+        <items id="comment">Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Name des Medikaments</items>
+        <items id="description">Name des Medikaments oder der Medikamentenunterklasse.</items>
+        <items id="comment">Zum Beispiel: Oxycodon.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Event Series</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Beliebiges Ereignis</items>
+        <items id="description">Standard, ein nicht spezifizierter Zeitpunkt oder ein Intervallereignis, das explizit in einem Template oder zur Laufzeit definiert werden kann.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Medikament in Verwendung?</items>
+        <items id="description">Wendet die Person das Medikament oder Unterklasse des Medikaments bei oder während des genannten Ereignisses an?</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Kommentar</items>
+        <items id="description">Zusätzliche Beschreibung des Gebrauchs von Medikamenten während eines bestimmten Ereignisses, die in anderen Bereichen nicht erfasst wurde.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Spezifische Medikamentenklasse</items>
+        <items id="description">Details über die Verwendung einer bestimmten Medikamentenklasse.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Medikamente in Verwendung?</items>
+        <items id="description">Wendet die Person das Medikament bei oder während des Zeitpunkts des Ergebnisses an?</items>
+      </items>
+      <items code="at0028">
+        <items id="text">In Verwendung</items>
+        <items id="description">Die Person verwendet die Medikamentenklasse zum Zeitpunkt des Ergebnis oder währendessen oder hat sie verwendet.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">Nicht in Verwendung</items>
+        <items id="description">Die Person verwendet die Medikamentenklasse zum Zeitpunkt des Ergebnis oder währendessen nicht oder hat sie nicht verwendet.</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Unbekannt</items>
+        <items id="description">Es ist unbekannt, ob die Person die Medikamentenklasse zum Zeitpunkt des Ergebnis oder währendessen verwendet oder sie verwendet hat.</items>
+      </items>
+      <items code="at0031">
+        <items id="text">In Verwendung</items>
+        <items id="description">Die Person verwendet das Medikament zum Zeitpunkt des Ergebnis oder währendessen oder hat es verwendet.</items>
+      </items>
+      <items code="at0032">
+        <items id="text">Nicht in Verwendung</items>
+        <items id="description">Die Person verwendet das Medikament zum Zeitpunkt des Ergebnis oder währendessen nicht oder hat es nicht verwendet.</items>
+      </items>
+      <items code="at0033">
+        <items id="text">Unbekannt</items>
+        <items id="description">Es ist unbekannt, ob die Person das Medikament zum Zeitpunkt des Ergebnis oder währendessen verwendet oder es verwendet hat.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

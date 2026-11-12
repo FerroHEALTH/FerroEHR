@@ -210,6 +210,26 @@ Two consequences to plan for:
   visibility is the effect to plan around, and the restore routes are how you
   get it back.
 
+## Operational-policy registers
+
+Three routes behind the same switch, for `admin_role` only, carry the
+operational policy that is data rather than configuration: the audit category
+map, the EHDS Art. 3(3) access delay and the Cedar policy set. What each
+register holds is on [Operational policy](operational-policy.md#the-admin-registers).
+
+| Route | Body or header | Success |
+|---|---|---|
+| `GET {ext}/admin/registers/{register}` | — | **200** `{"register", "version", "committer", "committed_at", "document"}`: the newest version, or version 0, the default; the `ETag` is the version |
+| `PUT {ext}/admin/registers/{register}` | `If-Match: "<version>"` and the whole register document | **200**: the new version, as the read answers it, with its `ETag`; the next request on every replica runs under it |
+| `GET {ext}/admin/registers/{register}/history` | — | **200** `{"register", "versions": [...]}`: every version, newest first, ending with version 0 |
+
+`{register}` is `audit-categories`, `access-delay` or `cedar-policies`, and any
+other name is **404**. A write without `If-Match` is **400**, and one whose
+`If-Match` is no longer the newest version is **412**: read the register again
+and write over the version it answers. A document that does not hold is
+**400** and leaves the version in force. Every read and write is an access
+record of its own.
+
 ## Legal marks: restriction, objection and retention
 
 Eleven routes behind the same switch and role, carrying the four marks the law
@@ -230,7 +250,7 @@ anything.
 | `POST {ext}/admin/access-restriction` | `{"ehr_id": "…", "vo_id": "…"?, "note": "…"?}` | **204**: the EHDS Art. 8 restriction of access by health professionals is recorded and in force |
 | `GET {ext}/admin/access-restriction` | `?ehr_id=…` | **200**: the access-restriction register, newest request first, lifts included |
 | `POST {ext}/admin/access-restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force access restriction at that grain is lifted |
-| `POST {ext}/admin/access-delay` | `{"ehr_id": "…", "vo_id": "…", "until": "…"?, "note": "…"?}` | **204**: the composition is withheld from the person under EHDS Art. 3(3) until `until` (an RFC 3339 instant within `privacy.access_delay.max_delay` of now) or for `privacy.access_delay.max_delay`; **400** while `[privacy.access_delay]` is off |
+| `POST {ext}/admin/access-delay` | `{"ehr_id": "…", "vo_id": "…", "until": "…"?, "note": "…"?}` | **204**: the composition is withheld from the person under EHDS Art. 3(3) until `until` (an RFC 3339 instant within the access-delay register's `max_delay` of now) or for the access-delay register's `max_delay`; **400** while the [access-delay register](installation/config-auth.md#the-access-delay-register) is off |
 | `GET {ext}/admin/access-delay` | `?ehr_id=…` | **200**: the access-delay register, newest hold first, each with its `basis` (`category` or `professional`), its end and its release |
 | `POST {ext}/admin/access-delay/release` | `{"ehr_id": "…", "vo_id": "…"}` | **204**: every hold of the composition still in force is released, and the person reads it |
 | `POST {ext}/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release` | none | **204**: the treating professional's release from the clinical surface, with the checks of a write to that EHR; **403** to a request that may be the person's |
@@ -244,14 +264,15 @@ is **404**, and a body without `Content-Type: application/json` is **415**, in
 each case before anything is recorded. Setting or lifting a mark is an access
 record of its own.
 
-A `category` is named as `[audit.categories]` names it (a priority category by
+A `category` is named as the [audit category register](installation/config-audit.md#the-audit-category-register) names it (a priority category by
 its code, `Patient-Summaries`, `Electronic-Prescriptions`,
 `Electronic-Dispensations`, `Medical-Imaging`, `Laboratory-Reports` or
 `Discharge-Reports`, or as `<system>|<code>`; a declared national category as
 its `<system>|<code>`; or `none`; an unknown one is **400**) and stored as its
 `<system>|<code>` token, which serves EHDS
 Annex II 3.4: retention periods that take the categories of the data into
-account. The server mirrors the map into the register at every boot. A period
+account. The server mirrors the map into the register at every boot and with
+every write of the audit category register. A period
 keyed on a category lists the objects the map places in it; an object the map
 cannot classify is listed under the longest period configured for its kind,
 and a category row with no object is left out of `due`. A period with no

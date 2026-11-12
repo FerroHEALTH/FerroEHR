@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -132,8 +132,7 @@ Skal ikke brukes for spørreskjemalignede registreringer om substansbruk, eksemp
 &#xD;
 Skal ikke brukes til å registrere informasjon om legemidler som er gitt under klinisk kontroll for det tiltenkte formålet og i passende doser. Bruk en passende arketype innenfor gruppen av legemiddelarketyper til dette formålet.&#xD;
 &#xD;
-Skal ikke brukes til å registrere en formell vurdering av avhengighet av en spesifikk substans. Bruk arketypen EVALUATION.problem_diagnosis.v1 (Problem/diagnose) til dette.&#xD;
-</misuse>
+Skal ikke brukes til å registrere en formell vurdering av avhengighet av en spesifikk substans. Bruk arketypen EVALUATION.problem_diagnosis.v1 (Problem/diagnose) til dette.</misuse>
       <copyright />
     </details>
     <details>
@@ -1758,4 +1757,3 @@ Not to be used to record a formal assessment of dependence to a specific substan
     </term_definitions>
   </ontology>
 </archetype>
-

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1048,7 +1048,7 @@ Cet archétype sera généralement utilisé dans le contexte d’un archétype p
         <items id="text">Direction sequence</items>
         <items id="description">The intended position of this direction within the overall sequence of directions.</items>
         <items id="comment">For example: ''1' '2', '3'.&#xD;
-Where multiple dosage directions are expressed, the 'Direction sequence' makes the order in which they should be executed explicit. For example: (1) 1 tab daily for 3 days, (2) 1 tab twice daily for 4 days, (3) 1 tablet for 7 days.  </items>
+Where multiple dosage directions are expressed, the 'Direction sequence' makes the order in which they should be executed explicit. For example: (1) 1 tab daily for 3 days, (2) 1 tab twice daily for 4 days, (3) 1 tablet for 7 days.</items>
       </items>
       <items code="at0066">
         <items id="text">Direction duration</items>
@@ -1325,4 +1325,3 @@ Lorsque plusieurs consignes posologiques sont indiquées, la « Séquence des in
     </term_definitions>
   </ontology>
 </archetype>
-

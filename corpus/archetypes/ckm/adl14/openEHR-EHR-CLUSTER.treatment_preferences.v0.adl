@@ -5,6 +5,19 @@ concept
 	[at0000]	-- Treatment preferences
 language
 	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Olha Nikolaieva">
+				["organisation"] = <"University Hospital Basel">
+				["email"] = <"olha.nikolaieva@usb.ch">
+			>
+			other_details = <
+				["other_contributors"] = <"Maren Diepenbruck, University Hospital Basel, Switzerland">
+			>
+		>
+	>
 description
 	original_author = <
 		["name"] = <"Heather Leslie">
@@ -13,6 +26,15 @@ description
 		["date"] = <"2020-11-13">
 	>
 	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Erfassung der persönlichen Präferenzen einer Person hinsichtlich ihrer zukünftigen Versorgung und Behandlung, einschließlich des übergeordneten Versorgungsziels sowie von Vorgaben zu möglichen Behandlungen und medizinischen Interventionen, die sich auf die Lebensdauer oder die Lebensqualität auswirken können.">
+			use = <"Zur Erfassung persönlicher Präferenzen hinsichtlich der zukünftigen Versorgung und Behandlung, die von der betroffenen Person selbst geäussert wurden. Diese Präferenzen umfassen das übergeordnete Versorgungsziel sowie Vorgaben zur kardiopulmonalen Reanimation und zu anderen kritischen medizinischen Interventionen, die das Leben verlängern oder die Lebensqualität beeinflussen können.
+
+Dieser Archetyp ist dafür vorgesehen, im SLOT «Directive details» des Archetyps EVALUATION.advance_care_directive eingebettet zu werden. Er kann, sofern klinisch angemessen, auch in andere Archetypen eingebettet werden.">
+			keywords = <"Patient, Präferenzen, Behandlung, Versorgung, Ziel", ...>
+			misuse = <"Nicht zur Erfassung einer Verfügung zur Notfallversorgung und -behandlung verwenden. Verwenden Sie hierfür EVALUATION.emergency_care_treatment.">
+		>
 		["en"] = <
 			language = <[ISO_639-1::en]>
 			purpose = <"To record personal preferences for future care and treatment by the individual, including the overall goal of care and guidance about possible treatments and medical interventions that may impact length of life or quality of life.">
@@ -37,8 +59,8 @@ Thomas RL, Zubair MY, Hayes B, Ashby MA. Goals of care: a clinical framework for
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"B6F1BE370EE11CB2CB7A432FADE04A9F">
-		["build_uid"] = <"451a1a98-6806-4488-80d2-3add72c4dacb">
+		["MD5-CAM-1.0.1"] = <"8B888397BB825773FC1D91DC8C2A19E8">
+		["build_uid"] = <"ae163ddd-fa19-4e34-bbb1-5a8a8b859c55">
 		["revision"] = <"0.0.1-alpha">
 	>
 
@@ -131,7 +153,6 @@ definition
 			}
 		}
 	}
-
 
 ontology
 	term_definitions = <
@@ -246,6 +267,120 @@ ontology
 				["at0026"] = <
 					text = <"Comment">
 					description = <"Additional narrative about the all treatment preferences, not captured in other fields.">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Behandlungspräferenzen">
+					description = <"Persönliche Präferenzen hinsichtlich des Versorgungsziels und akzeptabler zukünftiger medizinischer Interventionen, wie sie von der betroffenen Person selbst geäussert wurden.">
+				>
+				["at0001"] = <
+					text = <"Versorgungsziel">
+					description = <"Kategorie zur Beschreibung der Präferenz der betroffenen Person hinsichtlich ihrer eigenen zukünftigen Behandlung.">
+				>
+				["at0002"] = <
+					text = <"So lange wie möglich leben">
+					description = <"">
+				>
+				["at0003"] = <
+					text = <"Abwägung zwischen Lebensverlängerung und Lebensqualität">
+					description = <"">
+				>
+				["at0004"] = <
+					text = <"Lebensqualität und Wohlbefinden">
+					description = <"">
+				>
+				["at0005"] = <
+					text = <"Unbekannt">
+					description = <"">
+				>
+				["at0006"] = <
+					text = <"Präferenz zur kardiopulmonalen Reanimation">
+					description = <"Präferenz hinsichtlich einer zukünftigen kardiopulmonalen Reanimation (CPR).">
+				>
+				["at0007"] = <
+					text = <"Kardiopulmonale Reanimation durchführen">
+					description = <"Alle angemessenen Massnahmen zur kardiopulmonalen Reanimation sollen durchgeführt werden, um das Leben zu retten oder zu verlängern.">
+				>
+				["at0008"] = <
+					text = <"Keine kardiopulmonale Reanimation durchführen.">
+					description = <"Es sollen keine Massnahmen zur kardiopulmonalen Reanimation durchgeführt werden, um das Leben zu retten oder zu verlängern. Alle Behandlungen sollen auf Symptomlinderung und Lebensqualität ausgerichtet sein. Auch bekannt als \"Keine Reanimation (DNR)\", \"Keine Reanimationsmassnahmen (DNAR)\", \"Nicht zur Reanimation vorgesehen (NFR)\" oder ähnlich.">
+				>
+				["at0009"] = <
+					text = <"Unbekannt">
+					description = <"Die Entscheidung zur kardiopulmonalen Reanimation ist nicht bekannt.">
+				>
+				["at0010"] = <
+					text = <"Krankenhausbehandlung">
+					description = <"Präferenz hinsichtlich des akzeptablen Umfangs der Krankenhausbehandlung.">
+				>
+				["at0011"] = <
+					text = <"Aufnahme auf die Intensivstation">
+					description = <"">
+				>
+				["at0012"] = <
+					text = <"Aufnahme ins Krankenhaus, jedoch keine intensivmedizinische Behandlung.">
+					description = <"">
+				>
+				["at0013"] = <
+					text = <"Aufnahme ins Krankenhaus unter bestimmten Voraussetzungen.">
+					description = <"">
+				>
+				["at0014"] = <
+					text = <"Keine Aufnahme ins Krankenhaus.">
+					description = <"">
+				>
+				["at0015"] = <
+					text = <"Umstände einer Krankenhausaufnahme">
+					description = <"Beschreibung der Umstände, unter denen eine Krankenhausaufnahme akzeptabel wäre.">
+					comment = <"Zum Beispiel: Knochenfraktur.">
+				>
+				["at0016"] = <
+					text = <"Je Behandlung">
+					description = <"Details zu den Präferenzen hinsichtlich einer bestimmten medizinischen Behandlung.">
+				>
+				["at0017"] = <
+					text = <"Behandlung">
+					description = <"Name der Behandlung.">
+					comment = <"Die Kodierung des Behandlungsnamens mit einer Terminologie wird empfohlen.">
+				>
+				["at0018"] = <
+					text = <"Präferenz">
+					description = <"Entscheidung hinsichtlich der angegebenen Behandlung.">
+				>
+				["at0019"] = <
+					text = <"Akzeptabel">
+					description = <"">
+				>
+				["at0020"] = <
+					text = <"Akzeptabel unter bestimmten Voraussetzungen">
+					description = <"">
+				>
+				["at0021"] = <
+					text = <"Nicht akzeptabel">
+					description = <"">
+				>
+				["at0022"] = <
+					text = <"Unbekannt">
+					description = <"">
+				>
+				["at0023"] = <
+					text = <"Besondere Voraussetzungen">
+					description = <"Beschreibung der Voraussetzungen, unter denen die Behandlung akzeptabel wäre.">
+				>
+				["at0024"] = <
+					text = <"Kommentar">
+					description = <"Zusätzlicher Freitext zur festgelegten Behandlungspräferenz, der in anderen Feldern nicht erfasst ist.">
+				>
+				["at0025"] = <
+					text = <"Zusätzliche Details">
+					description = <"Zusätzliche strukturierte Angaben zu Behandlungspräferenzen, die in anderen Feldern nicht erfasst sind.">
+				>
+				["at0026"] = <
+					text = <"Kommentar">
+					description = <"Zusätzlicher Freitext zu allen Behandlungspräferenzen, der nicht in anderen Feldern erfasst werden konnte.">
 				>
 			>
 		>

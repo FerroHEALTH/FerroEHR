@@ -31,9 +31,9 @@ use openehr_its::opt14::types::Archetype;
 /// here is a NEGATIVE test: the gate asserts the read still fails, so a
 /// loosened codec cannot hide behind the entry.
 ///
-/// All four entries are the SAME defect in CKM's XML exporter, and the evidence
-/// is CKM contradicting itself: the export names `xsi:type="C_DV_SCALE"` on a
-/// `C_OBJECT`, but
+/// The entries are two defects in CKM's XML exporter. The first four are the
+/// SAME one, and the evidence is CKM contradicting itself: the export names
+/// `xsi:type="C_DV_SCALE"` on a `C_OBJECT`, but
 ///
 /// * no vendored openEHR schema declares that type — it is absent from every
 ///   `OpenehrProfile.xsd` we vendor (ITS-XML 1.0.2 `ALL/` and ITS-XML 2.0.0
@@ -47,10 +47,33 @@ use openehr_its::opt14::types::Archetype;
 /// schema-invalid, so refusing it is correct: accepting an undeclared
 /// constrainer would silently fork the AM model. Recorded as a defect in the
 /// vendored data, NOT as a codec gap — nothing here asks for a codegen change.
+///
+/// The other seven came with the 2026-11-12 re-vendoring: where the ADL 1.4
+/// source constrains a duration to one value (`value matches {PT1M}`), CKM's
+/// XML export now writes that value as a `<value>` child of `C_DURATION`. The
+/// AM 1.4 `C_DURATION` of both vendored `Archetype.xsd` releases declares only
+/// `pattern`, `range` and `assumed_value`, so the document is schema-invalid
+/// and the codec refuses it; the export of 2026-08-01 wrote an open `range`.
 pub(crate) const ADJUDICATED: &[(&str, &str)] = &[
     (
         "openEHR-EHR-CLUSTER.lab_microscopy_culture.v0.xml",
         "xsi:type=\"C_DV_SCALE\" is declared by no vendored openEHR schema",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.apgar.v2.xml",
+        "<value> is not a child C_DURATION declares in the vendored AM 1.4 schemas",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.blood_pressure.v2.xml",
+        "<value> is not a child C_DURATION declares in the vendored AM 1.4 schemas",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.fact_g-Hep.v0.xml",
+        "<value> is not a child C_DURATION declares in the vendored AM 1.4 schemas",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.fact_g.v0.xml",
+        "<value> is not a child C_DURATION declares in the vendored AM 1.4 schemas",
     ),
     (
         "openEHR-EHR-OBSERVATION.g8_screening_tool.v0.xml",
@@ -61,8 +84,20 @@ pub(crate) const ADJUDICATED: &[(&str, &str)] = &[
         "xsi:type=\"C_DV_SCALE\" is declared by no vendored openEHR schema",
     ),
     (
+        "openEHR-EHR-OBSERVATION.menstrual_diary.v1.xml",
+        "<value> is not a child C_DURATION declares in the vendored AM 1.4 schemas",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.mskcc_bowel_function_instrument.v0.xml",
+        "<value> is not a child C_DURATION declares in the vendored AM 1.4 schemas",
+    ),
+    (
         "openEHR-EHR-OBSERVATION.visual_acuity.v0.xml",
         "xsi:type=\"C_DV_SCALE\" is declared by no vendored openEHR schema",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.ygtss_revised.v1.xml",
+        "<value> is not a child C_DURATION declares in the vendored AM 1.4 schemas",
     ),
 ];
 

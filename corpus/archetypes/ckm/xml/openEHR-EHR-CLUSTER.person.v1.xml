@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -316,8 +316,7 @@ No debe utilizarse para representar el sujeto de la atención, los participantes
 &#xD;
 No debe utilizarse para registrar la fecha de nacimiento de un individuo: utilice el elemento de datos "Fecha de nacimiento" dentro de EVALUATION.birth_summary para este fin&#xD;
 &#xD;
-No debe utilizarse para registrar detalles biométricos o biomarcadores sobre un individuo - utilice un arquetipo de ENTRY específico para este fin.&#xD;
-</misuse>
+No debe utilizarse para registrar detalles biométricos o biomarcadores sobre un individuo - utilice un arquetipo de ENTRY específico para este fin.</misuse>
       <copyright />
     </details>
   </description>
@@ -923,8 +922,7 @@ Diogo Neto, Promptly Health, Portugal</other_details>
       <items code="at0002">
         <items id="text">Name strukturiert</items>
         <items id="description">Alternative Darstellung des vollständigen Namens der Person durch Trennung in diskrete, strukturierte Komponenten.</items>
-        <items id="comment">Es können beliebige oder alle strukturierte Elemente des Namens als Textzeichenfolge kombiniert und im Datenelement „Name“ präsentieren werden.&#xD;
-</items>
+        <items id="comment">Es können beliebige oder alle strukturierte Elemente des Namens als Textzeichenfolge kombiniert und im Datenelement „Name“ präsentieren werden.</items>
       </items>
       <items code="at0003">
         <items id="text">Identifikator</items>
@@ -933,8 +931,7 @@ Diogo Neto, Promptly Health, Portugal</other_details>
       </items>
       <items code="at0004">
         <items id="text">Rolle</items>
-        <items id="description">Die Beziehung oder die Rolle der Person zur Person in der elektronischen Gesundheitsakte.&#xD;
-</items>
+        <items id="description">Die Beziehung oder die Rolle der Person zur Person in der elektronischen Gesundheitsakte.</items>
         <items id="comment">Zum Beispiel - der Inhaber einer Patientenverfügung, Kontaktperson in einer Organisation, Verwandter in einem Eintrag zur Familienananese, Probenabnehmer oder Zeuge eines Sturzes oder Unfalls. Wenn die anhand dieses Archetyps beschriebene Person der/die Patient/in der Gesundheitsakte ist, dann ist dieses Datenelement redundant.</items>
       </items>
       <items code="at0005">
@@ -1037,14 +1034,12 @@ Diogo Neto, Promptly Health, Portugal</other_details>
       <items code="at0002">
         <items id="text">Strukturerat namn</items>
         <items id="description">Alternativ representation av en individs fullständiga namn genom uppdelning i enskilda komponenter.</items>
-        <items id="comment">Några eller alla strukturerade namnelement kan kombineras som en textsträng och representeras i dataelementet 'Namn' i denna arketyp.&#xD;
-</items>
+        <items id="comment">Några eller alla strukturerade namnelement kan kombineras som en textsträng och representeras i dataelementet 'Namn' i denna arketyp.</items>
       </items>
       <items code="at0003">
         <items id="text">Identifierare</items>
         <items id="description">Identifierare förknippad med personen.</items>
-        <items id="comment">Förekomster för detta dataelement är satt till 0..* för att tillåta att mer än en identifierare kan registreras. Observera att DV_IDENTIFIER-datatypen innehåller flera underkomponenter för registrering av ID-värde, typ, utfärdare och tilldelad. Till exempel - personnummer; körkort; eller passnummer.&#xD;
-</items>
+        <items id="comment">Förekomster för detta dataelement är satt till 0..* för att tillåta att mer än en identifierare kan registreras. Observera att DV_IDENTIFIER-datatypen innehåller flera underkomponenter för registrering av ID-värde, typ, utfärdare och tilldelad. Till exempel - personnummer; körkort; eller passnummer.</items>
       </items>
       <items code="at0004">
         <items id="text">Roll</items>
@@ -1307,4 +1302,3 @@ Om individen som beskrivs med denna arketyp är den som själva journalen gälle
     </term_definitions>
   </ontology>
 </archetype>
-

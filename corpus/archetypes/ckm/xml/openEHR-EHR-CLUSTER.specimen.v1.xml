@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -85,9 +85,9 @@ Laboratory Technical Framework, Volume 3: Content, Revision 10 [Internet]. USA: 
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">22CC4D6E678D5921D1235F94FF1DDDB1</other_details>
-    <other_details id="build_uid">2135a42f-2b06-49c7-a71b-dd68896fa178</other_details>
-    <other_details id="revision">1.1.2</other_details>
+    <other_details id="MD5-CAM-1.0.1">7872180A0DB94F368B0B4B041F020400</other_details>
+    <other_details id="build_uid">eb43fe33-6b2a-4a8e-acb0-2cf0620ff474</other_details>
+    <other_details id="revision">1.1.3</other_details>
     <details>
       <language>
         <terminology_id>
@@ -168,12 +168,11 @@ Der Begriff "Entnahme" (EN: collection), das in diesem Archetyp verwendet wird, 
         </terminology_id>
         <code_string>sv</code_string>
       </language>
-      <purpose>Att registrera detaljer om ett fysiskt provmaterial som tagits från eller relaterat till en individ för undersökning eller analys.</purpose>
+      <purpose>Att registrera detaljer om ett provmaterial som tagits från, eller är relaterat till, en individ för undersökning eller analys.</purpose>
       <keywords>provmaterial</keywords>
-      <keywords>laboratoriu</keywords>
+      <keywords>laboratorium</keywords>
       <keywords>prov</keywords>
       <keywords>provtagning</keywords>
-      <keywords>samplimg</keywords>
       <keywords>biopsi</keywords>
       <keywords>vävnad</keywords>
       <keywords>kroppsvävnad</keywords>
@@ -193,12 +192,14 @@ Der Begriff "Entnahme" (EN: collection), das in diesem Archetyp verwendet wird, 
       <keywords>urin</keywords>
       <keywords>saliv</keywords>
       <keywords>sekret</keywords>
+      <keywords>ledvätska</keywords>
       <keywords>cysta</keywords>
       <keywords>lymfa</keywords>
       <keywords>avföring</keywords>
       <keywords>faeces</keywords>
       <keywords>ascites</keywords>
-      <keywords>hostar upp</keywords>
+      <keywords>upphostningar</keywords>
+      <keywords>svabb</keywords>
       <keywords>sekret</keywords>
       <keywords>kompress</keywords>
       <keywords>bröstmjölk</keywords>
@@ -210,33 +211,31 @@ Der Begriff "Entnahme" (EN: collection), das in diesem Archetyp verwendet wird, 
       <keywords>odling</keywords>
       <keywords>skrapning</keywords>
       <keywords>aspirat</keywords>
-      <keywords>venesektion</keywords>
       <keywords>test</keywords>
       <keywords>cerebrospinalvätska</keywords>
       <keywords>pleuravätska</keywords>
       <keywords>resektion</keywords>
       <keywords>excision</keywords>
-      <use>Används för att registrera detaljer om ett fysiskt provmaterial som tagits från eller relaterat till en individ för undersökning eller analys.&#xD;
+      <use>Används för att registrera detaljer om ett provmaterial som tagits från, eller är relaterat till, en individ för undersökning eller analys.&#xD;
 &#xD;
-Denna CLUSTER-arketyp är utformad för användning i de tre huvudkontexterna som beskrivs nedan:&#xD;
-- Inom INSTRUCTION.service_request eller annan laboratorierelaterad INSTRUCTION-arketyp för att beskriva ett provmaterial som ska tas eller för att beskriva ett prov som åtföljer en begäran om laboratorietjänst.&#xD;
-- Inom en laboratorierelaterad ACTION-arketyp för att beskriva provtagning eller provtaget material.&#xD;
+Denna CLUSTER-arketyp är utformad för användning i kontexterna som beskrivs nedan:&#xD;
+- Inom INSTRUCTION.service_request eller annan laboratorierelaterad INSTRUCTION-arketyp för att beskriva ett provmaterial som ska tas eller för att beskriva ett provmaterial som åtföljer en begäran om laboratorietjänst.&#xD;
+- Inom en laboratorierelaterad ACTION-arketyp för att beskriva en provtagning **ALTERNATIV: insamling av ett provmaterial** eller ett provtaget material.&#xD;
 - Inom OBSERVATION.laboratory_test_result eller annan laboratorierelaterad OBSERVATION-arketyp för att beskriva det provmaterial som ett laboratorieresultat bygger på.&#xD;
-Dessutom kan arketypen också användas inom andra ENTRY- eller CLUSTER-arketyper, där det är kliniskt lämpligt.&#xD;
+Dessutom kan arketypen också nästlas i andra ENTRY- eller CLUSTER-arketyper, där det är kliniskt lämpligt.&#xD;
 &#xD;
-Detaljnivån i denna arketyp överstiger sannolikt det som för närvarande registreras i de flesta laboratorier. Arketypen är avsedd att vara användbar för en enkel provtagning, samtidig provtagning av flera provmaterial utifrån en och samma beställning eller komplexa situationer där minsta detalj om beredning och uppdelning av ett provmaterial måste registreras.&#xD;
+Detaljnivån i denna arketyp är sannolikt högre än vad som för närvarande registreras i de flesta laboratorier. Den är avsiktligt utformad för att stödja både enkel provtagning av ett enskilt prov, samtidig provtagning av flera prov vid en och samma beställning, samt mer komplexa situationer där mycket detaljerad information om hur ett prov förbereds och delas upp behöver dokumenteras.&#xD;
 &#xD;
-De specifika betydelserna för flera element i den här arketypen kommer att ändras beroende på den överordnade arketyp där arketypen för provmaterial är infogad. Till exempel kommer elementet "Provtagningsmetod" i samband med en INSTRUCTION-arketyp att vara den erforderliga provtagningsmetoden, medan samma element i sammanhanget av en ACTION-arketyp i det "färdiga" tillståndet är den faktiska provtagningsmetod som används.&#xD;
+De specifika betydelserna för flera datafält i den här arketypen kan variera beroende på sammanhanget i den överordnade arketyp där denna arketyp är nästlad. Till exempel kommer datafältet "Provtagningsmetod" i kontexten för en INSTRUCTION-arketyp avse den planerade provtagningsmetoden, medan samma datafält i kontexten för en ACTION-arketyp med status "completed" avse den metod som faktiskt användes.&#xD;
 &#xD;
-Denna arketyp kompletteras av andra CLUSTER-arketyper för begrepp som exempelvis behållare, provberedning, transport och lagring av provmaterial.&#xD;
+Denna arketyp kompletteras av andra CLUSTER-arketyper med detaljer om "Specimen container", "Specimen preparation" och "Transport of an item".&#xD;
 &#xD;
-Den här arketypen har utformats för att användas med arketypen ”Specimen Container” på två huvudsakliga sätt:&#xD;
-- ”Specimen Container” nästlad i ”Specimen” (till exempel när ett venöst blodprov är uppdelat mellan två injektionsflaskor eller om en hel tjocktarm är uppdelad i tre hinkar) eller&#xD;
-- "Specimen" nästlad i " Specimen Container" (till exempel när en hink med formalin innehåller en sektion av tjocktarmen och en rektum).&#xD;
+Denna arketyp har utformats för att användas med arketypen ”Specimen container” på två huvudsakliga sätt:&#xD;
+- ”Specimen container” nästlad i ”Specimen” (till exempel när ett venöst blodprov är uppdelat mellan två rör eller om en hel tjocktarm är uppdelad i tre hinkar) eller&#xD;
+- "Specimen" nästlad i " Specimen container" (till exempel när en hink med formalin innehåller en sektion av tjocktarmen och en sektion av rektumet).&#xD;
 &#xD;
-OBS! Termen "provtagning" i denna arketyp är avsedd att betyda aktiviteten för att samla in provmaterial från en individ. Det är inte avsett att representera transporten från individen till laboratoriet.&#xD;
-</use>
-      <misuse>Ej avsedd att användas för att registrera information om provmaterial som inte är relaterat till en viss individ, såsom exempelvis rutinprover från vattenverk eller slumpmässiga prover från livsmedelsproduktion.</misuse>
+OBS! Termen "provtagning" i denna arketyp är avsedd att betyda aktiviteten för att samla in provmaterial från en individ. Det är inte avsett att representera transporten av ett provmaterial från en individ till laboratoriet.</use>
+      <misuse>Ska inte användas för att registrera information om provmaterial som inte är relaterat till en specifik patient, såsom exempelvis rutinprover från vattenverk eller slumpmässiga prover från livsmedelsproduktion.</misuse>
       <copyright />
     </details>
     <details>
@@ -494,6 +493,217 @@ Please note: The term 'collection' used in this archetype always refers to the a
       <misuse />
       <copyright>© openEHR Foundation</copyright>
     </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>fr</code_string>
+      </language>
+      <purpose>Pour enregistrer les informations relatives à un échantillon physique prélevé sur une personne ou lié à celle-ci à des fins d'enquête, d'examen ou d'analyse.</purpose>
+      <keywords>échantillon</keywords>
+      <keywords>laboratoire</keywords>
+      <keywords>prélèvement</keywords>
+      <keywords>biopsie</keywords>
+      <keywords>tissu</keywords>
+      <keywords>cytologie</keywords>
+      <keywords>microbiologie</keywords>
+      <keywords>pathologie</keywords>
+      <keywords>histopathologie</keywords>
+      <keywords>histologie</keywords>
+      <keywords>lab</keywords>
+      <keywords>liquide</keywords>
+      <keywords>frottis</keywords>
+      <keywords>sang</keywords>
+      <keywords>exsudat</keywords>
+      <keywords>sérum</keywords>
+      <keywords>plasma</keywords>
+      <keywords>urine</keywords>
+      <keywords>salive</keywords>
+      <keywords>sécrétion</keywords>
+      <keywords>synovial</keywords>
+      <keywords>lymph</keywords>
+      <keywords>matières fécales</keywords>
+      <keywords>ascite</keywords>
+      <keywords>expectoration</keywords>
+      <keywords>écouvillon</keywords>
+      <keywords>lait maternel</keywords>
+      <keywords>pus</keywords>
+      <keywords>liquide de drainage</keywords>
+      <keywords>moelle osseuse</keywords>
+      <keywords>culture</keywords>
+      <keywords>prélèvement par raclage</keywords>
+      <keywords>aspirat</keywords>
+      <keywords>phlébotomie</keywords>
+      <keywords>test</keywords>
+      <keywords>liquide céphalo-rachidien</keywords>
+      <keywords>liquide pleural</keywords>
+      <keywords>résection</keywords>
+      <keywords>excision</keywords>
+      <use>À utiliser pour enregistrer les détails relatifs à un échantillon physique prélevé sur une personne ou lié à celle-ci à des fins d’investigation, d’examen ou d’analyse.&#xD;
+&#xD;
+Cet archétype a été spécialement conçu pour être utilisé dans les cas d’utilisation suivants :&#xD;
+- au sein de INSTRUCTION.service_request ou d’un autre archétype INSTRUCTION lié à un laboratoire, pour décrire un échantillon devant être prélevé, ou pour décrire un échantillon accompagnant une demande de service de laboratoire ; &#xD;
+- au sein d’un archétype ACTION lié à un laboratoire pour décrire le prélèvement d’un échantillon ou un échantillon qui a été prélevé ; ou&#xD;
+- au sein d’OBSERVATION.laboratory_test_result ou d’autres archétypes OBSERVATION relatifs aux rapports de laboratoire pour décrire l’échantillon faisant l’objet du rapport.&#xD;
+De plus, cet archétype peut également être imbriqué dans d’autres archétypes ENTRY ou CLUSTER, lorsque cela est cliniquement approprié.&#xD;
+&#xD;
+Le niveau de détail de cet archétype est susceptible de dépasser celui actuellement recueilli dans la plupart des laboratoires. Il a été délibérément conçu pour prendre en charge un prélèvement simple et unique d’un échantillon ; le prélèvement simultané de plusieurs échantillons dans le cadre d’une seule demande ; ainsi que des situations complexes où il est nécessaire d’enregistrer les moindres détails concernant la préparation et la subdivision d’un seul échantillon.&#xD;
+&#xD;
+La sémantique exacte de plusieurs éléments de cet archétype peut varier en fonction du contexte fourni par l’archétype parent dans lequel il est imbriqué. Par exemple, l’élément « Méthode de prélèvement » dans le contexte d’un archétype INSTRUCTION correspond à la méthode de prélèvement demandée, tandis que ce même élément, dans le contexte d’un archétype ACTION à l’état « terminé », correspond à la méthode de prélèvement effective.&#xD;
+&#xD;
+D’autres archétypes complémentaires fourniront les détails concernant le « Récipient pour échantillons », la « Préparation de l’échantillon » et le « Transport de l’échantillon ».&#xD;
+&#xD;
+Cet archétype a été conçu pour être utilisé avec l’archétype « Specimen container » de deux manières principales : &#xD;
+- « Récipient pour échantillons » imbriqué dans « Échantillon » (par exemple lorsqu’un échantillon de sang veineux est réparti entre deux flacons, ou qu’un gros intestin entier est divisé en trois seaux) ; ou&#xD;
+- « Échantillon » imbriqué dans « Récipient pour échantillons » (par exemple lorsqu’un seau de formol contient une section du gros intestin et un rectum, ou qu’un bocal contient cinq grains de beauté marqués individuellement).&#xD;
+&#xD;
+Remarque : le terme « prélèvement » utilisé dans cet archétype fait toujours référence à l’activité consistant à prélever un échantillon sur une personne. Il n’est pas destiné à désigner le transport de l’échantillon de la personne vers le laboratoire d’analyse.</use>
+      <misuse>À ne pas utiliser pour enregistrer des informations concernant des échantillons qui ne sont pas liés à une personne spécifique. Par exemple, des prélèvements d’eau de routine effectués dans une station de traitement d’eau ou des prélèvements ponctuels effectués dans des installations de production alimentaire.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ca</code_string>
+      </language>
+      <purpose>Registrar detalls sobre una mostra física recollida a un pacient o relacionada amb ell, amb finalitats de recerca, examen o anàlisi.</purpose>
+      <keywords>mostra</keywords>
+      <keywords>laboratori</keywords>
+      <keywords>recollida</keywords>
+      <keywords>mostreig</keywords>
+      <keywords>biòpsia</keywords>
+      <keywords>teixit</keywords>
+      <keywords>citologia</keywords>
+      <keywords>microbiologia</keywords>
+      <keywords>patologia</keywords>
+      <keywords>histopatologia</keywords>
+      <keywords>histologia</keywords>
+      <keywords>laboratori</keywords>
+      <keywords>líquid</keywords>
+      <keywords>frotis</keywords>
+      <keywords>sang</keywords>
+      <keywords>exsudat</keywords>
+      <keywords>sèrum</keywords>
+      <keywords>plasma</keywords>
+      <keywords>orina</keywords>
+      <keywords>saliva</keywords>
+      <keywords>secreció</keywords>
+      <keywords>sinovial</keywords>
+      <keywords>limfa</keywords>
+      <keywords>excrements</keywords>
+      <keywords>excrements</keywords>
+      <keywords>ascitis</keywords>
+      <keywords>expectorar</keywords>
+      <keywords>hisop</keywords>
+      <keywords>llet materna</keywords>
+      <keywords>pus</keywords>
+      <keywords>drenar líquid</keywords>
+      <keywords>medul·la òssia</keywords>
+      <keywords>cultura</keywords>
+      <keywords>raspat</keywords>
+      <keywords>aspirar</keywords>
+      <keywords>flebotomia</keywords>
+      <keywords>prova</keywords>
+      <keywords>líquid cefaloraquidi</keywords>
+      <keywords>líquid pleural</keywords>
+      <keywords>resecció</keywords>
+      <keywords>excissió</keywords>
+      <use>S'utilitza per registrar detalls sobre una mostra física recollida a un pacient o relacionada amb ell, amb finalitats de recerca, examen o anàlisi.&#xD;
+&#xD;
+Aquest arquetip ha estat dissenyat específicament per utilitzar-se en els casos d'ús següents:&#xD;
+- dins d'INSTRUCTION.service_request o un altre arquetip de tipus INSTRUCTION relacionat amb el laboratori, per descriure una mostra que s'ha de recollir o per descriure una mostra que acompanya una petició de laboratori;&#xD;
+- dins un arquetip de tipus ACTION relacionat amb el laboratori per descriure la recollida de mostres o una mostra que s'ha recollit; o&#xD;
+- dins d'OBSERVATION.laboratory_test_result o altres arquetips de tipus OBSERVATION d'informes de laboratori per descriure la mostra que se n'informa.&#xD;
+A més, aquest arquetip també es pot niar dins d'altres arquetips de tipus ENTRY o CLUSTER, quan sigui clínicament apropiat.&#xD;
+&#xD;
+És probable que el nivell de detall d'aquest arquetip superi el que es recull actualment a la majoria dels laboratoris. Ha estat dissenyat a propòsit per atendre una recollida simple d'una sola mostra; recollida simultània de múltiples mostres amb una sola sol·licitud; i situacions complexes en què cal registrar detalls minuciosos sobre la preparació i subdivisió d'una sola mostra.&#xD;
+&#xD;
+La semàntica d'alguns elements d'aquest arquetip pot canviar segons el context proporcionat per l'arquetip principal al qual estigui imbricat. Per exemple, l'element 'Mètode de recollida' dins el context d'un arquetip de tipus INSTRUCTION és el mètode de recollida sol·licitat, mentre que el mateix element dins el context d'un arquetip de tipus ACTION a l'estat 'completat' és el mètode de recollida real.&#xD;
+&#xD;
+Altres arquetips complementaris inclouran detalls sobre "Contenidor de mostres", "Preparació de mostres" i "Transport de mostres".&#xD;
+&#xD;
+Aquest arquetip ha estat dissenyat per utilitzar-se juntament amb l'arquetip de contenidor de mostres de dues maneres principals:&#xD;
+- 'Contenidor de mostra' imbricat dins de 'Mostra' (per exemple, quan una mostra de sang venosa es divideix en dos vials o una mostra de l'intestí gruixut es divideix en tres pots); o&#xD;
+- 'Mostra' imbricada dins de 'Contenidor de mostra' (per exemple, quan un pot de formaldehid conté una secció d'intestí gruixut i un recte, o un flascó conté cinc mostres cutànies marcades individualment).&#xD;
+&#xD;
+Cal tenir en compte: el terme "recollida" utilitzat en aquest arquetip sempre fa referència a l'activitat d'obtenir una mostra d'un individu. No vol representar el transport de la mostra des de l'individu fins al laboratori de proves.</use>
+      <misuse>No està destinat a ser utilitzat per registrar informació sobre mostres que no estiguin relacionades amb un pacient concret. Per exemple, mostres d'aigua d'una planta d'abastament d'aigua o mostres puntuals d'instal·lacions de producció d'aliments.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>es</code_string>
+      </language>
+      <purpose>Registrar detalles sobre una muestra física recogida a un paciente o relacionada con él, con fines de investigación, examen o análisis.</purpose>
+      <keywords>muestra</keywords>
+      <keywords>laboratorio</keywords>
+      <keywords>recogida</keywords>
+      <keywords>muestreo</keywords>
+      <keywords>biopsia</keywords>
+      <keywords>tejido</keywords>
+      <keywords>citología</keywords>
+      <keywords>microbiología</keywords>
+      <keywords>patología</keywords>
+      <keywords>histopatología</keywords>
+      <keywords>histología</keywords>
+      <keywords>laboratorio</keywords>
+      <keywords>líquido</keywords>
+      <keywords>frotis</keywords>
+      <keywords>sangre</keywords>
+      <keywords>exudado</keywords>
+      <keywords>suero</keywords>
+      <keywords>plasma</keywords>
+      <keywords>orina</keywords>
+      <keywords>saliva</keywords>
+      <keywords>secreción</keywords>
+      <keywords>sinovial</keywords>
+      <keywords>linfa</keywords>
+      <keywords>heces</keywords>
+      <keywords>excrementos</keywords>
+      <keywords>ascitis</keywords>
+      <keywords>expectorar</keywords>
+      <keywords>hisopo</keywords>
+      <keywords>leche materna</keywords>
+      <keywords>pus</keywords>
+      <keywords>drenar liquido</keywords>
+      <keywords>médula ósea</keywords>
+      <keywords>cultura</keywords>
+      <keywords>raspado</keywords>
+      <keywords>aspirar</keywords>
+      <keywords>flebotomía</keywords>
+      <keywords>prueba</keywords>
+      <keywords>líquido cefalorraquídeo</keywords>
+      <keywords>líquido pleural</keywords>
+      <keywords>resección</keywords>
+      <keywords>excisión</keywords>
+      <use>Se utiliza para registrar detalles sobre una muestra física recogida a un paciente o relacionada con él, con fines de investigación, examen o análisis.&#xD;
+&#xD;
+Este arquetipo ha sido diseñado específicamente para usarse en los siguientes casos de uso:&#xD;
+- dentro de INSTRUCTION.service_request u otro arquetipo de tipo INSTRUCTION relacionado con el laboratorio, para describir una muestra que se va a recoger o para describir una muestra que acompaña a una petición de laboratorio;&#xD;
+- dentro de un arquetipo de tipo ACTION relacionado con el laboratorio para describir la recogida de muestras o una muestra que se ha recogido; o&#xD;
+- dentro de OBSERVATION.laboratory_test_result u otros arquetipos de tipo OBSERVATION de informes de laboratorio para describir la muestra que se informa.&#xD;
+Además, este arquetipo también puede anidarse dentro de otros arquetipos de tipo ENTRY o CLUSTER, cuando sea clínicamente apropiado.&#xD;
+&#xD;
+Es probable que el nivel de detalle de este arquetipo supere el que se recoge actualmente en la mayoría de los laboratorios. Ha sido diseñado a propósito para atender una recogida simple de una sola muestra; recogida simultánea de múltiples muestras con una sola solicitud; y situaciones complejas en las que es necesario registrar detalles minuciosos sobre la preparación y subdivisión de una sola muestra.&#xD;
+&#xD;
+La semántica de algunos elementos de este arquetipo puede cambiar según el contexto proporcionado por el arquetipo principal al que esté anidado. Por ejemplo, el elemento 'Método de recogida' dentro del contexto de un arquetipo de tipo INSTRUCTION, es el método de recogida solicitado, mientras que el mismo elemento dentro del contexto de un arquetipo de tipo ACTION en el estado 'completado', es el método de recogida real.&#xD;
+&#xD;
+Otros arquetipos complementarios incluirán detalles sobre "Contenedor de muestras", "Preparación de muestras" y "Transporte de muestras".&#xD;
+&#xD;
+Este arquetipo ha sido diseñado para usarse junto con el arquetipo de contenedor de muestras de dos maneras principales:&#xD;
+- 'Contenedor de muestra' anidado dentro de 'Muestra' (por ejemplo, cuando una muestra de sangre venosa se divide en dos viales o una muestra del intestino grueso se divide en tres botes); o&#xD;
+- 'Muestra' anidada dentro de 'Contenedor de muestra' (por ejemplo, cuando un bote de formaldehído contiene una sección de intestino grueso y un recto, o un frasco contiene cinco muestras cutáneas marcadas individualmente).&#xD;
+&#xD;
+A tener en cuenta: el término "recogida" utilizado en este arquetipo siempre se refiere a la actividad de obtener una muestra de un individuo. No pretende representar el transporte de la muestra desde el individuo hasta el laboratorio de pruebas.</use>
+      <misuse>No está destinado a ser utilizado para registrar información sobre muestras que no estén relacionadas con un paciente en concreto. Por ejemplo, muestras de agua de una planta de abastecimiento de agua o muestras puntuales de instalaciones de producción de alimentos.</misuse>
+      <copyright />
+    </details>
   </description>
   <translations>
     <language>
@@ -513,9 +723,9 @@ Please note: The term 'collection' used in this archetype always refers to the a
       </terminology_id>
       <code_string>sv</code_string>
     </language>
-    <author id="name">Linda Aulin, Erik Sundvall</author>
-    <author id="organisation">Region Stockholm, Karolinska Institutet + Karolinska University Hospital, Region Stockholm + Linköping University</author>
-    <author id="email">linda.aulin-lundeqvist@regionstockholm.se, erik.sundvall@regionstockholm.se</author>
+    <author id="name">Linda Aulin, Erik Sundvall, Per Nemirovski, Jörgen Kuylenstierna, Manna Vosta</author>
+    <author id="organisation">Region Stockholm, Karolinska Institutet + Karolinska University Hospital, Region Stockholm + Linköping University, B3 HealthTech, eWeave</author>
+    <author id="email">linda.aulin-lundeqvist@regionstockholm.se, erik.sundvall@regionstockholm.se, per.nemirovski@b3.se, jorgen@eweave.se, manna.vosta@regionstockholm.se</author>
   </translations>
   <translations>
     <language>
@@ -549,6 +759,39 @@ Please note: The term 'collection' used in this archetype always refers to the a
       <code_string>ar-sy</code_string>
     </language>
     <author id="name">Mona Saleh</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>fr</code_string>
+    </language>
+    <author id="name">Jonas Bucher</author>
+    <author id="organisation">Cistec AG</author>
+    <author id="email">jonas.bucher@cistec.com</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ca</code_string>
+    </language>
+    <author id="name">Julio de Sosa</author>
+    <author id="organisation">Servei Català de la Salut</author>
+    <author id="email">juliodesosa@catsalut.cat</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>es</code_string>
+    </language>
+    <author id="name">Julio de Sosa</author>
+    <author id="organisation">Servei Català de la Salut</author>
+    <author id="email">juliodesosa@catsalut.cat</author>
   </translations>
   <uid>
     <value>4f4d5daf-b6b7-475f-ae49-66b3c5003e6f</value>
@@ -2565,8 +2808,7 @@ Koding av den anatomiske lokaliseringen med en terminologi er foretrukket der de
       </items>
       <items code="at0005">
         <items id="text">Gefahrenhinweis</items>
-        <items id="description">Jegliches Risiko oder jede Biogefährdung für den Probenehmer oder das Laborpersonal aufgrund der Exposition gegenüber oder Kontakt mit der Probe.&#xD;
-</items>
+        <items id="description">Jegliches Risiko oder jede Biogefährdung für den Probenehmer oder das Laborpersonal aufgrund der Exposition gegenüber oder Kontakt mit der Probe.</items>
         <items id="comment">Zum Beispiel: "Hepatitis B"; "Nervenmittel". Die Codierung des "Gefahrenhinweises" mit einer Terminologie wird, wenn möglich, bevorzugt.</items>
       </items>
       <items code="at0007">
@@ -2760,77 +3002,67 @@ Nach Möglichkeit wird die Codierung des Namens der Probenentnahmestelle mit ein
     <term_definitions language="sv">
       <items code="at0000">
         <items id="text">Provmaterial</items>
-        <items id="description">Ett fysiskt prov/provmaterial taget från, eller relaterat till, en individ i syfte att utföra en bedömning, undersökning eller analys.</items>
+        <items id="description">Ett provmaterial taget från, eller relaterat till, en individ i syfte att utföra en bedömning, undersökning eller analys.</items>
         <items id="comment">Exempelvis vävnad eller kroppsvätska.</items>
       </items>
       <items code="at0001">
         <items id="text">Laboritoriets providentifierare</items>
-        <items id="description">En unik providentifierare, vanligen angiven av laboratoriet.</items>
-        <items id="comment">Syftet är identifiering av ett prov i laboratorieinformationssystemet. Provbehållare såsom exempelvis vakuumflaskor och vävnadskassetter har sina egna ID-nummer vilka kan anges i "Container-elementet" i arketyper Specimen Container.&#xD;
-&#xD;
-</items>
+        <items id="description">En unik providentifierare för provmaterialet, vanligen angiven av laboratoriet.</items>
+        <items id="comment">Syftet är identifiering av ett provmaterial i ett laboratorieinformationssystem. Provbehållare såsom exempelvis vakuumflaskor och vävnadskassetter har sina egna ID-nummer vilka kan anges i datafältet "Container ID" i arketypen CLUSTER.specimen_container.</items>
       </items>
       <items code="at0003">
         <items id="text">Ursprungsprovets identifierare</items>
-        <items id="description">Unik identifierare för ursprungsprovet, där provet delats upp i delprover.</items>
-        <items id="comment">Till exempel: Ett specifikt objektglas för histologi kan ha ett specifikt paraffinvaxblock som sitt ursprungsprov.&#xD;
-</items>
+        <items id="description">Unik identifierare för ursprungsprovet, där provmaterialet har delats upp i delprover.</items>
+        <items id="comment">Till exempel: Ett specifikt objektglas inom histologi kan ha ett specifikt paraffinvaxblock som sitt ursprungsprov.</items>
       </items>
       <items code="at0005">
         <items id="text">Riskvarning</items>
         <items id="description">Identifierad hälsofara eller biologisk fara för provtagaren eller laboratoriepersonalen vid exponering för eller kontakt med provmaterialet.</items>
-        <items id="comment">Till exempel "hepatit B" eller "nervmedel". Kodning av riskvarning med en terminologi är att föredra, där det är möjligt.&#xD;
-</items>
+        <items id="comment">Till exempel "hepatit B" eller "nervmedel". Kodning av riskvarning med en terminologi är att föredra, där det är möjligt.</items>
       </items>
       <items code="at0007">
         <items id="text">Provtagningsmetod</items>
         <items id="description">Den metod som används för att ta provet.</items>
-        <items id="comment">Exempelvis venpunktion, biopsi eller resektion. Kodning av provtagningsmetod till en terminologi är att föredra i de fall det är möjligt. Om provtagningsmetoden inkluderas i "Provtyp" via prekoordinerade koder blir detta dataelement redundant. &#xD;
-</items>
+        <items id="comment">Exempelvis venpunktion, biopsi eller resektion. Kodning av provtagningsmetod till en terminologi är att föredra i de fall det är möjligt. Om provtagningsmetoden inkluderas i "Provtyp" via prekoordinerade koder blir detta datafält överflödigt.</items>
       </items>
       <items code="at0008">
         <items id="text">Provtagningskontext</items>
         <items id="description">Den kontext i vilken provet togs.</items>
-        <items id="comment">Exempel: fastande, full urinblåsa, sterilt fält. Alternativt specialinstruktioner avseende hanteringen av provet eller omedelbar beredning av provet såsom "centrifugera vid mottagande". Det här dataelementet kan även användas för att dokumentera olika typer av kända avvikelser vid provtagning eller hanteringsinstruktioner såsom exempelvis att patienten inte hade fastat trots att det uttryckligen hade begärts. Kodning av provtagningskontexten till en terminologi är att föredra i de fall det är möjligt. &#xD;
+        <items id="comment">Exempel: fastande, full urinblåsa, sterilt fält. Alternativt specialinstruktioner avseende hanteringen av provmaterialet eller omedelbar beredning av provmaterialet såsom "centrifugera vid mottagande". Det här datafältet kan även användas för att dokumentera olika typer av kända avvikelser vid provtagning eller instruktioner kring hantering såsom exempelvis att patienten inte hade fastat trots att det uttryckligen hade begärts. Kodning av provtagningskontexten till en terminologi är att föredra i de fall det är möjligt. &#xD;
 &#xD;
-Om den här arketypen används i en annan arketyp av typen INSTRUCTION kommer kontexten att återspegla de avsedda eller önskade förhållandena under provtagningen.&#xD;
+Om arketypen är nästlad i en INSTRUCTION-arketyp kommer kontexten att återspegla de avsedda eller önskade förhållandena för provtagningen.&#xD;
 &#xD;
-Om den arketypen används för att representera ett steg i en arketyp av typen ACTION som härrör till att provtagningen utförs eller slutförs kommer kontexten att återspegla de förhållanden som fanns vid provtagningen och detta kan även kopieras till elementet "Möjliga felkällor" i arketypen OBSERVATION.laboratory_test_result archetype.&#xD;
-</items>
+Om arketypen används för att representera ett steg i en ACTION-arketyp som härrör till att provtagningen utförs eller slutförs kommer kontexten att återspegla de förhållanden som fanns vid provtagningen och detta kan även kopieras till datafältet "Möjliga felkällor" i arketypen OBSERVATION.laboratory_test_result.</items>
       </items>
       <items code="at0013">
-        <items id="text">Strukturerad anatomisk lokalisation</items>
-        <items id="description">En strukturerad beskrivning av den anatomiska plats från vilken provet togs.&#xD;
-</items>
-        <items id="comment">Använd de mer detaljerade arketyperna för att beskriva strukturerade eller mer komplexa anatomiska platser, eller för att stödja applikationen för att upptäcka platsen. Om den anatomiska platsen ingår i "Provkälla" via förkoordinerade koder blir denna SLOT överflödig.&#xD;
-</items>
+        <items id="text">Strukturerad provkälla</items>
+        <items id="description">En beskrivning av den strukturerade anatomiska positionen från vilken provet togs.</items>
+        <items id="comment">Använd de mer detaljerade arketyperna för att beskriva strukturerade eller mer komplexa anatomiska positioner, eller för att stödja applikationen för att upptäcka positionen. Om den anatomiska platsen ingår i "Provkälla" via förkoordinerade koder blir denna SLOT överflödig.</items>
       </items>
       <items code="at0015">
         <items id="text">Datum/tid för provtagning</items>
         <items id="description">Datum och tid för när provtagningen ska äga rum eller har ägt rum.</items>
-        <items id="comment">Datum/tid kommer främst att anges i arketyper av typerna INSTRUCTION, ACTION eller OBSERVATION. Detta är dock en kritisk informationsdel och därför det kan vara användbart att ha möjlighet att också länka den direkt till provmaterialet.&#xD;
-&#xD;
-</items>
+        <items id="comment">Datum/tid kommer främst att anges i arketyper av typerna INSTRUCTION, ACTION eller OBSERVATION. Detta är dock en kritisk informationsdel och därför det kan vara användbart att ha möjlighet att också länka den direkt till provmaterialet.</items>
       </items>
       <items code="at0027">
         <items id="text">Fysiska egenskaper</items>
         <items id="description">Provmaterialets fysiska dimensioner, massa eller icke mätbara egenskaper.</items>
-        <items id="comment">Till exempel: Volym, massa, omkrets, färg, lukt eller turbiditet. Detta dataelement kan användas i en arketyp av typen INSTRUCTION för att specificera egenskaperna hos ett provmaterial som ska samlas in, alternativt i en arketyp av typen ACTION eller OBSERVATION för att ange egenskaper hos ett provmaterial som redan har samlats in.</items>
+        <items id="comment">Till exempel: Volym, massa, omkrets, färg, lukt eller turbiditet (grumlighet). Detta datafält kan nästlas i en INSTRUCTION-arketyp för att specificera egenskaperna hos ett provmaterial som ska samlas in, alternativt i en ACTION-arketyp eller OBSERVATION-arketyp för att ange egenskaper hos ett provmaterial som redan har samlats in. Till exempel kan en INSTRUCTION-arketyp begära att 20 mL blod ska samlas in, medan motsvarande ACTION-arketyp registrerar att 15 mL blod insamlades.</items>
         <items id="fhir_mapping">Specimen.collection.quantity</items>
       </items>
       <items code="at0029">
-        <items id="text">Provtyp</items>
-        <items id="description">Typ av prov</items>
+        <items id="text">Provtyp ELLER Typ av provmaterial</items>
+        <items id="description">Typ av provmaterial</items>
         <items id="comment">Exempelvis venöst blod, bakteriekultur, cytologi eller vävnadsprov. Kodning av provtypen till en terminologi är att föredra i de fall det är möjligt.</items>
       </items>
       <items code="at0034">
-        <items id="text">Datum/tid ankomst till labb</items>
-        <items id="description">Datum och tid när provet togs emot av laboratoriet.</items>
+        <items id="text">Datum/tid ankomst</items>
+        <items id="description">Datum och tid när provmaterialet togs emot av laboratoriet.</items>
       </items>
       <items code="at0041">
         <items id="text">Analysbarhet</items>
         <items id="description">Information om huruvida provmaterialet var av tillräcklig kvalitet för analys.</items>
-        <items id="comment">Detta element är avsett för att registrera ett beslut om huruvida provmaterialet var tillräckligt bra för analys och om analysen har genomförts. Kodning av analysbarheten till en terminologi är att föredra där det är möjligt.</items>
+        <items id="comment">Detta datafält är avsett för att registrera ett beslut om huruvida kvaliteten av provmaterialet var tillräckligt bra för att genomföra en analys och om analysen har genomförts. Kodning av analysbarheten till en terminologi är att föredra där det är möjligt.</items>
       </items>
       <items code="at0042">
         <items id="text">Provkvalitetsproblem</items>
@@ -2839,11 +3071,11 @@ Om den arketypen används för att representera ett steg i en arketyp av typen A
       </items>
       <items code="at0045">
         <items id="text">Kommentar</items>
-        <items id="description">Ytterligare fritext om provmaterialet som inte omfattas av andra fält.</items>
+        <items id="description">Ytterligare fritext om provmaterialet som inte omfattas av andra datafält.</items>
       </items>
       <items code="at0052">
         <items id="text">Hemolyserat</items>
-        <items id="description">Provmaterialet har hemolyserats.</items>
+        <items id="description">Provmaterialet var hemolyserat.</items>
       </items>
       <items code="at0053">
         <items id="text">Lipemiskt</items>
@@ -2851,7 +3083,7 @@ Om den arketypen används för att representera ett steg i en arketyp av typen A
       </items>
       <items code="at0054">
         <items id="text">Felaktigt additiv</items>
-        <items id="description">Provet har tillsatts ett felaktigt additiv såsom ett transportmedium eller konserveringsmedel.</items>
+        <items id="description">Ett felaktigt tillsatsmedel, såsom ett transportmedium eller konserveringsmedel, tillsattes till provmaterialet.</items>
       </items>
       <items code="at0055">
         <items id="text">Otillräcklig mängd</items>
@@ -2859,31 +3091,30 @@ Om den arketypen används för att representera ett steg i en arketyp av typen A
       </items>
       <items code="at0062">
         <items id="text">Tillfredställande</items>
-        <items id="description">Provet är av tillfredsställande kvalitet.</items>
+        <items id="description">Provmaterialet är av tillfredsställande kvalitet.</items>
       </items>
       <items code="at0063">
         <items id="text">Otillfredsställande - behandlat</items>
-        <items id="description">Provet är av otillfredsställande kvalitet men har analyserats.</items>
+        <items id="description">Provmaterialet är av otillfredsställande kvalitet men har analyserats.</items>
       </items>
       <items code="at0064">
         <items id="text">Otillfredsställande - ej behandlat</items>
-        <items id="description">Provet är av otillfredsställande kvalitet och har inte analyserats.</items>
+        <items id="description">Provmaterialet är av otillfredsställande kvalitet och har inte analyserats.</items>
       </items>
       <items code="at0067">
         <items id="text">Provtagningsmiljö</items>
-        <items id="description">Den fysiska miljös i vilken provmaterialet samlades in.</items>
-        <items id="comment">Till exempel: Laboratoriets öppenvårdsmottagning, hemma eller sjukhusavdelning. Detta dataelement specificerar i vilken typ av miljö provmaterialet samlades in. Provtagningssituationen kan också ge ytterligare information som är relevant för tolkningen av resultatet.&#xD;
-</items>
+        <items id="description">Den fysiska miljö i vilken provmaterialet samlades in.</items>
+        <items id="comment">Till exempel: Laboratoriets öppenvårdsmottagning, hemma eller sjukhusavdelning. Detta datafält specificerar i vilken typ av miljö provmaterialet samlades in. Provtagningssituationen kan också ge ytterligare information som är relevant för tolkningen av resultatet.</items>
       </items>
       <items code="at0068">
         <items id="text">Information om bearbetning</items>
-        <items id="description">Strukturerade detaljer om beredning eller bearbetning av provet.</items>
-        <items id="comment">Till exempel: färgning eller fixering.</items>
+        <items id="description">Strukturerade detaljer om beredning eller bearbetning av provmaterialet.</items>
+        <items id="comment">Till exempel: fixering eller färgning.</items>
       </items>
       <items code="at0070">
         <items id="text">Provtagaridentifierare</items>
-        <items id="description">Identifierare för den person eller organisation som ansvarar för provtagningen.</items>
-        <items id="comment">Detta dataelement är avsett att användas när provmaterialet redan har samlats in och den faktiska provtagaren är känd.</items>
+        <items id="description">Identifierare av den person eller organisation som ansvarar för provtagningen.</items>
+        <items id="comment">Detta datafältet är avsett att användas när provmaterialet redan har samlats in och den faktiska provtagaren är känd.</items>
       </items>
       <items code="at0071">
         <items id="text">Detaljer om provtagaren</items>
@@ -2894,17 +3125,14 @@ Om den arketypen används för att representera ett steg i en arketyp av typen A
         <items id="description">Fritextbeskrivning av provtagningen.</items>
       </items>
       <items code="at0080">
-        <items id="text">Antal behållare</items>
-        <items id="description">Det totala antalet fysiska enheter som provmaterialet är distribuerat i. &#xD;
-</items>
-        <items id="comment">Till exempel: antal provbehållare, provrör, provflaskor, block, objektglas eller galler.&#xD;
-&#xD;
-</items>
+        <items id="text">Antal provbehållare</items>
+        <items id="description">Det totala antalet enheter som provmaterialet är distribuerat i.</items>
+        <items id="comment">Till exempel: antal provbehållare, provrör, provflaskor, block, objektglas eller galler.</items>
       </items>
       <items code="at0083">
         <items id="text">Ytterligare detaljer</items>
-        <items id="description">Ytterligare strukturerade detaljer om provet.</items>
-        <items id="comment">Exempelvis: detaljer om nålbiopsier vid prostatacancer, där både remiss och svarsrapportering om provet är detaljerade och specifika.</items>
+        <items id="description">Ytterligare strukturerade detaljer om provmaterialet.</items>
+        <items id="comment">Exempelvis: detaljer om mellannålsbiopsier vid prostatacancer, där både beställning och svarsrapportering om provmaterialet är detaljerade och specifika.</items>
       </items>
       <items code="at0085">
         <items id="text">Detaljer om provbehållare</items>
@@ -2912,16 +3140,14 @@ Om den arketypen används för att representera ett steg i en arketyp av typen A
       </items>
       <items code="at0087">
         <items id="text">Provkälla</items>
-        <items id="description">Identifiering av var på kroppen eller annat ställe som provet är taget från.&#xD;
-</items>
+        <items id="description">Identifiering av den anatomiska positionen eller annat ställe som provet är taget från.</items>
         <items id="comment">Exempelvis "sår på vänster underben", "venkateter på höger arm", "höger njure". Kodning av provkälla till en terminologi är att föredra i de fall det är möjligt.&#xD;
 &#xD;
-Använd detta dataelement för att ange prekoordinerade provkällor. Om behoven för registrering av den anatomiska platsen bestäms i applikationen eller kräver komplex modellering såsom relativa platser, använd SLOT "Strukturerad anatomisk lokalisation" i denna arketyp. Om den anatomiska platsen ingår i "Provtyp" via förkoordinerade koder blir detta dataelement överflödigt.&#xD;
-</items>
+Använd detta datafält för att ange prekoordinerade provkällor. Om behoven för registrering av den anatomiska positionen kan genereras automatiskt av vissa IT-system eller kräver komplex modellering såsom relativa platser, använd SLOT "Strukturerad anatomisk position" i denna arketyp. Om den anatomiska positionen ingår i "Provtyp" via förkoordinerade koder blir detta datafält överflödigt.</items>
       </items>
       <items code="at0088">
         <items id="text">Extern identifierare</items>
-        <items id="description">En unik providentifierare som anges av en extern part utanför laboratoriet.</items>
+        <items id="description">En unik identifierare för provmaterial som anges av en extern part utanför laboratoriet.</items>
         <items id="comment">Exempelvis remiss-ID, beställnings-ID, arkiverings-ID, Biobank-ID.</items>
       </items>
       <items code="at0089">
@@ -2930,11 +3156,11 @@ Använd detta dataelement för att ange prekoordinerade provkällor. Om behoven 
       </items>
       <items code="at0090">
         <items id="text">Hanteringsfel</items>
-        <items id="description">Ett fel inträffade vid hantering av provet. Till exempel: Felaktig lagring eller trasig behållare.</items>
+        <items id="description">Ett fel inträffade vid hantering av provmaterialet. Till exempel: Felaktig lagring eller trasig behållare.</items>
       </items>
       <items code="at0091">
         <items id="text">Ålder</items>
-        <items id="description">Provet var för gammalt för att analysera eller för att analysera korrekt.</items>
+        <items id="description">Provmaterialet var för gammalt för att analysera eller för att analysera korrekt.</items>
       </items>
       <items code="at0092">
         <items id="text">Tekniskt fel</items>
@@ -2942,7 +3168,7 @@ Använd detta dataelement för att ange prekoordinerade provkällor. Om behoven 
       </items>
       <items code="at0093">
         <items id="text">Transportdetaljer</items>
-        <items id="description">Strukturerade detaljer om transport av provet.</items>
+        <items id="description">Strukturerade detaljer om transport av provmaterialet.</items>
       </items>
       <items code="at0094">
         <items id="text">Koagulerat</items>
@@ -2950,35 +3176,662 @@ Använd detta dataelement för att ange prekoordinerade provkällor. Om behoven 
       </items>
       <items code="at0095">
         <items id="text">Felaktig märkning</items>
-        <items id="description">Provet var felaktigt märkt.</items>
+        <items id="description">Provmaterialet var felaktigt märkt.</items>
       </items>
       <items code="at0096">
         <items id="text">Digital representation</items>
         <items id="description">Strukturerade detaljer om digital representation av provmaterialet.</items>
-        <items id="comment">Till exempel den skannade bilden av en histopatologibild.&#xD;
-</items>
+        <items id="comment">Till exempel den inskannade bilden av ett histopatologiskt objektglas.</items>
       </items>
       <items code="at0097">
-        <items id="text">Provbeskrivning</items>
-        <items id="description">Berättande beskrivning av det prov som undersöks.</items>
-        <items id="comment">Till exempel: färgen och viskositeten hos en vätska; formen av en fast vävnad; eller en beskrivning av vävnadsfragment.&#xD;
-</items>
+        <items id="text">Beskrivning av provmaterial ELLER Provbeskrivning</items>
+        <items id="description">Beskrivning av det provmaterial som undersöks.</items>
+        <items id="comment">Till exempel: färgen och viskositeten hos en vätska; formen av en fast vävnad; eller en beskrivning av vävnadsfragment.</items>
       </items>
       <items code="at0098">
-        <items id="text">Provets benämning</items>
-        <items id="description">Namn eller etikett som beskriver provet</items>
-        <items id="comment">Vanligtvis endast relevant för anatomiska patologiprover. Till exempel: 'Sigmoid resektion med en bit av blåsväggen' eller 'Aggregering av flera hudbiopsifragment'.</items>
+        <items id="text">Provmaterialets benämning</items>
+        <items id="description">Namn eller etikett som beskriver provmaterialet.</items>
+        <items id="comment">Vanligtvis endast relevant för anatomiska patologiprover. Till exempel: 'resektion av sigmoideum med en bit av blåsväggen' eller 'aggregering av flera hudbiopsifragment'.</items>
       </items>
       <items code="at0099">
         <items id="text">Antal fragment</items>
-        <items id="description">Antalet vävnadsfragment som ingår i provet.</items>
-        <items id="comment">Vanligtvis endast relevant när ett antal vävnadsfragment undersöks tillsammans och rapporteras gemensamt som ett enda prov.</items>
+        <items id="description">Antal vävnadsfragment som ingår i provmaterialet.</items>
+        <items id="comment">Vanligtvis endast relevant när ett antal vävnadsfragment undersöks tillsammans och rapporteras gemensamt som ett enda provmaterial.</items>
       </items>
       <items code="at0100">
         <items id="text">Lagringsdetaljer</items>
-        <items id="description">Strukturerade detaljer om förvaringen av provet.</items>
+        <items id="description">Strukturerade detaljer om förvaringen av provmaterialet.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="fr">
+      <items code="at0000">
+        <items id="text">Échantillon</items>
+        <items id="description">Échantillon physique prélevé sur une personne ou lié à celle-ci à des fins d’enquête, d’examen ou d’analyse.</items>
+        <items id="comment">Par exemple : un tissu ou un liquide biologique.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Identifiant de l'échantillon de laboratoire</items>
+        <items id="description">Identifiant unique de l'échantillon, généralement attribué par le laboratoire.</items>
+        <items id="comment">Parfois appelé « identifiant d’enregistrement ». Les récipients contenant les échantillons, par exemple les tubes sous vide ou les cassettes de tissus, possèdent leurs propres identifiants qui peuvent être enregistrés dans l’élément « Identifiant du récipient » de l’archétype « Récipient pour échantillons ».</items>
+        <items id="fhir_mapping">Specimen.accessionIdentifier</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Identifiant de l'échantillon parent</items>
+        <items id="description">Identifiant unique de l’échantillon parent, lorsque celui-ci est divisé en sous-échantillons.</items>
+        <items id="comment">Par exemple : un échantillon spécifique destiné à une préparation histologique peut avoir pour échantillon d'origine un bloc de paraffine spécifique.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Avertissement de danger</items>
+        <items id="description">Risque sanitaire ou risque biologique identifié pour le préleveur ou le personnel de laboratoire en raison d’une exposition à l’échantillon ou d’un contact avec celui-ci.</items>
+        <items id="comment">Par exemple : « hépatite B » ; « agent neurotoxique ». Il est préférable, dans la mesure du possible, de coder l’« avertissement de danger » à l’aide d’une terminologie spécifique.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Méthode de prélèvement</items>
+        <items id="description">La méthode de prélèvement utilisée.</items>
+        <items id="comment">Par exemple : ponction veineuse, biopsie, résection. Il est préférable, dans la mesure du possible, de coder la méthode de prélèvement à l’aide d’une terminologie. Si la méthode de prélèvement est incluse dans le champ « Type d’échantillon » via des codes précoordonnés, cet élément de données devient redondant.</items>
+        <items id="fhir_mapping">Specimen.collection.method</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Conditions de prélèvement</items>
+        <items id="description">Le contexte dans lequel l'échantillon est prélevé.</items>
+        <items id="comment">Par exemple : « à jeun » ; « vessie pleine » ; « champ stérile » ; ou des instructions spéciales concernant la manipulation ou le traitement immédiat de l’échantillon, telles que « centrifuger dès réception ». Cet élément de données peut également servir à consigner tout écart connu par rapport aux instructions de prélèvement ou de manipulation, par exemple le fait que le patient n’ait pas été à jeun, même si cela avait été initialement demandé. Il est préférable, dans la mesure du possible, de coder les « Conditions de prélèvement » à l’aide d’une terminologie.&#xD;
+&#xD;
+Si cet archétype est utilisé au sein d’un archétype INSTRUCTION, le contexte reflétera les conditions prévues ou souhaitées lors du prélèvement de l’échantillon. Si cet archétype est utilisé pour représenter une étape d’un parcours d’archétype ACTION qui correspond au prélèvement en cours ou achevé, le contexte reflétera les conditions qui existaient au moment du prélèvement de l’échantillon et celles-ci pourront également être copiées dans l’élément « Facteurs de confusion » de l’archétype OBSERVATION.laboratory_test_result.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Site corporel de prélèvement structuré</items>
+        <items id="description">Description structurée de la partie du corps sur laquelle l'échantillon a été prélevé.</items>
+        <items id="comment">Utiliser les archétypes plus détaillés pour décrire des sites anatomiques structurés ou plus complexes, ou pour faciliter l’enregistrement du site source par l’application lors de son exécution. Si le site corporel a été entièrement identifié dans l’élément de données « Site source », ce slot devient superflu.</items>
+        <items id="fhir_mapping">Specimen.collection.sourceSite</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Date/heure de prélèvement</items>
+        <items id="description">La date/heure auxquelles le prélèvement a été prescrit à avoir lieu ou a eu lieu.</items>
+        <items id="comment">Cette date et cette heure seront principalement saisies dans les champs de timing « INSTRUCTION », ou de date/heure « ACTION » ou « OBSERVATION ». Toutefois, comme il s'agit d'une information essentielle, il peut être utile de l'associer également directement à l'échantillon lui-même.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Propriétés physiques</items>
+        <items id="description">Dimensions physiques, masse ou propriétés non mesurables de l’échantillon.</items>
+        <items id="comment">Par exemple : volume, masse, circonférence, couleur, odeur, turbidité. Cet élément peut être utilisé pour préciser les propriétés de l’échantillon à prélever, dans le cadre d’un archétype INSTRUCTION, ou les propriétés de l’échantillon qui a été prélevé, dans le cadre d’un archétype ACTION ou OBSERVATION. Par exemple, une INSTRUCTION peut demander le prélèvement de 20 ml de sang, tandis que l’ACTION correspondante enregistre que seuls 15 ml ont été prélevés.</items>
+        <items id="fhir_mapping">Specimen.collection.quantity</items>
+      </items>
+      <items code="at0029">
+        <items id="text">Type d'échantillon</items>
+        <items id="description">Le type d'échantillon.</items>
+        <items id="comment">Par exemple : sang veineux, culture bactérienne, cytologie ou échantillon tissulaire. Dans la mesure du possible, il est préférable de coder le type d’échantillon à l’aide d’une terminologie spécifique.</items>
+        <items id="fhir_mapping">Specimen.type</items>
+      </items>
+      <items code="at0034">
+        <items id="text">Date/heure de réception</items>
+        <items id="description">Date et heure de réception de l'échantillon au laboratoire.</items>
+        <items id="fhir_mapping">Specimen.receivedTime</items>
+      </items>
+      <items code="at0041">
+        <items id="text">Aptitude à l'analyse</items>
+        <items id="description">Informations indiquant si l’échantillon était adapté aux examens</items>
+        <items id="comment">Cet élément est destiné à permettre d’indiquer si la qualité de l’échantillon était suffisante pour permettre la réalisation d’un test, et si ce test a été effectué ou non. Dans la mesure du possible, il est préférable de coder les problèmes liés à la qualité de l’échantillon à l’aide d’une terminologie spécifique.</items>
+      </items>
+      <items code="at0042">
+        <items id="text">Problèmes de qualité de l'échantillon</items>
+        <items id="description">Problèmes de qualité spécifiques concernant un échantillon.</items>
+        <items id="comment">Dans la mesure du possible, il est préférable de recourir à une terminologie spécifique pour codifier les problèmes de qualité des échantillons.</items>
+      </items>
+      <items code="at0045">
+        <items id="text">Remarque</items>
+        <items id="description">Informations supplémentaires concernant l’échantillon qui ne figurent pas dans les autres champs.</items>
+        <items id="fhir_mapping">Specimen.note</items>
+      </items>
+      <items code="at0052">
+        <items id="text">Hémolysé</items>
+        <items id="description">L'échantillon était hémolysé.</items>
+      </items>
+      <items code="at0053">
+        <items id="text">Lipémique</items>
+        <items id="description">L'échantillon était lipémique.</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Additif incorrect</items>
+        <items id="description">Un additif inapproprié, tel qu'un milieu de transport ou un conservateur, a été ajouté à l'échantillon.</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Quantité insuffisante</items>
+        <items id="description">La quantité d'échantillon disponible était insuffisante pour procéder à l'examen.</items>
+      </items>
+      <items code="at0062">
+        <items id="text">Satisfaisant</items>
+        <items id="description">L'échantillon est d'une qualité suffisante pour permettre l'établissement d'un rapport.</items>
+      </items>
+      <items code="at0063">
+        <items id="text">Insatisfaisant - analysé</items>
+        <items id="description">L'échantillon n'est pas conforme, mais il a été analysé.</items>
+      </items>
+      <items code="at0064">
+        <items id="text">Insatisfaisant – non analysé</items>
+        <items id="description">L'échantillon n'est pas conforme et n'a pas été analysé.</items>
+      </items>
+      <items code="at0067">
+        <items id="text">Contexte de prélèvement</items>
+        <items id="description">Identification du contexte physique dans lequel l'échantillon a été prélevé.</items>
+        <items id="comment">Par exemple : service de consultation externe d’un laboratoire, à domicile ou dans un service hospitalier. Cela précise le type de lieu de prélèvement de l’échantillon au sein de l’environnement de soins. Le cadre de prélèvement de l’échantillon peut fournir des informations supplémentaires pertinentes pour l’analyse du résultat.</items>
+      </items>
+      <items code="at0068">
+        <items id="text">Détails du procédé</items>
+        <items id="description">Informations structurées concernant la préparation ou le processus de traitement de l'échantillon.</items>
+        <items id="comment">Par exemple : coloration ou fixation.</items>
+      </items>
+      <items code="at0070">
+        <items id="text">Identifiant du préleveur de l'échantillon</items>
+        <items id="description">Identifiant de la personne ou de l'organisation chargé du prélèvement de l'échantillon.</items>
+        <items id="comment">Cet élément est destiné à être utilisé lorsque l’échantillon a déjà été prélevé et que l’identité de la personne ayant effectué le prélèvement est connue.</items>
+        <items id="fhir_mapping">Specimen.collection.collector</items>
+      </items>
+      <items code="at0071">
+        <items id="text">Détails du préleveur de l'échantillon</items>
+        <items id="description">La personne ou l'organisation chargé du prélèvement de l'échantillon.</items>
+        <items id="fhir_mapping">Specimen.collection.collector</items>
+      </items>
+      <items code="at0079">
+        <items id="text">Description du prélèvement</items>
+        <items id="description">Description narrative du prélèvement de l'échantillon.</items>
+      </items>
+      <items code="at0080">
+        <items id="text">Nombre de récipients</items>
+        <items id="description">Nombre total d'unités physiques contenant cet échantillon.</items>
+        <items id="comment">Par exemple : nombre de seaux, bocaux, flacons, tubes, blocs, lames ou grilles.</items>
+      </items>
+      <items code="at0083">
+        <items id="text">Détails supplémentaires</items>
+        <items id="description">Informations structurées supplémentaires concernant l'échantillon.</items>
+        <items id="comment">Par exemple : les informations relatives aux biopsies à l'aiguille dans le cadre d'un cancer de la prostate, où tant la demande que le compte rendu concernant l'échantillon sont détaillés et précis.</items>
+      </items>
+      <items code="at0085">
+        <items id="text">Détails des récipients</items>
+        <items id="description">Informations relatives aux récipients utilisés.</items>
+      </items>
+      <items code="at0087">
+        <items id="text">Site corporel de prélèvement</items>
+        <items id="description">Identification du site corporel ou de tout autre endroit où l'échantillon a été prélevé.</items>
+        <items id="comment">Par exemple : « plaie au mollet gauche », « canule intraveineuse au bras droit », « rein droit ».&#xD;
+Dans la mesure du possible, il est préférable de coder le nom du site source à l’aide d’une terminologie. Utilisez cet élément de données pour enregistrer les sites sources précoordonnés. Si les exigences relatives à l’enregistrement du site source sont déterminées au moment de l’exécution par l’application ou nécessitent une modélisation plus complexe, telle que des emplacements relatifs, utilisez alors le slot « Site corporel de prélèvement structuré » de cet archétype. Si le site source est inclus dans le « Type d’échantillon » via des codes précoordonnés, cet élément de données devient redondant.</items>
+      </items>
+      <items code="at0088">
+        <items id="text">Identifiant externe</items>
+        <items id="description">Identifiant unique de l'échantillon, attribué par une entité extérieure au laboratoire.</items>
+        <items id="comment">Par exemple : « Identifiant du demandeur », « Identifiant d'archive », « Identifiant de la biobanque ».</items>
+        <items id="fhir_mapping">Specimen.identifier</items>
+      </items>
+      <items code="at0089">
+        <items id="text">Ictérique</items>
+        <items id="description">L'échantillon présentait un aspect ictérique.</items>
+      </items>
+      <items code="at0090">
+        <items id="text">Erreur de manipulation</items>
+        <items id="description">Une erreur s'est produite lors de la manipulation de l'échantillon. Par exemple : stockage incorrect, récipient cassé.</items>
+      </items>
+      <items code="at0091">
+        <items id="text">Âge</items>
+        <items id="description">L'échantillon était trop vieux pour être analysé ou pour faire l'objet d'une analyse précise.</items>
+      </items>
+      <items code="at0092">
+        <items id="text">Panne technique</items>
+        <items id="description">L'échantillon n'a pas pu être analysé pour des raisons techniques.</items>
+      </items>
+      <items code="at0093">
+        <items id="text">Détails du transport</items>
+        <items id="description">Informations structurées concernant le transport de l'échantillon.</items>
+      </items>
+      <items code="at0094">
+        <items id="text">Coagulé</items>
+        <items id="description">L'échantillon était coagulé.</items>
+      </items>
+      <items code="at0095">
+        <items id="text">Étiquetage incorrect</items>
+        <items id="description">L'échantillon a été incorrectement étiqueté.</items>
+      </items>
+      <items code="at0096">
+        <items id="text">Représentation numérique</items>
+        <items id="description">Informations structurées concernant une représentation numérique de l'échantillon.</items>
+        <items id="comment">Par exemple, l’image numérisée d’une lame d’histopathologie.</items>
+      </items>
+      <items code="at0097">
+        <items id="text">Description de l'échantillon</items>
+        <items id="description">Description narrative de l’échantillon examiné.</items>
+        <items id="comment">Par exemple : la couleur et la viscosité d’un liquide ; la forme d’un tissu solide ; ou la description de fragments de tissu.</items>
+      </items>
+      <items code="at0098">
+        <items id="text">Étiquette de l’échantillon</items>
+        <items id="description">Nom ou étiquette décrivant l'échantillon.</items>
+        <items id="comment">Ne concerne généralement que les échantillons de pathologie anatomique. Par exemple : « Résection sigmoïdienne avec un fragment de paroi vésicale » ou « Ensemble de plusieurs fragments issus de biopsies cutanées ».</items>
+      </items>
+      <items code="at0099">
+        <items id="text">Nombre de fragments</items>
+        <items id="description">Nombre de fragments de tissu composant l’échantillon.</items>
+        <items id="comment">Généralement pertinent que lorsque plusieurs fragments de tissu sont examinés et font l'objet d'un rapport en tant qu'échantillon unique.</items>
+      </items>
+      <items code="at0100">
+        <items id="text">Détails du stockage</items>
+        <items id="description">Informations structurées concernant le stockage de l'échantillon.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ca">
+      <items code="at0000">
+        <items id="text">Mostra</items>
+        <items id="description">Mostra física recollida d'un pacient o relacionada amb ell, amb finalitats de recerca, examen o anàlisi.</items>
+        <items id="comment">Per exemple: teixit o fluid corporal.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Identificador de mostra de laboratori</items>
+        <items id="description">Un identificador únic de la mostra, normalment assignat pel laboratori.</items>
+        <items id="comment">De vegades se'n diu Identificador d'Accés. Els contenidors de mostres, per exemple, vials o cassets d'inclusió per a teixits, tenen els seus propis identificadors que es poden registrar a l'element "Identificador de contenidor" a l'arquetip "Contenidor de mostres".</items>
+        <items id="fhir_mapping">Specimen.accessionIdentifier</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Identificador de mostra origen</items>
+        <items id="description">Identificador únic de la mostra original, on aquesta es divideix en submostres.</items>
+        <items id="comment">Per exemple: una mostra de portaobjectes d'histologia pot tenir un bloc de cera de parafina específic com a mostra original.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Avís de perill</items>
+        <items id="description">Risc per a la salut o risc biològic identificat per al recol·lector o personal del laboratori a causa de l'exposició o el contacte amb la mostra.</items>
+        <items id="comment">Per exemple: 'Hepatitis B'; "agent nerviós". Sempre que sigui possible, es prefereix codificar l'“avís de perill” amb una terminologia.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Mètode de recollida</items>
+        <items id="description">Mètode de recollida utilitzat.</items>
+        <items id="comment">Per exemple: venopunció, biòpsia, resecció. Sempre que sigui possible, es prefereix codificar el mètode de recollida amb una terminologia. Si el mètode de recollida s'inclou al 'Tipus de mostra' mitjançant codis precoordinats, aquest element de dades es torna redundant.</items>
+        <items id="fhir_mapping">Specimen.collection.method</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Context del mostreig</items>
+        <items id="description">Context pel qual es recull la mostra.</items>
+        <items id="comment">Per exemple: 'dejuni'; 'bufeta plena'; 'camp estèril'; o instruccions especials sobre la manipulació o processament immediat de la mostra, com ara "centrifugar en rebre-la". Aquest element de dades també s'utilitzarà per documentar qualsevol desviació a la recollida o manipulació, per exemple, que el pacient no havia dejunat, fins i tot quan així s'havia sol·licitat originalment. Sempre que sigui possible, es prefereix la codificació del 'context del mostreig' amb una terminologia.&#xD;
+&#xD;
+Si aquest arquetip s'utilitza dins un arquetip de tipus INSTRUCTION, el context reflectirà les condicions previstes o desitjades a la recollida de la mostra. Si aquest arquetip és utilitzat per representar una fase del procés de l'arquetip ACTION que es correlaciona amb la recollida que s'està realitzant o completant, el context reflectirà les condicions que existien a la recollida de la mostra i això també es pot copiar a l'element " Factors de confusió" de l'arquetip OBSERVATION.laboratory_test_result.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Lloc d'origen estructurat</items>
+        <items id="description">Descripció estructurada de l'àrea del cos on es recull la mostra.</items>
+        <items id="comment">Utilitzar arquetips més detallats per descriure zones anatòmiques estructurades o més complexes, o per donar suport al registre del lloc dorigen en temps dexecució per part de laplicació. Si la zona corporal ha estat identificada a l'element de dades 'Lloc d'origen', aquest SLOT es torna redundant.</items>
+        <items id="fhir_mapping">Specimen.collection.sourceSite</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Data/hora de recollida</items>
+        <items id="description">Data i hora en què s'ha ordenat o ha tingut lloc la recollida.</items>
+        <items id="comment">Aquesta data i hora es registrarà principalment al timing INSTRUCTION, ACTION o OBSERVATION. No obstant això, com que es tracta d'una informació fonamental, pot ser útil associar-la també directament amb la mateixa mostra.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Propietats físiques</items>
+        <items id="description">Dimensions físiques, massa o propietats no mesurables de la mostra.</items>
+        <items id="comment">Per exemple: Volum, massa, perímetre, color, olor, terbolesa. Aquest element es pot utilitzar per especificar les propietats de la mostra que es recollirà, en el context d'un arquetip de tipus INSTRUCTION, o les propietats de la mostra que es va recollir, en el context d'un arquetip de tipus ACTION o OBSERVATION. Per exemple, una INSTRUCTION pot sol·licitar la recollida de 20 ml de sang, mentre que l'ACTION corresponent registra que només es van recollir 15 ml.</items>
+        <items id="fhir_mapping">Specimen.collection.quantity</items>
+      </items>
+      <items code="at0029">
+        <items id="text">Tipus de mostra</items>
+        <items id="description">Tipus de mostra.</items>
+        <items id="comment">Per exemple: sang venosa, cultiu bacterià, citologia o mostra de teixit. Sempre que sigui possible, es prefereix codificar el tipus de mostra amb una terminologia.</items>
+        <items id="fhir_mapping">Specimen.type</items>
+      </items>
+      <items code="at0034">
+        <items id="text">Data/hora de recepció</items>
+        <items id="description">Data i hora en què es va rebre la mostra al laboratori.</items>
+        <items id="fhir_mapping">Specimen.receivedTime</items>
+      </items>
+      <items code="at0041">
+        <items id="text">Adequació per a les proves</items>
+        <items id="description">Informació sobre si la mostra era adequada per a la prova.</items>
+        <items id="comment">Aquest element està destinat a ser utilitzat per registrar un judici sobre si la qualitat de la mostra va ser prou bona per a la prova i si la prova es va fer o no. Sempre que sigui possible, es prefereix codificar els problemes de qualitat de les mostres amb una terminologia.</items>
+      </items>
+      <items code="at0042">
+        <items id="text">Problema en qualitat de la mostra</items>
+        <items id="description">Problema de qualitat amb una mostra específica.</items>
+        <items id="comment">Sempre que sigui possible, es prefereix codificar els problemes de qualitat de les mostres amb una terminologia.</items>
+      </items>
+      <items code="at0045">
+        <items id="text">Comentaris</items>
+        <items id="description">Informació addicional sobre la mostra no registrada a altres camps.</items>
+        <items id="fhir_mapping">Specimen.note</items>
+      </items>
+      <items code="at0052">
+        <items id="text">Hemolitzada</items>
+        <items id="description">La mostra es troba hemolitzada.</items>
+      </items>
+      <items code="at0053">
+        <items id="text">Lipèmica</items>
+        <items id="description">La mostra es troba lipèmica.</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Additiu incorrecte</items>
+        <items id="description">S'hi va afegir a la mostra un additiu incorrecte, com un mitjà de transport o un conservant.</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Quantitat insuficient</items>
+        <items id="description">La quantitat de mostra disponible és insuficient per fer l'examen.</items>
+      </items>
+      <items code="at0062">
+        <items id="text">Satisfactòria</items>
+        <items id="description">La mostra és de qualitat suficient per permetre l'emissió d'informes.</items>
+      </items>
+      <items code="at0063">
+        <items id="text">Insatisfactòria - analitzada</items>
+        <items id="description">La mostra no és satisfactòria, però ha estat analitzada.</items>
+      </items>
+      <items code="at0064">
+        <items id="text">Insatisfactòria - no analitzada</items>
+        <items id="description">La mostra no és satisfactòria i no ha estat analitzada.</items>
+      </items>
+      <items code="at0067">
+        <items id="text">Escenari de recollida</items>
+        <items id="description">Identificació de l'entorn físic on es recull la mostra.</items>
+        <items id="comment">Per exemple: laboratori ambulatori, a domicili o a la sala d'un hospital. Detalleu el tipus d'ubicació de recollida de mostres dins l'entorn sanitari. L'entorn de recollida de mostres pot proporcionar informació addicional rellevant per a l'anàlisi del resultat.</items>
+      </items>
+      <items code="at0068">
+        <items id="text">Detalls del processament</items>
+        <items id="description">Detalls estructurats sobre la preparació o el processament de la mostra.</items>
+        <items id="comment">Per exemple: Tinció o fixació.</items>
+      </items>
+      <items code="at0070">
+        <items id="text">Identificador del col·lector</items>
+        <items id="description">Identificador de la persona o organització responsable de recollir la mostra.</items>
+        <items id="comment">Aquest element està pensat per a ser utilitzat quan la mostra ja ha estat recollida i es coneix el col·lector real.</items>
+        <items id="fhir_mapping">Specimen.collection.collector</items>
+      </items>
+      <items code="at0071">
+        <items id="text">Detalls del col·lector</items>
+        <items id="description">Persona o organització responsable de recollir la mostra.</items>
+        <items id="fhir_mapping">Specimen.collection.collector</items>
+      </items>
+      <items code="at0079">
+        <items id="text">Descripció de la recollida</items>
+        <items id="description">Descripció narrativa sobre la recollida de la mostra.</items>
+      </items>
+      <items code="at0080">
+        <items id="text">Nombre de recipients</items>
+        <items id="description">Número total d'unitats físiques que contenen aquesta mostra.</items>
+        <items id="comment">Per exemple: Nombre de pots, flascons, vials, tubs, blocs, portaobjectes o reixetes.</items>
+      </items>
+      <items code="at0083">
+        <items id="text">Detalls addicionals</items>
+        <items id="description">Detalls addicionals sobre la mostra.</items>
+        <items id="comment">Per exemple: detalls sobre biòpsies de pròstata, on tant la sol·licitud com l'informe sobre la mostra són detallats i específics.</items>
+      </items>
+      <items code="at0085">
+        <items id="text">Detalls del recipient</items>
+        <items id="description">Detalls sobre els recipients utilitzats.</items>
+      </items>
+      <items code="at0087">
+        <items id="text">Lloc d'origen</items>
+        <items id="description">Identificació de la zona del cos o un altre lloc on es recull la mostra.</items>
+        <items id="comment">Per exemple: 'ferida en panxell esquerre', 'cànula intravenosa braç dret', 'ronyó dret'.&#xD;
+Sempre que sigui possible, cal codificar el nom del lloc d'origen amb una terminologia. Utilitzeu aquest element de dades per registrar llocs d'origen precoordinats. Si els requisits per registrar el lloc d'origen els determina l'aplicació en temps d'execució o requereixen un modelatge més complex, com ara ubicacions relatives, utilitzeu el SLOT 'Lloc d'origen estructurat', dins aquest arquetip. Si el lloc d'origen s'inclou al 'Tipus de mostra' mitjançant codis precoordinats, aquest element de dades es torna redundant.</items>
+      </items>
+      <items code="at0088">
+        <items id="text">Identificador extern</items>
+        <items id="description">Un identificador únic de la mostra assignat per un equip extern al laboratori.</items>
+        <items id="comment">Per exemple: 'ID del sol·licitant', 'ID de l'arxiu, 'ID del biobanc'.</items>
+        <items id="fhir_mapping">Specimen.identifier</items>
+      </items>
+      <items code="at0089">
+        <items id="text">Ictèrica</items>
+        <items id="description">La mostra es troba ictèrica.</items>
+      </items>
+      <items code="at0090">
+        <items id="text">Error de maneig</items>
+        <items id="description">Va sorgir un problema en manipular la mostra. Per exemple: emmagatzematge incorrecte, contenidor trencat.</items>
+      </items>
+      <items code="at0091">
+        <items id="text">Antiquada</items>
+        <items id="description">La mostra era massa antiquada per analitzar-la o analitzar-la amb precisió.</items>
+      </items>
+      <items code="at0092">
+        <items id="text">Fallada tècnica</items>
+        <items id="description">La mostra no es va poder analitzar per motius tècnics.</items>
+      </items>
+      <items code="at0093">
+        <items id="text">Detalls de transport</items>
+        <items id="description">Detalls estructurats sobre el transport de la mostra.</items>
+      </items>
+      <items code="at0094">
+        <items id="text">Coagulada</items>
+        <items id="description">La mostra ha estat coagulada.</items>
+      </items>
+      <items code="at0095">
+        <items id="text">Etiquetada incorrectament</items>
+        <items id="description">La mostra va ser etiquetada incorrectament.</items>
+      </items>
+      <items code="at0096">
+        <items id="text">Representació digital</items>
+        <items id="description">Detalls estructurats sobre una representació digital de la mostra.</items>
+        <items id="comment">Per exemple, la imatge escanejada d'un portaobjectes d'histopatologia.</items>
+      </items>
+      <items code="at0097">
+        <items id="text">Descripció de la mostra</items>
+        <items id="description">Descripció narrativa sobre la mostra que cal examinar.</items>
+        <items id="comment">Per exemple: color i viscositat dʻun fluid; forma d'un teixit sòlid; o descripció de fragments del teixit.</items>
+      </items>
+      <items code="at0098">
+        <items id="text">Etiqueta de la mostra</items>
+        <items id="description">Nom o etiqueta que descrigui la mostra.</items>
+        <items id="comment">En general només és rellevant per a mostres d'anatomia patològica. Per exemple: 'Resecció sigmoidea d'un tros de paret de la bufeta' o 'Agregat de múltiples fragments de biòpsia de pell'.</items>
+      </items>
+      <items code="at0099">
+        <items id="text">Nombre de fragments</items>
+        <items id="description">Número de fragments de teixit que componen la mostra.</items>
+        <items id="comment">En general només és rellevant quan s'examinen diversos fragments de teixit i s'informen com una sola mostra.</items>
+      </items>
+      <items code="at0100">
+        <items id="text">Detalls d'emmagatzematge</items>
+        <items id="description">Detalls estructurats sobre el desament de la mostra.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="es">
+      <items code="at0000">
+        <items id="text">Muestra</items>
+        <items id="description">Muestra física recogida de un paciente o relacionada con él, con fines de investigación, examen o análisis.</items>
+        <items id="comment">Por ejemplo: tejido o fluido corporal.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Identificador de muestra de laboratorio</items>
+        <items id="description">Un identificador único de la muestra, normalmente asignado por el laboratorio.</items>
+        <items id="comment">A veces se le llama Identificador de Acceso. Los contenedores de muestras, por ejemplo, viales o casetes de inclusión para tejidos, tienen sus propios identificadores que pueden registrarse en el elemento "Identificador de contenedor" en el arquetipo "Contenedor de muestras".</items>
+        <items id="fhir_mapping">Specimen.accessionIdentifier</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Identificador de muestra origen</items>
+        <items id="description">Identificador único de la muestra original, donde ésta se divide en submuestras.</items>
+        <items id="comment">Por ejemplo: una muestra de portaobjetos de histología puede tener un bloque de cera de parafina específico como muestra original.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Aviso de peligro</items>
+        <items id="description">Riesgo para la salud o riesgo biológico identificado para el recolector o personal del laboratorio debido a la exposición o contacto con la muestra.</items>
+        <items id="comment">Por ejemplo: 'Hepatitis B'; "agente nervioso". Siempre que sea posible, se prefiere codificar el "aviso de peligro" con una terminología.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Método de recogida</items>
+        <items id="description">Método de recogida utilizado.</items>
+        <items id="comment">Por ejemplo: venopunción, biopsia, resección. Siempre que sea posible, se prefiere codificar el método de recogida con una terminología. Si el método de recogida se incluye en el 'Tipo de muestra' mediante códigos precoordinados, este elemento de datos se vuelve redundante.</items>
+        <items id="fhir_mapping">Specimen.collection.method</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Contexto del muestreo</items>
+        <items id="description">Contexto por el cual se recoge la muestra.</items>
+        <items id="comment">Por ejemplo: 'ayuno'; 'vejiga llena'; 'campo estéril'; o instrucciones especiales sobre la manipulación o procesamiento inmediato de la muestra, como "centrifugar al recibirla". Este elemento de datos también se utilizará para documentar cualquier desviación en la recogida o manipulación, por ejemplo, que el paciente no había ayunado, incluso cuando así se había solicitado originalmente. Siempre que sea posible, se prefiere la codificación del 'contexto del muestreo' con una terminología.&#xD;
+&#xD;
+Si este arquetipo se utiliza dentro de un arquetipo de tipo INSTRUCTION, el contexto reflejará las condiciones previstas o deseadas en la recogida de la muestra. Si este arquetipo es utilizado para representar una fase del proceso del arquetipo ACTION que se correlaciona con la recogida que se está realizando o completando, el contexto reflejará las condiciones que existían en la recogida de la muestra y esto también se puede copiar en el elemento "Factores de confusión" del arquetipo OBSERVATION.laboratory_test_result.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Lugar de origen estructurado</items>
+        <items id="description">Descripción estructurada del área del cuerpo de donde se recoge la muestra.</items>
+        <items id="comment">Utilizar arquetipos más detallados para describir zonas anatómicas estructuradas o más complejas, o para dar soporte en el registro del lugar de origen en tiempo de ejecución por parte de la aplicación. Si la zona corporal ha sido identificada n el elemento de datos 'Lugar de origen', este SLOT se vuelve redundante.</items>
+        <items id="fhir_mapping">Specimen.collection.sourceSite</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Fecha/hora de recogida</items>
+        <items id="description">Fecha y hora en que se ha ordenado o ha tenido lugar la recogida.</items>
+        <items id="comment">Esta fecha y hora se registrará principalmente en el timing INSTRUCTION, ACTION u OBSERVATION. Sin embargo, como se trata de una información fundamental, puede resultar útil asociarla también directamente con la muestra misma.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Propiedades físicas</items>
+        <items id="description">Dimensiones físicas, masa o propiedades no medibles de la muestra.</items>
+        <items id="comment">Por ejemplo: Volumen, masa, perímetro, color, olor, turbidez. Este elemento se puede utilizar para especificar las propiedades de la muestra que se recogerá, en el contexto de un arquetipo de tipo INSTRUCTION, o las propiedades de la muestra que se recogió, en el contexto de un arquetipo de tipo ACTION u OBSERVATION. Por ejemplo, una INSTRUCTION puede solicitar la recogida de 20 ml de sangre, mientras que la ACTION correspondiente registra que solo se recogieron 15 ml.</items>
+        <items id="fhir_mapping">Specimen.collection.quantity</items>
+      </items>
+      <items code="at0029">
+        <items id="text">Tipo de muestra</items>
+        <items id="description">Tipo de muestra.</items>
+        <items id="comment">Por ejemplo: sangre venosa, cultivo bacteriano, citología o muestra de tejido. Siempre que sea posible, se prefiere codificar el tipo de muestra con una terminología.</items>
+        <items id="fhir_mapping">Specimen.type</items>
+      </items>
+      <items code="at0034">
+        <items id="text">Fecha/hora de recepción</items>
+        <items id="description">Fecha y hora en que se recibió la muestra en el laboratorio.</items>
+        <items id="fhir_mapping">Specimen.receivedTime</items>
+      </items>
+      <items code="at0041">
+        <items id="text">Adecuación para las pruebas</items>
+        <items id="description">Información sobre si la muestra era adecuada para la prueba.</items>
+        <items id="comment">Este elemento está destinado a ser utilizado para registrar un juicio sobre si la calidad de la muestra fue lo suficientemente buena para la prueba y si la prueba se llevó a cabo o no. Siempre que sea posible, se prefiere codificar los problemas de calidad de las muestras con una terminología.</items>
+      </items>
+      <items code="at0042">
+        <items id="text">Problema en calidad de la muestra</items>
+        <items id="description">Problema en calidad con una muestra específica.</items>
+        <items id="comment">Siempre que sea posible, se prefiere codificar los problemas de calidad de las muestras con una terminología.</items>
+      </items>
+      <items code="at0045">
+        <items id="text">Comentarios</items>
+        <items id="description">Información adicional sobre la muestra no registrada en otros campos.</items>
+        <items id="fhir_mapping">Specimen.note</items>
+      </items>
+      <items code="at0052">
+        <items id="text">Hemolizada</items>
+        <items id="description">La muestra se encuentra hemolizada.</items>
+      </items>
+      <items code="at0053">
+        <items id="text">Lipémica</items>
+        <items id="description">La muestra se encuentra lipémica.</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Aditivo incorrecto</items>
+        <items id="description">Se añadió a la muestra un aditivo incorrecto, como un medio de transporte o un conservante.</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Cantidad insuficiente</items>
+        <items id="description">La cantidad de muestra disponible es insuficiente para realizar el examen.</items>
+      </items>
+      <items code="at0062">
+        <items id="text">Satisfactoria</items>
+        <items id="description">La muestra es de una calidad suficiente para permitir la emisión de informes.</items>
+      </items>
+      <items code="at0063">
+        <items id="text">Insatisfactoria - analizada</items>
+        <items id="description">La muestra no es satisfactoria pero ha sido analizada.</items>
+      </items>
+      <items code="at0064">
+        <items id="text">Insatisfactoria - no analizada</items>
+        <items id="description">La muestra no es satisfactoria y no ha sido analizada.</items>
+      </items>
+      <items code="at0067">
+        <items id="text">Escenario de recogida</items>
+        <items id="description">Identificación del entorno físico en el que se recoge la muestra.</items>
+        <items id="comment">Por ejemplo: laboratorio ambulatorio, a domicilio o en la sala de un hospital. Detalla el tipo de ubicación de recogida de muestras dentro del entorno sanitario. El entorno de recogida de muestras puede proporcionar información adicional relevante para el análisis del resultado.</items>
+      </items>
+      <items code="at0068">
+        <items id="text">Detalles del procesado</items>
+        <items id="description">Detalles estructurados sobre la preparación o procesado de la muestra.</items>
+        <items id="comment">Por ejemplo: Tinción o fijación.</items>
+      </items>
+      <items code="at0070">
+        <items id="text">Identificador del colector</items>
+        <items id="description">Identificador de la persona u organización responsable de recoger la muestra.</items>
+        <items id="comment">Este elemento está pensado para a ser utilizado cuando la muestra ya ha sido recogida y se conoce al colector real.</items>
+        <items id="fhir_mapping">Specimen.collection.collector</items>
+      </items>
+      <items code="at0071">
+        <items id="text">Detalles del colector</items>
+        <items id="description">Persona u organización responsable de recoger la muestra.</items>
+        <items id="fhir_mapping">Specimen.collection.collector</items>
+      </items>
+      <items code="at0079">
+        <items id="text">Descripción de la recogida</items>
+        <items id="description">Descripción narrativa sobre la recogida de la muestra.</items>
+      </items>
+      <items code="at0080">
+        <items id="text">Número de recipientes</items>
+        <items id="description">Número total de unidades físicas que contienen esta muestra.</items>
+        <items id="comment">Por ejemplo: Número de botes, frascos, viales, tubos, bloques, portaobjetos o rejillas.</items>
+      </items>
+      <items code="at0083">
+        <items id="text">Detalles adicionales</items>
+        <items id="description">Detalles adicionales sobre la muestra.</items>
+        <items id="comment">Por ejemplo: detalles sobre biopsias de próstata, donde tanto la solicitud como el informe sobre la muestra son detallados y específicos.</items>
+      </items>
+      <items code="at0085">
+        <items id="text">Detalles del recipiente</items>
+        <items id="description">Detalles sobre los recipientes utilizados.</items>
+      </items>
+      <items code="at0087">
+        <items id="text">Lugar de origen</items>
+        <items id="description">Identificación de la zona del cuerpo u otro lugar de donde se recoge la muestra.</items>
+        <items id="comment">Por ejemplo: 'herida en pantorrilla izquierda', 'cánula intravenosa brazo derecho', 'riñón derecho'.&#xD;
+Siempre que sea posible, se prefiere codificar el nombre del lugar de origen con una terminología. Utilice este elemento de datos para registrar lugares de origen precoordinados. Si los requisitos para registrar el lugar de origen los determina la aplicación en tiempo de ejecución o requieren un modelado más complejo, como ubicaciones relativas, utilizar el SLOT 'Lugar de origen estructurado', dentro de este arquetipo. Si el lugar de origen se incluye en el 'Tipo de muestra' mediante códigos precoordinados, este elemento de datos se vuelve redundante.</items>
+      </items>
+      <items code="at0088">
+        <items id="text">Identificador externo</items>
+        <items id="description">Un identificador único de la muestra, asignado por un equipo externo al laboratorio.</items>
+        <items id="comment">Por ejemplo: 'ID del solicitante', 'ID del archivo, 'ID del biobanco'.</items>
+        <items id="fhir_mapping">Specimen.identifier</items>
+      </items>
+      <items code="at0089">
+        <items id="text">Ictérica</items>
+        <items id="description">La muestra se encuentra ictérica.</items>
+      </items>
+      <items code="at0090">
+        <items id="text">Error de manejo</items>
+        <items id="description">Surgió un problema al manipular la muestra. Por ejemplo: almacenamiento incorrecto, contenedor roto.</items>
+      </items>
+      <items code="at0091">
+        <items id="text">Anticuada</items>
+        <items id="description">La muestra era demasiado anticuada para analizarla o analizarla con precisión.</items>
+      </items>
+      <items code="at0092">
+        <items id="text">Fallo técnico</items>
+        <items id="description">La muestra no pudo analizarse por motivos técnicos.</items>
+      </items>
+      <items code="at0093">
+        <items id="text">Detalles de transporte</items>
+        <items id="description">Detalles estructurados sobre el transporte de la muestra.</items>
+      </items>
+      <items code="at0094">
+        <items id="text">Coagulada</items>
+        <items id="description">La muestra se ha coagulado.</items>
+      </items>
+      <items code="at0095">
+        <items id="text">Etiquetada incorrectamente</items>
+        <items id="description">La muestra fue etiquetada incorrectamente.</items>
+      </items>
+      <items code="at0096">
+        <items id="text">Representación digital</items>
+        <items id="description">Detalles estructurados sobre una representación digital de la muestra.</items>
+        <items id="comment">Por ejemplo, imagen escaneada de un portaobjetos de histopatología.</items>
+      </items>
+      <items code="at0097">
+        <items id="text">Descripción de la muestra</items>
+        <items id="description">Descripción narrativa sobre la muestra a examinar.</items>
+        <items id="comment">Por ejemplo: color y viscosidad de un fluido; forma de un tejido sólido; o descripción de fragmentos del tejido.</items>
+      </items>
+      <items code="at0098">
+        <items id="text">Etiqueta de la muestra</items>
+        <items id="description">Nombre o etiqueta que describa la muestra.</items>
+        <items id="comment">Por lo general, sólo es relevante para muestras de anatomía patológica. Por ejemplo: 'Resección sigmoidea de un trozo de pared de la vejiga' o 'Agregado de múltiples fragmentos de biopsia de piel'.</items>
+      </items>
+      <items code="at0099">
+        <items id="text">Número de fragmentos</items>
+        <items id="description">Número de fragmentos de tejido que componen la muestra.</items>
+        <items id="comment">Por lo general, sólo es relevante cuando se examinan varios fragmentos de tejido y se informan como una sola muestra.</items>
+      </items>
+      <items code="at0100">
+        <items id="text">Detalles de almacenamiento</items>
+        <items id="description">Detalles estructurados sobre el guardado de la muestra.</items>
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

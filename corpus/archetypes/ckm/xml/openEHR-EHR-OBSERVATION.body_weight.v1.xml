@@ -1,0 +1,1655 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2006-03-09</original_author>
+    <original_author id="name">Sam Heard</original_author>
+    <original_author id="organisation">Ocean Informatics</original_author>
+    <original_author id="email">sam.heard@oceaninformatics.com</original_author>
+    <other_contributors>Marja Buur-Krom, Medisch Centrum Alkmaar, Netherlands</other_contributors>
+    <other_contributors>Rong Chen, Cambio Healthcare Systems, Sweden</other_contributors>
+    <other_contributors>Hans Demski, Helmholtz Zentrum München, Germany</other_contributors>
+    <other_contributors>Paul Donaldson, Nursing Informatics Australia, Australia</other_contributors>
+    <other_contributors>Sebastian Garde, Ocean Informatics, Germany</other_contributors>
+    <other_contributors>Heather Grain, Llewelyn Grain Informatics, Australia</other_contributors>
+    <other_contributors>Anne Harbison, CPCER, Australia</other_contributors>
+    <other_contributors>Sam Heard, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Andrew James, University of Toronto, Canada</other_contributors>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia (Editor)</other_contributors>
+    <other_contributors>Rikard Lovstrom, Swedish Medical Association, Sweden</other_contributors>
+    <other_contributors>Ian McNicoll, Ocean Informatics, United Kingdom</other_contributors>
+    <other_contributors>Jeroen Meintjens, Medisch Centrum Alkmaar, Netherlands</other_contributors>
+    <other_contributors>Soon Ghee Yap, Singapore Health Services Pte Ltd, Singapore</other_contributors>
+    <lifecycle_state>deprecated</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">777951417638DDCE87D2626A0BE646AE</other_details>
+    <other_details id="build_uid">13c4520f-ee3a-417f-a92f-ff61357992e2</other_details>
+    <other_details id="revision">1.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Dokumentation des Gewichtes eines Individuums, sowohl exakt als auch ungefähr.</purpose>
+      <keywords>Gewicht</keywords>
+      <keywords>Zunahme</keywords>
+      <keywords>Verlust</keywords>
+      <keywords>Masse</keywords>
+      <keywords>Schätzung</keywords>
+      <use>Zur Dokumentation des tatsächlichen Körpergewichts, auch wenn das Individuum einen Körperteil (angeboren oder später amputiert) vermisst. Sofern benötigt, kann dies im Datenelement 'Störfaktoren' dokumentiert werden. Dies ist der Archetyp, der gewöhnlicherweise für eine typische Gewichtsmessung benutzt werden sollte, z.B. bei Selbstmessung durch das Individuum zu Hause, durch einen Kliniker im Krankenhaus, oder einen Fitness-Trainer in einem Fitness-Center.&#xD;
+&#xD;
+Der Archetyp kann auch benutzt werden, um eine Schätzung des Körpergewichts zu dokumentieren, wenn es nicht möglich ist, das Gewicht genau zu bestimmen - z.B. bei der Messung des Gewichts eines nicht kooperativen Kindes, oder bei einem ungeborenen Fötus (hier ist das 'Subjekt der Daten' der Fötus und die Dokumentation erfolgt in der Akte der Mutter). Dass es sich um eine Schätzung handelt wird in diesem Archetyp nicht explizit modelliert, da das openEHR Referenzmodell dies direkt für 'Quantity'-Datentypen unterstützt. In einer konkreten klinischen Anwendung könnte die Benutzerschnittstelle es dem Kliniker z.B. über eine Checkbox ermöglichen, zu dokumentieren, dass es sich um eine Schätzung handelt.</use>
+      <misuse>Nicht zur Dokumentation des ersten Gewichts eines Neugeboren (Geburtsgewicht) - benutzen Sie hierzu den spezialisierten Archetyp OBSERVATION.body_weight-birth.&#xD;
+Nicht zur Dokumentation des angepassten Körpergewichts, z.B. eine Berechnung des vollständigen Körpergewichts bei einer Person mit amputierter Extremität auf Basis der anderen Körperteile und eines Algorithmus - benutzen Sie OBSERVATION.body_weight-adjusted.&#xD;
+Nicht zur Dokumentation eines Objekts oder eines Teils des Körpers.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ru</code_string>
+      </language>
+      <purpose>Для записи массы тела человека: фактической или приблизительной.</purpose>
+      <keywords>вес</keywords>
+      <keywords>масса тела</keywords>
+      <keywords>прибавка</keywords>
+      <keywords>потеря</keywords>
+      <keywords>увеличение</keywords>
+      <keywords>уменьшение</keywords>
+      <keywords>оценка</keywords>
+      <keywords>актуально</keywords>
+      <use>Использовать для записи фактического измерения массы тела, включая случаи отсутсвия части(-ей) тела, врожденное или после хирургического удаления. Отметка о физической неполноте тела может быть зарегистрирована в элементе данных "стохастическая погрешность", если требуется. Это - обычный архетип, используемый для типичного измерения веса, например самоизмеренного человеком дома, измерение клинициста в клинике/больнице, или фитнес-инструктором в гимнастическом зале. &#xD;
+&#xD;
+Может также использоваться для записи примерного измерения массы тела в клиническом сценарии, где не возможно взвешивание - например, сопротивляющийся ребёнок, или для оценики веса внутриутробного плода (где 'предметом данных' является плод, и регистрация происходит в пределах записи о состоянии здоровья матери). Это не оформлено явно в архетипе, поскольку модель openEHR позволяет атрибут «приблизительно» для любого типа данных «количество». При работе, например, прикладной пользовательский интерфейс позволяет клиницистам выбирать соответствующую отметку, смежную с полем данных «вес», чтобы указать, что зарегистрированный вес - приблизительный, а не фактический. &#xD;
+&#xD;
+Использовать для записи изменения веса, то есть, потери веса или увеличения веса.&#xD;
+Это может в настоящее время моделироваться, привязывая 'каждый случай' к интервалу со связанной математической функцией увеличения или уменьшения, соответственно.</use>
+      <misuse>Не использовать для записи первого веса младенца после рождение, которое обозначено как 'вес при рождении' - использовать специализацию этого архетипа OBSERVATION.body_weight-birth. &#xD;
+Не использовать для записи массы тела человека с протезами / приспособлениями для вычисление полной массы тела человека с ампутацией, основанной на других измерениях и алгоритме  - использовать архетип OBSERVATION.body_weight-adjusted.&#xD;
+Не использовать, чтобы сделать запись веса части тела или объекта.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Para registrar o peso corporal de um indivíduo - tanto real como aproximado.</purpose>
+      <keywords>*weight(en)</keywords>
+      <keywords>*gain(en)</keywords>
+      <keywords>*loss(en)</keywords>
+      <keywords>*increase(en)</keywords>
+      <keywords>*decrease(en)</keywords>
+      <keywords>*mass(en)</keywords>
+      <keywords>*estimate(en)</keywords>
+      <keywords>*actual(en)</keywords>
+      <use>Usado para gravar a medição real de peso corporal, inclusive quando o indivíduo tem faltando uma parte do corpo devido a uma causa congênita ou após a remoção cirúrgica. A indicação da imperfeição física do corpo pode ser registrada no elemento 'fatores de erro', se necessário.&#xD;
+Este é o arquétipo para ser utilizado para uma medição típica de peso, por exemplo, auto-medido pelo indivíduo em casa, uma medida médico em uma clínica / hospital, ou um instrutor de fitness em um ginásio. &#xD;
+&#xD;
+Também pode ser usado para a gravar uma aproximação da medição do peso corporal em um cenário clínico no qual não é possível medir com precisão o peso do corpo - por exemplo, pesar uma criança inquieta, ou estimar o peso de um feto (quando 'sujeito' é um feto e a gravação ocorre no registro da saúde da mãe). Isso não é modelado explicitamente no arquétipo como o modelo de referência da openEHR permite que o atributo de aproximação para qualquer tipo de dados quantitativos. Na execução, por exemplo, uma interface de usuário do aplicativo pode permitir que os clínicos para selecionar uma caixa de seleção devidamente setados junto ao campo de dados de peso, indicando que o peso verificado é uma aproximação, ao invés de reais. &#xD;
+&#xD;
+Usada para gravar a mudança de peso, ou seja, qualquer perda ou ganho de peso. Pode ser modelado por restringir a 'qualquer evento' a um intervalo associado com funções matemáticas de aumentar ou diminuir, conforme o caso.</use>
+      <misuse>Não deve ser utilizado para gravar o primeiro peso de um bebê logo após o nascimento, que é designado como o seu 'peso' - use a especialização de seu nascimento arquétipo OBSERVATION.body_weight-birth.&#xD;
+Não deve ser usado para registrar o peso do corpo ajustado por exemplo, um cálculo do peso de corpo inteiro de uma pessoa com amputação de membros, com base em medições de outro corpo e um algoritmo -OBSERVATION.body_weight-adjusted.&#xD;
+Não deve ser usado para registrar o peso de um objeto ou parte do corpo.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ja</code_string>
+      </language>
+      <purpose>個人の体重を記録するため。実測値あるいはおおよその値として。</purpose>
+      <keywords>重量</keywords>
+      <keywords>増量</keywords>
+      <keywords>減量</keywords>
+      <keywords>増加</keywords>
+      <keywords>現象</keywords>
+      <keywords>質量</keywords>
+      <keywords>推定値</keywords>
+      <keywords>実測値</keywords>
+      <use>身体の一部を先天的な理由あるいは外科的に切除していることにより欠損している場合を含めて、実測した体重を記録するために使われる。必要であれば身体の一部を物理的に欠損している状態は、「交絡因子」(confounding factor)データエレメントに指定される。これは一般的な体重測定のために使われるアーキタイプであり、たとえば個人の家庭で自己測定された体重や、クリニックや病院で臨床スタッフにより計測されたものあるいは、ジムでフィットネスインストラクタにより測定されたものである。&#xD;
+&#xD;
+また、正確な体重測定が不可能であると臨床上想定される場面において、体重を概算して記録するときにも利用される。たとえば、非協力的な子供の体重測定や、未出産の胎児の体重を見積もるような場合である。（胎児体重を見積もる場合、「データの対象」(subject of data)は「胎児」(Fetus)であり、母親の健康を記録するときに同時に記録される。）このアーキタイプでは、openEHRの参照モデルが量(Quantity)を表すデータ型に概算であることを示す属性を明示するようにはモデリングされていない。実装する場合には、たとえばアプリケーションのユーザーインターフェースが臨床スタッフに実測したデータでは無く概算であると言うことを明示的に記録できるようなチェックボックスを用意して、体重データフィールドに記録するようにしておくこともできる。&#xD;
+&#xD;
+体重変化、つまり体重が増加しているか減少しているかを記録するために利用することもできる。これについては、現在では「任意のイベント」(any event)による制約を適切な間隔で制約して、数学的に足したり引いたりすることができるようにモデリングされている。</use>
+      <misuse>新生児が生まれた直後に最初にはかる体重、つまり新生児の「生下時体重」(birth weith)を記録するためには設計されていない。生下時体重の記録にはこのアーキタイプを特殊化したOBSERVATION.body_weight-birthアーキタイプを利用すること。&#xD;
+調整された体重、たとえば四肢を切断した人の全体重を身体の他の部位を計測して、一定のアルゴリズムに基づいて計算するような場合にも用いられない。その場合には、OBSERVATION.body_weight-adjustedを用いること。&#xD;
+そのほかの物体や体の一部の重さを記録するためにも用いられない。</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ar-sy</code_string>
+      </language>
+      <purpose>لتسجيل وزن الجسم للشخص - بما في ذلك الوزن الحقيقي و المُقَدَّر</purpose>
+      <keywords>الوزن</keywords>
+      <keywords>الزيادة/الكسب</keywords>
+      <keywords>الفاقد</keywords>
+      <keywords>الزيادة</keywords>
+      <keywords>النقصان</keywords>
+      <keywords>الكتلة</keywords>
+      <keywords>التقدير</keywords>
+      <keywords>الحقيقي</keywords>
+      <use>يستخدم لتسجيل القياس الحقيقي لوزن الجسم, بما في ذلك ما إذا كان الشخص قد فقد جزءا من جسمه لسبب خَلقي وراثي, أو بعد استئصال جراحي.&#xD;
+بيان يقوم بتعريف مدى عدم الاكتمال البدني, و يمكن تسجيله تحت عنصر البيانات (العوامل المربكة), حسب الحاجة.&#xD;
+و هذا هو النموذج المعتاد الذي يستخدم للتسجيل النمطي للوزن, مثلا إذا قاسه الشخص لنفسه في المنزل, أو إذا قام الطبيب السريري بالقياس في العيادة/المستشفى, أو المُدرِّب البدني في القاعة الرياضية.&#xD;
+&#xD;
+يمكن أيضا أن يستخدم لتسجيل تقدير قياس وزن الجسم في سيناريو سريري حيث لا يمكن قياس وزن الجسم بشكل دقيق - مثلا, قياس وزن طفل غير متعاون, أو تقدير وزن جنين قبل الولادة - حيث يكون الهدف هو قياس وزن الجنين في حين يتم تسجيل ذلك في السجل الطبي للأم&#xD;
+&#xD;
+و لا يتم وضع هذا في نموذج صريح حيث يسمح النموذج المرجعي لـ&#xD;
+openEHR&#xD;
+لصفة التقريب لأي نوع كمي من البيانات. &#xD;
+و عند تشغيل هذا النموذج, مثلا شاشة لبرنامج كمبيوتر فإنها تسمح للطبيب السريري أن يختار زراّ مناسبا ملاصقا لبيانات الوزن تشير إلى أن هذا القياس هو تقدير و ليس حقيقيا.</use>
+      <misuse>لا يستخدم لتسجيل القياس الأول لوزن حديث الولادة بمجرد ولادته و الذي يسمى بالوزن عند الولادة/ الوضع - و استخدم بدلا من ذلك تخصيص النموذج الذي يسمى ملاحظة.وزن الجسم - الولادة/ الوضع.&#xD;
+&#xD;
+لا يستخدم لتسجيل وزن الجسم المُصحَّح مثل قياس الوزن الكلي للجسم لشخص يعاني من بتر في أحد الأطراف, بناءا على قياسات أخرى من الجسم باستخدام خُوارزمية - استخدم بدلا من ذلك نموذج ملاحظة.وزن الجسم المُصحَّح.&#xD;
+&#xD;
+لا يستخدم لتسجيل وزن شيئ أو جزء من أجزاء الجسم.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record the body weight of an individual - both actual and approximate.</purpose>
+      <keywords>weight</keywords>
+      <keywords>gain</keywords>
+      <keywords>loss</keywords>
+      <keywords>increase</keywords>
+      <keywords>decrease</keywords>
+      <keywords>mass</keywords>
+      <keywords>estimate</keywords>
+      <keywords>actual</keywords>
+      <use>To be used for recording the actual measurement of body weight, including when the individual is missing a body part due to a congenital cause or after surgical removal.   A statement identifying the physical incompleteness of the body can be recorded in the 'Confounding factors' data element, if required. This is the usual archetype to be used for a typical measurement of weight, for example self-measured by the individual at home, a clinician measurement in a clinic/hospital, or a fitness instructor in a gymnasium.  &#xD;
+&#xD;
+Can also be used for recording an approximation of body weight measurement in a clinical scenario where it is not possible to measure accurately body weight - for example, weighing an uncooperative child, or estimating the weight of an unborn fetus (where the 'subject of data' is the Fetus and recording occurs within the mother's health record).  This is not modelled explicitly in the archetype as the openEHR Reference model allows approximations  for any Quantity data type by setting the attribute Magnitude_status to the value '~'.  At implementation, for example, an application user interface could allow clinicians to select an appropriately labelled check box adjacent to the Weight data field to indicate that the recorded weight is an approximation, rather than actual.&#xD;
+&#xD;
+To be used for recording weight change, that is, either weight loss or weight gain.  This can currently be modelled by constraining the 'any event' to an interval with associated mathematical function of increase or decrease, as appropriate.</use>
+      <misuse>Not to be used to record the adjusted body weight eg a calculation of the full body weight of a person with limb amputation, based on other body part measurements and an algorithm - use OBSERVATION.body_weight-adjusted.&#xD;
+&#xD;
+Not to be used to record the weight of an object or body part.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>fa</code_string>
+      </language>
+      <purpose>برای ثبت وزن بدن فرد ، بطور واقعی یا تقریبی ، بکار می رود</purpose>
+      <keywords>وزن</keywords>
+      <keywords>زیاد کردن وزن</keywords>
+      <keywords>کم کردن وزن</keywords>
+      <keywords>افزایش</keywords>
+      <keywords>کاهش</keywords>
+      <keywords>توده</keywords>
+      <keywords>تخمین</keywords>
+      <keywords>واقعی</keywords>
+      <use>برای ثبت اندازه گیری واقعی وزن بکار می رود، و شامل زمانی که فرد مادرزادی عضوی را ندارد یا بعد از جراحی عضوی را ازدست می دهد، نیز می‌‌شود. عبارتی که نواقص فیزیکی بدن را مشخص می کند در بخش داده های "فاکتورهای جانبی" درصورت نیاز ثبت می شود.این الگوساز بطور معمولی برای اندازه گیری واقعی وزن استفاده می شود برای مثال اندازه گیری وزن توسط خود فرد در منزل ، اندازه گیری بالینی در مطب یا بیمارستان یا مربی ورزشی در باشگاه&#xD;
+همچنین از این الگو ساز می توان در اندازه گیری تقریبی وزن بدن در یک سناریوی بالینی، که اندازه گیری واقعی عملی نیست، استفاده نمود برای مثال اندازه گیری وزن کودکی که همکاری نمی کند یا تخمین وزن جنین بدنیا نیامده (که آنجا "موضوع داده" جنین است و اطلاعات در پرونده بهداشتی مادر ثبت می‌شوند). این مورد بطور واضح در الگوساز مدل بندی نشده است ولی مدل مرجع "اوپن ئی اچ ار" ویژگی تقریب را برای هر نوع داده کمی اجازه می دهد. در پیاده سازی، برای مثال، یک واسط کاربری نرم افزار می تواند به کاربران اجازه دهد تا با انتخاب گزینه ای [چک باکس] درکنار محل مربوط به وزن با نشانه گذاری مناسب نشان دهند که قد ثبت شده اندازه ای است تقریبی و نه  واقعی&#xD;
+     این الگوساز برای تغییرات وزن ، کاهش یا افزایش آن، استفاده می شود. این الگوساز می‌تواند در حال حاضر با مشروط کردن "هر رویداد" به دوره زمانی در نظر گرفته شده در الگو، با عملگرهای ریاضی مرتبط با افزایش یا کاهش، بصورت مناسب مدل بندی شود</use>
+      <misuse>برای ثبت اولین اندازه گیری وزن نوزاد بلافاصله بعد ازتولد به عنوان "وزن نوزاد هنگام تولد" استفاده نمی شود، در این موارد پیاده سازی اختصاصی از این الگوساز استفاده شود. ببینید&#xD;
+OBSERVATION.weight-birth&#xD;
+برای ثبت  وزن معادل (تطبیق یافته)، مانند محاسبه کل وزن یک فرد قطع عضوی، بر اساس اندازه گیری های بخشهایی از بدن و یا یک الگوریتم دیگر استفاده نشود. در این موارد از &#xD;
+OBSERVATION.weight-adjusted&#xD;
+استفاده کنید.&#xD;
+برای ثبت وزن یک شی یا بخشهایی از بدن استفاده نکنید</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>zh-cn</code_string>
+      </language>
+      <purpose>记录个人的身体重量（体重），实际重量和近似重量。</purpose>
+      <keywords>体重</keywords>
+      <keywords>身体重量</keywords>
+      <keywords>增加</keywords>
+      <keywords>减轻</keywords>
+      <keywords>增大</keywords>
+      <keywords>减小</keywords>
+      <keywords>长胖</keywords>
+      <keywords>消瘦</keywords>
+      <keywords>质量</keywords>
+      <keywords>估计</keywords>
+      <keywords>估计值</keywords>
+      <keywords>实际值</keywords>
+      <use>用于记录体重的实际测量值，包括当个人因为先天原因或在手术切除之后损失某个身体组成部分的时候。如果需要的话，可以在“干扰因素（Confounding factors）”数据元之中记录用于表明身体残缺情况的说明。这是旨在用于常规体重测量的普通原始型，如个人在家中自行测量，临床医生在门诊/医院里进行的测量，或者健身教练在健身房进行的测量。&#xD;
+&#xD;
+*Can also be used for recording an approximation of body weight measurement in a clinical scenario where it is not possible to measure accurately body weight - for example, weighing an uncooperative child, or estimating the weight of an unborn fetus (where the 'subject of data' is the Fetus and recording occurs within the mother's health record). This is not modelled explicitly in the archetype as the openEHR Reference model allows approximations for any Quantity data type by setting the attribute Magnitude_status to the value '~'. At implementation, for example, an application user interface could allow clinicians to select an appropriately labelled check box adjacent to the Weight data field to indicate that the recorded weight is an approximation, rather than actual.(en)&#xD;
+&#xD;
+用于记录体重变化，即体重增加或减轻。当前，可以通过在合适情况下，采用关联的关于增加或减轻的数学函数，将“任何事件”限制到特定区间。</use>
+      <misuse>并非旨在用于记录经过调整的身体重量，如基于其他身体组成部分测量结果和特定算法，对截肢患者完整体重的计算。此时，请采用调整型身体重量观察的原始型，即OBSERVATION.body_weight-adjusted。&#xD;
+并非旨在用于记录某种对象或身体组成部分的重量。</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nl</code_string>
+      </language>
+      <purpose>Om het lichaamsgewicht van een persoon te registreren - zowel exact als geschat gewicht.</purpose>
+      <keywords>gewicht</keywords>
+      <keywords>stijging</keywords>
+      <keywords>verlies</keywords>
+      <keywords>toename</keywords>
+      <keywords>daling</keywords>
+      <keywords>massa</keywords>
+      <keywords>schatting</keywords>
+      <keywords>werkelijk</keywords>
+      <keywords>afname</keywords>
+      <use>Registreren van een actuele meting van het lichaamsgewicht, ook als deze persoon een lichaamsdeel mist, door een geboorteafwijking of na een chirurgische ingreep. Een verklaring over de fysieke inclompleetheid van het lichaam, kan zo nodig opgeslagen worden in het data element 'beïnvloedende factoren'. Dit is het gebruikelijke archetype voor gewichtmetingen, bij voorbeeld thuis gemeten door de persoon zelf, een klinische meting in een kliniek/ziekenhuis, of door een fitness instructeur in een sportschool.&#xD;
+&#xD;
+Kan ook gebruikt worden om een geschat lichaamsgewicht te registreren in een klinische setting als het niet mogelijk is om het exacte lichaamsgewicht te meten - bijvoorbeeld, het wegen van een tegenwerkend kind, of een schatting van het gewicht van een ongeboren kind (waar het onderwerp van de gegevens de foetus is en de opslag in het patiënten dossier van de moeder plaatsvindt). Dit is niet expliciet gemodelleerd in het archetype, omdat het openEHR Referentie model een schatting in ieder kwantitatief data type toestaat. Bij de uitvoering, bijvoorbeeld, zou een applicatie gebruikersinterface, clinici een adequaat geëtiketteerd selectievakje kunnen aanbieden, naast de gegevens over het gewicht, waarin door selecteren aangegeven kan worden dat het opgenomen gewicht een schatting is, in plaats van het werkelijke gewicht.&#xD;
+&#xD;
+Dient te worden gebruikt om gewichtsverandering op te slaan, zowel gewichtsverlies als gewichtstoename.  Dit kan gemodelleerd worden door 'any event' - elke gebeurtenis - in voorkomende gevallen, te beperken tot een interval met met bijbehorende rekenkundige functie van stijging of daling.</use>
+      <misuse>Dient niet te worden gebruikt voor het registreren van het eerste gewicht van een kind, na geboorte, welke wordt aangewezen als geboortegewicht. Gebruik hiervoor de specialisatie van dit archetype, OBSERVATION.body_weight-birth (OBSERVATION.lichaamsgewicht-geboorte.&#xD;
+Dient niet te worden gebruikt voor het registreren van het aangepaste lichaamsgewicht, bijvoorbeeld een berekening van het volledige lichaamsgewicht van een persoon met een amputatie van ledematen, gebaseerd op metingen van lichaamsdelen en een algoritme - gebruik hiervoor OBSERVATION.body_weight-adjusted. (OBSERVATION.lichaamsgewicht-aangepast).&#xD;
+Dient niet te worden gebruikt voor het vastleggen van het gewicht van een object of lichaamsdeel.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>es</code_string>
+      </language>
+      <purpose>Registro del peso corporal de un individuo ya sea exacto o aproximado.</purpose>
+      <keywords>peso</keywords>
+      <keywords>ganancia</keywords>
+      <keywords>pérdida</keywords>
+      <keywords>incremento</keywords>
+      <keywords>decremento</keywords>
+      <keywords>masa</keywords>
+      <keywords>estimado</keywords>
+      <keywords>real</keywords>
+      <use>Se usará para el registro de la medición real del peso del cuerpo, incluso cuando falte una parte del cuerpo debido a una anomalía congénita o después de una extirpación quirúrgica. Este hecho se registra de forma complementaria en un campo asignado ex-profeso. También se puede utilizar para el registro del peso aproximado en un escenario clínico en el que no es posible medir con precisión el peso corporal - por ejemplo, el peso de un niño no coopera, o la estimación del peso de un feto (donde el sujeto de los datos es el feto y la grabación se produce dentro de registros de salud de la madre). En la aplicación, por ejemplo, una interfaz de usuario podría permitir a los médicos seleccionar una casilla de verificación debidamente etiquetada junto al campo "peso" para indicar que el peso registrado es una aproximación.&#xD;
+&#xD;
+Se usará para reflejar el cambio de registro de peso, es decir, aumento o pérdida de peso. Esto se puede modelar mediante la limitación de "cualquier evento" a un intervalo asociado a una función matemática de incremento o decremento, según corresponda.</use>
+      <misuse>No debe ser usado para grabar el primer registro de peso de un recién nacido ("el peso al nacer") que cuenta con su propio arquetipo.&#xD;
+No debe ser usado para registrar el peso corporal ajustado mediante algoritmos.&#xD;
+No debe ser usado para registrar el peso de un objeto o parte del cuerpo.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Sebastian Garde, Jasmin Buck</author>
+    <author id="organisation">Ocean Informatics, University of Heidelberg</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ru</code_string>
+    </language>
+    <author id="name">Igor Lizunov</author>
+    <author id="email">i.lizunov@infinnity.ru</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>pt-br</code_string>
+    </language>
+    <author id="name">Marco Borges</author>
+    <author id="organisation">P2D</author>
+    <author id="email">marco.borges@p2d.com.br</author>
+    <accreditation>P2D Health Advisor Council</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ja</code_string>
+    </language>
+    <author id="name">Shinji Kobayashi</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ar-sy</code_string>
+    </language>
+    <author id="name">Mona Saleh</author>
+    <author id="email">monasaleh01@live.com</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>fa</code_string>
+    </language>
+    <author id="name">Shahla Foozonkhah</author>
+    <author id="organisation">Ocean Informatics</author>
+    <author id="email">Shahla.foozonkhah@oceaninformatics.com</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>zh-cn</code_string>
+    </language>
+    <author id="name">Lin Zhang</author>
+    <author id="organisation">BIPH</author>
+    <author id="email">linforest@163.com</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>es</code_string>
+    </language>
+    <author id="name">Jose Fernandez-Engo</author>
+    <author id="organisation">Andalusian Healthcare Ministry - IT Division</author>
+    <author id="email">joser.fernandez.exts@juntadeandalucia.es</author>
+    <accreditation>Responsible IOP Estrategy</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nl</code_string>
+    </language>
+    <author id="name">Marja Buur</author>
+    <author id="organisation">Medisch Centrum Alkmaar, Nederland</author>
+    <author id="email">m.buur-krom@mca.nl</author>
+    <accreditation>Nurse informatics</accreditation>
+  </translations>
+  <uid>
+    <value>5bb71308-f1cf-410e-b36a-4e7c881b69ea</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-OBSERVATION.body_weight.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>OBSERVATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>HISTORY</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0002</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>events</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0003</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ITEM_TREE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0001</node_id>
+                <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                  <rm_attribute_name>items</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0004</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_QUANTITY">
+                        <rm_type_name>DV_QUANTITY</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <property>
+                          <terminology_id>
+                            <value>openehr</value>
+                          </terminology_id>
+                          <code_string>124</code_string>
+                        </property>
+                        <list>
+                          <magnitude>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>0.0</lower>
+                            <upper>1000.0</upper>
+                          </magnitude>
+                          <units>kg</units>
+                        </list>
+                        <list>
+                          <magnitude>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>0.0</lower>
+                            <upper>2000.0</upper>
+                          </magnitude>
+                          <units>[lb_av]</units>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0024</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <cardinality>
+                    <is_ordered>false</is_ordered>
+                    <is_unique>false</is_unique>
+                    <interval>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>1</lower>
+                    </interval>
+                  </cardinality>
+                </attributes>
+              </children>
+            </attributes>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>state</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ITEM_TREE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0008</node_id>
+                <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                  <rm_attribute_name>items</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0009</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>defining_code</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_CODE_PHRASE">
+                            <rm_type_name>CODE_PHRASE</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <assumed_value>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0011</code_string>
+                            </assumed_value>
+                            <terminology_id>
+                              <value>local</value>
+                            </terminology_id>
+                            <code_list>at0011</code_list>
+                            <code_list>at0013</code_list>
+                            <code_list>at0010</code_list>
+                            <code_list>at0017</code_list>
+                          </children>
+                        </attributes>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </occurrences>
+                    <node_id>at0025</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <cardinality>
+                    <is_ordered>true</is_ordered>
+                    <is_unique>false</is_unique>
+                    <interval>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </interval>
+                  </cardinality>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>POINT_EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0026</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="ARCHETYPE_INTERNAL_REF">
+                <rm_type_name>ITEM_TREE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <target_path>/data[at0002]/events[at0003]/data[at0001]</target_path>
+              </children>
+            </attributes>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>state</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="ARCHETYPE_INTERNAL_REF">
+                <rm_type_name>ITEM_TREE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <target_path>/data[at0002]/events[at0003]/state[at0008]</target_path>
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0015</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0020</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0027</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <cardinality>
+            <is_ordered>true</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="ar-sy">
+      <items code="at0000">
+        <items id="text">وزن الجسم</items>
+        <items id="description">قياس وزن الجسم للشخص</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Simple</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">history</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Any event(en)</items>
+        <items id="description">*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">الوزن</items>
+        <items id="description">وزن الشخص</items>
+      </items>
+      <items code="at0008">
+        <items id="text">state structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0009">
+        <items id="text">*State of dress(en)</items>
+        <items id="description">*Description of the state of dress of the person at the time of weighing.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">ملابس كاملة, بما في ذلك الأحذية</items>
+        <items id="description">الشخص يرتدي ملابس قد تزيد الوزن بشكل مؤثر, بما في ذلك الأحذية.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">ملابس خفيفة/ ملابس داخلية</items>
+        <items id="description">ملابس لا تزيد الوزن بشكل مؤثر</items>
+      </items>
+      <items code="at0013">
+        <items id="text">مُعَرَّى</items>
+        <items id="description">لا يرتدي أي ملابس</items>
+      </items>
+      <items code="at0015">
+        <items id="text">protocol structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0017">
+        <items id="text">حفاظة</items>
+        <items id="description">الشخص يرتدي حفاظة فقط - و قد يزيد ذلك من الوزن بشكل مؤثر</items>
+      </items>
+      <items code="at0020">
+        <items id="text">الجهيزة</items>
+        <items id="description">تفاصيل حول الجهيزة المستخدمة في القياس</items>
+      </items>
+      <items code="at0024">
+        <items id="text">*Comment(en)</items>
+        <items id="description">*Additional narrative about the measurement of Body weight, not captured in other fields.(en)</items>
+      </items>
+      <items code="at0025">
+        <items id="text">*Confounding factors(en)</items>
+        <items id="description">*Record any issues or factors that may impact on the measurement of body weight eg timing in menstrual cycle, timing of recent bowel motion or noting of amputation.(en)</items>
+      </items>
+      <items code="at0026">
+        <items id="text">*Birth(en)</items>
+        <items id="description">*Usually the first weight, measured soon after birth. This event will only be used once per health record&#xD;
+.(en)</items>
+      </items>
+      <items code="at0027">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to capture local content or to align with other reference models/formalisms.(en)</items>
+        <items id="comment">*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ru">
+      <items code="at0000">
+        <items id="text">Масса тела</items>
+        <items id="description">Измерение актуальной массы тела человека.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Простой</items>
+        <items id="description">Bнутренний элемент.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">История</items>
+        <items id="description">Bнутренний элемент.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Any event(en)</items>
+        <items id="description">*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Вес</items>
+        <items id="description">Актуальный вес человека.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">state structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0009">
+        <items id="text">*State of dress(en)</items>
+        <items id="description">*Description of the state of dress of the person at the time of weighing.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">В одежде без обуви</items>
+        <items id="description">Одежда может добавить значительный вес.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">В лёгкой одежде или раздевшись до белья</items>
+        <items id="description">Одежда, не добавляющая значительный вес.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Обнажен</items>
+        <items id="description">Без какой-либо одежды и белья.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">protocol structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0017">
+        <items id="text">В памперсе</items>
+        <items id="description">Одет(а) только в памперс - может добавить значительный вес.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Устройство</items>
+        <items id="description">Весы (устройство, на котором производилось взвешивание): информация.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">*Comment(en)</items>
+        <items id="description">*Additional narrative about the measurement of Body weight, not captured in other fields.(en)</items>
+      </items>
+      <items code="at0025">
+        <items id="text">*Confounding factors(en)</items>
+        <items id="description">*Record any issues or factors that may impact on the measurement of body weight eg timing in menstrual cycle, timing of recent bowel motion or noting of amputation.(en)</items>
+      </items>
+      <items code="at0026">
+        <items id="text">*Birth(en)</items>
+        <items id="description">*Usually the first weight, measured soon after birth. This event will only be used once per health record&#xD;
+.(en)</items>
+      </items>
+      <items code="at0027">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to capture local content or to align with other reference models/formalisms.(en)</items>
+        <items id="comment">*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ja">
+      <items code="at0000">
+        <items id="text">体重</items>
+        <items id="description">個人の体重を測定したもの</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*Simple(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*history(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Any event(en)</items>
+        <items id="description">*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">重量</items>
+        <items id="description">個人の重量</items>
+      </items>
+      <items code="at0008">
+        <items id="text">*state structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0009">
+        <items id="text">*State of dress(en)</items>
+        <items id="description">*Description of the state of dress of the person at the time of weighing.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">靴も履いている着衣状態</items>
+        <items id="description">靴を含めて、体重測定に大きく関与するような着衣状態</items>
+      </items>
+      <items code="at0011">
+        <items id="text">軽装／下着</items>
+        <items id="description">体重測定にあまり寄与しない着衣</items>
+      </items>
+      <items code="at0013">
+        <items id="text">全裸</items>
+        <items id="description">何も着衣していない</items>
+      </items>
+      <items code="at0015">
+        <items id="text">*protocol structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0017">
+        <items id="text">おむつを付けている状態</items>
+        <items id="description">おむつだけをはいている状態。体重測定に関与しうる。</items>
+      </items>
+      <items code="at0020">
+        <items id="text">測定機器</items>
+        <items id="description">測定に使用された機器についての詳細な記録</items>
+      </items>
+      <items code="at0024">
+        <items id="text">*Comment(en)</items>
+        <items id="description">*Additional narrative about the measurement of Body weight, not captured in other fields.(en)</items>
+      </items>
+      <items code="at0025">
+        <items id="text">*Confounding factors(en)</items>
+        <items id="description">*Record any issues or factors that may impact on the measurement of body weight eg timing in menstrual cycle, timing of recent bowel motion or noting of amputation.(en)</items>
+      </items>
+      <items code="at0026">
+        <items id="text">*Birth(en)</items>
+        <items id="description">*Usually the first weight, measured soon after birth. This event will only be used once per health record&#xD;
+.(en)</items>
+      </items>
+      <items code="at0027">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to capture local content or to align with other reference models/formalisms.(en)</items>
+        <items id="comment">*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="fa">
+      <items code="at0000">
+        <items id="text">وزن بدن</items>
+        <items id="description">اندازه گیری وزن بدن فرد</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Simple</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">history</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Any event(en)</items>
+        <items id="description">*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">وزن</items>
+        <items id="description">وزن فرد</items>
+      </items>
+      <items code="at0008">
+        <items id="text">state structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0009">
+        <items id="text">*State of dress(en)</items>
+        <items id="description">*Description of the state of dress of the person at the time of weighing.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">کاملا لباس پوشیده ، از جمله کفش</items>
+        <items id="description">لباسی که ممکن است بطور قابل توجهی به وزن بیافزاید شامل کفش ها</items>
+      </items>
+      <items code="at0011">
+        <items id="text">لباس سبک یا لباس زیر</items>
+        <items id="description">لباسی که بطور قابل توجهی وزن را افزایش ندهد</items>
+      </items>
+      <items code="at0013">
+        <items id="text">لخت</items>
+        <items id="description">بدون هر گونه لباس</items>
+      </items>
+      <items code="at0015">
+        <items id="text">protocol structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0017">
+        <items id="text">کهنه بچه یا پوشک</items>
+        <items id="description">پوشیدن فقط یک پوشک که می تواند وزن را بطور قابل توجهی افزایش دهد</items>
+      </items>
+      <items code="at0020">
+        <items id="text">تجهیز</items>
+        <items id="description">توصیف تجهیز استفاده شده برای اندازه گیری وزن</items>
+      </items>
+      <items code="at0024">
+        <items id="text">*Comment(en)</items>
+        <items id="description">*Additional narrative about the measurement of Body weight, not captured in other fields.(en)</items>
+      </items>
+      <items code="at0025">
+        <items id="text">*Confounding factors(en)</items>
+        <items id="description">*Record any issues or factors that may impact on the measurement of body weight eg timing in menstrual cycle, timing of recent bowel motion or noting of amputation.(en)</items>
+      </items>
+      <items code="at0026">
+        <items id="text">*Birth(en)</items>
+        <items id="description">*Usually the first weight, measured soon after birth. This event will only be used once per health record&#xD;
+.(en)</items>
+      </items>
+      <items code="at0027">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to capture local content or to align with other reference models/formalisms.(en)</items>
+        <items id="comment">*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="zh-cn">
+      <items code="at0000">
+        <items id="text">体重</items>
+        <items id="description">个人体重（身体重量）的测量。</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*Simple(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*history(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">任何事件</items>
+        <items id="description">任何事件。</items>
+      </items>
+      <items code="at0004">
+        <items id="text">重量</items>
+        <items id="description">个人的身体重量。</items>
+      </items>
+      <items code="at0008">
+        <items id="text">*state structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0009">
+        <items id="text">衣着状态</items>
+        <items id="description">关于称重时受检人员的衣着状态</items>
+      </items>
+      <items code="at0010">
+        <items id="text">衣着整齐，包括鞋子</items>
+        <items id="description">包括鞋子在内，所穿着衣物可能显著增加重量。</items>
+      </items>
+      <items code="at0011">
+        <items id="text">衣着轻便/仅内衣</items>
+        <items id="description">所穿着衣物并不会显著增加重量。</items>
+      </items>
+      <items code="at0013">
+        <items id="text">裸体</items>
+        <items id="description">没有穿着任何衣物。</items>
+      </items>
+      <items code="at0015">
+        <items id="text">*protocol structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0017">
+        <items id="text">尿布/尿不湿</items>
+        <items id="description">仅有尿布/尿不湿 - 有可能显著增加重量。</items>
+      </items>
+      <items code="at0020">
+        <items id="text">装置</items>
+        <items id="description">关于称重装置的详细信息。</items>
+      </items>
+      <items code="at0024">
+        <items id="text">备注</items>
+        <items id="description">*Additional narrative about the measurement of Body weight, not captured in other fields.(en)</items>
+      </items>
+      <items code="at0025">
+        <items id="text">干扰因素</items>
+        <items id="description">用于记录任何可能对体重测量造成影响的问题或因素，如月经周期所处时间阶段、最近排便的时间安排情况或者截肢情况说明。</items>
+      </items>
+      <items code="at0026">
+        <items id="text">*Birth(en)</items>
+        <items id="description">*Usually the first weight, measured soon after birth. This event will only be used once per health record&#xD;
+.(en)</items>
+      </items>
+      <items code="at0027">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to capture local content or to align with other reference models/formalisms.(en)</items>
+        <items id="comment">*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="pt-br">
+      <items code="at0000">
+        <items id="text">Peso corporal</items>
+        <items id="description">A medição do peso corporal de um indivíduo.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Simple</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">history</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Any event(en)</items>
+        <items id="description">*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Peso</items>
+        <items id="description">O peso do indivíduo.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">state structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0009">
+        <items id="text">*State of dress(en)</items>
+        <items id="description">*Description of the state of dress of the person at the time of weighing.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Totalmente vestida, incluindo sapatos</items>
+        <items id="description">Roupas que podem aumentar significativamente o peso, incluindo sapatos.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Levemente vestido / roupa íntimas</items>
+        <items id="description">Roupas que não irão acrescentar ao peso de forma significativa.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Despido</items>
+        <items id="description">Sem nenhuma roupa.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">protocol structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Fralda</items>
+        <items id="description">Vestindo apenas uma fralda - pode adicionar peso significativo.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Dispositivo</items>
+        <items id="description">Detalhes sobre o dispositivo de pesagem.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">*Comment(en)</items>
+        <items id="description">*Additional narrative about the measurement of Body weight, not captured in other fields.(en)</items>
+      </items>
+      <items code="at0025">
+        <items id="text">*Confounding factors(en)</items>
+        <items id="description">*Record any issues or factors that may impact on the measurement of body weight eg timing in menstrual cycle, timing of recent bowel motion or noting of amputation.(en)</items>
+      </items>
+      <items code="at0026">
+        <items id="text">*Birth(en)</items>
+        <items id="description">*Usually the first weight, measured soon after birth. This event will only be used once per health record&#xD;
+.(en)</items>
+      </items>
+      <items code="at0027">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to capture local content or to align with other reference models/formalisms.(en)</items>
+        <items id="comment">*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Body weight</items>
+        <items id="description">Measurement of the body weight of an individual.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Simple</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">history</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Any event</items>
+        <items id="description">Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Weight</items>
+        <items id="description">The weight of the individual.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">state structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0009">
+        <items id="text">State of dress</items>
+        <items id="description">Description of the state of dress of the person at the time of weighing.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Fully clothed, including shoes</items>
+        <items id="description">Clothing which may add significantly to weight, including shoes.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Lightly clothed/underwear</items>
+        <items id="description">Clothing which will not add to weight significantly.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Naked</items>
+        <items id="description">Without any clothes.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">protocol structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Nappy/diaper</items>
+        <items id="description">Wearing only a nappy - can add significant weight.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Device</items>
+        <items id="description">Details about the weighing device.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Comment</items>
+        <items id="description">Additional narrative about the measurement of Body weight, not captured in other fields.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Confounding factors</items>
+        <items id="description">Record any issues or factors that may impact on the measurement of body weight eg timing in menstrual cycle, timing of recent bowel motion or noting of amputation.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Birth</items>
+        <items id="description">Usually the first weight, measured soon after birth. This event will only be used once per health record&#xD;
+.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Extension</items>
+        <items id="description">Additional information required to capture local content or to align with other reference models/formalisms.</items>
+        <items id="comment">For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Körpergewicht</items>
+        <items id="description">Messung des Körpergewichts eines Individuums.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Simple</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">History</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Any event(en)</items>
+        <items id="description">*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Gewicht</items>
+        <items id="description">Das Gewicht eines Individuums.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">State structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0009">
+        <items id="text">*State of dress(en)</items>
+        <items id="description">*Description of the state of dress of the person at the time of weighing.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Voll bekleidet, mit Schuhen</items>
+        <items id="description">Bekleidung, die signifikant zum Gewicht beiträgt, mit Schuhen.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Leicht bekleidet / Unterwäsche</items>
+        <items id="description">Bekleidung, die nicht signifikant zum Gewicht beiträgt.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Unbekleidet</items>
+        <items id="description">Ohne Kleidung.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Protocol structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Windel</items>
+        <items id="description">Trägt Windel; kann signifikant zum Gewicht beitragen.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Gerät</items>
+        <items id="description">Details über die benutzte Waage.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">*Comment(en)</items>
+        <items id="description">*Additional narrative about the measurement of Body weight, not captured in other fields.(en)</items>
+      </items>
+      <items code="at0025">
+        <items id="text">*Confounding factors(en)</items>
+        <items id="description">*Record any issues or factors that may impact on the measurement of body weight eg timing in menstrual cycle, timing of recent bowel motion or noting of amputation.(en)</items>
+      </items>
+      <items code="at0026">
+        <items id="text">*Birth(en)</items>
+        <items id="description">*Usually the first weight, measured soon after birth. This event will only be used once per health record&#xD;
+.(en)</items>
+      </items>
+      <items code="at0027">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to capture local content or to align with other reference models/formalisms.(en)</items>
+        <items id="comment">*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nl">
+      <items code="at0000">
+        <items id="text">Lichaamsgewicht</items>
+        <items id="description">Meting van het lichaamsgewicht van een individu.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*Simple(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*history(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Any event(en)</items>
+        <items id="description">*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Gewicht</items>
+        <items id="description">Het gewicht van het individu.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">*state structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0009">
+        <items id="text">*State of dress(en)</items>
+        <items id="description">*Description of the state of dress of the person at the time of weighing.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Volledig gekleed, inclusief schoenen</items>
+        <items id="description">Kleren die een significante bijdrage hebben aan het gewicht, inclusief schoenen.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Lichte kleding/ondergoed</items>
+        <items id="description">Kleding die niet significant het gewicht beÏnvloedt.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Naakt</items>
+        <items id="description">Zonder kleding.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">*protocol structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Luier</items>
+        <items id="description">Individu draagt alleen een luier - zou significant aan het gewicht kunnen bijdragen.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Apparaat</items>
+        <items id="description">Details over het weeginstrument.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">*Comment(en)</items>
+        <items id="description">*Additional narrative about the measurement of Body weight, not captured in other fields.(en)</items>
+      </items>
+      <items code="at0025">
+        <items id="text">*Confounding factors(en)</items>
+        <items id="description">*Record any issues or factors that may impact on the measurement of body weight eg timing in menstrual cycle, timing of recent bowel motion or noting of amputation.(en)</items>
+      </items>
+      <items code="at0026">
+        <items id="text">*Birth(en)</items>
+        <items id="description">*Usually the first weight, measured soon after birth. This event will only be used once per health record&#xD;
+.(en)</items>
+      </items>
+      <items code="at0027">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to capture local content or to align with other reference models/formalisms.(en)</items>
+        <items id="comment">*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="es">
+      <items code="at0000">
+        <items id="text">Peso corporal</items>
+        <items id="description">Medición del peso corporal de un individuo.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*Simple(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*history(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Any event(en)</items>
+        <items id="description">*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Peso</items>
+        <items id="description">Peso del individuo.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">*state structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0009">
+        <items id="text">*State of dress(en)</items>
+        <items id="description">*Description of the state of dress of the person at the time of weighing.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Totalmente vestido incluyendo calzado</items>
+        <items id="description">La indumentaria, incluyendo calzado, puede incrementar el peso de forma significativa.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Indumentaria ligera/Ropa interior</items>
+        <items id="description">La indumentaria no genera un incremento significativo del peso.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Desnudo</items>
+        <items id="description">Sin ropa.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">*protocol structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Pañales</items>
+        <items id="description">Únicamente con un pañal. Puede incrementar el peso de forma significativa.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Dispositivo</items>
+        <items id="description">Detalles acerca del dispositivo de pesada.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">*Comment(en)</items>
+        <items id="description">*Additional narrative about the measurement of Body weight, not captured in other fields.(en)</items>
+      </items>
+      <items code="at0025">
+        <items id="text">*Confounding factors(en)</items>
+        <items id="description">*Record any issues or factors that may impact on the measurement of body weight eg timing in menstrual cycle, timing of recent bowel motion or noting of amputation.(en)</items>
+      </items>
+      <items code="at0026">
+        <items id="text">*Birth(en)</items>
+        <items id="description">*Usually the first weight, measured soon after birth. This event will only be used once per health record&#xD;
+.(en)</items>
+      </items>
+      <items code="at0027">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to capture local content or to align with other reference models/formalisms.(en)</items>
+        <items id="comment">*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

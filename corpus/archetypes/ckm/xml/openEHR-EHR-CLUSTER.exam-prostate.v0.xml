@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -702,7 +702,7 @@ Not to be used for recording the results of an imaging examination - use the CLU
       </items>
       <items code="at0.1">
         <items id="text">Prostate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nb">
@@ -757,7 +757,7 @@ Not to be used for recording the results of an imaging examination - use the CLU
       </items>
       <items code="at0.1">
         <items id="text">*Prostate (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="pt-br">
@@ -812,7 +812,7 @@ Not to be used for recording the results of an imaging examination - use the CLU
       </items>
       <items code="at0.1">
         <items id="text">*Prostate (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="de">
@@ -867,7 +867,7 @@ Not to be used for recording the results of an imaging examination - use the CLU
       </items>
       <items code="at0.1">
         <items id="text">*Prostate (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="sv">
@@ -878,7 +878,7 @@ Not to be used for recording the results of an imaging examination - use the CLU
       </items>
       <items code="at0003">
         <items id="text">Klinisk beskrivning</items>
-        <items id="description">En övergripande beskrivning av fynden från den fysiska undersökningen. </items>
+        <items id="description">En övergripande beskrivning av fynden från den fysiska undersökningen.</items>
       </items>
       <items code="at0004">
         <items id="text">Fynd vid undersökning</items>
@@ -922,7 +922,7 @@ Not to be used for recording the results of an imaging examination - use the CLU
       </items>
       <items code="at0.1">
         <items id="text">*Prostate (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="el">
@@ -977,7 +977,7 @@ Not to be used for recording the results of an imaging examination - use the CLU
       </items>
       <items code="at0.1">
         <items id="text">*Prostate (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="es">
@@ -1032,7 +1032,7 @@ Not to be used for recording the results of an imaging examination - use the CLU
       </items>
       <items code="at0.1">
         <items id="text">*Prostate (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_bindings terminology="SNOMED-CT">
@@ -1047,4 +1047,3 @@ Not to be used for recording the results of an imaging examination - use the CLU
     </term_bindings>
   </ontology>
 </archetype>
-

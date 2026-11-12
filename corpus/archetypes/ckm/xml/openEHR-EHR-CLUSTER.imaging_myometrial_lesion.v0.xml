@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1047,35 +1047,35 @@ This archetype has been designed to be nested in the 'Lesion detail' SLOT within
       </items>
       <items code="at0010">
         <items id="text">Pedunculated intracavitary</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Submucosal, &lt; 50% intramural (≥50% submucosal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Submucosal, ≥ 50% intramural (&lt;50% submucosal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">100% intramural, contacting endometrium</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">100% intramural, no endometrial or subserosal contact</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Subserosal,≥50% intramural</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Subserosal,&lt;50% intramural</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Pedunculated subserosal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Non-myometrial location</items>
@@ -1113,7 +1113,7 @@ This archetype has been designed to be nested in the 'Lesion detail' SLOT within
       </items>
       <items code="at0045">
         <items id="text">Presence?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Present</items>
@@ -1125,39 +1125,39 @@ This archetype has been designed to be nested in the 'Lesion detail' SLOT within
       </items>
       <items code="at0040">
         <items id="text">Shadowing details</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Shadow type</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Edge shadow</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Internal shadow</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Fan-shaped shadow</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Degree</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Slight</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Strong</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Well-defined</items>
@@ -1177,15 +1177,15 @@ This archetype has been designed to be nested in the 'Lesion detail' SLOT within
       </items>
       <items code="at0028">
         <items id="text">Round</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Oval</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Lobulated</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Contour</items>
@@ -1193,11 +1193,11 @@ This archetype has been designed to be nested in the 'Lesion detail' SLOT within
       </items>
       <items code="at0032">
         <items id="text">Smooth</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Irregular</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Rim</items>
@@ -1205,15 +1205,15 @@ This archetype has been designed to be nested in the 'Lesion detail' SLOT within
       </items>
       <items code="at0035">
         <items id="text">Hypo-echogenic</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Hyper-echogenic</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">No rim</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Comment</items>
@@ -1221,9 +1221,8 @@ This archetype has been designed to be nested in the 'Lesion detail' SLOT within
       </items>
       <items code="at0038">
         <items id="text">Lesion vascularisation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

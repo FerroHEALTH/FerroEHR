@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -62,8 +62,7 @@ Eine Person kann mehrere Bildungsgänge gleichzeitig oder überlappend absolvier
 &#xD;
 Die derzeitige Aus- oder Weiterbildung kann aus einem "Datum des Beginns", aber keinem "erreichten Meilenstein" abgeleitet werden.&#xD;
 &#xD;
-Dieser Archetyp wurde speziell für die Verwendung im SLOT "Education record" innerhalb des Archetyps EVALUATION.education_summary entwickelt, kann aber auch in jedem anderen ENTRY- oder CLUSTER-Archetyp verwendet werden, sofern dies klinisch sinnvoll ist.&#xD;
-</use>
+Dieser Archetyp wurde speziell für die Verwendung im SLOT "Education record" innerhalb des Archetyps EVALUATION.education_summary entwickelt, kann aber auch in jedem anderen ENTRY- oder CLUSTER-Archetyp verwendet werden, sofern dies klinisch sinnvoll ist.</use>
       <misuse>Nicht zur Darstellung detaillierter Beschreibungen von Gesundheitsrisiken oder der Exposition gegenüber gefährlichen Stoffen während der Aus- oder Weiterbildung. Verwenden Sie zu diesem Zweck die Archetypen EVALUATION.health_risk oder EVALUATION.exposure.&#xD;
 &#xD;
 Nicht zur Aufzeichnung von Informationen über die Aus- oder Weiterbildung einer Person zu einem bestimmten Zeitpunkt (z. B. am 16. Juni 2014) oder während eines relativen Zeitraums (z. B. "in den letzten 30 Tagen") verwenden. Verwenden Sie zu diesem Zweck einen geeigneten Archetyp OBSERVATION.</misuse>
@@ -580,8 +579,7 @@ Not to be used to record information about the education or training of an indiv
       <items code="at0001">
         <items id="text">Bildungseinrichtung</items>
         <items id="description">Name der Einrichtung, Institution oder Schule, in der die Bildung oder Ausbildung stattgefunden hat.</items>
-        <items id="comment">Zum Beispiel: Universität von London.&#xD;
-</items>
+        <items id="comment">Zum Beispiel: Universität von London.</items>
       </items>
       <items code="at0002">
         <items id="text">Details zur Organisation</items>
@@ -620,4 +618,3 @@ Not to be used to record information about the education or training of an indiv
     </term_definitions>
   </ontology>
 </archetype>
-

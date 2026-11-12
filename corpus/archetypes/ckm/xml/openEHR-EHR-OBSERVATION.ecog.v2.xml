@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -585,27 +585,27 @@ The ECOG performance status is in the public domain therefore available for publ
       </items>
       <items code="at0005">
         <items id="text">Fully active, able to carry on all pre-disease performance without restriction.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Restricted in physically strenuous activity but ambulatory and able to carry out work of a light or sedentary nature, e.g., light house work, office work.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Ambulatory and capable of all selfcare but unable to carry out any work activities; up and about more than 50% of waking hours.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Capable of only limited selfcare; confined to bed or chair more than 50% of waking hours.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Completely disabled; cannot carry on any selfcare; totally confined to bed or chair.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Dead</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Tree</items>
@@ -640,27 +640,27 @@ The ECOG performance status is in the public domain therefore available for publ
       </items>
       <items code="at0005">
         <items id="text">I stand til å utføre enhver normal aktivitet uten begrensning.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Ikke i stand til fysisk krevende aktivitet, men oppegående og i stand til å utføre lett arbeid.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Oppegående og i stand til all egenpleie, men ikke i stand til noe arbeid; oppe og i bevegelse mer enn 50% av våken tid.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Bare i stand til begrenset egenpleie, bundet til seng eller stol &gt; 50 % av våken tid.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Helt hjelpetrengende; klarer ikke noen egenpleie; helt bundet til seng eller stol.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Død</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Tree</items>
@@ -683,8 +683,7 @@ The ECOG performance status is in the public domain therefore available for publ
       </items>
       <items code="at0002">
         <items id="text">Beliebiges Ereignis</items>
-        <items id="description">Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann. &#xD;
-</items>
+        <items id="description">Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.</items>
       </items>
       <items code="at0003">
         <items id="text">Tree</items>
@@ -950,4 +949,3 @@ The ECOG performance status is in the public domain therefore available for publ
     </term_definitions>
   </ontology>
 </archetype>
-

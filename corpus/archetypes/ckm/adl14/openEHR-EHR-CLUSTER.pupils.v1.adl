@@ -1,0 +1,197 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-CLUSTER.pupils.v1
+
+concept
+	[at0000]	-- Pupils
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"????">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Record details from an examination of pupils.">
+			use = <"">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <>
+	other_details = <
+		["MD5-CAM-1.0.1"] = <"B485063F64C411F5AD1A340EA9357C37">
+		["references"] = <"">
+	>
+
+definition
+	CLUSTER[at0000] matches {	-- Pupils
+		items cardinality matches {1..*; unordered} matches {
+			CLUSTER[at0012] occurrences matches {0..1} matches {	-- Normal statements
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0011] occurrences matches {0..1} matches {	-- Normal statements
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {[local::at0013]}		-- Pupils equal and reactive to light
+							}
+						}
+					}
+				}
+			}
+			CLUSTER[at0014] occurrences matches {0..1} matches {	-- Findings
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0015] occurrences matches {0..1} matches {	-- Side
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0016, 	-- Left
+									at0017, 	-- Right
+									at0018]	-- Both eyes
+								}
+							}
+						}
+					}
+					CLUSTER[at0001] occurrences matches {0..1} matches {	-- Details
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0002] occurrences matches {0..1} matches {	-- Size
+								value matches {
+									C_DV_QUANTITY <
+										property = <[openehr::122]>
+										list = <
+											["1"] = <
+												units = <"mm">
+											>
+										>
+									>
+								}
+							}
+							ELEMENT[at0003] occurrences matches {0..1} matches {	-- Direct light reflex present
+								value matches {
+									DV_BOOLEAN matches {
+										value matches {True, False}
+									}
+								}
+							}
+							ELEMENT[at0004] occurrences matches {0..1} matches {	-- Consensual pupillary light reflex present
+								value matches {
+									DV_BOOLEAN matches {
+										value matches {True, False}
+									}
+								}
+							}
+							ELEMENT[at0005] occurrences matches {0..1} matches {	-- Shape
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0006] occurrences matches {0..1} matches {	-- Pupillary accommodation reflex
+								value matches {
+									DV_BOOLEAN matches {
+										value matches {True, False}
+									}
+								}
+							}
+							ELEMENT[at0007] occurrences matches {0..1} matches {	-- Speed of pupillary response
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0008, 	-- Sluggish/slow
+											at0009, 	-- Normal
+											at0010]	-- Brisk
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Pupils">
+					description = <"Record examination of pupils.">
+				>
+				["at0001"] = <
+					text = <"Details">
+					description = <"*">
+				>
+				["at0002"] = <
+					text = <"Size">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"Direct light reflex present">
+					description = <"Pupil constricts with light shone into that eye.">
+				>
+				["at0004"] = <
+					text = <"Consensual pupillary light reflex present">
+					description = <"*">
+				>
+				["at0005"] = <
+					text = <"Shape">
+					description = <"*">
+				>
+				["at0006"] = <
+					text = <"Pupillary accommodation reflex">
+					description = <"*">
+				>
+				["at0007"] = <
+					text = <"Speed of pupillary response">
+					description = <"*">
+				>
+				["at0008"] = <
+					text = <"Sluggish/slow">
+					description = <"*">
+				>
+				["at0009"] = <
+					text = <"Normal">
+					description = <"*">
+				>
+				["at0010"] = <
+					text = <"Brisk">
+					description = <"*">
+				>
+				["at0011"] = <
+					text = <"Normal statements">
+					description = <"*">
+				>
+				["at0012"] = <
+					text = <"Normal statements">
+					description = <"*">
+				>
+				["at0013"] = <
+					text = <"Pupils equal and reactive to light">
+					description = <"*">
+				>
+				["at0014"] = <
+					text = <"Findings">
+					description = <"*">
+				>
+				["at0015"] = <
+					text = <"Side">
+					description = <"Identification of eye examined.">
+				>
+				["at0016"] = <
+					text = <"Left">
+					description = <"*">
+				>
+				["at0017"] = <
+					text = <"Right">
+					description = <"*">
+				>
+				["at0018"] = <
+					text = <"Both eyes">
+					description = <"*">
+				>
+			>
+		>
+	>

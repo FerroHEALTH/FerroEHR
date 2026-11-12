@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1733,29 +1733,27 @@
       </items>
       <items code="at0001">
         <items id="text">Ventilation mode</items>
-        <items id="description">The mode of mechanical ventilation used.    </items>
+        <items id="description">The mode of mechanical ventilation used.</items>
       </items>
       <items code="at0007">
         <items id="text">Frequency</items>
-        <items id="description">A ventilator frequency setting.    </items>
+        <items id="description">A ventilator frequency setting.</items>
       </items>
       <items code="at0008">
         <items id="text">Min respiratory rate</items>
-        <items id="description">Minimum  respiratory rate.&#xD;
-</items>
+        <items id="description">Minimum  respiratory rate.</items>
       </items>
       <items code="at0009">
         <items id="text">Safe respiratory rate</items>
-        <items id="description">Safe respiratory rate.&#xD;
-</items>
+        <items id="description">Safe respiratory rate.</items>
       </items>
       <items code="at0010">
-        <items id="text">Respiratory rate (f) </items>
+        <items id="text">Respiratory rate (f)</items>
         <items id="description">Respiratory rate,  frequency or BPM breaths per minute.</items>
       </items>
       <items code="at0015">
         <items id="text">Pressure</items>
-        <items id="description">A ventilator pressure setting.    </items>
+        <items id="description">A ventilator pressure setting.</items>
       </items>
       <items code="at0016">
         <items id="text">CPAP</items>
@@ -1803,7 +1801,7 @@
       </items>
       <items code="at0031">
         <items id="text">Volume</items>
-        <items id="description">A ventilator volume setting.  </items>
+        <items id="description">A ventilator volume setting.</items>
       </items>
       <items code="at0032">
         <items id="text">Tidal volume (V te)</items>
@@ -1815,7 +1813,7 @@
       </items>
       <items code="at0038">
         <items id="text">Timing</items>
-        <items id="description">A ventilator duration or timing setting.   </items>
+        <items id="description">A ventilator duration or timing setting.</items>
       </items>
       <items code="at0039">
         <items id="text">Inspiratory time (T i)</items>
@@ -1883,66 +1881,55 @@
       </items>
       <items code="at0060">
         <items id="text">Flow rate</items>
-        <items id="description">A ventilator flow rate parameter.       </items>
+        <items id="description">A ventilator flow rate parameter.</items>
       </items>
       <items code="at0065">
         <items id="text">SPONTANEOUS</items>
-        <items id="description">Patient is breathing spontaneously.&#xD;
-</items>
+        <items id="description">Patient is breathing spontaneously.</items>
       </items>
       <items code="at0070">
         <items id="text">CPAP</items>
-        <items id="description">Pressure support / Continous positive airway pressure.&#xD;
-</items>
+        <items id="description">Pressure support / Continous positive airway pressure.</items>
       </items>
       <items code="at0072">
-        <items id="text">CMV </items>
-        <items id="description">Controlled mandatory ventilation </items>
+        <items id="text">CMV</items>
+        <items id="description">Controlled mandatory ventilation</items>
       </items>
       <items code="at0073">
         <items id="text">HFO</items>
-        <items id="description"> High frequency oscillation ventilation.&#xD;
-</items>
+        <items id="description">High frequency oscillation ventilation.</items>
       </items>
       <items code="at0075">
         <items id="text">PTV</items>
-        <items id="description">Patient triggered ventilation.&#xD;
-</items>
+        <items id="description">Patient triggered ventilation.</items>
       </items>
       <items code="at0076">
         <items id="text">IPPV</items>
-        <items id="description">Intermittent positive pressure ventilation.&#xD;
-</items>
+        <items id="description">Intermittent positive pressure ventilation.</items>
       </items>
       <items code="at0077">
         <items id="text">MMV</items>
-        <items id="description">Mandatory minute ventilation.&#xD;
-</items>
+        <items id="description">Mandatory minute ventilation.</items>
       </items>
       <items code="at0079">
         <items id="text">BIPAP</items>
-        <items id="description">Biphasic positive airway pressure.&#xD;
-</items>
+        <items id="description">Biphasic positive airway pressure.</items>
       </items>
       <items code="at0080">
-        <items id="text">PSV </items>
-        <items id="description">Pressure support ventilation.&#xD;
-</items>
+        <items id="text">PSV</items>
+        <items id="description">Pressure support ventilation.</items>
       </items>
       <items code="at0083">
         <items id="text">PCV</items>
-        <items id="description">Pressure controlled ventilation.&#xD;
-</items>
+        <items id="description">Pressure controlled ventilation.</items>
       </items>
       <items code="at0084">
         <items id="text">S/T</items>
-        <items id="description">Spontaneous timed breathing.&#xD;
-</items>
+        <items id="description">Spontaneous timed breathing.</items>
       </items>
       <items code="at0085">
         <items id="text">PAV/T</items>
-        <items id="description">Proportional assist ventilation/Time.&#xD;
-</items>
+        <items id="description">Proportional assist ventilation/Time.</items>
       </items>
       <items code="at0087">
         <items id="text">Trigger type</items>
@@ -1966,7 +1953,7 @@
       </items>
       <items code="at0095">
         <items id="text">Artificial airway compensation</items>
-        <items id="description">Artificial airway compensation. </items>
+        <items id="description">Artificial airway compensation.</items>
       </items>
       <items code="at0096">
         <items id="text">Intermittent PEEP</items>
@@ -1998,10 +1985,10 @@
       </items>
       <items code="at0106">
         <items id="text">PS</items>
-        <items id="description">Pressure support </items>
+        <items id="description">Pressure support</items>
       </items>
       <items code="at0108">
-        <items id="text">SIMV </items>
+        <items id="text">SIMV</items>
         <items id="description">Synchronised intermittent mandatory ventilation.</items>
       </items>
       <items code="at0111">
@@ -2018,7 +2005,7 @@
       </items>
       <items code="at0114">
         <items id="text">Ventilation submode</items>
-        <items id="description">Ventilation submode     </items>
+        <items id="description">Ventilation submode</items>
       </items>
       <items code="at0115">
         <items id="text">PC</items>
@@ -2034,7 +2021,7 @@
       </items>
       <items code="at0118">
         <items id="text">PC/TC</items>
-        <items id="description"> PC/TC</items>
+        <items id="description">PC/TC</items>
       </items>
       <items code="at0119">
         <items id="text">VC/PS</items>
@@ -2074,7 +2061,7 @@
       </items>
       <items code="at0140">
         <items id="text">PS/CPAP</items>
-        <items id="description"> PS/CPAP</items>
+        <items id="description">PS/CPAP</items>
       </items>
       <items code="at0141">
         <items id="text">CPAP/APRV</items>
@@ -2090,7 +2077,7 @@
       </items>
       <items code="at0144">
         <items id="text">Type of ventilation</items>
-        <items id="description">Type of ventilation of patient </items>
+        <items id="description">Type of ventilation of patient</items>
       </items>
       <items code="at0145">
         <items id="text">INVASIVE</items>
@@ -2137,20 +2124,20 @@
         <items id="description">Mandatory raspiration rate</items>
       </items>
       <items code="at0158">
-        <items id="text">High inspiratory pressure </items>
-        <items id="description">High inspiratory pressure </items>
+        <items id="text">High inspiratory pressure</items>
+        <items id="description">High inspiratory pressure</items>
       </items>
       <items code="at0159">
-        <items id="text">HFV Mean airway pressure </items>
-        <items id="description">HFV Mean airway pressure </items>
+        <items id="text">HFV Mean airway pressure</items>
+        <items id="description">HFV Mean airway pressure</items>
       </items>
       <items code="at0160">
-        <items id="text">HFV Inspiratory pressure </items>
-        <items id="description">HFV Inspiratory pressure </items>
+        <items id="text">HFV Inspiratory pressure</items>
+        <items id="description">HFV Inspiratory pressure</items>
       </items>
       <items code="at0161">
-        <items id="text">HFV Frequency </items>
-        <items id="description">HFV Frequency </items>
+        <items id="text">HFV Frequency</items>
+        <items id="description">HFV Frequency</items>
       </items>
       <items code="at0162">
         <items id="text">Peak inspiratory pressure</items>
@@ -2168,7 +2155,7 @@
       </items>
       <items code="at0001">
         <items id="text">Vrsta umetnega predihavanja</items>
-        <items id="description">Vrsta umetnega predihavanja </items>
+        <items id="description">Vrsta umetnega predihavanja</items>
       </items>
       <items code="at0007">
         <items id="text">Frekvenca</items>
@@ -2183,12 +2170,12 @@
         <items id="description">Varnostna frekvenca dihanja</items>
       </items>
       <items code="at0010">
-        <items id="text">Frekvenca dihanja (f) </items>
-        <items id="description">Frekvenca dihanja (f) </items>
+        <items id="text">Frekvenca dihanja (f)</items>
+        <items id="description">Frekvenca dihanja (f)</items>
       </items>
       <items code="at0015">
         <items id="text">Tlak</items>
-        <items id="description">Tlak </items>
+        <items id="description">Tlak</items>
       </items>
       <items code="at0016">
         <items id="text">CPAP</items>
@@ -2255,8 +2242,8 @@
         <items id="description">Inspiratorni čas (T i)</items>
       </items>
       <items code="at0040">
-        <items id="text">Čas apnee </items>
-        <items id="description">Čas apnee </items>
+        <items id="text">Čas apnee</items>
+        <items id="description">Čas apnee</items>
       </items>
       <items code="at0041">
         <items id="text">Inspiratorni čas "rise"</items>
@@ -2300,7 +2287,7 @@
       </items>
       <items code="at0053">
         <items id="text">Vnos NO</items>
-        <items id="description">Količina vnošenega NO </items>
+        <items id="description">Količina vnošenega NO</items>
       </items>
       <items code="at0054">
         <items id="text">Iznos NO2</items>
@@ -2327,8 +2314,8 @@
         <items id="description">Pressure support / Continous positive airway pressure.</items>
       </items>
       <items code="at0072">
-        <items id="text">CMV </items>
-        <items id="description">Controlled mandatory ventilation </items>
+        <items id="text">CMV</items>
+        <items id="description">Controlled mandatory ventilation</items>
       </items>
       <items code="at0073">
         <items id="text">HFO</items>
@@ -2336,42 +2323,35 @@
       </items>
       <items code="at0075">
         <items id="text">PTV</items>
-        <items id="description">Patient triggered ventilation.&#xD;
-</items>
+        <items id="description">Patient triggered ventilation.</items>
       </items>
       <items code="at0076">
         <items id="text">IPPV</items>
-        <items id="description">Intermittent positive pressure ventilation.&#xD;
-</items>
+        <items id="description">Intermittent positive pressure ventilation.</items>
       </items>
       <items code="at0077">
         <items id="text">MMV</items>
-        <items id="description">Mandatory minute ventilation.&#xD;
-</items>
+        <items id="description">Mandatory minute ventilation.</items>
       </items>
       <items code="at0079">
         <items id="text">BIPAP</items>
         <items id="description">Biphasic positive airway pressure</items>
       </items>
       <items code="at0080">
-        <items id="text">PSV </items>
-        <items id="description">Pressure support ventilation.&#xD;
-</items>
+        <items id="text">PSV</items>
+        <items id="description">Pressure support ventilation.</items>
       </items>
       <items code="at0083">
         <items id="text">PCV</items>
-        <items id="description">Pressure controlled ventilation.&#xD;
-</items>
+        <items id="description">Pressure controlled ventilation.</items>
       </items>
       <items code="at0084">
         <items id="text">S/T</items>
-        <items id="description">Spontaneous timed breathing.&#xD;
-</items>
+        <items id="description">Spontaneous timed breathing.</items>
       </items>
       <items code="at0085">
         <items id="text">PAV/T</items>
-        <items id="description">Proportional assist ventilation/Time.&#xD;
-</items>
+        <items id="description">Proportional assist ventilation/Time.</items>
       </items>
       <items code="at0087">
         <items id="text">Trigger tip</items>
@@ -2430,7 +2410,7 @@
         <items id="description">Pressure support</items>
       </items>
       <items code="at0108">
-        <items id="text">SIMV </items>
+        <items id="text">SIMV</items>
         <items id="description">Synchronised intermittent mandatory ventilation.</items>
       </items>
       <items code="at0111">
@@ -2463,7 +2443,7 @@
       </items>
       <items code="at0118">
         <items id="text">PC/TC</items>
-        <items id="description"> PC/TC</items>
+        <items id="description">PC/TC</items>
       </items>
       <items code="at0119">
         <items id="text">VC/PS</items>
@@ -2592,4 +2572,3 @@
     </term_definitions>
   </ontology>
 </archetype>
-

@@ -215,9 +215,10 @@ pub(crate) struct SigningCtx<'a> {
     /// INSERT + envelope serialization is skipped entirely. No openEHR spec
     /// governs eventing — our own extension.
     pub(crate) outbox_enabled: bool,
-    /// The `[privacy.access_delay]` policy a new COMPOSITION is held under (EHDS Art.
-    /// 3(3), [`crate::versioning::access_delay`]); `None` holds nothing.
-    pub(crate) access_delay: Option<&'a crate::config::access_delay::AccessDelayPolicy>,
+    /// The access-delay register's policy a new COMPOSITION is held under (EHDS
+    /// Art. 3(3), [`crate::versioning::access_delay`]); `None` holds nothing.
+    pub(crate) access_delay:
+        Option<std::sync::Arc<crate::policy_register::access_delay::AccessDelayPolicy>>,
     /// The origin a body with no `FEEDER_AUDIT` is stamped with
     /// (`version.origins`): the committing client's registered origin, or
     /// [`Self::system_id`] (EHDS Annex II 3.4, [`crate::origins`]).

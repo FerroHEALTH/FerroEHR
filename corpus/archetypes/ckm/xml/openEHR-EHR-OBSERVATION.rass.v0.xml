@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -474,7 +474,7 @@ German translation from https://www.icu-rehab.de/resources/RASS.pdf</other_detai
       </items>
       <items code="at0004">
         <items id="text">The Richmond Agitation–Sedation Scale</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Combative</items>
@@ -545,7 +545,7 @@ German translation from https://www.icu-rehab.de/resources/RASS.pdf</other_detai
       </items>
       <items code="at0004">
         <items id="text">The Richmond Agitation–Sedation Scale</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Aggressiv</items>
@@ -565,7 +565,7 @@ German translation from https://www.icu-rehab.de/resources/RASS.pdf</other_detai
       </items>
       <items code="at0009">
         <items id="text">Våken og rolig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Døsig</items>
@@ -600,7 +600,7 @@ German translation from https://www.icu-rehab.de/resources/RASS.pdf</other_detai
     <term_definitions language="de">
       <items code="at0000">
         <items id="text">Richmond Agitation-Sedation Scale (RASS)</items>
-        <items id="description">Der Richmond Agitation-Sedation Scale (RASS) wird verwendet, um das Level von Agitation oder Sedierung eines Patienten zu messen. </items>
+        <items id="description">Der Richmond Agitation-Sedation Scale (RASS) wird verwendet, um das Level von Agitation oder Sedierung eines Patienten zu messen.</items>
       </items>
       <items code="at0001">
         <items id="text">History</items>
@@ -616,7 +616,7 @@ German translation from https://www.icu-rehab.de/resources/RASS.pdf</other_detai
       </items>
       <items code="at0004">
         <items id="text">Der Richmond Agitation–Sedation Scale</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Streitlustig</items>
@@ -636,7 +636,7 @@ German translation from https://www.icu-rehab.de/resources/RASS.pdf</other_detai
       </items>
       <items code="at0009">
         <items id="text">Aufmerksam und ruhig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Schläfrig</items>
@@ -687,7 +687,7 @@ German translation from https://www.icu-rehab.de/resources/RASS.pdf</other_detai
       </items>
       <items code="at0004">
         <items id="text">Escala</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Combativo</items>
@@ -740,4 +740,3 @@ German translation from https://www.icu-rehab.de/resources/RASS.pdf</other_detai
     </term_definitions>
   </ontology>
 </archetype>
-

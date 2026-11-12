@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1145,15 +1145,15 @@ For example: 'tobacco'; 'cigarettes'; 'alcohol'; 'any substance other than tobac
       </items>
       <items code="at0036">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Screening purpose</items>
@@ -1179,15 +1179,15 @@ For example: 'tobacco'; 'cigarettes'; 'alcohol'; 'any substance other than tobac
       </items>
       <items code="at0053">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Overall comment</items>
@@ -1195,11 +1195,11 @@ For example: 'tobacco'; 'cigarettes'; 'alcohol'; 'any substance other than tobac
       </items>
       <items code="at0057">
         <items id="text">Unsure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Unsure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nb">
@@ -1260,15 +1260,15 @@ For eksempel: "tobakk"; "sigaretter"; "alkohol"; "enhver substans utenom tobakk 
       </items>
       <items code="at0036">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Ukjent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Kartleggingsformål</items>
@@ -1294,15 +1294,15 @@ For eksempel: "tobakk"; "sigaretter"; "alkohol"; "enhver substans utenom tobakk 
       </items>
       <items code="at0053">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Ukjent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Overordnet kommentar</items>
@@ -1310,11 +1310,11 @@ For eksempel: "tobakk"; "sigaretter"; "alkohol"; "enhver substans utenom tobakk 
       </items>
       <items code="at0057">
         <items id="text">Usikker</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Usikker</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="de">
@@ -1375,15 +1375,15 @@ Zum Beispiel: „Tabak“, „Zigaretten“, „Alkohol“, „jede andere Subst
       </items>
       <items code="at0036">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Nein</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Unbekannt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Zweck des Screenings</items>
@@ -1409,15 +1409,15 @@ Zum Beispiel: „Tabak“, „Zigaretten“, „Alkohol“, „jede andere Subst
       </items>
       <items code="at0053">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Nein</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Unbekannt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Allgemeine Bemerkungen</items>
@@ -1425,11 +1425,11 @@ Zum Beispiel: „Tabak“, „Zigaretten“, „Alkohol“, „jede andere Subst
       </items>
       <items code="at0057">
         <items id="text">Unsicher</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Unsicher</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nl">
@@ -1490,15 +1490,15 @@ For example: 'tobacco'; 'cigarettes'; 'alcohol'; 'any substance other than tobac
       </items>
       <items code="at0036">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Onbekend</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Doel van screening</items>
@@ -1524,15 +1524,15 @@ For example: 'tobacco'; 'cigarettes'; 'alcohol'; 'any substance other than tobac
       </items>
       <items code="at0053">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Onbekend</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">*Overall comment (en)</items>
@@ -1540,11 +1540,11 @@ For example: 'tobacco'; 'cigarettes'; 'alcohol'; 'any substance other than tobac
       </items>
       <items code="at0057">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_bindings terminology="SNOMED-CT">
@@ -1599,4 +1599,3 @@ For example: 'tobacco'; 'cigarettes'; 'alcohol'; 'any substance other than tobac
     </term_bindings>
   </ontology>
 </archetype>
-

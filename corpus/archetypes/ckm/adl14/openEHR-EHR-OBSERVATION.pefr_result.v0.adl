@@ -1,0 +1,284 @@
+﻿archetype (adl_version=1.4; uid=454a222a-85c2-49e9-a755-70da329f405c)
+	openEHR-EHR-OBSERVATION.pefr_result.v0
+
+concept
+	[at0000]	-- Peak expiratory flow result
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			author = <
+				["name"] = <"Silje Ljosland Bakke">
+				["organisation"] = <"Helse Vest IKT AS">
+				["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Atomica Informatics">
+		["email"] = <"heather.leslie@atomicainformatics.com">
+		["date"] = <"2019-04-03">
+	>
+	details = <
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			purpose = <"For å registrere maksimal ekspiratorisk luftstrømshastighet (peak expiratory flow, PEF), målt med en mekanisk PEF-måler.">
+			use = <"Brukes for å registrere maksimal ekspiratorisk luftstrømshastighet (peak expiratory flow, PEF), målt med en mekanisk PEF-måler.
+
+Denne arketypen er ment for å brukes for PEF-målinger gjort gjennom munnen. Den kan spesialiseres for å brukes for målinger gjort gjellom nesen (PNEF).">
+			keywords = <"pulmonær", "funksjon", "maksimal", "peak", "ekspiratorisk", "PEF", "PEFR">
+			misuse = <"Brukes ikke for å registrere PEF målt med spirometer. Bruk arketypen OBSERVATION.spirometry for dette formålet.
+
+Brukes ikke for å registrere PEF målt gjennom nesen. Bruk en spesialisering av denne arketypen for dette formålet.
+
+Brukes ikke for å registrere maksimal inspiratorisk strømningshastighet (peak inspiratory flow, PIF). Bruk arketypen OBSERVATION.pifr_result for dette formålet.">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record the peak expiratory, measured using a mechanical peak expiratory flow (PEF) meter.">
+			use = <"Use to record the peak expiratory flow, measured using a mechanical peak expiratory flow (PEF) meter.
+
+This archetype is intended to be used for oral peak expiratory flow. It can be specialised for nasal peak expiratory flow (PNEF).">
+			keywords = <"pulmonary", "function", "peak", "expiratory", "PEF", "PEFR">
+			misuse = <"Not to be used to record peak expiratory flow using a spirometer. Use the OBSERVATION.spirometry archetype for this purpose.
+
+Not to be used to record peak nasal expiratory flow (PNEF). Use a specialisation of this archetype for this purpose.
+
+Not to be used to record peak inspiratory flow. Use the OBSERVATION.pifr_result archetype for this purpose.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Silje Ljosland Bakke, Helse Vest IKT, Norway", "Ian McNicoll, freshEHR Clinical Informatics, UK">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"Wallace JL, George CM, Tolley EA, Winton JC, Fasanella D, Finch CK, Self TH. Peak expiratory flow in bed? A comparison of 3 positions. Respir Care. 2013 Mar;58(3):494-7. doi: 10.4187/respcare.01843. PubMed PMID: 22906434.">
+		["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia <heather.leslie@atomicainformatics.com>">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"396437B96D107E868076525634C8CAE9">
+		["build_uid"] = <"8d89a6a1-67fa-41e5-9c63-34d1bd8cf176">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	OBSERVATION[at0000] matches {    -- Peak expiratory flow result
+		data matches {
+			HISTORY[at0001] matches {    -- History
+				events cardinality matches {0..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..*} matches {    -- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {    -- ItemTree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0004] matches {    -- Flow rate
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::126]>
+												list = <
+													["1"] = <
+														units = <"l/m">
+														magnitude = <|0.0..<1000.0|>
+														precision = <|0|>
+													>
+												>
+											>
+										}
+									}
+									ELEMENT[at0015] occurrences matches {0..1} matches {    -- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+						state matches {
+							ITEM_TREE[at0008] matches {    -- ItemTree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0016] occurrences matches {0..1} matches {    -- Position
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0017,    -- Standing
+													at0018,    -- Sitting
+													at0019,    -- Reclining
+													at0020]    -- Lying
+												}
+											}
+										}
+									}
+									ELEMENT[at0009] occurrences matches {0..1} matches {    -- Confounding factors
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0005] matches {    -- ItemTree
+				items cardinality matches {0..*; unordered} matches {
+					allow_archetype CLUSTER[at0007] occurrences matches {0..*} matches {    -- Device
+						include
+							archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1/}
+					}
+					allow_archetype CLUSTER[at0006] occurrences matches {0..*} matches {    -- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Peak expiratory flow result">
+					description = <"The peak expiratory flow, measured using a mechanical peak expiratory flow (PEF) meter.">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+				>
+				["at0003"] = <
+					text = <"ItemTree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Flow rate">
+					description = <"The measured peak expiratory flow rate.">
+				>
+				["at0005"] = <
+					text = <"ItemTree">
+					description = <"@ internal @">
+				>
+				["at0006"] = <
+					text = <"Extension">
+					description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+					comment = <"For example: local information requirements or additional metadata to align with FHIR equivalents.">
+				>
+				["at0007"] = <
+					text = <"Device">
+					description = <"Details of the device used to measure the peak expiratory flow rate.">
+				>
+				["at0008"] = <
+					text = <"ItemTree">
+					description = <"@ internal @">
+				>
+				["at0009"] = <
+					text = <"Confounding factors">
+					description = <"Record any issues or factors that may impact on the measurement of peak expiratory flow rate.">
+				>
+				["at0015"] = <
+					text = <"Comment">
+					description = <"Additional narrative about the measurement of peak expiratory flow rate not captured in other fields.">
+				>
+				["at0016"] = <
+					text = <"Position">
+					description = <"The body position of the individual at the time of measurement.">
+				>
+				["at0017"] = <
+					text = <"Standing">
+					description = <"Standing at the time of measurement.">
+				>
+				["at0018"] = <
+					text = <"Sitting">
+					description = <"Sitting (for example on a bed or chair) at the time of measurement.">
+				>
+				["at0019"] = <
+					text = <"Reclining">
+					description = <"Reclining at the time of measurement.">
+				>
+				["at0020"] = <
+					text = <"Lying">
+					description = <"Lying flat at the time of measurement.">
+				>
+			>
+		>
+		["nb"] = <
+			items = <
+				["at0000"] = <
+					text = <"Maksimal ekspiratorisk luftstrømshastighet (PEF)">
+					description = <"Maksimal ekspiratorisk luftstrømshastighet (peak expiratory flow, PEF), målt med en mekanisk PEF-måler.">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Uspesifisert hendelse">
+					description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+				>
+				["at0003"] = <
+					text = <"ItemTree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Luftstrømshastighet">
+					description = <"Den målte maksimale ekspiratoriske luftstrømshastigheten (PEF).">
+				>
+				["at0005"] = <
+					text = <"ItemTree">
+					description = <"@ internal @">
+				>
+				["at0006"] = <
+					text = <"Tilleggsinformasjon">
+					description = <"Ytterligere informasjon som er nødvendig for å registrere lokalt innhold/kontekst, eller for å sammenstille med andre referansemodeller/formalismer.">
+					comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+				>
+				["at0007"] = <
+					text = <"Måleapparat">
+					description = <"Detaljer om måleapparatet brukt til å utføre målingen.">
+				>
+				["at0008"] = <
+					text = <"ItemTree">
+					description = <"@ internal @">
+				>
+				["at0009"] = <
+					text = <"Konfunderende faktorer">
+					description = <"Forhold eller omstendigheter som kan ha betydning for målingen.">
+				>
+				["at0015"] = <
+					text = <"Kommentar">
+					description = <"Ytterligere fritekst om målingen av maksimal ekspiratorisk luftstrømshastighet, som ikke fanges opp i andre felt.">
+				>
+				["at0016"] = <
+					text = <"Stilling">
+					description = <"Individets kroppsstilling ved tidspunktet for målingen.">
+				>
+				["at0017"] = <
+					text = <"Stående">
+					description = <"Individet var stående ved målingstidspunktet.">
+				>
+				["at0018"] = <
+					text = <"Sittende">
+					description = <"Individet var sittende (for eksempel på en seng eller stol) ved målingstidspunktet.">
+				>
+				["at0019"] = <
+					text = <"Tilbakelent">
+					description = <"Individet var tilbakelent ved målingstidspunktet.">
+				>
+				["at0020"] = <
+					text = <"Liggende">
+					description = <"Individet var liggende flatt ved målingstidspunktet.">
+				>
+			>
+		>
+	>

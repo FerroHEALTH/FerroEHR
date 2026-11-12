@@ -507,11 +507,68 @@ address archetypes), identified by a mandatory provider identifier. The
 professional `ROLE` keeps CKM's meaning of a capability: its `CAPABILITY` is
 `CAPABILITY.individual_credentials.v0`, a clinician's registrations and
 qualifications, carries no grant kind, and is never read as a grant, since
-only the policy role templates are. Every CKM source is a v0 draft, so each
+only the policy archetypes are. Every CKM source is a v0 draft, so each
 `derived_from` names its CKM citeable id and modification time. The
 deployment-modelled definitions (professional, care team, representation,
 patient, provider) stay under `deploy/definitions/`, load wherever the
 default set loads and ride every release as assets.
+
+### The operational-policy admin registers (`ferroehr::policy_register`) — our own design
+
+No openEHR specification governs operational policy or where a CDR keeps it:
+our own design (#5442). Three kinds of policy change while the CDR runs and have
+no home in the RM demographic model (no `PARTY`, `ROLE` or `CAPABILITY` carries
+a category map, a Member State's access delay or a Cedar policy set), so each
+is an **admin register**: `audit-categories` (the EHDS Annex II 3.2(c) category
+map), `access-delay` (the EHDS Art. 3(3) delay) and `cedar-policies` (the
+embedded Cedar engine's policy set). The TOML keys they replace
+(`[audit.categories]`, `[privacy.access_delay]`, `[authz.abac.cedar]`) are
+removed outright and refused as unknown keys.
+
+- **Storage.** One append-only clinical table, `policy_register (register,
+  version, document jsonb, committer, committed_at)`. A register with no row
+  holds its default (version 0): the shipped category map, the delay off, an
+  empty Cedar set, which permits nothing.
+- **Write.** `PUT {ext}/admin/registers/{register}` replaces the whole document
+  over the version `If-Match` names; under a per-register advisory lock the
+  write appends the next version only while that version is still the newest,
+  else `412`. The document is checked before it is stored and refused whole
+  with `400`: a category map must compile (and must classify something under
+  the production `no_category_map` floor, which stays TOML because it must
+  hold before the register is readable); the access delay's limit and
+  categories must hold under the category map in force; a Cedar set must parse
+  and validate strictly against the schema built from the ABAC request model.
+  A category write mirrors its map into the retention register's
+  `category_map` in the same transaction. The committer is the request's
+  authenticated subject; the access record of the request is the audit entry.
+- **Read path, with no database work per request.** Each replica keeps the
+  compiled registers in memory and listens on the PostgreSQL channel
+  `ferroehr_policy_register`; a register write runs `pg_notify` in its own
+  transaction, which PostgreSQL delivers to every listener when it commits
+  (PostgreSQL 18 `NOTIFY`). A notification marks the registers stale, and the
+  next operation that consults a register (all but the admin group's
+  maintenance routes) reads the newest version of each, one `GROUP BY` over
+  the primary key, and installs what changed: the classifier goes to the audit
+  sender, which stamps every record with its map digest; the access-delay
+  policy is recompiled against the map in force; the Cedar engine rebuilds its
+  set on its next decision. With nothing stale a request adds no transaction,
+  which the performance gate's transactions-per-request measure holds. The
+  writing replica reads the registers before it answers, so its next request
+  runs under the change; another replica runs under it from the first request
+  after the notification reaches it. While a listener is not connected (at
+  boot, or after it lost its connection, until it connects again and marks
+  the registers stale) that replica reads the registers on every request, so a
+  lost notification never serves an outdated policy; a store that cannot
+  answer the read is `503`. Two alternatives were weighed: reading the
+  versions inside a transaction each request already opens would thread the
+  read through every handler's own transaction, and a per-request read of its
+  own costs one transaction per request (measured: 6.5 to 7.5). A stored
+  version that stops compiling under a later release leaves the document in
+  force and is logged, so a code change never empties a policy.
+- **Audit records under a changing map.** The audit store keeps one render
+  policy per category map and writes each record under the policy of the map
+  its digest names, so a record emitted under one map and written after a
+  change still renders with the categories it was classified into.
 
 ## Templates, validation, FLAT
 

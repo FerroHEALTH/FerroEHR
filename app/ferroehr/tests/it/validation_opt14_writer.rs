@@ -24,6 +24,7 @@ use ferroehr::validation::validate_opt_artefact;
 const VCAEX_ARCHETYPES: &[&str] = &[
     "openEHR-DEMOGRAPHIC-ADDRESS.address-provider.v0",
     "openEHR-DEMOGRAPHIC-ADDRESS.address.v0",
+    "openEHR-DEMOGRAPHIC-ADDRESS.address_iso-health_provider.v1",
     "openEHR-DEMOGRAPHIC-ADDRESS.electronic_communication-provider.v0",
     "openEHR-DEMOGRAPHIC-ADDRESS.electronic_communication.v0",
     "openEHR-DEMOGRAPHIC-CAPABILITY.individual_credentials.v0",
@@ -37,6 +38,21 @@ const VCAEX_ARCHETYPES: &[&str] = &[
     "openEHR-DEMOGRAPHIC-ROLE.healthcare_provider_organisation.v0",
     "openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0",
     "openEHR-DEMOGRAPHIC-ROLE.third_party_payer.v0",
+];
+
+/// REJECTED CKM archetypes whose own constraints the reference model refuses,
+/// with the rule the refusal must carry: a CLUSTER `items` cardinality with a
+/// lower bound of 0 is wider than the RM's {1..*} (AOM2 VCACA), and
+/// `ITEM_TABLE.number_key_columns` is an attribute no RM release defines (VCARM).
+/// Each entry is a negative test, so a corrected CKM export shows up here.
+const RM_REFUSED_ARCHETYPES: &[(&str, &str)] = &[
+    ("openEHR-EHR-EVALUATION.risk-family_history.v1", "VCACA"),
+    ("openEHR-EHR-OBSERVATION.blood_gases.v1", "VCACA"),
+    ("openEHR-EHR-OBSERVATION.substance_use-caffeine.v0", "VCACA"),
+    (
+        "openEHR-EHR-OBSERVATION.tendon_babinski_reflexes.v0",
+        "VCARM",
+    ),
 ];
 
 fn pack() -> Vec<PathBuf> {
@@ -98,6 +114,7 @@ fn every_ckm_archetype_opt_passes_the_upload_validation() {
     let library = library();
     let mut findings = String::new();
     let mut refused = Vec::new();
+    let mut rm_refused = Vec::new();
     for path in pack() {
         let Some(id) = path.file_stem().and_then(std::ffi::OsStr::to_str) else {
             continue;
@@ -117,6 +134,13 @@ fn every_ckm_archetype_opt_passes_the_upload_validation() {
             {
                 refused.push(id.to_owned());
             }
+            Err(ServiceError::ValidationFailed(violations))
+                if RM_REFUSED_ARCHETYPES.iter().any(|(file, code)| {
+                    *file == id && violations.iter().all(|v| v.path == *code)
+                }) =>
+            {
+                rm_refused.push(id.to_owned());
+            }
             Err(e) => {
                 let _ = writeln!(findings, "{id}: {e:?}");
             }
@@ -129,6 +153,14 @@ fn every_ckm_archetype_opt_passes_the_upload_validation() {
     assert_eq!(
         refused, VCAEX_ARCHETYPES,
         "the archetypes refused for their own existence constraints"
+    );
+    let expected: Vec<&str> = RM_REFUSED_ARCHETYPES
+        .iter()
+        .map(|(file, _)| *file)
+        .collect();
+    assert_eq!(
+        rm_refused, expected,
+        "the REJECTED archetypes refused on their stated reference-model rule"
     );
 }
 

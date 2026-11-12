@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -25,9 +25,9 @@
         </terminology_id>
         <code_string>en</code_string>
       </language>
-      <purpose>To provide a structured and standardized way to record lens specifications in clinical or optical settings, </purpose>
+      <purpose>To provide a structured and standardized way to record lens specifications in clinical or optical settings,</purpose>
       <use>To document lens details for patients, including those derived from refraction observations, lensmeter measurements, or prescriptions</use>
-      <misuse>This Archetype is not used to document the measurement of a refractive error. </misuse>
+      <misuse>This Archetype is not used to document the measurement of a refractive error.</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
   </description>
@@ -872,69 +872,68 @@
       </items>
       <items code="at0021">
         <items id="text">Link to Observation on which Lens Values are based</items>
-        <items id="description"></items>
-        <items id="comment">Is it possible to have a "choice of..." a link?&#xD;
-</items>
+        <items id="description" />
+        <items id="comment">Is it possible to have a "choice of..." a link?</items>
       </items>
       <items code="at0024">
         <items id="text">Lens Type</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Sphere Power</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Cylinder Power</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Cylinder Axis</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Prism Power</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Lens Wear Duration</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Prism Base Direction</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Up</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Down</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Left</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Right</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Intermediate Addition Power</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Near Addition Power</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Contact Lens Base Curve Radius</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Contact Lens Diameter</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Link to Glasses or Contact Lens Device</items>
@@ -942,17 +941,16 @@
       </items>
       <items code="at0041">
         <items id="text">Color</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Brand</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Note</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

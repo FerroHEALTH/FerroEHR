@@ -1,0 +1,373 @@
+﻿archetype (adl_version=1.4; uid=cb8a43c1-473b-4cba-81ff-24faa086ac69)
+	openEHR-EHR-OBSERVATION.lab_test-immunology.v1
+specialise
+	openEHR-EHR-OBSERVATION.lab_test.v1
+
+concept
+	[at0000.1]	-- Immunology titres
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Dr Ian McNicoll">
+		["organisation"] = <"Ocean Informatics, United Kingdom">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"07/11/2009">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To represent immunology tests where the result is expressed as a titre usually along with a qualitative result e.g. positive, negative.
+
+
+">
+			use = <"Will generally be used in combination with archetypes representing other parts of the laboratory test ordering and processing process.
+">
+			keywords = <"lab", "pathology", "biochemistry", "immunology", "laboratory", "serology">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Sam Heard, Ocean Informatics, Australia", "Heather Leslie, Ocean Informatics, Australia">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["references"] = <"NEHTA, Australia. Pathology Episode v1.0 - Data Group library [Internet]. 2009;[cited 2009 Dec 8 ] Available from: http://www.nehta.gov.au/data-group-library/data-specifications/dgl-pathology
+
+IHE. IHE, Laboratory Technical Framework, Volume 3 Content [Internet]. 2008;Available from: http://www.ihe.net/Technical_Framework/upload/ihe_lab_TF_rel2_1-Vol-3_FT_2008-08-08.pdf
+
+
+
+
+">
+		["build_uid"] = <"1199b3ee-0fac-4c88-adb8-9e48c4dca4c3">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"A1EBA56120CA9A87E8F8822C9F5F3758">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Immunology titres
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0005] occurrences matches {0..1} matches {	-- Test name
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0077] occurrences matches {0..1} matches {	-- Diagnostic service
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0073] occurrences matches {0..1} matches {	-- Test status
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0037, 	-- Interim
+													at0038, 	-- Final
+													at0039, 	-- Supplementary
+													at0040, 	-- Corrected (amended)
+													at0074, 	-- Aborted
+													at0079]	-- Never performed
+												}
+											}
+										}
+									}
+									allow_archetype CLUSTER[at0065] occurrences matches {0..*} matches {	-- Specimen detail
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen\.v1/}
+										exclude
+											archetype_id/value matches {/.*/}
+									}
+									ELEMENT[at0078] occurrences matches {0..*} matches {*}
+									allow_archetype CLUSTER[at0089] occurrences matches {0..*} matches {	-- Per-result annotation
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.lab_result_annotation(-[a-zA-Z0-9_]+)*\.v1/}
+										exclude
+											archetype_id/value matches {/.*/}
+									}
+									CLUSTER[at0.97] occurrences matches {0..*} matches {	-- Immunology result
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0078.2] occurrences matches {0..*} matches {	-- Titre
+												value matches {
+													DV_PROPORTION matches {
+														numerator matches {|>=0.0|}
+														denominator matches {|>=0.0|}
+														is_integral matches {True}
+														type matches {0}
+													}
+												}
+											}
+											ELEMENT[at0.95] occurrences matches {0..*} matches {	-- Amount
+												value matches {
+													C_DV_QUANTITY <
+													>
+												}
+											}
+											ELEMENT[at0.96] occurrences matches {0..*} matches {	-- Fluoresence pattern
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0.98, 	-- Homogenous
+															at0.99, 	-- Peripheral
+															at0.100, 	-- Speckled
+															at0.101]	-- Nucleolar
+														}
+													}
+												}
+											}
+											ELEMENT[at0078.1] occurrences matches {0..*} matches {	-- Qualitative result
+												value matches {
+													DV_TEXT matches {*}
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0.90, 	-- Negative
+															at0.91, 	-- Weakly positive
+															at0.92, 	-- Positive
+															at0.93]	-- Strongly positive
+														}
+													}
+												}
+											}
+										}
+									}
+									ELEMENT[at0057] occurrences matches {0..1} matches {	-- Overall interpretation
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0010] occurrences matches {0..*} matches {	-- Multimedia representation
+										value matches {
+											DV_MULTIMEDIA matches {
+												media_type matches {[openEHR::]}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0004] matches {	-- Tree
+				items cardinality matches {0..*; unordered} matches {
+					CLUSTER[at0013] occurrences matches {0..1} matches {	-- Test identification
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0062] occurrences matches {0..1} matches {	-- Placer order identifier
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0063] occurrences matches {0..1} matches {	-- Filler order Identifier
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0068] occurrences matches {0..1} matches {	-- Laboratory test result identifier
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0017] occurrences matches {0..*} matches {	-- Laboratory details  
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation\.v1/}
+								exclude
+									archetype_id/value matches {/.*/}
+							}
+						}
+					}
+					ELEMENT[at0075] occurrences matches {0..1} matches {	-- Datetime result issued
+						value matches {
+							DV_DATE_TIME matches {*}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.100"] = <
+					text = <"Speckled">
+					description = <"A speckled pattern of fluorescence.">
+				>
+				["at0.101"] = <
+					text = <"Nucleolar">
+					description = <"A nucleolar pattern of fluorescence.">
+				>
+				["at0.90"] = <
+					text = <"Negative">
+					description = <"The test is negative.">
+				>
+				["at0.91"] = <
+					text = <"Weakly positive">
+					description = <"The test is weekly positive.">
+				>
+				["at0.92"] = <
+					text = <"Positive">
+					description = <"The test is positive.">
+				>
+				["at0.93"] = <
+					text = <"Strongly positive">
+					description = <"The test is strongly positive.">
+				>
+				["at0.94"] = <
+					text = <"New element">
+					description = <"*">
+				>
+				["at0.95"] = <
+					text = <"Amount">
+					description = <"The immunology result expressed as an amount e.g 3.0U for Anti-nucealr antibody. The units are highly dependent on particular lab techniques">
+				>
+				["at0.96"] = <
+					text = <"Fluoresence pattern">
+					description = <"The fluorescence staining pattern observed.">
+				>
+				["at0.97"] = <
+					text = <"Immunology result">
+					description = <"Group of test results relating to a single immunology test.">
+				>
+				["at0.98"] = <
+					text = <"Homogenous">
+					description = <"A homogenous pattern of fluorescence.">
+				>
+				["at0.99"] = <
+					text = <"Peripheral">
+					description = <"A peripheral pattern of fluorescence.">
+				>
+				["at0000"] = <
+					text = <"Laboratory test">
+					description = <"To record the result of a laboratory test which may be used to record a single valued test but will often be specialised or templated to represent multiple value or 'panel' tests.
+This archetype also acts as the parent for specialisations appropriate for more specific laboratory tests microbiology, histopathology.">
+				>
+				["at0000.1"] = <
+					text = <"Immunology titres">
+					description = <"To represent immunology tests where the result is expressed as a titre usually along with a qualitiative result e.g. positive, negative">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Test name">
+					description = <"Specific identifier for this lab test. e.g. Full blood count , blood glucose, urine microbiology.  May equate to the result name for a single value result. Commonly a coded term e.g from LOINC or SNOMED-CT.">
+				>
+				["at0010"] = <
+					text = <"Multimedia representation">
+					description = <"Representations of the whole test in mutlimedia e.g image, audio, video.">
+				>
+				["at0013"] = <
+					text = <"Test identification">
+					description = <"Unique identifiers used in delivery of the care process.">
+				>
+				["at0017"] = <
+					text = <"Laboratory details  ">
+					description = <"Demographic details of the laboratory with responsibility for the test. Details of secondary laboratories may also be included.">
+				>
+				["at0037"] = <
+					text = <"Interim">
+					description = <"This is an initial or interim result - further updates are anticipated">
+				>
+				["at0038"] = <
+					text = <"Final">
+					description = <"This is the final result. No further alterations are anticipated">
+				>
+				["at0039"] = <
+					text = <"Supplementary">
+					description = <"This is a supplememtary result in addition to the Interim result">
+				>
+				["at0040"] = <
+					text = <"Corrected (amended)">
+					description = <"This is a Correction which should replace any previous results">
+				>
+				["at0057"] = <
+					text = <"Overall interpretation">
+					description = <"An overall interpretative comment on this test.">
+				>
+				["at0062"] = <
+					text = <"Placer order identifier">
+					description = <"The ID assigned to the order by the order requester. Equivalent to the NEHTA Requester Order Identifier.">
+				>
+				["at0063"] = <
+					text = <"Filler order Identifier">
+					description = <"The ID assigned to the test order by the order filler, usually by the (LIS) Laboratory Information System. Equivalent to the DICOM Accession Number and NEHTA Laboratory Request Identifier.">
+				>
+				["at0065"] = <
+					text = <"Specimen detail">
+					description = <"Details of the specimen being reported where all individual results are derived from the same specimen">
+				>
+				["at0068"] = <
+					text = <"Laboratory test result identifier">
+					description = <"The identifier given to the laboratory test result of a pathology 
+investigation.">
+				>
+				["at0073"] = <
+					text = <"Test status">
+					description = <"The status of the lab test as a whole.">
+				>
+				["at0074"] = <
+					text = <"Aborted">
+					description = <"*">
+				>
+				["at0075"] = <
+					text = <"Datetime result issued">
+					description = <"The date and/or time that the result was issued for the recorded 
+‘test status’. ">
+					comment = <"The date and time related to the results status is
+useful for version control and cumulative results for the report.">
+				>
+				["at0077"] = <
+					text = <"Diagnostic service">
+					description = <"The type of high-level diagnostic service e.g. biochemistry, haematology. ">
+				>
+				["at0078"] = <
+					text = <"Result">
+					description = <"The result of the test.">
+				>
+				["at0078.1"] = <
+					text = <"Qualitative result">
+					description = <"The qualitative result of the test.">
+				>
+				["at0078.2"] = <
+					text = <"Titre">
+					description = <"The test result, expressed as a titre e.g. 1:450">
+				>
+				["at0079"] = <
+					text = <"Never performed">
+					description = <"The test was never performed.">
+				>
+				["at0089"] = <
+					text = <"Per-result annotation">
+					description = <"Slot to allow an annotation to be added to a particular test result at run-time.">
+				>
+			>
+		>
+	>
