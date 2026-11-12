@@ -709,7 +709,7 @@ fn operation(code: &str) -> Value {
 }
 
 /// An `ELEMENT` named `name` holding `value`.
-fn item(name: &str, value: Value) -> Value {
+fn item(name: &str, value: &Value) -> Value {
     json!({ "_type": "ELEMENT", "archetype_node_id": "at0010",
         "name": { "_type": "DV_TEXT", "value": name }, "value": value })
 }
@@ -739,7 +739,7 @@ async fn a_deployments_own_archetypes_carrying_the_codes_are_policy_parties() {
                 "name": { "_type": "DV_TEXT", "value": "Terms" },
                 "items": [{ "_type": "CLUSTER", "archetype_node_id": "at0022",
                     "name": { "_type": "DV_TEXT", "value": "Scope" },
-                    "items": [item("What", code)] }] } }]);
+                    "items": [item("What", &code)] }] } }]);
         role
     };
 
@@ -765,7 +765,7 @@ async fn a_deployments_own_archetypes_carrying_the_codes_are_policy_parties() {
         "name": { "_type": "DV_TEXT", "value": "Mandate" },
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0030",
             "name": { "_type": "DV_TEXT", "value": "Mandate details" },
-            "items": [item("Kind", operation("acts_for"))] },
+            "items": [item("Kind", &operation("acts_for"))] },
         "source": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
             "id": { "_type": "HIER_OBJECT_ID", "value": person.to_string() } },
         "target": { "_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",

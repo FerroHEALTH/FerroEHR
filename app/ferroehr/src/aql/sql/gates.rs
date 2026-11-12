@@ -42,9 +42,10 @@ pub(super) struct Gates {
     /// The Art. 10 opt-out: no object or EHR of an opted-out EHR contributes a
     /// row.
     opted_out: bool,
-    /// A demographic query leaves the policy parties out: no party whose
-    /// head carries the policy mark contributes a row.
-    policy_parties_hidden: bool,
+    /// Whether a demographic query leaves the policy parties out: no party
+    /// whose head carries the policy mark contributes a row. A clinical
+    /// query reads no party, so it is [`PolicyParties::Served`] there.
+    policy_parties: PolicyParties,
 }
 
 impl Gates {
@@ -58,8 +59,11 @@ impl Gates {
             access_restricted: access_restriction_enforced(),
             person_withheld: access_delay_enforced(),
             opted_out: access_opt_out_enforced(),
-            policy_parties_hidden: domain == QueryDomain::Demographic
-                && policy_parties == PolicyParties::Hidden,
+            policy_parties: if domain == QueryDomain::Demographic {
+                policy_parties
+            } else {
+                PolicyParties::Served
+            },
         }
     }
 
@@ -67,7 +71,7 @@ impl Gates {
     pub(super) fn on_head(self, h: &str) -> Vec<Expr> {
         let mut predicates = Vec::new();
         // NOTE: our own design, only an administrator reads any version of a marked party.
-        if self.policy_parties_hidden {
+        if self.policy_parties == PolicyParties::Hidden {
             predicates.push(col(h, VoHead::PolicyPartyAt).is_null());
         }
         // NOTE: EHDS Art. 8, an object under an access restriction contributes no row.

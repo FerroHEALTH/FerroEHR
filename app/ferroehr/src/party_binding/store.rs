@@ -279,7 +279,7 @@ async fn reindex_heads(
 /// Every row goes, and the rows of every party head come back, the
 /// tombstones of the deleted `PERSON`s included, as the commits wrote them.
 /// Every party with a policy version gets the mark it lacks
-/// ([`crate::party_binding::policy_mark::mark_stored`]); no mark is cleared.
+/// (`policy_mark::mark_stored`); no mark is cleared.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.

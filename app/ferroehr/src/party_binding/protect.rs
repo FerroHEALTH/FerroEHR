@@ -98,9 +98,11 @@ impl Protected {
         self.whole || !self.identifiers.is_empty()
     }
 
-    /// Whether the body is a policy party.
-    fn policy(&self) -> bool {
-        self.policy.is_some()
+    /// Records `reason`, why the party is a policy party, when there is one:
+    /// a policy party is protected whole.
+    fn mark_policy(&mut self, reason: Option<String>) {
+        self.whole |= reason.is_some();
+        self.policy = reason;
     }
 
     /// The canonical binding keys `(issuer, value)` of the version.
@@ -142,15 +144,7 @@ pub(crate) async fn check(
     }
     let binding = !mapping.is_empty() && matches!(kind, Kind::Person | Kind::Role | Kind::Group);
     let (current, previous) = versions(tx, vo_id).await?;
-    let marked = policy_mark::marked(tx, vo_id).await?;
-    let committed_policy = match (current, facts) {
-        (Some(_), Some(facts)) => facts.policy.clone(),
-        (Some(sys_version), None) => stored_policy(tx, kind, vo_id, sys_version).await?,
-        (None, _) => None,
-    };
-    if committed_policy.is_some() && !marked {
-        policy_mark::mark(tx, vo_id).await?;
-    }
+    let (marked, committed_policy) = mark_committed(tx, (kind, vo_id), current, facts).await?;
     if !(binding || mapping.names_policy()) {
         return Ok(());
     }
@@ -164,22 +158,13 @@ pub(crate) async fn check(
         (None, _) => Protected::default(),
     };
     if mapping.names_policy() {
-        before.policy = marked.then(|| "a version of it held policy content".to_owned());
-        before.whole |= before.policy();
-        after.policy = committed_policy.map(|content| format!("it holds {content}"));
-        after.whole |= after.policy();
+        before.mark_policy(marked.then(|| "a version of it held policy content".to_owned()));
+        after.mark_policy(committed_policy.map(|content| format!("it holds {content}")));
     }
     if !(before.protected() || after.protected()) {
         return Ok(());
     }
-    if let Some(reason) = after.policy.as_ref().or(before.policy.as_ref())
-        && !administrator(mapping)
-    {
-        return Err(ServiceError::not_permitted(format!(
-            "the {} {vo_id} is a policy party, as {reason}: only an administrator writes it",
-            kind.as_str()
-        )));
-    }
+    refuse_policy(mapping, (kind, vo_id), &before, &after)?;
     let owner = match PROVISIONER.try_with(Clone::clone) {
         Ok(issuer) => {
             let held = [current, previous];
@@ -487,6 +472,46 @@ async fn read(
         ..Facts::default()
     };
     Ok(protected(mapping, kind, &facts))
+}
+
+/// Refuses the write of the party `vo_id` of `kind` by a caller who is no
+/// administrator when its version `before` or `after` the write is a policy
+/// party.
+fn refuse_policy(
+    mapping: &BindingMapping,
+    (kind, vo_id): (Kind, VoId),
+    before: &Protected,
+    after: &Protected,
+) -> Result<(), ServiceError> {
+    match after.policy.as_ref().or(before.policy.as_ref()) {
+        Some(reason) if !administrator(mapping) => Err(ServiceError::not_permitted(format!(
+            "the {} {vo_id} is a policy party, as {reason}: only an administrator writes it",
+            kind.as_str()
+        ))),
+        _ => Ok(()),
+    }
+}
+
+/// Whether the party `vo_id` of `kind` was marked before the commit `tx`
+/// wrote its version `current` holding `facts`, and what makes that version
+/// a policy party ([`policy_mark::policy_content`]); a policy version marks
+/// the party whatever the mapping, so the mark is a fact of the versions.
+async fn mark_committed(
+    tx: &mut PgConnection,
+    (kind, vo_id): (Kind, VoId),
+    current: Option<i32>,
+    facts: Option<&Facts>,
+) -> Result<(bool, Option<PolicyContent>), ServiceError> {
+    let marked = policy_mark::marked(tx, vo_id).await?;
+    let committed = match (current, facts) {
+        (Some(_), Some(facts)) => facts.policy.clone(),
+        (Some(sys_version), None) => stored_policy(tx, kind, vo_id, sys_version).await?,
+        (None, _) => None,
+    };
+    if committed.is_some() && !marked {
+        policy_mark::mark(tx, vo_id).await?;
+    }
+    Ok((marked, committed))
 }
 
 /// What makes the stored version `sys_version` of `vo_id` of `kind` a policy

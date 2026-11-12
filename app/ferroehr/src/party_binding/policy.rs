@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The default policy definitions: example archetypes of a system `AGENT`,
-//! the `ROLE`s whose `CAPABILITY.credentials` grant operations, and the
-//! acts-for `PARTY_RELATIONSHIP` from a system to the provider it acts for.
+//! The default policy definitions, examples of the policy parties.
+//!
+//! They are archetypes of a system `AGENT`, of the `ROLE`s whose
+//! `CAPABILITY.credentials` grant operations, and of the acts-for
+//! `PARTY_RELATIONSHIP` from a system to the provider it acts for.
 //!
 //! FerroEHR does not recognise a policy party by these archetypes: a party is
 //! one when a version of it holds the coded content

@@ -16,7 +16,7 @@
 //! A party with such a version is marked in `vo_head.policy_party_at`: the
 //! commit of the version sets it in its own transaction
 //! (`party_binding::protect::check`), the party migration and
-//! [`mark_stored`] set it from the stored versions, and nothing clears it.
+//! `mark_stored` set it from the stored versions, and nothing clears it.
 //! Only an administrator writes or reads a marked party, through the
 //! Demographic API and through demographic AQL alike, every version of it.
 //! No openEHR spec gives a capability an authorization meaning or governs who
@@ -46,10 +46,10 @@ pub const ACTS_FOR: &str = "acts_for";
 /// The `DV_IDENTIFIER.type` of an OAuth 2.0 `client_id`.
 pub const CLIENT_ID: &str = "client_id";
 
-/// The SQL/JSON path that holds of a stored party body exactly when
-/// [`policy_content`] finds content in it: the party migration
-/// `0033_policy_party_mark.sql` and [`mark_stored`] test each version's body
-/// with it, and a test runs both over one set of bodies.
+/// The SQL/JSON path that holds exactly when [`policy_content`] finds content.
+///
+/// The party migration `0033_policy_party_mark.sql` and `mark_stored` test
+/// each version's body with it, and a test runs both over one set of bodies.
 pub const POLICY_PATH: &str = "$ ? (\
 exists($.**?(@._type == \"CAPABILITY\").credentials.**?(@._type == \"DV_CODED_TEXT\" \
 && @.defining_code.terminology_id.value == \"ferroehr-operations\")) \
@@ -203,14 +203,14 @@ mod tests {
     }
 
     /// An `ELEMENT` holding `value`.
-    fn element(value: Value) -> Value {
+    fn element(value: &Value) -> Value {
         json!({ "_type": "ELEMENT", "archetype_node_id": "at1",
             "name": { "_type": "DV_TEXT", "value": "item" }, "value": value })
     }
 
     /// A `ROLE` of a deployment's own archetype with one capability whose
     /// credentials hold `items` in a cluster.
-    fn role(items: Value) -> Value {
+    fn role(items: &Value) -> Value {
         json!({ "_type": "ROLE", "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-ROLE.legacy_migration.v3",
             "capabilities": [{ "_type": "CAPABILITY", "archetype_node_id": "at2",
                 "name": { "_type": "DV_TEXT", "value": "Migration" },
@@ -219,7 +219,7 @@ mod tests {
     }
 
     /// A body holding `relationship` inline.
-    fn holding(relationship: Value) -> Value {
+    fn holding(relationship: &Value) -> Value {
         json!({ "_type": "ORGANISATION", "archetype_node_id": "openEHR-DEMOGRAPHIC-ORGANISATION.mine.v2",
             "relationships": [relationship] })
     }
@@ -230,19 +230,19 @@ mod tests {
         let grant = PolicyContent::Grant("import_ehr".to_owned());
         vec![
             (
-                role(json!([element(coded_text("import_ehr", TERMINOLOGY))])),
+                role(&json!([element(&coded_text("import_ehr", TERMINOLOGY))])),
                 Some(grant),
             ),
             (
-                role(json!([element(coded_text("not_after", TERMINOLOGY))])),
+                role(&json!([element(&coded_text("not_after", TERMINOLOGY))])),
                 Some(PolicyContent::Grant("not_after".to_owned())),
             ),
             (
-                role(json!([element(coded_text("import_ehr", "local"))])),
+                role(&json!([element(&coded_text("import_ehr", "local"))])),
                 None,
             ),
             (
-                role(json!([element(coded_text(
+                role(&json!([element(&coded_text(
                     "import_ehr",
                     "FERROEHR-OPERATIONS"
                 ))])),
@@ -255,7 +255,7 @@ mod tests {
             ),
             (
                 holding(
-                    json!({ "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "at5",
+                    &json!({ "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "at5",
                     "name": coded_text(ACTS_FOR, TERMINOLOGY) }),
                 ),
                 Some(PolicyContent::ActsFor),
@@ -264,12 +264,12 @@ mod tests {
                 json!({ "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "org.example::rel.v1",
                     "name": { "_type": "DV_TEXT", "value": "on behalf of" },
                     "details": { "_type": "ITEM_TREE", "archetype_node_id": "at6",
-                        "items": [element(coded_text(ACTS_FOR, TERMINOLOGY))] } }),
+                        "items": [element(&coded_text(ACTS_FOR, TERMINOLOGY))] } }),
                 Some(PolicyContent::ActsFor),
             ),
             (
                 holding(
-                    json!({ "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "at5",
+                    &json!({ "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "at5",
                     "name": coded_text("import_ehr", TERMINOLOGY) }),
                 ),
                 None,
@@ -277,21 +277,21 @@ mod tests {
             (
                 json!({ "_type": "ORGANISATION", "archetype_node_id": "x",
                     "details": { "_type": "ITEM_TREE", "archetype_node_id": "at7",
-                        "items": [element(coded_text(ACTS_FOR, TERMINOLOGY))] } }),
+                        "items": [element(&coded_text(ACTS_FOR, TERMINOLOGY))] } }),
                 None,
             ),
             (
                 json!({ "_type": "AGENT", "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-AGENT.gateway.v2",
                     "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "at8",
                         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at9",
-                            "items": [element(json!({ "_type": "DV_IDENTIFIER",
+                            "items": [element(&json!({ "_type": "DV_IDENTIFIER",
                                 "issuer": "https://login.example", "id": "lab", "type": CLIENT_ID }))] } }] }),
                 Some(PolicyContent::Client),
             ),
             (
                 json!({ "_type": "PERSON", "archetype_node_id": "x",
                     "details": { "_type": "ITEM_TREE", "archetype_node_id": "at9",
-                        "items": [element(json!({ "_type": "DV_IDENTIFIER",
+                        "items": [element(&json!({ "_type": "DV_IDENTIFIER",
                             "issuer": "NL", "id": "123", "type": "BSN" }))] } }),
                 None,
             ),
