@@ -133,6 +133,15 @@ impl Facts {
                     .map(str::to_owned);
                 facts.validity = body.get("time_validity").cloned();
             }
+            // NOTE: a standalone relationship container is listed at its target
+            // like an inline one (RM demographic master02 §Party Relationships): our own design.
+            Kind::PartyRelationship => {
+                facts.targets.extend(
+                    body.pointer("/target/id/value")
+                        .and_then(Value::as_str)
+                        .and_then(container),
+                );
+            }
             _ => {}
         }
         facts

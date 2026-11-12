@@ -131,7 +131,10 @@ pub(crate) async fn reindex_committed(
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
     if committed.kind == Kind::PartyRelationship {
-        return crate::party_binding::protect::check(tx, ctx.binding, committed, None).await;
+        crate::party_binding::protect::check(tx, ctx.binding, committed, None).await?;
+        let targets = facts.map_or(&[][..], |f| f.targets.as_slice());
+        party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
+        return Ok(());
     }
     if crate::versioning::committer::person_commits() {
         // NOTE: RM common master04 §Audit Details, PARTY_SELF names the record
@@ -188,6 +191,9 @@ pub(crate) async fn reindex_stored(
     vo_id: VoId,
 ) -> Result<(), StorageError> {
     party_reverse::rebuild(tx, vo_id).await?;
+    if kind == Kind::PartyRelationship {
+        return Ok(());
+    }
     let mut heads = stored_heads(tx, mapping, kind, Some(&[vo_id.0]), None).await?;
     let Some(head) = heads.pop() else {
         return Ok(());

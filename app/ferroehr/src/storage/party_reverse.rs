@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Row I/O for `party_relationship_target`, the target-side index of the
-//! `PARTY_RELATIONSHIP`s a party carries inline.
+//! `PARTY_RELATIONSHIP`s a party carries inline and of FerroEHR's standalone
+//! relationship containers.
 //!
 //! RM demographic `master02-demographic_package.adoc` §Party Relationships
 //! stores a relationship in the data of its source party and lists it, at the
@@ -22,13 +23,15 @@ use crate::storage::error::StorageError;
 /// [`rebuild`], completed by their own `WHERE`.
 ///
 /// The `relationships` attribute is read only when it is an array, so a body
-/// without one contributes no row. A target id is a `HIER_OBJECT_ID` value,
+/// without one contributes no row; a standalone `PARTY_RELATIONSHIP` version
+/// is its own one relationship. A target id is a `HIER_OBJECT_ID` value,
 /// `root` or `root::extension`, and the root is what names a party container,
 /// as `crate::party_binding::derive::container` reads it.
 macro_rules! relationships_of_v {
     () => {
         "CROSS JOIN LATERAL jsonb_array_elements( \
-             CASE WHEN jsonb_typeof(v.body::jsonb -> 'relationships') = 'array' \
+             CASE WHEN v.kind = 'PARTY_RELATIONSHIP' THEN jsonb_build_array(v.body::jsonb) \
+                  WHEN jsonb_typeof(v.body::jsonb -> 'relationships') = 'array' \
                   THEN v.body::jsonb -> 'relationships' ELSE '[]'::jsonb END \
          ) WITH ORDINALITY AS r(rel, ord) \
          CROSS JOIN LATERAL (SELECT lower(split_part( \
@@ -43,7 +46,8 @@ macro_rules! reverse_columns {
     () => {
         "SELECT h.vo_id AS source_vo_id, \
                 r.rel ->> 'archetype_node_id' AS node_id, \
-                r.rel -> 'name' ->> 'value' AS name \
+                r.rel -> 'name' ->> 'value' AS name, \
+                v.kind = 'PARTY_RELATIONSHIP' AS standalone \
          FROM party_relationship_target t \
          JOIN vo_head h ON h.vo_id = t.source_vo_id AND h.restricted_at IS NULL "
     };
@@ -105,10 +109,10 @@ pub async fn rebuild(tx: &mut PgConnection, source: VoId) -> Result<(), StorageE
         .await?;
     sqlx::query(concat!(
         "WITH v AS ( \
-             SELECT v.trunk_version, v.committed_at, v.body, v.lifecycle_state, \
+             SELECT v.trunk_version, v.committed_at, v.body, v.lifecycle_state, v.kind, \
                     lead(v.committed_at) OVER (ORDER BY v.trunk_version) AS next_at \
              FROM version v \
-             WHERE v.vo_id = $1 AND v.branch_number = 0 AND v.kind <> 'PARTY_RELATIONSHIP' \
+             WHERE v.vo_id = $1 AND v.branch_number = 0 \
          ), named AS ( \
              SELECT DISTINCT v.trunk_version, v.committed_at, v.next_at, \
                     target.root::uuid AS target \
@@ -145,6 +149,9 @@ pub struct ReverseRelationship {
     pub node_id: Option<String>,
     /// The relationship's `name/value`.
     pub name: Option<String>,
+    /// Whether the relationship is a standalone `PARTY_RELATIONSHIP`
+    /// container, `source_vo_id` then being that container.
+    pub standalone: bool,
 }
 
 /// The relationships whose target is `target`, ordered by source container
@@ -183,7 +190,7 @@ pub async fn reverse_of(
             sqlx::query(concat!(
                 reverse_columns!(),
                 "CROSS JOIN LATERAL ( \
-                     SELECT s.body FROM version s \
+                     SELECT s.body, s.kind FROM version s \
                      WHERE s.tier = h.tier AND s.vo_id = h.vo_id AND s.branch_number = 0 \
                        AND s.committed_at <= $2 \
                      ORDER BY s.committed_at DESC, s.trunk_version DESC LIMIT 1 \
@@ -206,6 +213,7 @@ pub async fn reverse_of(
             source_vo_id: row.try_get("source_vo_id")?,
             node_id: row.try_get("node_id")?,
             name: row.try_get("name")?,
+            standalone: row.try_get("standalone")?,
         });
     }
     Ok(out)

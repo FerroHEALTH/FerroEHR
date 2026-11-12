@@ -115,7 +115,9 @@ fn organisation(name: &str, id: &str, system: &str) -> Value {
     })
 }
 
-fn role(name: &str, id: &str, system: &str) -> Value {
+/// A ROLE whose performer is the PERSON container `performer` (RM demographic
+/// `role.adoc` `performer`: the version container of an Actor).
+fn role(name: &str, id: &str, system: &str, performer: &str) -> Value {
     json!({
         "_type": "ROLE",
         "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.role.v1",
@@ -127,7 +129,7 @@ fn role(name: &str, id: &str, system: &str) -> Value {
             "_type": "PARTY_REF",
             "namespace": "demographic",
             "type": "PERSON",
-            "id": { "_type": "HIER_OBJECT_ID", "value": "cccccccc-cccc-4ccc-8ccc-cccccccccccc" }
+            "id": { "_type": "HIER_OBJECT_ID", "value": performer }
         }
     })
 }
@@ -189,7 +191,12 @@ async fn each_root_finds_its_party_by_identifier() {
         &organisation("Acme", "O-1", "urn:agb"),
     )
     .await;
-    let nurse = create(&svc, PartyKind::Role, &role("Nurse", "R-1", "urn:big")).await;
+    let nurse = create(
+        &svc,
+        PartyKind::Role,
+        &role("Nurse", "R-1", "urn:big", party_id(&jane)),
+    )
+    .await;
 
     for (class, id, system, expected) in [
         ("PERSON", "P-1", "urn:bsn", &jane),
@@ -668,7 +675,12 @@ async fn an_ehr_whose_subject_names_the_party_joins() {
     )
     .await;
     let acme_ehr = subject_ehr(&svc, party_id(&acme), "local", "ORGANISATION", "visit o").await;
-    let nurse = create(&svc, PartyKind::Role, &role("Nurse", "R-1", "urn:big")).await;
+    let nurse = create(
+        &svc,
+        PartyKind::Role,
+        &role("Nurse", "R-1", "urn:big", party_id(&ada)),
+    )
+    .await;
     let nurse_ehr = subject_ehr(&svc, party_id(&nurse), "local", "ROLE", "visit r").await;
 
     // A second PERSON named in the `local` namespace: one EHR, one row.
