@@ -600,7 +600,7 @@ async fn turn_ordinary(svc: &FerroEhrService, fixture: &Fixture) -> Vec<(PartyKi
             };
             let ordinary = as_admin(update(svc, kind, vo_of(uid), uid, &body))
                 .await
-                .unwrap_or_else(|e| panic!("an administrator turns {uid} ordinary: {e:?}"));
+                .unwrap_or_else(|e| panic!("an administrator turns a {class} ordinary: {e:?}"));
             turned.push((kind, ordinary));
         }
     }
@@ -674,9 +674,9 @@ async fn the_mark_is_written_by_the_commit_and_never_cleared() {
             marks.push((vo, mark(&db, vo).await.expect("a policy party is marked")));
         }
     }
-    for uids in fixture.ordinary.values() {
+    for (class, uids) in &fixture.ordinary {
         for uid in uids {
-            assert_eq!(mark(&db, vo_of(uid)).await, None, "the ordinary {uid}");
+            assert_eq!(mark(&db, vo_of(uid)).await, None, "an ordinary {class}");
         }
     }
 
@@ -744,17 +744,14 @@ async fn the_refill_rebuilds_the_mark() {
     .await
     .expect("the refill runs");
 
-    for uids in fixture.policy.values() {
+    for (class, uids) in &fixture.policy {
         for uid in uids {
-            assert!(
-                mark(&db, vo_of(uid)).await.is_some(),
-                "the policy party {uid}"
-            );
+            assert!(mark(&db, vo_of(uid)).await.is_some(), "a policy {class}");
         }
     }
-    for uids in fixture.ordinary.values() {
+    for (class, uids) in &fixture.ordinary {
         for uid in uids {
-            assert_eq!(mark(&db, vo_of(uid)).await, None, "the ordinary {uid}");
+            assert_eq!(mark(&db, vo_of(uid)).await, None, "an ordinary {class}");
         }
     }
 }
