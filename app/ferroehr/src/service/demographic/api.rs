@@ -126,8 +126,7 @@ impl FerroEhrService {
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
         let (vo_id, version) = (address.vo_id, address.tree());
-        self.policy_read_gate(vo_id).await?;
-        let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
+        let at = self.gated_at(vo_id, version_at_time.as_deref()).await?;
         let mut resp = self.read_party(kind, vo_id, version, at).await?;
         // Attach the party's stored ITEM_TAGs for the item-tag response headers
         // (person_get.yaml). A deleted read carries no metadata → no-op.
@@ -269,8 +268,7 @@ impl FerroEhrService {
         vo_id: VoId,
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.policy_read_gate(vo_id).await?;
-        let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
+        let at = self.gated_at(vo_id, version_at_time.as_deref()).await?;
         self.party_version_at_time(vo_id, at).await
     }
 
@@ -427,8 +425,7 @@ impl FerroEhrService {
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
         let (vo_id, version) = (address.vo_id, address.tree());
-        self.policy_read_gate(vo_id).await?;
-        let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
+        let at = self.gated_at(vo_id, version_at_time.as_deref()).await?;
         self.read_relationship(vo_id, version, at).await
     }
 
@@ -545,8 +542,7 @@ impl FerroEhrService {
         vo_id: VoId,
         version_at_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.policy_read_gate(vo_id).await?;
-        let at = version_at_time.as_deref().map(parse_at_time).transpose()?;
+        let at = self.gated_at(vo_id, version_at_time.as_deref()).await?;
         self.relationship_version_at_time(vo_id, at).await
     }
 
@@ -567,6 +563,17 @@ impl FerroEhrService {
         Ok(ServiceResponse::plain(
             self.relationship_version(vo_id, version).await?,
         ))
+    }
+
+    /// The instant `version_at_time` names, once the read of `vo_id` passes
+    /// [`Self::policy_read_gate`].
+    async fn gated_at(
+        &self,
+        vo_id: VoId,
+        version_at_time: Option<&str>,
+    ) -> Result<Option<jiff::Timestamp>, ServiceError> {
+        self.policy_read_gate(vo_id).await?;
+        version_at_time.map(parse_at_time).transpose()
     }
 
     /// Refuses the read of the party or relationship `vo_id` when it is a
