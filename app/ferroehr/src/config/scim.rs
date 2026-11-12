@@ -315,7 +315,9 @@ mod tests {
         let refused = toml::from_str::<ScimConfig>("public_base_url = \"https://cdr.example.com\"")
             .expect_err("the key is unknown");
         assert!(
-            refused.to_string().contains("unknown field `public_base_url`"),
+            refused
+                .to_string()
+                .contains("unknown field `public_base_url`"),
             "{refused}"
         );
     }

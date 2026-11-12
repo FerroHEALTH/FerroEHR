@@ -686,8 +686,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
             !body.contains("URL_PW_SENTINEL"),
             "URL userinfo leaked from {uri}: {body}"
         );
-        // NOTE: no openEHR spec governs configuration: our own design; URL 11 was
-        // `[auth.scim] public_base_url`, which URL 10 replaces.
+        // URL 11 was `[auth.scim] public_base_url`, which URL 10 replaces.
         for n in (1..=13).filter(|n| ![4, 11].contains(n)) {
             assert!(
                 body.contains(&format!("https://***@h{n}/p")),

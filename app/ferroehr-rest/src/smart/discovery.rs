@@ -326,7 +326,8 @@ mod tests {
     #[test]
     fn the_base_url_hangs_off_the_public_url_and_the_mount_path() {
         let mut cfg = enabled_cfg();
-        cfg.public_root = Some(PublicRoot::new("https://gw.example.com/cdr", "/ehr").expect("a root"));
+        cfg.public_root =
+            Some(PublicRoot::new("https://gw.example.com/cdr", "/ehr").expect("a root"));
         let options = options(&cfg);
         assert_eq!(
             options.services[OPENEHR_REST_SERVICE]["baseUrl"],

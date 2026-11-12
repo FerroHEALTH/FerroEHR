@@ -502,7 +502,11 @@ impl FerroEhrConfig {
         if let Err(e) = self.auth.smart.validate() {
             errors.push(ConfigError::semantic(format!("auth.smart: {e}")));
         }
-        errors.extend(self.public_url_errors().into_iter().map(ConfigError::semantic));
+        errors.extend(
+            self.public_url_errors()
+                .into_iter()
+                .map(ConfigError::semantic),
+        );
         let resolved = auth::resolve(&self.auth.shared).ok();
         errors.extend(
             self.auth

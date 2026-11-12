@@ -65,6 +65,7 @@ use crate::extensions::access::authn::{self, AuthError, Authenticator};
 use crate::scim::protocol::MEDIA_TYPE;
 use crate::scim::protocol::discovery::{self, Discovery, DiscoveryError};
 use crate::scim::protocol::error::ScimError;
+use crate::scim::protocol::urn;
 use crate::state::AppState;
 
 /// The path the endpoint is served under.
@@ -195,19 +196,20 @@ fn resources(
     discovery: &Discovery,
     service: Arc<FerroEhrService>,
 ) -> Result<Router<AppState>, String> {
-    let schema = |name: &str| {
-        discovery
+    let base_url = base_url(config);
+    let listing = |name: &str, urn: &str, attributes: &[&str]| {
+        let schema = discovery
             .resource_schema(name)
             .cloned()
-            .ok_or_else(|| format!("the discovery documents define no {name}"))
+            .ok_or_else(|| format!("the discovery documents define no {name}"))?;
+        listing::Listing::new(schema, scim, &base_url, urn, attributes)
     };
     let users = users::Users::new(
         Arc::clone(&service),
         user_map::UserMap::new(&config.party_binding)?,
-        schema("User")?,
+        listing("User", urn::CORE_USER, &["userName", "externalId", "id"])?,
         scim,
-        &base_url(config),
-    )?;
+    );
     let routes = Router::new()
         .route("/Users", get(users::list).post(users::create))
         .route(
@@ -221,7 +223,15 @@ fn resources(
     let Some(map) = group_map::GroupMap::new(config, scim)? else {
         return Ok(routes);
     };
-    let groups = groups::Groups::new(service, map, schema("Group")?, scim, &base_url(config))?;
+    let groups = groups::Groups::new(
+        service,
+        map,
+        listing(
+            "Group",
+            urn::CORE_GROUP,
+            &["displayName", "externalId", "id"],
+        )?,
+    );
     Ok(routes.merge(
         Router::new()
             .route("/Groups", get(groups::list).post(groups::create))

@@ -165,10 +165,13 @@ mod tests {
 
     #[test]
     fn the_table_takes_no_public_base_url() {
-        let refused = toml::from_str::<SmartConfig>("public_base_url = \"https://cdr.example.com\"")
-            .expect_err("the key is unknown");
+        let refused =
+            toml::from_str::<SmartConfig>("public_base_url = \"https://cdr.example.com\"")
+                .expect_err("the key is unknown");
         assert!(
-            refused.to_string().contains("unknown field `public_base_url`"),
+            refused
+                .to_string()
+                .contains("unknown field `public_base_url`"),
             "{refused}"
         );
     }

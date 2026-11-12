@@ -177,7 +177,9 @@ async fn a_proof_addressed_elsewhere_is_refused() {
         let (status, challenge) = send(&app, &token, &proof).await;
         assert_eq!(status, StatusCode::UNAUTHORIZED, "{htu}: {challenge:?}");
         assert!(
-            challenge.as_deref().is_some_and(|text| text.contains("DPoP")),
+            challenge
+                .as_deref()
+                .is_some_and(|text| text.contains("DPoP")),
             "{htu}: {challenge:?}"
         );
     }

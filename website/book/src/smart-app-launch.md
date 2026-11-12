@@ -174,8 +174,9 @@ A document looks like:
 
 - **`services`** names the openEHR REST service; `org.fhir.rest` is never
   advertised, because FerroEHR serves no FHIR API for clinical data. Each
-  `baseUrl` is **absolute**, built by prefixing the CDR's own base path with
-  `public_base_url`, which is why that key is required.
+  `baseUrl` is **absolute**, built from
+  [`server.public_base_url`](installation/config-server.md#public_base_url-the-one-public-url),
+  `server.base_path` and `api.base_path`, which is why that key is required.
 - **`capabilities`** carries what the server enforces: `context-openehr-ehr`
   and `openehr-permission-v1` always, `permission-user`, and
   `permission-patient` only when `patient_issuers` binds an issuer; the client

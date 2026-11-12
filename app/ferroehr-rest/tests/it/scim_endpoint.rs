@@ -318,6 +318,7 @@ async fn off_by_default_nothing_is_served() {
     let config = {
         let mut c = AppConfig { ..config(None) };
         c.auth.scim = Some(ScimConfig::default());
+        c.public_root = None;
         c
     };
     let app = common::router_with(config, service).await;

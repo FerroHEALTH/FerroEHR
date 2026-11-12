@@ -38,8 +38,7 @@ use crate::scim::protocol::filter::Filter;
 use crate::scim::protocol::list::Projection;
 use crate::scim::protocol::patch::PatchRequest;
 use crate::scim::protocol::path::AttrPath;
-use crate::scim::protocol::resource::{Container, Resource, ResourceSchema};
-use crate::scim::protocol::urn;
+use crate::scim::protocol::resource::{Container, Resource};
 
 /// What the `/Users` handlers share.
 #[derive(Clone)]
@@ -57,25 +56,14 @@ struct Inner {
 }
 
 impl Users {
-    /// The handlers' state over `service`.
-    ///
-    /// # Errors
-    /// The refusal naming what the mapping or the schema lacks.
+    /// The handlers' state over `service`, listing Users by `listing`.
     pub(crate) fn new(
         service: Arc<FerroEhrService>,
         map: UserMap,
-        schema: ResourceSchema,
+        listing: Listing,
         scim: &ferroehr::config::scim::ScimConfig,
-        base_url: &str,
-    ) -> Result<Self, String> {
-        let listing = Listing::new(
-            schema,
-            scim,
-            base_url,
-            urn::CORE_USER,
-            &["userName", "externalId", "id"],
-        )?;
-        Ok(Self {
+    ) -> Self {
+        Self {
             service,
             inner: Arc::new(Inner {
                 map,
@@ -86,7 +74,7 @@ impl Users {
                 },
                 contact_erasure_minutes: scim.erasure_minutes(),
             }),
-        })
+        }
     }
 }
 
