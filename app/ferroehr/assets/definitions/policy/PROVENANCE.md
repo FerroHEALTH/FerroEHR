@@ -3,12 +3,16 @@
 Six ADL 2 archetypes, the defaults of FerroEHR's authorization model. The
 binary carries them (`ferroehr::party_binding::policy::DEFINITIONS`), and
 each boot stores one when no definition of its id is stored, never over a
-stored one. FerroEHR recognises a policy party by these archetypes (or a
-specialisation of one) under any template, and no configuration key names
-them; a deployment versions or replaces the templates through the
-definition API. A party of one of them is a
-policy party, which only an administrator writes and reads; the book's
-"Operational policy" page describes the model.
+stored one. They are examples: FerroEHR recognises a policy party by the
+codes it holds in any archetype, never by these archetype ids, and no
+configuration key names them; a deployment versions or replaces the
+templates through the definition API. Each carries the codes: every `ROLE`
+holds an `Operation` element (`id90`) whose `DV_CODED_TEXT` is a code of
+FerroEHR's operation terminology `ferroehr-operations`, the acts-for
+relationship holds `ferroehr-operations::acts_for` in its details (`id6`),
+and the `AGENT` holds a `client_id` identifier, so a party of one of them is
+a policy party, which only an administrator writes and reads (#5485); the
+book's "Operational policy" page describes the model.
 
 1. `openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0.adls`: the `AGENT` of a software
    system, identified by a `DV_IDENTIFIER` in `details` whose issuer is the

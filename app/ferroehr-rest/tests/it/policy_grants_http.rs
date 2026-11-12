@@ -15,7 +15,8 @@ use std::time::Duration;
 
 use axum::Router;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
-use ferroehr::party_binding::grants::operation::{Operation, TERMINOLOGY};
+use ferroehr::party_binding::grants::operation::Operation;
+use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::FerroEhrService;
 use ferrohealth_smart::profile::Preset;
 use http::{StatusCode, header};

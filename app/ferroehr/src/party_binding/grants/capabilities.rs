@@ -7,7 +7,7 @@
 //! The REST layer resolves the caller's capabilities after authentication
 //! and runs the request inside them, so a check anywhere in the request reads
 //! them with [`Capabilities::current`]. A grant is an operation of
-//! [`crate::party_binding::grants::operation::TERMINOLOGY`] a `CAPABILITY` of a `ROLE` the caller performs holds,
+//! [`crate::party_binding::policy_mark::TERMINOLOGY`] a `CAPABILITY` of a `ROLE` the caller performs holds,
 //! in force on the request's date and instant, of an operation
 //! `[authz.grants] allowed` admits. No openEHR spec gives a capability an
 //! authorization meaning: our own design.
@@ -24,8 +24,9 @@ use std::sync::Arc;
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::party_binding::grants::derive::{coded, walk};
+use crate::party_binding::grants::derive::walk;
 use crate::party_binding::grants::operation::Operation;
+use crate::party_binding::policy_mark::coded;
 
 tokio::task_local! {
     /// The capabilities of the caller of the running request.
@@ -138,7 +139,7 @@ impl Grant {
 }
 
 /// The `credentials` of a grant, or one `CLUSTER` of them, read by the
-/// elements [`crate::party_binding::grants::operation::TERMINOLOGY`] names.
+/// elements [`crate::party_binding::policy_mark::TERMINOLOGY`] names.
 ///
 /// An element or a cluster is read by the code of its `name`, a
 /// `DV_CODED_TEXT` of the operation terminology, wherever it sits in the
@@ -272,7 +273,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::party_binding::grants::operation::TERMINOLOGY;
+    use crate::party_binding::policy_mark::TERMINOLOGY;
 
     fn named(code: &str, value: &Value) -> Value {
         json!({"_type": "ELEMENT", "archetype_node_id": "at1",

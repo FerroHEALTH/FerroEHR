@@ -9,7 +9,7 @@
 //! Nothing is read by archetype or node id: a client identifier is any
 //! `DV_IDENTIFIER` of type [`CLIENT_ID`] in the actor's `details` or
 //! `identities`, an operation any `DV_CODED_TEXT` value of
-//! [`TERMINOLOGY`] in a capability's `credentials`, and a bound the
+//! [`crate::party_binding::policy_mark::TERMINOLOGY`] in a capability's `credentials`, and a bound the
 //! `DV_DATE_TIME` of an element that terminology names
 //! [`NOT_BEFORE`] or [`NOT_AFTER`]. No openEHR spec gives a capability an
 //! authorization meaning: our own design.
@@ -22,9 +22,8 @@
 
 use serde_json::Value;
 
-use crate::party_binding::grants::operation::{
-    CLIENT_ID, NOT_AFTER, NOT_BEFORE, TERMINOLOGY, is_qualifier,
-};
+use crate::party_binding::grants::operation::{NOT_AFTER, NOT_BEFORE, is_qualifier};
+use crate::party_binding::policy_mark::{CLIENT_ID, coded};
 use crate::versioning::Kind;
 
 /// A `Not before` or `Not after` bound of a capability's credentials.
@@ -44,7 +43,7 @@ pub(crate) enum Bound {
 pub(crate) struct CapabilityFacts {
     /// The capability's position in `ROLE.capabilities`.
     pub(crate) ordinal: i32,
-    /// The code of [`TERMINOLOGY`] it holds, as written.
+    /// The code of [`crate::party_binding::policy_mark::TERMINOLOGY`] it holds, as written.
     pub(crate) code: String,
     /// The capability's `time_validity`.
     pub(crate) validity: Option<Value>,
@@ -170,15 +169,6 @@ fn client(value: &Value) -> Option<(String, String)> {
         .flatten()
 }
 
-/// The code of `value` when it is a `DV_CODED_TEXT` of [`TERMINOLOGY`].
-pub(crate) fn coded(value: &Value) -> Option<&str> {
-    let code = value.get("defining_code")?;
-    (value.get("_type").and_then(Value::as_str) == Some("DV_CODED_TEXT")
-        && code.get("terminology_id")?.get("value")?.as_str() == Some(TERMINOLOGY))
-    .then(|| code.get("code_string")?.as_str())
-    .flatten()
-}
-
 /// The bound the `DV_DATE_TIME` value of the element `element` names.
 fn bound(element: &Value) -> Bound {
     element
@@ -214,6 +204,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+    use crate::party_binding::policy_mark::TERMINOLOGY;
 
     fn coded_text(code: &str, terminology: &str) -> Value {
         json!({"_type": "DV_CODED_TEXT", "value": code,

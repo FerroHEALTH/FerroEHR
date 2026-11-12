@@ -6,7 +6,7 @@
 //!
 //! A `CAPABILITY` grants an operation when its `credentials` hold, anywhere
 //! in their tree, a `DV_CODED_TEXT` whose `defining_code` names
-//! [`TERMINOLOGY`] and an operation code: the RM's `ITEM_STRUCTURE` with a
+//! [`crate::party_binding::policy_mark::TERMINOLOGY`] and an operation code: the RM's `ITEM_STRUCTURE` with a
 //! terminology binding, which a deployment models in any archetype or
 //! template. The same terminology names the acts-for relationship and the
 //! qualifiers a grant carries. No openEHR spec gives a capability an
@@ -27,16 +27,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-/// The `TERMINOLOGY_ID` of FerroEHR's operation terminology.
-pub const TERMINOLOGY: &str = "ferroehr-operations";
-
-/// The `DV_IDENTIFIER.type` that binds an actor to an OAuth 2.0 client: its
-/// `issuer` is the token issuer and its `id` the `client_id`.
-pub const CLIENT_ID: &str = "client_id";
-
-/// The code of a `PARTY_RELATIONSHIP` from a client to the party it acts
-/// for, in its `name` or its details.
-pub const ACTS_FOR: &str = "acts_for";
+use crate::party_binding::policy_mark::ACTS_FOR;
 
 /// The code naming the credentials element whose `DV_DATE_TIME` is the
 /// instant before which a grant does not hold.
@@ -98,7 +89,7 @@ impl Operation {
         Self::ReadIdentifiers,
     ];
 
-    /// The operation's code in [`TERMINOLOGY`].
+    /// The operation's code in [`crate::party_binding::policy_mark::TERMINOLOGY`].
     #[must_use]
     pub const fn code(self) -> &'static str {
         match self {
@@ -130,7 +121,7 @@ impl fmt::Display for Operation {
     }
 }
 
-/// Whether `code` of [`TERMINOLOGY`] is a qualifier rather than an
+/// Whether `code` of [`crate::party_binding::policy_mark::TERMINOLOGY`] is a qualifier rather than an
 /// operation: the acts-for code, a bound or a scope.
 #[must_use]
 pub(crate) fn is_qualifier(code: &str) -> bool {
