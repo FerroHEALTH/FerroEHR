@@ -1272,9 +1272,17 @@ fn place(
     // Per relative segment, the template-constrained concrete type and name of
     // the structural wrapper at that absolute path.
     let types = wrapper_types(&child.aql_path, rel.len(), &ctx.slots);
+    // NOTE: master04 §"Conditionally Collapsed Wrapper Types": a collapsed EVENT's
+    // `events` level is a structural wrapper the leaf below it shares, never its own.
+    let id_idx = rel
+        .iter()
+        .rposition(|s| is_multiple(&s.attribute))
+        .filter(|&i| {
+            i + 1 == rel.len() || types.get(i).is_none_or(|facts| facts.rm_type.is_none())
+        });
     let placement = Placement {
         rel,
-        id_idx: rel.iter().rposition(|s| is_multiple(&s.attribute)),
+        id_idx,
         child,
         occ,
         path,
