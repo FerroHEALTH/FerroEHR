@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1712,7 +1712,7 @@ It can be implied that the heartbeat is present if 'Heart rate' &gt;0 /min. (en)
       <items code="at1019">
         <items id="text">Method</items>
         <items id="description">The method used to observe the heartbeat.</items>
-        <items id="comment">For example, auscultation or electric monitoring. </items>
+        <items id="comment">For example, auscultation or electric monitoring.</items>
       </items>
       <items code="at1022">
         <items id="text">Clinical description</items>
@@ -2492,7 +2492,7 @@ It can be implied that the heartbeat is present if 'Heart rate' &gt;0 /min. (en)
       <items code="at1019">
         <items id="text">Menetelmä</items>
         <items id="description">*Method used to observe the heartbeat. (en)</items>
-        <items id="comment">For example, auscultation or electronic monitoring. </items>
+        <items id="comment">For example, auscultation or electronic monitoring.</items>
       </items>
       <items code="at1022">
         <items id="text">Kliininen kuvaus</items>
@@ -2771,4 +2771,3 @@ It can be implied that the heartbeat is present if 'Heart rate' &gt;0 /min. (en)
     </term_bindings>
   </ontology>
 </archetype>
-

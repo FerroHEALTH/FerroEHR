@@ -64,7 +64,6 @@ definition
 		}
 	}
 
-
 ontology
 	terminologies_available = <"MTH", ...>
 	term_definitions = <

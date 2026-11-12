@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -56,10 +56,10 @@ Derived from: ASA-klassifikasjon, Publisert arketype [Internet]. Nasjonal IKT, N
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">4C4DD4CF98D10F540319C3ECFC498330</other_details>
-    <other_details id="build_uid">f7d26beb-edb0-4d66-86e4-fc63147b95df</other_details>
+    <other_details id="MD5-CAM-1.0.1">9BD22711FC3BF6FA7E17E92B980EEE11</other_details>
+    <other_details id="build_uid">0d17a85b-5724-4152-afea-6ae59de7cdd3</other_details>
     <other_details id="ip_acknowledgements">This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.</other_details>
-    <other_details id="revision">1.1.0</other_details>
+    <other_details id="revision">1.1.1</other_details>
     <details>
       <language>
         <terminology_id>
@@ -120,8 +120,7 @@ The ASA (2020) reference defines each classification and provides some adult, pa
 &#xD;
 Referansen til ASA (2020) definerer hver klassifikasjon og gir noen eksempler for voksne, barn og obstetriske pasienter for å veilede klinikere i å tildele et nivå av fysisk klassifikasjon. Fordi disse eksemplene er mange og kan ytterligere tilpasses eller beskrives på institusjonsnivå, er imidlertid spesifikke eksempler ikke inkludert i denne arketypen.&#xD;
 &#xD;
-Norsk oversettelse av definisjoner og ASA-godkjente eksempler (se https://www.asahq.org/standards-and-practice-parameters/statement-on-asa-physical-status-classification-system). (n.d.). Retrieved December 17, 2025, from https://www.nafweb.no/assets/files/andre-dokumenter/asa-klassifisering-2025-(naf).pdf&#xD;
-</use>
+Norsk oversettelse av definisjoner og ASA-godkjente eksempler (se https://www.asahq.org/standards-and-practice-parameters/statement-on-asa-physical-status-classification-system). (n.d.). Retrieved December 17, 2025, from https://www.nafweb.no/assets/files/andre-dokumenter/asa-klassifisering-2025-(naf).pdf</use>
       <misuse />
       <copyright>© openEHR Foundation, openEHR Norway</copyright>
     </details>
@@ -186,6 +185,25 @@ The ASA (2020) reference defines each classification and provides some adult, pa
       <misuse />
       <copyright>© openEHR Foundation, openEHR Norway</copyright>
     </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nl</code_string>
+      </language>
+      <purpose>Voor het vastleggen van het classificatiesysteem van de American Society of Anesthesiologists (ASA) als onderdeel van een preoperatieve risicobeoordeling.</purpose>
+      <keywords>ASA</keywords>
+      <keywords>preoperatief</keywords>
+      <keywords>chirurgie</keywords>
+      <keywords>anesthesiologie</keywords>
+      <keywords>anesthesie</keywords>
+      <use>Voor het vastleggen van het classificatiesysteem van de American Society of Anesthesiologists (ASA) als onderdeel van een preoperatieve risicobeoordeling.&#xD;
+&#xD;
+De ASA (2020)-referentie definieert elke classificatie en geeft enkele voorbeelden voor volwassenen, kinderen en obstetrie om zorgverleners te helpen een classificatieniveau voor de fysieke status toe te kennen. Omdat deze voorbeelden talrijk zijn en op instellingsniveau verder verfijnd of beschreven kunnen worden, zijn specifieke voorbeelden niet in dit archetype opgenomen.</use>
+      <misuse />
+      <copyright />
+    </details>
   </description>
   <translations>
     <language>
@@ -246,6 +264,17 @@ The ASA (2020) reference defines each classification and provides some adult, pa
     <author id="email">dasanchez@clinic.cat</author>
     <accreditation>Clinical data analyst</accreditation>
     <other_details id="other_contributors">None</other_details>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nl</code_string>
+    </language>
+    <author id="name">Mattijs Kuhlmann</author>
+    <author id="organisation">Nedap</author>
+    <author id="email">mattijs.kuhlmann@nedap.com</author>
   </translations>
   <uid>
     <value>e42ba3b0-e0ab-4534-8d9a-9d8c1de3c708</value>
@@ -955,6 +984,67 @@ The ASA (2020) reference defines each classification and provides some adult, pa
         <items id="comment">Representado por el sufijo 'E' añadido a la clase. Por ejemplo: '3E'. La Clase 5 suele ser una emergencia y por lo tanto casi siempre se designa solo como '5E'. La clase '6E' no es válida y simplemente se registra como clase '6', ya que la extracción de órganos en pacientes en estado de muerte cerebral se realiza en la urgencia. La definición de una emergencia se puede encontrar en la referencia de la ASA (2020).</items>
       </items>
     </term_definitions>
+    <term_definitions language="nl">
+      <items code="at0000">
+        <items id="text">ASA-classificatiesysteem fysieke status</items>
+        <items id="description">Classificatiesysteem van de American Society of Anesthesiologists (ASA) als onderdeel van een preoperatieve risicobeoordeling.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Classificatie</items>
+        <items id="description">Vastgestelde classificatie van een patiënt.</items>
+        <items id="comment">Voorbeelden voor elke klasse zijn te vinden in de ASA (2020)-referentie.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">ASA 1</items>
+        <items id="description">Een normale, gezonde patiënt.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">ASA 2</items>
+        <items id="description">Een patiënt met een milde systemische aandoening.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">ASA 3</items>
+        <items id="description">Een patiënt met een ernstige systemische aandoening.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">ASA 4</items>
+        <items id="description">Een patiënt met een ernstige systemische aandoening die een constante bedreiging voor het leven vormt.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">ASA 5</items>
+        <items id="description">Een moribunde patiënt van wie niet verwacht wordt dat die zonder de operatie overleeft.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">ASA 6</items>
+        <items id="description">Een hersendode patiënt van wie organen worden uitgenomen voor donatie.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Event Series</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Willekeurig moment in de tijd</items>
+        <items id="description">Ongespecificeerd moment in de tijd dat expliciet gedefinieerd kan worden in een template of tijdens het vastleggen van de data.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0018">
+        <items id="text">ItemTree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Uitbreiding</items>
+        <items id="description">Aanvullende informatie die nodig is om het model uit te breiden met lokale inhoud of af te stemmen op andere referentiemodellen of formalismen.</items>
+        <items id="comment">Bijvoorbeeld: lokale informatiebehoeften; of aanvullende metadata voor afstemming met FHIR.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Spoed (E)</items>
+        <items id="description">Registreer als Waar als de operatie in een spoedsituatie werd uitgevoerd.</items>
+        <items id="comment">Weergegeven door het achtervoegsel 'E' achter de klasse. Bijvoorbeeld: '3E'. Klasse 5 is meestal een spoedsituatie en wordt daarom vrijwel altijd als '5E' aangeduid. De klasse '6E' is niet geldig en wordt eenvoudigweg als klasse '6' vastgelegd, omdat alle orgaanuitname bij hersendode patiënten met spoed plaatsvindt. De definitie van een spoedsituatie is te vinden in de ASA (2020)-referentie.</items>
+      </items>
+    </term_definitions>
     <term_bindings terminology="SNOMED-CT">
       <items code="at0000">
         <value>
@@ -1023,4 +1113,3 @@ The ASA (2020) reference defines each classification and provides some adult, pa
     </term_bindings>
   </ontology>
 </archetype>
-

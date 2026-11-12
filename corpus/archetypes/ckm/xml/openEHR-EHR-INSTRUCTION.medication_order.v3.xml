@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -3468,8 +3468,7 @@ Det bør om mulig benyttes terminologi, f.eks. FEST, for å angi administrerings
       <items code="at0009">
         <items id="text">Instruções Gerais da Prescrição</items>
         <items id="description">Narrativa completa da descrição de como o item deve ser utilizado.</items>
-        <items id="comment">Esta narrativa deve normalmente incluir os dados capturados em "quantidade de dose", "Duração da dose" e quaisquer instruções adicionais de uso. Ainda que o detalhamento da dose esteja totalmente representado de forma estruturada e computável, esse elemento deve também representar o equivalente narrativo, geralmente gerado automaticamente. Se não for possível representar o detalhamento da dose do medicamento na forma computável, não se recomenda a representação parcial destes itens, Neste caso, deve ser registradas somente em forma narrativa usando este elemento de dados.&#xD;
-</items>
+        <items id="comment">Esta narrativa deve normalmente incluir os dados capturados em "quantidade de dose", "Duração da dose" e quaisquer instruções adicionais de uso. Ainda que o detalhamento da dose esteja totalmente representado de forma estruturada e computável, esse elemento deve também representar o equivalente narrativo, geralmente gerado automaticamente. Se não for possível representar o detalhamento da dose do medicamento na forma computável, não se recomenda a representação parcial destes itens, Neste caso, deve ser registradas somente em forma narrativa usando este elemento de dados.</items>
       </items>
       <items code="at0011">
         <items id="text">Critério para o início da prescrição</items>
@@ -4363,8 +4362,7 @@ Das Ziel oder die Zieldosis kann hier als Teil eines verknüpften EVALUATION-Arc
       </items>
       <items code="at0070">
         <items id="text">Läkemedelsartikel</items>
-        <items id="description">Benämning på det läkemedel, vaccin eller annan terapeutisk/ordinerbar artikel som beställs.&#xD;
-</items>
+        <items id="description">Benämning på det läkemedel, vaccin eller annan terapeutisk/ordinerbar artikel som beställs.</items>
         <items id="comment">Beroende på ordinationstyp, kan detta fält användas för antingen generisk eller produktbaserad ordination. Detta datafält kan användas för att registrera relaterade beställningar av olika läkemedel när de ordineras som enpack. Om möjligt, benämn läkemedelsartikeln med en terminologi. Omfattningen av benämningen kan variera från namn på läkemedelsartikeln till detaljer om själva läkemedelspaketet. Fri textinmatning bör endast användas om det inte finns någon lämplig terminologi tillgänglig.</items>
       </items>
       <items code="at0091">
@@ -4738,8 +4736,7 @@ Es prefereix la codificació de la localització corporal amb terminologia, semp
       <items code="at0161">
         <items id="text">Data de venciment de la dispensació</items>
         <items id="description">La data després de la qual l'element ordenat ja no és vàlid per ser dispensat legalment.</items>
-        <items id="comment">En algunes jurisdiccions, les ordres de dispensació poden tenir una data de venciment després de la qual la prescripció ja no es podria dispensar.&#xD;
-</items>
+        <items id="comment">En algunes jurisdiccions, les ordres de dispensació poden tenir una data de venciment després de la qual la prescripció ja no es podria dispensar.</items>
       </items>
       <items code="at0162">
         <items id="text">Motiu anul·lat</items>
@@ -5621,4 +5618,3 @@ L’objectif ou la dose cible peut être consigné ici ou, plus couramment, dans
     </term_definitions>
   </ontology>
 </archetype>
-

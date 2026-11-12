@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -395,43 +395,43 @@ In clinical scenarios requiring the documentation of more than one strength resp
       </items>
       <items code="at0003">
         <items id="text">Left arm</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0002">
         <items id="text">Right arm</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Left leg</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0004">
         <items id="text">Right leg</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">No visible muscle contraction</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Visible muscle contraction with no or trace movement</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Limb movement, but not against gravity</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Movement against gravity but not resistance</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Movement against at least some resistance supplied by the examiner</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Full strength</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Clinical description</items>
@@ -449,53 +449,51 @@ In clinical scenarios requiring the documentation of more than one strength resp
       </items>
       <items code="at0002">
         <items id="text">Rechter Arm</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0003">
         <items id="text">Linker Arm</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0004">
         <items id="text">Rechtes Bein</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Linkes Bein</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Klinische Beschreibung</items>
-        <items id="description">Beschreibung der beobachteten Muskelkraft an der angegebenen Körperstelle.&#xD;
-</items>
+        <items id="description">Beschreibung der beobachteten Muskelkraft an der angegebenen Körperstelle.</items>
       </items>
       <items code="at0007">
         <items id="text">Kraft</items>
-        <items id="description">Beobachtetes Kraftniveau in der angegebenen Gliedmaße oder Muskelgruppe.&#xD;
-</items>
+        <items id="description">Beobachtetes Kraftniveau in der angegebenen Gliedmaße oder Muskelgruppe.</items>
       </items>
       <items code="at0008">
         <items id="text">Keine sichtbare Muskelkontraktion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Sichtbare Muskelkontraktion ohne oder mit minimaler Bewegung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Gliedmaßenbewegung, jedoch nicht gegen die Schwerkraft</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Bewegung gegen die Schwerkraft, jedoch ohne Widerstand</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Bewegung gegen mindestens einen vom Untersucher ausgeübten Widerstand</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Volle Kraft</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Kommentar</items>
@@ -514,4 +512,3 @@ In clinical scenarios requiring the documentation of more than one strength resp
     </term_bindings>
   </ontology>
 </archetype>
-

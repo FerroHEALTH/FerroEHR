@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -85,10 +85,10 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">6693D3AAC8F91648625B726EC5070CCD</other_details>
-    <other_details id="build_uid">e45fe563-4cb6-4d98-aea3-07e9a7c01aaf</other_details>
+    <other_details id="MD5-CAM-1.0.1">4789CB0E45553BBEB04AC84B4B4DB431</other_details>
+    <other_details id="build_uid">087f421e-090e-4181-8ebf-7c16e787621f</other_details>
     <other_details id="ip_acknowledgements">This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.</other_details>
-    <other_details id="revision">2.1.4</other_details>
+    <other_details id="revision">2.1.5</other_details>
     <details>
       <language>
         <terminology_id>
@@ -142,16 +142,16 @@ Nicht zur Darstellung einer formalen und wiederholbaren Schweregradskala wie VAS
       <keywords>problem</keywords>
       <keywords>obehag</keywords>
       <keywords>tecken</keywords>
-      <use>Används för att registrera en enskild episod av ett symtom eller tecken, rapporterat av individen själv eller annan part. Uppgifterna kan registreras av vårdpersonal utifrån det som rapporterats eller observerats, eller av individen själv som en del av patientrapporterad data. &#xD;
+      <use>Används för att registrera en enskild episod av ett symtom eller tecken, rapporterat av individen själv eller annan part. Uppgifterna kan registreras av vårdpersonal utifrån det som rapporterats eller observerats, eller av individen själv som en del av egenrapporterad data.&#xD;
 &#xD;
 Symtom är individens subjektiva upplevelser av fysisk eller psykisk påverkan, medan tecken är objektivt observerbara fynd. Eftersom gränsen mellan rapporterade symtom och tecken ofta är otydlig har denna arketyp utformats för att stödja registrering av hela spektrumet, från tydligt subjektiva symtom till rapporterade eller observerade tecken, i en gemensam informationsmodell.&#xD;
 &#xD;
 Används generellt för registrera alla symtom och tecken.&#xD;
 &#xD;
-Används huvudsakligen för att registrera positiv förekomst av ett symtom eller tecken i SLOT "Structured details" i arketypen OBSERVATION.story eller tillsammans med ett positivt svar i OBSERVATION.symptom_sign_screening. Kan även användas i andra OBSERVATION- eller CLUSTER-arketyper.&#xD;
+Används huvudsakligen för att registrera förekomst av ett symtom eller tecken i SLOT "Structured details" i arketypen OBSERVATION.story eller tillsammans med ett svar i OBSERVATION.symptom_sign_screening. Kan även användas i andra OBSERVATION- eller CLUSTER-arketyper.&#xD;
 &#xD;
 Används i SLOT för "Associerade symtom/tecken" eller "Tidigare episoder" i denna arketyp. Kan vid behov utökas med specifika detaljer i SLOT för "Specifika detaljer", särskilt för mer komplexa symtom eller tecken. Flera instanser kan användas för att beskriva upprepade episoder och varierande detaljnivå i en klinisk berättelse.</use>
-      <misuse>Ska inte användas för screeningfrågor, använd istället OBSERVATION.symptom_sign_screening. Dock kan denna arketyp (Symtom/Tecken) nästlas i SLOT för "additional details" i arketypen OBSERVATION.symptom_sign_screening för att registera detaljer om symtom och tecken.&#xD;
+      <misuse>Ska inte användas för screeningfrågor, använd istället OBSERVATION.symptom_sign_screening. Dock kan denna arketyp nästlas i SLOT för "additional details" i arketypen OBSERVATION.symptom_sign_screening för att registera detaljer om symtom och tecken.&#xD;
 &#xD;
 Ska inte användas för att registrera frånvaro av specifika symtom och tecken. Använd istället CLUSTER.exclusion_symptom_sign.&#xD;
 &#xD;
@@ -214,8 +214,7 @@ Not to be used to record a formal and repeatable severity scale such as VAS or N
       <keywords>sykdomstegn</keywords>
       <keywords>lyte</keywords>
       <keywords>skavank</keywords>
-      <use>	&#xD;
-For å registrere detaljer om en enkeltepisode av et rapportert symptom eller sykdomstegn hos et individ, som redegjort av personen selv, foreldre, omsorgsperson eller andre parter. Registrering kan skje i forbindelse med opptak av anamnese, eller som en selvregistrering som en del av et klinisk spørreskjema eller personlig journal. En fullstendig klinisk anamnese eller pasientanamnese kan inneholde beskrivelser med ulikt detaljnivå om flere episoder knyttet til samme symptom eller sykdomstegn, og vil også kunne inneholde flere ulike symptomer eller sykdomstegn.&#xD;
+      <use>For å registrere detaljer om en enkeltepisode av et rapportert symptom eller sykdomstegn hos et individ, som redegjort av personen selv, foreldre, omsorgsperson eller andre parter. Registrering kan skje i forbindelse med opptak av anamnese, eller som en selvregistrering som en del av et klinisk spørreskjema eller personlig journal. En fullstendig klinisk anamnese eller pasientanamnese kan inneholde beskrivelser med ulikt detaljnivå om flere episoder knyttet til samme symptom eller sykdomstegn, og vil også kunne inneholde flere ulike symptomer eller sykdomstegn.&#xD;
 &#xD;
 Denne arketypen er laget for å registrere positiv tilstedeværelse av et symptom eller sykdomstegn som en del av anamneseopptak ved å bruke OBSERVATION.story-arketypen, eller i sammenheng med et positivt svar i arketypen OBSERVATION.symptom_sign_screening.&#xD;
 &#xD;
@@ -270,6 +269,44 @@ Not to be used for recording objective findings as part of a physical examinatio
 Not to be used for diagnoses and problems that form part of a persisting Problem List - use EVALUATION.problem_diagnosis.&#xD;
 &#xD;
 Not to be used to record a formal and repeatable severity scale such as VAS or NRS. Use appropriate OBSERVATION archetypes for this purpose. (en)</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ja</code_string>
+      </language>
+      <purpose>報告された症状または徴候の単一のエピソードについて詳細に記録するため。必要に応じて過去のエピソードの（詳細ではない）文脈を含める。</purpose>
+      <keywords>訴え</keywords>
+      <keywords>症状</keywords>
+      <keywords>変調</keywords>
+      <keywords>プロブレム</keywords>
+      <keywords>不快</keywords>
+      <keywords>主訴</keywords>
+      <keywords>受診時の症状</keywords>
+      <keywords>徴候</keywords>
+      <keywords>症候</keywords>
+      <keywords>自覚症状</keywords>
+      <use>本人、親、介護者、その他の関係者から報告された症状や徴候について、単一のエピソードを詳細に記録するために用いる。医療従事者が聴取した内容や自ら観察した内容を病歴として記録する場合にも、本人が問診票や個人健康記録に記入する場合にも使用できる。病歴全体や患者の語りには、複数の異なる症状・徴候だけでなく、同じ症状・徴候に関する複数のエピソードが含まれることがあり、それぞれの記述の詳しさも異なる。&#xD;
+&#xD;
+本archetypeは、症状や徴候がある場合に、その内容を詳しく記録するために設計されている。OBSERVATION.storyを用いた病歴聴取の一部として、またはOBSERVATION.symptom_sign_screeningでの「症状・徴候あり」という回答と組み合わせて使用する。&#xD;
+&#xD;
+厳密には、症状は心身の変調に関する主観的な観察に基づくものであり、徴候は客観的な観察に基づくものである。いずれも本人が経験したこととして、本人または他者から病歴の聴取者に伝えられる。この区別に従えば、病歴の記録には、報告された症状を記録するarchetypeと、報告された徴候を記録するarchetypeの二つが必要になる。しかし、実際には、臨床データをどちらのモデルに入力するかを判断して使い分けなければならず、モデルの設計者とデータの入力者の双方に大きな負担が生じるため、現実的ではない。また、症状と徴候には、明確に区別しにくい臨床概念もある。例えば、過去に起きた嘔吐や出血は、症状と報告された徴候のどちらに分類すべきだろうか。そこで本archetypeは、明らかな症状から報告された徴候まで、両者の境界に位置するものも含めて、一つの情報モデルで記録できるように設計されている。&#xD;
+&#xD;
+本archetypeは、あらゆる症状や報告された徴候を記録するための汎用的なモデルとして用いることを想定している。より複雑な症状や徴候を扱う場合には、「詳細記録」SLOTを用いて、それぞれに特有のデータエレメントを追加し、archetypeを拡張できる。 &#xD;
+&#xD;
+本archetypeは、OBSERVATION.story archetypeの「構造化された詳細記録」SLOTで使用することを想定して設計されている。他のOBSERVATIONやCLUSTER archetype内でも使用でき、同じCLUSTER.symptom_sign archetypeの別のインスタンスにある「随伴症状・徴候」SLOTや「過去のエピソード」SLOTにも組み込むことができる。</use>
+      <misuse>特定の症状の有無を尋ねるスクリーニング問診票への回答は、本archetypeではなく、OBSERVATION.symptom_sign_screening archetypeを用いて記録する。ただし、症状や徴候について詳しく記録できるように問診票を拡張する必要がある場合には、OBSERVATION.symptom_sign_screening archetypeの「スクリーニングの詳細」SLOTに、本CLUSTER.symptom_sign archetypeを組み込むことができる。&#xD;
+&#xD;
+症状や徴候がないと明確に伝えられたことを記録する場合には、本archetypeではなく、CLUSTER.exclusion_symptom_signを用いる。ただし、記録の負担や複雑さが増すことを考慮し、それに見合う必要性がある用途に限って慎重に使用する。&#xD;
+&#xD;
+身体診察で得られた客観的所見は、本archetypeではなく、OBSERVATION.examと関連する診察用のCLUSTER archetypeを用いて記録する。&#xD;
+&#xD;
+継続的に管理するプロブレムリストに含まれる診断やプロブレムは、本archetypeではなく、EVALUATION.problem_diagnosisを用いて記録する。&#xD;
+&#xD;
+VASやNRSなど、所定の方法で繰り返し評価できる重症度尺度による評価結果は、本archetypeではなく、適切なOBSERVATION archetypeを用いて記録する。</misuse>
       <copyright />
     </details>
     <details>
@@ -464,6 +501,17 @@ No utilitzar per a registrar una escala de gravetat formal i repetible com l’E
     <author id="name">Vladimir Pizzo</author>
     <author id="organisation">Hospital Sirio Libanes - Brazil</author>
     <author id="email">vladimir.pizzo@hsl.org.br</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ja</code_string>
+    </language>
+    <author id="name">Shinji KOBAYASHI</author>
+    <author id="organisation">NPO openEHR Japan</author>
+    <author id="email">skoba@moss.gr.jp</author>
   </translations>
   <translations>
     <language>
@@ -2851,8 +2899,7 @@ If the anatomical location is included in the Symptom name via precoordinated co
         <items id="text">Anatomische Lokalisation</items>
         <items id="description">Anatomische Lokalisation des Symptoms/Anzeichens.</items>
         <items id="comment">Das Auftreten dieses Datenelements wird auf 0...* gesetzt, um bei Bedarf mehrere Körperstellen im Template voneinander zu trennen. Dies ermöglicht die Darstellung klinischer Szenarien, in denen ein Symptom/Krankheitsanzeichen an mehreren Stellen erfasst werden muss oder in denen sowohl die ursprüngliche als auch die distale Stelle bei der Schmerzausbreitung identifiziert werden, aber alle anderen Attribute wie Wirkung und Dauer identisch sind. Wenn die Anforderungen an die Erfassung der Lokalisation zur Laufzeit durch die Anwendung festgelegt werden oder komplexere Modellierungen wie z.B. relative Positionen erforderlich sind, verwenden Sie CLUSTER.anatomical_location oder CLUSTER.relative_location innerhalb des Slots "Spezifische anatomische Lokalisation" in diesem Archetyp. &#xD;
-Wird die anatomische Lokalisation über vordefinierte Codes in den Symptomnamen aufgenommen, wird dieses Datenelement redundant. Wenn die anatomische Lokalisation mit dem Slot "Spezifische anatomische Lokalisation" erfasst wird, ist die Verwendung dieses Datenelements nicht erlaubt - erfassen Sie entweder die grobe "Anatomische Lokalisation" oder die "Spezifische anatomische Lokalisation", nicht beides.&#xD;
-</items>
+Wird die anatomische Lokalisation über vordefinierte Codes in den Symptomnamen aufgenommen, wird dieses Datenelement redundant. Wenn die anatomische Lokalisation mit dem Slot "Spezifische anatomische Lokalisation" erfasst wird, ist die Verwendung dieses Datenelements nicht erlaubt - erfassen Sie entweder die grobe "Anatomische Lokalisation" oder die "Spezifische anatomische Lokalisation", nicht beides.</items>
       </items>
       <items code="at0152">
         <items id="text">Beginn der Episode</items>
@@ -3100,9 +3147,7 @@ Eksempel på modifiserende faktor: sengeleie med flere puter, spising, eller adm
       <items code="at0151">
         <items id="text">Anatomisk lokalisering</items>
         <items id="description">Registrering av ett enkelt område på kroppen hvor symptomet eller sykdomstegnet var rapportert.</items>
-        <items id="comment">Forekomster for dette dataelementet er satt 0..* for å tillate at flere kroppssted kan trekkes ut i et templat om ønsket. Dette åpner for å representere kliniske scenarier hvor et symptom må registreres flere steder på kroppen eller for å identifisere både opphavssted for smerte og ytterpunkt for utstråling av smerter, og alle andre dataelementer i arketypen som "Innvirkning" og "Varighet" er like. Om kravet for registrering av kroppsplassering er bestemt i en applikasjon eller krever en mer kompleks modellering som for eksempel relativ lokalisering, bruk arketypen CLUSTER.anatomical_location eller CLUSTER.relative_location i "Strukturert anatomisk lokalisering"-SLOTet i denne arketypen. Er den anatomiske lokaliseringen inkludert i "Navn på symptom/sykdomstegn" via prekoordinerte koder er dette dataelementet overflødig. Registreres den anatomiske lokaliseringen i SLOTet "Strukturert anatomisk lokalisering" er bruken av dette dataelementet ikke tillatt. Registrer enten i "Anatomisk lokalisering" eller i "Strukturert anatomisk lokalisering", ikke i begge.&#xD;
-&#xD;
-</items>
+        <items id="comment">Forekomster for dette dataelementet er satt 0..* for å tillate at flere kroppssted kan trekkes ut i et templat om ønsket. Dette åpner for å representere kliniske scenarier hvor et symptom må registreres flere steder på kroppen eller for å identifisere både opphavssted for smerte og ytterpunkt for utstråling av smerter, og alle andre dataelementer i arketypen som "Innvirkning" og "Varighet" er like. Om kravet for registrering av kroppsplassering er bestemt i en applikasjon eller krever en mer kompleks modellering som for eksempel relativ lokalisering, bruk arketypen CLUSTER.anatomical_location eller CLUSTER.relative_location i "Strukturert anatomisk lokalisering"-SLOTet i denne arketypen. Er den anatomiske lokaliseringen inkludert i "Navn på symptom/sykdomstegn" via prekoordinerte koder er dette dataelementet overflødig. Registreres den anatomiske lokaliseringen i SLOTet "Strukturert anatomisk lokalisering" er bruken av dette dataelementet ikke tillatt. Registrer enten i "Anatomisk lokalisering" eller i "Strukturert anatomisk lokalisering", ikke i begge.</items>
       </items>
       <items code="at0152">
         <items id="text">Dato/tid for episodens debut</items>
@@ -3254,9 +3299,7 @@ Eksempel på modifiserende faktor: sengeleie med flere puter, spising, eller adm
       </items>
       <items code="at0200">
         <items id="text">Nadir</items>
-        <items id="description">Dato/tidspunkt da et monophasisk, progredierende symptom eller sykdomstegn nådde sin maksimale intensitet eller funksjonelle påvirkning.&#xD;
-&#xD;
-</items>
+        <items id="description">Dato/tidspunkt da et monophasisk, progredierende symptom eller sykdomstegn nådde sin maksimale intensitet eller funksjonelle påvirkning.</items>
         <items id="comment">For eksempel tidspunktet da nevrologiske funn ved Guillain-Barrés sykdom var på sitt verste.</items>
       </items>
     </term_definitions>
@@ -3513,176 +3556,163 @@ If the anatomical location is included in the Symptom name via precoordinated co
         <items id="description">Rapporterat symtom eller observerat tecken på fysisk eller psykisk påverkan hos en individ.</items>
       </items>
       <items code="at0001">
-        <items id="text">Namn på symptom/tecken</items>
+        <items id="text">Namn på symtom/tecken</items>
         <items id="description">Namnet på det rapporterade symtomet eller tecknet.</items>
         <items id="comment">Koda om möjligt namnet på symtomet med en terminologi.</items>
       </items>
       <items code="at0002">
         <items id="text">Beskrivning</items>
-        <items id="description">Sammanfattande beskrivning av rapporterat symtom eller tecken.</items>
+        <items id="description">Beskrivning av rapporterat symtom eller tecken.</items>
       </items>
       <items code="at0003">
-        <items id="text">Mönster för skov</items>
-        <items id="description">Sammanfattande beskrivning av egenart och mönster av symtom eller tecken under detta skov.</items>
+        <items id="text">Mönster</items>
+        <items id="description">Beskrivning av karakterisering och mönster av symtomet eller tecknet under denna episod.</items>
         <items id="comment">Exempelvis smärta som kan beskrivas som konstant eller återkommande.</items>
       </items>
       <items code="at0017">
         <items id="text">Effekt</items>
-        <items id="description">Upplevd effekt av den modifierande faktorn på symtom eller tecken.</items>
+        <items id="description">Upplevd effekt av den påverkande faktorn på symtomet eller tecknet.</items>
       </items>
       <items code="at0018">
-        <items id="text">Modifierande faktor</items>
-        <items id="description">Beskrivning hur en specifik faktor påverkar aktuellt symtom eller tecken under denna episod.</items>
+        <items id="text">Påverkande faktor</items>
+        <items id="description">Beskrivning av hur en specifik faktor påverkar symtomet eller tecknet under denna episod.</items>
       </items>
       <items code="at0019">
         <items id="text">Faktor</items>
         <items id="description">Namn på den påverkande faktorn.</items>
-        <items id="comment">Exempel på påverkande faktorer att individen ligger på flera kuddar eller tillförs ett specifikt läkemedel.</items>
+        <items id="comment">Exempelvis att individen ligger på flera kuddar eller tillförs ett specifikt läkemedel.</items>
       </items>
       <items code="at0021">
         <items id="text">Svårighetsgrad</items>
-        <items id="description">Gruppering som ger en övergripande bild av svårighetsgraden av symtom eller tecken.</items>
+        <items id="description">Symtomets eller tecknets svårighetsgrad.</items>
         <items id="comment">Det är inte lätt att göra en gradering såsom mild, måttlig eller svår på ett sätt som är tillämpligt på flera symtom eller tecken samt utforma dem så att flera användare kan tolka och registrera dem på ett konsekvent sätt. Vissa organisationer utökar alternativen ytterligare genom att inkludera fler steg som "Obetydlig" och "Mycket allvarlig" eller "Mild-måttlig" och "Måttlig-svår", vilket ökar definitionssvårigheterna och kan också försämra tillförlitligheten mellan olika bedömare. Användning av "Livshotande" och "Dödlig" betraktas också ofta som en del av denna skala, även om det mer speglar ett resultat snarare än en en svårighetsgrad. Mot denna bakgrund är det att föredra att hålla sig till en kortare men väldefinierad lista som skalan med mild/måttlig/svår erbjuder. Möjligheten kvarstår dock att inkludera ytterligare värden i detta datafält i en template.</items>
       </items>
       <items code="at0023">
         <items id="text">Mild</items>
-        <items id="description">Intensiteten av symtom eller tecken påverkar inte normal livsföring. &#xD;
-</items>
+        <items id="description">Intensiteten av symtomet eller tecknet påverkar inte normal livsföring.</items>
       </items>
       <items code="at0024">
         <items id="text">Måttlig</items>
-        <items id="description">Intensiteten av symtom eller tecken påverkar normal livsföring.</items>
+        <items id="description">Intensiteten av symtmet eller tecknet påverkar normal livsföring.</items>
       </items>
       <items code="at0025">
         <items id="text">Svår</items>
-        <items id="description">Intensiteten av symtom eller tecken hindrar normal livsföring.</items>
+        <items id="description">Intensiteten av symtomet eller tecknet hindrar normal livsföring.</items>
       </items>
       <items code="at0028">
-        <items id="text">Skovets duration</items>
-        <items id="description">Varaktigheten av detta skov med symtomet eller tecknet sedan första början.</items>
-        <items id="comment">Om "Tidpunkt för start" och "Upphörande datum/tid" används i IT-system, kan detta datafält beräknas, eller alternativt betraktas som överflödigt i detta scenario. Textdatatypen används för att fånga förinställda varaktighetsintervall som 0-7 dagar, 1-2 veckor, 2 veckor eller mer.&#xD;
-&#xD;
-&#xD;
-</items>
+        <items id="text">Episodens duration</items>
+        <items id="description">Varaktigheten av nuvarande episod med symtomet eller tecknet sedan debut.</items>
+        <items id="comment">Om "Episodens start" och "Tidpunkt för upphörande" används i IT-system, kan detta datafält beräknas, eller alternativt betraktas som överflödigt i detta scenario. Datatypen text används för att fånga förinställda intervall för varaktighet som 0-7 dagar, 1-2 veckor, 2 veckor eller mer.</items>
       </items>
       <items code="at0031">
-        <items id="text">Antal tidigare inträffade episoder</items>
-        <items id="description">Antalet gånger som detta symtom eller tecken har förekommit tidigare.</items>
+        <items id="text">Antal tidigare episoder</items>
+        <items id="description">Antal gånger som symtomet eller tecknet har förekommit tidigare.</items>
       </items>
       <items code="at0037">
         <items id="text">Beskrivning av episoden</items>
-        <items id="description">Beskrivning av förloppet för symtom eller tecken under denna episod.</items>
-        <items id="comment">Exempelvis en textbeskrivning om symtomdebut, aktiviteter som ger symtomförsämring eller förbättring, på vilket sätt som förbättring eller försämring sker och hur det försvinner över tid.</items>
+        <items id="description">Beskrivning av förloppet för symtomet eller tecknet under denna episod.</items>
+        <items id="comment">Exempelvis en beskrivning av symtomdebut, aktiviteter som ger symtomförsämring eller förbättring, på vilket sätt som förbättring eller försämring sker och hur det försvinner över tid.</items>
       </items>
       <items code="at0056">
         <items id="text">Beskrivning</items>
-        <items id="description">Beskrivning av den påverkande faktorns effekt på symtom eller tecken.</items>
+        <items id="description">Beskrivning av den påverkande faktorns effekt på symtomet eller tecknet.</items>
       </items>
       <items code="at0057">
         <items id="text">Beskrivning av tidigare episoder</items>
-        <items id="description">Beskrivning av några eller alla tidigare episoder.</items>
-        <items id="comment">Exempelvis frekvens eller periodicitet, per timme, dag, vecka, månad, år och eventuell regelbundenhet. Den kan även innehålla en jämförelse med aktuell episod.</items>
+        <items id="description">Beskrivning av en eller flera tidigare episoder.</items>
+        <items id="comment">Exempelvis frekvens eller periodicitet såsom per timme, dag, vecka, månad, år och eventuell regelbundenhet. Beskrivningen kan även innehålla en jämförelse med aktuell episod.</items>
       </items>
       <items code="at0063">
         <items id="text">Associerade symtom/tecken</items>
-        <items id="description">Strukturerad beskrivning av eventuella samtidiga associerade symtom eller tecken. &#xD;
-</items>
-        <items id="comment">I kliniska system med läkningsmöjlighet är det möjligt att assoscierade symtom eller tecken redan har registrerats i patientjournalen. System kan låta vårdpersonalen länka till relevanta associerade symtom och tecken. Däremot i ett system eller i meddelanden utan länkningsmöjlighet till befintliga data eller med en ny patient, kan ytterligare fall av Symtom/Tecken-arketypen ingå för att presentera associerade symtom och tecken.</items>
+        <items id="description">Strukturerad beskrivning av eventuella samtidiga associerade symtom eller tecken.</items>
+        <items id="comment">I kliniska system med länkningsmöjlighet är det möjligt att associerade symtom eller tecken redan har registrerats i patientjournalen. System kan låta vårdpersonalen länka till relevanta associerade symtom och tecken. Däremot i ett system eller i meddelanden utan länkningsmöjlighet till befintliga data eller med en ny patient, kan ytterligare fall av Symtom/Tecken-arketypen ingå för att presentera associerade symtom och tecken.</items>
       </items>
       <items code="at0146">
         <items id="text">Tidigare episoder</items>
-        <items id="description">Strukturerad beskrivning om symtom eller tecken som inträffat under en tidigare episod.</items>
+        <items id="description">Strukturerad beskrivning av symtomet eller tecknet som förekommit under en tidigare episod.</items>
         <items id="comment">I länkade kliniska system är det möjligt att tidigare episoder redan har registrerats i patientjournalen. System kan låta vårdpersonalen länka till relevanta tidigare episoder (med dataypen LINK). Men i ett system eller meddelande utan länkningsmöjlighet till befintlig data eller med en ny patient, kan ytterligare användningsfall av Symtom/Tecken-arketypen ingå, för att beskriva tidigare episoder. Det rekommenderas att nya exempel med Symtom/Tecken-arketypen som förs in i denna SLOT presenterar en eller flera tidigare episoder kopplade till det aktuella symtomet.</items>
       </items>
       <items code="at0147">
         <items id="text">Strukturerad kroppslokalisation</items>
         <items id="description">Strukturerad lokalisation på kroppen där symtomen eller tecknet uppvisats.</items>
-        <items id="comment">Om kroppslokalisationen ingår i "Namnet på symtomet eller tecknet" genom prekoordinerade koder blir det här fältet överflödigt. &#xD;
-Om kroppslokalisation beskrivs i fältet "Kroppslokalisation" är det inte tillåtet att använda CLUSTER-arketyper i det här fältet. Registrera antingen i "Kroppslokalisation" eller i "Strukturerad kroppslokalisation", men använd inte båda datafälten.&#xD;
-</items>
+        <items id="comment">Om kroppslokalisationen ingår i "Namnet på symtomet eller tecknet" genom prekoordinerade koder blir det här datafältet överflödigt. &#xD;
+Om kroppslokalisation beskrivs i datafältet "Kroppslokalisation" är det inte tillåtet att använda CLUSTER-arketyper i det här datafältet. Registrera antingen i "Kroppslokalisation" eller i "Strukturerad kroppslokalisation", men använd inte båda datafälten.</items>
       </items>
       <items code="at0151">
         <items id="text">Kroppslokalisation</items>
         <items id="description">Lokalisation på kroppen där symtomet eller tecknet uppvisats.</items>
-        <items id="comment">Det här fältet kan repeteras, förekomst 0.. *, för att tillåta att flera kroppslokalisationer kan anges separat i en template, om så önskas. Detta möjliggör dokumentation av kliniska användningsfall där ett symtom eller tecken kan förekomma på flera ställen samtidigt eller för att identifiera både start- och slutpunkter för en utstrålande smärta, samtidigt som andra aspekter som svårighetsgrad och varaktighet är identiska.&#xD;
-Om kraven för att registrera kroppslokalisationer kan genereras automatiskt av vissa IT-system, eller om dokumentationskraven för lokalisationen är mer komplex, som att ange den relativa lokalisationen, använd då arketyperna CLUSTER.anatomical_location eller CLUSTER.relative_location inom fältet SLOT för "Strukturerad kroppslokalisation" i den här arketypen.&#xD;
+        <items id="comment">Det här datafältet kan repeteras, förekomst 0.. *, för att tillåta att flera kroppslokalisationer kan anges separat i en template, om så önskas. Detta möjliggör dokumentation av kliniska användningsfall där ett symtom eller tecken kan förekomma på flera ställen samtidigt eller för att identifiera både start- och slutpunkter för en utstrålande smärta, samtidigt som andra aspekter som svårighetsgrad och varaktighet är identiska.&#xD;
+Om kraven för att registrera kroppslokalisationer kan genereras automatiskt av vissa IT-system, eller om dokumentationskraven för lokalisationen är mer komplex (som att ange den relativa lokalisationen), använd då arketyperna CLUSTER.anatomical_location eller CLUSTER.relative_location inom datafältet SLOT för "Strukturerad kroppslokalisation" i den här arketypen.&#xD;
 &#xD;
-Om kroppslokalisationen ingår i "Namnet på symtomet eller tecknet" genom prekoordinerade koder blir det här fältet överflödigt. &#xD;
-Om kroppslokalisationen beskrivs i fältet SLOT för "Strukturerad kroppslokalisation", är det inte tillåtet att använda detta fält. Registrera alltså endast i "Kroppslokalisation" ELLER i "Strukturerad kroppslokalisation", inte i båda fälten.&#xD;
-&#xD;
-</items>
+Om kroppslokalisationen ingår i "Namnet på symtomet eller tecknet" genom prekoordinerade koder blir det här datafältet överflödigt. &#xD;
+Om kroppslokalisationen beskrivs i datafältet SLOT för "Strukturerad kroppslokalisation", är det inte tillåtet att använda detta fält. Registrera alltså endast i "Kroppslokalisation" ELLER i "Strukturerad kroppslokalisation", inte i båda datafälten.</items>
       </items>
       <items code="at0152">
-        <items id="text">Skovets debut</items>
-        <items id="description">Debut för detta skov med symtomet eller tecknet.</items>
-        <items id="comment">Även om partiella datum är tillåtna, kan det exakta datumet och tiden för debuten registreras, om så är lämpligt. Om detta symptom eller tecken upplevs för första gången eller återkommer, används detta datum för att representera början av detta skov. Om detta symptom eller tecken pågår kan detta datafält vara överflödigt om det har registrerats tidigare.&#xD;
-&#xD;
-</items>
+        <items id="text">Episodens start</items>
+        <items id="description">Start för nuvarande episod med symtomet eller tecknet.</items>
+        <items id="comment">Även om partiella datum är tillåtna, kan det exakta datumet och tiden för start registreras, om så är lämpligt. Om detta symtom eller tecken upplevs för första gången eller återkommer, används detta datum för att representera starten på denna episod. Om detta symtom eller tecken pågår kan detta datafält vara överflödigt om det har registrerats tidigare.</items>
       </items>
       <items code="at0153">
         <items id="text">Specifika detaljer</items>
         <items id="description">Ytterligare specifika datafält som kan krävas för att fånga unika egenskaper för aktuellt symtom eller tecken.</items>
-        <items id="comment">Exempelvis CTCAE-skattning (skattningsskala av svårighetsgraden).</items>
+        <items id="comment">Exempelvis CTCAE-skattning (skattning av svårighetsgrad).</items>
       </items>
       <items code="at0154">
-        <items id="text">Detaljerad beskrivning av faktor</items>
+        <items id="text">Detaljer om faktor</items>
         <items id="description">Strukturerad beskrivning av den faktor som är kopplad till aktuellt symtom eller tecken.</items>
       </items>
       <items code="at0155">
         <items id="text">Påverkan</items>
         <items id="description">Beskrivning av vilken påverkan detta symptom eller tecken medför.</items>
-        <items id="comment">Vid bedömningen av påverkan kan olika faktorer ingå som symtomets svårighetsgrad, varaktighet och frekvens samt typen av påverkan inklusive, men inte begränsat till, funktionell, social och emotionell påverkan. Förekomster av detta datafält är inställt på 0..*, vilket tillåter att flera typer av påverkan kan separeras i en template, om så önskas. Exempel på funktionell påverkan av en hörselnedsättning kan vara hörselsvårigheter i tyst miljö, svårigheter att höra TV eller radio, svårigheter att höra gruppsamtal eller svårigheter att höra i telefon. &#xD;
-&#xD;
-</items>
+        <items id="comment">Vid bedömningen av påverkan kan olika faktorer ingå som symtomets svårighetsgrad, varaktighet och frekvens samt typen av påverkan inklusive, men inte begränsat till, funktionell, social och emotionell påverkan. Förekomster av detta datafält är inställt på 0..*, vilket tillåter att flera typer av påverkan kan separeras i en template, om så önskas. Exempel på funktionell påverkan av en hörselnedsättning kan vara hörselsvårigheter i tyst miljö, svårigheter att höra TV eller radio, svårigheter att höra gruppsamtal eller svårigheter att höra i telefon.</items>
       </items>
       <items code="at0156">
         <items id="text">Ingen effekt</items>
-        <items id="description">Faktorn har ingen påverkan på symtom eller tecken.</items>
+        <items id="description">Faktorn har ingen påverkan på symtomet eller tecknet.</items>
       </items>
       <items code="at0158">
         <items id="text">Förvärrande</items>
-        <items id="description">Faktorn ökar svårighetsgraden eller effekten av symtom eller tecken.</items>
+        <items id="description">Faktorn ökar svårighetsgraden eller effekten av symtomet eller tecknet.</items>
       </items>
       <items code="at0159">
         <items id="text">Lindrande</items>
-        <items id="description">Faktorn minskar svårighetsgraden eller påverkan på symtom eller tecken, men leder inte till fullständig lindring.</items>
+        <items id="description">Faktorn minskar svårighetsgraden eller påverkan på symtomet eller tecknet, men leder inte till fullständig lindring.</items>
       </items>
       <items code="at0161">
-        <items id="text">Upphörande datum/tid</items>
+        <items id="text">Tidpunkt för upphörande</items>
         <items id="description">Tidpunkten då denna episod av symtom eller tecken har upphört.</items>
-        <items id="comment">Om "Tidpunkt för start" och "Skovets duration" har använts i systemen, kan detta datafält beräknas eller alternativt betraktas som överflödigt. &#xD;
-Partiella datum och tidsuppgifter är tillåtna, men om det är möjligt och lämpligt kan exakt datum och tid registreras för symtomfrihet.</items>
+        <items id="comment">Om "Episodens start" och "Episodens duration" har använts i systemen, kan detta datafält beräknas alternativt betraktas som överflödigt. Partiella datum och tidsuppgifter är tillåtna, men om det är möjligt och lämpligt kan exakt datum och tid för symtomfrihet registreras.</items>
       </items>
       <items code="at0163">
         <items id="text">Kommentar</items>
-        <items id="description">Ytterligare beskrivning av symtom eller tecknen som inte dokumenterats i andra datafält.</items>
+        <items id="description">Ytterligare beskrivning av symtom eller tecken som inte registrerats i andra datafält.</items>
       </items>
       <items code="at0164">
-        <items id="text">Tidpunkt för start</items>
-        <items id="description">Tidpunkten för starten och utvecklingen av symtomet eller tecknet.</items>
+        <items id="text">Tidpunkt för debut</items>
+        <items id="description">Tidpunkten för debuten och utvecklingen av symtomet eller tecknet.</items>
         <items id="comment">Typ av debut kan kodas med en terminologi. Exempelvis gradvis eller plötslig.</items>
       </items>
       <items code="at0165">
         <items id="text">Utlösande faktor</items>
-        <items id="description">Beskrivning av specifika faktorer som kan associeras med att symtom eller tecken initieras.</items>
-        <items id="comment">Till exempel att ligga ner leder till halsbränna eller att gå uppför en kulle leder till krampsmärta i vaderna (claudicatio).</items>
+        <items id="description">Beskrivning av specifika faktorer som kan associeras med att symtomet eller tecknet utlöses.</items>
+        <items id="comment">Exempelvis att ligga ner leder till halsbränna eller att gå uppför en kulle leder till krampsmärta i vaderna (claudicatio).</items>
       </items>
       <items code="at0170">
         <items id="text">Faktor</items>
-        <items id="description">Namn på hälsotillståndet, symtom, uppvisat tecken eller annan faktor.</items>
-        <items id="comment">Exempelvis uppkomst av ett annat symptom; lägga sig ner eller gå uppför en kulle.</items>
+        <items id="description">Namn på hälsotillstånd, symtom, uppvisat tecken eller annan faktor.</items>
+        <items id="comment">Exempelvis uppkomst av ett annat symtom, att lägga sig ner eller gå uppför en kulle.</items>
       </items>
       <items code="at0171">
         <items id="text">Tidsintervall</items>
-        <items id="description">Tidsintervallet mellan uppkomst av faktorn och start av symtom eller tecken.</items>
+        <items id="description">Tidsintervallet mellan uppkomst av faktorn och uppkomst av symtomet eller tecknet.</items>
       </items>
       <items code="at0175">
-        <items id="text">Förekomst</items>
-        <items id="description">Förekomsten av det angivna symtomet eller tecknet.</items>
+        <items id="text">Episodicitet</items>
+        <items id="description">Status för episodicitet av symtomet eller tecknet.</items>
       </items>
       <items code="at0176">
         <items id="text">Ny</items>
-        <items id="description">En ny episod av symtomet eller tecknet, antingen som debutsymtom eller som återfall, där den föregående episoden redan har avslutats.</items>
+        <items id="description">En ny episod av symtomet eller tecknet, antingen som debutsymtom eller som återfall, där den föregående episoden redan har upphört.</items>
       </items>
       <items code="at0177">
         <items id="text">Obestämd</items>
@@ -3690,31 +3720,28 @@ Partiella datum och tidsuppgifter är tillåtna, men om det är möjligt och lä
       </items>
       <items code="at0178">
         <items id="text">Pågående</items>
-        <items id="description">Detta symptom eller tecken är pågående, registrerat som en enskild sammanhängande episod.</items>
+        <items id="description">Symtomet eller tecknet är pågående, registrerat som en enskild sammanhängande episod.</items>
       </items>
       <items code="at0180">
-        <items id="text">Stegvis utveckling</items>
-        <items id="description">Beskrivning av den stegvisa utvecklingen av symtom eller tecken vid tidpunkten för rapportering.</items>
-        <items id="comment">Förekomster av detta datafält är satt till 0..* för att tillåta flera typer av utveckling och kan separeras i en template om så önskas, till exempel svårighetsgrad eller frekvens. Datatypen Text läggs till som ett alternativ för att stödja andra skalor än de som ingår i arketypen.&#xD;
-&#xD;
-&#xD;
-</items>
+        <items id="text">Progression</items>
+        <items id="description">Beskrivning av den stegvisa utvecklingen av symtomet eller tecknet vid tidpunkten för rapportering.</items>
+        <items id="comment">Förekomster av detta datafält är satt till 0..* för att tillåta flera typer av utveckling och kan separeras i en template om så önskas, till exempel svårighetsgrad eller frekvens. Datatypen Text läggs till som ett alternativ för att stödja andra skalor än de som ingår i arketypen.</items>
       </items>
       <items code="at0181">
-        <items id="text">Förbättrad</items>
-        <items id="description">Svårighetsgraden av symtom eller tecken har totalt sett förbättrats under detta skov.</items>
+        <items id="text">Förbättrat</items>
+        <items id="description">Svårighetsgraden av symtomet eller tecknet har förbättrats under denna episod.</items>
       </items>
       <items code="at0182">
-        <items id="text">Oförändrad</items>
-        <items id="description">Svårighetsgraden av symtom eller tecken har totalt sett inte förändrats under detta skov. </items>
+        <items id="text">Oförändrat</items>
+        <items id="description">Svårighetsgraden av symtomet eller tecknet har inte förändrats under denna episod.</items>
       </items>
       <items code="at0183">
-        <items id="text">Försämrad</items>
-        <items id="description">Svårighetsgraden av symtom eller tecken har totalt sett förvärrats under detta skov.</items>
+        <items id="text">Försämrat</items>
+        <items id="description">Svårighetsgraden av symtomet eller tecknet har förvärrats under denna episod.</items>
       </items>
       <items code="at0184">
-        <items id="text">Gått över</items>
-        <items id="description">Symtom eller tecken har gått över.</items>
+        <items id="text">Upphört</items>
+        <items id="description">Symtomet eller tecknet har upphört.</items>
       </items>
       <items code="at0185">
         <items id="text">Beskrivning</items>
@@ -3722,56 +3749,56 @@ Partiella datum och tidsuppgifter är tillåtna, men om det är möjligt och lä
       </items>
       <items code="at0186">
         <items id="text">Förekomst</items>
-        <items id="description">Typ av förekomst för detta symtom eller tecken.</items>
+        <items id="description">Typ av förekomst av symtomet eller tecknet.</items>
       </items>
       <items code="at0187">
         <items id="text">Första tillfället</items>
-        <items id="description">Detta är det första tillfället någonsin som detta symtom eller tecken uppträder.</items>
+        <items id="description">Första förekomst någonsin av symtomet eller tecknet.</items>
       </items>
       <items code="at0188">
         <items id="text">Upprepning</items>
-        <items id="description">Ny förekomst av samma symtom eller tecken efter att en tidigare episod har avslutats.</items>
+        <items id="description">Ny förekomst av samma symtom eller tecken efter att en tidigare episod har upphört.</items>
       </items>
       <items code="at0189">
-        <items id="text">Egenart</items>
+        <items id="text">Karakterisering</items>
         <items id="description">Ord eller kort fras som beskriver symtomets (eller tecknets) egenskaper.</items>
         <items id="comment">Exempelvis smärta kan beskrivas som "gnagande", "brännande" eller "som en elektrisk stöt". Huvudvärk kan vara "bultande" eller "konstant". Koda om möjligt med extern terminologi.</items>
       </items>
       <items code="at0190">
         <items id="text">Upphävande faktor</items>
-        <items id="description">Detaljer om specificerade faktorer som är associerat med att symtom eller tecken försvinner.</items>
-        <items id="comment">Exempelvis att upprätt hållning stoppar halsbrännan eller at en vilopaus upphäver krampsmärta i vaderna (claudicatio).</items>
+        <items id="description">Detaljer om specificerade faktorer som är associerade med att symtomet eller tecknet försvinner.</items>
+        <items id="comment">Exempelvis att upprätt hållning stoppar halsbrännan eller att en vilopaus upphäver krampsmärta i vaderna (claudicatio).</items>
       </items>
       <items code="at0193">
         <items id="text">Faktor</items>
-        <items id="description">Namn på hälsotillståndet, symtom, tecken eller annan faktor.</items>
+        <items id="description">Namn på hälsotillstånd, symtom, uppvisat tecken eller annan faktor.</items>
         <items id="comment">Exempelvis upprätt hållning eller vila.</items>
       </items>
       <items code="at0194">
-        <items id="text">Detaljerad beskrivning av faktor</items>
+        <items id="text">Detaljer om faktor</items>
         <items id="description">Strukturerad beskrivning av den faktor som är kopplad till aktuellt symtom eller tecken.</items>
       </items>
       <items code="at0195">
         <items id="text">Tidsintervall</items>
-        <items id="description">Tidsintervallet mellan uppkomsten av faktorn och att symtom eller tecken försvinner.</items>
+        <items id="description">Tidsintervallet mellan uppkomsten av faktorn och att symtomet eller tecknet försvinner.</items>
       </items>
       <items code="at0196">
         <items id="text">Beskrivning</items>
         <items id="description">Beskrivning av effekten av faktorn på identifierat symtom eller tecken.</items>
       </items>
       <items code="at0197">
-        <items id="text">Detaljerad beskrivning av faktor</items>
-        <items id="description">Strukturerad beskrivning av den faktor som är kopplad till aktuellt symtom eller tecken.</items>
+        <items id="text">Detaljer om faktor</items>
+        <items id="description">Strukturerad beskrivning av den faktor som är kopplad till symtomet eller tecknet.</items>
       </items>
       <items code="at0198">
-        <items id="text">Svårighetsgrad</items>
-        <items id="description">Numerisk bedömningsskala som övergripande bild av svårighetsgraden av symtom eller tecken.</items>
+        <items id="text">Skattning av svårighetsgrad</items>
+        <items id="description">Numerisk bedömningsskala av svårighetsgraden av symtomet eller tecknet.</items>
         <items id="comment">Symtomets svårighetsgrad kan bedömas av individen själv genom att registrera ett steg på en skala, till exempel från 0 (dvs. symtom saknas) till 10 (dvs. symtomet är så allvarligt som individen kan föreställa sig).</items>
       </items>
       <items code="at0200">
-        <items id="text">Sämst mående</items>
-        <items id="description">Datum eller tid då ett monofasiskt, progressivt symptom eller tecken nådde sin maximala intensitet eller funktionella effekt.</items>
-        <items id="comment">Exempelvis det datum då neurologiska tecken vid Guillain-Barres sjukdom var som värst.</items>
+        <items id="text">Maximal symtomintensitet</items>
+        <items id="description">Datum eller tidpunkt då ett monofasiskt, progressivt symtom eller tecken nådde sin maximala intensitet eller funktionella effekt.</items>
+        <items id="comment">Exempelvis det datum då neurologiska symtom vid Guillain-Barres sjukdom var som mest intensiva.</items>
       </items>
     </term_definitions>
     <term_definitions language="pt-br">
@@ -4515,6 +4542,253 @@ Si la ubicació anatòmica està inclosa en el Nom del símptoma mitjançant cod
         <items id="comment">Per exemple: la data quan els signes neurològics de la malaltia de Guillain-Barré estaven en el moment de major intensitat.</items>
       </items>
     </term_definitions>
+    <term_definitions language="ja">
+      <items code="at0000">
+        <items id="text">症状・徴候</items>
+        <items id="description">本人の心身の変調について、本人または他者が捉え、伝えた観察内容。</items>
+      </items>
+      <items code="at0001">
+        <items id="text">症状・徴候の名称</items>
+        <items id="description">報告された症状または徴候の名称。</items>
+        <items id="comment">可能であれば、症状の名称は用語集によりコード化すべきである。</items>
+      </items>
+      <items code="at0002">
+        <items id="text">説明</items>
+        <items id="description">報告された症状または徴候についての叙述的な記述。</items>
+      </items>
+      <items code="at0003">
+        <items id="text">パターン</items>
+        <items id="description">このエピソードにおける症状または徴候のパターンについての叙述的な記述。</items>
+        <items id="comment">例：疼痛は持続性または間欠性と記述できる。</items>
+      </items>
+      <items code="at0017">
+        <items id="text">影響</items>
+        <items id="description">修飾因子が症状または徴候に及ぼすと認識された影響。</items>
+      </items>
+      <items code="at0018">
+        <items id="text">修飾因子</items>
+        <items id="description">このエピソードにおいて、特定の因子が特定された症状または徴候にどのように影響するかに関する詳細情報。</items>
+      </items>
+      <items code="at0019">
+        <items id="text">因子</items>
+        <items id="description">修飾因子の名称。</items>
+        <items id="comment">修飾因子の例：枕を複数重ねて横になること、食事、または特定の薬剤の投与。</items>
+      </items>
+      <items code="at0021">
+        <items id="text">重症度</items>
+        <items id="description">症状または徴候の全体的な重症度を表す区分。</items>
+        <items id="comment">「軽症」「中等症」「重症」などの値を、さまざまな症状や徴候に適用でき、複数の利用者が一貫した基準で解釈・記録できるように定義するのは容易ではない。組織によっては、「ごく軽症」「非常に重症」や「軽症〜中等症」「中等症〜重症」などを加えて値セットを拡張している。しかし、選択肢を増やすと各値の定義がさらに難しくなり、記録者間で評価が一致しにくくなるおそれもある。「生命を脅かす」や「致死的」をこの値セットに含めることもよく検討されるが、厳密には、これらは重症度ではなく転帰を表している可能性がある。以上を踏まえ、各値の定義を明確にし、選択肢を少数に絞ることが望ましいため、本archetypeでは「軽症」「中等症」「重症」の値セットを用意している。ただし、これら以外のテキストも使用できるため、テンプレートではこのデータエレメントに別の値セットを設定することもできる。</items>
+      </items>
+      <items code="at0023">
+        <items id="text">軽症</items>
+        <items id="description">症状または徴候の強さは通常の活動を妨げない。</items>
+      </items>
+      <items code="at0024">
+        <items id="text">中等症</items>
+        <items id="description">症状または徴候の強さは通常の活動を妨げる。</items>
+      </items>
+      <items code="at0025">
+        <items id="text">重症</items>
+        <items id="description">症状または徴候の強さは通常の活動を不可能にする。</items>
+      </items>
+      <items code="at0028">
+        <items id="text">エピソードの持続期間</items>
+        <items id="description">症状または徴候の今回のエピソードにおける、発症からの持続期間。</items>
+        <items id="comment">システムで「発症日時」と「消失日時」を使用している場合、このデータエレメントの値は両者から算出できる。そのため、冗長とみられることもある。テキストデータ型は、「0〜7日」「1〜2週」「2週以上」など、あらかじめ設定された期間区分を記録するために用いる。</items>
+      </items>
+      <items code="at0031">
+        <items id="text">過去のエピソードの回数</items>
+        <items id="description">この症状または徴候が過去に生じた回数。</items>
+      </items>
+      <items code="at0037">
+        <items id="text">エピソードの説明</items>
+        <items id="description">このエピソードにおける症状または徴候の経過についての叙述的な記述。</items>
+        <items id="comment">例：発症直後の様子、症状を悪化または軽減させた活動、改善しているか悪化しているか、数週間かけてどのように消失したかについてのテキスト記述。</items>
+      </items>
+      <items code="at0056">
+        <items id="text">説明</items>
+        <items id="description">修飾因子が症状または徴候に及ぼす影響の叙述的な記述。</items>
+      </items>
+      <items code="at0057">
+        <items id="text">過去のエピソードの説明</items>
+        <items id="description">過去のエピソードのいずれかまたはすべてについての叙述的な記述。</items>
+        <items id="comment">例：頻度／周期性 - 1時間、1日、1週、1か月、1年あたりといった頻度、周期性および規則性。このエピソードとの比較を含めてもよい。</items>
+      </items>
+      <items code="at0063">
+        <items id="text">随伴症状・徴候</items>
+        <items id="description">同時に生じている随伴症状または徴候についての構造化された詳細記録。</items>
+        <items id="comment">連携している臨床システムでは、随伴する症状や徴候がすでに EHR 内に記録されていることがある。その場合、システムは、医療従事者が関連する随伴症状・徴候への LINK を設定する機能を提供できる。一方、既存データへの LINK がないシステムやメッセージ、あるいは新規患者の場合には、この SLOT に Symptom archetypeのインスタンスを追加して、随伴症状・徴候を記録できる。</items>
+      </items>
+      <items code="at0146">
+        <items id="text">過去のエピソード</items>
+        <items id="description">過去のエピソードにおける症状または徴候の構造化された詳細記録。</items>
+        <items id="comment">連携している臨床システムでは、過去のエピソードがすでに EHR 内に記録されていることがある。その場合、システムは、医療従事者が関連する過去のエピソードへの LINK を設定する機能を提供できる。一方、既存データへの LINK がないシステムやメッセージ、あるいは新規患者の場合には、この SLOT に Symptom archetypeのインスタンスを追加して、過去のエピソードを記録できる。追加するインスタンスには、この SLOT を含む Symptom インスタンスに関連する過去のエピソードのみを、1つまたは複数記録することを推奨する。</items>
+      </items>
+      <items code="at0147">
+        <items id="text">構造化された身体部位表現</items>
+        <items id="description">症状または徴候が報告された身体部位の構造化された表現。</items>
+        <items id="comment">解剖学的部位が事前調整されたコードによって症状の名称に含まれている場合、この SLOT を使用する必要はない。解剖学的部位を「身体部位」データエレメントで記録する場合、この SLOT での CLUSTER archetypeの使用は許可されない。単純な「身体部位」または「構造化された身体部位表現」のどちらか一方だけを記録し、両方は記録しない。</items>
+      </items>
+      <items code="at0151">
+        <items id="text">身体部位</items>
+        <items id="description">症状または徴候があると報告された身体部位の簡潔な記述。</items>
+        <items id="comment">このデータエレメントの出現回数は 0..* に設定されており、必要に応じてテンプレートで複数の身体部位を分けて表せる。これにより、症状や徴候を複数の部位に記録する必要がある臨床シナリオや、放散痛の起始部位と遠位部位の両方を特定するが、影響や持続期間などの他の属性はすべて同一であるシナリオを表現できる。身体部位の記録要件がアプリケーションによって実行時に決定される場合や、相対的な位置関係などより複雑なモデリングが必要な場合は、本archetypeの「詳細な解剖学的部位」SLOT 内で CLUSTER.anatomical_location または CLUSTER.relative_location を用いること。 &#xD;
+解剖学的部位が事前調整されたコードによって症状の名称に含まれている場合、このデータエレメントは冗長になる。解剖学的部位を「構造化された身体部位表現」SLOT で記録する場合、このデータエレメントの使用は許可されない。単純な「身体部位」または「構造化された身体部位表現」のどちらか一方だけを記録し、両方は記録しない。</items>
+      </items>
+      <items code="at0152">
+        <items id="text">エピソードの発症日時</items>
+        <items id="description">症状または徴候のこのエピソードの発症。</items>
+        <items id="comment">部分的な日付も記録できるが、適切であれば発症の正確な日時を記録できる。初発・再発のいずれの場合も、この日付は今回のエピソードの発症時点を表す。症状または徴候が継続しており、発症日時がすでに記録されている場合、このデータエレメントは冗長とみられることがある。</items>
+      </items>
+      <items code="at0153">
+        <items id="text">詳細記録</items>
+        <items id="description">特定された症状または徴候に固有の属性として、追加で記録する必要がある特定のデータエレメント。</items>
+        <items id="comment">例：CTCAE のグレード分類。</items>
+      </items>
+      <items code="at0154">
+        <items id="text">因子の詳細</items>
+        <items id="description">特定された症状または徴候に関連する因子についての構造化された詳細記録。</items>
+      </items>
+      <items code="at0155">
+        <items id="text">影響</items>
+        <items id="description">この症状または徴候の影響の記述。</items>
+        <items id="comment">影響の評価では、症状の重症度、持続期間、頻度に加え、機能面、社会面、情緒面など、影響が及ぶ側面も考慮できる。必要に応じてテンプレート内で影響を種類ごとに分けて表せるよう、このデータエレメントの出現回数は 0..* に設定されている。難聴による機能面への影響の例としては、「静かな環境で聞き取りにくい」「テレビやラジオの音声を聞き取りにくい」「複数人での会話を聞き取りにくい」「電話で聞き取りにくい」などが挙げられる。</items>
+      </items>
+      <items code="at0156">
+        <items id="text">影響なし</items>
+        <items id="description">その因子は症状または徴候に影響を及ぼさない。</items>
+      </items>
+      <items code="at0158">
+        <items id="text">増悪</items>
+        <items id="description">その因子は症状または徴候の重症度または影響を増大させる。</items>
+      </items>
+      <items code="at0159">
+        <items id="text">軽減</items>
+        <items id="description">その因子は症状または徴候の重症度または影響を軽減させるが、完全には消失させない。</items>
+      </items>
+      <items code="at0161">
+        <items id="text">消失日時</items>
+        <items id="description">症状または徴候のこのエピソードが消失した時期。</items>
+        <items id="comment">システムで「発症日時」と「持続期間」を使う場合、このデータエレメントは計算で求められるか、あるいは冗長とみられることがある。部分的な日付も許容されるが、適切であれば消失の正確な日時を記録できる。</items>
+      </items>
+      <items code="at0163">
+        <items id="text">コメント</items>
+        <items id="description">他の項目には収まらない症状または徴候についての追加の記述。</items>
+      </items>
+      <items code="at0164">
+        <items id="text">発症時期</items>
+        <items id="description">症状または徴候の発症と進展のタイミング。</items>
+        <items id="comment">発症の型は、必要に応じて用語集によりコード化できる。例：緩徐；または突発。</items>
+      </items>
+      <items code="at0165">
+        <items id="text">誘発因子</items>
+        <items id="description">症状または徴候の誘発に関連する特定の因子に関する詳細情報。</items>
+        <items id="comment">例：横になると胸やけが生じる；または坂を上ると跛行が生じる。</items>
+      </items>
+      <items code="at0170">
+        <items id="text">因子</items>
+        <items id="description">健康イベント、症状、報告された徴候、またはその他の因子の名称。</items>
+        <items id="comment">例：別の症状の発症；横になること；または坂を上ること。</items>
+      </items>
+      <items code="at0171">
+        <items id="text">時間間隔</items>
+        <items id="description">因子の発生または発症から、症状または徴候の発症までの時間間隔。</items>
+      </items>
+      <items code="at0175">
+        <items id="text">エピソード区分</items>
+        <items id="description">特定された症状または徴候における、このエピソードの区分。</items>
+      </items>
+      <items code="at0176">
+        <items id="text">新規</items>
+        <items id="description">症状または徴候の新しいエピソード。初発、または以前のエピソードが完全に消失した後の再発のいずれか。</items>
+      </items>
+      <items code="at0177">
+        <items id="text">判定不能</items>
+        <items id="description">この症状または徴候の今回の発症が新規か継続中かを判定できない。</items>
+      </items>
+      <items code="at0178">
+        <items id="text">継続中</items>
+        <items id="description">この症状または徴候は継続しており、実質的に単一の連続したエピソードである。</items>
+      </items>
+      <items code="at0180">
+        <items id="text">進行状況</items>
+        <items id="description">報告時点における症状または徴候の進行状況の記述。</items>
+        <items id="comment">このデータエレメントの出現回数は 0..* に設定されており、必要に応じてテンプレートで複数の種類の進行状況（例えば重症度や頻度）を分けて表せる。archetypeに含まれる値セット以外の値セットに対応するため、テキストデータ型が選択肢として追加されている。</items>
+      </items>
+      <items code="at0181">
+        <items id="text">改善</items>
+        <items id="description">このエピソードの間に、症状または徴候の重症度は全体として改善した。</items>
+      </items>
+      <items code="at0182">
+        <items id="text">不変</items>
+        <items id="description">このエピソードの間に、症状または徴候の重症度は全体として変化していない。</items>
+      </items>
+      <items code="at0183">
+        <items id="text">悪化</items>
+        <items id="description">このエピソードの間に、症状または徴候の重症度は全体として悪化した。</items>
+      </items>
+      <items code="at0184">
+        <items id="text">消失</items>
+        <items id="description">症状または徴候は消失した。</items>
+      </items>
+      <items code="at0185">
+        <items id="text">説明</items>
+        <items id="description">因子が特定された症状または徴候に及ぼす影響についての叙述的な記述。</items>
+      </items>
+      <items code="at0186">
+        <items id="text">発症区分</items>
+        <items id="description">この症状または徴候の発症の種類。</items>
+      </items>
+      <items code="at0187">
+        <items id="text">初発</items>
+        <items id="description">この症状または徴候の、初めての発症である。</items>
+      </items>
+      <items code="at0188">
+        <items id="text">再発</items>
+        <items id="description">以前のエピソードが消失した後の、同じ症状または徴候の新たな発症。</items>
+      </items>
+      <items code="at0189">
+        <items id="text">性状</items>
+        <items id="description">症状または徴候の性質を表す語または短い句。</items>
+        <items id="comment">例：疼痛は「うずくような」「灼けるような」「電気が走るような」、頭痛は「拍動性」または「持続性」と記述できる。可能であれば、外部用語集によりコード化することが望ましい。</items>
+      </items>
+      <items code="at0190">
+        <items id="text">消失因子</items>
+        <items id="description">症状または徴候の消失に関連する特定の因子に関する詳細情報。</items>
+        <items id="comment">例：直立姿勢で胸やけが止まる；または休息で跛行が止まる。</items>
+      </items>
+      <items code="at0193">
+        <items id="text">因子</items>
+        <items id="description">健康イベント、症状、報告された徴候、またはその他の因子の名称。</items>
+        <items id="comment">例：直立姿勢；または休息。</items>
+      </items>
+      <items code="at0194">
+        <items id="text">因子の詳細</items>
+        <items id="description">特定された症状または徴候に関連する因子についての構造化された詳細記録。</items>
+      </items>
+      <items code="at0195">
+        <items id="text">時間間隔</items>
+        <items id="description">因子の発生または発症から、症状または徴候の消失までの時間間隔。</items>
+      </items>
+      <items code="at0196">
+        <items id="text">説明</items>
+        <items id="description">因子が特定された症状または徴候に及ぼす影響についての叙述的な記述。</items>
+      </items>
+      <items code="at0197">
+        <items id="text">因子の詳細</items>
+        <items id="description">特定された症状または徴候に関連する因子についての構造化された詳細記録。</items>
+      </items>
+      <items code="at0198">
+        <items id="text">重症度評価</items>
+        <items id="description">症状または徴候の全体的な重症度を表す数値評価スケール。</items>
+        <items id="comment">症状の重症度は、例えば 0（症状なし）から 10（本人が想像しうる最も重い症状）までのスコアを記録することで、本人が評価できる。</items>
+      </items>
+      <items code="at0200">
+        <items id="text">最悪時</items>
+        <items id="description">単相性で進行性の症状または徴候が、最大の強さまたは機能的に最悪の影響に達した日時。</items>
+        <items id="comment">例：ギラン・バレー症候群の神経学的徴候が最も悪化した日。</items>
+      </items>
+    </term_definitions>
     <term_bindings terminology="SNOMED-CT">
       <items code="at0023">
         <value>
@@ -4567,4 +4841,3 @@ Si la ubicació anatòmica està inclosa en el Nom del símptoma mitjançant cod
     </term_bindings>
   </ontology>
 </archetype>
-

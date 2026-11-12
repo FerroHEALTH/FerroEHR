@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -101,10 +101,38 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">BEE657F7707979285CCBDEE8A4650A7D</other_details>
-    <other_details id="build_uid">2b262bfc-de97-4b56-8b74-a184e2856812</other_details>
+    <other_details id="MD5-CAM-1.0.1">2B1A4A28E8FD775EC27AC251FCF63534</other_details>
+    <other_details id="build_uid">0262f9b9-76ea-4216-ad7a-efced93e4089</other_details>
     <other_details id="ip_acknowledgements">This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.</other_details>
-    <other_details id="revision">1.0.2</other_details>
+    <other_details id="revision">1.0.3</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Erfassung der räumlichen Maße einer anatomischen Struktur, eines Objekts oder einer Flüssigkeit, die Teil des Körpers einer Person ist, sich darin befindet oder aus diesem stammt.</purpose>
+      <keywords>Präparat, Labor, Probe, Pathologie, Größe, Fläche, Masse, Volumen, Abmessung, Länge, Breite, Durchmesser, Dicke, Fremdkörper, Höhe, Maße</keywords>
+      <use>Zu verwenden für die Erfassung der räumlichen Maße einer anatomischen Struktur, eines Objekts oder einer Flüssigkeit, die Teil des Körpers einer Person ist, sich darin befindet oder aus diesem stammt. &#xD;
+&#xD;
+Beispiele hierfür sind unter anderem:&#xD;
+- Die Abmessungen eines Leberlappens&#xD;
+- Eine 8.0 × 10.2 × 6.5 mm große Tumorprobe aus dem Darm&#xD;
+- Eine Wunde mit einer Länge von 24 mm, einer Breite von 15 mm und einer Tiefe von 4 mm&#xD;
+- 7 ml Blut in einem Vakuumröhrchen&#xD;
+- Eine Murmel mit einem Durchmesser von 1 cm&#xD;
+&#xD;
+Dieser Archetyp ist für die Verwendung im Kontext beliebiger geeigneter ENTRY- oder CLUSTER-Archetypen konzipiert, um eine gemeinsame und wiederverwendbare Struktur für die Erfassung der räumlichen Maße einer Struktur, eines Objekts oder einer Flüssigkeit bereitzustellen. Er ist speziell für die Verwendung innerhalb von CLUSTER.specimen, CLUSTER.imaging_exam und CLUSTER.exam konzipiert, kann jedoch in jedem relevanten Archetyp verwendet werden.&#xD;
+&#xD;
+In Modellierungssituationen, in denen die Messanforderungen nicht im Voraus absehbar sind oder noch keine speziellen Archetypen verfügbar sind, sollte dieser Archetyp als vereinbarter Ansatz zur Erfassung einzelner oder aller räumlichen Maße oder Abmessungen verwendet werden.&#xD;
+&#xD;
+Ist die Ausrichtung einer anatomischen Struktur oder eines Objekts unklar, kann jede Abmessung wiederholt unter Verwendung desselben Datenelements erfasst werden, beispielsweise „Länge × Länge × Länge“.</use>
+      <misuse>Nicht zu verwenden für die Erfassung gängiger Körpersegmentmaße, die als separate Archetypen modelliert wurden.&#xD;
+&#xD;
+In Modellierungssituationen, in denen die Messanforderungen im Voraus absehbar sind und es gängige und bekannte räumliche Maße gibt, sollten diese explizit als eigenständige Datenelemente innerhalb der entsprechenden Archetypen erfasst werden. Beispiel: „Endometriumdicke“ im CLUSTER.imaging_exam-uterus.</misuse>
+      <copyright />
+    </details>
     <details>
       <language>
         <terminology_id>
@@ -190,6 +218,17 @@ In modelling situations, where the measurement requirements are able to be antic
       <copyright>© openEHR Foundation</copyright>
     </details>
   </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Jonas Bucher</author>
+    <author id="organisation">Cistec AG</author>
+    <author id="email">jonas.bucher@cistec.com</author>
+  </translations>
   <translations>
     <language>
       <terminology_id>
@@ -3490,6 +3529,69 @@ Detta datafält har flera förekomster för att möjliggöra registrering av fle
 Detta datafält har flera förekomster för att möjliggöra registrering av flera tjocklekar. Exempelvis den maximala och minimala tjockleken på en cystvägg.</items>
       </items>
     </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Physikalische Abmessungen</items>
+        <items id="description">Die räumlichen Maße einer anatomischen Struktur, eines Objekts oder einer Flüssigkeit, die Teil des Körpers einer Person ist, sich darin befindet oder aus diesem stammt.</items>
+      </items>
+      <items code="at0046">
+        <items id="text">Volumen</items>
+        <items id="description">Der dreidimensionale Raum, den eine Struktur bzw. ein Objekt einnimmt.</items>
+      </items>
+      <items code="at0049">
+        <items id="text">Länge</items>
+        <items id="description">Die längste Ausdehnung einer anatomischen Struktur oder eines Objekts, die in der Regel mit deren primärer anatomischer oder Längsachse übereinstimmt.</items>
+        <items id="comment">Dieses Datenelement kann mehrfach vorkommen, um die Erfassung von mehr als einer Länge zu ermöglichen.&#xD;
+&#xD;
+Ist die Ausrichtung einer anatomischen Struktur oder eines Objekts unklar, kann jede Dimension wiederholt unter Verwendung desselben Datenelements erfasst werden, zum Beispiel „Länge × Länge × Länge“.</items>
+      </items>
+      <items code="at0050">
+        <items id="text">Breite</items>
+        <items id="description">Die zur Länge senkrechte Dimension, gemessen in koronaler (von links nach rechts) oder transversaler (von einer Seite zur anderen) Richtung – oft die zweitlängste Achse.</items>
+        <items id="comment">Dieses Datenelement kann mehrfach vorkommen, um zur Erfassung von mehr als einer Breite zu dienen. Beispielsweise die breiteste und die schmalste Stelle einer pathologischen Masse.</items>
+      </items>
+      <items code="at0052">
+        <items id="text">Durchmesser</items>
+        <items id="description">Die Länge einer geraden Linie, die durch den Mittelpunkt eines Objekts von einer Seite zur gegenüberliegenden Seite verläuft und typischerweise an der breitesten Stelle gemessen wird.</items>
+        <items id="comment">Dieses Datenelement kann mehrfach vorkommen, um die Erfassung mehrerer Messwerte zu ermöglichen.&#xD;
+&#xD;
+Ist die Ausrichtung einer anatomischen Struktur oder eines Objekts unklar, verwenden Sie mehrere Vorkommen desselben Datenelements, um den Durchmesser entlang zweier oder mehrerer Achsen ohne spezifische Ausrichtung zu erfassen. Beispielsweise eine Läsion mit den angegebenen Durchmessern 3 mm × 4 mm, was Messwerte entlang zweier senkrechter Achsen angibt, ohne zu definieren, welche davon die Länge und welche die Breite ist.</items>
+      </items>
+      <items code="at0053">
+        <items id="text">Tiefe</items>
+        <items id="description">Der vertikale Abstand von einer neutralen Basis oder Referenzfläche zu einem tiefer gelegenen Punkt an einer anatomischen Struktur oder einem Objekt.</items>
+        <items id="comment">Beispiel: die Tiefe einer Wunde gemessen von der normalen Hautoberfläche.&#xD;
+&#xD;
+Dieses Datenelement kann mehrfach vorkommen, zur Erfassung der tiefsten und flachsten Stelle einer Hautläsion oder der maximalen und minimalen Tiefe eines inneren Tumors im Weichgewebe.</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Höhe</items>
+        <items id="description">Der vertikale Abstand von einer neutralen Basis oder Referenzfläche zu einem höher gelegenen Punkt auf einer anatomischen Struktur oder einem Objekt.</items>
+        <items id="comment">Beispielsweise: die Höhe einer Läsion über der normalen Hautoberfläche oder die Höhe einer Probe über einer Tischplatte.&#xD;
+&#xD;
+Dieses Datenelement kann mehrfach vorkommen, um zur Erfassung von mehr als einer Höhe zu dienen. Beispielsweise die maximale und minimale Höhe eines Tumors über der Hautoberfläche.</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Umfang</items>
+        <items id="description">Der lineare Abstand entlang der Außenkante oder Begrenzung eines Objekts.</items>
+        <items id="comment">Dieses Datenelement kann mehrfach vorkommen, zur Erfassung mehrerer Messwerte. Beispielsweise der innere und äußere Umfang einer Narbe oder einer unregelmäßigen Hautveränderung oder der innere und äußere Kreisumfang einer Zyste oder eines Knotens, gemessen an verschiedenen Messorten.</items>
+      </items>
+      <items code="at0080">
+        <items id="text">Radius</items>
+        <items id="description">Die Länge einer geraden Linie vom Mittelpunkt eines Objekts bis zu dessen Oberfläche oder Begrenzung, die typischerweise die Hälfte des Durchmessers darstellt.</items>
+        <items id="comment">Dieses Datenelement kann mehrfach vorkommen, um zur Erfassung mehrerer Messwerte zu dienen. Zum Beispiel den maximalen und minimalen Radius einer Zyste oder eines Knotens.</items>
+      </items>
+      <items code="at0081">
+        <items id="text">Fläche</items>
+        <items id="description">Der berechnete Raum einer Struktur/eines Objekts in zwei Dimensionen.</items>
+      </items>
+      <items code="at0082">
+        <items id="text">Dicke</items>
+        <items id="description">Der Abstand zwischen zwei gegenüberliegenden Oberflächen oder Begrenzungen einer anatomischen Struktur oder eines Objekts.</items>
+        <items id="comment">Beispielsweise die Dicke einer Gewebeschicht, einer Organwand oder eines Biopsieschnitts. &#xD;
+&#xD;
+Dieses Datenelement kann mehrfach vorkommen, um zur Erfassung mehrerer Messwerte zu dienen. Beispielsweise die maximale und minimale Dicke einer Zystenwand.</items>
+      </items>
+    </term_definitions>
   </ontology>
 </archetype>
-

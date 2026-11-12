@@ -17,9 +17,9 @@ language
 		["sv"] = <
 			language = <[ISO_639-1::sv]>
 			author = <
-				["name"] = <"Emma Malm, Rikard Lovstrom">
+				["name"] = <"Emma Malm, Rikard Lovstrom, Manna Vosta">
 				["organisation"] = <"Karolinska Universitetssjukhuset, Karolinska University Hospital">
-				["email"] = <"emma.malm@cambio.se, rikard.lovstrom@gmail.com">
+				["email"] = <"emma.malm@cambio.se, rikard.lovstrom@gmail.com, manna.vosta@regionstockholm.se">
 			>
 		>
 		["nb"] = <
@@ -44,6 +44,14 @@ language
 				["name"] = <"Christos Antoniadis">
 				["organisation"] = <"SigmaSoft">
 				["email"] = <"c.antoniadis@sigmasoft.gr">
+			>
+		>
+		["fr"] = <
+			language = <[ISO_639-1::fr]>
+			author = <
+				["name"] = <"Jonas Bucher">
+				["organisation"] = <"Cistec AG">
+				["email"] = <"jonas.bucher@cistec.com">
 			>
 		>
 		["ca"] = <
@@ -120,15 +128,15 @@ Nicht zu verwenden für die explizite Erfassung, dass keine Informationen über 
 		>
 		["sv"] = <
 			language = <[ISO_639-1::sv]>
-			purpose = <"Att dokumentera den kliniska bedömningen av benägenheten hos en individ att uppleva en reaktion om individen exponeras, eller återexponeras, för ett specificerat ämne eller klass av ämnen.">
-			use = <"Används för att dokumentera en klinisk bedömning av en benägenhet för en reaktion vid framtida exponering för ett specificerat ämne eller klass av ämnen inklusive, men inte begränsat till, verksamma ämnen (aktiva substanser) och hjälpämnen i läkemedelsberedningar, biologiska produkter, metallsalter och organiska kemiska föreningar.
+			purpose = <"Att registrera den kliniska bedömningen av risken hos en individ att uppleva en ogynnsam reaktion vid exponering eller återexponering till ett specificerat ämne eller klass av ämnen.">
+			use = <"Används för att registrera en klinisk bedömning av risken för en ogynnsam reaktion vid framtida exponering för ett specificerat ämne eller klass av ämnen, inklusive men inte begränsat till aktiva substanser och hjälpämnen i läkemedel, biologiska produkter, metallsalter och organiska kemiska föreningar.
 
-Denna arketyp är avsedd att tillhandahålla en enda plats i journalen för att dokumentera benägenheten för alla reaktioner, från triviala till livshotande:
-- immunmedierad: typ I-IV (inklusive allergiska reaktioner och överkänslighet); eller
+Denna arketyp är avsedd att tillhandahålla en plats i journalen för att registrera risken för hela spektrumet av ogynnsamma reaktioner, från lindriga till livshotande:
+- immunmedierad: typ I-IV (inklusive allergiska reaktioner och överkänslighetsreaktioner); eller
 - icke-immunmedierad: inklusive pseudo-allergiska reaktioner, biverkningar, intoleranser och läkemedelstoxicitet.
-I klinisk praxis kan det vara svårt att skilja mellan immunmedierade och icke-immunmedierade reaktioner. Identifiering av typen av reaktion är inte en ersättning för allvarlighetsgrad eller risk för skada på patienten.
+I klinisk praxis kan det vara svårt att skilja mellan immunmedierade och icke-immunmedierade reaktioner. Typen av reaktion är inte ett mått på reaktionens allvarlighetsgrad eller risken för att patienten ska komma till skada.
 
-När en reaktionsbenägenhet identifieras kan information om eller belägg för en eller flera inträffade reaktioner registreras med hjälp av arketypen CLUSTER.adverse_reaction_event under rubriken \"Reaktionshändelsesammanfattning\" (KONTROLLERA REFERENS).
+När en risk för en ogynnsam reaktion har identifierats kan information eller belägg om en eller flera inträffade reaktioner registreras i SLOT \"Sammanfattning av inträffade reaktioner\" med hjälp av CLUSTER.adverse_reaction_event.
 
 Identifiering av svårighetsgraden av manifestationen av reaktionen, dokumenterad i arketypen CLUSTER.adverse_reaction_event, kan ange allvarlighetsgraden för biverkningsrisken. Om man till exempel upplever anafylaxi vid första exponeringen för ett ämne skulle det motivera att man anger allvarlighetsgraden som hög (livshotande), på grund av den höga risken för att anafylaxi sannolikt återkommer vid den andra och efterföljande exponeringar.
 
@@ -326,6 +334,47 @@ Not to be used for the explicit recording of an absence (or negative presence) o
 Not to be used for the explicit recording that no information was able to be obtained about the adverse reaction status of a patient. Use the EVALUATION.absence archetype to record that a positive statement that information was not able to be obtained, for example, if a non-cooperative patient refuses to answer questions.">
 			copyright = <"© Australian Digital Health Agency, openEHR Foundation, HL7 International, Nasjonal IKT">
 		>
+		["fr"] = <
+			language = <[ISO_639-1::fr]>
+			purpose = <"Pour enregistrer l'évaluation clinique de la propension d'un individu à présenter un effet indésirable en cas d'exposition ou de réexposition à une substance ou à une classe de substances spécifiée.">
+			use = <"À utiliser pour enregistrer une évaluation clinique de la propension à présenter un effet indésirable lors d’une future exposition à une substance ou à une classe de substances spécifiées, y compris, sans s’y limiter, les principes actifs et les excipients présents dans les médicament, les produits biologiques, les sels métalliques et les composés chimiques organiques. 
+
+Cet archétype a pour but de fournir un emplacement unique au sein du dossier médical pour documenter la propension à présenter toute la gamme des réactions, des plus bénignes à celles mettant la vie en danger :
+- à médiation immunitaire : types I à IV (y compris les réactions allergiques et les hypersensibilités) ; ou 
+- à médiation non immunitaire : y compris les réactions pseudo-allergiques, les effets secondaires, les intolérances et les toxicités médicamenteuses.
+Dans la pratique clinique, il peut être difficile de distinguer les réactions à médiation immunitaire de celles qui ne le sont pas. L’identification du type de réaction ne permet pas d’évaluer la gravité ou le risque nuire au patient.
+
+Lorsqu’une propension est identifiée, les informations ou preuves relatives à un ou plusieurs événements de réaction peuvent être enregistrées à l’aide de l’archétype CLUSTER.adverse_reaction_event dans le SLOT « Résumé de l’événement de réaction ».
+
+L’identification de la gravité de la manifestation de la réaction, enregistrée dans l’archétype CLUSTER.adverse_reaction_event, peut éclairer la « criticité » du risque lié à l’effet indésirable. Par exemple, le fait de présenter une anaphylaxie lors de la première exposition à une substance justifierait de définir une « criticité » « élevée », en raison du risque élevé que l’anaphylaxie se reproduise lors de la deuxième exposition et des expositions suivantes.
+
+Cet archétype a été conçu pour permettre l’enregistrement d’informations concernant une substance spécifique (amoxicilline, huîtres ou venin d’abeille) ou, à défaut, une classe de substances (par exemple, les pénicillines). Si une classe de substances est enregistrée, l’identification de la substance exacte peut être enregistrée pour chaque réaction à l’aide de l’archétype CLUSTER.adverse_reaction_event.
+
+À utiliser pour enregistrer des informations concernant la présence avérée d’un risque d’effet indésirable :
+- pour soutenir la prise en charge clinique directe d’un individu ; 
+- dans le cadre d’une liste d’effets indésirables ou d’allergies/intolérances gérée ; 
+- pour faciliter l’échange d’informations sur la propension et les événements liés aux effets indésirables ; 
+- pour alimenter les déclarations d’effets indésirables ; et 
+- pour faciliter les activités informatisées fondées sur la connaissance, telles que l’aide à la décision clinique et les alertes.
+
+Le risque d’événement ou de manifestation d’effet indésirable doit toujours proposer une substance ou une classe de substances en cause. S’il existe un degré d’incertitude quant à la responsabilité d’une substance spécifique, ce niveau d’incertitude peut être consigné à l’aide de l’élément de données « Statut de vérification ». Si plusieurs substances sont susceptibles d’avoir provoqué une réaction ou une manifestation, chacune d’entre elles doit être enregistrée à l’aide d’une instance distincte de cet archétype de risque d’effet indésirable, avec le « Statut de vérification » défini initialement sur « Non confirmé », afin que la vérification des effets indésirables puisse être activée dans les systèmes cliniques. S’il s’avère par la suite que la substance n’est pas en cause, le « Statut de vérification » peut être modifié en « Réfuté » – par exemple, après des tests d’allergie.">
+			keywords = <"réaction", "allergie", "allergique", "indésirable", "événement", "effet", "sensibilité", "intolérance", "hypersensibilité", "effet secondaire", "toxicité", "médicament", "alimentation", "agent", "substance", "immunitaire", "non immunitaire", "chimique", "anaphylaxie", "allergène", "médicament", "supplément", "médecine", "remèdes naturels", "immunologique", "non immunologique", "risque">
+			misuse = <"À ne pas utiliser pour enregister les réactions physiologiques à des agents physiques, tels que la chaleur, le froid, la lumière du soleil, les vibrations, l’activité physique, ni celles provoquées par des agents infectieux ou des contaminants alimentaires. Utiliser à cette fin un archétype spécifique de type EVALUATION.problem/diagnosis ou CLUSTER.symptom/sign.
+
+À ne pas utiliser pour enregister des événements indésirables, y compris les défaillances de processus cliniques, d’interventions ou de produits. Par exemple : utilisation anormale, posologie incorrecte ou mauvaise administration d’un agent ou d’une substance ; étiquetage erroné ; dommage ou blessure causé(e) par une intervention ou une procédure ; surdosage/empoisonnement, etc. Utilisez un archétype spécifique à cet effet. 
+
+À ne pas utiliser pour enregistrer un effet indésirable lorsque la substance est inconnue. Utilisez EVALUATION.problem_diagnosis ou CLUSTER.symptom_sign pour enregistrer ces informations dans le dossier médical jusqu’à ce qu’une substance potentielle soit identifiée.
+
+À ne pas utiliser pour enregistrer les réactions à des transfusions de produits sanguins. Utilisez un archétype spécifique à cet effet. 
+
+À ne pas utiliser pour enregistrer des « alertes ». Utilisez les archétypes EVALUATION.precaution, EVALUATION.contraindication ou des archétypes apparentés à cette fin.
+
+À ne pas utiliser pour enregistrer un échec thérapeutique.
+
+À ne pas utiliser pour enregistrer explicitement l’absence (ou la présence négative) d’une réaction à « toute substance » ou à des substances identifiées, par exemple « Aucune allergie ou effet indésirable connu » ou « Aucune allergie connue à la pénicilline ». Utilisez les archétypes EVALUATION.exclusion_global ou EVALUATION.exclusion_specific pour exprimer une affirmation positive d’exclusion d’un effet indésirable.
+
+À ne pas utiliser pour enregister explicitement qu’aucune information n’a pu être obtenue concernant le statut d’un patient en matière d’effets indésirables. Utilisez l’archétype EVALUATION.absence pour enregister une affirmation positive indiquant qu’aucune information n’a pu être obtenue, par exemple si un patient non coopératif refuse de répondre aux questions.">
+		>
 		["ca"] = <
 			language = <[ISO_639-1::ca]>
 			purpose = <"Registrar l'avaluació clínica de la propensió d’un pacient d’experimentar una reacció adversa en cas d'exposició, o reexposició, d'una substància específica o substàncies d’una altra categoria.">
@@ -463,9 +512,9 @@ Thien FC. Drug hypersensitivity. Med J Aust. 2006 Sep 18;185(6):333-8. Review. P
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"C8015C0CAA2F425EF80DB7A794F19DB9">
-		["build_uid"] = <"e7a627fa-7d7c-40b4-8ba6-061d631f6a67">
-		["revision"] = <"2.0.1">
+		["MD5-CAM-1.0.1"] = <"9EF636F951CD7E56F009E24CD7840632">
+		["build_uid"] = <"482bdcef-5e18-4505-9ded-b3413b054824">
+		["revision"] = <"2.0.2">
 	>
 
 definition
@@ -593,7 +642,6 @@ definition
 			}
 		}
 	}
-
 
 ontology
 	term_definitions = <
@@ -1289,7 +1337,7 @@ Att de flesta kliniker INTE kommer att kunna urskilja mekanismen för en specifi
 					comment = <"Till exempel: lokala informationskrav eller metadata för att anpassas till överföring med FHIR.">
 				>
 				["at0129"] = <
-					text = <"Sammanfattning av reaktionen">
+					text = <"Sammanfattning av inträffade reaktioner">
 					description = <"Sammanfattning som beskriver varje biverkning kopplad till det identifierade ämnet.">
 				>
 				["at0130"] = <
@@ -1729,6 +1777,146 @@ It is acknowledged that most clinicians will NOT be able to distinguish the mech
 					text = <"*Onset of first reaction(en)">
 					description = <"*The onset of the first known occurrence of a reaction event.(en)">
 					comment = <"*For example: the actual date and/or time of onset; the interval of time during which the onset occurred; the age of the individual at the time of the onset; or the duration of time since the onset occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year.(en)">
+				>
+			>
+		>
+		["fr"] = <
+			items = <
+				["at0000"] = <
+					text = <"Risque d'effet indésirable">
+					description = <"Évaluation clinique de la propension d'un individu à présenter une réaction physiologique nocive ou indésirable en cas d'exposition ou de réexposition à une substance.">
+					comment = <"Ces substances comprennent, sans s’y limiter : une substance thérapeutique administrée correctement à une posologie adaptée à la personne concernée ; les aliments ; les matières d’origine végétale ou animale ; ou le venin issu de piqûres d’insectes.">
+					source = <"openEHR,FHIR">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Substance">
+					description = <"Identification d’une substance ou d’une classe de substances considérée comme exposant la personne à un risque d’effet indésirable.">
+					comment = <"Une substance individuelle et une classe de substances constituent toutes deux des entrées valides dans le champ « Substance ». Une substance peut être un composé de substances plus simples, par exemple un médicament. Il est fortement recommandé, dans la mesure du possible, de coder le champ « Substance » à l’aide d’une terminologie capable de déclencher une aide à la décision. Par exemple : Snomed CT, DM+D, RxNorm, NDFRT, ATC, la liste universelle des médicaments de Nouvelle-Zélande et la terminologie australienne des médicaments. La saisie en texte libre ne doit être utilisée que s’il n’existe aucune terminologie appropriée.">
+				>
+				["at0006"] = <
+					text = <"Commentaire">
+					description = <"Informations supplémentaires sur la propension à présenter un effet indésirable, non reprises dans d’autres champs.">
+					comment = <"Par exemple : incluant la raison justifiant l’attribution d’un niveau de « criticité » correspondant à un « risque élevé » ; et les consignes relatives à une exposition ou à une administration future de la substance, telles que l’administration au sein d’une unité de soins intensifs ou sous traitement corticostéroïdien.">
+				>
+				["at0042"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0047"] = <
+					text = <"Information complémentaire issue du dossier clinique">
+					description = <"Lien vers des informations complémentaires concernant le tableau clinique et les résultats figurant ailleurs dans le dossier médical, y compris les rapports de tests d'allergie.">
+					comment = <"Par exemple, les symptômes présentés, les résultats d'examen, le diagnostic, etc.">
+				>
+				["at0058"] = <
+					text = <"Mécanisme de réaction">
+					description = <"Identification du mécanisme physiologique sous-jacent à l'effet indésirable.">
+					comment = <"Les réactions à médiation immunitaire ont traditionnellement été considérées comme un indicateur d’aggravation d’un risque futur significatif. Les connaissances actuelles suggèrent que certaines réactions auparavant considérées comme immunitaires sont en réalité de nature non immunitaire et présentent néanmoins un risque potentiellement mortel. 
+
+Les tests immunologiques peuvent fournir des éléments probants concernant le mécanisme et la substance responsable, mais aucun test n’est sensible ou spécifique à 100 % pour une réaction de sensibilité. 
+
+Il est admis que la plupart des cliniciens ne seront PAS en mesure de distinguer le mécanisme d’une réaction spécifique. Toutefois, cet élément de données est inclus car de nombreux systèmes hérités ont enregistré cet attribut.">
+				>
+				["at0059"] = <
+					text = <"À médiation immunitaire">
+					description = <"Réaction à médiation immunitaire, y compris les réactions allergiques et les hypersensibilités.">
+				>
+				["at0060"] = <
+					text = <"À médiation non immunitaire">
+					description = <"Réaction à médiation non immunitaire, pouvant inclure des réactions pseudo-allergiques, des effets indésirables, des intolérances et des toxicités médicamenteuses (par exemple, à la gentamicine).">
+				>
+				["at0062"] = <
+					text = <"Dernière mise à jour">
+					description = <"Date à laquelle la propension ou l'événement indésirable a été mis à jour.">
+				>
+				["at0063"] = <
+					text = <"Statut de vérification">
+					description = <"Assertion concernant la certitude de la propension, ou du risque futur potentiel, de la « substance » identifiée à provoquer une réaction.">
+					comment = <"L'aide à la décision déclencherait généralement des alertes pour les statuts « Non confirmé » et « Confirmé », et ignorerait une réaction « Réfutée ». Les systèmes cliniques peuvent choisir de ne pas afficher les entrées d’effets indésirables ayant le statut « Réfutée » dans la liste des effets indésirables. Toutefois, le statut « Réfutée » peut s’avérer utile pour la conciliation de la liste des effets indésirables ou lors des échanges entre systèmes. Certaines implémentations peuvent choisir de rendre ce champ obligatoire. Le type de données « texte libre » permettra des adaptations locales en autorisant l’application d’autres ensembles de valeurs à cet élément de données dans un modèle ; dans ce cas, il est recommandé de coder les valeurs à l’aide d’une terminologie.">
+				>
+				["at0064"] = <
+					text = <"Non confirmé">
+					description = <"La propension à présenter une réaction à la « substance » identifiée n’a pas été vérifiée de manière objective.">
+				>
+				["at0065"] = <
+					text = <"Confirmé">
+					description = <"La propension à présenter une réaction à la « substance » identifiée a été objectivement vérifiée. Cela peut inclure des preuves cliniques issues de tests, d’une nouvelle exposition ou d’une observation.">
+				>
+				["at0066"] = <
+					text = <"Réfuté">
+					description = <"La propension à présenter une réaction à la « substance » identifiée a été contestée ou réfutée avec un niveau de certitude clinique suffisant pour justifier l’invalidation de cette affirmation. Cela peut inclure des preuves cliniques issues de tests, d’une nouvelle exposition ou d’une observation.">
+				>
+				["at0101"] = <
+					text = <"Criticité">
+					description = <"Une indication du risque de lésions graves touchant des organes vitaux ou de conséquences pouvant mettre la vie en danger.">
+					comment = <"Cela peut être considéré comme une estimation prédictive du « scénario le plus défavorable ». Dans la plupart des contextes, la valeur « Faible » serait considérée comme la valeur par défaut.">
+				>
+				["at0102"] = <
+					text = <"Faible">
+					description = <"L'exposition à cette substance est peu susceptible d'entraîner des lésions graves des organes vitaux ou des conséquences mettant la vie en danger. Une exposition future à la « substance » identifiée doit être considérée comme une contre-indication relative dans des circonstances cliniques normales.">
+				>
+				["at0103"] = <
+					text = <"Élevé">
+					description = <"L'exposition à cette substance peut entraîner des lésions graves au niveau des systèmes organiques ou avoir des conséquences potentiellement mortelles. Une exposition future à la « substance » identifiée doit être considérée comme une contre-indication absolue dans des circonstances cliniques normales.">
+				>
+				["at0117"] = <
+					text = <"Apparition de la dernière réaction">
+					description = <"Date/heure de l'apparition du dernier épisode connu d'une réaction indésirable.">
+					comment = <"Par exemple : la date et/ou l’heure exacte de l’apparition ; l’intervalle de temps au cours duquel l’apparition s’est produite ; l’âge de la personne au moment de l’apparition ; ou la durée écoulée depuis l’apparition. Une date partielle est valable, en utilisant le type de données DV_DATE_TIME, pour enregistrer uniquement l’année.">
+				>
+				["at0120"] = <
+					text = <"Catégorie">
+					description = <"Catégorie de la « substance » identifiée.">
+					comment = <"Cet élément de données a été inclus car il est actuellement enregistré dans certains systèmes cliniques. Ces données peuvent être dérivées de l’élément « Substance » lorsque des systèmes de codage sont utilisés, et sont alors redondantes.">
+				>
+				["at0121"] = <
+					text = <"Alimentation">
+					description = <"Toute substance consommée pour apporter un soutien nutritionnel à l'organisme, telle que les cacahuètes ou les œufs.">
+				>
+				["at0122"] = <
+					text = <"Médicament">
+					description = <"Toute substance administrée dans le but d'obtenir un effet physiologique.">
+				>
+				["at0123"] = <
+					text = <"Autres">
+					description = <"Toute autre substance rencontrée, y compris le venin, le latex et d’autres substances présentes dans l’environnement.">
+				>
+				["at0124"] = <
+					text = <"Indéterminé">
+					description = <"Impossible à évaluer à partir des informations disponibles.">
+				>
+				["at0126"] = <
+					text = <"Indéterminé">
+					description = <"Le mécanisme physiologique n'a pas pu être déterminé.">
+				>
+				["at0128"] = <
+					text = <"Extension">
+					description = <"Informations supplémentaires nécessaires pour représenter un contenu local ou pour assurer l’alignement avec d’autres modèles de référence ou formalismes.">
+					comment = <"Par exemple : exigences d’information locales ou métadonnées supplémentaires permettant l’alignement avec des équivalents FHIR.">
+				>
+				["at0129"] = <
+					text = <"Résumé des événements liés aux réactions">
+					description = <"Résumé des détails concernant chaque effet indésirable lié à l'exposition à la « substance » identifiée.">
+				>
+				["at0130"] = <
+					text = <"Statut actif/inactif">
+					description = <"Statut indiquant si la déclaration relative au risque d'effet indésirable est active ou inactive.">
+				>
+				["at0131"] = <
+					text = <"Actif">
+					description = <"Le sujet présente actuellement une réaction à la substance identifiée ou risque d'en présenter une.">
+				>
+				["at0132"] = <
+					text = <"Inactif">
+					description = <"Le sujet ne court plus de risque de réaction à la substance identifiée.">
+				>
+				["at0133"] = <
+					text = <"Apparition de la première réaction">
+					description = <"Apparition de la première manifestation connue d’un événement indésirable.">
+					comment = <"Par exemple : la date et/ou l’heure exacte de l’apparition ; l’intervalle de temps au cours duquel l’apparition s’est produite ; l’âge de la personne au moment de l’apparition ; ou la durée écoulée depuis l’apparition. Une date partielle est valable, en utilisant le type de données DV_DATE_TIME, pour enregistrer seulement l’année.">
 				>
 			>
 		>

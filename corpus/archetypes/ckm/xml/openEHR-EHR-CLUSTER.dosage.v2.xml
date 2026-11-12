@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -222,8 +222,7 @@ Spesifikke tidspunkter for administrering og start/stopp-tidspunkter spesifisere
         </terminology_id>
         <code_string>pt-br</code_string>
       </language>
-      <purpose>Para gravar a combinação de uma quantidade de medicamento e o tempo de administração diário, como parte de uma solicitação ou gestão de medicamentos ou para outros itens terapêuticos/prescritos apropriados.&#xD;
-</purpose>
+      <purpose>Para gravar a combinação de uma quantidade de medicamento e o tempo de administração diário, como parte de uma solicitação ou gestão de medicamentos ou para outros itens terapêuticos/prescritos apropriados.</purpose>
       <keywords>medicamento</keywords>
       <keywords>solicitação</keywords>
       <keywords>prescrever</keywords>
@@ -250,8 +249,7 @@ No contexto de uma INSTRUÇÃO terapêutica este arquétipo pode ser inserido de
 &#xD;
 No contexto de um arquétipo tipo ACTION insira este arquétipo diretamente no SLOT "Amount" para gravar a dose e tempo da administração de um item terapêutico.&#xD;
 &#xD;
-Tempos específicos de início e parada de administração devem ser especificados dentro do arquétipo CLUSTER "Timing - daily".&#xD;
-</use>
+Tempos específicos de início e parada de administração devem ser especificados dentro do arquétipo CLUSTER "Timing - daily".</use>
       <misuse />
       <copyright />
     </details>
@@ -285,8 +283,7 @@ Tempos específicos de início e parada de administração devem ser especificad
 V kontexte INSTRUCTION tento archetyp má byť vložený v SLOTe "Štrukturované dávkovanie a časy podania" v rámci CLUSTER 'Therapeutic direction' archetypu - aby bolo možné zadať dávku a časový rozpis pre jednotlivé požadované podanie preskribovanej položky&#xD;
 V kontexte ACTION tento archetyp má byť vložený priamo do SLOTu "Množstvo" - aby bolo možné zadať dávku a čas pre aktuálne podanie položky&#xD;
 &#xD;
-Špecifické časy pre začiatok podávania a koniec podávania majú byť špecifikované vo vloženom CLUSTER 'Timing - daily' archetype.&#xD;
-</use>
+Špecifické časy pre začiatok podávania a koniec podávania majú byť špecifikované vo vloženom CLUSTER 'Timing - daily' archetype.</use>
       <misuse />
       <copyright />
     </details>
@@ -363,8 +360,7 @@ En el contexto de una INSTRUCTION terapéutica, este arquetipo puede insertarse 
 &#xD;
 En el contexto de un arquetipo de tipo ACTION, inserte este arquetipo directamente en el SLOT "Cantidad" para registrar la dosis y el momento de la administración real de un elemento terapéutico.&#xD;
 &#xD;
-Las horas específicas de inicio y finalización de la administración deben especificarse dentro de un arquetipo CLUSTER "Timing - diario".&#xD;
-</use>
+Las horas específicas de inicio y finalización de la administración deben especificarse dentro de un arquetipo CLUSTER "Timing - diario".</use>
       <misuse />
       <copyright />
     </details>
@@ -1197,8 +1193,7 @@ Where multiple dosages are expressed, the 'Pattern sequence' makes the order in 
     <term_definitions language="pt-br">
       <items code="at0000">
         <items id="text">Dose</items>
-        <items id="description">A combinação de uma quantidade de medicamento e o tempo de administração para um único dia, no contexto de uma solicitação ou gestão de medicamento.&#xD;
-</items>
+        <items id="description">A combinação de uma quantidade de medicamento e o tempo de administração para um único dia, no contexto de uma solicitação ou gestão de medicamento.</items>
         <items id="comment">Por exemplo: "2 comprimidos às 18h" ou "20 mg três vezes ao dia". Por favor note que: este cluster permite ocorrências múltiplas para possibilitar a representação de um conjunto completo de padrões de dose para uma orientação de dose única.</items>
       </items>
       <items code="at0037">
@@ -1267,8 +1262,7 @@ Quando são expressas múltiplas doses, a "Sequência Padrão" indica a ordem na
       <items code="at0135">
         <items id="text">Dosisformel</items>
         <items id="description">Die Formel zur Berechnung der Dosismenge oder der Verabreichungsrate, wenn dies von einem anderen Faktor abhängt, wie z. B. dem Körpergewicht oder der Hautoberfläche.</items>
-        <items id="comment">Zum Beispiel: "10mg/kg/Tag". Das Ergebnis der Formel würde üblicherweise in Dosierung oder Verabreichungsrate/-dauer gehalten werden. Wenn klinische Maße, wie das Körpergewicht, bei der Berechnung der Dosis verwendet werden, sollte ein LINK-Attribut genutzt werden, um anzugeben, welche bestimmte Messung verwendet wurde.&#xD;
-</items>
+        <items id="comment">Zum Beispiel: "10mg/kg/Tag". Das Ergebnis der Formel würde üblicherweise in Dosierung oder Verabreichungsrate/-dauer gehalten werden. Wenn klinische Maße, wie das Körpergewicht, bei der Berechnung der Dosis verwendet werden, sollte ein LINK-Attribut genutzt werden, um anzugeben, welche bestimmte Messung verwendet wurde.</items>
       </items>
       <items code="at0144">
         <items id="text">Dosis</items>
@@ -1486,4 +1480,3 @@ V prípade, že je zadaných viacej dávkovaní, táto sekvencia explicitne defi
     </term_definitions>
   </ontology>
 </archetype>
-

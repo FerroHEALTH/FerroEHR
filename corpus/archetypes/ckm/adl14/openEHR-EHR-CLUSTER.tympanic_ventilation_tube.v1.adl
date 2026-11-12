@@ -1,0 +1,144 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-CLUSTER.tympanic_ventilation_tube.v1
+
+concept
+	[at0000]	-- Tympanic Ventilation tube
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Ian McNicoll">
+		["organisation"] = <"Ocean Informatics">
+		["date"] = <"10/11/2007">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record details of a Tympanic Ventilation tube.">
+			use = <"To record details of a Tympanic Ventilation tube as part of an inspection of the tympanic membrane.">
+			keywords = <"ENT", "tympanic", "ventilation", "tube", "grommet", "hearing">
+			misuse = <"Not currently suitable for recording the insertion of a tube as part of an operative procedure.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <>
+	other_details = <
+		["references"] = <"Minimum dataset for recording myringotomy and ventilation tube insertion Sunil N. Dutt M.S., D.N.B., D.L.O., F.R.C.S.(Ed) a1 and Ahmes L. Pahor F.R.C.S., F.I.C.S., M.A., D.L.O., D.Msc.(Path), D.H.M.S.A. a1 Journal of Laryngology & Otology  (2001), 115: 812-814 Cambridge University Press">
+	>
+
+definition
+	CLUSTER[at0000] matches {	-- Tympanic Ventilation tube
+		items cardinality matches {0..*; unordered} matches {
+			ELEMENT[at0012] occurrences matches {0..1} matches {	-- Insitu
+				value matches {
+					DV_BOOLEAN matches {
+						value matches {True, False}
+					}
+				}
+			}
+			CLUSTER[at0006] occurrences matches {0..1} matches {	-- Tube details
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0003] occurrences matches {0..1} matches {	-- Size
+						value matches {
+							C_DV_QUANTITY <
+							>
+						}
+					}
+					ELEMENT[at0002] occurrences matches {0..1} matches {	-- Style
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0001] occurrences matches {0..1} matches {	-- Make
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0011] occurrences matches {0..1} matches {	-- Insertion Position
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+			ELEMENT[at0004] occurrences matches {0..1} matches {	-- Patency
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0005] occurrences matches {0..1} matches {	-- Current tube position
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0007, 	-- In-situ
+							at0008, 	-- Extruded - visible
+							at0009]	-- Extruded - not visible
+						}
+					}
+				}
+			}
+			CLUSTER[at0010] occurrences matches {0..1} matches {*}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Tympanic Ventilation tube">
+					description = <"To record details of a Tympanic Ventilation tube">
+				>
+				["at0001"] = <
+					text = <"Make">
+					description = <"Make of the ventilation tube">
+				>
+				["at0002"] = <
+					text = <"Style">
+					description = <"Style of ventilation tube">
+				>
+				["at0003"] = <
+					text = <"Size">
+					description = <"Size of ventilation tube">
+				>
+				["at0004"] = <
+					text = <"Patency">
+					description = <"Degree of patency of the tube">
+				>
+				["at0005"] = <
+					text = <"Current tube position">
+					description = <"Current position of the tube">
+				>
+				["at0006"] = <
+					text = <"Tube details">
+					description = <"Details of the tube inserted">
+				>
+				["at0007"] = <
+					text = <"In-situ">
+					description = <"The tube is visible and in-situ">
+				>
+				["at0008"] = <
+					text = <"Extruded - visible">
+					description = <"The tube is visible but not in-situ">
+				>
+				["at0009"] = <
+					text = <"Extruded - not visible">
+					description = <"The tube is not visible">
+				>
+				["at0010"] = <
+					text = <"Comment">
+					description = <"Any additional comment">
+				>
+				["at0011"] = <
+					text = <"Insertion Position">
+					description = <"The original position on which the tube was inserted">
+				>
+				["at0012"] = <
+					text = <"Insitu">
+					description = <"Ventilation tube observed">
+				>
+			>
+		>
+	>

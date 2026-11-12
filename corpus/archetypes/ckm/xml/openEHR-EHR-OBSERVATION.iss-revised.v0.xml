@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -646,7 +646,7 @@ interphase fluorescent in situ hybridization (iFISH).</items>
       </items>
       <items code="at0.4">
         <items id="text">Serum LDH</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.5">
         <items id="text">Normal</items>
@@ -658,7 +658,7 @@ interphase fluorescent in situ hybridization (iFISH).</items>
       </items>
       <items code="at0.7">
         <items id="text">Revised ISS stage</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.8">
         <items id="text">R-ISS I</items>
@@ -686,35 +686,35 @@ interphase fluorescent in situ hybridization (iFISH).</items>
       </items>
       <items code="at0004">
         <items id="text">Serum β2 microglobulin</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">&lt;3.5 mg/L</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">3.5-5.4 mg/L</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">&gt;5.4 mg/L</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Serum albumin</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">&lt;3.5 g/dL</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">≥3.5 g/dL</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">ISS stage</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">ISS I</items>
@@ -740,4 +740,3 @@ interphase fluorescent in situ hybridization (iFISH).</items>
     </term_definitions>
   </ontology>
 </archetype>
-

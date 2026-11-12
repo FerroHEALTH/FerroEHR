@@ -1,0 +1,77 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6aea8b85-00e7-4290-8bf7-31ce79cbffc9; build_uid=4a8bb6bb-53f3-44f3-a183-41ecc1fa3d2a)
+    openEHR-EHR-EVALUATION.exclusion-family_history.v1.0.0
+
+specialize
+    openEHR-EHR-EVALUATION.exclusion.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2010-03-2">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sam Heard, Ocean Informatics, Australia", "Ian McNicoll, Ocean Informatics, Australia", "Stephen Chu, NEHTA, Australia", "Stephen Royce, NEHTA, Australia">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Exclusion of Family History, draft archetype, NEHTA Clinical Knowledge Manager [Internet]. NEHTA. Authored: 02 Mar 2010. Available at: ">
+        ["2"] = <"http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1314_1(accessed 3 Sept 2013)">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"A3AF28DAA57C3C42FF988C2DB3C70227">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To positively record statement/s about family history that need to be clinically excluded from the health record at a specific point in time.">
+            keywords = <"exclusion", "family">
+            use = <"Use to record positive statement/s about the absence or exclusion of family history information within the health record at a specific point in time. For example: to record that the subject does not have any significant family history; or that the subject has no family members with heart disease.
+
+This archetype has specifically been designed to avoid the need to use flags or terminology to express negation about any family history within the health record. 
+
+Exclusion statements can only be considered to be current and accurate at the time of recording. For example: recording an exclusion is only relevant at the time of recording and may be effectively obsolete immediately after the record is made if new information is discovered.">
+            misuse = <"Not to be used to record the exclusion or absence of adverse reactions, medication use, procedures, problems or diagnoses - use specific specialisations of this archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Exclusion of Family History
+        /data[at0001]/items matches {
+            ELEMENT[at0003.1] matches {    -- Family History
+                value matches {
+                    DV_TEXT[at0.9000]
+                    DV_CODED_TEXT[at9001.1] matches {
+                        defining_code matches {[ac0.1]}    -- Family History
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Exclusion of Family History">
+                description = <"Positive statement/s about family history that need to be recorded as clinically excluded from the health record at a specific point in time.">
+            >
+            ["at0003.1"] = <
+                text = <"Family History">
+                description = <"Identification of the specific fanily history to which the Exclusion Statement applies.">
+            >
+            ["ac0.1"] = <
+                text = <"Family History">
+                description = <"All possible findings of Family History">
+            >
+        >
+    >

@@ -1,0 +1,627 @@
+﻿archetype (adl_version=1.4; uid=c25ce52a-8f8b-4d23-a686-4db052bbb6bb)
+	openEHR-EHR-OBSERVATION.lab_test.v1
+
+concept
+	[at0000]	-- Laboratory test
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			author = <
+				["name"] = <"Yoel Unanuee Mac Lennan">
+				["organisation"] = <"GLYM Software">
+			>
+			accreditation = <"Desarrollo de LIS desde 1998">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+		["ru"] = <
+			language = <[ISO_639-1::ru]>
+			author = <
+				["name"] = <"Vyacheslav Mavrin">
+				["organisation"] = <"JSC Comsoft">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Dr Ian McNicoll">
+		["organisation"] = <"Ocean Informatics, United Kingdom">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"07/11/2009">
+	>
+	details = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لتسجيل نتيجة اختبار المعمل, و التي قد يتم استخدامها لتسجيل اختبار ذي قيمة واحدة, و عادة ما يتم بعد ذلك المزيد من التخصيص أو الوضع في قالب لتمثيل اختبار متعدد القيم أو رتل من الاختبارات. 
+و يمثل هذا النموذج كوالد (أب) للتخصيصات الأخرى لاختبارات معملية أكثر تحديدا مثل الميكروبيولوجيا و الهيستوباثولوجيا.">
+			use = <"قد يستخدم لتسجيل نتيجة اختبار المعمل, و التي قد يتم استخدامها لتسجيل اختبار ذي قيمة واحدة, و عادة ما يتم بعد ذلك المزيد من التخصيص أو الوضع في قالب لتمثيل اختبار متعدد القيم أو رتل من الاختبارات. 
+
+يتم بعد ذلك تقديم التقرير للطبيب السريري الذي قام بطلب الاختبار في سياق تقرير معملي متكامل.">
+			keywords = <"المعمل - المختبر", "الباثولوجيا - المرضية", "الكيمياء الحيوية", "الدمويات", "الميكروبيولوجيا", "المناعيات - علم المناعة">
+			misuse = <"قد تكون التخصيصات أكثر مناسبة للتقارير المركبة مثل حالات الميكروبيولوجيا أو الهيستوباثولوجيا.">
+			copyright = <"© openEHR Foundation">
+		>
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			purpose = <" Para grabar el resultado de una prueba de laboratorio que puede ser utilizado para registrar una prueba de un solo valor, pero también puede ser especializado o usado como plantilla para representar el valor múltiple o las pruebas de un panel o perfil.
+ Este arquetipo también actúa como el padre de las especialidades correspondientes a las pruebas de laboratorio más específicas de microbiología, anatomía patológica, etc.">
+			use = <" Puede ser usado para representar un solo valor \"estándar\"  de resultados de las pruebas de laboratorio, pero a menudo se especializará o utilizará como plantilla para representar los resultados de varios valores, denominados a veces como paneles. También podría ser especializado para pruebas de laboratorio más altamente estructuradas, tales como la microbiología e histopatología.
+
+ Normalmente, se informó al médico solicitante en el contexto de un informe de laboratorio basado en la composición general.">
+			keywords = <"*lab(en)", "*pathology(en)", "*biochemistry(en)", "*haematology(en)", "*microbiology(en)", "*immunology(en)", "*laboratory(en)">
+			misuse = <"El uso de especialidades pueden ser más apropiados para determinados informes estructurados como para microbiología e histopatología. ">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record the result of a laboratory test which may be used to record a single valued test but will often be specialised or templated to represent multiple value or 'panel' tests.
+This archetype also acts as the parent for specialisations appropriate for more specific laboratory tests microbiology, histopathology.">
+			use = <"May be used to represent 'standard' single-value laboratory test results  but will often be specialised or templated to represent multi-value results, sometimes referred to as panels. May also be specialised to more highly structured laboratory tests such as microbiology or histopathology.
+
+Will normally be reported back to the requesting clinician within the context of an overall Composition-based laboratory report.">
+			keywords = <"lab", "pathology", "biochemistry", "haematology", "microbiology", "immunology", "laboratory">
+			misuse = <"Specialisations may be more appropriate for specific structured reports such as for microbiology or histopathology.">
+			copyright = <"© openEHR Foundation">
+		>
+		["ru"] = <
+			language = <[ISO_639-1::ru]>
+			purpose = <"Для записи результатов лабораторных исследований. Такая запись может быть использована для записи одиночного значения, но часто используется в шаблонах для представления нескольких значений или \"панельных\"результатов . Этот архетип также выступает в качестве родительского для более специализированных  лабораторных испытаний   в микробиологии, гистологии.">
+			use = <"Может быть использован для представления результатов \"стандартного\" анализа с одним значением, однако будет часто специализируетсся и используется как шаблон для представления многозначных результатов, которые иногда называют панелями. Может также специализируется на более высоко структурированные лабораторные тесты, такие как в микробиологии и гистологии.
+
+Как правило, результат  доводится до сведения запрашивающего врача в контексте общей композиции на основе лабораторного исследования.">
+			keywords = <"лаборатория", "патология", "лабораторное исследование", "биохимия", "гематология", "микробиология", "иммунология">
+			misuse = <"Для конкретных структурированных отчетов, таких как для микробиологии и гистологии, более удобно использовать специализации данного архетипа.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Koray Atalag, University of Auckland, New Zealand", "Heath Frankel, Ocean Informatics, Australia", "Sam Heard, Ocean Informatics, Australia (Editor)", "Heather Leslie, Ocean Informatics, Australia", "Ian McNicoll, Ocean Informatics, United Kingdom (Editor)", "David Rowed, VAMC Clinic, Australia (Editor)", "Mona Saleh (Translator)">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["references"] = <"NEHTA, Australia. Pathology Episode v1.0 - Data Group library [Internet]. 2009;[cited 2009 Dec 8 ] Available from: http://www.nehta.gov.au/data-group-library/data-specifications/dgl-pathology
+
+IHE. IHE, Laboratory Technical Framework, Volume 3 Content [Internet]. 2008;Available from: http://www.ihe.net/Technical_Framework/upload/ihe_lab_TF_rel2_1-Vol-3_FT_2008-08-08.pdf.">
+		["build_uid"] = <"2b27fb17-50ed-49b3-affc-0d08c1e712ac">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"AC508DEE64F1DE2058116A8DA78DAD2F">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	OBSERVATION[at0000] matches {	-- Laboratory test
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..*} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0005] occurrences matches {0..1} matches {	-- Test name
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0077] occurrences matches {0..1} matches {	-- Diagnostic service
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0073] occurrences matches {0..1} matches {	-- Test status
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0037, 	-- Interim
+													at0038, 	-- Final
+													at0039, 	-- Supplementary
+													at0040, 	-- Corrected (amended)
+													at0074, 	-- Aborted
+													at0079]	-- Never performed
+												}
+											}
+										}
+									}
+									allow_archetype CLUSTER[at0065] occurrences matches {0..*} matches {	-- Specimen detail
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen\.v1/}
+										exclude
+											archetype_id/value matches {/.*/}
+									}
+									ELEMENT[at0078] occurrences matches {0..*} matches {*}
+									allow_archetype CLUSTER[at0089] occurrences matches {0..*} matches {	-- Per-result annotation
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.lab_result_annotation(-[a-zA-Z0-9_]+)*\.v1/}
+										exclude
+											archetype_id/value matches {/.*/}
+									}
+									ELEMENT[at0057] occurrences matches {0..1} matches {	-- Overall interpretation
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0010] occurrences matches {0..*} matches {	-- Multimedia representation
+										value matches {
+											DV_MULTIMEDIA matches {
+												media_type matches {[openEHR::]}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0004] matches {	-- Tree
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0062] occurrences matches {0..1} matches {	-- Requestor order identifier
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					allow_archetype CLUSTER[at0090] occurrences matches {0..*} matches {	-- Requestor
+						include
+							archetype_id/value matches {/.*/}
+					}
+					ELEMENT[at0063] occurrences matches {0..1} matches {	-- Receiver order Identifier
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					allow_archetype CLUSTER[at0017] occurrences matches {0..*} matches {	-- Receiving laboratory
+						include
+							archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation\.v1/}
+						exclude
+							archetype_id/value matches {/.*/}
+					}
+					ELEMENT[at0068] occurrences matches {0..1} matches {	-- Laboratory test result identifier
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0075] occurrences matches {0..1} matches {	-- Datetime result issued
+						value matches {
+							DV_DATE_TIME matches {*}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["ar-sy"] = <
+			items = <
+				["at0000"] = <
+					text = <"الاختبار المعملي">
+					description = <"لتسجيل نتيجة الاختبار و التي قد تستخدم إما لتسجيل اختبار ذي قيمة واحدة كما أنه قد يتم تخصيصه أو وضعه في قالب لتمثيل الاختبارات متعددة القيمة أو رتل من الاختبارات.
+يستخدم هذا النموذج كوالد (أب) للتخصيصات المناسبة لاختبارات أكثر تحديدا مثل حالات الميكروبيولوجيا و الهيستوباثولوجيا.">
+				>
+				["at0001"] = <
+					text = <"*Event Series(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"إحدى الوقائع">
+					description = <"إحدى الوقائع">
+				>
+				["at0003"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0005"] = <
+					text = <"اسم الاختبار">
+					description = <"تعريف معين لهوية هذا الاختبار. مثل العد الدموي الشامل, الغلوكوز (سكر العنب) في الدم. قد يكون هو نفسه اسم النتيجة في الاختبارات ذات النتيجة المتكونة من قيمة وحيدة. عادة ما يكون مُصطَلحاً مُرمَزًا مثل لوينك و سنوميد-سي تي.">
+				>
+				["at0010"] = <
+					text = <"تمثيل الوسائط المتعددة">
+					description = <"تمثيلات الاختبار الكلي عن طريق الوسائط المتعددة مثل: الصورة, الصوت, و الفيديو">
+				>
+				["at0017"] = <
+					text = <"المعمل المستقبل لطلب الاختبار">
+					description = <"التفاصيل الديموغرافية عن المعمل المسئول عن الاختبار. قد يتضمن معلومات عن معامل أخرى ثانوية.">
+				>
+				["at0037"] = <
+					text = <"مؤقت">
+					description = <"هذه هي النتيجة المبدئية أو المؤقتة - المزيد من التحديثات للنتيجة متوقَّعة أو منتظَرة">
+				>
+				["at0038"] = <
+					text = <"نهائية">
+					description = <"هذه هي النتيجة النهائية. لا يوجد المزيد من التعديلات المتوقَّعة">
+				>
+				["at0039"] = <
+					text = <"تكميلية">
+					description = <"هذه هي نتيجة تكميلية بالإضافة إلى النتيجة الموَقتة">
+				>
+				["at0040"] = <
+					text = <"بعد التصحيح – معدَّلة">
+					description = <"هذا هو تصحيح لابد و أن يحل محلّ أي نتائج سابقة">
+				>
+				["at0057"] = <
+					text = <"التفسير الإجمالي">
+					description = <"تعليق تفسيري إجمالي حول هذا الاختبار">
+				>
+				["at0062"] = <
+					text = <"عنصر معرِّف فريد بواسطة طالب الاختبار">
+					description = <"العنصر التعريفي الفريد الذي يتم إعطاؤه للأمر بالاختبار بواسطة من يقوم بإجراء الأمر. مكافئ للعنصر التعريفي للأمر بواسطة من يقوم بطلب إجرائه.">
+				>
+				["at0063"] = <
+					text = <"عنصر معرِّف فريد بواسطة مستقبل الاختبار">
+					description = <"العنصر التعريفي الذي يتم إعطاؤه للأمر بالاختبار بواسطة منفذ الاختبار, عادةً النظام المعلومات الخاص بالمعمل. يكافئ رقم الإضافة الخاص بـ دايكوم, و معرِّف أمر الاختبار ">
+				>
+				["at0065"] = <
+					text = <"تفاصيل العيِّنة">
+					description = <"تفاصيل العينة حيث جميع النتائج مشتقة من نفس العينة">
+				>
+				["at0068"] = <
+					text = <"العنصر التعريفي الخاص بنتيجة الاختبار">
+					description = <"العنصر التعريفي الذي تم إعطاؤه لنتيجة اختبار معملي خاص بالباثولوجيا – المَرَضية">
+				>
+				["at0073"] = <
+					text = <"حالة الاختبار">
+					description = <"حالة الاختبار المعملي ككل">
+				>
+				["at0074"] = <
+					text = <"مُلغاة">
+					description = <"تم إلغاء الاختبار و لم يتم استكماله بعد ذلك.">
+				>
+				["at0075"] = <
+					text = <"تاريخ و وقت إصدار النتيجة">
+					description = <"التاريخ و / أو الوقت الذي تم فيه إصدار النتيجة لحالة الاختبار المسجَّلة.">
+					comment = <"التاريخ و الوقت المتعلق بحالة النتائج هو من النقاط المفيدة للتحكم في الروايات المتعددة و النتائج التراكمية الخاصة بالتقرير.">
+				>
+				["at0077"] = <
+					text = <"الخدمة التشخيصية">
+					description = <"نوع الخدمة التشخيصية - مستوى عالي من التشخيص - مثلا: الكيمياء الحيوية و الدمويات">
+				>
+				["at0078"] = <
+					text = <"النتيجة">
+					description = <"نتيجة الاختبار">
+				>
+				["at0079"] = <
+					text = <"لم يتم عملها على الإطلاق">
+					description = <"لم يتم عمل الاختبار على الإطلاق">
+				>
+				["at0089"] = <
+					text = <"ملاحظات ما قبل الاختبار">
+					description = <"شرفة تسمح بإضافة ملاحظات حول نتيجة اختبار معين في أثناء إجرائه">
+				>
+				["at0090"] = <
+					text = <"الطالب">
+					description = <"تفاصيل حول الطبيب السريري أو المؤسسة التي تطلب الاختبار المعملي.">
+				>
+			>
+		>
+		["es-ar"] = <
+			items = <
+				["at0000"] = <
+					text = <"Análisis de Laboratorio">
+					description = <" Para grabar el resultado de una prueba de laboratorio que puede ser utilizado para registrar una prueba de un solo valor, pero tambiém puede ser especializado o usado como plantilla para representar el valor múltiple o las pruebas de un panel.
+ Este arquetipo también actúa como el padre de las especialidades correspondientes a las pruebas de laboratorio más específicas de microbiología, anatomía patológica.">
+				>
+				["at0001"] = <
+					text = <"Serie de eventos">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Cualquier evento">
+					description = <"cualquier evento">
+				>
+				["at0003"] = <
+					text = <"Arbol">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Arbol">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Nombre de análisis">
+					description = <"Identificador especifico del test de labotratorio ej. Hemograma, glucemia,  Microbiológico de  orina.   Puede equipararse al nombre de resultado para un resultado de valor simple. Comúnmente un término codificado. Ej. LOINC o SNOMED-CT.">
+				>
+				["at0010"] = <
+					text = <"Representación multimedia">
+					description = <"Representación multimedia de todo el test, como gráfico de volumen, audio, video.">
+				>
+				["at0017"] = <
+					text = <"Laboratorio receptor">
+					description = <"Datos demográficos del laboratorio responsable de la prueba. Los detalles de los laboratorios secundarios también pueden ser incluidos">
+				>
+				["at0037"] = <
+					text = <"Provisorio">
+					description = <"Este es un resultado inicial o intermedio, se preveen actualizaciones del resultado">
+				>
+				["at0038"] = <
+					text = <"Final">
+					description = <"Este es el resultado final, no se preveen actualizaciones posteriores.">
+				>
+				["at0039"] = <
+					text = <"Suplementario">
+					description = <"Este es un resultado complementario adicionado al resultado anterior.">
+				>
+				["at0040"] = <
+					text = <"Corregido (modificado)">
+					description = <"Esta es una corrección que debe sustituir por completo los resultados anteriores">
+				>
+				["at0057"] = <
+					text = <"Interpretación general">
+					description = <"Comentario general sobre el análisis.">
+				>
+				["at0062"] = <
+					text = <"ID de orden de solicitante">
+					description = <"Código de identificacion local asignado por el solicitante del análisis">
+				>
+				["at0063"] = <
+					text = <"ID de orden de receptor">
+					description = <"Código de identificación local asignado por el sistema de gestión del laboratorio (LIS) que realiza el análisis">
+				>
+				["at0065"] = <
+					text = <"Detalle de muestra o specimen">
+					description = <"Detalles de la muestra que se informa (tubo o material) cuando todos los resultados individuales provienen de la misma muestra (tubo o material)">
+				>
+				["at0068"] = <
+					text = <"Identificador de resultado de análisis">
+					description = <"El identificador dado al resultado de la prueba de laboratorio de una investigación de patología.">
+				>
+				["at0073"] = <
+					text = <"Estado general del analisis">
+					description = <"Estado general del análisis (como un todo)">
+				>
+				["at0074"] = <
+					text = <"Abortado">
+					description = <"El análisis fué abortado y nunca se completó">
+				>
+				["at0075"] = <
+					text = <"Fecha y hora de publicación del resultado">
+					description = <"La fecha y / o hora que el resultado fue publicado">
+					comment = <"*The date and time related to the results status is useful for version control and cumulative results for the report.(en)">
+				>
+				["at0077"] = <
+					text = <"Servicio">
+					description = <"El tipo de servicio diagnóstico de alto nivel. Ej. bioquímica, hematología, etc.">
+				>
+				["at0078"] = <
+					text = <"Resultado">
+					description = <"Resultado del análisis">
+				>
+				["at0079"] = <
+					text = <"Nunca se realizó">
+					description = <"El análisis nunca se realizó">
+				>
+				["at0089"] = <
+					text = <"Nota de resultado">
+					description = <"Campo para anotar una anotación sobre el resultado de un test en particular en tiempo de rjecución, ej. resultado confirmado, etc.">
+				>
+				["at0090"] = <
+					text = <"Solicitante">
+					description = <"Detalles de la institución o centro médico que solicita el análisis del test.">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Laboratory test">
+					description = <"To record the result of a laboratory test which may be used to record a single valued test but will often be specialised or templated to represent multiple value or 'panel' tests.
+This archetype also acts as the parent for specialisations appropriate for more specific laboratory tests microbiology, histopathology.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Any event.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Test name">
+					description = <"Specific identifier for this lab test. e.g. Full blood count , blood glucose, urine microbiology.  May equate to the result name for a single value result. Commonly a coded term e.g from LOINC or SNOMED-CT.">
+				>
+				["at0010"] = <
+					text = <"Multimedia representation">
+					description = <"Representations of the whole test in mutlimedia e.g image, audio, video.">
+				>
+				["at0017"] = <
+					text = <"Receiving laboratory">
+					description = <"Demographic details of the laboratory with responsibility for the test. Details of secondary laboratories may also be included.">
+				>
+				["at0037"] = <
+					text = <"Interim">
+					description = <"This is an initial or interim result - further updates are anticipated.">
+				>
+				["at0038"] = <
+					text = <"Final">
+					description = <"This is the final result. No further alterations are anticipated.">
+				>
+				["at0039"] = <
+					text = <"Supplementary">
+					description = <"This is a supplementary result ehich should be appended to a previous result.">
+				>
+				["at0040"] = <
+					text = <"Corrected (amended)">
+					description = <"This is a correction which should completely replace any previous results.">
+				>
+				["at0057"] = <
+					text = <"Overall interpretation">
+					description = <"An overall interpretative comment on this test.">
+				>
+				["at0062"] = <
+					text = <"Requestor order identifier">
+					description = <"The local ID assigned to the order by the order requester. Equivalent to the Placer Order Identifier.">
+				>
+				["at0063"] = <
+					text = <"Receiver order Identifier">
+					description = <"The local ID assigned to the test order by the order filler, usually by the (LIS) Laboratory Information System. Equivalent to the DICOM Accession Number and the Filler Order Identifier.">
+				>
+				["at0065"] = <
+					text = <"Specimen detail">
+					description = <"Details of the specimen being reported where all individual results are derived from the same specimen.">
+				>
+				["at0068"] = <
+					text = <"Laboratory test result identifier">
+					description = <"The identifier given to the laboratory test result of a pathology investigation.">
+				>
+				["at0073"] = <
+					text = <"Test status">
+					description = <"The status of the lab test as a whole.">
+				>
+				["at0074"] = <
+					text = <"Aborted">
+					description = <"The test was aborted and never completed.">
+				>
+				["at0075"] = <
+					text = <"Datetime result issued">
+					description = <"The date and/or time that the result was issued for the recorded ‘test status’.">
+					comment = <"The date and time related to the results status is useful for version control and cumulative results for the report.">
+				>
+				["at0077"] = <
+					text = <"Diagnostic service">
+					description = <"The type of high-level diagnostic service e.g. biochemistry, haematology.">
+				>
+				["at0078"] = <
+					text = <"Result">
+					description = <"The result of the test.">
+				>
+				["at0079"] = <
+					text = <"Never performed">
+					description = <"The test was never performed.">
+				>
+				["at0089"] = <
+					text = <"Per-result annotation">
+					description = <"Slot to allow an annotation to be added to a particular test result at run-time.">
+				>
+				["at0090"] = <
+					text = <"Requestor">
+					description = <"Details of the clinician or organisation requesting the laboratory test.">
+				>
+			>
+		>
+		["ru"] = <
+			items = <
+				["at0000"] = <
+					text = <"Лабораторный анализ">
+					description = <"Для записи результатов лабораторных исследований. Такая запись может быть использована для записи одиночного значения, но часто используется в шаблонах для представления нескольких значений или \"табличных\"результатов . Этот архетип также выступает в качестве родительского для более специализированных  лабораторных испытаний   в микробиологии, гистологии.">
+				>
+				["at0001"] = <
+					text = <"Серии событий">
+					description = <"@ внутренний @">
+				>
+				["at0002"] = <
+					text = <"Любое событие">
+					description = <"Любое событие.">
+				>
+				["at0003"] = <
+					text = <"Дерево">
+					description = <"@ внутренний @">
+				>
+				["at0004"] = <
+					text = <"Дерево">
+					description = <"@ внутренний @">
+				>
+				["at0005"] = <
+					text = <"Наименование анализа">
+					description = <"Конкретный идентификатор этого лабораторного анализа. Например: общий анализ крови, сахар крови, микробиология мочи. Может отождествляться с наименованием результата  в случае одиночного значения. Обычно кодированный термин, например, из LOINC или SNOMED-CT.">
+				>
+				["at0010"] = <
+					text = <"Мультимедийное представление">
+					description = <"Представление всего анализа в виде мультимедийного содержимого, например, как изображение, как аудиозапись или  как видеозапись.">
+				>
+				["at0017"] = <
+					text = <"Принимающая лаборатория">
+					description = <"Демографическая информация о лаборатории, несущей ответственность за анализ. Также может быть включена информация о вторичных лабораториях.">
+				>
+				["at0037"] = <
+					text = <"Предварительный">
+					description = <"Это начальный или промежуточный результат -  ожидается дальнейшее обновление.">
+				>
+				["at0038"] = <
+					text = <"Окончательный">
+					description = <"Это конечный результат. Никаких дополнительных изменений не предвидится.">
+				>
+				["at0039"] = <
+					text = <"Дополнительный">
+					description = <"Это дополнительный результат, который должен быть добавлен к предыдущему результату.">
+				>
+				["at0040"] = <
+					text = <"Исправленный">
+					description = <"Это коррекция, которая должна полностью заменить все предыдущие результаты.">
+				>
+				["at0057"] = <
+					text = <"Общая интерпретация">
+					description = <"Общее толкование результатов анализа.">
+				>
+				["at0062"] = <
+					text = <"Идентификатор заявки заказчика">
+					description = <"Локальный идентификатор, назначаемый заказу его заказчиком. Эквивалент Идентификатора заказа.">
+				>
+				["at0063"] = <
+					text = <"Идентификатор заявки получателя">
+					description = <"Локальный идентификатор, присваиваемый заказу на анализ её получателем. Обычно присваивается Лабораторной Информационной Системой (ЛИС). Эквивалентно регистрационному номеру DICOM и Идентификатору Заполнителя Заказа.">
+				>
+				["at0065"] = <
+					text = <"Информация о пробе">
+					description = <"В информации о пробе сообщается обо всех отдельных результатах, полученных из того же образца пробы.">
+				>
+				["at0068"] = <
+					text = <"Идентификатор лабораторного анализа">
+					description = <"Идентификатор, выданный результату лабораторного анализа при лабораторном исследовании.">
+				>
+				["at0073"] = <
+					text = <"Статус анализа">
+					description = <"Статус лабораторного анализа в целом.">
+				>
+				["at0074"] = <
+					text = <"Прерван">
+					description = <"Анализ был прерван и не завершён.">
+				>
+				["at0075"] = <
+					text = <"Дата-время выдачи результата">
+					description = <"Дата и/или время, когда результат был выдан для записи \"статуса анализа\".">
+					comment = <"Дата и время, связанные со статусом результаты полезны для управления версиями а также для сводных результатов.">
+				>
+				["at0077"] = <
+					text = <"Диагностическая услуга">
+					description = <"Тип лабораторно-диагностической услуги. Например, биохимия, гематология.">
+				>
+				["at0078"] = <
+					text = <"Результат">
+					description = <"Результат лабораторного анализа.">
+				>
+				["at0079"] = <
+					text = <"Никогда не проводился">
+					description = <"Анализ никода не проводился.">
+				>
+				["at0089"] = <
+					text = <"Поэтапное описание">
+					description = <"Место, позволяющее добавить пояснение к определённому результату анализа непосредственно во время его выполнения.">
+				>
+				["at0090"] = <
+					text = <"Заказчик">
+					description = <"Информация о враче или организации, запрашивающих лабораторный анализ.">
+				>
+			>
+		>
+	>

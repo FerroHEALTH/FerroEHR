@@ -9,10 +9,19 @@ language
 		["nb"] = <
 			language = <[ISO_639-1::nb]>
 			author = <
-				["name"] = <"Marit Alice Venheim, Silje Ljosland Bakke, John Tore Valand">
-				["organisation"] = <"Helse Vest IKT, Helse Vest IKT AS, Helse Bergen">
-				["email"] = <"marit.alice.venheim@helse-vest-ikt.no, silje.ljosland.bakke@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no">
+				["name"] = <"Marit Alice Venheim, Silje Ljosland Bakke, John Tore Valand, Vebjørn Arntzen">
+				["organisation"] = <"Helse Vest IKT, Helse Vest IKT AS, Helse Bergen, Oslo University Hospital">
+				["email"] = <"marit.alice.venheim@helse-vest-ikt.no, silje.ljosland.bakke@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no, varntzen@ous-hf.no">
 			>
+		>
+		["nl"] = <
+			language = <[ISO_639-1::nl]>
+			author = <
+				["name"] = <"Joost Holslag">
+				["organisation"] = <"Nedap">
+				["email"] = <"joost.holslag@nedap.com">
+			>
+			accreditation = <"MD">
 		>
 	>
 description
@@ -51,6 +60,13 @@ For permission: https://www.geriatricmedicineresearch.ca.">
 			misuse = <"">
 			copyright = <"© openEHR Foundation">
 		>
+		["nl"] = <
+			language = <[ISO_639-1::nl]>
+			purpose = <"Het vastleggen van de Clinical Frailty Scale (CFS) 2.0">
+			use = <"Gebruik voor het vastleggen van de Clinical Frailty Scale (CFS) 2.0.
+In 2020 is de CFS herzien (versie 2.0) met beperkte verduidelijkende aanpassing van de beschrijvingen en kopjes. Meest noemenswaardig zijn, CFS level 2 is aangepast van \"Well\" naar \"Fit\" (in Nederlandse vertaling niet van toepassing), level 4 van \"vulnerable\" (Risico op kwetsbaarheid) naar">
+			misuse = <"">
+		>
 	>
 	lifecycle_state = <"published">
 	other_contributors = <"Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Astrid Askeland, Dips AS, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Hans Flaatten, Helse Bergen HF, Norway", "Tormod Førland, Dips Front, Norway", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (openEHR Editor)", "Merete Havn Torland, Helse Vest IKT, Norway", "Lise Kristin Knutsen, Oslo universitetssykehus, Norway", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia", "Ian McNicoll, NDS, Scotland", "Bjørn Næss, DIPS ASA, Norway", "Dr Paul Miller, NDS, Scotland", "Elisabeth Skaar, Helse Bergen, Norway", "Arild Stangeland, Helse Bergen, Norway", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
@@ -71,9 +87,9 @@ Clinical Frailty Scale [Internet]. Norsk forening for geriatri. Den norske legef
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"F6634E28D3EA7BFB28AA3177488BA047">
-		["build_uid"] = <"0a7a1f2a-70a4-433d-b920-d8ef554c294c">
-		["revision"] = <"1.0.0">
+		["MD5-CAM-1.0.1"] = <"38477BE944B93CD0F61B76C148A6F724">
+		["build_uid"] = <"0c2f2654-f74b-4625-822a-5564d96beb1d">
+		["revision"] = <"1.0.1">
 	>
 
 definition
@@ -116,7 +132,6 @@ definition
 			}
 		}
 	}
-
 
 ontology
 	term_definitions = <
@@ -195,7 +210,7 @@ ontology
 				["at0000"] = <
 					text = <"Clinical Frailty Scale (CFS 2.0)">
 					description = <"Clinical Frailty Scale er en vurderingsskala for å gradere skrøpelighet hos de over 65 år ved å kartlegge graden av kondisjon og skrøpelighet.">
-					comment = <"Også kjent som Rockwood Clinical Frailty Scale.
+					comment = <"Også kjent som \"Klinisk skrøpelighetsskala\" og \"Rockwood Clinical Frailty Scale\".
 ">
 				>
 				["at0001"] = <
@@ -257,7 +272,75 @@ ontology
 				>
 				["at0042"] = <
 					text = <"Terminalt syk">
-					description = <"Nærmer seg livets slutt. I denne kategorien inngår personer med en forventet levetid <6 måneder uten at de lever med alvorlig skrøpelighet. (Mange terminalt syke pasienter kan være fysisk aktive inntil de er svært nær døden).">
+					description = <"Nærmer seg livets slutt. I denne kategorien inngår personer med en forventet levetid &lt;6 måneder uten at de lever med alvorlig skrøpelighet. (Mange terminalt syke pasienter kan være fysisk aktive inntil de er svært nær døden).">
+				>
+			>
+		>
+		["nl"] = <
+			items = <
+				["at0000"] = <
+					text = <"*Clinical Frailty Scale (CFS 2.0)(en)">
+					description = <"*An assessment scale used to screen for frailty and to broadly stratify degrees of fitness and frailty in an individual over the age of 65.(en)">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"*Any point in time event(en)">
+					description = <"*Default, unspecified point in time event which may be explicitly defined in a template or at run-time.(en)">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"*Assessment(en)">
+					description = <"*Assessed level of frailty.(en)">
+				>
+				["at0014"] = <
+					text = <"ItemTree">
+					description = <"@ internal @">
+				>
+				["at0015"] = <
+					text = <"*Extension(en)">
+					description = <"*Additional information required to extend the model with local content or to align with other reference models/formalisms.(en)">
+				>
+				["at0034"] = <
+					text = <"*Very fit(en)">
+					description = <"*People who are robust, active, energetic and motivated. They tend to exercise regularly and are among the fittest for their age.(en)">
+				>
+				["at0035"] = <
+					text = <"*Fit(en)">
+					description = <"*People who have no active disease symptoms but are less fit than category 1. Often, they exercise or are very active occasionally, e.g., seasonally.(en)">
+				>
+				["at0036"] = <
+					text = <"*Managing well(en)">
+					description = <"*People whose medical problems are well controlled, even if occasionally symptomatic, but often are not regularly active beyond routine walking.(en)">
+				>
+				["at0037"] = <
+					text = <"*Living with very mild frailty(en)">
+					description = <"*Previously 'Vulnerable', this category marks early transition from complete independence. While not dependent on others for daily help, often symptoms limit activities. A common complaint is being 'slowed up' and/or being tired during the day.(en)">
+				>
+				["at0038"] = <
+					text = <"*Living with mild frailty(en)">
+					description = <"*People who often have more evident slowing, and need help with high order instrumental activities of daily living (finances, transportation, heavy housework). Typically, mild frailty progressively impairs shopping and walking outside alone, meal preparation, medications and begins to restrict light housework.(en)">
+				>
+				["at0039"] = <
+					text = <"*Living with moderate frailty(en)">
+					description = <"*People who need help with all outside activities and with keeping house. Inside, they often have problems with stairs and need help with bathing and might need minimal assistance (cuing, standby) with dressing.(en)">
+				>
+				["at0040"] = <
+					text = <"*Living with severe frailty(en)">
+					description = <"*Completely dependent for personal care, from whatever cause (physical or cognitive). Even so, they seem stable and not at high risk of dying (within ~6 months).(en)">
+				>
+				["at0041"] = <
+					text = <"*Living with very severe frailty(en)">
+					description = <"*Completely dependent for personal care and approaching end of life. Typically, they could not recover even from a minor illness.(en)">
+				>
+				["at0042"] = <
+					text = <"*Terminally Ill(en)">
+					description = <"*Approaching the end of life. This category applies to people with a life expectancy <6 months, who are not otherwise living with severe frailty. (Many terminally ill people can still exercise until very close to death).(en)">
 				>
 			>
 		>

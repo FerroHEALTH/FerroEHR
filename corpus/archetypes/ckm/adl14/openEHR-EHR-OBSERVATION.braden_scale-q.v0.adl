@@ -1,0 +1,347 @@
+﻿archetype (adl_version=1.4; uid=57bf4d16-86e4-4d99-95eb-deb8e3935b71)
+	openEHR-EHR-OBSERVATION.braden_scale-q.v0
+specialise
+	openEHR-EHR-OBSERVATION.braden_scale.v1
+
+concept
+	[at0000.1]	-- Modified Braden Q Scale
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Ian McNicoll">
+		["organisation"] = <"Ocean Informatics, UK">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"2011-08-01">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"The Modified Braden Q Scale for Predicting Pressure Sore Risk is an assessment tool used to assess the risk of pressure ulcer development in children aged between 21 days and 5 years.">
+			use = <"To assess risk of pressure ulcer development in children from 21 days to 5 years of age.
+The Braden Scale is copyrighted as \"Copyright Nursecom Inc\".">
+			keywords = <"pressure", "sore", "ulcer", "Braden", "child", "paediatric">
+			misuse = <"The Braden Q Scale should not be used unless the terms of copyright have been observed.
+The Braden Scale should not be used for adults or children over 5 years of age - use OPENEHR-EHR-OBSERVATION.braden_scale
+The Braden Scale should not be used for children less than  21 days old - use OPENEHR-EHR-OBSERVATION.braden_scale_neonate.v1">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"Curley  MAQ, Razmus IS, Roberts KE, Wypij D. Predicting  pressure ulcer risk  in pediatric patients-the Braden Q scale. Nursing Research. 2003; 52(1) 22-31.
+Bergstrom, N., Braden, B., Laguzza, A. & Holman, A. (1987). The Braden Scale for predicting pressure sore risk. Nursing Research. 36(4), 205-210.
+Braden, B. J. & Blanchard, S. (2007). Risk assessment in pressure ulcer prevention. In D. L. Krasner, G. T. Rodeheaver, & R. G. Sibbald (Eds.), Chronic Wound Care: A Clinical Source Book for Healthcare Professionals (4th ed.). Wayne PA: HMP Communications
+Ayello, E.A. & Braden, B. (2002) How and why to do pressure ulcer risk assessment. Advances in Wound Care, 15 (3), 125-131.
+
+Prevention Plus - Home of the Braden Scale [Internet]. [date unknown];[cited 2011 Aug 1] Available from: http://bradenscale.com/index.htm
+Modified Braden Q Scale for Paediatric Use [Internet]. [date unknown];[cited 2011 Aug 8] Available from: http://nursing.advanceweb.com/SharedResources/Downloads/2007/090107/NW/nng090107_p55table1.pdf">
+		["current_contact"] = <"Ian McNicoll, Ocean Informatics, UK, ian.mcnicoll@oceaninformatics.com">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"3BE26F76D2C0CC1C10FECB1058C0C8FD">
+		["build_uid"] = <"7738902b-0958-4fb3-acf3-d97f6e89325f">
+		["ip_acknowledgements"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Modified Braden Q Scale
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0004] occurrences matches {0..1} matches {	-- Sensory perception
+										value matches {
+											1|[local::at0005], 	-- Completely limited
+											2|[local::at0006], 	-- Very limited
+											3|[local::at0007], 	-- Slightly limited
+											4|[local::at0008]  	-- No impairment
+										}
+									}
+									ELEMENT[at0009] occurrences matches {0..1} matches {	-- Moisture
+										value matches {
+											1|[local::at0015], 	-- Constantly moist
+											2|[local::at0016], 	-- Very moist
+											3|[local::at0017], 	-- Occasionally moist
+											4|[local::at0018]  	-- Rarely moist
+										}
+									}
+									ELEMENT[at0010] occurrences matches {0..1} matches {	-- Activity
+										value matches {
+											1|[local::at0011], 	-- Bedfast
+											2|[local::at0012], 	-- Chairfast
+											3|[local::at0013], 	-- Walks occasionally
+											4|[local::at0014]  	-- Walks frequently
+										}
+									}
+									ELEMENT[at0019] occurrences matches {0..1} matches {	-- Mobility
+										value matches {
+											1|[local::at0026], 	-- Completely immobile
+											2|[local::at0027], 	-- Very limited
+											3|[local::at0028], 	-- Slightly limited
+											4|[local::at0029]  	-- No limitation
+										}
+									}
+									ELEMENT[at0020] occurrences matches {0..1} matches {	-- Nutrition
+										value matches {
+											1|[local::at0030], 	-- Very poor
+											2|[local::at0031], 	-- Probably inadequate
+											3|[local::at0032], 	-- Adequate
+											4|[local::at0033]  	-- Excellent
+										}
+									}
+									ELEMENT[at0021] occurrences matches {0..1} matches {	-- Friction and shear
+										value matches {
+											1|[local::at0023], 	-- Problem
+											2|[local::at0024], 	-- Potential problem
+											3|[local::at0025]  	-- No apparent problem
+										}
+									}
+									ELEMENT[at0034] occurrences matches {0..1} matches {	-- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0022] occurrences matches {0..1} matches {	-- Braden total score
+										value matches {
+											DV_COUNT matches {
+												magnitude matches {|6..20|}
+											}
+										}
+									}
+									ELEMENT[at0035] occurrences matches {0..1} matches {	-- Braden risk grade
+										value matches {
+											0|[local::at0036], 	-- No Risk  : score 19 or higher
+											1|[local::at0037], 	-- At Risk : score 15-18
+											2|[local::at0038], 	-- Moderate Risk : score 13-14
+											3|[local::at0039], 	-- High Risk : score 10-12
+											4|[local::at0040]  	-- Severe Risk : score 9 or below
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	terminologies_available = <"LOINC", "Snomed">
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Braden Scale">
+					description = <"The Braden Scale for Predicting Pressure Sore Risk.">
+				>
+				["at0000.1"] = <
+					text = <"Modified Braden Q Scale">
+					description = <"The Modified Braden Q Scale for paediatric use.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Any event.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Sensory perception">
+					description = <"Ability to respond meaningfully to pressure-related discomfort.">
+				>
+				["at0005"] = <
+					text = <"Completely limited">
+					description = <"Unresponsive (does not moan, flinch, or grasp) to painful stimuli, due to diminished level of consciousness or sedation. OR limited ability to feel pain over most of body.">
+				>
+				["at0006"] = <
+					text = <"Very limited">
+					description = <"Responds only to painful stimuli. Cannot communicate discomfort except by moaning or restlessness. OR has a sensory impairment which limits the ability to feel pain or discomfort over 1/2 of body.">
+				>
+				["at0007"] = <
+					text = <"Slightly limited">
+					description = <"Responds to verbal commands, but cannot always communicate discomfort or the need to be turned. OR has some sensory impairment which limits ability to feel pain or discomfort in 1 or 2 extremities.">
+				>
+				["at0008"] = <
+					text = <"No impairment">
+					description = <"Responds to verbal commands. Has no sensory deficit which would limit ability to feel or voice pain or discomfort.">
+				>
+				["at0009"] = <
+					text = <"Moisture">
+					description = <"Degree to which skin is exposed to moisture.">
+				>
+				["at0010"] = <
+					text = <"Activity">
+					description = <"Degree of physical ability.">
+				>
+				["at0011"] = <
+					text = <"Bedfast">
+					description = <"Confined to bed.">
+				>
+				["at0012"] = <
+					text = <"Chairfast">
+					description = <"Ability to walk severely limited or non-existent.  Cannot bear own weight and/or must be assisted into chair or wheelchair.">
+				>
+				["at0013"] = <
+					text = <"Walks occasionally">
+					description = <"Walks occasionally during day, but for very short distances, with or without assistance.  Spends majority of each shift in bed or chair. OR spends majority of each day at home in bed or chair.">
+				>
+				["at0014"] = <
+					text = <"Walks frequently">
+					description = <"Walks outside room at least twice a day and inside room at least once every two hours during waking hours.">
+				>
+				["at0015"] = <
+					text = <"Constantly moist">
+					description = <"Skin is kept moist almost constantly by perspiration, urine etc.  Dampness is detected every time patient is moved or turned.">
+				>
+				["at0016"] = <
+					text = <"Very moist">
+					description = <"Skin is often, but not always moist.  Linen must be changed at least once a shift. OR  as often as 3 times in 24 hours at home.">
+				>
+				["at0017"] = <
+					text = <"Occasionally moist">
+					description = <"Skin is occasionally moist, requiring an extra linen change approximately once a day.">
+				>
+				["at0018"] = <
+					text = <"Rarely moist">
+					description = <"Skin is usually dry, linen only requires changing at routine intervals.">
+				>
+				["at0019"] = <
+					text = <"Mobility">
+					description = <"Ability to change and control body position.">
+				>
+				["at0020"] = <
+					text = <"Nutrition">
+					description = <"Usual food intake pattern.">
+				>
+				["at0021"] = <
+					text = <"Friction and shear">
+					description = <"Friction occurs when skin moves against support surfaces.  Shear occurs when skin and adjacent bony surface slide across one another.">
+				>
+				["at0022"] = <
+					text = <"Braden total score">
+					description = <"Total score based upon addition of all sub-scores that determines the patient's overall risk for developing a pressure ulcer.">
+				>
+				["at0023"] = <
+					text = <"Problem">
+					description = <"Requires moderate to maximum assistance in moving. Complete lifting without sliding against sheets is impossible. Frequently slides down in bed or chair, requiring frequent repositioning with maximum assistance. Spasticity, contractures or agitation leads to almost constant friction.">
+				>
+				["at0024"] = <
+					text = <"Potential problem">
+					description = <"Moves feebly or requires minimum assistance. During a move skin probably slides to some extent against sheets, chair, restraints or other devices. Maintains relatively good position in chair or bed most of the time but occasionally slides down.">
+				>
+				["at0025"] = <
+					text = <"No apparent problem">
+					description = <"Moves in bed and in chair independently and has sufficient muscle strength to lift up completely during move.  Maintains good position in bed or chair.">
+				>
+				["at0026"] = <
+					text = <"Completely immobile">
+					description = <"Does not make even slight changes in body or extremity position without assistance.">
+				>
+				["at0027"] = <
+					text = <"Very limited">
+					description = <"Makes occasional slight changes in body or extremity position but unable to make frequent or significant changes independently.">
+				>
+				["at0028"] = <
+					text = <"Slightly limited">
+					description = <"Makes frequent though slight changes in body or extremity position independently.">
+				>
+				["at0029"] = <
+					text = <"No limitation">
+					description = <"Makes major and frequent changes in position without assistance.">
+				>
+				["at0030"] = <
+					text = <"Very poor">
+					description = <"Never eats a complete meal. Rarely eats more than a 1/3 of any food offered. Eats 2 servings or less of protein (meat or dairy products) per day. Takes fluids poorly. Does not take a liquid dietary supplement. OR is NPO and/or maintained on clear liquids or IV's for more than 5 days.">
+				>
+				["at0031"] = <
+					text = <"Probably inadequate">
+					description = <"Rarely eats a complete meal and generally eats only about 1/2 of any food offered. Protein intake includes only 3 servings of meat or dairy products per day. Occasionally will take a dietary supplement. OR  receives less than optimum amount of liquid diet or tube feeding.">
+				>
+				["at0032"] = <
+					text = <"Adequate">
+					description = <"Eats over half of most meals. Eats a total of 4 servings of protein (meat, dairy products per day. Occasionally will refuse a meal, but will usually take a supplement when offered  OR  is on a tube feeding or TPN regimen which probably meets most of their nutritional needs.">
+				>
+				["at0033"] = <
+					text = <"Excellent">
+					description = <"Eats most of every meal. Never refuses a meal. Usually eats a total of 4 or more servings of meat and dairy products. Occasionally eats between meals. Does not require supplementation.">
+				>
+				["at0034"] = <
+					text = <"Comment">
+					description = <"An additional comment about use of the Braden scale.">
+				>
+				["at0035"] = <
+					text = <"Braden risk grade">
+					description = <"A graded risk score based upon addition of all sub-scores that determines the patient's overall risk for developing a pressure ulcer.">
+				>
+				["at0036"] = <
+					text = <"No Risk  : score 19 or higher">
+					description = <"No risk for developing a pressure ulcer in an adult patient.">
+				>
+				["at0037"] = <
+					text = <"At Risk : score 15-18">
+					description = <"At risk for developing pressure ulcers and a prevention protocol should be initiated.">
+				>
+				["at0038"] = <
+					text = <"Moderate Risk : score 13-14">
+					description = <"At moderate risk for developing pressure ulcers and a prevention protocol should be initiated.">
+				>
+				["at0039"] = <
+					text = <"High Risk : score 10-12">
+					description = <"At high risk for developing pressure ulcers and an aggressive prevention protocol should be initiated.">
+				>
+				["at0040"] = <
+					text = <"Severe Risk : score 9 or below">
+					description = <"At extreme risk for developing pressure ulcers and an aggressive prevention protocol should be initiated.">
+				>
+			>
+		>
+	>
+	term_bindings = <
+		["LOINC"] = <
+			items = <
+				["at0004"] = <[LOINC::38222-6]>
+				["at0005"] = <[LOINC::LA9603-7]>
+				["at0006"] = <[LOINC::LA9605-4]>
+				["at0007"] = <[LOINC::LA9605-2]>
+				["at0008"] = <[LOINC::LA9606-0]>
+				["at0009"] = <[LOINC::38229-1]>
+				["at0010"] = <[LOINC::38223-4]>
+				["at0011"] = <[LOINC::LA6742-6]>
+				["at0012"] = <[LOINC::LA9611-0]>
+				["at0013"] = <[LOINC::LA9612-8]>
+				["at0014"] = <[LOINC::LA9613-6]>
+				["at0015"] = <[LOINC::LA9607-8]>
+				["at0016"] = <[LOINC::LA9608-6]>
+				["at0017"] = <[LOINC::LA9609-4]>
+				["at0018"] = <[LOINC::LA9610-2]>
+				["at0019"] = <[LOINC::38224-2]>
+				["at0020"] = <[LOINC::38225-9]>
+				["at0021"] = <[LOINC::38226-7]>
+				["at0022"] = <[LOINC::38227-5]>
+				["at0023"] = <[LOINC::LA9617-7]>
+				["at0024"] = <[LOINC::LA9618-5]>
+				["at0025"] = <[LOINC::LA9619-3]>
+				["at0026"] = <[LOINC::LA9614-4]>
+				["at0029"] = <[LOINC::LA120-8]>
+				["at0030"] = <[LOINC::LA9615-1]>
+				["at0031"] = <[LOINC::LA9616-9]>
+				["at0032"] = <[LOINC::LA8913-1]>
+				["at0033"] = <[LOINC::LA9206-9]>
+			>
+		>
+	>

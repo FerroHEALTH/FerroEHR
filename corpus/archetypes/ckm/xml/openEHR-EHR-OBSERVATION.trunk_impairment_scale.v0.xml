@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1586,11 +1586,11 @@ Verheyden G, Willems AM, Ooms L, Nieuwboer A. Validity of the trunk impairment s
       </items>
       <items code="at0005">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Therapist crosses unaffected leg</items>
@@ -1598,11 +1598,11 @@ Verheyden G, Willems AM, Ooms L, Nieuwboer A. Validity of the trunk impairment s
       </items>
       <items code="at0008">
         <items id="text">Falls or can’t maintain sitting position for 10 seconds without arm support</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Maintains sitting position for 10 seconds</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Patient crosses unaffected leg</items>
@@ -1610,19 +1610,19 @@ Verheyden G, Willems AM, Ooms L, Nieuwboer A. Validity of the trunk impairment s
       </items>
       <items code="at0011">
         <items id="text">Falls</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Cannot cross legs without arm support</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Crosses legs but displaces trunk &gt;10 cm backwards or assists crossing with hand</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Crosses legs without displacement or assistance</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Static balance score</items>
@@ -1634,35 +1634,35 @@ Verheyden G, Willems AM, Ooms L, Nieuwboer A. Validity of the trunk impairment s
       </items>
       <items code="at0017">
         <items id="text">Falls, needs support from upper extremity, or elbow does not touch the bed or table</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Moves actively without help, elbow touches bed or table</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Shortens hemiplegic side - repetition 1</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">No (or opposite) shortening/lengthening</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Appropriate shortening/lengthening</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Shortens hemiplegic side - repetition 2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Compensation (with upper extremity, hips, knees, or feet)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Moves without compensation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Shortens unaffected side</items>
@@ -1670,11 +1670,11 @@ Verheyden G, Willems AM, Ooms L, Nieuwboer A. Validity of the trunk impairment s
       </items>
       <items code="at0026">
         <items id="text">Shorten unaffected side - repetition 1</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Shorten unaffected side - repetition 2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Lifts pelvis hemiplegic side</items>
@@ -1682,15 +1682,15 @@ Verheyden G, Willems AM, Ooms L, Nieuwboer A. Validity of the trunk impairment s
       </items>
       <items code="at0029">
         <items id="text">Lifts pelvis hemiplegic side - repetition 1</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Compensation (with upper extremity or foot)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Moves without compensation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Lifts pelvis unaffected side</items>
@@ -1698,7 +1698,7 @@ Verheyden G, Willems AM, Ooms L, Nieuwboer A. Validity of the trunk impairment s
       </items>
       <items code="at0033">
         <items id="text">Lifts pelvis unaffected side - repetition 1</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Dynamic Balance score</items>
@@ -1710,15 +1710,15 @@ Verheyden G, Willems AM, Ooms L, Nieuwboer A. Validity of the trunk impairment s
       </items>
       <items code="at0036">
         <items id="text">Hemiplegic side not moved 3x</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Assymetrical rotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Symmetrical rotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Rotates upper trunk - repetition 1</items>
@@ -1726,11 +1726,11 @@ Verheyden G, Willems AM, Ooms L, Nieuwboer A. Validity of the trunk impairment s
       </items>
       <items code="at0040">
         <items id="text">Assymetrical rotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Symmetrical rotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Rotates lower trunk</items>
@@ -1760,4 +1760,3 @@ Verheyden G, Willems AM, Ooms L, Nieuwboer A. Validity of the trunk impairment s
     </term_definitions>
   </ontology>
 </archetype>
-

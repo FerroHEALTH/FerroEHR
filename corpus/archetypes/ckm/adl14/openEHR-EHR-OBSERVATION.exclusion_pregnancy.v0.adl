@@ -1,0 +1,125 @@
+﻿archetype (adl_version=1.4; uid=572d005b-9244-4f9c-9af7-48ffd2da3a6e)
+	openEHR-EHR-OBSERVATION.exclusion_pregnancy.v0
+
+concept
+	[at0000]	-- Exclusion of pregnancy
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Atomica Informatics">
+		["email"] = <"heather.leslie@atomicainformatics.com">
+		["date"] = <"2020-08-18">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record an explicit statement that a pregnancy was not present at a specified point in time or over a period of time.">
+			use = <"Use to record an explicit statement that a pregnancy was not present at a specified point in time or over a period of time.">
+			keywords = <"pregnancy", "exclusion">
+			misuse = <"Not to be used to record details about a known pregnancy.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"ABE303D105AD4BAAAC677AC5442438C2">
+		["build_uid"] = <"6d832a03-7395-4ef6-b4c7-fb344b2efca1">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	OBSERVATION[at0000] matches {    -- Exclusion of pregnancy
+		data matches {
+			HISTORY[at0001] matches {    -- History
+				events cardinality matches {0..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..*} matches {    -- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {    -- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0006] occurrences matches {0..1} matches {    -- Exclusion statement
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0007] occurrences matches {0..1} matches {    -- Rationale
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0008] occurrences matches {0..1} matches {    -- Indefinite
+										value matches {
+											DV_BOOLEAN matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0004] matches {    -- Item tree
+				items cardinality matches {0..*; unordered} matches {
+					allow_archetype CLUSTER[at0005] occurrences matches {0..*} matches {    -- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Exclusion of pregnancy">
+					description = <"Statement to explicitly record that a pregnancy was not present.">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Extension">
+					description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+					comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+				>
+				["at0006"] = <
+					text = <"Exclusion statement">
+					description = <"An overall statement of exclusion about the state of pregnancy.">
+				>
+				["at0007"] = <
+					text = <"Rationale">
+					description = <"Justification, rationale or evidence for excluding a pregnancy.">
+				>
+				["at0008"] = <
+					text = <"Indefinite">
+					description = <"Flag to indicate it is not possible for the individual to become pregnant in the future.">
+					comment = <"For example: post hysterectomy.">
+				>
+			>
+		>
+	>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -257,7 +257,7 @@ This archetype is intended to be used within a template in which the content is 
       </items>
       <items code="at0001">
         <items id="text">Vital signs</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="ko">
@@ -267,7 +267,7 @@ This archetype is intended to be used within a template in which the content is 
       </items>
       <items code="at0001">
         <items id="text">생체 징후</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="de">
@@ -277,7 +277,7 @@ This archetype is intended to be used within a template in which the content is 
       </items>
       <items code="at0001">
         <items id="text">Vitalparameter</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="es">
@@ -287,7 +287,7 @@ This archetype is intended to be used within a template in which the content is 
       </items>
       <items code="at0001">
         <items id="text">Signos vitales</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="sv">
@@ -297,9 +297,8 @@ This archetype is intended to be used within a template in which the content is 
       </items>
       <items code="at0001">
         <items id="text">Vitalparametrar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

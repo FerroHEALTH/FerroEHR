@@ -1,0 +1,1290 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">07/11/2009</original_author>
+    <original_author id="name">Dr Ian McNicoll</original_author>
+    <original_author id="organisation">Ocean Informatics, United Kingdom</original_author>
+    <original_author id="email">ian.mcnicoll@oceaninformatics.com</original_author>
+    <other_contributors>Koray Atalag, University of Auckland, New Zealand</other_contributors>
+    <other_contributors>Heath Frankel, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Sam Heard, Ocean Informatics, Australia (Editor)</other_contributors>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Ian McNicoll, Ocean Informatics, United Kingdom (Editor)</other_contributors>
+    <other_contributors>David Rowed, VAMC Clinic, Australia (Editor)</other_contributors>
+    <other_contributors>Mona Saleh (Translator)</other_contributors>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">NEHTA, Australia. Pathology Episode v1.0 - Data Group library [Internet]. 2009;[cited 2009 Dec 8 ] Available from: http://www.nehta.gov.au/data-group-library/data-specifications/dgl-pathology&#xD;
+&#xD;
+IHE. IHE, Laboratory Technical Framework, Volume 3 Content [Internet]. 2008;Available from: http://www.ihe.net/Technical_Framework/upload/ihe_lab_TF_rel2_1-Vol-3_FT_2008-08-08.pdf.</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">AC508DEE64F1DE2058116A8DA78DAD2F</other_details>
+    <other_details id="build_uid">2b27fb17-50ed-49b3-affc-0d08c1e712ac</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ru</code_string>
+      </language>
+      <purpose>Для записи результатов лабораторных исследований. Такая запись может быть использована для записи одиночного значения, но часто используется в шаблонах для представления нескольких значений или "панельных"результатов . Этот архетип также выступает в качестве родительского для более специализированных  лабораторных испытаний   в микробиологии, гистологии.</purpose>
+      <keywords>лаборатория</keywords>
+      <keywords>патология</keywords>
+      <keywords>лабораторное исследование</keywords>
+      <keywords>биохимия</keywords>
+      <keywords>гематология</keywords>
+      <keywords>микробиология</keywords>
+      <keywords>иммунология</keywords>
+      <use>Может быть использован для представления результатов "стандартного" анализа с одним значением, однако будет часто специализируетсся и используется как шаблон для представления многозначных результатов, которые иногда называют панелями. Может также специализируется на более высоко структурированные лабораторные тесты, такие как в микробиологии и гистологии.&#xD;
+&#xD;
+Как правило, результат  доводится до сведения запрашивающего врача в контексте общей композиции на основе лабораторного исследования.</use>
+      <misuse>Для конкретных структурированных отчетов, таких как для микробиологии и гистологии, более удобно использовать специализации данного архетипа.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>es-ar</code_string>
+      </language>
+      <purpose>Para grabar el resultado de una prueba de laboratorio que puede ser utilizado para registrar una prueba de un solo valor, pero también puede ser especializado o usado como plantilla para representar el valor múltiple o las pruebas de un panel o perfil.&#xD;
+ Este arquetipo también actúa como el padre de las especialidades correspondientes a las pruebas de laboratorio más específicas de microbiología, anatomía patológica, etc.</purpose>
+      <keywords>*lab(en)</keywords>
+      <keywords>*pathology(en)</keywords>
+      <keywords>*biochemistry(en)</keywords>
+      <keywords>*haematology(en)</keywords>
+      <keywords>*microbiology(en)</keywords>
+      <keywords>*immunology(en)</keywords>
+      <keywords>*laboratory(en)</keywords>
+      <use>Puede ser usado para representar un solo valor "estándar"  de resultados de las pruebas de laboratorio, pero a menudo se especializará o utilizará como plantilla para representar los resultados de varios valores, denominados a veces como paneles. También podría ser especializado para pruebas de laboratorio más altamente estructuradas, tales como la microbiología e histopatología.&#xD;
+&#xD;
+ Normalmente, se informó al médico solicitante en el contexto de un informe de laboratorio basado en la composición general.</use>
+      <misuse>El uso de especialidades pueden ser más apropiados para determinados informes estructurados como para microbiología e histopatología.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ar-sy</code_string>
+      </language>
+      <purpose>لتسجيل نتيجة اختبار المعمل, و التي قد يتم استخدامها لتسجيل اختبار ذي قيمة واحدة, و عادة ما يتم بعد ذلك المزيد من التخصيص أو الوضع في قالب لتمثيل اختبار متعدد القيم أو رتل من الاختبارات. &#xD;
+و يمثل هذا النموذج كوالد (أب) للتخصيصات الأخرى لاختبارات معملية أكثر تحديدا مثل الميكروبيولوجيا و الهيستوباثولوجيا.</purpose>
+      <keywords>المعمل - المختبر</keywords>
+      <keywords>الباثولوجيا - المرضية</keywords>
+      <keywords>الكيمياء الحيوية</keywords>
+      <keywords>الدمويات</keywords>
+      <keywords>الميكروبيولوجيا</keywords>
+      <keywords>المناعيات - علم المناعة</keywords>
+      <use>قد يستخدم لتسجيل نتيجة اختبار المعمل, و التي قد يتم استخدامها لتسجيل اختبار ذي قيمة واحدة, و عادة ما يتم بعد ذلك المزيد من التخصيص أو الوضع في قالب لتمثيل اختبار متعدد القيم أو رتل من الاختبارات. &#xD;
+&#xD;
+يتم بعد ذلك تقديم التقرير للطبيب السريري الذي قام بطلب الاختبار في سياق تقرير معملي متكامل.</use>
+      <misuse>قد تكون التخصيصات أكثر مناسبة للتقارير المركبة مثل حالات الميكروبيولوجيا أو الهيستوباثولوجيا.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record the result of a laboratory test which may be used to record a single valued test but will often be specialised or templated to represent multiple value or 'panel' tests.&#xD;
+This archetype also acts as the parent for specialisations appropriate for more specific laboratory tests microbiology, histopathology.</purpose>
+      <keywords>lab</keywords>
+      <keywords>pathology</keywords>
+      <keywords>biochemistry</keywords>
+      <keywords>haematology</keywords>
+      <keywords>microbiology</keywords>
+      <keywords>immunology</keywords>
+      <keywords>laboratory</keywords>
+      <use>May be used to represent 'standard' single-value laboratory test results  but will often be specialised or templated to represent multi-value results, sometimes referred to as panels. May also be specialised to more highly structured laboratory tests such as microbiology or histopathology.&#xD;
+&#xD;
+Will normally be reported back to the requesting clinician within the context of an overall Composition-based laboratory report.</use>
+      <misuse>Specialisations may be more appropriate for specific structured reports such as for microbiology or histopathology.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ru</code_string>
+    </language>
+    <author id="name">Vyacheslav Mavrin</author>
+    <author id="organisation">JSC Comsoft</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>es-ar</code_string>
+    </language>
+    <author id="name">Yoel Unanuee Mac Lennan</author>
+    <author id="organisation">GLYM Software</author>
+    <accreditation>Desarrollo de LIS desde 1998</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ar-sy</code_string>
+    </language>
+    <author id="name">Mona Saleh</author>
+  </translations>
+  <uid>
+    <value>c25ce52a-8f8b-4d23-a686-4db052bbb6bb</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-OBSERVATION.lab_test.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>OBSERVATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>HISTORY</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>events</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0002</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ITEM_TREE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0003</node_id>
+                <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                  <rm_attribute_name>items</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0005</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0077</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0073</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>defining_code</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_CODE_PHRASE">
+                            <rm_type_name>CODE_PHRASE</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <terminology_id>
+                              <value>local</value>
+                            </terminology_id>
+                            <code_list>at0037</code_list>
+                            <code_list>at0038</code_list>
+                            <code_list>at0039</code_list>
+                            <code_list>at0040</code_list>
+                            <code_list>at0074</code_list>
+                            <code_list>at0079</code_list>
+                          </children>
+                        </attributes>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="ARCHETYPE_SLOT">
+                    <rm_type_name>CLUSTER</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </occurrences>
+                    <node_id>at0065</node_id>
+                    <includes>
+                      <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen\.v1/}</string_expression>
+                      <expression xsi:type="EXPR_BINARY_OPERATOR">
+                        <type>Boolean</type>
+                        <operator>2007</operator>
+                        <precedence_overridden>false</precedence_overridden>
+                        <left_operand xsi:type="EXPR_LEAF">
+                          <type>String</type>
+                          <item xsi:type="xsd:string">archetype_id/value</item>
+                          <reference_type>attribute</reference_type>
+                        </left_operand>
+                        <right_operand xsi:type="EXPR_LEAF">
+                          <type>C_STRING</type>
+                          <item xsi:type="C_STRING">
+                            <pattern>openEHR-EHR-CLUSTER\.specimen\.v1</pattern>
+                          </item>
+                          <reference_type>constraint</reference_type>
+                        </right_operand>
+                      </expression>
+                    </includes>
+                    <excludes>
+                      <string_expression>archetype_id/value matches {/.*/}</string_expression>
+                      <expression xsi:type="EXPR_BINARY_OPERATOR">
+                        <type>Boolean</type>
+                        <operator>2007</operator>
+                        <precedence_overridden>false</precedence_overridden>
+                        <left_operand xsi:type="EXPR_LEAF">
+                          <type>String</type>
+                          <item xsi:type="xsd:string">archetype_id/value</item>
+                          <reference_type>attribute</reference_type>
+                        </left_operand>
+                        <right_operand xsi:type="EXPR_LEAF">
+                          <type>C_STRING</type>
+                          <item xsi:type="C_STRING">
+                            <pattern>.*</pattern>
+                          </item>
+                          <reference_type>constraint</reference_type>
+                        </right_operand>
+                      </expression>
+                    </excludes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </occurrences>
+                    <node_id>at0078</node_id>
+                  </children>
+                  <children xsi:type="ARCHETYPE_SLOT">
+                    <rm_type_name>CLUSTER</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </occurrences>
+                    <node_id>at0089</node_id>
+                    <includes>
+                      <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.lab_result_annotation(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+                      <expression xsi:type="EXPR_BINARY_OPERATOR">
+                        <type>Boolean</type>
+                        <operator>2007</operator>
+                        <precedence_overridden>false</precedence_overridden>
+                        <left_operand xsi:type="EXPR_LEAF">
+                          <type>String</type>
+                          <item xsi:type="xsd:string">archetype_id/value</item>
+                          <reference_type>attribute</reference_type>
+                        </left_operand>
+                        <right_operand xsi:type="EXPR_LEAF">
+                          <type>C_STRING</type>
+                          <item xsi:type="C_STRING">
+                            <pattern>openEHR-EHR-CLUSTER\.lab_result_annotation(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                          </item>
+                          <reference_type>constraint</reference_type>
+                        </right_operand>
+                      </expression>
+                    </includes>
+                    <excludes>
+                      <string_expression>archetype_id/value matches {/.*/}</string_expression>
+                      <expression xsi:type="EXPR_BINARY_OPERATOR">
+                        <type>Boolean</type>
+                        <operator>2007</operator>
+                        <precedence_overridden>false</precedence_overridden>
+                        <left_operand xsi:type="EXPR_LEAF">
+                          <type>String</type>
+                          <item xsi:type="xsd:string">archetype_id/value</item>
+                          <reference_type>attribute</reference_type>
+                        </left_operand>
+                        <right_operand xsi:type="EXPR_LEAF">
+                          <type>C_STRING</type>
+                          <item xsi:type="C_STRING">
+                            <pattern>.*</pattern>
+                          </item>
+                          <reference_type>constraint</reference_type>
+                        </right_operand>
+                      </expression>
+                    </excludes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0057</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </occurrences>
+                    <node_id>at0010</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_MULTIMEDIA</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>media_type</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_CODE_PHRASE">
+                            <rm_type_name>CODE_PHRASE</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <terminology_id>
+                              <value>openEHR</value>
+                            </terminology_id>
+                          </children>
+                        </attributes>
+                      </children>
+                    </attributes>
+                  </children>
+                  <cardinality>
+                    <is_ordered>false</is_ordered>
+                    <is_unique>false</is_unique>
+                    <interval>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </interval>
+                  </cardinality>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0004</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0062</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0090</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0063</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0017</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation\.v1/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>openEHR-EHR-CLUSTER\.organisation\.v1</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+            <excludes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </excludes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0068</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0075</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="ar-sy">
+      <items code="at0000">
+        <items id="text">الاختبار المعملي</items>
+        <items id="description">لتسجيل نتيجة الاختبار و التي قد تستخدم إما لتسجيل اختبار ذي قيمة واحدة كما أنه قد يتم تخصيصه أو وضعه في قالب لتمثيل الاختبارات متعددة القيمة أو رتل من الاختبارات.&#xD;
+يستخدم هذا النموذج كوالد (أب) للتخصيصات المناسبة لاختبارات أكثر تحديدا مثل حالات الميكروبيولوجيا و الهيستوباثولوجيا.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*Event Series(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">إحدى الوقائع</items>
+        <items id="description">إحدى الوقائع</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Tree(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">*Tree(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0005">
+        <items id="text">اسم الاختبار</items>
+        <items id="description">تعريف معين لهوية هذا الاختبار. مثل العد الدموي الشامل, الغلوكوز (سكر العنب) في الدم. قد يكون هو نفسه اسم النتيجة في الاختبارات ذات النتيجة المتكونة من قيمة وحيدة. عادة ما يكون مُصطَلحاً مُرمَزًا مثل لوينك و سنوميد-سي تي.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">تمثيل الوسائط المتعددة</items>
+        <items id="description">تمثيلات الاختبار الكلي عن طريق الوسائط المتعددة مثل: الصورة, الصوت, و الفيديو</items>
+      </items>
+      <items code="at0017">
+        <items id="text">المعمل المستقبل لطلب الاختبار</items>
+        <items id="description">التفاصيل الديموغرافية عن المعمل المسئول عن الاختبار. قد يتضمن معلومات عن معامل أخرى ثانوية.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">مؤقت</items>
+        <items id="description">هذه هي النتيجة المبدئية أو المؤقتة - المزيد من التحديثات للنتيجة متوقَّعة أو منتظَرة</items>
+      </items>
+      <items code="at0038">
+        <items id="text">نهائية</items>
+        <items id="description">هذه هي النتيجة النهائية. لا يوجد المزيد من التعديلات المتوقَّعة</items>
+      </items>
+      <items code="at0039">
+        <items id="text">تكميلية</items>
+        <items id="description">هذه هي نتيجة تكميلية بالإضافة إلى النتيجة الموَقتة</items>
+      </items>
+      <items code="at0040">
+        <items id="text">بعد التصحيح – معدَّلة</items>
+        <items id="description">هذا هو تصحيح لابد و أن يحل محلّ أي نتائج سابقة</items>
+      </items>
+      <items code="at0057">
+        <items id="text">التفسير الإجمالي</items>
+        <items id="description">تعليق تفسيري إجمالي حول هذا الاختبار</items>
+      </items>
+      <items code="at0062">
+        <items id="text">عنصر معرِّف فريد بواسطة طالب الاختبار</items>
+        <items id="description">العنصر التعريفي الفريد الذي يتم إعطاؤه للأمر بالاختبار بواسطة من يقوم بإجراء الأمر. مكافئ للعنصر التعريفي للأمر بواسطة من يقوم بطلب إجرائه.</items>
+      </items>
+      <items code="at0063">
+        <items id="text">عنصر معرِّف فريد بواسطة مستقبل الاختبار</items>
+        <items id="description">العنصر التعريفي الذي يتم إعطاؤه للأمر بالاختبار بواسطة منفذ الاختبار, عادةً النظام المعلومات الخاص بالمعمل. يكافئ رقم الإضافة الخاص بـ دايكوم, و معرِّف أمر الاختبار</items>
+      </items>
+      <items code="at0065">
+        <items id="text">تفاصيل العيِّنة</items>
+        <items id="description">تفاصيل العينة حيث جميع النتائج مشتقة من نفس العينة</items>
+      </items>
+      <items code="at0068">
+        <items id="text">العنصر التعريفي الخاص بنتيجة الاختبار</items>
+        <items id="description">العنصر التعريفي الذي تم إعطاؤه لنتيجة اختبار معملي خاص بالباثولوجيا – المَرَضية</items>
+      </items>
+      <items code="at0073">
+        <items id="text">حالة الاختبار</items>
+        <items id="description">حالة الاختبار المعملي ككل</items>
+      </items>
+      <items code="at0074">
+        <items id="text">مُلغاة</items>
+        <items id="description">تم إلغاء الاختبار و لم يتم استكماله بعد ذلك.</items>
+      </items>
+      <items code="at0075">
+        <items id="text">تاريخ و وقت إصدار النتيجة</items>
+        <items id="description">التاريخ و / أو الوقت الذي تم فيه إصدار النتيجة لحالة الاختبار المسجَّلة.</items>
+        <items id="comment">التاريخ و الوقت المتعلق بحالة النتائج هو من النقاط المفيدة للتحكم في الروايات المتعددة و النتائج التراكمية الخاصة بالتقرير.</items>
+      </items>
+      <items code="at0077">
+        <items id="text">الخدمة التشخيصية</items>
+        <items id="description">نوع الخدمة التشخيصية - مستوى عالي من التشخيص - مثلا: الكيمياء الحيوية و الدمويات</items>
+      </items>
+      <items code="at0078">
+        <items id="text">النتيجة</items>
+        <items id="description">نتيجة الاختبار</items>
+      </items>
+      <items code="at0079">
+        <items id="text">لم يتم عملها على الإطلاق</items>
+        <items id="description">لم يتم عمل الاختبار على الإطلاق</items>
+      </items>
+      <items code="at0089">
+        <items id="text">ملاحظات ما قبل الاختبار</items>
+        <items id="description">شرفة تسمح بإضافة ملاحظات حول نتيجة اختبار معين في أثناء إجرائه</items>
+      </items>
+      <items code="at0090">
+        <items id="text">الطالب</items>
+        <items id="description">تفاصيل حول الطبيب السريري أو المؤسسة التي تطلب الاختبار المعملي.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="es-ar">
+      <items code="at0000">
+        <items id="text">Análisis de Laboratorio</items>
+        <items id="description">Para grabar el resultado de una prueba de laboratorio que puede ser utilizado para registrar una prueba de un solo valor, pero tambiém puede ser especializado o usado como plantilla para representar el valor múltiple o las pruebas de un panel.&#xD;
+ Este arquetipo también actúa como el padre de las especialidades correspondientes a las pruebas de laboratorio más específicas de microbiología, anatomía patológica.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Serie de eventos</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Cualquier evento</items>
+        <items id="description">cualquier evento</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Arbol</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Arbol</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Nombre de análisis</items>
+        <items id="description">Identificador especifico del test de labotratorio ej. Hemograma, glucemia,  Microbiológico de  orina.   Puede equipararse al nombre de resultado para un resultado de valor simple. Comúnmente un término codificado. Ej. LOINC o SNOMED-CT.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Representación multimedia</items>
+        <items id="description">Representación multimedia de todo el test, como gráfico de volumen, audio, video.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Laboratorio receptor</items>
+        <items id="description">Datos demográficos del laboratorio responsable de la prueba. Los detalles de los laboratorios secundarios también pueden ser incluidos</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Provisorio</items>
+        <items id="description">Este es un resultado inicial o intermedio, se preveen actualizaciones del resultado</items>
+      </items>
+      <items code="at0038">
+        <items id="text">Final</items>
+        <items id="description">Este es el resultado final, no se preveen actualizaciones posteriores.</items>
+      </items>
+      <items code="at0039">
+        <items id="text">Suplementario</items>
+        <items id="description">Este es un resultado complementario adicionado al resultado anterior.</items>
+      </items>
+      <items code="at0040">
+        <items id="text">Corregido (modificado)</items>
+        <items id="description">Esta es una corrección que debe sustituir por completo los resultados anteriores</items>
+      </items>
+      <items code="at0057">
+        <items id="text">Interpretación general</items>
+        <items id="description">Comentario general sobre el análisis.</items>
+      </items>
+      <items code="at0062">
+        <items id="text">ID de orden de solicitante</items>
+        <items id="description">Código de identificacion local asignado por el solicitante del análisis</items>
+      </items>
+      <items code="at0063">
+        <items id="text">ID de orden de receptor</items>
+        <items id="description">Código de identificación local asignado por el sistema de gestión del laboratorio (LIS) que realiza el análisis</items>
+      </items>
+      <items code="at0065">
+        <items id="text">Detalle de muestra o specimen</items>
+        <items id="description">Detalles de la muestra que se informa (tubo o material) cuando todos los resultados individuales provienen de la misma muestra (tubo o material)</items>
+      </items>
+      <items code="at0068">
+        <items id="text">Identificador de resultado de análisis</items>
+        <items id="description">El identificador dado al resultado de la prueba de laboratorio de una investigación de patología.</items>
+      </items>
+      <items code="at0073">
+        <items id="text">Estado general del analisis</items>
+        <items id="description">Estado general del análisis (como un todo)</items>
+      </items>
+      <items code="at0074">
+        <items id="text">Abortado</items>
+        <items id="description">El análisis fué abortado y nunca se completó</items>
+      </items>
+      <items code="at0075">
+        <items id="text">Fecha y hora de publicación del resultado</items>
+        <items id="description">La fecha y / o hora que el resultado fue publicado</items>
+        <items id="comment">*The date and time related to the results status is useful for version control and cumulative results for the report.(en)</items>
+      </items>
+      <items code="at0077">
+        <items id="text">Servicio</items>
+        <items id="description">El tipo de servicio diagnóstico de alto nivel. Ej. bioquímica, hematología, etc.</items>
+      </items>
+      <items code="at0078">
+        <items id="text">Resultado</items>
+        <items id="description">Resultado del análisis</items>
+      </items>
+      <items code="at0079">
+        <items id="text">Nunca se realizó</items>
+        <items id="description">El análisis nunca se realizó</items>
+      </items>
+      <items code="at0089">
+        <items id="text">Nota de resultado</items>
+        <items id="description">Campo para anotar una anotación sobre el resultado de un test en particular en tiempo de rjecución, ej. resultado confirmado, etc.</items>
+      </items>
+      <items code="at0090">
+        <items id="text">Solicitante</items>
+        <items id="description">Detalles de la institución o centro médico que solicita el análisis del test.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Laboratory test</items>
+        <items id="description">To record the result of a laboratory test which may be used to record a single valued test but will often be specialised or templated to represent multiple value or 'panel' tests.&#xD;
+This archetype also acts as the parent for specialisations appropriate for more specific laboratory tests microbiology, histopathology.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Event Series</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Any event</items>
+        <items id="description">Any event.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Test name</items>
+        <items id="description">Specific identifier for this lab test. e.g. Full blood count , blood glucose, urine microbiology.  May equate to the result name for a single value result. Commonly a coded term e.g from LOINC or SNOMED-CT.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Multimedia representation</items>
+        <items id="description">Representations of the whole test in mutlimedia e.g image, audio, video.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Receiving laboratory</items>
+        <items id="description">Demographic details of the laboratory with responsibility for the test. Details of secondary laboratories may also be included.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Interim</items>
+        <items id="description">This is an initial or interim result - further updates are anticipated.</items>
+      </items>
+      <items code="at0038">
+        <items id="text">Final</items>
+        <items id="description">This is the final result. No further alterations are anticipated.</items>
+      </items>
+      <items code="at0039">
+        <items id="text">Supplementary</items>
+        <items id="description">This is a supplementary result ehich should be appended to a previous result.</items>
+      </items>
+      <items code="at0040">
+        <items id="text">Corrected (amended)</items>
+        <items id="description">This is a correction which should completely replace any previous results.</items>
+      </items>
+      <items code="at0057">
+        <items id="text">Overall interpretation</items>
+        <items id="description">An overall interpretative comment on this test.</items>
+      </items>
+      <items code="at0062">
+        <items id="text">Requestor order identifier</items>
+        <items id="description">The local ID assigned to the order by the order requester. Equivalent to the Placer Order Identifier.</items>
+      </items>
+      <items code="at0063">
+        <items id="text">Receiver order Identifier</items>
+        <items id="description">The local ID assigned to the test order by the order filler, usually by the (LIS) Laboratory Information System. Equivalent to the DICOM Accession Number and the Filler Order Identifier.</items>
+      </items>
+      <items code="at0065">
+        <items id="text">Specimen detail</items>
+        <items id="description">Details of the specimen being reported where all individual results are derived from the same specimen.</items>
+      </items>
+      <items code="at0068">
+        <items id="text">Laboratory test result identifier</items>
+        <items id="description">The identifier given to the laboratory test result of a pathology investigation.</items>
+      </items>
+      <items code="at0073">
+        <items id="text">Test status</items>
+        <items id="description">The status of the lab test as a whole.</items>
+      </items>
+      <items code="at0074">
+        <items id="text">Aborted</items>
+        <items id="description">The test was aborted and never completed.</items>
+      </items>
+      <items code="at0075">
+        <items id="text">Datetime result issued</items>
+        <items id="description">The date and/or time that the result was issued for the recorded ‘test status’.</items>
+        <items id="comment">The date and time related to the results status is useful for version control and cumulative results for the report.</items>
+      </items>
+      <items code="at0077">
+        <items id="text">Diagnostic service</items>
+        <items id="description">The type of high-level diagnostic service e.g. biochemistry, haematology.</items>
+      </items>
+      <items code="at0078">
+        <items id="text">Result</items>
+        <items id="description">The result of the test.</items>
+      </items>
+      <items code="at0079">
+        <items id="text">Never performed</items>
+        <items id="description">The test was never performed.</items>
+      </items>
+      <items code="at0089">
+        <items id="text">Per-result annotation</items>
+        <items id="description">Slot to allow an annotation to be added to a particular test result at run-time.</items>
+      </items>
+      <items code="at0090">
+        <items id="text">Requestor</items>
+        <items id="description">Details of the clinician or organisation requesting the laboratory test.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ru">
+      <items code="at0000">
+        <items id="text">Лабораторный анализ</items>
+        <items id="description">Для записи результатов лабораторных исследований. Такая запись может быть использована для записи одиночного значения, но часто используется в шаблонах для представления нескольких значений или "табличных"результатов . Этот архетип также выступает в качестве родительского для более специализированных  лабораторных испытаний   в микробиологии, гистологии.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Серии событий</items>
+        <items id="description">@ внутренний @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Любое событие</items>
+        <items id="description">Любое событие.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Дерево</items>
+        <items id="description">@ внутренний @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Дерево</items>
+        <items id="description">@ внутренний @</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Наименование анализа</items>
+        <items id="description">Конкретный идентификатор этого лабораторного анализа. Например: общий анализ крови, сахар крови, микробиология мочи. Может отождествляться с наименованием результата  в случае одиночного значения. Обычно кодированный термин, например, из LOINC или SNOMED-CT.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Мультимедийное представление</items>
+        <items id="description">Представление всего анализа в виде мультимедийного содержимого, например, как изображение, как аудиозапись или  как видеозапись.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Принимающая лаборатория</items>
+        <items id="description">Демографическая информация о лаборатории, несущей ответственность за анализ. Также может быть включена информация о вторичных лабораториях.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Предварительный</items>
+        <items id="description">Это начальный или промежуточный результат -  ожидается дальнейшее обновление.</items>
+      </items>
+      <items code="at0038">
+        <items id="text">Окончательный</items>
+        <items id="description">Это конечный результат. Никаких дополнительных изменений не предвидится.</items>
+      </items>
+      <items code="at0039">
+        <items id="text">Дополнительный</items>
+        <items id="description">Это дополнительный результат, который должен быть добавлен к предыдущему результату.</items>
+      </items>
+      <items code="at0040">
+        <items id="text">Исправленный</items>
+        <items id="description">Это коррекция, которая должна полностью заменить все предыдущие результаты.</items>
+      </items>
+      <items code="at0057">
+        <items id="text">Общая интерпретация</items>
+        <items id="description">Общее толкование результатов анализа.</items>
+      </items>
+      <items code="at0062">
+        <items id="text">Идентификатор заявки заказчика</items>
+        <items id="description">Локальный идентификатор, назначаемый заказу его заказчиком. Эквивалент Идентификатора заказа.</items>
+      </items>
+      <items code="at0063">
+        <items id="text">Идентификатор заявки получателя</items>
+        <items id="description">Локальный идентификатор, присваиваемый заказу на анализ её получателем. Обычно присваивается Лабораторной Информационной Системой (ЛИС). Эквивалентно регистрационному номеру DICOM и Идентификатору Заполнителя Заказа.</items>
+      </items>
+      <items code="at0065">
+        <items id="text">Информация о пробе</items>
+        <items id="description">В информации о пробе сообщается обо всех отдельных результатах, полученных из того же образца пробы.</items>
+      </items>
+      <items code="at0068">
+        <items id="text">Идентификатор лабораторного анализа</items>
+        <items id="description">Идентификатор, выданный результату лабораторного анализа при лабораторном исследовании.</items>
+      </items>
+      <items code="at0073">
+        <items id="text">Статус анализа</items>
+        <items id="description">Статус лабораторного анализа в целом.</items>
+      </items>
+      <items code="at0074">
+        <items id="text">Прерван</items>
+        <items id="description">Анализ был прерван и не завершён.</items>
+      </items>
+      <items code="at0075">
+        <items id="text">Дата-время выдачи результата</items>
+        <items id="description">Дата и/или время, когда результат был выдан для записи "статуса анализа".</items>
+        <items id="comment">Дата и время, связанные со статусом результаты полезны для управления версиями а также для сводных результатов.</items>
+      </items>
+      <items code="at0077">
+        <items id="text">Диагностическая услуга</items>
+        <items id="description">Тип лабораторно-диагностической услуги. Например, биохимия, гематология.</items>
+      </items>
+      <items code="at0078">
+        <items id="text">Результат</items>
+        <items id="description">Результат лабораторного анализа.</items>
+      </items>
+      <items code="at0079">
+        <items id="text">Никогда не проводился</items>
+        <items id="description">Анализ никода не проводился.</items>
+      </items>
+      <items code="at0089">
+        <items id="text">Поэтапное описание</items>
+        <items id="description">Место, позволяющее добавить пояснение к определённому результату анализа непосредственно во время его выполнения.</items>
+      </items>
+      <items code="at0090">
+        <items id="text">Заказчик</items>
+        <items id="description">Информация о враче или организации, запрашивающих лабораторный анализ.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

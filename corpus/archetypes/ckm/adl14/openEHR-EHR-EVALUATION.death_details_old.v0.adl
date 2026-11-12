@@ -1,0 +1,696 @@
+﻿archetype (adl_version=1.4; uid=92964cbe-9c67-457a-83ee-ead5a342c2f6)
+	openEHR-EHR-EVALUATION.death_details_old.v0
+
+concept
+	[at0000]	-- Death details
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Mikkel Johan Gaup Grønmo">
+		["organisation"] = <"Forvaltningssenter EPJ, Helse-Nord RHF">
+		["email"] = <"mikkel.johan.gaup.gronmo@helse-nord.no">
+		["date"] = <"2021-11-19">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record further details about an individuals death.">
+			use = <"Use to record details about an individuals death.">
+			keywords = <"certificate", "additional info", "Medical Certificate of Death", "date of death", "coroner's report">
+			misuse = <"Not to be used to record cause of death, for specific disease or conditions that caused, or contributed to death, please use the EVALUATION.cause_of_death archetype.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"NVSS - U.S Standard Certificate of Death. november 2003,[Internet] Available from: https://www.cdc.gov/nchs/data/dvs/DEATH11-03final-ACC.pdf.
+
+Hanzlick, Randy, og Randy Hanzlick. Cause of death and the death certificate: important information for physicians, coroners, medical examiners, and the public. College of American Pathologists,  2006. Available from: https://www.health.state.mn.us/people/vitalrecords/physician-me/docs/capcodbook.pdf.
+
+«Slik skal dødsmeldingen fylles ut». Folkehelseinstituttet, https://www.fhi.no/hn/helseregistre-og-registre/dodsarsaksregisteret/slik-skal-elektronisk-dodsmelding-fylles-ut/#2-registrere-doedsaarsak. Opened 3. august 2020.
+
+World Health Organization (2016). International statistical classification of diseases and related health problems, 10th revision, vol. 2, 5th edition. Geneva, World Health Organization. Page 203. Available from: https://icd.who.int/browse10/Content/statichtml/ICD10Volume2_en_2016.pdf
+
+ICMR; Form 4/4A for MCCD; page 34-35; Available from: https://ncdirindia.org/e-mor/Download/Physician's_Manual_MCCD.pdf">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"0D26ECC6933C1F194B66BCD5ACC2DA32">
+		["build_uid"] = <"f9c2b97a-2467-4449-b2c9-1d3b0df9029c">
+		["revision"] = <"0.0.3">
+	>
+
+definition
+	EVALUATION[at0000] matches {    -- Death details
+		data matches {
+			ITEM_TREE[at0001] matches {    -- Item tree
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0002] matches {    -- Deceased
+						value matches {
+							DV_BOOLEAN matches {
+								value matches {true; true}
+							}
+						}
+					}
+					ELEMENT[at0091] occurrences matches {0..1} matches {    -- Time of death
+						value matches {
+							DV_DATE_TIME matches {*}
+						}
+					}
+					ELEMENT[at0092] occurrences matches {0..1} matches {    -- Approximate time of death
+						value matches {
+							DV_DATE_TIME matches {*}
+						}
+					}
+					ELEMENT[at0003] occurrences matches {0..1} matches {    -- Surgery
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0004] occurrences matches {0..1} matches {    -- Date of surgery
+						value matches {
+							DV_DATE_TIME matches {*}
+						}
+					}
+					ELEMENT[at0005] occurrences matches {0..1} matches {    -- Reason for surgery
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0007] occurrences matches {0..1} matches {    -- Autopsy
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0008] occurrences matches {0..1} matches {    -- Autopsy findings
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0010] occurrences matches {0..1} matches {    -- Manner of death
+						value matches {
+							DV_TEXT matches {*}
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0011,    -- Disease
+									at0012,    -- Assault
+									at0013,    -- Intentional self harm
+									at0014,    -- Pending investigation
+									at0015,    -- War
+									at0016,    -- Legal intervention
+									at0017,    -- Could not be determined, specify
+									at0018]    -- Unknown
+								}
+							}
+						}
+					}
+					ELEMENT[at0093] occurrences matches {0..1} matches {    -- Manner of death specified
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0019] occurrences matches {0..1} matches {    -- External cause or poisoning
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0021] occurrences matches {0..1} matches {    -- Place of occurence
+						value matches {
+							DV_TEXT matches {*}
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0022,    -- At home
+									at0023,    -- Residential institution
+									at0024,    -- School
+									at0025,    -- Other institutions
+									at0026,    -- Public administrative area
+									at0027,    -- Sports and athletics area
+									at0028,    -- Street and highway
+									at0029,    -- Trade and service area
+									at0030,    -- Industrial and construction area
+									at0031,    -- Farm
+									at0032,    -- Other, specify
+									at0033]    -- Unknown
+								}
+							}
+						}
+					}
+					ELEMENT[at0094] occurrences matches {0..1} matches {    -- Place of occurence specified
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0034] occurrences matches {0..1} matches {    -- Activity
+						value matches {
+							DV_TEXT matches {*}
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0035,    -- Sporting/sports
+									at0036,    -- Pasttime activites
+									at0037,    -- Income generating activites
+									at0038,    -- Unpaid activity
+									at0039,    -- Activities of daily living, ADL
+									at0040,    -- Other activities, please specify
+									at0041]    -- Unknown
+								}
+							}
+						}
+					}
+					CLUSTER[at0043] occurrences matches {0..1} matches {    -- Fetal or infant death
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0044] occurrences matches {0..1} matches {    -- Stillborn
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0045] occurrences matches {0..1} matches {    -- First 24h
+								value matches {
+									DV_COUNT matches {
+										magnitude matches {|0..24|}
+									}
+								}
+							}
+							ELEMENT[at0046] occurrences matches {0..1} matches {    -- Birth weight
+								value matches {
+									C_DV_QUANTITY <
+										property = <[openehr::124]>
+										list = <
+											["1"] = <
+												units = <"g">
+												magnitude = <|>=0.0|>
+											>
+										>
+									>
+								}
+							}
+							ELEMENT[at0051] occurrences matches {0..1} matches {    -- Age of mother
+								value matches {
+									DV_COUNT matches {*}
+								}
+							}
+							ELEMENT[at0052] occurrences matches {0..1} matches {    -- Completed weeks of pregnancy
+								value matches {
+									DV_COUNT matches {
+										magnitude matches {|0..52|}
+									}
+								}
+							}
+							ELEMENT[at0053] occurrences matches {0..1} matches {    -- Multiple pregnancy
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0054] occurrences matches {0..1} matches {    -- Perinatal death
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							CLUSTER[at0055] occurrences matches {0..1} matches {    -- Additional perinatal death details
+								items cardinality matches {1..*; unordered} matches {
+									ELEMENT[at0056] occurrences matches {0..1} matches {    -- Labour
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0057,    -- Before labour
+													at0058,    -- During labour
+													at0059]    -- Not known
+												}
+											}
+										}
+									}
+									ELEMENT[at0060] occurrences matches {0..1} matches {    -- Mothers date of birth
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0061] occurrences matches {0..1} matches {    -- Number of previous live births
+										value matches {
+											DV_COUNT matches {*}
+										}
+									}
+									ELEMENT[at0062] occurrences matches {0..1} matches {    -- Number of previous stillbirths
+										value matches {
+											DV_COUNT matches {*}
+										}
+									}
+									ELEMENT[at0063] occurrences matches {0..1} matches {    -- Number of previous abortions
+										value matches {
+											DV_COUNT matches {*}
+										}
+									}
+									ELEMENT[at0064] occurrences matches {0..1} matches {    -- Date of last pregnancy
+										value matches {
+											DV_DATE_TIME matches {*}
+										}
+									}
+									ELEMENT[at0065] occurrences matches {0..1} matches {    -- Outcome of last previous pregnancy
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0066,    -- Live birth
+													at0067,    -- Stillbirth
+													at0068]    -- Abortion
+												}
+											}
+										}
+									}
+									ELEMENT[at0069] occurrences matches {0..1} matches {    -- Menstrual periode
+										value matches {
+											DV_DATE matches {*}
+										}
+									}
+									ELEMENT[at0070] occurrences matches {0..1} matches {    -- Delivery
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0071,    -- Normal spontaneous vertex
+													at0072]    -- Other
+												}
+											}
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0073] occurrences matches {0..1} matches {    -- Delivery specified
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0074] occurrences matches {0..1} matches {    -- Child
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0095,    -- Single birth
+													at0096,    -- First twin
+													at0097,    -- Second twin
+													at0098]    -- Other multiple
+												}
+											}
+										}
+									}
+									ELEMENT[at0099] occurrences matches {0..1} matches {    -- Other multiple specified
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0086] occurrences matches {0..1} matches {    -- Attendant at birth
+										value matches {
+											DV_TEXT matches {*}
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0087,    -- Physician
+													at0088,    -- Trained midwife
+													at0089]    -- Other
+												}
+											}
+										}
+									}
+									ELEMENT[at0090] occurrences matches {0..1} matches {    -- Attendant specified
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+					allow_archetype CLUSTER[at0042] occurrences matches {0..*} matches {    -- Additional death details
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0009] matches {*}    -- Item tree
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Death details">
+					description = <"Details about the death of an individual.">
+				>
+				["at0001"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Deceased">
+					description = <"Whether the individual is deceased.">
+					comment = <"This element is also meant to be usable in a context outside of a death certificate, to state that the individual is deceased without submitting other registrations">
+				>
+				["at0003"] = <
+					text = <"Surgery">
+					description = <"Was surgery performed within the last 4 weeks?">
+				>
+				["at0004"] = <
+					text = <"Date of surgery">
+					description = <"Date when surgery was performed.">
+				>
+				["at0005"] = <
+					text = <"Reason for surgery">
+					description = <"Details about why the surgery was performed.">
+				>
+				["at0007"] = <
+					text = <"Autopsy">
+					description = <"Was autopsy requested?">
+				>
+				["at0008"] = <
+					text = <"Autopsy findings">
+					description = <"Were the findings used in the certification?">
+				>
+				["at0009"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0010"] = <
+					text = <"Manner of death">
+					description = <"How or in what setting did the patient die?">
+				>
+				["at0011"] = <
+					text = <"Disease">
+					description = <"">
+				>
+				["at0012"] = <
+					text = <"Assault">
+					description = <"">
+				>
+				["at0013"] = <
+					text = <"Intentional self harm">
+					description = <"">
+				>
+				["at0014"] = <
+					text = <"Pending investigation">
+					description = <"">
+				>
+				["at0015"] = <
+					text = <"War">
+					description = <"">
+				>
+				["at0016"] = <
+					text = <"Legal intervention">
+					description = <"">
+				>
+				["at0017"] = <
+					text = <"Could not be determined, specify">
+					description = <"">
+				>
+				["at0018"] = <
+					text = <"Unknown">
+					description = <"">
+				>
+				["at0019"] = <
+					text = <"External cause or poisoning">
+					description = <"Please describe how external cause occurred.">
+					comment = <"If poisoning please specify poisoning agent.">
+				>
+				["at0021"] = <
+					text = <"Place of occurence">
+					description = <"Place of occurrence of the external cause.">
+				>
+				["at0022"] = <
+					text = <"At home">
+					description = <"">
+				>
+				["at0023"] = <
+					text = <"Residential institution">
+					description = <"">
+				>
+				["at0024"] = <
+					text = <"School">
+					description = <"">
+				>
+				["at0025"] = <
+					text = <"Other institutions">
+					description = <"">
+				>
+				["at0026"] = <
+					text = <"Public administrative area">
+					description = <"">
+				>
+				["at0027"] = <
+					text = <"Sports and athletics area">
+					description = <"">
+				>
+				["at0028"] = <
+					text = <"Street and highway">
+					description = <"">
+				>
+				["at0029"] = <
+					text = <"Trade and service area">
+					description = <"">
+				>
+				["at0030"] = <
+					text = <"Industrial and construction area">
+					description = <"">
+				>
+				["at0031"] = <
+					text = <"Farm">
+					description = <"">
+				>
+				["at0032"] = <
+					text = <"Other, specify">
+					description = <"">
+				>
+				["at0033"] = <
+					text = <"Unknown">
+					description = <"">
+				>
+				["at0034"] = <
+					text = <"Activity">
+					description = <"Type of activity when injured.">
+				>
+				["at0035"] = <
+					text = <"Sporting/sports">
+					description = <"">
+				>
+				["at0036"] = <
+					text = <"Pasttime activites">
+					description = <"">
+				>
+				["at0037"] = <
+					text = <"Income generating activites">
+					description = <"">
+				>
+				["at0038"] = <
+					text = <"Unpaid activity">
+					description = <"">
+				>
+				["at0039"] = <
+					text = <"Activities of daily living, ADL">
+					description = <"">
+				>
+				["at0040"] = <
+					text = <"Other activities, please specify">
+					description = <"">
+				>
+				["at0041"] = <
+					text = <"Unknown">
+					description = <"">
+				>
+				["at0042"] = <
+					text = <"Additional death details">
+					description = <"Additional details about death.">
+				>
+				["at0043"] = <
+					text = <"Fetal or infant death">
+					description = <"Details about pregnancy and infant death.">
+				>
+				["at0044"] = <
+					text = <"Stillborn">
+					description = <"Stillborn death.">
+					comment = <"The definition of viability can be recorded in the Protocol.">
+				>
+				["at0045"] = <
+					text = <"First 24h">
+					description = <"If death within 24h specify number of hours survived.">
+				>
+				["at0046"] = <
+					text = <"Birth weight">
+					description = <"The first weight of the fetus or neonate obtained after birth.
+For live births, birth weight should preferably be measured within the first hour of life before significant postnatal weight loss has occurred.">
+					comment = <"While statistical tabulations include 500 g groupings for birth weight, weights should not be recorded in those groupings. The actual weight should be recorded to the degree of accuracy to which it is measured.">
+				>
+				["at0051"] = <
+					text = <"Age of mother">
+					description = <"What is the age of the mother at the time of death?">
+				>
+				["at0052"] = <
+					text = <"Completed weeks of pregnancy">
+					description = <"Number of completed weeks of pregnancy.">
+				>
+				["at0053"] = <
+					text = <"Multiple pregnancy">
+					description = <"Pregnancy with more than one fetus.">
+					comment = <"For example: Twins, triplets.">
+				>
+				["at0054"] = <
+					text = <"Perinatal death">
+					description = <"If death was perinatal, please state conditions of mother that affected the fetus and newborn.">
+				>
+				["at0055"] = <
+					text = <"Additional perinatal death details">
+					description = <"Additional detail of perinatal deaths.">
+					comment = <"Stillbirths and liveborn infants dying within 168 hours [1 week] from birth.">
+				>
+				["at0056"] = <
+					text = <"Labour">
+					description = <"At what stage of labour did the individual die.">
+				>
+				["at0057"] = <
+					text = <"Before labour">
+					description = <"Individual died before labour.">
+				>
+				["at0058"] = <
+					text = <"During labour">
+					description = <"Individual died during labour.">
+				>
+				["at0059"] = <
+					text = <"Not known">
+					description = <"Unknown at what time the individual died.">
+				>
+				["at0060"] = <
+					text = <"Mothers date of birth">
+					description = <"Date of birth of the fetus' or infant's mother.">
+				>
+				["at0061"] = <
+					text = <"Number of previous live births">
+					description = <"Number of infants born alive.">
+					comment = <"This number can be deduced if existing data is available in the EHR, but there might also be a need to manually count and record instances">
+				>
+				["at0062"] = <
+					text = <"Number of previous stillbirths">
+					description = <"Number of stillbirths.">
+					comment = <"This number can be deduced if existing data is available in the EHR, but there might also be a need to manually count and record instances.
+The definition of viability can be recorded in the Protocol">
+				>
+				["at0063"] = <
+					text = <"Number of previous abortions">
+					description = <"Number of pregnancies that do not reach viability from all causes, including spontaneous miscarriages, induced terminations and ectopic pregnancies.">
+					comment = <"This number can be deduced if existing data is available in the EHR, but there might also be a need to manually count and record instances">
+				>
+				["at0064"] = <
+					text = <"Date of last pregnancy">
+					description = <"Date of last pregnancy.">
+				>
+				["at0065"] = <
+					text = <"Outcome of last previous pregnancy">
+					description = <"Outcome of last previous pregnancy.">
+				>
+				["at0066"] = <
+					text = <"Live birth">
+					description = <"Outcome of last previous pregnancy was a live birth.">
+				>
+				["at0067"] = <
+					text = <"Stillbirth">
+					description = <"Outcome of last previous pregnancy was a stillbirh.">
+				>
+				["at0068"] = <
+					text = <"Abortion">
+					description = <"Outcome of last previous pregnancy was an abortion.">
+				>
+				["at0069"] = <
+					text = <"Menstrual periode">
+					description = <"First (1st) day of last menstrual period.">
+				>
+				["at0070"] = <
+					text = <"Delivery">
+					description = <"Status of the delivery.">
+				>
+				["at0071"] = <
+					text = <"Normal spontaneous vertex">
+					description = <"Delivery with normal spontaneous vertex.">
+				>
+				["at0072"] = <
+					text = <"Other">
+					description = <"Please specify.">
+				>
+				["at0073"] = <
+					text = <"Delivery specified">
+					description = <"Specify delivery complication.">
+				>
+				["at0074"] = <
+					text = <"Child">
+					description = <"Child number n in a multiple pregnancy.">
+					comment = <"When there are multiple individuals in same pregnancy, please state which child in the birth order this registration regards.
+For example: First twin, second triplet, fifth octuplet">
+				>
+				["at0086"] = <
+					text = <"Attendant at birth">
+					description = <"Type of attendant at birth.">
+				>
+				["at0087"] = <
+					text = <"Physician">
+					description = <"Attendee was a physician.">
+				>
+				["at0088"] = <
+					text = <"Trained midwife">
+					description = <"Attendee was a trained midwife.">
+				>
+				["at0089"] = <
+					text = <"Other">
+					description = <"Please specify type of attendant present at birth.">
+				>
+				["at0090"] = <
+					text = <"Attendant specified">
+					description = <"Further specified type of attendant at birth.">
+				>
+				["at0091"] = <
+					text = <"Time of death">
+					description = <"Time of death.">
+					comment = <"For example: witnessed (in or out of hospital)">
+				>
+				["at0092"] = <
+					text = <"Approximate time of death">
+					description = <"Approximated or estimated time of death.">
+					comment = <"Approximated or estimated time of death.
+For example: based on findings pertaining to examination of the corpse and the pathologist's reconstruction of time of death based on post-mortem changes, temperature, etc.">
+				>
+				["at0093"] = <
+					text = <"Manner of death specified">
+					description = <"Specify how or in what setting did the patient die?">
+				>
+				["at0094"] = <
+					text = <"Place of occurence specified">
+					description = <"Specified place of occurrence of the external cause.">
+				>
+				["at0095"] = <
+					text = <"Single birth">
+					description = <"">
+				>
+				["at0096"] = <
+					text = <"First twin">
+					description = <"">
+				>
+				["at0097"] = <
+					text = <"Second twin">
+					description = <"">
+				>
+				["at0098"] = <
+					text = <"Other multiple">
+					description = <"">
+				>
+				["at0099"] = <
+					text = <"Other multiple specified">
+					description = <"Child number n in a multiple pregnancy.">
+					comment = <"Specified other multiple.
+For example: second triplet, fifth octuplet">
+				>
+			>
+		>
+	>

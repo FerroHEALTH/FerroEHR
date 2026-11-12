@@ -1,0 +1,186 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9bd4553b-2f0a-42a0-987c-a264c3b6faf8; build_uid=e2f87caa-ed91-487f-a6e0-31fbb89b7289)
+    openEHR-EHR-CLUSTER.medication_amount.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2012-12-03">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sam Heard, Ocean Informatics, Australia", ...>
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7437F751AA8E59A6512844A6C5B4BF17">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To describe the quantity or strength of a medicinal substance.">
+            keywords = <"amount", "dose", "dosing", "quantity", "strength">
+            use = <"Normally used in the context of medication INSRUCTION or ACTION archetypes.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Medication amount
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Amount
+                value matches {
+                    DV_QUANTITY[at9001] matches {
+                        property matches {[at9000]}    -- Qualified real
+                        magnitude matches {|>=0.0|}
+                        units matches {"1"}
+                    }
+                    DV_INTERVAL<DV_QUANTITY>[at9002] matches {
+                        upper matches {
+                            DV_QUANTITY[at9003] matches {
+                                property matches {[at9000]}    -- Qualified real
+                                magnitude matches {|>=0.0|}
+                                units matches {"1"}
+                            }
+                        }
+                        lower matches {
+                            DV_QUANTITY[at9004] matches {
+                                property matches {[at9000]}    -- Qualified real
+                                magnitude matches {|>=0.0|}
+                                units matches {"1"}
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Dose unit
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac2]}    -- Dose Unit
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            CLUSTER[at0008] occurrences matches {0..1} matches {    -- Ratio amount numerator
+                items cardinality matches {1..*; unordered} matches {
+                    use_node ELEMENT[at9007] occurrences matches {0..1} /items[at0001]
+                    use_node ELEMENT[at9010] occurrences matches {0..1} /items[at0002]    -- Ratio amount numerator (synthesised)
+                }
+            }
+            CLUSTER[at0007] occurrences matches {0..1} matches {    -- Ratio amount denominator
+                items cardinality matches {1..*; unordered} matches {
+                    use_node ELEMENT[at9009] occurrences matches {0..1} /items[at0001]
+                    use_node ELEMENT[at9011] occurrences matches {0..1} /items[at0002]    -- Ratio amount denominator (synthesised)
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Medication amount">
+                description = <"The amount or strength of a medication or substance for medication orders, administrations, dispensing etc.">
+            >
+            ["at0001"] = <
+                text = <"Amount">
+                description = <"The value of the amount of medication as a real number.">
+                comment = <"Example: 1, 1.5, 0.125">
+            >
+            ["at0002"] = <
+                text = <"Dose unit">
+                description = <"The dose unit of this medication amount.">
+                comment = <"Example: tab, drop caps">
+            >
+            ["at0003"] = <
+                text = <"Description">
+                description = <"Free text description of the amount which may consist of the amount value and amount dose unit.">
+                comment = <"Example: 40mg">
+            >
+            ["at0007"] = <
+                text = <"Ratio amount denominator">
+                description = <"The denominator value where the amount is described as a ratio e.g. 5mls where the amount is 2mg/5mls.">
+            >
+            ["at0008"] = <
+                text = <"Ratio amount numerator">
+                description = <"The numerator value where the amount is described as a ratio e.g. 2mg where the amount is 2mg/5mls.">
+            >
+            ["ac2"] = <
+                text = <"Dose Unit">
+                description = <"Tablets, Capsules, Sachets, mg, L etc.">
+            >
+            ["at9000"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["at9010"] = <
+                text = <"Ratio amount numerator (synthesised)">
+                description = <"The numerator value where the amount is described as a ratio e.g. 2mg where the amount is 2mg/5mls. (synthesised)">
+            >
+            ["at9011"] = <
+                text = <"Ratio amount denominator (synthesised)">
+                description = <"The denominator value where the amount is described as a ratio e.g. 5mls where the amount is 2mg/5mls. (synthesised)">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"*Medication amount(en)">
+                description = <"*The amount or strength of a medication or substance for medication orders, administrations, dispensing etc.(en)">
+            >
+            ["at0001"] = <
+                text = <"*Amount(en)">
+                description = <"*The value of the amount of medication as a real number e.g 1, 1.5, 0.125. (en)">
+            >
+            ["at0002"] = <
+                text = <"*Dose unit(en)">
+                description = <"*The dose unit of this medication amount.(en)">
+                comment = <"*Example: tab, drop caps. (en)">
+            >
+            ["at0003"] = <
+                text = <"*Description(en)">
+                description = <"*Free text description of the amount which may consist of the amount value and amount dose unit.(en)">
+                comment = <"*Example: \"40mg\"(en)">
+            >
+            ["at0007"] = <
+                text = <"*Ratio amount denominator(en)">
+                description = <"*The denominator value where the amount is described as a ratio e.g. 5mls where the amount is 2mg/5mls.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Ratio amount numerator(en)">
+                description = <"*The numerator value where the amount is described as a ratio e.g. 2mg where the amount is 2mg/5mls.(en)">
+            >
+            ["ac2"] = <
+                text = <"*Dose Unit(en)">
+                description = <"*Tablets, Capsules, Sachets, mg, L etc.(en)">
+            >
+            ["at9000"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["at9010"] = <
+                text = <"*Ratio amount numerator(en) (synthesised)">
+                description = <"*The numerator value where the amount is described as a ratio e.g. 2mg where the amount is 2mg/5mls.(en) (synthesised)">
+            >
+            ["at9011"] = <
+                text = <"*Ratio amount denominator(en) (synthesised)">
+                description = <"*The denominator value where the amount is described as a ratio e.g. 5mls where the amount is 2mg/5mls.(en) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/380>
+        >
+    >

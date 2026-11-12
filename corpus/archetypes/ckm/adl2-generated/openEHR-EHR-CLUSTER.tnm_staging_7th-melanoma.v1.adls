@@ -1,0 +1,273 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d15349b8-7d9d-4528-900d-869229f13c3d; build_uid=2adab98c-5106-48b0-8c43-124f208561a6)
+    openEHR-EHR-CLUSTER.tnm_staging_7th-melanoma.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.tnm_staging_7th.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics Scotland">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"27/07/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie Ocean Informatics Australia", "Sam Heard Ocean Informatics Australia", "Koray Atalag, University of Auckland, New Zealand">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Sobin LH. TNM Classification of Malignant Tumours 7th Edition.  John Wiley and Sons; 2009.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"461497070666001E182C7A6B17A058E6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the classification and grading of primary cutaneous melanoma using the TNM classification 7th Edition.">
+            keywords = <"tumour", "TNM", "malignancy", "cancer", "staging", "classification", "grade", "grading", "stage", "lymph node", "metastasis", "melanoma", "skin">
+            use = <"">
+            misuse = <"Should not normally be used for TNM classification without specialisation or template-constraints">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Tumour - Primary Cutaneous Melanoma TNM staging 7th Edition
+        items matches {
+            ELEMENT[at0003] matches {
+                value matches {
+                    DV_CODED_TEXT[at9001.1] matches {
+                        defining_code matches {[ac0.9000]}    -- Primary tumour (T) (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0004] matches {
+                value matches {
+                    DV_CODED_TEXT[at9002.1] matches {
+                        defining_code matches {[ac0.9001]}    -- Regional lymph nodes (N) (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0005] matches {
+                value matches {
+                    DV_CODED_TEXT[at9003.1] matches {
+                        defining_code matches {[ac0.9002]}    -- Distant metastasis (M) (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0014] matches {
+                value matches {
+                    DV_CODED_TEXT[at9008.1] matches {
+                        defining_code matches {[ac0.9003]}    -- Stage grouping (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.52"] = <
+                text = <"TX">
+                description = <"Primsry tumour cannot be assessed.">
+            >
+            ["at0.53"] = <
+                text = <"T0">
+                description = <"No evidence of primary tumour.">
+            >
+            ["at0.54"] = <
+                text = <"Tis">
+                description = <"Melanoma in situ">
+            >
+            ["at0.55"] = <
+                text = <"T1">
+                description = <"T1 - as defined by AJCC/UICC TNM system (7th edition) Prostate cancer.">
+            >
+            ["at0.56"] = <
+                text = <"T1a">
+                description = <"T1a - as defined by AJCC/UICC TNM system (7th edition) Melanoma.">
+            >
+            ["at0.57"] = <
+                text = <"T1b">
+                description = <"T1b - as defined by AJCC/UICC TNM system (7th edition) Melanoma.">
+            >
+            ["at0.58"] = <
+                text = <"T2">
+                description = <"T2 - as defined by AJCC/UICC TNM system (7th edition) Melanoma.">
+            >
+            ["at0.59"] = <
+                text = <"T2a">
+                description = <"T2a - as defined by AJCC/UICC TNM system (7th edition) Melanoma.">
+            >
+            ["at0.60"] = <
+                text = <"T2b">
+                description = <"T2b - as defined by AJCC/UICC TNM system (7th edition) Melanoma.">
+            >
+            ["at0.61"] = <
+                text = <"T3">
+                description = <"T3 - as defined by AJCC/UICC TNM system (7th edition) Melanoma.">
+            >
+            ["at0.62"] = <
+                text = <"T3a">
+                description = <"T3a - as defined by AJCC/UICC TNM system (7th edition) Melanoma.">
+            >
+            ["at0.63"] = <
+                text = <"T3b">
+                description = <"T3b - as defined by AJCC/UICC TNM system (7th edition) Melanoma.">
+            >
+            ["at0.64"] = <
+                text = <"T4">
+                description = <"T4 - as defined by AJCC/UICC TNM system (7th edition) Melanoma.">
+            >
+            ["at0.65"] = <
+                text = <"T4a">
+                description = <"T4a - as defined by AJCC/UICC TNM system (7th edition) Melanoma.">
+            >
+            ["at0.66"] = <
+                text = <"T4b">
+                description = <"T4b - as defined by AJCC/UICC TNM system (7th edition) Melanoma.">
+            >
+            ["at0.67"] = <
+                text = <"NX">
+                description = <"Regional lymph nodes cannot be assessed.">
+            >
+            ["at0.68"] = <
+                text = <"N0">
+                description = <"No regional lymph node metastasis.">
+            >
+            ["at0.69"] = <
+                text = <"N1">
+                description = <"*">
+            >
+            ["at0.70"] = <
+                text = <"N1a">
+                description = <"*">
+            >
+            ["at0.71"] = <
+                text = <"N1b">
+                description = <"*">
+            >
+            ["at0.72"] = <
+                text = <"N2">
+                description = <"*">
+            >
+            ["at0.73"] = <
+                text = <"N2a">
+                description = <"*">
+            >
+            ["at0.74"] = <
+                text = <"N2b">
+                description = <"*">
+            >
+            ["at0.75"] = <
+                text = <"N2c">
+                description = <"*">
+            >
+            ["at0.76"] = <
+                text = <"N3">
+                description = <"*">
+            >
+            ["at0.77"] = <
+                text = <"M0">
+                description = <"No distant metastasis.">
+            >
+            ["at0.78"] = <
+                text = <"M1a">
+                description = <"*">
+            >
+            ["at0.79"] = <
+                text = <"M1b">
+                description = <"*">
+            >
+            ["at0.80"] = <
+                text = <"M1c">
+                description = <"*">
+            >
+            ["at0.81"] = <
+                text = <"Stage 0">
+                description = <"*">
+            >
+            ["at0.82"] = <
+                text = <"Stage IA">
+                description = <"*">
+            >
+            ["at0.83"] = <
+                text = <"Stage IB">
+                description = <"*">
+            >
+            ["at0.84"] = <
+                text = <"Stage IIA">
+                description = <"*">
+            >
+            ["at0.85"] = <
+                text = <"Stage IIB">
+                description = <"*">
+            >
+            ["at0.86"] = <
+                text = <"Stage IIC">
+                description = <"*">
+            >
+            ["at0.87"] = <
+                text = <"Stage IIIA">
+                description = <"*">
+            >
+            ["at0.88"] = <
+                text = <"Stage IIIB">
+                description = <"*">
+            >
+            ["at0.89"] = <
+                text = <"Stage IIIC">
+                description = <"*">
+            >
+            ["at0.90"] = <
+                text = <"Stage IV">
+                description = <"*">
+            >
+            ["at0000.1"] = <
+                text = <"Tumour - Primary Cutaneous Melanoma TNM staging 7th Edition">
+                description = <"For the classification and grading of primary cutaneous melanom using the TNM classification 7th Edition.">
+            >
+            ["ac0.9000"] = <
+                text = <"Primary tumour (T) (synthesised)">
+                description = <"Assessment of the primary tumour. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Regional lymph nodes (N) (synthesised)">
+                description = <"Assessment of the regional lymph nodes. (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Distant metastasis (M) (synthesised)">
+                description = <"Assessment of distant metastasis. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Stage grouping (synthesised)">
+                description = <"The TNM Stage grouping. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.52", "at0.53", "at0.54", "at0.55", "at0.56", "at0.57", "at0.58", "at0.59", "at0.60", "at0.61", "at0.62", "at0.63", "at0.64", "at0.65", "at0.66">
+        >
+        ["ac0.9003"] = <
+            id = <"ac0.9003">
+            members = <"at0.81", "at0.82", "at0.83", "at0.84", "at0.85", "at0.86", "at0.87", "at0.88", "at0.89", "at0.90">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.67", "at0.68", "at0.69", "at0.70", "at0.71", "at0.72", "at0.73", "at0.74", "at0.75", "at0.76">
+        >
+        ["ac0.9002"] = <
+            id = <"ac0.9002">
+            members = <"at0.77", "at0.78", "at0.79", "at0.80">
+        >
+    >

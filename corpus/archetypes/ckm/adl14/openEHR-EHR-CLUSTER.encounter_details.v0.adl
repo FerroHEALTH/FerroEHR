@@ -28,15 +28,15 @@ description
 			purpose = <"For å registrere detaljer om en klinisk kontakt.">
 			use = <"Brukes til å registrere detaljer om en klinisk kontakt mellom en pasient og helsetjenester.
 
-I konteksten av denne arketypen så tolkes klinisk kontakt i vid forstand, og inkluderer enhver kontakt mellom en pasient og helsetjenester som det er behov for å registrere. Dette inkluderer, men er ikke begrenset til, fastlegebesøk, polikliniske besøk, døgnbehandling, akuttinnleggelser, hjemmebesøk eller psykisk helsehjelp.
+I konteksten av denne arketypen tolkes begrepet kontakt vidt og omfatter enhver kontakt mellom en pasient og helsetjenesten som det er behov for å registrere. Dette inkluderer, men er ikke begrenset til, fastlegebesøk, polikliniske besøk, døgnbehandling, akuttinnleggelser, hjemmebesøk, video- og telefonkonsultasjoner, eller psykisk helsehjelp.
 
-Som følge av dette så har både konseptet og dataelementene blitt gitt veldig generiske navn. Det forventes at disse ikke vil passe i alle myndighetsområder eller bruksområder, og må endres i templatet for å bedre passe den aktuelle bruken.
+Som følge av dette har både konseptet og dataelementene blitt gitt veldig generiske navn. Det forventes at disse ikke vil passe i alle myndighetsområder eller bruksområder, og må endres i templatet for å bedre tilpasses den aktuelle bruken.
 
-Del-episode slotten er designet for å motta gjentagende utgaver av dette clusteret for å modellere del-kontakter. For eksempel, en instans av dette clusteret kan brukes for å registrere et sykehusopphold, og en del-episode kan brukes for å registrere innleggelse ved akuttmottaket, men en annen del-episode kan brukes for å registrere overføringen til en annen avdeling. Disse clusterne kan deles videre opp som nødvendig for å registrere nødvendige kontakter.
+SLOT for delepisoder er utformet for å motta gjentagende forekomster av dette clusteret for å modellere delkontakter ved behov. For eksempel kan én forekomst av clusteret brukes til å registrere et sykehusopphold, én delepisode kan brukes til å registrere innleggelsen via akuttmottaket. En annen delepisode kan brukes til å registrere en overføring til en annen avdeling. Disse clusterne kan videre deles opp etter behov for å registrere mer spesifikke kontakter.
 
-Opphav, opphavskategori, destinasjon og destinasjonskategori er ment for å gi alternativer for hvordan man registrerer hvor pasienten kom fra og hvor de dro til. Opphavskategori og destinasjonskategori  er ment for å gi generell informasjon om hvor en pasient kom fra og hvor de dro til, mens opphav og destinasjon slottene er ment for å identifisere spesifikke organisasjoner og/eller lokasjoner.">
-			keywords = <"innleggelse, utskrivning, overføring, besøk, opphold, sykehusinnleggelse, innlagt, kontakt, død", ...>
-			misuse = <"Skal ikke brukes til planlegging av fremtidige kliniske kontakter. På tidspunktet for utarbeidelsen er det ennå ikke avklart hvilken arketype som bør brukes til dette formålet.">
+Opphav, opphavskategori, destinasjon og destinasjonskategori gir ulike muligheter til å registrere hvor pasienten kom fra før kontakten, og hvor pasienten ble sendt videre etter kontakten. Opphavskategori og destinasjonskategori brukes til å registrere generell informasjon om henholdsvis opphav og destinasjon, mens SLOT for opphav og destinasjon brukes til å identifisere spesifikke organisasjoner og/eller lokasjoner.">
+			keywords = <"innleggelse, utskrivning, overføring, besøk, opphold, sykehusinnleggelse, innlagt, kontakt, død, poliklinikk, dagbehandling, konsultasjon, videokonsultasjon, telefonkontakt, hjemmekonsultasjon, time", ...>
+			misuse = <"Brukes ikke for planlegging av fremtidige kliniske kontakter. På tidspunktet for utarbeidelsen er det ennå ikke avklart hvilken arketype som bør brukes til dette formålet.">
 			copyright = <"© openEHR Foundation">
 		>
 		["en"] = <
@@ -65,8 +65,8 @@ Source, Source category, Destination and Destination category are intended to pr
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"922DC591626640BA904282CD5180A0C3">
-		["build_uid"] = <"dbc7bd56-6b0b-4b53-a924-16a1239ab339">
+		["MD5-CAM-1.0.1"] = <"7DD0941945A54679866050B7EA64E131">
+		["build_uid"] = <"a0110921-5a6e-4007-b266-c5e8e70c303f">
 		["revision"] = <"0.0.1-alpha">
 	>
 
@@ -109,7 +109,7 @@ definition
 			}
 			allow_archetype CLUSTER[at0019] occurrences matches {0..*} matches {    -- Sub-episode
 				include
-					archetype_id/value matches {/openEHR-EHR-CLUSTER\.inpatient_episode_details\.v0/}
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.encounter_details\.v0|openEHR-EHR-CLUSTER\.encounter_details\.v1/}
 			}
 			allow_archetype CLUSTER[at0045] occurrences matches {0..1} matches {    -- Destination
 				include
@@ -136,7 +136,6 @@ definition
 			}
 		}
 	}
-
 
 ontology
 	term_definitions = <
@@ -209,7 +208,7 @@ ontology
 		["nb"] = <
 			items = <
 				["at0000"] = <
-					text = <"Klinisk kontakt detaljer">
+					text = <"Detaljer om klinisk kontakt">
 					description = <"Detaljer om en klinisk kontakt.">
 				>
 				["at0001"] = <
@@ -227,21 +226,21 @@ ontology
 				>
 				["at0004"] = <
 					text = <"Start">
-					description = <"Dato/dato‑tidspunkt for når den kliniske kontakten startet.">
-					comment = <"For eksempel, innlagt i døgninstitusjon, overført til annen avdeling.">
+					description = <"Dato eller dato og klokkeslett for når den kliniske kontakten startet.">
+					comment = <"For eksempel tidspunktet individet ble innlagt i døgninstitusjon eller overført til annen avdeling.">
 				>
 				["at0005"] = <
 					text = <"Stopp">
-					description = <"Dato/dato‑tidspunkt for når den kliniske kontakten sluttet.">
+					description = <"Dato eller dato og klokkeslett for når den kliniske kontakten sluttet.">
 				>
 				["at0019"] = <
 					text = <"Del-episode">
 					description = <"Detaljer om en del‑episode som utgjør en del av den opprinnelige kliniske kontakten.">
-					comment = <"Dette SLOT-et er ment for å legge inn detaljer om del‑episoder ved bruk av nestede instanser av denne arketypen. Eksempler på del‑episoder kan være overføringer til annen avdeling eller endringer av rom/seng">
+					comment = <"Dette SLOT-et er ment for å registrere detaljer om del‑episoder ved å gjenbruke denne arketypen for underordnede episoder (nøsting). Eksempler på del‑episoder kan være overføringer til annen avdeling eller endringer av rom/seng.">
 				>
 				["at0020"] = <
 					text = <"Kommentar">
-					description = <"Tekstlig tilleggsinformasjon om den kliniske kontakten som ikke er registrert i andre felt. ">
+					description = <"Ytterligere fritekst om den kliniske kontakten som ikke er registrert/omfattet i andre felter.">
 				>
 				["at0021"] = <
 					text = <"Opphav">
@@ -249,25 +248,25 @@ ontology
 				>
 				["at0022"] = <
 					text = <"Opphavskategori">
-					description = <"Typen sted pasienten var før den kliniske kontakten.">
-					comment = <"Koding av opphavskategori med en terminologi er foretrukket om mulig. For eksempel, hjem, sykehjem, eller skadested.">
+					description = <"Type sted pasienten kom fra før den kliniske kontakten.">
+					comment = <"Koding av opphavskategori med en terminologi er foretrukket om mulig. For eksempel hjem, sykehjem, eller skadested.">
 				>
 				["at0045"] = <
 					text = <"Destinasjon">
-					description = <"Stedet/organisasjonen pasienten dro til etter den kliniske kontakten.">
+					description = <"Stedet/organisasjonen pasienten ble utskrevet/overflyttet til etter den kliniske kontakten.">
 				>
 				["at0046"] = <
-					text = <"Klinisk kontakt ID">
+					text = <"Identifikator">
 					description = <"En identifikator for den kliniske kontakten.">
 				>
 				["at0047"] = <
 					text = <"Destinasjonskategori">
-					description = <"Typen sted pasienten dro til etter kliniske kontakten.">
-					comment = <"Koding av destinasjonskategori med en terminologi er foretrukket om mulig. For eksempel, hjem, sykehjem, eller annen helseinstitusjon.">
+					description = <"Typen sted pasienten ble utskrevet/overflyttet til etter den kliniske kontakten.">
+					comment = <"Koding av destinasjonskategori med en terminologi er foretrukket om mulig. For eksempel hjem, sykehjem, eller annen helseinstitusjon.">
 				>
 				["at0048"] = <
 					text = <"Ytterligere detaljer">
-					description = <"Ytterligere detaljer om den kliniske kontakten.">
+					description = <"Ytterligere strukturerte detaljer om den kliniske kontakten.">
 				>
 			>
 		>
