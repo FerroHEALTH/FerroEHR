@@ -107,11 +107,6 @@ pub struct EndpointLevels {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
-#[expect(
-    clippy::struct_field_names,
-    reason = "each key is a ceiling a request is held to, and the `max_` names are the keys \
-              an operator writes"
-)]
 #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct ProfilingConfig {
     /// The longest sample window a single request may ask for, in whole
@@ -119,9 +114,6 @@ pub struct ProfilingConfig {
     pub max_duration: ferrohealth_config::units::Duration,
     /// The highest sampling frequency a request may ask for, in Hz.
     pub max_frequency: i32,
-    /// Retired in v5.7.0: refused at load, naming `max_duration`.
-    #[serde(skip_serializing)]
-    pub max_seconds: ferrohealth_config::removed::Removed,
 }
 
 impl ProfilingConfig {
@@ -137,7 +129,6 @@ impl Default for ProfilingConfig {
         Self {
             max_duration: ferrohealth_config::units::Duration::from_secs(30),
             max_frequency: 999,
-            max_seconds: ferrohealth_config::removed::Removed::default(),
         }
     }
 }
@@ -172,9 +163,6 @@ pub struct ManagementConfig {
     /// file, for `inferno-flamegraph` to render offline. Unset, nothing is
     /// captured.
     pub flame_file: Option<std::path::PathBuf>,
-    /// Retired in v5.7.0: refused at load, naming `listen`.
-    #[serde(skip_serializing)]
-    pub port: ferrohealth_config::removed::Removed,
 }
 
 impl Default for ManagementConfig {
@@ -186,7 +174,6 @@ impl Default for ManagementConfig {
             endpoints: EndpointLevels::default(),
             profiling: ProfilingConfig::default(),
             flame_file: None,
-            port: ferrohealth_config::removed::Removed::default(),
         }
     }
 }

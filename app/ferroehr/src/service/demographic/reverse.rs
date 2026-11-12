@@ -58,15 +58,17 @@ impl FerroEhrService {
     /// version container, as the relationships stand now when `at` is `None`,
     /// else as they stood at the instant `at`.
     ///
-    /// RM 1.1.0 demographic `master02-demographic_package.adoc` §Party
-    /// Relationships: "each Party involved in a relationship includes it in its
-    /// relationships list, if it is at the source end, or in the
-    /// `_reverse_relationships_` list, if at the target end", and
-    /// `reverse_relationships` "is by references". The reference names the
-    /// source party's version container by `HIER_OBJECT_ID` (the same section:
-    /// relationships are "between _continuants_") and the relationship by its
-    /// path in that party's data. RM 1.2.0 turns the attribute into a function
-    /// (SPECRM-124), whose result is the same list.
+    /// RM 1.1.0 demographic §Party Relationships, which is not vendored
+    /// (<https://specifications.openehr.org/releases/RM/Release-1.1.0/demographic.html#_party_relationships>):
+    /// "each Party involved in a relationship includes it in its relationships
+    /// list, if it is at the source end, or in the `reverse_relationships`
+    /// list, if at the target end", and `reverse_relationships` "is by
+    /// references". The reference names the source party's version container
+    /// by `HIER_OBJECT_ID` (the same section, and the vendored RM 1.2.0
+    /// `master02-demographic_package.adoc` §Party Relationships: relationships
+    /// are "between _continuants_") and the relationship by its path in that
+    /// party's data. RM 1.2.0 turns the attribute into a function (SPECRM-124,
+    /// `master00-amendment_record.adoc`), whose result is the same list.
     ///
     /// A read of a party version, by its id or at a time, passes that
     /// version's commit instant, so every representation of one version

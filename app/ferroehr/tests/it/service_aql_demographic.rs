@@ -784,7 +784,6 @@ async fn a_subject_join_is_recorded_in_the_party_and_linkage_domains() {
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..StoreConfig::default()
         },
         ..AuditConfig::default()
     };

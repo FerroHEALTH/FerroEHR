@@ -44,6 +44,7 @@ fn build_sql(q: &str) -> String {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
@@ -1046,6 +1047,7 @@ fn a_fragment_path_ending_on_a_list_names_its_elements() {
             limit: None,
             offset: None,
             archetype_lineage: Arc::new(ArchetypeLineage::default()),
+            policy_parties: ferroehr::aql::sql::PolicyParties::Served,
         };
         let built = ferroehr::aql::sql::build(&plan_ok(q), &Params::default(), &ctx)
             .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"));
@@ -1590,6 +1592,7 @@ fn build_sql_limited(q: &str) -> String {
         limit: Some(50),
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
@@ -1785,6 +1788,7 @@ fn a_named_ehr_scope_streams_on_its_spine() {
         limit: Some(50),
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     let named = ferroehr::aql::sql::build(
         &ir,
@@ -2105,6 +2109,7 @@ fn build_err(q: &str) -> AqlError {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .err()
@@ -2380,6 +2385,7 @@ fn prepare(
         limit,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
@@ -2639,6 +2645,7 @@ fn scope_ctx() -> SqlCtx {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     }
 }
 
@@ -3019,6 +3026,7 @@ fn build_sql_with(q: &str, params: &Params) -> String {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     ferroehr::aql::sql::build(&ir, params, &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))

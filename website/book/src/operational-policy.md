@@ -133,8 +133,33 @@ Only an administrator reads one too: `GET` of the party, of
 `/demographic/versioned_party/{id}` and its `revision_history` and
 `version` reads, and of its tags answer `403` to any other caller, naming
 the archetype, when any version of the party is a policy party. Every
-other party stays readable as before. AQL over the demographic store does
-not apply this rule yet ([#5450](https://github.com/FerroHEALTH/FerroEHR/issues/5450)).
+other party stays readable as before.
+
+AQL over the demographic store applies the same rule. For a caller without
+`admin_role`, a query rooted at `PERSON`, `ORGANISATION` or `ROLE`, alone or
+under `VERSION`, leaves out every version of a party whose root archetype is
+a policy archetype or a specialisation of one, and every version of a party
+that holds an acts-for relationship. The query answers as if those parties
+were not stored, and it is not refused:
+
+- The rule is a condition of the one SQL statement the query runs, so
+  `COUNT` and the other aggregates, `LIMIT`, `OFFSET` and the REST `fetch`
+  and `offset` count only the parties the caller may read. A page is never
+  short because a policy party was taken out of it, and no row of a policy
+  party leaves the database.
+- A node the query reaches through `CONTAINS`, such as a `ROLE`'s
+  `CAPABILITY`, or through a path belongs to its party and is left out with
+  it. The party half of a query that joins a party to its `EHR` is filtered
+  the same way.
+- The rule reads the archetype columns of the party's root row and the
+  relationships that row holds, which the query reads anyway, so it adds no
+  statement and no transaction.
+- An administrator's query returns the policy parties.
+
+`AGENT`, `GROUP`, `PARTY_RELATIONSHIP` and the abstract `PARTY` and `ACTOR`
+are no demographic AQL root: a query from them is refused for every caller,
+so AQL never returns a system's `AGENT` or an acts-for relationship written
+as a `PARTY_RELATIONSHIP` of its own.
 
 Every write and every read is an access record of the Demographic API, with
 its committer, as any demographic access is.
@@ -707,6 +732,9 @@ design:
 - **Only an administrator writes and reads a policy party.** The RM's
   `ACCESS_CONTROL_SETTINGS` is implementation dependent, and the Demographic
   API defines no access rule for its own operations.
+- **AQL leaves the policy parties out for anyone else.** AQL over a
+  demographic store is FerroEHR's own extension: QUERY §FROM gives semantics
+  to the clinical repository only.
 - **The grant ceiling.** `[authz.grants] allowed` bounds what the party store
   may grant.
 - **Break-glass stays in the configuration**, so emergency access works when

@@ -94,7 +94,6 @@ impl Seaweed {
             access_key_id: None,
             secret_access_key: None,
             secret_access_key_file: None,
-            ..MultimediaConfig::default()
         }
     }
 

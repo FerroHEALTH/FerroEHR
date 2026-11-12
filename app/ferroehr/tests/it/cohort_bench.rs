@@ -360,6 +360,7 @@ async fn explain_clinical(pool: &sqlx::PgPool, ehr_ids: &[EhrId]) -> Value {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     let ast = openehr_query::parser::parse_str(BENCH_AQL).expect("the AQL parses");
     let params = Params::default();
