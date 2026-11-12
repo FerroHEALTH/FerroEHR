@@ -24,7 +24,7 @@ use crate::service::FerroEhrService;
 use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::support;
 use crate::service::demographic::types::PartyKind;
-use crate::service::demographic::validate::party_invariants;
+use crate::service::demographic::validate::{Container, party_invariants};
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
@@ -141,7 +141,15 @@ impl FerroEhrService {
         kind: PartyKind,
         request: WriteRequest<Value>,
     ) -> Result<ServiceResponse, ServiceError> {
-        party_invariants(kind.rm_type(), &request.data, false, None)?;
+        // The id is allocated before the checks, so the relationships are
+        // judged against the container the commit gives the party.
+        let allocated = self.allocate_party_id();
+        party_invariants(
+            kind.rm_type(),
+            &request.data,
+            false,
+            Container::New(allocated.id()),
+        )?;
         // The caller's request merges with the server rules, BOTH halves the
         // committal headers carry: the `UPDATE_AUDIT` attributes and the
         // VERSION `lifecycle_state` ("whatever is provided it MUST be merged
@@ -163,7 +171,7 @@ impl FerroEhrService {
             .commit_one(&self.demographic_pool, Mode::Transaction, async move |_| {
                 Ok(Write::new(
                     None,
-                    Change::create(support::kind_of(kind), body, None, envelope),
+                    Change::create_allocated(allocated, support::kind_of(kind), body, envelope),
                     audit,
                 ))
             })
@@ -241,7 +249,12 @@ impl FerroEhrService {
                     format!("{} {vo_id} is deleted", kind.rm_type()),
                 ));
             }
-            party_invariants(kind.rm_type(), &request.data, false, Some(vo_id))?;
+            party_invariants(
+                kind.rm_type(),
+                &request.data,
+                false,
+                Container::Existing(vo_id),
+            )?;
             self.resolve_write(&request, change_type::MODIFICATION, "PARTY update")
         })();
         let checked = match checked {

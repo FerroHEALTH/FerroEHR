@@ -582,6 +582,239 @@ async fn update_without_uid_refuses_a_foreign_relationship_source() {
     assert_eq!(ovid(&after.body), v1, "the latest version is unchanged");
 }
 
+/// An inline `PARTY_RELATIONSHIP` from `source` to `target`, both PERSON
+/// containers.
+fn inline_relationship(source: &str, target: &str) -> Value {
+    json!({
+        "_type": "PARTY_RELATIONSHIP",
+        "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.relationship.v1",
+        "name": { "_type": "DV_TEXT", "value": "related" },
+        "source": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": source } },
+        "target": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": target } }
+    })
+}
+
+/// Asserts `result` is a `422` at a path ending in `path`, naming `invariant`.
+fn assert_refused<T: std::fmt::Debug>(
+    result: Result<T, ServiceError>,
+    path: &str,
+    invariant: Option<&str>,
+) {
+    match result {
+        Err(ServiceError::Unprocessable {
+            kind: Invalid::Content,
+            violation,
+        }) => {
+            assert_eq!(violation.invariant(), invariant, "{violation:?}");
+            assert!(
+                violation.path().is_some_and(|at| at.ends_with(path)),
+                "{violation:?}"
+            );
+        }
+        other => panic!("expected the 422 at {path}, got {other:?}"),
+    }
+}
+
+/// Asserts `result` is the `422` of `PARTY.Relationships_validity` at the
+/// `source` of the first inline relationship.
+fn assert_relationships_validity<T: std::fmt::Debug>(result: Result<T, ServiceError>) {
+    assert_refused(
+        result,
+        "PERSON.relationships[0].source",
+        Some("PARTY.Relationships_validity"),
+    );
+}
+
+/// A demographic CONTRIBUTION of one PERSON version carrying `data`: a
+/// creation, or a modification of `preceding` when it is given.
+fn person_contribution(data: &Value, preceding: Option<&str>) -> Value {
+    let coded = |code: &str, value: &str| {
+        json!({ "value": value,
+            "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": code } })
+    };
+    let change = if preceding.is_some() {
+        coded("251", "modification")
+    } else {
+        coded("249", "creation")
+    };
+    let mut version = json!({
+        "lifecycle_state": coded("532", "complete"),
+        "commit_audit": { "change_type": change.clone(), "committer": committer("tester") },
+        "data": data
+    });
+    if let Some(preceding) = preceding {
+        version["preceding_version_uid"] = json!({ "value": preceding });
+    }
+    json!({
+        "versions": [version],
+        "audit": { "change_type": change, "committer": committer("tester") }
+    })
+}
+
+/// A direct create judges each inline relationship `source` against the
+/// container the commit gives the new party: RM `party.adoc` §Invariants
+/// `Relationships_validity`, "`relationships.for_all (r | r.source = self)`",
+/// and RM demographic master02 §Party Relationships, "`PARTY_RELATIONSHIPs`
+/// are stored as part of the data of the `PARTY` designated as the source". A
+/// relationship sourced at another party is the `422` and commits nothing, so
+/// the other party's reverse list stays empty.
+#[tokio::test]
+async fn create_refuses_a_relationship_sourced_at_another_party() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let other = svc
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&person("Other"))),
+        )
+        .await
+        .expect("create the other person");
+    let other_vo = vo_uuid(&other.body);
+
+    let mut body = person("Creator");
+    body["relationships"] = json!([inline_relationship(&other_vo, &other_vo)]);
+    assert_relationships_validity(
+        svc.party_create(PartyKind::Person, WriteRequest::new(typed(&body)))
+            .await,
+    );
+
+    // A body `uid` is overwritten by the commit, so naming the relationship's
+    // source in it does not make the source the new party.
+    body["uid"] = json!({ "_type": "HIER_OBJECT_ID", "value": other_vo });
+    assert_relationships_validity(
+        svc.party_create(PartyKind::Person, WriteRequest::new(typed(&body)))
+            .await,
+    );
+
+    let reverse = svc
+        .party_reverse_relationships(other_vo.parse().expect("a container id"))
+        .await
+        .expect("read the reverse list");
+    assert!(
+        reverse.references.is_empty(),
+        "a refused create indexes nothing, got {:?}",
+        reverse.references
+    );
+}
+
+/// An update judges against the container its path names: a body `uid` of
+/// another container is refused before the relationships are judged, so it
+/// cannot stand in for the party's own id (RM `party.adoc`
+/// `Relationships_validity`; BASE `OBJECT_VERSION_ID.object_id`).
+#[tokio::test]
+async fn update_refuses_a_body_uid_of_another_container() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let first = svc
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&person("First"))),
+        )
+        .await
+        .expect("create the first person");
+    let second = svc
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&person("Second"))),
+        )
+        .await
+        .expect("create the second person");
+    let v1 = ovid(&first.body).to_owned();
+    let vo = vo_uuid(&first.body);
+    let foreign = vo_uuid(&second.body);
+
+    let mut body = first.body.clone();
+    body["uid"] = second.body["uid"].clone();
+    body["relationships"] = json!([inline_relationship(&foreign, &vo)]);
+    let refused = svc
+        .party_update(
+            PartyKind::Person,
+            crate::fixtures::object(vo.clone()),
+            crate::fixtures::if_match(v1.clone()),
+            WriteRequest::new(typed(&body)),
+        )
+        .await;
+    assert_refused(refused, "PERSON.uid", None);
+
+    let after = svc
+        .party_get(PartyKind::Person, crate::fixtures::at(vo), None)
+        .await
+        .expect("read after the refused update");
+    assert_eq!(ovid(&after.body), v1, "the latest version is unchanged");
+}
+
+/// The CONTRIBUTION lane judges a creation member against the container the
+/// commit gives it, and a modification member against the container its
+/// `preceding_version_uid` names, whatever `uid` its body carries (RM
+/// `party.adoc` `Relationships_validity`; RM common master06
+/// §Contributions: each version is validated as a direct commit would be).
+#[tokio::test]
+async fn contribution_refuses_a_relationship_sourced_at_another_party() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let holder = svc
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&person("Holder"))),
+        )
+        .await
+        .expect("create the holder");
+    let other = svc
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&person("Other"))),
+        )
+        .await
+        .expect("create the other person");
+    let holder_vo = vo_uuid(&holder.body);
+    let other_vo = vo_uuid(&other.body);
+
+    let mut created = person("Contributed");
+    created["relationships"] = json!([inline_relationship(&other_vo, &other_vo)]);
+    assert_relationships_validity(
+        svc.demographic_contribution_create(person_contribution(&created, None))
+            .await,
+    );
+
+    let mut modified = person("Holder");
+    modified["relationships"] = json!([inline_relationship(&other_vo, &holder_vo)]);
+    assert_relationships_validity(
+        svc.demographic_contribution_create(person_contribution(
+            &modified,
+            Some(ovid(&holder.body)),
+        ))
+        .await,
+    );
+
+    // A body `uid` of the relationship's source does not make it the holder:
+    // it names another container than the one the member modifies.
+    modified["uid"] = other.body["uid"].clone();
+    assert_refused(
+        svc.demographic_contribution_create(person_contribution(
+            &modified,
+            Some(ovid(&holder.body)),
+        ))
+        .await,
+        "versions[0]/PERSON.uid",
+        None,
+    );
+
+    // The holder's own container is the one source the modification takes.
+    let mut own = holder.body.clone();
+    own["relationships"] = json!([inline_relationship(&holder_vo, &other_vo)]);
+    svc.demographic_contribution_create(person_contribution(&own, Some(ovid(&holder.body))))
+        .await
+        .expect("a relationship sourced at its holder commits");
+    let reverse = svc
+        .party_reverse_relationships(other_vo.parse().expect("a container id"))
+        .await
+        .expect("read the reverse list");
+    assert_eq!(
+        reverse.sources,
+        vec![holder_vo],
+        "only the holder's relationship is indexed"
+    );
+}
+
 #[tokio::test]
 async fn role_create_and_get() {
     let (_db, svc) = crate::fixtures::service().await;
@@ -837,8 +1070,8 @@ async fn party_update_if_match_is_case_insensitive_and_quote_tolerant() {
     );
 }
 
-/// A PARTY committed with an inline `relationships` list keeps that list
-/// VERBATIM, and it stays disjoint from the service-managed relationship
+/// A PARTY version committed with an inline `relationships` list keeps that
+/// list VERBATIM, and it stays disjoint from the service-managed relationship
 /// containers.
 ///
 /// RM demographic `docs/demographic/master02-demographic_package.adoc` §Party
@@ -863,25 +1096,38 @@ async fn inline_relationships_are_stored_and_served_verbatim() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
+    // The relationship is sourced at the party that holds it
+    // (PARTY.Relationships_validity, `r.source = self`), so it rides an update,
+    // the first write that knows the party's container id.
+    let created = svc
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&person("Jane Related"))),
+        )
+        .await
+        .expect("create person");
+    let vo = vo_uuid(&created.body);
     let relationship = json!({
         "_type": "PARTY_RELATIONSHIP",
         "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.relationship.v1",
         "name": { "_type": "DV_TEXT", "value": "inline relationship" },
         "source": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
-            "id": { "_type": "HIER_OBJECT_ID", "value": "11111111-1111-4111-8111-111111111111" } },
+            "id": { "_type": "HIER_OBJECT_ID", "value": vo } },
         "target": { "_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
             "id": { "_type": "HIER_OBJECT_ID", "value": "22222222-2222-4222-8222-222222222222" } }
     });
     let mut body = person("Jane Related");
     body["relationships"] = json!([relationship.clone()]);
 
-    // ACCEPTED: a by-value relationships list is ordinary PARTY content
-    // (PARTY.Relationships_validity only forbids a PRESENT-EMPTY list).
-    let created = svc
-        .party_create(PartyKind::Person, WriteRequest::new(typed(&body)))
-        .await
-        .expect("a party carrying an inline relationships list is accepted");
-    let vo = vo_uuid(&created.body);
+    // ACCEPTED: a by-value relationships list is ordinary PARTY content.
+    svc.party_update(
+        PartyKind::Person,
+        crate::fixtures::object(vo.clone()),
+        crate::fixtures::if_match(ovid(&created.body)),
+        WriteRequest::new(typed(&body)),
+    )
+    .await
+    .expect("a party carrying an inline relationships list is accepted");
 
     // SERVED VERBATIM: the read-back list is the committed one, unchanged,
     // unexpanded and un-repointed.

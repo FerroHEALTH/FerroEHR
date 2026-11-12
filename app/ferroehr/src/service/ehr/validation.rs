@@ -276,7 +276,9 @@ impl FerroEhrService {
     /// validation.
     ///
     /// The demographic arms (party roots + `PARTY_RELATIONSHIP`) dispatch to
-    /// the demographic register (`service/demographic/`).
+    /// the demographic register (`service/demographic/`). A party root is
+    /// judged against its version container, so its writes call
+    /// [`Self::demographic_commit_check`] with it; here it is an internal fault.
     ///
     /// The clinical arms additionally run the data-minimisation pass
     /// ([`crate::privacy`]) — the subject-reference rule, the identified-party
@@ -317,7 +319,8 @@ impl FerroEhrService {
             | Kind::Person
             | Kind::Role
             | Kind::PartyRelationship => {
-                self.demographic_commit_check(kind, data, incomplete).await
+                self.demographic_commit_check(kind, data, incomplete, None)
+                    .await
             }
         }
     }
