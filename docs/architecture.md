@@ -408,16 +408,30 @@ removed outright and refused as unknown keys.
   A category write mirrors its map into the retention register's
   `category_map` in the same transaction. The committer is the request's
   authenticated subject; the access record of the request is the audit entry.
-- **Read path.** Every dispatched operation that consults a register (all of
-  them but the admin group's maintenance routes) first reads the newest version of
-  each register, one `GROUP BY` over the primary key, and installs a version
-  the replica does not hold: the compiled classifier is handed to the audit
+- **Read path, with no database work per request.** Each replica keeps the
+  compiled registers in memory and listens on the PostgreSQL channel
+  `ferroehr_policy_register`; a register write runs `pg_notify` in its own
+  transaction, which PostgreSQL delivers to every listener when it commits
+  (PostgreSQL 18 `NOTIFY`). A notification marks the registers stale, and the
+  next operation that consults a register (all but the admin group's
+  maintenance routes) reads the newest version of each, one `GROUP BY` over
+  the primary key, and installs what changed: the classifier goes to the audit
   sender, which stamps every record with its map digest; the access-delay
   policy is recompiled against the map in force; the Cedar engine rebuilds its
-  policy set on its next decision. A change therefore decides the next request
-  on every replica with no restart, and a store that cannot answer the read is
-  `503`. A stored version that stops compiling under a later release leaves the
-  document in force and is logged, so a code change never empties a policy.
+  set on its next decision. With nothing stale a request adds no transaction,
+  which the performance gate's transactions-per-request measure holds. The
+  writing replica reads the registers before it answers, so its next request
+  runs under the change; another replica runs under it from the first request
+  after the notification reaches it. While a listener is not connected (at
+  boot, or after it lost its connection, until it connects again and marks
+  the registers stale) that replica reads the registers on every request, so a
+  lost notification never serves an outdated policy; a store that cannot
+  answer the read is `503`. Two alternatives were weighed: reading the
+  versions inside a transaction each request already opens would thread the
+  read through every handler's own transaction, and a per-request read of its
+  own costs one transaction per request (measured: 6.5 to 7.5). A stored
+  version that stops compiling under a later release leaves the document in
+  force and is logged, so a code change never empties a policy.
 - **Audit records under a changing map.** The audit store keeps one render
   policy per category map and writes each record under the policy of the map
   its digest names, so a record emitted under one map and written after a

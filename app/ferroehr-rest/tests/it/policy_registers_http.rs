@@ -12,6 +12,7 @@
 //! openEHR spec governs operational policy: our own design/extension.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
@@ -49,10 +50,36 @@ async fn replica(pool: &PgPool, abac: bool) -> (Arc<FerroEhrService>, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
+    listening(&svc).await;
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), handle, Observability::default())
         .await
         .expect("build app");
     (svc, app)
+}
+
+/// Start `svc`'s register listener, as the binary does at boot, and wait
+/// until it is connected.
+async fn listening(svc: &Arc<FerroEhrService>) {
+    svc.policy_registers().spawn_listener();
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    while !svc.policy_registers().is_listening() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the register listener did not connect"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+}
+
+/// Wait until `svc` has received a register notification beyond `seen`: a
+/// write on another replica reaches this one when its commit notifies.
+async fn delivered(svc: &Arc<FerroEhrService>, seen: u64) {
+    assert!(
+        svc.policy_registers()
+            .notified_after(seen, Duration::from_secs(10))
+            .await,
+        "the register write's notification did not arrive"
+    );
 }
 
 /// `method` on the register `name` (with `tail` after it) as `user`, with an
@@ -190,7 +217,7 @@ async fn a_caller_without_the_admin_role_is_refused() {
 async fn a_category_change_applies_on_the_next_request() {
     let (_db, pool) = common::migrated_pool().await;
     let (_a, writer) = replica(&pool, false).await;
-    let (_b, reader) = replica(&pool, false).await;
+    let (b, reader) = replica(&pool, false).await;
     let period = json!({
         "kind": "COMPOSITION",
         "jurisdiction": "DE",
@@ -219,6 +246,7 @@ async fn a_category_change_applies_on_the_next_request() {
         StatusCode::BAD_REQUEST,
         "no such category yet: {body}"
     );
+    let seen = b.policy_registers().notifications();
     let (status, body) = write(
         &writer,
         "audit-categories",
@@ -227,6 +255,7 @@ async fn a_category_change_applies_on_the_next_request() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
+    delivered(&b, seen).await;
     let (status, body) = retention(reader).await;
     assert_eq!(
         status,
@@ -241,7 +270,7 @@ async fn a_category_change_applies_on_the_next_request() {
 async fn an_access_delay_change_applies_on_the_next_request() {
     let (_db, pool) = common::migrated_pool().await;
     let (_a, writer) = replica(&pool, false).await;
-    let (_b, reader) = replica(&pool, false).await;
+    let (b, reader) = replica(&pool, false).await;
     let hold = |app: Router| async move {
         common::send_body(
             &app,
@@ -262,14 +291,17 @@ async fn an_access_delay_change_applies_on_the_next_request() {
     let (status, body) = hold(reader.clone()).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "the delay is off: {body}");
     let on = json!({ "enabled": true, "categories": [], "max_delay": "72h" });
+    let seen = b.policy_registers().notifications();
     let (status, body) = write(&writer, "access-delay", "\"0\"", &on).await;
     assert_eq!(status, StatusCode::OK, "{body}");
+    delivered(&b, seen).await;
     let (status, body) = hold(reader.clone()).await;
     assert_eq!(
         status,
         StatusCode::NOT_FOUND,
         "the delay is on, so the hold reaches the EHR it names: {body}"
     );
+    let seen = b.policy_registers().notifications();
     let (status, body) = write(
         &writer,
         "access-delay",
@@ -278,6 +310,7 @@ async fn an_access_delay_change_applies_on_the_next_request() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
+    delivered(&b, seen).await;
     let (status, body) = hold(reader).await;
     assert_eq!(
         status,
@@ -294,7 +327,7 @@ async fn an_access_delay_change_applies_on_the_next_request() {
 async fn a_cedar_change_applies_on_the_next_request_and_a_bad_set_is_refused() {
     let (_db, pool) = common::migrated_pool().await;
     let (_a, writer) = replica(&pool, true).await;
-    let (_b, reader) = replica(&pool, true).await;
+    let (b, reader) = replica(&pool, true).await;
     let create = |app: Router| async move {
         common::send_body(
             &app,
@@ -309,8 +342,10 @@ async fn a_cedar_change_applies_on_the_next_request_and_a_bad_set_is_refused() {
     assert_eq!(status, StatusCode::FORBIDDEN, "no policy permits: {body}");
 
     let permit = json!({ "policies": "permit(principal, action, resource);" });
+    let seen = b.policy_registers().notifications();
     let (status, body) = write(&writer, "cedar-policies", "\"0\"", &permit).await;
     assert_eq!(status, StatusCode::OK, "{body}");
+    delivered(&b, seen).await;
     let (status, body) = create(reader.clone()).await;
     assert_eq!(
         status,
@@ -338,5 +373,71 @@ async fn a_cedar_change_applies_on_the_next_request_and_a_bad_set_is_refused() {
         status,
         StatusCode::CREATED,
         "the set in force stays: {body}"
+    );
+}
+
+/// A replica whose listener has lost its connection reads the registers on
+/// every request until it connects again, so a write it was never notified
+/// of applies on its next request rather than an outdated policy.
+#[tokio::test]
+async fn a_lost_listener_falls_back_to_a_read_on_every_request() {
+    let (_db, pool) = common::migrated_pool().await;
+    let (_a, writer) = replica(&pool, false).await;
+    let (b, reader) = replica(&pool, false).await;
+    let listeners: Vec<i32> = sqlx::query_scalar(
+        "SELECT pid FROM pg_stat_activity WHERE datname = current_database() \
+         AND query LIKE 'LISTEN %'",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("the listening sessions");
+    assert_eq!(listeners.len(), 2, "one listener per replica");
+    for pid in listeners {
+        sqlx::query("SELECT pg_terminate_backend($1)")
+            .bind(pid)
+            .execute(&pool)
+            .await
+            .expect("drop a listener's connection");
+    }
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    while b.policy_registers().is_listening() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the replica did not notice its lost listener"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    let (status, body) = write(
+        &writer,
+        "access-delay",
+        "\"0\"",
+        &json!({ "enabled": true, "categories": [], "max_delay": "72h" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) = common::send_body(
+        &reader,
+        Request::post(format!("{EXT}/admin/access-delay"))
+            .header(header::AUTHORIZATION, common::basic_credential("root"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(
+                json!({
+                    "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
+                    "vo_id": "8849182c-82ad-4088-a07f-48ead4180515"
+                })
+                .to_string(),
+            ))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "the delay is on for the replica's next request: {body}"
+    );
+    assert_eq!(
+        b.policy_registers().access_delay().version,
+        1,
+        "with its listener down the replica read the registers on that request"
     );
 }

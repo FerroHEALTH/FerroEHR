@@ -19,9 +19,11 @@
 //! design/extension.
 
 pub mod access_delay;
+pub mod listen;
 
 use std::fmt;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, PoisonError, RwLock};
 
 use serde::{Deserialize, Serialize};
@@ -150,6 +152,14 @@ pub struct LiveRegisters {
     cedar_check: RwLock<Option<CedarCheck>>,
     /// Serializes the reads that install a new version.
     installing: tokio::sync::Mutex<()>,
+    /// Whether the listener ([`listen`]) is connected, so a request may trust
+    /// the registers in force until a notification marks them stale.
+    listening: AtomicBool,
+    /// Whether a notification arrived that no read has made up yet.
+    stale: AtomicBool,
+    /// The notifications received, and the wake of a task waiting on one.
+    notified: AtomicU64,
+    wake: tokio::sync::Notify,
 }
 
 impl fmt::Debug for LiveRegisters {
@@ -208,6 +218,10 @@ impl LiveRegisters {
             audit: RwLock::new(None),
             cedar_check: RwLock::new(None),
             installing: tokio::sync::Mutex::new(()),
+            listening: AtomicBool::new(false),
+            stale: AtomicBool::new(false),
+            notified: AtomicU64::new(0),
+            wake: tokio::sync::Notify::new(),
         }
     }
 
@@ -256,6 +270,26 @@ impl LiveRegisters {
             Register::AccessDelay => self.access_delay().version,
             Register::CedarPolicies => self.cedar().version,
         }
+    }
+
+    /// Whether the listener is connected; while it is not, every request reads
+    /// the registers.
+    #[must_use]
+    pub fn is_listening(&self) -> bool {
+        self.listening.load(Ordering::Acquire)
+    }
+
+    /// Read the registers when a notification marked them stale or the
+    /// listener is down; otherwise the registers in force stand, and the
+    /// request touches no database.
+    ///
+    /// # Errors
+    /// As [`Self::refresh`].
+    pub async fn refresh_if_stale(&self) -> Result<(), RegisterError> {
+        if self.must_read() {
+            self.refresh().await?;
+        }
+        Ok(())
     }
 
     /// The pool the registers are stored in.

@@ -39,10 +39,14 @@ on [Admin & messaging APIs](operations-admin-apis.md#operational-policy-register
   `400` and never reaches a request: a category map that does not compile, a
   delay with an unusable limit, a Cedar set that does not parse or validate.
   The register keeps its version in force.
-- **Effective on the next request.** Every request that a register can
-  decide reads the newest version of each register first, one indexed read, so a change applies to the next
-  request on every replica. A database that cannot answer that read fails the
-  request with `503`; it is never served under a guess.
+- **Effective without a restart.** Each replica keeps the registers in
+  memory and is told of every write through PostgreSQL `LISTEN`/`NOTIFY` when
+  the write commits; its next request after that reads the new version. The
+  replica that took the write applies it to its own next request. While a
+  replica's listener is not connected, that replica reads the registers on
+  every request, so it never serves an outdated policy. A database that cannot
+  answer that read fails the request with `503`; it is never served under a
+  guess.
 - **Audited.** Every read and write of a register is an access record.
 
 The three keys these registers replace, `[audit.categories]`,

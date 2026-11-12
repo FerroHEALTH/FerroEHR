@@ -84,13 +84,25 @@ impl FerroEhrService {
         self
     }
 
-    /// Read the newest version of every register and install each one this
-    /// replica does not hold: the request path calls it before it decides
-    /// anything, so a change applies on the next request.
+    /// Bring the registers in force up to date before the request path
+    /// decides anything: a read when a register write was notified or the
+    /// listener is down ([`crate::policy_register::listen`]), and no database
+    /// work otherwise.
     ///
     /// # Errors
     /// `service_overloaded` (`503`) when the register store does not answer.
     pub async fn refresh_policy_registers(&self) -> Result<(), ServiceError> {
+        self.registers.refresh_if_stale().await.map_err(|error| {
+            ServiceError::overloaded("the policy registers could not be read", error)
+        })
+    }
+
+    /// Read the newest version of every register and install each one this
+    /// replica does not hold, whatever the listener says.
+    ///
+    /// # Errors
+    /// `service_overloaded` (`503`) when the register store does not answer.
+    pub async fn read_policy_registers(&self) -> Result<(), ServiceError> {
         self.registers.refresh().await.map_err(|error| {
             ServiceError::overloaded("the policy registers could not be read", error)
         })
@@ -152,7 +164,7 @@ impl FerroEhrService {
         replaces: i64,
         document: &str,
     ) -> Result<i64, ServiceError> {
-        self.refresh_policy_registers().await?;
+        self.read_policy_registers().await?;
         let canonical = match register {
             Register::AuditCategories => self.checked_categories(document)?.1,
             Register::AccessDelay => self.checked_delay(document)?,
@@ -177,8 +189,15 @@ impl FerroEhrService {
                 .await
                 .map_err(ServiceError::Storage)?;
         }
+        // NOTE: PostgreSQL 18 NOTIFY (sql-notify) delivers at commit, to every listening replica.
+        sqlx::query("SELECT pg_notify($1, $2)")
+            .bind(crate::policy_register::listen::CHANNEL)
+            .bind(format!("{register}:{version}"))
+            .execute(&mut *tx)
+            .await
+            .map_err(ServiceError::Database)?;
         tx.commit().await.map_err(ServiceError::Database)?;
-        self.refresh_policy_registers().await?;
+        self.read_policy_registers().await?;
         Ok(version)
     }
 

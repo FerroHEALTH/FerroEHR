@@ -1057,9 +1057,10 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // The policy registers in force before the listener takes traffic, and the
     // retention register keyed on the category register in force.
     service
-        .refresh_policy_registers()
+        .read_policy_registers()
         .await
         .context("reading the operational-policy registers")?;
+    service.policy_registers().spawn_listener();
     service
         .mirror_category_map()
         .await
