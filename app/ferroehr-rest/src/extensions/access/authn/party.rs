@@ -92,29 +92,42 @@ impl std::fmt::Debug for Binding {
     }
 }
 
+/// Why the party binding of `[[auth.party]]` and `[authz.party_binding]`
+/// cannot be built.
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum BindingRefused {
+    /// `[[auth.party]]` tables bind logins, but no party source was given to
+    /// look them up in, so every caller would be served unbound.
+    #[error(
+        "[[auth.party]] binds logins to parties, but no party source was given to look them up in"
+    )]
+    NoSource,
+    /// The shared crate refuses the binding.
+    #[error("authz.party_binding")]
+    Shared(#[source] ferroehr::config::binding::BindingError),
+}
+
 /// Returns the party binding of `config`'s `[[auth.party]]` tables and
-/// `[authz.party_binding]`, looking logins up in `source`; `None` without a
-/// source, or when `[auth]` is off or binds no issuer.
+/// `[authz.party_binding]`, looking logins up in `source`; `None` when
+/// `[auth]` is off or binds no issuer.
 ///
 /// # Errors
-/// A message naming what the shared crate refuses in the binding.
+/// [`BindingRefused::NoSource`] for `[[auth.party]]` tables without a
+/// `source`, and [`BindingRefused::Shared`] for a binding the shared crate
+/// refuses.
 pub(super) fn binding(
     config: &crate::config::AppConfig,
     resolved: &ferrohealth_smart::config::Resolved,
     source: Option<Arc<dyn BindingSource>>,
-) -> Result<Option<Arc<Binding>>, String> {
-    let Some(source) = source.filter(|_| resolved.enabled && !resolved.party.is_empty()) else {
+) -> Result<Option<Arc<Binding>>, BindingRefused> {
+    if !resolved.enabled || resolved.party.is_empty() {
         return Ok(None);
-    };
+    }
+    let source = source.ok_or(BindingRefused::NoSource)?;
     let lookup: Arc<dyn ferrohealth_smart::party::source::PartySource> =
         Arc::<dyn BindingSource>::clone(&source);
     let binding = ferroehr::config::binding::party_binding(&config.party_binding, resolved, lookup)
-        .map_err(|e| {
-            format!(
-                "authz.party_binding: {}",
-                ferroehr::error::ErrorChain::new(&e)
-            )
-        })?;
+        .map_err(BindingRefused::Shared)?;
     let tenant_claims = resolved
         .issuers
         .iter()
@@ -697,5 +710,62 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    /// An `[auth]` section with one `persons` issuer and its `[[auth.party]]`
+    /// table.
+    fn bound_section() -> ferrohealth_smart::config::AuthSection {
+        let issuer = ferrohealth_secret::secret_url::SecretUrl::new("https://login.example");
+        ferrohealth_smart::config::AuthSection {
+            enabled: true,
+            issuer: vec![ferrohealth_smart::config::IssuerEntry {
+                issuer: issuer.clone(),
+                kind: Some(ferrohealth_smart::kind::IssuerKind::Persons),
+                audience: vec!["ferroehr".to_owned()],
+                ..ferrohealth_smart::config::IssuerEntry::default()
+            }],
+            party: vec![ferrohealth_smart::party::config::PartySection {
+                issuer,
+                identifier_issuer: "urn:login".to_owned(),
+                identifier_type: "guid".to_owned(),
+                ..ferrohealth_smart::party::config::PartySection::default()
+            }],
+            ..ferrohealth_smart::config::AuthSection::default()
+        }
+    }
+
+    #[test]
+    fn party_tables_without_a_source_are_refused_naming_the_source() {
+        let config = crate::config::AppConfig::default();
+        let resolved =
+            ferroehr::config::auth::resolve(&bound_section()).expect("the [auth] section resolves");
+        let refused = binding(&config, &resolved, None);
+        assert!(
+            matches!(refused, Err(BindingRefused::NoSource)),
+            "{refused:?}"
+        );
+        let unbound = ferrohealth_smart::config::AuthSection {
+            party: Vec::new(),
+            ..bound_section()
+        };
+        let resolved =
+            ferroehr::config::auth::resolve(&unbound).expect("the [auth] section resolves");
+        assert!(
+            matches!(binding(&config, &resolved, None), Ok(None)),
+            "no [[auth.party]] table needs no source"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_authenticator_refuses_party_tables_without_a_source() {
+        let mut config = crate::config::AppConfig::default();
+        *config.auth.shared = bound_section();
+        let replay: Arc<dyn ferrohealth_smart::sender::replay::ReplayStore> =
+            Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new());
+        let Err(message) = super::super::Authenticator::new(&config, None, None, replay).await
+        else {
+            panic!("[[auth.party]] without a party source builds no authenticator");
+        };
+        assert!(message.contains("no party source"), "{message}");
     }
 }
