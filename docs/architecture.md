@@ -519,7 +519,7 @@ or turned into an ordinary one by anyone else. Reads are an administrator's too:
 party or relationship any of whose versions is a policy party are `403` to
 any other caller, and demographic AQL by such a caller leaves out every
 version of it (#5450, #5485). Both read one mark: `vo_head.policy_party_at`
-(party migration `0033_policy_party_mark.sql`), which the commit of a policy
+(party migration `0034_policy_party_mark.sql`), which the commit of a policy
 version sets in its own transaction (`protect::check`, from the body the
 commit holds), which nothing clears, and which an import, an archive load
 and `party-binding refill` set from the stored bodies
