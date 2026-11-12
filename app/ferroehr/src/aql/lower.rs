@@ -33,10 +33,12 @@ use crate::versioning::Kind;
 
 /// The demographic roots the experimental demographic extension serves.
 ///
-/// No openEHR spec governs AQL over a demographic repository (QUERY master03
-/// §FROM names only clinical classes), so the served set is our own design:
-/// the three roots the extension's consumers issue. `GROUP`, `AGENT` and
-/// `PARTY_RELATIONSHIP` answer a typed refusal.
+/// QUERY `AQL/master03-syntax.adoc` §Query structure, FROM admits any class
+/// the RM defines ("All the classes referenced by the `FROM` clause should be
+/// defined by the RM") and names clinical classes only as examples; which
+/// demographic roots are served is our own design: the three roots the
+/// extension's consumers issue. `GROUP`, `AGENT` and `PARTY_RELATIONSHIP`
+/// answer a typed refusal.
 pub(crate) const SERVED_PARTY_ROOTS: [&str; 3] = ["PERSON", "ORGANISATION", "ROLE"];
 
 /// Lowers one parsed [`SelectQuery`] into a [`QueryIr`] (without parameter-
