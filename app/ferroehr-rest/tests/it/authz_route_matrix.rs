@@ -246,6 +246,10 @@ const CLINICAL_READ: &[(&str, &str)] = &[
     ("GET", "/demographic/role/{uid_based_id}"),
     ("GET", "/demographic/role/{uid_based_id}/tags"),
     ("GET", "/demographic/party_relationship/{uid_based_id}"),
+    (
+        "GET",
+        "/demographic/party/{uid_based_id}/reverse_relationships",
+    ),
     ("GET", "/demographic/versioned_party/{versioned_object_uid}"),
     (
         "GET",
