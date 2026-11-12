@@ -20,6 +20,8 @@
 //! "left the archetype" rather than guessing (RM path validity is a
 //! reference-model concern, `crate::validate::rm`). See [`resolve`].
 
+use std::borrow::Cow;
+
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
 
@@ -136,7 +138,9 @@ pub enum Resolution {
     LeftArchetype,
 }
 
-/// Resolve `path` against the `root` object tree.
+/// Resolve `path` (`AM/docs/ADL2/master05-paths.adoc` §Overview) against the
+/// `root` object tree as authored, where a `use_node` proxy is a leaf with
+/// nothing below it.
 ///
 /// - [`Resolution::Found`] — every segment matched an attribute + object node.
 /// - [`Resolution::NotFound`] — a segment with a node-id predicate found no
@@ -146,11 +150,40 @@ pub enum Resolution {
 ///   extension is a reference-model question (`crate::validate::rm`).
 #[must_use]
 pub fn resolve(root: &CComplexObject, path: &str) -> Resolution {
+    walk(root, path, Proxies::Opaque)
+}
+
+/// Resolve `path` against the flat form of `root`, in which every `use_node`
+/// proxy stands for a deep copy of its target
+/// (`AM/docs/AOM2/master03-archetype_package.adoc` §Structural Variants).
+///
+/// A path runs through a proxy by the target's node id, or by the proxy's own
+/// when the proxy is a sibling of its target
+/// (`AM/docs/ADL2/master04.3-cadl_complex_types.adoc` §Paths and Proxy
+/// Objects). The outcomes are those of [`resolve`].
+#[must_use]
+pub fn resolve_in_flat(root: &CComplexObject, path: &str) -> Resolution {
+    walk(root, path, Proxies::Expanded)
+}
+
+/// How [`walk`] treats a `C_COMPLEX_OBJECT_PROXY` it meets on a path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Proxies {
+    /// The source tree: a proxy is a leaf.
+    Opaque,
+    /// The flat archetype: a proxy is the copy of its target.
+    Expanded,
+}
+
+fn walk(root: &CComplexObject, path: &str, proxies: Proxies) -> Resolution {
     let segments = parse_path(path);
     if segments.is_empty() {
         return Resolution::Found; // the root path
     }
     let mut current: &CComplexObject = root;
+    // Where `current` sits in the source tree, which a followed proxy moves
+    // to its target while the walked path stays on the proxy's branch.
+    let mut location: Vec<PathSegment> = Vec::new();
     for (idx, seg) in segments.iter().enumerate() {
         let Some(attr) = complex_attributes(current)
             .iter()
@@ -169,7 +202,7 @@ pub fn resolve(root: &CComplexObject, path: &str) -> Resolution {
                 .children
                 .iter()
                 .flatten()
-                .find(|c| object_node_id(c) == nid),
+                .find(|c| path_node_id(c, proxies, &location, &seg.attribute) == nid.as_str()),
             None if attr.children.as_ref().map_or(0, Vec::len) == 1 => {
                 attr.children.iter().flatten().next()
             }
@@ -182,8 +215,21 @@ pub fn resolve(root: &CComplexObject, path: &str) -> Resolution {
                 Resolution::LeftArchetype
             };
         };
+        let node = match child {
+            CObject::CComplexObjectProxy(proxy) if proxies == Proxies::Expanded => {
+                location = parse_path(&proxy.target_path);
+                locate(root, &proxy.target_path).unwrap_or(child)
+            }
+            _ => {
+                location.push(PathSegment {
+                    attribute: seg.attribute.clone(),
+                    node_id: Some(object_node_id(child).to_owned()),
+                });
+                child
+            }
+        };
         let is_last = idx + 1 == segments.len();
-        match child {
+        match node {
             CObject::CComplexObject(cco) => current = cco,
             _ if is_last => return Resolution::Found,
             // A non-complex child (primitive / slot / proxy) has no further
@@ -192,6 +238,46 @@ pub fn resolve(root: &CComplexObject, path: &str) -> Resolution {
         }
     }
     Resolution::Found
+}
+
+/// The node id a path names `child` by when it sits under `attribute` of the
+/// node at `location`: its own, except for a proxy in the flat archetype that
+/// is not a sibling of its target, which takes the target's
+/// (`ADL2/master04.3-cadl_complex_types.adoc` §Paths and Proxy Objects).
+fn path_node_id<'a>(
+    child: &'a CObject,
+    proxies: Proxies,
+    location: &[PathSegment],
+    attribute: &str,
+) -> Cow<'a, str> {
+    let CObject::CComplexObjectProxy(proxy) = child else {
+        return Cow::Borrowed(object_node_id(child));
+    };
+    if proxies == Proxies::Opaque {
+        return Cow::Borrowed(&proxy.node_id);
+    }
+    let mut target = parse_path(&proxy.target_path);
+    let Some(last) = target.pop() else {
+        return Cow::Borrowed(&proxy.node_id);
+    };
+    let sibling = last.attribute == attribute && same_place(&target, location);
+    match last.node_id {
+        Some(target_id) if !sibling => Cow::Owned(target_id),
+        _ => Cow::Borrowed(&proxy.node_id),
+    }
+}
+
+/// True when two segment lists name the same node, a segment without a
+/// node-id predicate standing for the single child of its attribute.
+fn same_place(a: &[PathSegment], b: &[PathSegment]) -> bool {
+    a.len() == b.len()
+        && a.iter().zip(b).all(|(x, y)| {
+            x.attribute == y.attribute
+                && match (x.node_id.as_deref(), y.node_id.as_deref()) {
+                    (Some(l), Some(r)) => l == r || l.is_empty() || r.is_empty(),
+                    _ => true,
+                }
+        })
 }
 
 /// True iff `path` resolves to an object node inside the archetype
@@ -390,5 +476,88 @@ terminology
         assert!(path_exists(&root, "/element_attr[id2]"));
         let paths = enumerate_paths(&root);
         assert!(paths.contains(&"/element_attr[id2]".to_owned()));
+    }
+    /// A tree with a proxy beside its target (`id4`) and one on another branch
+    /// (`id6`), both pointing at `CLUSTER[id2]`.
+    const PROXIES: &str = "\
+archetype (adl_version=2.0.5; rm_release=1.0.2)
+    openEHR-EHR-CLUSTER.proxy_paths.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    lifecycle_state = <\"draft\">
+
+definition
+    CLUSTER[id1] matches {
+        items matches {
+            CLUSTER[id2] matches {
+                items matches {
+                    ELEMENT[id3]
+                }
+            }
+            use_node CLUSTER[id4] /items[id2]
+            CLUSTER[id5] matches {
+                items matches {
+                    use_node CLUSTER[id6] /items[id2]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        [\"en\"] = <
+            [\"id1\"] = < text = <\"\"> description = <\"\"> >
+            [\"id2\"] = < text = <\"\"> description = <\"\"> >
+            [\"id3\"] = < text = <\"\"> description = <\"\"> >
+            [\"id4\"] = < text = <\"\"> description = <\"\"> >
+            [\"id5\"] = < text = <\"\"> description = <\"\"> >
+            [\"id6\"] = < text = <\"\"> description = <\"\"> >
+        >
+    >
+";
+
+    /// ADL2 `master04.3-cadl_complex_types.adoc` §Paths and Proxy Objects: a
+    /// path through a sibling proxy uses the proxy's id, any other the target's.
+    #[test]
+    fn resolve_in_flat_names_a_proxy_as_the_spec_forms_its_paths() {
+        let root = root_of(PROXIES);
+        assert_eq!(
+            resolve_in_flat(&root, "/items[id4]/items[id3]"),
+            Resolution::Found
+        );
+        assert_eq!(
+            resolve_in_flat(&root, "/items[id5]/items[id2]/items[id3]"),
+            Resolution::Found
+        );
+        assert_eq!(
+            resolve_in_flat(&root, "/items[id5]/items[id2]"),
+            Resolution::Found
+        );
+        assert_eq!(
+            resolve_in_flat(&root, "/items[id5]/items[id6]/items[id3]"),
+            Resolution::NotFound
+        );
+        assert_eq!(
+            resolve_in_flat(&root, "/items[id5]/items[id2]/items[id9]"),
+            Resolution::NotFound
+        );
+    }
+
+    /// The source tree keeps a proxy a leaf, which VUNP relies on to refuse a
+    /// target reached only through another proxy.
+    #[test]
+    fn resolve_does_not_walk_into_a_proxy() {
+        let root = root_of(PROXIES);
+        assert_eq!(
+            resolve(&root, "/items[id5]/items[id6]/items[id3]"),
+            Resolution::LeftArchetype
+        );
+        assert_eq!(
+            resolve(&root, "/items[id5]/items[id2]/items[id3]"),
+            Resolution::NotFound
+        );
     }
 }
