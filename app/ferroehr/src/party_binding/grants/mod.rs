@@ -11,7 +11,7 @@
 //! §Party Identification), and a party may do an operation when a
 //! `CAPABILITY` of a `ROLE` whose `performer` names it
 //! (`org.openehr.rm.demographic.role.adoc`) holds that operation's code of
-//! [`operation::TERMINOLOGY`] anywhere in its `credentials`, valid on the
+//! [`super::policy_mark::TERMINOLOGY`] anywhere in its `credentials`, valid on the
 //! request's date by the `ROLE`'s and the `CAPABILITY`'s `time_validity` and
 //! at its instant by the `not_before` and `not_after` elements. [`store`]
 //! writes the rows in each party commit's transaction and in a refill;
