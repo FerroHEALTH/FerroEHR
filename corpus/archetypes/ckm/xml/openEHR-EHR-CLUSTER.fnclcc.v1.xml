@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -490,51 +490,51 @@ The archetype is designed to be used in an ENTRY archetype that will provide the
       </items>
       <items code="at0005">
         <items id="text">Tumour differentiation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Mitotic count</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Tumour necrosis</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Sarcoma closely resembling normal adult mesenchymal tissue (e.g., low-grade liposarcoma).</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Sarcomas for which histological typing is certain (e.g., myxoid/round cell liposarcoma).</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Embryonal and undifferentiated sarcomas, sarcomas of doubtful type, synovial sarcomas, soft tissue osteosarcoma, Ewing sarcoma/primitive neuroectodermal tumor (PNET) of soft tissue.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">0-9 mitoses per 1,7 mm2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">10-19 mitoses per 1.7 mm2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">≥20 mitoses per 1.7 mm2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">No necrosis</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">&lt;50% tumor necrosis</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">≥50% tumor necrosis</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Histological grade</items>
@@ -565,62 +565,61 @@ The archetype is designed to be used in an ENTRY archetype that will provide the
     <term_definitions language="nb">
       <items code="at0000">
         <items id="text">FNCLCC graderingssystem</items>
-        <items id="description">Histologisk gradering av bløtvevssarkom i henhold til FNCLCC sitt graderingssystem. </items>
+        <items id="description">Histologisk gradering av bløtvevssarkom i henhold til FNCLCC sitt graderingssystem.</items>
         <items id="comment">FNCLCC - Fédération Nationale des Centres de Lutte Contre le Cancer.</items>
       </items>
       <items code="at0005">
         <items id="text">Tumors differensiering</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Mitosetall</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Tumornekrose</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Sarkom som ligner normalt og modent mesenkymalt vev</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Sarkom der histologisk type er sikker</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Embryonale og udifferensierte sarkomer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">0-9 mitoser per 1,7 mm2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">10-19 mitoser per 1,7 mm2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">≥20 mitoser per 1,7 mm2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Ingen nekrose</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">&lt; 50 % nekrose (også vurdert makroskopisk)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">≥ 50 % nekrose (også vurdert makroskopisk)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Histologisk grad</items>
         <items id="description">Vurdering av histologisk grad basert på total skår i FNCLCC graderingssystem.</items>
-        <items id="comment">I klinisk praksis for bløtvevssarkomer, blir 'Histologisk grad'-resultatet fra arketypen ofte gjenbrukt for å fylle ut dataelementet 'Histopatologisk gradering (G)' i arketypene TNM-klassifikasjon klinisk (CLUSTER.tnm) og TNM-klassifikasjon patologi (CLUSTER.tnm-pathological.v1).&#xD;
-</items>
+        <items id="comment">I klinisk praksis for bløtvevssarkomer, blir 'Histologisk grad'-resultatet fra arketypen ofte gjenbrukt for å fylle ut dataelementet 'Histopatologisk gradering (G)' i arketypene TNM-klassifikasjon klinisk (CLUSTER.tnm) og TNM-klassifikasjon patologi (CLUSTER.tnm-pathological.v1).</items>
       </items>
       <items code="at0018">
         <items id="text">Grad 1</items>
@@ -645,4 +644,3 @@ The archetype is designed to be used in an ENTRY archetype that will provide the
     </term_definitions>
   </ontology>
 </archetype>
-

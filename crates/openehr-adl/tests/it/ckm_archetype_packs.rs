@@ -74,7 +74,33 @@ const ADJUDICATED_CKM_ADL14: &[Refusal] = &[
         SyntaxErrorCode::Sdinv,
         "terminology ODIN repeats the sibling container key [\"at0310\"] (VDOBU)",
     ),
+    // The three REJECTED palpation archetypes, the same defect as their 2013
+    // twins in `ADJUDICATED_PAIRS`.
+    (
+        "openEHR-EHR-CLUSTER.palpation-external_ear.v1.adl",
+        SyntaxErrorCode::Sdinv,
+        "terminology ODIN repeats the sibling container key [\"at0019\"] (VDOBU)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.palpation-joint.v1.adl",
+        SyntaxErrorCode::Sdinv,
+        "terminology ODIN repeats the sibling container key [\"at0019\"] (VDOBU)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.palpation.v1.adl",
+        SyntaxErrorCode::Sdinv,
+        "terminology ODIN repeats the sibling container key [\"at0019\"] (VDOBU)",
+    ),
 ];
+
+/// CKM archetypes the resource-meta pass MUST refuse, with the code the
+/// refusal must carry and the adjudication behind it.
+const ADJUDICATED_RESOURCE_META: &[(&str, &str, &str)] = &[(
+    "openEHR-EHR-CLUSTER.imaging_result.v0.adl",
+    "RESOURCE_DESCRIPTION.Original_author_valid",
+    "a REJECTED archetype whose original_author is empty, which BASE \
+     RESOURCE_DESCRIPTION's invariant `not original_author.is_empty` forbids",
+)];
 
 /// The upstream paired pack's adjudicated refusals — the same VDOBU defect
 /// family, in three `.adl` files of the 2013 CKM export. The `.adls` half of
@@ -315,29 +341,48 @@ fn ckm_adl14_pack_is_resource_meta_clean() {
     let files = files_with_extension(&dir, "adl");
     assert!(files.len() >= 900);
     let mut offenders = Vec::new();
+    let mut refused = Vec::new();
     for path in &files {
+        let name = file_name(path);
         let src = std::fs::read_to_string(path).expect("archetype is readable");
         let Ok(issues) = openehr_adl::validate::validate_adl14_source(&src, &ProductionRmModel)
         else {
             continue; // adjudicated parse refusals are ckm_adl14_pack_parses' claim
         };
+        let adjudicated = ADJUDICATED_RESOURCE_META
+            .iter()
+            .find(|(file, _, _)| *file == name);
         for issue in issues
             .iter()
             .filter(|i| i.severity == Severity::Error)
             .filter(|i| resource_codes.contains(&i.code.mnemonic()))
         {
-            offenders.push(format!(
-                "{}: {} — {}",
-                file_name(path),
-                issue.code.mnemonic(),
-                issue.message
-            ));
+            match adjudicated {
+                Some((_, code, _)) if *code == issue.code.mnemonic() => {
+                    refused.push(name.clone());
+                }
+                _ => offenders.push(format!(
+                    "{name}: {} — {}",
+                    issue.code.mnemonic(),
+                    issue.message
+                )),
+            }
         }
     }
     assert!(
         offenders.is_empty(),
         "CKM archetypes refused by the resource-meta pass (adjudicate, never silence):\n{}",
         offenders.join("\n")
+    );
+    refused.sort();
+    refused.dedup();
+    let expected: Vec<String> = ADJUDICATED_RESOURCE_META
+        .iter()
+        .map(|(file, _, _)| (*file).to_owned())
+        .collect();
+    assert_eq!(
+        refused, expected,
+        "every adjudicated resource-meta refusal happens with its stated code"
     );
 }
 

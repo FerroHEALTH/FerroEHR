@@ -1,0 +1,377 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.inspection-tympanic_membrane.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.inspection.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics">
+        ["date"] = <"02/11/2007">
+    >
+    other_contributors = <"Heather Leslie", ...>
+    lifecycle_state = <"Rejected">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording the findings on inspection of the tympanic membrane">
+            keywords = <"inspect", "visual", "ear", "tympanic", "perforation", "drum">
+            use = <"For use with the exam clusters for recording findings on inspection of the tmpanic membrane">
+            misuse = <"Should only be used in the exam observation">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Inspection of Tympanic Membrane
+        items matches {
+            CLUSTER[at0001] matches {
+                /items[at0002]/value matches {
+                    DV_CODED_TEXT[at9007.1] matches {
+                        defining_code matches {[at0.87]}    -- Tympanic membrane normal
+                    }
+                }
+            }
+            CLUSTER[at0006] matches {
+                items matches {
+                    ELEMENT[at0027] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9014.1] matches {
+                                defining_code matches {[ac0.9000]}    -- Surface (synthesised)
+                            }
+                        }
+                    }
+                    after [at0034]
+                    ELEMENT[at0.52] occurrences matches {0..1} matches {    -- Adequacy of View
+                        value matches {
+                            DV_ORDINAL[at0.9004] matches {
+                                [value, symbol] matches {
+                                    [{0}, {[at0.53]}],    -- Unobscured
+                                    [{1}, {[at0.54]}],    -- Slightly obscured
+                                    [{2}, {[at0.55]}],    -- Moderately obscured
+                                    [{3}, {[at0.56]}],    -- Mostly obscured
+                                    [{4}, {[at0.57]}]    -- Totally obscured
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0.76] occurrences matches {0..1} matches {    -- Specific Appearance
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0.58] matches {    -- Clinical Description
+                                value matches {
+                                    DV_CODED_TEXT[at0.9005] matches {
+                                        defining_code
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.93] occurrences matches {0..1} matches {    -- Light Reflex present
+                                value matches {
+                                    DV_BOOLEAN[at0.9006] matches {
+                                        value matches {True, False}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0051] occurrences matches {0..1} matches {
+                                value matches {
+                                    DV_TEXT[at0.9007]
+                                }
+                            }
+                            ELEMENT[at0.80] occurrences matches {0..1} matches {    -- Retraction
+                                value matches {
+                                    DV_ORDINAL[at0.9008] matches {
+                                        [value, symbol] matches {
+                                            [{0}, {[at0.81]}],    -- No retraction
+                                            [{1}, {[at0.82]}],    -- Slightly retracted
+                                            [{2}, {[at0.83]}],    -- touches the ossicular chain
+                                            [{3}, {[at0.84]}],    -- reaches the level of the promontory
+                                            [{4}, {[at0.85]}]    -- adheres to the promontory
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.90] occurrences matches {0..1} matches {    -- Air/Fluid level visible?
+                                value matches {
+                                    DV_BOOLEAN[at0.9009] matches {
+                                        value matches {True, False}
+                                    }
+                                }
+                            }
+                            CLUSTER[at0.97] occurrences matches {0..1} matches {    -- Scarring
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0.94] occurrences matches {0..1} matches {    -- Description of scarring
+                                        value matches {
+                                            DV_CODED_TEXT[at0.9010] matches {
+                                                defining_code matches {[ac0.9003]}    -- Description of scarring (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0.79] occurrences matches {0..1} matches {    -- Clinical Description
+                                        value matches {
+                                            DV_TEXT[at0.9011]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0.74] occurrences matches {0..1} matches {    -- Ventilation Tube
+                        items cardinality matches {1..*; unordered} matches {
+                            allow_archetype CLUSTER[at0.98] matches {    -- Cluster: Ventilation tube
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.tympanic_ventilation_tube\.v1\..*/}
+                            }
+                        }
+                    }
+                    CLUSTER[at0.63] occurrences matches {0..1} matches {    -- Perforation
+                        items cardinality matches {1..*; unordered} matches {
+                            allow_archetype CLUSTER[at0.99] matches {    -- Cluster: Perforation
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.inspection-tympanic_perforation\.v1\..*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.52"] = <
+                text = <"Adequacy of View">
+                description = <"How good is the view of the membrane?">
+            >
+            ["at0.53"] = <
+                text = <"Unobscured">
+                description = <"The TM is not obscured">
+            >
+            ["at0.54"] = <
+                text = <"Slightly obscured">
+                description = <"The TM is slightly obscured">
+            >
+            ["at0.55"] = <
+                text = <"Moderately obscured">
+                description = <"The TM is moderately obscured">
+            >
+            ["at0.56"] = <
+                text = <"Mostly obscured">
+                description = <"The TM is mostly obscured">
+            >
+            ["at0.57"] = <
+                text = <"Totally obscured">
+                description = <"The TM is totally obscured">
+            >
+            ["at0.58"] = <
+                text = <"Clinical Description">
+                description = <"The general appearance of the tympanic membrane">
+            >
+            ["at0.59"] = <
+                text = <"Translucent">
+                description = <"The TM is translucent">
+            >
+            ["at0.60"] = <
+                text = <"Dull">
+                description = <"The TM is dull">
+            >
+            ["at0.61"] = <
+                text = <"Inflamed">
+                description = <"The TM is inflamed">
+            >
+            ["at0.62"] = <
+                text = <"Retracted">
+                description = <"The TM appears retracted">
+            >
+            ["at0.63"] = <
+                text = <"Perforation">
+                description = <"Details of any perforation">
+            >
+            ["at0.64"] = <
+                text = <"Drum perforated">
+                description = <"Is the Tympanic membrane perforated?">
+            >
+            ["at0.65"] = <
+                text = <"Size">
+                description = <"Size of the perforation">
+            >
+            ["at0.66"] = <
+                text = <"Site">
+                description = <"Site of the perforation">
+            >
+            ["at0.67"] = <
+                text = <"Middle ear structures">
+                description = <"Description of any middle ear structure visible">
+            >
+            ["at0.68"] = <
+                text = <"Grommet">
+                description = <"*">
+            >
+            ["at0.69"] = <
+                text = <"Grommet">
+                description = <"The status of any grommet inserted">
+            >
+            ["at0.70"] = <
+                text = <"Not inserted">
+                description = <"*">
+            >
+            ["at0.71"] = <
+                text = <"In situ">
+                description = <"*">
+            >
+            ["at0.72"] = <
+                text = <"Not in position">
+                description = <"*">
+            >
+            ["at0.73"] = <
+                text = <"Not visible">
+                description = <"*">
+            >
+            ["at0.74"] = <
+                text = <"Ventilation Tube">
+                description = <"Details of any ventilation tube inserted">
+            >
+            ["at0.75"] = <
+                text = <"Appearance">
+                description = <"*">
+            >
+            ["at0.76"] = <
+                text = <"Specific Appearance">
+                description = <"The appearance of the drum">
+            >
+            ["at0.77"] = <
+                text = <"Retraction">
+                description = <"Degree of retraction of the TM">
+            >
+            ["at0.78"] = <
+                text = <"Perforated">
+                description = <"*">
+            >
+            ["at0.79"] = <
+                text = <"Clinical Description">
+                description = <"Text Description of the appearance of the drum">
+            >
+            ["at0.80"] = <
+                text = <"Retraction">
+                description = <"Degree of tympanic membrane retraction (Sade classification)">
+            >
+            ["at0.81"] = <
+                text = <"No retraction">
+                description = <"Normal TM without retraction">
+            >
+            ["at0.82"] = <
+                text = <"Slightly retracted">
+                description = <"TM slighly retracted i.e tothe level of the annualt ligament">
+            >
+            ["at0.83"] = <
+                text = <"touches the ossicular chain">
+                description = <"TM touchs the ossicular chain">
+            >
+            ["at0.84"] = <
+                text = <"reaches the level of the promontory">
+                description = <"TM reaches the promontory without adhering to it ">
+            >
+            ["at0.85"] = <
+                text = <"adheres to the promontory">
+                description = <"TM reaches the promontory and adheres to it">
+            >
+            ["at0.86"] = <
+                text = <"Both drums normal">
+                description = <"Both tympanic membranes are normal">
+            >
+            ["at0.87"] = <
+                text = <"Tympanic membrane normal">
+                description = <"*">
+            >
+            ["at0.88"] = <
+                text = <"new ordinal">
+                description = <"*">
+            >
+            ["at0.89"] = <
+                text = <"Fluid level visible">
+                description = <"*">
+            >
+            ["at0.90"] = <
+                text = <"Air/Fluid level visible?">
+                description = <"Is a fluid level visible behind the membrane?">
+            >
+            ["at0.91"] = <
+                text = <"No evidence of inflammation">
+                description = <"*">
+            >
+            ["at0.92"] = <
+                text = <"Evidence of inflammation">
+                description = <"*">
+            >
+            ["at0.93"] = <
+                text = <"Light Reflex present">
+                description = <"*">
+            >
+            ["at0.94"] = <
+                text = <"Description of scarring">
+                description = <"*">
+            >
+            ["at0.95"] = <
+                text = <"Evidence of Atrophy">
+                description = <"*">
+            >
+            ["at0.96"] = <
+                text = <"Evidence of tympanosclerosis">
+                description = <"*">
+            >
+            ["at0.97"] = <
+                text = <"Scarring">
+                description = <"*">
+            >
+            ["at0.98"] = <
+                text = <"Cluster: Ventilation tube">
+                description = <"*">
+            >
+            ["at0.99"] = <
+                text = <"Cluster: Perforation">
+                description = <"*">
+            >
+            ["at0000.1"] = <
+                text = <"Inspection of Tympanic Membrane">
+                description = <"The findings on physical examination by inspection of the tympanic membrane
+">
+            >
+            ["ac0.9000"] = <
+                text = <"Surface (synthesised)">
+                description = <"A description of the surface (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Adequacy of View (synthesised)">
+                description = <"How good is the view of the membrane? (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Retraction (synthesised)">
+                description = <"Degree of tympanic membrane retraction (Sade classification) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Description of scarring (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.91", "at0.92">
+        >
+        ["ac0.9003"] = <
+            id = <"ac0.9003">
+            members = <"at0.95", "at0.96">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.53", "at0.54", "at0.55", "at0.56", "at0.57">
+        >
+        ["ac0.9002"] = <
+            id = <"ac0.9002">
+            members = <"at0.81", "at0.82", "at0.83", "at0.84", "at0.85">
+        >
+    >

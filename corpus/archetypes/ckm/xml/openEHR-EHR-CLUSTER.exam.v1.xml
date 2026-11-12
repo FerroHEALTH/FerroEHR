@@ -1,0 +1,869 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2015-06-23</original_author>
+    <original_author id="name">Heather Leslie</original_author>
+    <original_author id="organisation">Atomica Informatics</original_author>
+    <original_author id="email">heather.leslie@atomicainformatics.com</original_author>
+    <other_contributors>Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>SB Bhattacharyya, Sudisa Consultancy Services, India</other_contributors>
+    <other_contributors>Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway</other_contributors>
+    <other_contributors>Shahla Foozonkhah, Iran ministry of health and education, Iran</other_contributors>
+    <other_contributors>Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom (openEHR Editor)</other_contributors>
+    <other_contributors>Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)</other_contributors>
+    <other_contributors>Ingrid Heitmann, Oslo universitetssykehus HF, Norway</other_contributors>
+    <other_contributors>Hilde Hollås, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Evelyn Hovenga, EJSH Consulting, Australia</other_contributors>
+    <other_contributors>Lars Ivar Mehlum, Helse Bergen HF, Norway</other_contributors>
+    <other_contributors>Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway</other_contributors>
+    <other_contributors>Heather Leslie, Atomica Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom</other_contributors>
+    <other_contributors>Lars Morgan Karlsen, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Bjørn Næss, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Andrej Orel, Marand d.o.o., Slovenia</other_contributors>
+    <other_contributors>Vladimir Pizzo, Hospital Sírio Libanês, Brazil</other_contributors>
+    <other_contributors>Jussara Rotzsch, UNB, Brazil</other_contributors>
+    <other_contributors>Anoop Shah, University College London, United Kingdom</other_contributors>
+    <other_contributors>Line Silsand, Universitetssykehuset i Nord-Norge, Norway</other_contributors>
+    <other_contributors>Norwegian Review Summary, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>Nyree Taylor, Ocean Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Rowan Thomas, St. Vincent's Hospital Melbourne, Australia</other_contributors>
+    <other_contributors>Jon Tysdahl, Furst medlab AS, Norway</other_contributors>
+    <other_contributors>John Tore Valand, Helse Bergen, Norway (openEHR Editor)</other_contributors>
+    <lifecycle_state>deprecated</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="current_contact">Heather Leslie, Atomica Informatics, Australia&lt;heather.leslie@atomicainformatics.com&gt;</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">52CB062818EEA91586BDBEBB8C6BEB21</other_details>
+    <other_details id="build_uid">577978d3-b4ef-4dc1-8b17-6894730e8081</other_details>
+    <other_details id="ip_acknowledgements">This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.</other_details>
+    <other_details id="revision">1.0.10</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Aufzeichnung einer Beschreibung und klinischen Interpretation der Untersuchungsergebnisse, die bei der körperlichen Untersuchung eines Körpersystems oder einer anatomischen Struktur beobachtet wurden.</purpose>
+      <use>Zur Aufzeichnung einer Beschreibung und klinischen Interpretation von Untersuchungsergebnissen, die bei der körperlichen Untersuchung eines Körpersystems oder einer anatomischen Struktur beobachtet wurden.&#xD;
+&#xD;
+Dieser Archetyp wurde speziell für die Verwendung im SLOT "Untersuchungsdetails" innerhalb des Archetyp OBSERVATION.exam oder ACTION.procedure entwickelt, kann aber auch innerhalb anderer ENTRY- oder CLUSTER-Archetypen verwendet werden, wenn dies klinisch angebracht ist.&#xD;
+&#xD;
+Verwendung zur Bereitstellung eines Frameworks, in dem CLUSTER-Archetypen im SLOT "Untersuchungsergebnisse" verschachtelt werden können, um zusätzliche strukturierte körperliche Untersuchungsbefunde zu erfassen.&#xD;
+&#xD;
+Der Archetyp CLUSTER.exclusion_exam kann innerhalb des SLOTS "Nicht durchgeführte Untersuchung" verschachtelt werden, um optional explizite Details über die nicht durchgeführte Untersuchung aufzuzeichnen.&#xD;
+&#xD;
+Wird verwendet, um die klinische Befundbeschreibung innerhalb bestehender oder älterer klinischer Systeme in ein archetypisches Format unter Verwendung des Datenelements "Klinische Beschreibung" zu integrieren.</use>
+      <misuse>Nicht für die Dokumentation der Krankengeschichte zu verwenden - Für diesen Zweck sollten spezifische OBSERVATION- und CLUSTER-Archetypen verwendet werden, z.B. OBSERVATION.story und CLUSTER.symptom_sign.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sv</code_string>
+      </language>
+      <purpose>Att dokumentera beskrivning och tolkning av fynd som gjorts under fysisk undersökning av system i kroppen, eller av anatomisk struktur.</purpose>
+      <keywords>fynd, undersökningsfynd, fysisk undersökning, u.a., utan anmärkning</keywords>
+      <use>Används för att dokumentera beskrivning och tolkning av fynd som gjorts under fysisk undersökning av system i kroppen, eller vid undersökning av anatomisk struktur.&#xD;
+&#xD;
+Denna arketyp har specifikt utformats för att användas i inkluderas under "Undersökningsdetaljer"(?) i arketypen OBSERVATION.exam eller "Åtgärdsdetaljer"(?) i arketypen ACTION.procedure, men kan också användas inom andra ENTRY- eller CLUSTER-arketyper, där det är kliniskt lämpligt.&#xD;
+&#xD;
+Används även som ett ramverk där CLUSTER-arketyper kan kapslas i "SLOT" för undersökningsresultat för att registrera ytterligare strukturerade fysiska undersökningsresultat.&#xD;
+&#xD;
+Arketypen CLUSTER.exclusion_exam kan inkluderas under "Undersökning ej genomförd" för att beskriva undersökningar som ej kunde göras.&#xD;
+&#xD;
+Fältet "Klinisk beskrivning" kan användas t.ex. vid import av fritextbeskrivningar från befintliga system till arketypbaserade system &#xD;
+&#xD;
+[Orden markerade med (?) refererar till fält i arketyper som inte var översatta till svenska när denna arketyp översattes, de referenserna kan alltså komma att behöva ändras när dessa översätts.]</use>
+      <misuse>Ska inte användas för att dokumentera anamnes eller historik, använd då istället specifika OBSERVATION- och CLUSTER-arketyper; exempelvis OBSERVATION.story och CLUSTER.symptom_sign.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.</purpose>
+      <use>Brukes til å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et spesifisert organsystem eller anatomisk struktur. Denne arketypen består kun av kjerneelementene av mønsteret for undersøkelser, og kan utvides ved hjelp av andre CLUSTER-arketyper eller brukes som grunnlag for undersøkelsesarketyper for spesifikke kroppssystemer eller anatomiske strukturer. &#xD;
+&#xD;
+Eksempler på detaljer som kan beskrives ved hjelp av dette CLUSTER er inspeksjon, palpasjon, auskultasjon, perkusjon og bevegelser i kroppssystemer eller anatomiske strukturer. Undersøkelsen kan støttes av enkle hjelpemidler som stetoskop, otoskop eller reflekshammer. Også funn ved mer avanserte undersøkelser kan registreres her, som ved endoskopi. I de tilfellene vil informasjon om hvilket hjelpemiddel eller utstyr brukt bli registrert i OBSERVATION.exam, elementet "Detaljer om medisinsk utstyr", i ACTION.procedure "Prosedyredetaljer" eller tilsvarende i egnet ENTRY- eller ACTION-arketype.&#xD;
+&#xD;
+Arketypen er laget spesifikt for å brukes i "Undersøkelsesdetaljer"-SLOTet i arketypen OBSERVATION.exam, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.&#xD;
+&#xD;
+Denne arketypen kan benyttes for alle typer undersøkelser, alt fra enkle undersøkelser som undersøkelse av et hudområde, inspeksjon av ører og til artroskopi av et kne.&#xD;
+&#xD;
+Kan for eksempel nøstes i SLOTet "Undersøkelsesdetaljer" i arketypen OBSERVATION.exam (Norsk Funn ved fysisk undersøkelse) for å registrere ytterligere strukturerte funn ved fysiske undersøkelser.&#xD;
+&#xD;
+Arketypen CLUSTER.exclusion_exam kan nøstes i SLOTet "Undersøkelse ikke utført" der en har behov for å registrere informasjon om at en undersøkelse ikke ble utført.&#xD;
+&#xD;
+Brukes for å videreføre fritekstbeskrivelser av kliniske funn fra tidligere systemer inn i et arketypeformat, ved å bruke elementet "Klinisk beskrivelse".</use>
+      <misuse>Skal ikke brukes til å ta opp frittstående klinisk observasjoner eller testresultater - bruk spesifikke OBSERVATION arketyper, for eksempel OBSERVATION.head_circumference eller OBSERVATION.glasgow_coma_scale.&#xD;
+&#xD;
+Skal ikke brukes til å ta opp anamnese - bruk da spesifikke OBSERVATION og CLUSTER arketyper. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Registrar uma descrição narrativa e interpretação clínica dos achados observados durante o exame físico de um sistema corporal ou estrutura anatômica.</purpose>
+      <use>Use para registrar uma descrição narrativa e interpretação clínica dos achados observados durante o exame físico de um sistema corporal ou estrutura anatômica.&#xD;
+&#xD;
+Esse arquétipo foi projetado especificamente para ser usado no SLOT 'Detalhes do exame' no arquétipo OBSERVATION.exam ou ACTION.procedure, mas também pode ser usado em outros arquétipos ENTRY ou CLUSTER, quando clinicamente apropriado.&#xD;
+&#xD;
+Use para fornecer uma estrutura na qual os arquétipos CLUSTER podem ser aninhados no SLOT 'Descobertas do exame' para registrar descobertas adicionais estruturadas do exame físico.&#xD;
+&#xD;
+O arquétipo CLUSTER.exclusion_exam pode ser aninhado no SLOT 'Exame não realizado' para registrar opcionalmente detalhes explícitos sobre o exame que não está sendo executado.&#xD;
+&#xD;
+Use para incorporar as descrições narrativas das descobertas clínicas nos sistemas clínicos existentes ou legados em um formato arquetipado, usando o elemento de dados 'Descrição Clínica'.</use>
+      <misuse>Não deve ser usado para registrar a história clínica - use arquétipos específicos de OBSERVAÇÃO e CLUSTER. Por exemplo, OBSERVATION.story e CLUSTER.symptom_sign.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of a body system or anatomical structure.</purpose>
+      <use>Use to record a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of a body system or anatomical structure.&#xD;
+&#xD;
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the 'Procedure detail' SLOT within ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.&#xD;
+&#xD;
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.&#xD;
+&#xD;
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.&#xD;
+&#xD;
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.</use>
+      <misuse>Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Nina Schewe</author>
+    <author id="organisation">Medizinische Hochschule Hannover</author>
+    <author id="email">schewe.nina@mh-hannover.de</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sv</code_string>
+    </language>
+    <author id="name">Erik Sundvall</author>
+    <author id="organisation">Region Östergötland + Linköping University</author>
+    <author id="email">erik.sundvall@regionostergotland.se</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Silje Ljosland Bakke</author>
+    <author id="organisation">Nasjonal IKT HF</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>pt-br</code_string>
+    </language>
+    <author id="name">Adriana Kitajima</author>
+    <author id="organisation">Hospital Alemão Oswaldo Cruz - HAOC</author>
+    <author id="email">adrianakitajima@gmail.com</author>
+  </translations>
+  <uid>
+    <value>dcdf73f0-bb0d-45b8-a139-cce60261ef7b</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-CLUSTER.exam.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0012</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0011</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.anatomical_location_circle(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v2/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.anatomical_location_circle(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v2</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0002</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_BOOLEAN</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_PRIMITIVE_OBJECT">
+                <rm_type_name>BOOLEAN</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <item xsi:type="C_BOOLEAN">
+                  <true_valid>true</true_valid>
+                  <false_valid>false</false_valid>
+                </item>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0003</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0004</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/.*/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>.*</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0005</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_capture*/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-CLUSTER\.media_capture*</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0006</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0007</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0008</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Examination findings</items>
+        <items id="description">Findings observed during the physical examination of a body system or anatomical structure.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">System or structure examined</items>
+        <items id="description">Identification of the examined body system or anatomical structure.</items>
+        <items id="comment">Coding of the system or structure examined with a terminology is preferred, where possible.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">No abnormality detected</items>
+        <items id="description">Statement that no abnormality was detected (NAD) on physical examination.</items>
+        <items id="comment">Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element. If 'No abnormality detected' is selected, then recording of other examination data elements becomes redundant, with the exception of only the 'Clinical interpretation' data element, which may be useful if a normal statement is desired for recording, for example 'Normal examination'.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Clinical description</items>
+        <items id="description">Narrative description of the overall findings observed during the physical examination.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Examination findings</items>
+        <items id="description">Structured details about the physical examination findings.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Multimedia representation</items>
+        <items id="description">Digital image, video or diagram representing the physical examination findings.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Clinical interpretation</items>
+        <items id="description">Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings.</items>
+        <items id="comment">Coding of the 'Clinical interpretation' with a terminology is preferred, where possible.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Comment</items>
+        <items id="description">Additional narrative about the physical examination findings, not captured in other fields.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Examination not done</items>
+        <items id="description">Details to explicitly record that this examination was not performed.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Structured body site</items>
+        <items id="description">A structured description of the area of the body under examination.</items>
+        <items id="comment">If the body site has been fully identified in the 'System or structure examined' or the 'Body site' data element, this SLOT becomes redundant.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Body site</items>
+        <items id="description">Identification of the area of the body under examination.</items>
+        <items id="comment">If the body site has been fully identified in the 'System or structure examined' data element, this data element becomes redundant.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Undersøkelsesfunn</items>
+        <items id="description">Funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Undersøkt organsystem eller struktur</items>
+        <items id="description">Identifisering av det undersøkte organsystemet eller anatomiske strukturen.</items>
+        <items id="comment">*Coding of the system or structure examined with a terminology is preferred, where possible. (en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Uten anmerkning</items>
+        <items id="description">Utsagn om at ingen avvik var oppdaget ved undersøkelsen (U.a.).</items>
+        <items id="comment">*Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element. If 'No abnormality detected' is selected, then recording of other examination data elements becomes redundant, with the exception of only the 'Clinical interpretation' data element, which may be useful if a normal statement is desired for recording, for example 'Normal examination'. (en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Klinisk beskrivelse</items>
+        <items id="description">Fritekstbeskrivelse av de overordnede funnene ved den fysiske undersøkelsen.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Spesifikke funn</items>
+        <items id="description">Ytterligere strukturerte detaljer om undersøkelsesfunnene.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Multimediarepresentasjon</items>
+        <items id="description">Digitale bilder, video eller diagram som representerer undersøkelsesfunnene.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Fortolkning</items>
+        <items id="description">Enkelt ord, setning, frase eller kort beskrivelse som representerer den kliniske betydning og viktigheten av funnene ved den kliniske undersøkelsen.</items>
+        <items id="comment">Koding med terminologi foretrekkes når mulig. For eksempel "normal undersøkelse" eller "tympanisk membran perforasjon".</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Kommentar</items>
+        <items id="description">Ytterligere fritekst om funn ved undersøkelsen, som ikke dekkes av andre elementer.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Undersøkelse ikke utført</items>
+        <items id="description">Detaljer for å eksplisitt registrere at denne undersøkelsen ikke ble utført.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Strukturert anatomisk lokalisasjon</items>
+        <items id="description">Angivelse av en strukturert anatomisk lokalisering av det undersøkte organsystemet eller anatomiske strukturen.</items>
+        <items id="comment">Hvis anatomisk lokalisasjon er entydig identifisert i elementet "Undersøkt organsystem eller struktur" er dette SLOTet ikke nødvendig å benytte.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Anatomisk lokalisasjon</items>
+        <items id="description">Identifisering av et enkelt fysisk sted enten på eller i menneskekroppen.</items>
+        <items id="comment">*If the body site has been fully identified in the 'System or structure examined' data element, this data element becomes redundant. (en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="pt-br">
+      <items code="at0000">
+        <items id="text">Resultados do exame</items>
+        <items id="description">Constatações observadas durante o exame físico de um sistema corporal ou estrutura anatômica.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Sistema ou estrutura examinada</items>
+        <items id="description">Identificação do sistema do corpo examinado ou da estrutura anatômica.</items>
+        <items id="comment">A codificação do sistema ou estrutura examinada com uma terminologia é preferível, sempre que possível.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Nenhuma anormalidade detectada</items>
+        <items id="description">Declaração de que nenhuma anormalidade foi detectada (NAD) no exame físico.</items>
+        <items id="comment">Registre como Verdadeiro se nenhuma anormalidade foi detectada no exame. Declarações específicas sobre o exame podem ser incluídas no elemento de dados 'Interpretação Clínica'. Se 'Nenhuma anormalidade detectada' for selecionada, o registro de outros elementos de dados do exame se tornará redundante, com exceção do elemento de dados 'Interpretação clínica', que pode ser útil se uma declaração normal for desejada para o registro, por exemplo 'Exame normal'.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Descrição clínica</items>
+        <items id="description">Descrição narrativa dos achados gerais observados durante o exame físico.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Resultados do exame</items>
+        <items id="description">Detalhes estruturados sobre os resultados do exame físico.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Representação multimídia</items>
+        <items id="description">Imagem digital, vídeo ou diagrama representando os achados do exame físico.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Interpretação clínica</items>
+        <items id="description">Palavra, frase ou breve descrição que represente o significado clínico e o significado dos resultados do exame físico.</items>
+        <items id="comment">É preferível codificar a "interpretação clínica" com uma terminologia, sempre que possível.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Comentário</items>
+        <items id="description">Narrativa adicional sobre os achados do exame físico, não capturados em outros campos.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Exame não realizado</items>
+        <items id="description">Detalhes para registrar explicitamente que esse exame não foi realizado.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Local do corpo estruturado</items>
+        <items id="description">Uma descrição estruturada da área do corpo em exame.</items>
+        <items id="comment">Se o local do corpo tiver sido totalmente identificado no elemento de dados 'Sistema ou estrutura examinada' ou 'Local do corpo', esse SLOT se tornará redundante.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Local do corpo</items>
+        <items id="description">Identificação da área do corpo em exame.</items>
+        <items id="comment">Se o local do corpo foi totalmente identificado no elemento de dados 'Sistema ou estrutura examinada', esse elemento de dados se torna redundante.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Untersuchungsergebnisse</items>
+        <items id="description">Während der körperlichen Untersuchung eines Körpersystems oder einer anatomischen Struktur beobachtete Befunde.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Untersuchtes System oder untersuchte Struktur</items>
+        <items id="description">Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur.</items>
+        <items id="comment">Wenn möglich wird die Kodierung des untersuchten Systems oder der untersuchten Struktur mit einer Terminologie bevorzugt.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Keine Anomalie festgestellt</items>
+        <items id="description">Erklärung, das bei der körperlichen Untersuchung keine Anomalie festgestellt wurde (NAD).</items>
+        <items id="comment">Die Aussage wird als "wahr" erfasst, wenn bei der Untersuchung keine Anomalie festgestellt wurde. Spezifische Aussagen über die Untersuchung können im Datenelement "Klinische Interpretation" dokumentiert werden. Wenn "Keine Anomalie festgestellt" ausgewählt wird, wird die Aufzeichnung anderer Untersuchungsdatenelemente überflüssig, mit Ausnahme des Datenelements "Klinische Interpretation", welches nützlich sein kann, wenn eine normale Aussage zur Aufzeichnung gewünscht wird. Zum Beispiel: "Normale Untersuchung".</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Klinische Beschreibung</items>
+        <items id="description">Beschreibung der bei der körperlichen Untersuchung beobachteten Gesamtbefunde.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Untersuchungsergebnisse</items>
+        <items id="description">Strukturierte Angaben zu den Ergebnissen der körperlichen Untersuchung.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Multimediale Darstellung</items>
+        <items id="description">Digitales Bild, Video oder Diagramm, das die Ergebnisse der körperlichen Untersuchung darstellt.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Klinische Interpretation</items>
+        <items id="description">Ein einzelnes Wort, eine Phrase oder eine kurze Beschreibung, die die klinische Bedeutung und Wichtigkeit der Untersuchungsergebnisse darstellt.</items>
+        <items id="comment">Die Kodierung der "Klinischen Interpretation" mit einer Terminologie wird, wenn möglich, bevorzugt.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Kommentar</items>
+        <items id="description">Zusätzliche Beschreibung der Ergebnisse der körperlichen Untersuchung, die in anderen Bereichen nicht erfasst werden konnten.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Nicht durchgeführte Untersuchung</items>
+        <items id="description">Eine Aussage die ausdrücklich erfasst, dass die Untersuchung nicht durchgeführt wurde.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Strukturierte Körperstelle</items>
+        <items id="description">Eine strukturierte Beschreibung des zu untersuchenden Körperbereichs.</items>
+        <items id="comment">Wenn die Körperstelle im Datenelement "Untersuchtes System oder untersuchte Struktur" oder im Datenelement "Körperstelle" vollständig identifiziert wurde, wird die Verwendung dieses SLOT überflüssig.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Körperstelle</items>
+        <items id="description">Identifizierung des Untersuchungsbereichs.</items>
+        <items id="comment">Wenn die Körperstelle im Datenelement "Untersuchtes System oder untersuchte Struktur" vollständig identifiziert wurde, wird dieses Datenelement überflüssig.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="sv">
+      <items code="at0000">
+        <items id="text">Fynd vid undersökning</items>
+        <items id="description">Observerade fynd vid fysisk undersökning av system i kroppen, eller av anatomisk struktur</items>
+      </items>
+      <items code="at0001">
+        <items id="text">System eller struktur som undersökts</items>
+        <items id="description">Identifiering av systemet eller strukturen som undersökts.</items>
+        <items id="comment">Om möjligt, koda systemet eller strukturen med hjälp av ett terminologisystem.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">u.a. (utan anmärkning)</items>
+        <items id="description">Konstaterande att inget onormalt fynd gjordes vid denna del av den fysiska undersökningen.</items>
+        <items id="comment">Dokumentera som "sant" om inget onormalt upptäcktes vid undersökningen. Specifika uttalanden om undersökningen kan inkluderas i fältet "Klinisk tolkning". Om "u.a." (utan anmärkning) väljs, så blir övriga fält överflödiga, med undantag endast för fältet "Klinisk tolkning", som fortfarande kan användas om man vill ange någon sorts normal-utlåtande, till exempel "Normal funktion".</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Klinisk beskrivning</items>
+        <items id="description">En övergripande beskrivning av fynden från den fysiska undersökningen.</items>
+        <items id="comment">Detta fält kan användas t.ex. vid import av fritextbeskrivningar från befintliga system.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Fynd vid undersökning</items>
+        <items id="description">Strukturerade detaljer om fynd vid den fysiska undersökningen.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Multimedia-representation</items>
+        <items id="description">Digital bild, video eller diagram som återger fynd från undersökningen.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Klinisk tolkning</items>
+        <items id="description">Ord, fras eller kort beskrivning av fyndens kliniska betydelse.</items>
+        <items id="comment">Om möjligt, koda den kliniska tolkningen med hjälp av et terminologisystem.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Kommentar</items>
+        <items id="description">Kommentarer avseende undersökningsfynd som inte beskrivs i övriga fält.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Undersökning ej genomförd</items>
+        <items id="description">Detaljerad beskrivning om att undersökningen inte genomfördes.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Strukturerad anatomisk plats</items>
+        <items id="description">Strukturerad beskrivning av den anatomiska platsen som undersökts.</items>
+        <items id="comment">Om den anatomiska platsen kan identifieras helt via dataelementet "System eller struktur som undersökts" så blir denna del redundant.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Anatomisk plats</items>
+        <items id="description">Identifiering av den anatomiska plats som undersökts.</items>
+        <items id="comment">Om den anatomiska platsen har identifierats fullt ut i "System eller struktur som undersökts" så blir detta element redundant.</items>
+      </items>
+    </term_definitions>
+    <term_bindings terminology="SNOMED-CT">
+      <items code="at0000">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>5880005</code_string>
+        </value>
+      </items>
+    </term_bindings>
+  </ontology>
+</archetype>

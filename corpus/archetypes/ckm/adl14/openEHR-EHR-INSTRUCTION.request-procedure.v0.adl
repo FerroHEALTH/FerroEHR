@@ -1,0 +1,561 @@
+﻿archetype (adl_version=1.4; uid=a14624d5-2176-47b7-a923-34c016c2e53d)
+	openEHR-EHR-INSTRUCTION.request-procedure.v0
+specialise
+	openEHR-EHR-INSTRUCTION.request.v0
+
+concept
+	[at0000.1]	-- Procedure request
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			author = <
+				["name"] = <"Lars Bitsch-Larsen">
+				["organisation"] = <"Haukeland University Hospital of Bergen, Norway">
+			>
+			accreditation = <"MD, DEAA, MBA, spec in anesthesia, spec in tropical medicine.">
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Dr Ian McNicoll">
+		["organisation"] = <"Ocean Informatics, United Kingdom">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"2009-12-08">
+	>
+	details = <
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			purpose = <"Generisk mønster for rekvirering av en hvilken som helst helsetjeneste.">
+			use = <"Brukes for å registrere en generell rekvirering/bestilling av helsetjenester. Det lages spesialiserte arketyper for vanlige rekvirerbare tjenester basert på denne arketypen, f.eks. laboratorierekvisisjon eller henvisning.">
+			keywords = <"rekvisisjon", "bestilling", "foreskriving", "tjeneste", "tjenesteyter", "rekvirere", "bestille", "anmodning", "forespørre", "forespørsel", "anmode", "tilsyn">
+			misuse = <"Skal ikke brukes for rekvisisjoner der det eksisterer eksplisitte spesialiseringer, f.eks:
+- Laboratorierekvisisjon - bruk arketypen INSTRUCTION.request-laboratory_test
+- Rekvisisjon av billeddiagnostikk - bruk arketypen INSTRUCTION.request-imaging_exam
+- Prosedyrerekvisisjon - bruk arketypen INSTRUCTION.request-procedure
+- Henvisning - bruk arketypen INSTRUCTION.request-referral.">
+			copyright = <"© Nasjonal IKT HF">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Generic framework for a request for a procedure to be performed by a healthcare provider or agency.">
+			use = <"Use to record a request for a procedure. This archetype has been designed as a framework that can be used as the basis for a request from one healthcare provider or agency to another healthcare provider or agency for a procedure - for example, insertion of a urinary catheter, a removal of a skin lesion by a specialist, or a surgical operation requiring admission to hospital.
+
+In most situations it will be possible to record the steps that occur as part of this procedure being performed using the corresponding generic ACTION.procedure. In some situations a specific and purpose-built ACTION archetype may be required due to additional or unique data requirements to record the procedure being performed, or requiring additional or different care pathway steps.">
+			keywords = <"request", "order", "service", "provide", "referral", "procedure">
+			misuse = <"Not to be used for requests which have a specific specialisation - for example:
+- Laboratory test request - use the INSTRUCTION.request-laboratory_test archetype; and
+- Imaging examination request - use the INSTRUCTION.request-imaging_exam archetype.">
+			copyright = <"© openEHR Foundation, Nasjonal IKT HF">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Fatima Almeida, Critical SW, Portugal", "Tomas Alme, DIPS ASA, Norway", "Vebjoern Arntzen, Oslo university hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, National ICT Norway, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Anita Bjørnnes, Helse Bergen, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Knut Harboe, Stavanger Universitetssjukehus, Norway", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Andreas Hering, Helse Bergen HF, Haukeland universitetssjukehus, Norway", "Anca Heyd, DIPS ASA, Norway", "Hilde Hollås, Norway", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Lars Karlsen, DIPS ASA, Norway", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Oslo Universitetssykehus HF, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Lars Morgan Karlsen, DIPS ASA, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Jussara Rotzsch, UNB, Brazil", "Line Sæle, Nasjonal IKT HF, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Editor)">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["current_contact"] = <"Heather Leslie, Ocean Informatics<heather.leslie@oceaninformatics.com>">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"52B8333D9A8C5300DA91B7581DAB7005">
+		["build_uid"] = <"d1047a2d-8256-462a-9adc-0973426ebf82">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	INSTRUCTION[at0000.1] matches {	-- Procedure request
+		activities cardinality matches {0..*; unordered} matches {
+			ACTIVITY[at0001] occurrences matches {1..*} matches {	-- Request
+				description matches {
+					ITEM_TREE[at0009] matches {	-- Tree
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0121.1] matches {	-- Procedure name
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0148.1] occurrences matches {0..1} matches {	-- Procedure type
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0135] occurrences matches {0..1} matches {	-- Description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0.150] occurrences matches {0..*} matches {	-- Body site
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0062.1] occurrences matches {0..1} matches {	-- Indication
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0064.1] occurrences matches {0..1} matches {	-- Indication description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0065.1] occurrences matches {0..*} matches {	-- Objective
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0068] occurrences matches {0..1} matches {	-- Urgency
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0136, 	-- Emergency
+											at0137, 	-- Urgent
+											at0138]	-- Routine
+										}
+									}
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0040] occurrences matches {0..1} matches {	-- Service due
+								value matches {
+									DV_DATE_TIME matches {*}
+								}
+							}
+							ELEMENT[at0145] occurrences matches {0..1} matches {	-- Service period start
+								value matches {
+									DV_DATE_TIME matches {*}
+								}
+							}
+							ELEMENT[at0144] occurrences matches {0..1} matches {	-- Service period expiry
+								value matches {
+									DV_DATE_TIME matches {*}
+								}
+							}
+							ELEMENT[at0147] occurrences matches {0..1} matches {	-- Indefinite?
+								value matches {
+									DV_BOOLEAN matches {
+										value matches {True}
+									}
+								}
+							}
+							allow_archetype CLUSTER[at0132.1] occurrences matches {0..*} matches {	-- Procedure details
+								include
+									archetype_id/value matches {/.*/}
+							}
+							allow_archetype CLUSTER[at0149] occurrences matches {0..*} matches {	-- Attachment
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1/}
+							}
+							ELEMENT[at0076] occurrences matches {0..1} matches {	-- Information to follow?
+								value matches {
+									DV_BOOLEAN matches {
+										value matches {True}
+									}
+								}
+							}
+							ELEMENT[at0078] occurrences matches {0..1} matches {	-- Information description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0116] occurrences matches {0..*} matches {	-- Patient requirements
+								include
+									archetype_id/value matches {/.*/}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0008] matches {	-- Tree
+				items cardinality matches {1..*; unordered} matches {
+					allow_archetype CLUSTER[at0112] occurrences matches {0..*} matches {	-- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+					ELEMENT[at0010] occurrences matches {0..1} matches {	-- Requestor Identifier
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					allow_archetype CLUSTER[at0141] occurrences matches {0..*} matches {	-- Requestor
+						include
+							archetype_id/value matches {/.*/}
+					}
+					ELEMENT[at0011] occurrences matches {0..1} matches {	-- Receiver identifier
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					allow_archetype CLUSTER[at0142] occurrences matches {0..*} matches {	-- Receiver
+						include
+							archetype_id/value matches {/.*/}
+					}
+					ELEMENT[at0127] occurrences matches {0..1} matches {	-- Request status
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					allow_archetype CLUSTER[at0128] occurrences matches {0..*} matches {	-- Distribution list for response
+						include
+							archetype_id/value matches {/openEHR-EHR-CLUSTER\.distribution\.v1/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.150"] = <
+					text = <"Body site">
+					description = <"Identification of the body site for the procedure.">
+					comment = <"Occurrences for this data element are unbounded to allow for clinical scenarios such as removing multiple skin lesions in different places, but where all of the other attributes are identical. Use this data element to record simple terms or precoordinated anatomical locations. If the requirements for recording the anatomical location are determined at run-time by the application or require more complex modelling such as relative locations then use the CLUSTER.anatomical_location or CLUSTER.relative_location within the 'Procedure detail' SLOT in this archetype. If the anatomical location is included in the 'Procedure name' via precoordinated codes, this data element becomes redundant.">
+				>
+				["at0000"] = <
+					text = <"Service request">
+					description = <"Request for a health-related service to be supplied by a healthcare provider or agency.">
+					comment = <"For example equipment request.">
+				>
+				["at0000.1"] = <
+					text = <"Procedure request">
+					description = <"Request for a procedure to be performed by a healthcare provider or agency.">
+					comment = <"For example equipment request.!">
+				>
+				["at0001"] = <
+					text = <"Request">
+					description = <"Description of the requested service.">
+				>
+				["at0008"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0009"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0010"] = <
+					text = <"Requestor Identifier">
+					description = <"The local ID assigned to the order by the healthcare provider or organisation requesting the service. This is also referred to as Placer Order Identifier.">
+				>
+				["at0011"] = <
+					text = <"Receiver identifier">
+					description = <"The ID assigned to the order by the healthcare provider or organisation receiving the request for service. This is also referred to as Filler Order Identifier.">
+				>
+				["at0040"] = <
+					text = <"Service due">
+					description = <"The date/time, or acceptable interval of date/time, for provision of the service.">
+					comment = <"In practice, clinicians will often think in terms of ordering services as approximate timing, for example: review in 3 months, 6 months or 12 months. As clinical systems need more exact parameters to operate on, this '3 months' will usually be converted to an exact date 3 months from the date of recording and stored using this data element.">
+				>
+				["at0062"] = <
+					text = <"Reason for request">
+					description = <"A short phrase describing the reason for the request.">
+					comment = <"Coding of the 'Reason for request' with a coding system is desirable, if available.">
+				>
+				["at0062.1"] = <
+					text = <"Indication">
+					description = <"A short phrase describing the indication for the procedure.">
+					comment = <"May be narrative or a coded value set.">
+				>
+				["at0064"] = <
+					text = <"Reason description">
+					description = <"Narrative description about the reason for request.">
+				>
+				["at0064.1"] = <
+					text = <"Indication description">
+					description = <"Narrative description about the indication for the procedure.">
+				>
+				["at0065"] = <
+					text = <"Intent">
+					description = <"Description of the intent for the request.">
+					comment = <"For example a referral with the intent of having specialist care take over the care of the patient, or advice on how to proceed with an investigation or treatment. This data element allows multiple occurrences to enable multiple choice selection in user interface.">
+				>
+				["at0065.1"] = <
+					text = <"Objective">
+					description = <"Description of the objective of the procedure.">
+					comment = <"May be narrative or a coded value set.">
+				>
+				["at0068"] = <
+					text = <"Urgency">
+					description = <"Urgency of the request for service.">
+					comment = <"Specific definitions of emergency and urgent will vary between clinical contexts, clinical systems and the nature of the request itself, so have not be defined in this archetype. If explicit timing is required then the Service period should be clearly stated.">
+				>
+				["at0076"] = <
+					text = <"Information to follow?">
+					description = <"Will supplementary information be following this request?">
+					comment = <"Record as TRUE if additional information has been identified and will be forwarded when available. For example: pending test results.">
+				>
+				["at0078"] = <
+					text = <"Information description">
+					description = <"Description of the supplementary information.">
+				>
+				["at0112"] = <
+					text = <"Extension">
+					description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+					comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+				>
+				["at0116"] = <
+					text = <"Patient requirements">
+					description = <"Language, transport or other personal requirements to support the patient's attendance or participation in provision of the service.">
+				>
+				["at0121"] = <
+					text = <"Service name">
+					description = <"Identification of the service requested, by name.">
+					comment = <"Coding of the 'Service name' with a coding system is desirable, if available.">
+				>
+				["at0121.1"] = <
+					text = <"Procedure name">
+					description = <"Identification of the procedure requested, by name.">
+				>
+				["at0127"] = <
+					text = <"Request status">
+					description = <"The status of the request for service as indicated by the requester. 
+Status is used to denote whether this is the initial request, or a follow-up request to change or provide supplementary information.">
+				>
+				["at0128"] = <
+					text = <"Distribution list for response">
+					description = <"A list of person's or organisation who should receive copies of any communication.">
+				>
+				["at0132"] = <
+					text = <"Specific details">
+					description = <"Additional detail about the service requested.">
+					comment = <"Example: CLUSTER archetype specifying complex timing requirements.">
+				>
+				["at0132.1"] = <
+					text = <"Procedure details">
+					description = <"Additional detail about the procedure requested.">
+				>
+				["at0135"] = <
+					text = <"Description">
+					description = <"Narrative description of the service requested.">
+				>
+				["at0136"] = <
+					text = <"Emergency">
+					description = <"The request requires immediate attention.">
+				>
+				["at0137"] = <
+					text = <"Urgent">
+					description = <"The request requires prioritised attention.">
+				>
+				["at0138"] = <
+					text = <"Routine">
+					description = <"The request does not require prioritised scheduling.">
+				>
+				["at0141"] = <
+					text = <"Requestor">
+					description = <"Details about the healthcare provider or organisation requesting the service.">
+				>
+				["at0142"] = <
+					text = <"Receiver">
+					description = <"Details about the healthcare provider or organisation receiving the request for service.">
+				>
+				["at0144"] = <
+					text = <"Service period expiry">
+					description = <"The date/time that marks the conclusion of the valid period of time for delivery of this service.">
+					comment = <"This date/time is the equivalent to the latest possible date for service delivery or to the date of expiry for this request. For example: a service may be required to be completed before another event, such as scheduled surgery.">
+				>
+				["at0145"] = <
+					text = <"Service period start">
+					description = <"The date/time that marks the beginning of the valid period of time for delivery of this service.">
+					comment = <"This date/time is the equivalent to the earliest possible date for service delivery. For example: sometimes a certain amount of time must pass before a service can be performed, for example some procedures can only be performed once the patient has stopped taking medications for a specific amount of time.">
+				>
+				["at0147"] = <
+					text = <"Indefinite?">
+					description = <"The valid period for this request is open ended and has no date of expiry.">
+					comment = <"Record as TRUE to record explicity that the request has no expiry date.">
+				>
+				["at0148"] = <
+					text = <"Service type">
+					description = <"Category of service requested.">
+					comment = <"For example: hospital vs home care delivery.">
+				>
+				["at0148.1"] = <
+					text = <"Procedure type">
+					description = <"Category of procedure requested.">
+				>
+				["at0149"] = <
+					text = <"Attachment">
+					description = <"Digital document, image, video or diagram as supporting information for the request.">
+				>
+			>
+		>
+		["nb"] = <
+			items = <
+				["at0.150"] = <
+					text = <"*Body site(en)">
+					description = <"*Identification of the body site for the procedure.(en)">
+					comment = <"*Occurrences for this data element are unbounded to allow for clinical scenarios such as removing multiple skin lesions in different places, but where all of the other attributes are identical. Use this data element to record simple terms or precoordinated anatomical locations. If the requirements for recording the anatomical location are determined at run-time by the application or require more complex modelling such as relative locations then use the CLUSTER.anatomical_location or CLUSTER.relative_location within the 'Procedure detail' SLOT in this archetype. If the anatomical location is included in the 'Procedure name' via precoordinated codes, this data element becomes redundant.(en)">
+				>
+				["at0000"] = <
+					text = <"*Service request(en)">
+					description = <"*Request for a health-related service to be supplied by a healthcare provider or agency.(en)">
+					comment = <"*For example equipment request.(en)">
+				>
+				["at0000.1"] = <
+					text = <"*Procedure request(en)">
+					description = <"*Request for a procedure to be performed by a healthcare provider or agency.(en)">
+					comment = <"*For example equipment request.!(en)">
+				>
+				["at0001"] = <
+					text = <"Rekvirering">
+					description = <"Beskrivelse av tjenesten det rekvireres til.">
+				>
+				["at0008"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0009"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0010"] = <
+					text = <"Rekvisisjonsidentifikator">
+					description = <"Rekvisisjonens identifikator, tilordnet av den som rekvirererer tjenesten. Det kan være helsepersonell, organisasjon eller applikasjonen.">
+				>
+				["at0011"] = <
+					text = <"Mottakers rekvisisjonsidentifikator">
+					description = <"Rekvisisjonens identifikator, tilordnet av den som mottar rekvisisjonen. Mottaker kan være helsepersonell, organisasjon eller applikasjonen.">
+				>
+				["at0040"] = <
+					text = <"*Service due(en)">
+					description = <"*The date/time, or acceptable interval of date/time, for provision of the service.(en)">
+					comment = <"*In practice, clinicians will often think in terms of ordering services as approximate timing, for example: review in 3 months, 6 months or 12 months. As clinical systems need more exact parameters to operate on, this '3 months' will usually be converted to an exact date 3 months from the date of recording and stored using this data element.(en)">
+				>
+				["at0062"] = <
+					text = <"*Reason for request(en)">
+					description = <"*A short phrase describing the reason for the request.(en)">
+					comment = <"*Coding of the 'Reason for request' with a coding system is desirable, if available.(en)">
+				>
+				["at0062.1"] = <
+					text = <"*Indication(en)">
+					description = <"*A short phrase describing the indication for the procedure.(en)">
+					comment = <"*May be narrative or a coded value set.(en)">
+				>
+				["at0064"] = <
+					text = <"*Reason description(en)">
+					description = <"*Narrative description about the reason for request.(en)">
+				>
+				["at0064.1"] = <
+					text = <"*Indication description(en)">
+					description = <"*Narrative description about the indication for the procedure.(en)">
+				>
+				["at0065"] = <
+					text = <"*Intent(en)">
+					description = <"*Description of the intent for the request.(en)">
+					comment = <"*For example a referral with the intent of having specialist care take over the care of the patient, or advice on how to proceed with an investigation or treatment. This data element allows multiple occurrences to enable multiple choice selection in user interface.(en)">
+				>
+				["at0065.1"] = <
+					text = <"*Objective(en)">
+					description = <"*Description of the objective of the procedure.(en)">
+					comment = <"*May be narrative or a coded value set.(en)">
+				>
+				["at0068"] = <
+					text = <"*Urgency(en)">
+					description = <"*Urgency of the request for service.(en)">
+					comment = <"*Specific definitions of emergency and urgent will vary between clinical contexts, clinical systems and the nature of the request itself, so have not be defined in this archetype. If explicit timing is required then the Service period should be clearly stated.(en)">
+				>
+				["at0076"] = <
+					text = <"*Information to follow?(en)">
+					description = <"*Will supplementary information be following this request?(en)">
+					comment = <"*Record as TRUE if additional information has been identified and will be forwarded when available. For example: pending test results.(en)">
+				>
+				["at0078"] = <
+					text = <"*Information description(en)">
+					description = <"*Description of the supplementary information.(en)">
+				>
+				["at0112"] = <
+					text = <"Tilleggsinformasjon">
+					description = <"Ytterligere informasjon som er nødvendig for å registrere lokalt innhold/kontekst, eller for å sammenstille med andre referansemodeller/formalismer.">
+					comment = <"F.eks lokale informasjonskrav eller ekstra metadata for å tilpasse med FHIR eller CIMI ekvivalenter.">
+				>
+				["at0116"] = <
+					text = <"Pasientens behov">
+					description = <"Språk, transport eller andre personlige behov som er nødvendige for å sikre pasientens oppmøte eller deltakelse i utførelsen av den rekvirerte tjeneste.">
+				>
+				["at0121"] = <
+					text = <"Tjenestenavn">
+					description = <"Navn på forespurt tjeneste.">
+					comment = <"Koding av tjenestenavnet med et kodeverk er ønskelig, dersom tilgjengelig.">
+				>
+				["at0121.1"] = <
+					text = <"*Procedure name(en)">
+					description = <"*Identification of the procedure requested, by name.(en)">
+				>
+				["at0127"] = <
+					text = <"Rekvisisjonsstatus">
+					description = <"Status for rekvisisjonen oppgitt av rekvirenten. Status brukes for å vise om dette er den primære rekvisisjonen, en endring eller supplerende informasjon.">
+				>
+				["at0128"] = <
+					text = <"Svarmottakere">
+					description = <"En liste over personer eller organisasjoner som bør motta svar på rekvisisjonen.">
+				>
+				["at0132"] = <
+					text = <"*Specific details(en)">
+					description = <"*Additional detail about the service requested.(en)">
+					comment = <"*Example: CLUSTER archetype specifying complex timing requirements.(en)">
+				>
+				["at0132.1"] = <
+					text = <"*Procedure details(en)">
+					description = <"*Additional detail about the procedure requested.(en)">
+				>
+				["at0135"] = <
+					text = <"Beskrivelse">
+					description = <"Fritekstlig beskrivelse av tjenesten som er rekvirert.">
+				>
+				["at0136"] = <
+					text = <"*Emergency(en)">
+					description = <"*The request requires immediate attention.(en)">
+				>
+				["at0137"] = <
+					text = <"*Urgent(en)">
+					description = <"*The request requires prioritised attention.(en)">
+				>
+				["at0138"] = <
+					text = <"*Routine(en)">
+					description = <"*The request does not require prioritised scheduling.(en)">
+				>
+				["at0141"] = <
+					text = <"Rekvirent">
+					description = <"Detaljer om helsepersonellet eller organisasjonen som har rekvirert prosedyren.">
+				>
+				["at0142"] = <
+					text = <"Mottaker">
+					description = <"Detaljer om helsepersonellet eller organisasjonen som mottar prosedyrerekvisisjonen.">
+				>
+				["at0144"] = <
+					text = <"*Service period expiry(en)">
+					description = <"*The date/time that marks the conclusion of the valid period of time for delivery of this service.(en)">
+					comment = <"*This date/time is the equivalent to the latest possible date for service delivery or to the date of expiry for this request. For example: a service may be required to be completed before another event, such as scheduled surgery.(en)">
+				>
+				["at0145"] = <
+					text = <"*Service period start(en)">
+					description = <"*The date/time that marks the beginning of the valid period of time for delivery of this service.(en)">
+					comment = <"*This date/time is the equivalent to the earliest possible date for service delivery. For example: sometimes a certain amount of time must pass before a service can be performed, for example some procedures can only be performed once the patient has stopped taking medications for a specific amount of time.(en)">
+				>
+				["at0147"] = <
+					text = <"*Indefinite?(en)">
+					description = <"*The valid period for this request is open ended and has no date of expiry.(en)">
+					comment = <"*Record as TRUE to record explicity that the request has no expiry date.(en)">
+				>
+				["at0148"] = <
+					text = <"*Service type(en)">
+					description = <"*Category of service requested.(en)">
+					comment = <"*For example: hospital vs home care delivery.(en)">
+				>
+				["at0148.1"] = <
+					text = <"*Procedure type(en)">
+					description = <"*Category of procedure requested.(en)">
+				>
+				["at0149"] = <
+					text = <"*Attachment(en)">
+					description = <"*Digital document, image, video or diagram as supporting information for the request.(en)">
+				>
+			>
+		>
+	>

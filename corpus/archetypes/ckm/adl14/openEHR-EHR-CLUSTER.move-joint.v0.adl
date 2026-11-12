@@ -1,0 +1,579 @@
+﻿archetype (adl_version=1.4; uid=e75c531a-8649-45d0-b2bb-84e7f10d6ca9)
+	openEHR-EHR-CLUSTER.move-joint.v0
+specialise
+	openEHR-EHR-CLUSTER.move.v1
+
+concept
+	[at0000.1]	-- Movement of a joint
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"unknown">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For describing the findings on movement of a joint.">
+			use = <"">
+			keywords = <"movement", "joint">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لوصف الموجودات عند حركة المفصل">
+			use = <"">
+			keywords = <"الحركة", "المفصل">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"4B7C88F3FFF84767CD583B96BE85F94E">
+		["build_uid"] = <"66328b34-00bf-40ed-a160-a369d1e0995d">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	CLUSTER[at0000.1] matches {	-- Movement of a joint
+		items cardinality matches {1..*; unordered} matches {
+			CLUSTER[at0001] occurrences matches {0..1} matches {	-- Normal statements
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0002] occurrences matches {1..*} matches {	-- Normal statement
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+			ELEMENT[at0003] occurrences matches {0..1} matches {	-- Clinical description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0036] occurrences matches {0..1} matches {	-- Findings
+				items cardinality matches {1..*; unordered} matches {
+					CLUSTER[at0037] occurrences matches {0..1} matches {	-- General movement
+						items cardinality matches {1..*; unordered} matches {
+							use_node ELEMENT /items[at0036]/items[at0004]/items[at0007]	-- /items[Findings]/items[Specific movement]/items[Description]
+							use_node ELEMENT /items[at0036]/items[at0004]/items[at0006]	-- /items[Findings]/items[Specific movement]/items[Relative range of movement]
+							use_node ELEMENT /items[at0036]/items[at0004]/items[at0019]	-- /items[Findings]/items[Specific movement]/items[Associated pain]
+						}
+					}
+					CLUSTER[at0004] occurrences matches {0..*} matches {	-- Specific movement
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0011] occurrences matches {0..1} matches {	-- Type of movement
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0012, 	-- Active movement
+											at0013]	-- Passive movement
+										}
+									}
+								}
+							}
+							ELEMENT[at0005] matches {	-- Movement
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0.1, 	-- Flexion
+											at0.2, 	-- Extension
+											at0.3, 	-- Abduction
+											at0.4, 	-- Adduction
+											at0.5, 	-- Internal rotation
+											at0.6, 	-- External rotation
+											at0.7, 	-- Supination
+											at0.8, 	-- Pronation
+											at0.9, 	-- Eversion
+											at0.10, 	-- Inversion
+											at0.11, 	-- Rotation
+											at0.12, 	-- Opening
+											at0.13]	-- Closing
+										}
+									}
+								}
+							}
+							ELEMENT[at0007] occurrences matches {0..1} matches {	-- Description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0035] occurrences matches {0..1} matches {	-- Arc of movement
+								value matches {
+									C_DV_QUANTITY <
+										property = <[openehr::497]>
+										list = <
+											["1"] = <
+												units = <"°">
+												magnitude = <|0.0..360.0|>
+												precision = <|0|>
+											>
+										>
+									>
+								}
+							}
+							ELEMENT[at0006] occurrences matches {0..1} matches {	-- Relative range of movement
+								value matches {
+									0|[local::at0008], 	-- No movement
+									2|[local::at0017], 	-- Severe restriction
+									5|[local::at0010], 	-- Moderate restriction
+									8|[local::at0016], 	-- Minor restriction
+									10|[local::at0009]; 	-- Full range of movement
+									0  	-- assumed value
+								}
+							}
+							ELEMENT[at0019] occurrences matches {0..1} matches {	-- Associated pain
+								value matches {
+									0|[local::at0020], 	-- None
+									1|[local::at0021], 	-- Mild
+									5|[local::at0022], 	-- Moderate
+									8|[local::at0024], 	-- Severe
+									10|[local::at0023]; 	-- Extreme
+									0  	-- assumed value
+								}
+							}
+						}
+					}
+					CLUSTER[at0.14] occurrences matches {0..1} matches {	-- Abnormal movement
+						items cardinality matches {1..*; unordered} matches {
+							CLUSTER[at0.16] occurrences matches {0..*} matches {	-- Ligament testing
+								items cardinality matches {1..*; unordered} matches {
+									ELEMENT[at0.15] occurrences matches {0..1} matches {	-- Name
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0.21] occurrences matches {0..1} matches {	-- Movement or stress
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {[local::]}
+											}
+										}
+									}
+									ELEMENT[at0.17] occurrences matches {0..1} matches {	-- Finding
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0.18, 	-- Normal
+													at0.19, 	-- Lax
+													at0.20]	-- Subluxing
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.1"] = <
+					text = <"Flexion">
+					description = <"Movement through contraction of the flexor muscles.">
+				>
+				["at0.10"] = <
+					text = <"Inversion">
+					description = <"Rotation towards the midline.">
+				>
+				["at0.11"] = <
+					text = <"Rotation">
+					description = <"Movement throughout a circle.">
+				>
+				["at0.12"] = <
+					text = <"Opening">
+					description = <"Opening of the joint.">
+				>
+				["at0.13"] = <
+					text = <"Closing">
+					description = <"Closing of the joint.">
+				>
+				["at0.14"] = <
+					text = <"Abnormal movement">
+					description = <"*">
+				>
+				["at0.15"] = <
+					text = <"Name">
+					description = <"Clinical description of any abnormal movement findings.">
+				>
+				["at0.16"] = <
+					text = <"Ligament testing">
+					description = <"*">
+				>
+				["at0.17"] = <
+					text = <"Finding">
+					description = <"*">
+				>
+				["at0.18"] = <
+					text = <"Normal">
+					description = <"*">
+				>
+				["at0.19"] = <
+					text = <"Lax">
+					description = <"*">
+				>
+				["at0.2"] = <
+					text = <"Extension">
+					description = <"Movement through the extensor muscles.">
+				>
+				["at0.20"] = <
+					text = <"Subluxing">
+					description = <"*">
+				>
+				["at0.21"] = <
+					text = <"Movement or stress">
+					description = <"*">
+				>
+				["at0.3"] = <
+					text = <"Abduction">
+					description = <"Movement of the distal part away from the midline.">
+				>
+				["at0.4"] = <
+					text = <"Adduction">
+					description = <"Movement of the distal part towards the midline.">
+				>
+				["at0.5"] = <
+					text = <"Internal rotation">
+					description = <"Rotating the anterior aspect distal to the joint towards the midline.">
+				>
+				["at0.6"] = <
+					text = <"External rotation">
+					description = <"Rotation of the anterior aspect distal to the joint away from the midline.">
+				>
+				["at0.7"] = <
+					text = <"Supination">
+					description = <"Rotation of the distal part into the anatomical position.">
+				>
+				["at0.8"] = <
+					text = <"Pronation">
+					description = <"Rotation of the distal part away from the anatomical position.">
+				>
+				["at0.9"] = <
+					text = <"Eversion">
+					description = <"Rotation away from the midline.">
+				>
+				["at0000"] = <
+					text = <"Movement">
+					description = <"Movement as part of physical examination.">
+				>
+				["at0000.1"] = <
+					text = <"Movement of a joint">
+					description = <"Movement of a joint as part of physical examination.">
+				>
+				["at0001"] = <
+					text = <"Normal statements">
+					description = <"A group of statements that express normality of movement.">
+				>
+				["at0002"] = <
+					text = <"Normal statement">
+					description = <"A statement about normality of movement.">
+				>
+				["at0003"] = <
+					text = <"Clinical description">
+					description = <"Clinical description about the findings on movement.">
+				>
+				["at0004"] = <
+					text = <"Specific movement">
+					description = <"A specific movement being tested.">
+				>
+				["at0005"] = <
+					text = <"Movement">
+					description = <"A specific movement.">
+				>
+				["at0006"] = <
+					text = <"Relative range of movement">
+					description = <"The relative range of movement.">
+				>
+				["at0007"] = <
+					text = <"Description">
+					description = <"A textural description of the movement.">
+				>
+				["at0008"] = <
+					text = <"No movement">
+					description = <"There is no movement.">
+				>
+				["at0009"] = <
+					text = <"Full range of movement">
+					description = <"Movement is not restricted.">
+				>
+				["at0010"] = <
+					text = <"Moderate restriction">
+					description = <"Movement is moderately restricted.">
+				>
+				["at0011"] = <
+					text = <"Type of movement">
+					description = <"The type of movement.">
+				>
+				["at0012"] = <
+					text = <"Active movement">
+					description = <"The movement is undertaken by the person.">
+				>
+				["at0013"] = <
+					text = <"Passive movement">
+					description = <"The clinician is moving the body part.">
+				>
+				["at0016"] = <
+					text = <"Minor restriction">
+					description = <"Movement is slightly restricted.">
+				>
+				["at0017"] = <
+					text = <"Severe restriction">
+					description = <"Movement is severely restricted.">
+				>
+				["at0019"] = <
+					text = <"Associated pain">
+					description = <"Associated pain or discomfort.">
+				>
+				["at0020"] = <
+					text = <"None">
+					description = <"No pain or discomfort on movement.">
+				>
+				["at0021"] = <
+					text = <"Mild">
+					description = <"Mild pain on movement.">
+				>
+				["at0022"] = <
+					text = <"Moderate">
+					description = <"Moderate pain on movement.">
+				>
+				["at0023"] = <
+					text = <"Extreme">
+					description = <"Severe pain which restricts all movement.">
+				>
+				["at0024"] = <
+					text = <"Severe">
+					description = <"Severe pain which limits movement.">
+				>
+				["at0035"] = <
+					text = <"Arc of movement">
+					description = <"The number of degrees that movement is available.">
+				>
+				["at0036"] = <
+					text = <"Findings">
+					description = <"Clinical findings.">
+				>
+				["at0037"] = <
+					text = <"General movement">
+					description = <"Statements about movement in general.">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0.1"] = <
+					text = <"ثني">
+					description = <"الحركة من خلال انقباض العضلات المثنية">
+				>
+				["at0.10"] = <
+					text = <"انقلاب">
+					description = <"دوران تجاه الخط المُنصِّف">
+				>
+				["at0.11"] = <
+					text = <"دوران">
+					description = <"الحركة من خلال دائرة">
+				>
+				["at0.12"] = <
+					text = <"انفتاح">
+					description = <"انفتاح المفصل">
+				>
+				["at0.13"] = <
+					text = <"إغلاق">
+					description = <"إغلاق المفصل">
+				>
+				["at0.14"] = <
+					text = <"حركة غير طبيعية">
+					description = <"*">
+				>
+				["at0.15"] = <
+					text = <"الاسم">
+					description = <"الوصف السريري لأي موجودات لحركة غير طبيعية">
+				>
+				["at0.16"] = <
+					text = <"اختبار الرباط">
+					description = <"*">
+				>
+				["at0.17"] = <
+					text = <"الموجودات">
+					description = <"*">
+				>
+				["at0.18"] = <
+					text = <"طبيعي">
+					description = <"*">
+				>
+				["at0.19"] = <
+					text = <"تراخي">
+					description = <"*">
+				>
+				["at0.2"] = <
+					text = <"البسط/التمديد">
+					description = <"الحركة من خلال العضلات الباسطة">
+				>
+				["at0.20"] = <
+					text = <"خلع جزئي">
+					description = <"*">
+				>
+				["at0.21"] = <
+					text = <"الحركة أو الضغط">
+					description = <"*">
+				>
+				["at0.3"] = <
+					text = <"تبعيد">
+					description = <"حركة الجزء القاصي بعيدا عن الخط الوسطي">
+				>
+				["at0.4"] = <
+					text = <"تقريب">
+					description = <"حركة الجزء القاصي بعيدا عن الخط الوسطي">
+				>
+				["at0.5"] = <
+					text = <"دوارن داخلي">
+					description = <"دوران الجزء الأمامي القاصي عن المفصل نحو الخط المُنَصِّف">
+				>
+				["at0.6"] = <
+					text = <"دوران خارجي">
+					description = <"دوران الجزء الأمامي القاصي عند المفصل بعيدا عن الخط المُنَصِّف">
+				>
+				["at0.7"] = <
+					text = <"بسط">
+					description = <"دوران الجزء القاصي في داخل المكان التشريحي">
+				>
+				["at0.8"] = <
+					text = <"انبطاح/كبّ">
+					description = <"دوران الجزء القاصي بعيدا عن الموقع/المكان التشريحي">
+				>
+				["at0.9"] = <
+					text = <"انقلاب للخارج">
+					description = <"الدوران بعيدا عن الخط المُنَصِّف">
+				>
+				["at0000"] = <
+					text = <"*Movement(en)">
+					description = <"*Movement as part of physical examination.(en)">
+				>
+				["at0000.1"] = <
+					text = <"حركة المفصل">
+					description = <"حركة المفصل كجزء من الفحص البدني">
+				>
+				["at0001"] = <
+					text = <"البيانات الطبيعية">
+					description = <"مجموعة من البيانات التي تعبر عن مدى طبيعية الحركة">
+				>
+				["at0002"] = <
+					text = <"بيان طبيعي">
+					description = <"بيان حول مدى طبيعية الحركة">
+				>
+				["at0003"] = <
+					text = <"الوصف السريري">
+					description = <"الوصف السريري حول موجودات الحركة">
+				>
+				["at0004"] = <
+					text = <"الحركة المخصوصة">
+					description = <"الحركة المخصوصة التي يتم اختبارها">
+				>
+				["at0005"] = <
+					text = <"الحركة">
+					description = <"حركة مخصوصة">
+				>
+				["at0006"] = <
+					text = <"المدى النسبي للحركة">
+					description = <"المدى النسبي للحركة">
+				>
+				["at0007"] = <
+					text = <"الوصف">
+					description = <"وصف نصي للحركة">
+				>
+				["at0008"] = <
+					text = <"لا يوجد حركة">
+					description = <"لا يوجد حركة">
+				>
+				["at0009"] = <
+					text = <"المدى الكامل للحركة">
+					description = <"الحركة غير مقيدة">
+				>
+				["at0010"] = <
+					text = <"تقييد متوسط">
+					description = <"الحركة مقيدة بشكل متوسط">
+				>
+				["at0011"] = <
+					text = <"نوع الحركة">
+					description = <"نوع الحركة">
+				>
+				["at0012"] = <
+					text = <"حركة نشطة">
+					description = <"قام الشخص بالحركة">
+				>
+				["at0013"] = <
+					text = <"حركة سلبية">
+					description = <"الطبيب السريري هو من يحرك الجزء من الجسم">
+				>
+				["at0016"] = <
+					text = <"تقييد قليل">
+					description = <"الحركة مقيدة بشكل طفيف">
+				>
+				["at0017"] = <
+					text = <"تقييد شديد">
+					description = <"الحركة مقيدة بشكل شديد">
+				>
+				["at0019"] = <
+					text = <"الألم المصاحب">
+					description = <"الألم أو عدم الارتياح المصاحب">
+				>
+				["at0020"] = <
+					text = <"لا يوجد">
+					description = <"لا يوجد ألم أو عدم راحة عند الحركة">
+				>
+				["at0021"] = <
+					text = <"طفيف">
+					description = <"يوجد ألم طفيف عند الحركة">
+				>
+				["at0022"] = <
+					text = <"متوسط">
+					description = <"يوجد ألم متوسط عند الحركة">
+				>
+				["at0023"] = <
+					text = <"شديد جدا">
+					description = <"ألم شديد يقيد جميع الحركة">
+				>
+				["at0024"] = <
+					text = <"شديد">
+					description = <"الألم شديد يحد الحركة">
+				>
+				["at0035"] = <
+					text = <"قوس الحركة">
+					description = <"عدد الدرجات التي تكون الحركة متاحة فيها">
+				>
+				["at0036"] = <
+					text = <"الموجودات">
+					description = <"الموجودات السريرية">
+				>
+				["at0037"] = <
+					text = <"الحركة العامة">
+					description = <"بيانات حول الحركة بشكل عام">
+				>
+			>
+		>
+	>

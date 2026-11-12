@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1257,119 +1257,119 @@ The ordinal value '98' is included to represent the non-numerical value 'Not ass
       </items>
       <items code="at0004">
         <items id="text">Gait</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Abnormal but walks without assistance</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Abnormal and requires assistance (companion, cane, walker, etc.)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Unable to walk</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Strength</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Movement present but decreased against resistance</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Movement present but none against resistance</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">No movement</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Ataxia (upper extremity)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Able to finger to nose touch without difficulty</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Able to finger to nose touch but difficult</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Unable to finger to nose touch</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Sensation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Decreased but aware of sensory modality</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Unaware of sensory modality</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Visual fields</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Inconsistent or equivocal partial hemianopsia (≥ quadrantopsia)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Consistent or unequivocal partial hemianopsia (≥ quadrantopsia)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Complete hemianopsia</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Facial strength</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Mild/moderate weakness</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Severe facial weakness</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Language</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Abnormal but easily conveys meaning to examiner</items>
@@ -1381,119 +1381,119 @@ The ordinal value '98' is included to represent the non-numerical value 'Not ass
       </items>
       <items code="at0035">
         <items id="text">Abnormal. If verbal, unable to convey meaning to the examiner OR non-verbal (mute/global aphasia)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Level of consciousness</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Drowsy (easily arousable)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Somnolent (difficult to arouse)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Unarousable/coma</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Behavior</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Mild/moderate alteration</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Severe alteration</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">ITEM_TREE</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Not assessed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Not evaluable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Not assessed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Not evaluable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Not assessed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Not evaluable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Not assessed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Not evaluable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Not assessed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Not evaluable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">Not assessed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Not evaluable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Not assessed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Not evaluable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Not assessed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Not evaluable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Not assessed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Not evaluable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Additional details</items>
@@ -1502,7 +1502,7 @@ The ordinal value '98' is included to represent the non-numerical value 'Not ass
       </items>
       <items code="at0066">
         <items id="text">Overall NANO score</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Neurological response</items>
@@ -1544,15 +1544,15 @@ The ordinal value '98' is included to represent the non-numerical value 'Not ass
       </items>
       <items code="at0004">
         <items id="text">Gange</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Unormal, men går uten hjelp</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Unormal og trenger hjelp til å gå</items>
@@ -1560,103 +1560,103 @@ The ordinal value '98' is included to represent the non-numerical value 'Not ass
       </items>
       <items code="at0008">
         <items id="text">Ikke i stand til å gå</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Styrke</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Bevegelse til stede, men svekket styrke ved motstand</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Bevegelse til stede, men ingen styrke ved motstand</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Ingen bevegelse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Ataksi (overekstremiteter)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">I stand til å utføre finger-nese-prøve uten vanskeligheter</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">I stand til å utføre finger-nese-prøve med vanskeligheter</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Ikke i stand til å utføre finger-nese-prøve</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Sensibilitet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Svekket, men klar over sansemodalitet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Ikke klar over sansemodalitet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Synsfelt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Normalt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Inkonsistent eller usikker delvis hemianopsi (≥kvadrantanopsi)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Konsistent eller sikker delvis hemianopsi (≥kvadrantanopsi)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Fullstendig hemianopsi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Muskelstyrke i ansikt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Mild/moderat svekkelse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Alvorlig svekkelse i ansiktet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Språk</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Normalt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Unormalt, men formidler enkelt mening til undersøker</items>
@@ -1668,119 +1668,119 @@ The ordinal value '98' is included to represent the non-numerical value 'Not ass
       </items>
       <items code="at0035">
         <items id="text">Unormalt. Hvis i stand til å prate, er pasienten likevel ikke i stand til å formidle mening til undersøker, ELLER ikke-verbal (stum/global afasi)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Bevissthetsnivå</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Normalt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Søvnig (enkel å vekke)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Somnolent (vanskelig å vekke)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Ikke mulig å vekke/komatøs</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Atferd</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Mild/moderat endring</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Alvorlig endring</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">ITEM_TREE</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Ikke vurdert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Ikke vurderbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Ikke vurdert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Ikke vurderbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Ikke vurdert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Ikke vurderbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Ikke vurdert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Ikke vurderbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Ikke vurdert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Ikke vurderbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">Ikke vurdert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Ikke vurderbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Ikke vurdert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Ikke vurderbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Ikke vurdert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Ikke vurderbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Ikke vurdert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Ikke vurderbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Ytterligere detaljer</items>
@@ -1789,7 +1789,7 @@ The ordinal value '98' is included to represent the non-numerical value 'Not ass
       </items>
       <items code="at0066">
         <items id="text">Overordnet NANO skår</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Nevrologisk respons</items>
@@ -1814,4 +1814,3 @@ The ordinal value '98' is included to represent the non-numerical value 'Not ass
     </term_definitions>
   </ontology>
 </archetype>
-

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -142,8 +142,7 @@ Fall för klinisk användning:&#xD;
 -2 cm medialt till höger bröstvårta.&#xD;
 -5 cm inuti analöppningen.&#xD;
 &#xD;
-I en situation där CLUSTER.anatomical_location endast kan användas för att namnge en större eller ospecifik kroppsdel kan användningen av denna arketyp i SLOT för "Alternativ struktur" stödja registreringen av en mer exakt plats - t.ex. 2 cm främre än fossa cubitalis på vänster arm eller 4 cm under revbensbågen i medioklavikularlinjen på bröstväggen.&#xD;
-</use>
+I en situation där CLUSTER.anatomical_location endast kan användas för att namnge en större eller ospecifik kroppsdel kan användningen av denna arketyp i SLOT för "Alternativ struktur" stödja registreringen av en mer exakt plats - t.ex. 2 cm främre än fossa cubitalis på vänster arm eller 4 cm under revbensbågen i medioklavikularlinjen på bröstväggen.</use>
       <misuse>Används inte för att registrera "ensidig" eller "bilateral", eftersom dessa termer kvalificerar sig för slutsatser snarare än anatomiska platser.&#xD;
 &#xD;
 Används inte för att ange en enda fysisk plats på kroppen som vänster lårben eller den mediala delen av näsan. Använd arketypen CLUSTER.anatomical_location för detta.&#xD;
@@ -220,8 +219,7 @@ Casos de uso clínico:&#xD;
 - 2 cm medial ao mamilo direito&#xD;
 - aspecto medial da unha do dedo indicador da mão.&#xD;
 &#xD;
-Na situação em que o CLUSTER.anatomical_location só pode ser usado para nomear uma parte do corpo grande e / ou não específica, o uso deste arquétipo dentro do SLOT 'Estrutura alternativa' suportará a gravação de uma localização mais precisa - por exemplo, 2 Cm anterior à fossa cubital do antebraço esquerdo ou 4 cm abaixo da margem costal R na parede torácica na linha médio clavicular.&#xD;
-</use>
+Na situação em que o CLUSTER.anatomical_location só pode ser usado para nomear uma parte do corpo grande e / ou não específica, o uso deste arquétipo dentro do SLOT 'Estrutura alternativa' suportará a gravação de uma localização mais precisa - por exemplo, 2 Cm anterior à fossa cubital do antebraço esquerdo ou 4 cm abaixo da margem costal R na parede torácica na linha médio clavicular.</use>
       <misuse>Não utilizar para especificar ocorrências de características anatômicas de lateralidade.&#xD;
 Não utilizar para especificar um local simples de locais do corpo já nominados, tais como, femur esquerdo ou a fossa medial do nariz. Utilize neste caso o CLUSTER.anatomical_location.</misuse>
       <copyright />
@@ -811,7 +809,7 @@ Not to be used to represent location of anatomical features at the microscopic l
       </items>
       <items code="at0013">
         <items id="text">خلفي</items>
-        <items id="description">المكان النسبي هو خلف المَعْلَم </items>
+        <items id="description">المكان النسبي هو خلف المَعْلَم</items>
       </items>
       <items code="at0020">
         <items id="text">*Relative location(en)</items>
@@ -1133,8 +1131,7 @@ Not to be used to represent location of anatomical features at the microscopic l
         <items id="text">Retning</items>
         <items id="description">Detalj om den relative retningen fra kroppsstedet til landemerket.</items>
         <items id="comment">Vanlige aspekter er tatt med som verdisett som kan utvides over tid, og fritekstbeskrivelse er også en mulighet. Det antas at kroppen beskrives når den er i den anatomiske posisjonen. Det tillates maksimalt registrering av 6 retninger. Med dette verdisettet er det 8 gjensidige parvise utelukkelser - for eksempel kan et kroppssted ikke både være "medialt for" og "lateralt for" et identifisert landemerke. Andre parvise gjensidige utelukkelser er "ovenfor" og "nedenfor", "anteriort" og "posteriort", "proksimalt" og "distalt", "overfladisk" og "dypt", "kranialt" og "kaudalt", "rostralt og kaudalt", og "inni" og "utenfor".&#xD;
-Kombinasjoner valgt innenfor hvert av de 8 parene er i prinsippet gyldige, selv om det i praksis er usannsynlig at det er behov for registrering av mer enn to retninger samtidig for å beskrive retningen til et kroppssted.&#xD;
-</items>
+Kombinasjoner valgt innenfor hvert av de 8 parene er i prinsippet gyldige, selv om det i praksis er usannsynlig at det er behov for registrering av mer enn to retninger samtidig for å beskrive retningen til et kroppssted.</items>
       </items>
       <items code="at0007">
         <items id="text">Medialt for</items>
@@ -1359,18 +1356,13 @@ Kombinasjoner valgt innenfor hvert av de 8 parene er i prinsippet gyldige, selv 
     <term_definitions language="sv">
       <items code="at0000">
         <items id="text">Relativ anatomisk lokalisation</items>
-        <items id="description">En identifierad fysisk plats på eller i människokroppen, i förhållande till andra kroppsdelar och ytmarkeringar.&#xD;
-&#xD;
-</items>
+        <items id="description">En identifierad fysisk plats på eller i människokroppen, i förhållande till andra kroppsdelar och ytmarkeringar.</items>
       </items>
       <items code="at0006">
         <items id="text">Riktning</items>
-        <items id="description">Detalj om den relativa riktningen från kroppsstället till landmärket.&#xD;
-&#xD;
-</items>
+        <items id="description">Detalj om den relativa riktningen från kroppsstället till landmärket.</items>
         <items id="comment">Vanliga aspekter ingår som värdeuppsättningar som kan utökas över tid och beskrivning av fritext är också ett alternativ. Man antar att kroppen beskrivs när den är i den anatomiska positionen. En maximal registrering av 6 riktningar är tillåten. Med denna uppsättning värden finns det 8 ömsesidiga parvisa undantag - till exempel kan ett kroppsställe inte vara både "medialt till" och "lateralt till" ett identifierat riktmärke. Andra parvisa ömsesidiga uteslutningar är "ovan" och "nedan", "främre" och "bakre", "proximal" och "distal", "ytlig" och "djup", "kranial" och "kaudal", "rostral och kaudal" och "inuti" och "utanför".&#xD;
-Kombinationer som valts inom vart och ett av de 8 paren är i princip giltiga, även om det i praktiken är osannolikt att det finns ett behov av registrering av mer än två riktningar samtidigt för att beskriva riktningen för en kroppsplats.&#xD;
-</items>
+Kombinationer som valts inom vart och ett av de 8 paren är i princip giltiga, även om det i praktiken är osannolikt att det finns ett behov av registrering av mer än två riktningar samtidigt för att beskriva riktningen för en kroppsplats.</items>
       </items>
       <items code="at0007">
         <items id="text">Medial</items>
@@ -1398,9 +1390,7 @@ Kombinationer som valts inom vart och ett av de 8 paren är i princip giltiga, �
       </items>
       <items code="at0020">
         <items id="text">Relativ plats</items>
-        <items id="description">Detaljerad identifiering av en enda fysisk plats, antingen på eller i människokroppen, baserad på dess förhållande till andra makroskopiska anatomiska landmärken.&#xD;
-&#xD;
-</items>
+        <items id="description">Detaljerad identifiering av en enda fysisk plats, antingen på eller i människokroppen, baserad på dess förhållande till andra makroskopiska anatomiska landmärken.</items>
         <items id="comment">Fler än en relativ plats kan krävas för att tillhandahålla en korrekt korsreferens.</items>
       </items>
       <items code="at0021">
@@ -1447,9 +1437,7 @@ Kombinationer som valts inom vart och ett av de 8 paren är i princip giltiga, �
       </items>
       <items code="at0062">
         <items id="text">Lateralitet</items>
-        <items id="description">Den sida av kroppen där det identifierade landmärket är lokaliserat.&#xD;
-&#xD;
-</items>
+        <items id="description">Den sida av kroppen där det identifierade landmärket är lokaliserat.</items>
         <items id="comment">Om det identifierade landmärket inte har lateralitet saknar detta dataelement värde. Om "Namn på landmärke" använder förkoordinerade termer som innehåller lateralitet är detta dataelement överflödigt.</items>
       </items>
       <items code="at0063">
@@ -1556,8 +1544,7 @@ Kombinationer som valts inom vart och ett av de 8 paren är i princip giltiga, �
       </items>
       <items code="at0059">
         <items id="text">Innerhalb</items>
-        <items id="description">Einwärts von der äußeren Öffnung einer Körperhöhle, zum Beispiel des äußeren Gehörgangs, einer Fistel oder einer Wunde, relativ zum Orientierungspunkt.&#xD;
-</items>
+        <items id="description">Einwärts von der äußeren Öffnung einer Körperhöhle, zum Beispiel des äußeren Gehörgangs, einer Fistel oder einer Wunde, relativ zum Orientierungspunkt.</items>
       </items>
       <items code="at0060">
         <items id="text">Außen gelegen nach</items>
@@ -1570,8 +1557,7 @@ Kombinationer som valts inom vart och ett av de 8 paren är i princip giltiga, �
       </items>
       <items code="at0063">
         <items id="text">Am Mund</items>
-        <items id="description">In Richtung Mund, relativ zum Orientierungspunkt. Wird normalerweise zur Beschreibung von Stellen im Verdauungssystem verwendet.&#xD;
-</items>
+        <items id="description">In Richtung Mund, relativ zum Orientierungspunkt. Wird normalerweise zur Beschreibung von Stellen im Verdauungssystem verwendet.</items>
       </items>
       <items code="at0064">
         <items id="text">Am Anus</items>
@@ -1626,4 +1612,3 @@ Kombinationer som valts inom vart och ett av de 8 paren är i princip giltiga, �
     </term_bindings>
   </ontology>
 </archetype>
-

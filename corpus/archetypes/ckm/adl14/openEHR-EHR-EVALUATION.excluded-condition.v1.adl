@@ -1,0 +1,161 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-EVALUATION.excluded-condition.v1
+specialise
+	openEHR-EHR-EVALUATION.excluded.v1
+
+concept
+	[at0000.1]	-- Statement of exclusion of specific condition
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.com">
+		["date"] = <"23/04/2006">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording the exclusion of incidence of a health problem for this person. This may be limited to a particular time period.">
+			use = <"">
+			keywords = <"no", "past", "history", "hospitalisations", "problem">
+			misuse = <"">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"AuthorDraft">
+	other_contributors = <>
+	other_details = <
+		["MD5-CAM-1.0.1"] = <"075A8967794BF01D7F2DBED1360BE0CB">
+		["references"] = <"">
+	>
+
+definition
+	EVALUATION[at0000.1] matches {	-- Statement of exclusion of specific condition
+		data matches {
+			ITEM_TREE[at0001] matches {	-- Tree
+				items cardinality matches {2..*; unordered} matches {
+					ELEMENT[at0002] matches {	-- Statement
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0003.1, 	-- No evidence of
+									at0009.1, 	-- No significant past history of
+									at0010.1, 	-- No hospitalisations for
+									at0011.1, 	-- No surgery for
+									at0012.1, 	-- No significant family history of
+									at0.6]	-- No episodes of
+								}
+							}
+						}
+					}
+					ELEMENT[at0.4] matches {	-- Condition
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0.5] occurrences matches {0..1} matches {	-- Duration
+						value matches {
+							C_DV_QUANTITY <
+								property = <[openehr::128]>
+							>
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.4"] = <
+					text = <"Condition">
+					description = <"The specified condition">
+				>
+				["at0.5"] = <
+					text = <"Duration">
+					description = <"The duration of the exclusion">
+				>
+				["at0.6"] = <
+					text = <"No episodes of">
+					description = <"No known episodes of a condition">
+				>
+				["at0000"] = <
+					text = <"General statement of exclusions or states">
+					description = <"A category of conditions or states which have been excluded">
+				>
+				["at0000.1"] = <
+					text = <"Statement of exclusion of specific condition">
+					description = <"Allows recording of exclusion of a specific condition">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Statement">
+					description = <"The statement about what is excluded.">
+				>
+				["at0003"] = <
+					text = <"No significant illness">
+					description = <"The person has no significant medical condition">
+				>
+				["at0003.1"] = <
+					text = <"No evidence of">
+					description = <"There is no evidence that the person has a specific condition">
+				>
+				["at0004"] = <
+					text = <"No significant past history">
+					description = <"The person has no significant past medical history">
+				>
+				["at0005"] = <
+					text = <"No significant family history">
+					description = <"The person has no relatives with significant health problems">
+				>
+				["at0006"] = <
+					text = <"No known adverse reactions">
+					description = <"The person has had no adverse reactions to medications, food, animals or chemicals">
+				>
+				["at0006.1"] = <
+					text = <"No known allergies">
+					description = <"No allergies known to any medications, foods or substances">
+				>
+				["at0009"] = <
+					text = <"No relevant past history">
+					description = <"No past problems or procedures relevant to the current situation">
+				>
+				["at0009.1"] = <
+					text = <"No significant past history of">
+					description = <"The person has no significant past history of the specific condition">
+				>
+				["at0010"] = <
+					text = <"No hospitalisations">
+					description = <"No admissions to hospital">
+				>
+				["at0010.1"] = <
+					text = <"No hospitalisations for">
+					description = <"No admissions to hospital for a specific condition">
+				>
+				["at0011"] = <
+					text = <"No major surgery">
+					description = <"No major operations or procedures">
+				>
+				["at0011.1"] = <
+					text = <"No surgery for">
+					description = <"No major operations or procedures for the specific condition">
+				>
+				["at0012"] = <
+					text = <"No relevant family history">
+					description = <"No family history relevant to the current situation">
+				>
+				["at0012.1"] = <
+					text = <"No significant family history of">
+					description = <"No family history of the specified condition">
+				>
+			>
+		>
+	>

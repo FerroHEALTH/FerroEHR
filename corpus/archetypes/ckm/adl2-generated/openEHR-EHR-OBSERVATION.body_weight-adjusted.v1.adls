@@ -1,0 +1,123 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8bdf715e-87d0-44d7-bacb-2b4b94228a2d; build_uid=3c27d480-d6e1-43db-a84d-b5f829194a2e)
+    openEHR-EHR-OBSERVATION.body_weight-adjusted.v1.0.0
+
+specialize
+    openEHR-EHR-OBSERVATION.body_weight.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2009-6-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Jeroen Meintjens, Medisch Centrum Alkmaar, Netherlands", "Marja Buur-Krom, Medisch Centrum Alkmaar, Netherlands", "Sebastian Garde, Ocean Informatics, Germany", "Ian McNicoll, Ocean Informatics, Scotland", "Paul Donaldson, Queensland Health, Australia", "Heather Grain, Llewellyn Informatics, Australia", "Anne Harbison, Australia", "Andrew James, University of Toronto, Canada", "Sam Heard, Ocean Informatics, Australia">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"EAC87AC0ED2395CE91BA47B358D9CB67">
+    >
+    details = <
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            purpose = <"Для записи скорректированного веса тела(ru)">
+            keywords = <"*weight(en)", "*adjusted(en)">
+            use = <"Используется для записи скорректированной массы тела - то есть, расчет полной и окончательной массы тела человека с ампутации конечностей, основанном на других измерениях и алгоритме.">
+            misuse = <"Не использовать для записи фактического веса человека, или прибавки / потери массы - использовать для этого архетип OBSERVATION.body_weight.
+Не использовать для записи первого вес ребенка вскоре после рождения - использовать для этого архетип OBSERVATION.body_weight.
+Не использовать для записи веса предмета или части тела(ru)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the adjusted body weight of an individual.">
+            keywords = <"weight", "adjusted">
+            use = <"To be used to record the adjusted measurement of body weight - that is, a calculation of the full and complete body weight of a person with limb amputation, based on other measurements and an algorithm.">
+            misuse = <"Not to be used to record the actual weight of an individual, or weight gain/loss - use OBSERVATION.body_weight.
+Not to be used to record the first weight of an infant soon after birth - use the specialisation of this archetype OBSERVATION.body_weight-birth.
+Not to be used to record the weight of an object or body part.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل وزن الجسم المُصحَّح للشخص">
+            keywords = <"الوزن", "المُصحَّح">
+            use = <"يستخدم لتسجيل القياس المُصحَّح لوزن الجسم - و ذلك يعني حساب وزن الجسم الإجمالي و الكامل للشخص الذي يعاني من بتر في أحد أطرافه, بناء على قياسات أخرى باستخدام خُوارزمية">
+            misuse = <"لا يستخدم لتسجيل الوزن الفعلي للشخص, أو زيادة/نقص الوزن - استخدم لذلك نموذج ملاحظة.وزن الجسم.
+لا يستخدم لتسجيل الوزن الأول لحديث الولادة بعد ولادته بفترة قليلة - استخدم لذلك تخصيص النموذج ملاحظة.وزن الجسم عند الولادة.
+لا يستخدم لتسجيل وزن شيء ما أو جزء من الجسم.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- Adjusted Body weight
+        /data[at0002]/events[at0003]/data[at0001]/items matches {
+            ELEMENT[at0004.1] matches {    -- Adjusted Weight
+                value matches {
+                    DV_QUANTITY[at0.9000] matches {
+                        property matches {[at9000]}
+                        [magnitude, units] matches {
+                            [{|0.0..1000.0|}, {"kg"}],
+                            [{|0.0..2000.0|}, {"lb"}]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ru"] = <
+            ["at0000.1"] = <
+                text = <"Вес тела с добавлениями">
+                description = <"Измерение массы тела пациента с протезами / внешними устройствами.">
+            >
+            ["at0004.1"] = <
+                text = <"Вес дополнения">
+                description = <"Вес дополнения.">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Adjusted Body weight">
+                description = <"Measurement of the adjusted body weight of an individual.">
+            >
+            ["at0004.1"] = <
+                text = <"Adjusted Weight">
+                description = <"The adjusted weight of the individual.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000.1"] = <
+                text = <"وزن الجسم المُصحَّح">
+                description = <"قياس وزن الجسم المُصحَّح للشخص">
+            >
+            ["at0004.1"] = <
+                text = <"الوزن المُصحَّح">
+                description = <"الوزن المُصحَّح للشخص">
+            >
+        >
+    >

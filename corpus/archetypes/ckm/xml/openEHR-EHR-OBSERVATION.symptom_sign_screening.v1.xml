@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1278,11 +1278,11 @@ No debe utilizarse para registrar detalles sobre una lista de selección simple 
       </items>
       <items code="at0023">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Additional details</items>
@@ -1290,7 +1290,7 @@ No debe utilizarse para registrar detalles sobre una lista de selección simple 
       </items>
       <items code="at0027">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Any symptoms or signs?</items>
@@ -1307,15 +1307,15 @@ Date/time for the date the symptom started. Interval of date/time for a period o
       </items>
       <items code="at0031">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Screening purpose</items>
@@ -1342,11 +1342,11 @@ For example: 'pre-admission screening' or the name of the actual questionnaire.<
       </items>
       <items code="at0040">
         <items id="text">Unsure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Unsure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="fi">
@@ -1392,11 +1392,11 @@ For example: 'pre-admission screening' or the name of the actual questionnaire.<
       </items>
       <items code="at0023">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">*Additional details (en)</items>
@@ -1404,7 +1404,7 @@ For example: 'pre-admission screening' or the name of the actual questionnaire.<
       </items>
       <items code="at0027">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">*Any symptoms or signs? (en)</items>
@@ -1425,15 +1425,15 @@ For example:&#xD;
       </items>
       <items code="at0031">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">*Screening purpose(en)</items>
@@ -1459,11 +1459,11 @@ For example:&#xD;
       </items>
       <items code="at0040">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nb">
@@ -1509,11 +1509,11 @@ For example:&#xD;
       </items>
       <items code="at0023">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Ytterligere detaljer</items>
@@ -1521,7 +1521,7 @@ For example:&#xD;
       </items>
       <items code="at0027">
         <items id="text">Ukjent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Symptomer eller sykdomstegn?</items>
@@ -1536,15 +1536,15 @@ For eksempel: Dato/klokkeslett brukes for dato for når symptomene først ble op
       </items>
       <items code="at0031">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Ukjent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Kartleggingsformål</items>
@@ -1571,11 +1571,11 @@ For eksempel: "Pre operativ screening" eller navnet på det faktiske spørreskje
       </items>
       <items code="at0040">
         <items id="text">Usikker</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Usikker</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="de">
@@ -1621,11 +1621,11 @@ For eksempel: "Pre operativ screening" eller navnet på det faktiske spørreskje
       </items>
       <items code="at0023">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Nein</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Zusätzliche Angaben</items>
@@ -1633,7 +1633,7 @@ For eksempel: "Pre operativ screening" eller navnet på det faktiske spørreskje
       </items>
       <items code="at0027">
         <items id="text">Unbekannt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Irgendwelche Symptome oder Anzeichen?</items>
@@ -1650,15 +1650,15 @@ Datum/Uhrzeit für Beginn des Symptoms. Intervall von Datum/Uhrzeit für einen Z
       </items>
       <items code="at0031">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Nein</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Unbekannt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Zweck des Screenings</items>
@@ -1676,8 +1676,7 @@ Zum Beispiel: "Screening vor der Aufnahme" oder der Name des eigentlichen Frageb
       </items>
       <items code="at0037">
         <items id="text">Zeitpunkt</items>
-        <items id="description">Angabe des Zeitpunkts im Zusammenhang mit dem spezifischen Symptom oder Zeichen.&#xD;
-</items>
+        <items id="description">Angabe des Zeitpunkts im Zusammenhang mit dem spezifischen Symptom oder Zeichen.</items>
         <items id="comment">Das Datenelement „Zeitpunkt“ wurde bewusst locker modelliert, um die unzähligen Möglichkeiten zu unterstützen, wie es in Fragebögen verwendet werden kann, um zu erfassen, wann das spezifische Symptom oder Zeichen aufgetreten ist. Die spezifische und beabsichtigte Semantik kann in einem Template weiter verdeutlicht werden. Zum Beispiel: das tatsächliche Datum und/oder die tatsächliche Uhrzeit; die Start- und Stoppzeit für das Auftreten eines bestimmten Symptoms oder Zeichens; der Zeitraum, in dem das spezifische Symptom oder Zeichen auftrat; die Dauer des spezifischen Symptoms oder Anzeichens; das Alter der Person zum Zeitpunkt des Auftretens des spezifischen Symptoms oder Anzeichens; oder die Zeitspanne, seit es aufgetreten ist. Bei Verwendung des Datentyps DV_DATE_TIME ist ein Teildatum gültig, um nur ein Jahr aufzuzeichnen.</items>
       </items>
       <items code="at0039">
@@ -1686,11 +1685,11 @@ Zum Beispiel: "Screening vor der Aufnahme" oder der Name des eigentlichen Frageb
       </items>
       <items code="at0040">
         <items id="text">Unsicher</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Unsicher</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="it">
@@ -1736,11 +1735,11 @@ Zum Beispiel: "Screening vor der Aufnahme" oder der Name des eigentlichen Frageb
       </items>
       <items code="at0023">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">*Additional details (en)</items>
@@ -1748,7 +1747,7 @@ Zum Beispiel: "Screening vor der Aufnahme" oder der Name des eigentlichen Frageb
       </items>
       <items code="at0027">
         <items id="text">Indeterminato</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">*Any symptoms or signs? (en)</items>
@@ -1769,15 +1768,15 @@ For example:&#xD;
       </items>
       <items code="at0031">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Indeterminato</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Scopo dello screening</items>
@@ -1803,11 +1802,11 @@ For example:&#xD;
       </items>
       <items code="at0040">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="sv">
@@ -1830,9 +1829,7 @@ For example:&#xD;
       </items>
       <items code="at0004">
         <items id="text">Symptom/tecken-benämning</items>
-        <items id="description">Benämning på det symptom eller annat tecken (eller grupp av dessa) som screenas.&#xD;
-&#xD;
-</items>
+        <items id="description">Benämning på det symptom eller annat tecken (eller grupp av dessa) som screenas.</items>
         <items id="comment">Kodning av 'Symtom/teckennamn' med en terminologi är att föredra, om möjligt.</items>
       </items>
       <items code="at0005">
@@ -1855,11 +1852,11 @@ For example:&#xD;
       </items>
       <items code="at0023">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Nej</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Ytterligare detaljer</items>
@@ -1867,7 +1864,7 @@ For example:&#xD;
       </items>
       <items code="at0027">
         <items id="text">Okänt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Förekommer några symptom eller andra tecken?</items>
@@ -1884,15 +1881,15 @@ Datum/tid för när symtomet började. Intervall för datum/tid under en tidsper
       </items>
       <items code="at0031">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Nej</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Okänt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Screeningssyfte</items>
@@ -1920,11 +1917,11 @@ Exempel: "screening inför inskrivning" eller namnet på själva frågeformulär
       </items>
       <items code="at0040">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="fr">
@@ -1970,11 +1967,11 @@ Exempel: "screening inför inskrivning" eller namnet på själva frågeformulär
       </items>
       <items code="at0023">
         <items id="text">Oui</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Non</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Détails supplémentaires</items>
@@ -1982,7 +1979,7 @@ Exempel: "screening inför inskrivning" eller namnet på själva frågeformulär
       </items>
       <items code="at0027">
         <items id="text">Inconnu</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Des symptômes ou des signes ?</items>
@@ -1999,15 +1996,15 @@ Date/heure pour la date d'apparition du symptôme. Intervalle de date/heure pour
       </items>
       <items code="at0031">
         <items id="text">Oui</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Non</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Inconnu</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Objectif du dépistage</items>
@@ -2034,11 +2031,11 @@ Par exemple : « dépistage avant l'admission » ou le nom du questionnaire prop
       </items>
       <items code="at0040">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="zh-cn">
@@ -2084,11 +2081,11 @@ Par exemple : « dépistage avant l'admission » ou le nom du questionnaire prop
       </items>
       <items code="at0023">
         <items id="text">是</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">否</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">其他详情</items>
@@ -2096,7 +2093,7 @@ Par exemple : « dépistage avant l'admission » ou le nom du questionnaire prop
       </items>
       <items code="at0027">
         <items id="text">未知</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">是否存在任何的症状或体征？</items>
@@ -2113,15 +2110,15 @@ Par exemple : « dépistage avant l'admission » ou le nom du questionnaire prop
       </items>
       <items code="at0031">
         <items id="text">是</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">否</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">未知</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">筛查目的</items>
@@ -2148,11 +2145,11 @@ Par exemple : « dépistage avant l'admission » ou le nom du questionnaire prop
       </items>
       <items code="at0040">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="ca">
@@ -2198,11 +2195,11 @@ Par exemple : « dépistage avant l'admission » ou le nom du questionnaire prop
       </items>
       <items code="at0023">
         <items id="text">Sí</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Detalls addicionals</items>
@@ -2210,7 +2207,7 @@ Par exemple : « dépistage avant l'admission » ou le nom du questionnaire prop
       </items>
       <items code="at0027">
         <items id="text">Desconegut</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Algun símptoma o signe?</items>
@@ -2227,15 +2224,15 @@ Data/hora de la data en què va començar el símptoma. Interval de data/hora pe
       </items>
       <items code="at0031">
         <items id="text">Sí</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Desconegut</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Objectiu del cribratge</items>
@@ -2261,11 +2258,11 @@ Data/hora de la data en què va començar el símptoma. Interval de data/hora pe
       </items>
       <items code="at0040">
         <items id="text">Dubtós</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Dubtós</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="es">
@@ -2311,11 +2308,11 @@ Data/hora de la data en què va començar el símptoma. Interval de data/hora pe
       </items>
       <items code="at0023">
         <items id="text">Sí</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Detalles adicionales</items>
@@ -2323,7 +2320,7 @@ Data/hora de la data en què va començar el símptoma. Interval de data/hora pe
       </items>
       <items code="at0027">
         <items id="text">Desconocido</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">¿Algún síntoma o signo?</items>
@@ -2340,15 +2337,15 @@ Fecha/hora de inicio del síntoma. Intervalo de fecha/hora para un período de t
       </items>
       <items code="at0031">
         <items id="text">Sí</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Desconocido</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Objetivo del cribado</items>
@@ -2375,11 +2372,11 @@ Por ejemplo: "cribado previo al ingreso" o el nombre del cuestionario.</items>
       </items>
       <items code="at0040">
         <items id="text">Dudoso</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Dudoso</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_bindings terminology="SNOMED-CT">
@@ -2434,4 +2431,3 @@ Por ejemplo: "cribado previo al ingreso" o el nombre del cuestionario.</items>
     </term_bindings>
   </ontology>
 </archetype>
-

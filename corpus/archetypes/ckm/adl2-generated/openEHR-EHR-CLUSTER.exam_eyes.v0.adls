@@ -1,0 +1,245 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9f233ec0-a27d-40e6-8ea5-58cede4bfe01; build_uid=56a69254-97f2-4530-b1fc-3b0e123f5c72)
+    openEHR-EHR-CLUSTER.exam_eyes.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Hallvard Lærum">
+                ["organisation"] = <"Oslo University Hospital HF">
+                ["email"] = <"hallaeru@online.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2013-02-05">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Bergen Hospital Trust, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "John Tore Valand, Haukeland Universitetssjukehus, Norway", "Heather Leslie, Ocean Informatics, Australia">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics<heather.leslie@oceaninformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"7CA8C13F3DE872A19221C4E5BCDC1D39">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Å registrere en tekstlig beskrivelse og tolkning av funn gjort ved undersøkelse av begge øyne, inkludert sammenligninger mellom dem.">
+            keywords = <"undersøkelse", "fysisk", "klinisk", "funn", "test", "øye", "øyeundersøkelse">
+            use = <"Brukes til å registrere en tekstlig beskrivelse av overordnede funn gjort ved undersøkelse av øynene. 
+
+Brukes som rammeverk til å sette inn CLUSTER-arketyper under 'Undersøkelsesfunn'-SLOT'en for å registrere detaljerte undersøkelser strukturert. CLUSTER-arketyper kan settes inni hverandre avhengig av hvor detaljerte undersøkelser man ønsker.
+
+I tillegg kan CLUSTER.exclusion_exam-arketypen settes inn i 'Undersøkelse ikke utført'-SLOT'en for å registrere detaljene om undersøkelser som ikke er blitt gjennomført.
+
+Brukes også til å importere tekstlige beskrivelser av kliniske funn fra eksisterende eller tidligere kliniske systemer til arketypeformat, ved å benytte elementet 'Klinisk beskrivelse'.">
+            misuse = <"Må ikke brukes til å registrere data som er relatert til et enkelt øye - bruk CLUSTER.exam_eye i stedet.
+
+Må ikke brukes til å registere data om spesifikke tester av øyet - bruk egne arketyper til det. For eksempel brukes OBSERVATION.visual_acuity til visus og OBSERVATION.visual_field til synsfeltsundersøkelser.
+
+Må ikke brukes til å registrere sykehistorie - bruk spesifikke OBSERVATION eller CLUSTER-arketyper i stedet. For eksempel brukes OBSERVATION.story til sykehistorie og CLUSTER.symptom til symptomene pasienten har opplevd tidligere.
+
+Må ikke brukes til å registrere frittstående kliniske observasjoner, målinger eller testresultater - bruk spesifikke OBSERVATION-arketyper i stedet. For eksempel brukes OBSERVATION.blood_pressure til blodtrykksmålinger og OBSERVATION.imaging_exam til røntgenfunn.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording a narrative description and clinical interpretation of the findings observed during the physical examination of both eyes, including comparative findings between both eyes.">
+            keywords = <"examination", "physical", "clinical", "findings", "exam", "eye">
+            use = <"Use to record a narrative description of the overall findings observed during the physical examination of the eyes. 
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings - for example, CLUSTER.exam_pupils. 
+
+In addition, the CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording data not related to the physical examination of a single eye  - use CLUSTER.exam_eye for this purpose.
+
+Not to be used to record data about eye testing - use specific purpose-built OBSERVATION archetypes. For example, OBSERVATION .visual_acuity or OBSERVATION.visual_field_measurement.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom.
+
+Not to be used to record stand-alone clinical observations or measurements or test results - use specific OBSERVATION archetypes. For example OBSERVATION.blood_pressure or OBSERVATION.imaging_exam.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of both eyes
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- No abnormality detected
+                name matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9004]}    -- No abnormality detected (synthesised)
+                    }
+                }
+                value matches {
+                    DV_BOOLEAN[at9000] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Symmetry?
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- Examination details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_eye(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0005] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0006] matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            allow_archetype CLUSTER[at0008] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Undersøkelse av begge øyne">
+                description = <"Funn gjort ved klinisk undersøkelse av begge øyne.">
+            >
+            ["at0002"] = <
+                text = <"Normale funn">
+                description = <"Vanlig benyttet utsagn om at det ikke er funnet noe unormalt (uten anmerkning, ua) ved undersøkelse av begge øyne.">
+                comment = <"Registrerer som Sann hvis det ikke er funnet noe unormalt under undersøkelsen. Spesifikke utsagn om undersøkelsen kan legges til i feltet 'Klinisk tolkning'.">
+            >
+            ["at0003"] = <
+                text = <"Klinisk beskrivelse">
+                description = <"Tekstlig beskrivelse av overordnede funn gjort ved undersøkelse.">
+            >
+            ["at0004"] = <
+                text = <"Detaljerte funn">
+                description = <"Strukturerte detaljer om funn fra undersøkelsen.">
+            >
+            ["at0005"] = <
+                text = <"Multimedia">
+                description = <"Digitalt bilde, video eller figur som viser funn fra undersøkelsen.">
+            >
+            ["at0006"] = <
+                text = <"Klinisk tolkning">
+                description = <"Enkeltord, frase eller kort beskrivelse som angir den kliniske betydningen eller tolkningen av funnene fra undersøkelsen.">
+            >
+            ["at0007"] = <
+                text = <"Kommentar">
+                description = <"Tekstlige tilleggsopplysninger som ikke er registrert i andre felter.">
+            >
+            ["at0008"] = <
+                text = <"Undersøkelse ikke utført">
+                description = <"Detaljer for å beskrive at denne undersøkelsen ikke ble utført.">
+            >
+            ["at0011"] = <
+                text = <"Symmetri?">
+                description = <"Beskrivelse av i hvilken grad øynene er symmetriske.">
+            >
+            ["at0012"] = <
+                text = <"Like pupiller, reagerer på lys">
+                description = <"Pupiller runde og sidelike, reagerer normalt på lys.">
+            >
+            ["at0013"] = <
+                text = <"Like pupiller, reagerer på lys og nærinnstilling">
+                description = <"Pupiller runde og sidelike, reagerer normalt på lys og nærinnstilling">
+            >
+            ["at0014"] = <
+                text = <"Uten anmerkning">
+                description = <"Vanlig benyttet utsagn om at det ikke er funnet noe unormalt (uten anmerkning, ua) ved undersøkelse av begge øyne.">
+            >
+            ["ac9004"] = <
+                text = <"Normale funn (synthesised)">
+                description = <"Vanlig benyttet utsagn om at det ikke er funnet noe unormalt (uten anmerkning, ua) ved undersøkelse av begge øyne. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination of both eyes">
+                description = <"Findings observed during the physical examination of both eyes.">
+            >
+            ["at0002"] = <
+                text = <"No abnormality detected">
+                description = <"Commonly used statement that no abnormality was detected (NAD) on examination of both eyes.">
+                comment = <"Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element.">
+            >
+            ["at0003"] = <
+                text = <"Clinical description">
+                description = <"Narrative description of the overall findings observed during the physical examination.">
+            >
+            ["at0004"] = <
+                text = <"Examination details">
+                description = <"Structured details about the physical examination findings.">
+            >
+            ["at0005"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the physical examination findings.">
+            >
+            ["at0006"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the physical examination findings, not captured in other fields.">
+            >
+            ["at0008"] = <
+                text = <"Examination not done">
+                description = <"Details to explicitly record that this examination was not performed.">
+            >
+            ["at0011"] = <
+                text = <"Symmetry?">
+                description = <"Description of the appearance of symmetry of both eyes in comparison to one another.">
+            >
+            ["at0012"] = <
+                text = <"PERL">
+                description = <"Pupils are equal and reactive to light.">
+            >
+            ["at0013"] = <
+                text = <"PERLA">
+                description = <"Pupils are equal and reactive to light and accomodation.">
+            >
+            ["at0014"] = <
+                text = <"No abnormality detected">
+                description = <"Commonly used statement no abnormality was detected (NAD) on examination of both pupils.">
+            >
+            ["ac9004"] = <
+                text = <"No abnormality detected (synthesised)">
+                description = <"Commonly used statement that no abnormality was detected (NAD) on examination of both eyes. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0012", "at0013", "at0014">
+        >
+    >

@@ -1,0 +1,86 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-INSTRUCTION.non_drug_therapy.v1
+
+concept
+	[at0000]	-- Non-drug therapy
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Jasmin Buck, Sebastian Garde">
+				["organisation"] = <"University of Heidelberg, Central Queensland University">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"unknown">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Dokumentation von Anweisungen zu nicht-medikamentösen Therapien">
+			use = <"">
+			keywords = <"nicht-medikamentös", "Sauerstoff">
+			misuse = <"">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record instructions about non-drug therapy">
+			use = <"">
+			keywords = <"non-drug", "oxygen">
+			misuse = <"">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <>
+	other_details = <
+		["references"] = <"">
+		["MD5-CAM-1.0.1"] = <"F2CBA85244EEB01D74179AE22D984E06">
+	>
+
+definition
+	INSTRUCTION[at0000] matches {	-- Non-drug therapy
+		activities cardinality matches {0..*; unordered} matches {
+			ACTIVITY[at0001] occurrences matches {0..1} matches {	-- new activity
+				description matches {
+					allow_archetype ITEM_TREE occurrences matches {0..1} matches {
+						include
+							archetype_id/value matches {/openEHR-EHR-ITEM_TREE\.gas_administration\.v1/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"nicht-medikamentöse Therapie">
+					description = <"Zur Verschreibung nicht-medikamentöser Therapien">
+				>
+				["at0001"] = <
+					text = <"neue Handlung">
+					description = <"*">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Non-drug therapy">
+					description = <"For orders of non-drug therapy">
+				>
+				["at0001"] = <
+					text = <"new activity">
+					description = <"*">
+				>
+			>
+		>
+	>

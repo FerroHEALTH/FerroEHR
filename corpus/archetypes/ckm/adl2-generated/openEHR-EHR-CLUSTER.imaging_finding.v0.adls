@@ -1,0 +1,379 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=670088a0-ca0b-469f-ad01-9724c24e7354; build_uid=486f0f6f-f717-4bde-ae64-7439becbf8a1)
+    openEHR-EHR-CLUSTER.imaging_finding.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Åsa Skagerhult, Linda Aulin">
+                ["organisation"] = <"Region Östergötland, Region Stockholm">
+                ["email"] = <"asa.skagerhult@regionostergotland.se, linda.aulin@sll.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-03-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Fatemeh Chalabianloo, Helse Bergen, Norway", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Nasjonal IKT, Norway", "Silje Kaada, Helse-Bergen, Avdeling for immunologi og transfusjonsmedisin, Norway", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Anjali Kulkarni, Karkinos, India", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ole Martin Sand, DIPS ASA, Norway", "Paul Miller, SCIMP NHS Scotland, United Kingdom", "Lars Morgan Karlsen, DIPS ASA, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Andrej Orel, Marand d.o.o., Slovenia", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Line Sæle, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Anders Thurin, VGR, Sweden", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Wouter Zanen, Eurotranplant, Netherlands", "Lin Zhang, Taikang Insurance Group, China">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"53ED6F95BEBEE2249906207F9AC486D0">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. (en)">
+            keywords = <"*finding, imaging, body, system, observation, diagnostic, radiology, image (en)", ...>
+            use = <"*Use to record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. 
+
+In practice, the design intent is for the CLUSTER.imaging_exam family of archetypes to be used to record all detailed findings on radiological examination. The family of specialised archetypes, derived from the generic parent archetype, are intentionally designed to be inclusive of all reasonably anticipated and relevant findings for each structure or region.
+
+In situations where it is not possible to use one of the CLUSTER.imaging_exam family of archetypes, use this alternative CLUSTER.imaging_finding archetype to capture simple details about a single finding. In this way it is possible to record findings that are not yet available in an incomplete specialisation or to capture information about unanticipated or unexpected findings. 
+
+This archetype has been designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or in 'Additional details' SLOT within a relevant CLUSTER.imaging_exam specialisation, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. (en)">
+            misuse = <"*Not to be used to record clinical findings that are already modelled within one of the CLUSTER.imaging_exam family of archetypes. (en)">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. (en)">
+            keywords = <"*finding, imaging, body, system, observation, diagnostic, radiology, image (en)", ...>
+            use = <"*Use to record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. 
+
+In practice, the design intent is for the CLUSTER.imaging_exam family of archetypes to be used to record all detailed findings on radiological examination. The family of specialised archetypes, derived from the generic parent archetype, are intentionally designed to be inclusive of all reasonably anticipated and relevant findings for each structure or region.
+
+In situations where it is not possible to use one of the CLUSTER.imaging_exam family of archetypes, use this alternative CLUSTER.imaging_finding archetype to capture simple details about a single finding. In this way it is possible to record findings that are not yet available in an incomplete specialisation or to capture information about unanticipated or unexpected findings. 
+
+This archetype has been designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or in 'Additional details' SLOT within a relevant CLUSTER.imaging_exam specialisation, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. (en)">
+            misuse = <"*Not to be used to record clinical findings that are already modelled within one of the CLUSTER.imaging_exam family of archetypes. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. (en)">
+            keywords = <"*finding, imaging, body, system, observation, diagnostic, radiology, image (en)", ...>
+            use = <"*Use to record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. 
+
+In practice, the design intent is for the CLUSTER.imaging_exam family of archetypes to be used to record all detailed findings on radiological examination. The family of specialised archetypes, derived from the generic parent archetype, are intentionally designed to be inclusive of all reasonably anticipated and relevant findings for each structure or region.
+
+In situations where it is not possible to use one of the CLUSTER.imaging_exam family of archetypes, use this alternative CLUSTER.imaging_finding archetype to capture simple details about a single finding. In this way it is possible to record findings that are not yet available in an incomplete specialisation or to capture information about unanticipated or unexpected findings. 
+
+This archetype has been designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or in 'Additional details' SLOT within a relevant CLUSTER.imaging_exam specialisation, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. (en)">
+            misuse = <"*Not to be used to record clinical findings that are already modelled within one of the CLUSTER.imaging_exam family of archetypes. (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes.">
+            keywords = <"finding, imaging, body, system, observation, diagnostic, radiology, image", ...>
+            use = <"Use to record details about a single, clinically significant finding identified on radiological examination that cannot be otherwise recorded using the CLUSTER.imaging_exam family of archetypes. 
+
+In practice, the design intent is for the CLUSTER.imaging_exam family of archetypes to be used to record all detailed findings on radiological examination. The family of specialised archetypes, derived from the generic parent archetype, are intentionally designed to be inclusive of all reasonably anticipated and relevant findings for each structure or region.
+
+In situations where it is not possible to use one of the CLUSTER.imaging_exam family of archetypes, use this alternative CLUSTER.imaging_finding archetype to capture simple details about a single finding. In this way it is possible to record findings that are not yet available in an incomplete specialisation or to capture information about unanticipated or unexpected findings. 
+
+This archetype has been designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or in 'Additional details' SLOT within a relevant CLUSTER.imaging_exam specialisation, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.">
+            misuse = <"Not to be used to record clinical findings that are already modelled within one of the CLUSTER.imaging_exam family of archetypes.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Imaging finding
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0024] occurrences matches {1} matches {    -- Finding
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Presence?
+                value matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[ac9000]}    -- Presence? (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0033] occurrences matches {0..1} matches {    -- Body site
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            allow_archetype CLUSTER[at0034] matches {    -- Structured body site
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0014] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0003] matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Bildgebender Befund">
+                description = <"*Details about a single finding identified on radiological examination. (en)">
+            >
+            ["at0001"] = <
+                text = <"Vorhanden?">
+                description = <"*The presence or absence of a clinically significant finding. (en)">
+                hl7v2_mapping = <"OBX.2, OBX.5, OBX.6, OBX.7, OBX.8">
+                fhir_mapping = <"Observation.value[x]">
+            >
+            ["at0003"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about the imaging finding, not captured in other fields. (en)">
+                hl7v2_mapping = <"NTE.3">
+                fhir_mapping = <"Observation.note">
+            >
+            ["at0014"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional structured details about imaging finding. (en)">
+            >
+            ["at0024"] = <
+                text = <"Befund">
+                description = <"*Identification of a significant clinical finding, by name. (en)">
+                comment = <"*Coding of 'Finding' with a terminology, such as SNOMED CT, is recommended. For example: free fluid; or abscess. (en)">
+                hl7v2_mapping = <"OBX.3">
+                fhir_mapping = <"Observation.code">
+            >
+            ["at0028"] = <
+                text = <"*Description (en)">
+                description = <"*Narrative description about the clinically significant finding. (en)">
+            >
+            ["at0033"] = <
+                text = <"Körperstelle">
+                description = <"Beschreibung des beobachteten klinischen Befundes.">
+                comment = <"*For example: Recto-uterine pouch. Coding of 'Body site' with a terminology, such as SNOMED CT, is desirable. (en)">
+            >
+            ["at0034"] = <
+                text = <"Körperstelle strukturiert">
+                description = <"*Structured details about the area of the body under examination. (en)">
+                comment = <"*For example: details about a relative anatomical location, such as '2cm distal to the appendix'. If the body site has been fully identified in the 'Body site' data element, then this SLOT becomes redundant. (en)">
+            >
+            ["at0035"] = <
+                text = <"Vorhanden">
+                description = <"*The finding is observed. (en)">
+            >
+            ["at0036"] = <
+                text = <"Nicht vorhanden">
+                description = <"*The finding is not observed. (en)">
+            >
+            ["at0037"] = <
+                text = <"Unbestimmt">
+                description = <"Es ist nicht möglich festzustellen, ob der Befund vorhanden ist oder nicht.">
+            >
+            ["ac9000"] = <
+                text = <"Vorhanden? (synthesised)">
+                description = <"*The presence or absence of a clinically significant finding. (en) (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Bilddiagnostiskt fynd">
+                description = <"*Details about a single finding identified on radiological examination. (en)">
+            >
+            ["at0001"] = <
+                text = <"Förekomst?">
+                description = <"*The presence or absence of a clinically significant finding. (en)">
+                hl7v2_mapping = <"OBX.2, OBX.5, OBX.6, OBX.7, OBX.8">
+                fhir_mapping = <"Observation.value[x]">
+            >
+            ["at0003"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about the imaging finding, not captured in other fields. (en)">
+                hl7v2_mapping = <"NTE.3">
+                fhir_mapping = <"Observation.note">
+            >
+            ["at0014"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional structured details about imaging finding. (en)">
+            >
+            ["at0024"] = <
+                text = <"Namn på fynd">
+                description = <"*Identification of a significant clinical finding, by name. (en)">
+                comment = <"*Coding of 'Finding' with a terminology, such as SNOMED CT, is recommended. For example: free fluid; or abscess. (en)">
+                hl7v2_mapping = <"OBX.3">
+                fhir_mapping = <"Observation.code">
+            >
+            ["at0028"] = <
+                text = <"*Description (en)">
+                description = <"*Narrative description about the clinically significant finding. (en)">
+            >
+            ["at0033"] = <
+                text = <"Anatomisk lokalisation">
+                description = <"Enkel beskrivning av den anatomiska lokalisationen.">
+                comment = <"*For example: Recto-uterine pouch. Coding of 'Body site' with a terminology, such as SNOMED CT, is desirable. (en)">
+            >
+            ["at0034"] = <
+                text = <"Strukturerad anatomisk lokalisation">
+                description = <"*Structured details about the area of the body under examination. (en)">
+                comment = <"*For example: details about a relative anatomical location, such as '2cm distal to the appendix'. If the body site has been fully identified in the 'Body site' data element, then this SLOT becomes redundant. (en)">
+            >
+            ["at0035"] = <
+                text = <"Förekomst">
+                description = <"*The finding is observed. (en)">
+            >
+            ["at0036"] = <
+                text = <"Avsaknad">
+                description = <"*The finding is not observed. (en)">
+            >
+            ["at0037"] = <
+                text = <"Obestämbar">
+                description = <"Det är inte möjligt att avgöra om förekomst av fyndet finns i bilden eller inte.">
+            >
+            ["ac9000"] = <
+                text = <"Förekomst? (synthesised)">
+                description = <"*The presence or absence of a clinically significant finding. (en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Bildefunn">
+                description = <"*Details about a single finding identified on radiological examination. (en)">
+            >
+            ["at0001"] = <
+                text = <"Tilstedeværelse?">
+                description = <"*The presence or absence of a clinically significant finding. (en)">
+            >
+            ["at0003"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about the imaging finding, not captured in other fields. (en)">
+            >
+            ["at0014"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional structured details about imaging finding. (en)">
+            >
+            ["at0024"] = <
+                text = <"Funn">
+                description = <"*Identification of a significant clinical finding, by name. (en)">
+                comment = <"*Coding of 'Finding' with a terminology, such as SNOMED CT, is recommended. For example: free fluid; or abscess. (en)">
+            >
+            ["at0028"] = <
+                text = <"*Description (en)">
+                description = <"*Narrative description about the clinically significant finding. (en)">
+            >
+            ["at0033"] = <
+                text = <"Kroppsområde/organ">
+                description = <"Enkel beskrivelse av den anatomiske lokaliseringen av funnet.">
+                comment = <"*For example: Recto-uterine pouch. Coding of 'Body site' with a terminology, such as SNOMED CT, is desirable. (en)">
+            >
+            ["at0034"] = <
+                text = <"Strukturert kroppsområde/organ">
+                description = <"*Structured details about the area of the body under examination. (en)">
+                comment = <"*For example: details about a relative anatomical location, such as '2cm distal to the appendix'. If the body site has been fully identified in the 'Body site' data element, then this SLOT becomes redundant. (en)">
+            >
+            ["at0035"] = <
+                text = <"Til stede">
+                description = <"*The finding is observed. (en)">
+            >
+            ["at0036"] = <
+                text = <"Fraværende">
+                description = <"*The finding is not observed. (en)">
+            >
+            ["at0037"] = <
+                text = <"Usikkert">
+                description = <"Det er ikke mulig å avgjøre om funnet er til stede eller fraværende.">
+            >
+            ["ac9000"] = <
+                text = <"Tilstedeværelse? (synthesised)">
+                description = <"*The presence or absence of a clinically significant finding. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Imaging finding">
+                description = <"Details about a single finding identified on radiological examination.">
+            >
+            ["at0001"] = <
+                text = <"Presence?">
+                description = <"The presence or absence of a clinically significant finding.">
+            >
+            ["at0003"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the imaging finding, not captured in other fields.">
+            >
+            ["at0014"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about imaging finding.">
+            >
+            ["at0024"] = <
+                text = <"Finding">
+                description = <"Identification of a significant clinical finding, by name.">
+                comment = <"Coding of 'Finding' with a terminology, such as SNOMED CT, is recommended. For example: free fluid; or abscess.">
+            >
+            ["at0028"] = <
+                text = <"Description">
+                description = <"Narrative description about the clinically significant finding.">
+            >
+            ["at0033"] = <
+                text = <"Body site">
+                description = <"Simple description of anatomical location of the finding.">
+                comment = <"For example: Recto-uterine pouch. Coding of 'Body site' with a terminology, such as SNOMED CT, is desirable.">
+            >
+            ["at0034"] = <
+                text = <"Structured body site">
+                description = <"Structured details about the area of the body under examination.">
+                comment = <"For example: details about a relative anatomical location, such as '2cm distal to the appendix'. If the body site has been fully identified in the 'Body site' data element, then this SLOT becomes redundant.">
+            >
+            ["at0035"] = <
+                text = <"Present">
+                description = <"The finding is observed.">
+            >
+            ["at0036"] = <
+                text = <"Absent">
+                description = <"The finding is not observed.">
+            >
+            ["at0037"] = <
+                text = <"Indeterminate">
+                description = <"It is not possible to determine if the finding is present or absent.">
+            >
+            ["ac9000"] = <
+                text = <"Presence? (synthesised)">
+                description = <"The presence or absence of a clinically significant finding. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0035", "at0036", "at0037">
+        >
+    >

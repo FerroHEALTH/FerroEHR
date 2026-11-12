@@ -1,0 +1,749 @@
+﻿archetype (adl_version=1.4; uid=69dfbb94-5540-47c4-b9eb-be25849b1890)
+	openEHR-EHR-OBSERVATION.laboratory_test-histopathology.v1
+specialise
+	openEHR-EHR-OBSERVATION.laboratory_test.v0
+
+concept
+	[at0000.1]	-- Histopathology test
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Ian McNicoll">
+		["organisation"] = <"freshEHR Clinical Informatics">
+		["email"] = <"ian@freshehr.com">
+		["date"] = <"2014-10-15">
+	>
+	details = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لتسجيل نتيجة اختبار المعمل, و التي قد يتم استخدامها لتسجيل اختبار ذي قيمة واحدة, و عادة ما يتم بعد ذلك المزيد من التخصيص أو الوضع في قالب لتمثيل اختبار متعدد القيم أو رتل من الاختبارات.
+و يمثل هذا النموذج كوالد (أب) للتخصيصات الأخرى لاختبارات معملية أكثر تحديدا مثل الميكروبيولوجيا و الهيستوباثولوجيا.">
+			use = <"قد يستخدم لتسجيل نتيجة اختبار المعمل, و التي قد يتم استخدامها لتسجيل اختبار ذي قيمة واحدة, و عادة ما يتم بعد ذلك المزيد من التخصيص أو الوضع في قالب لتمثيل اختبار متعدد القيم أو رتل من الاختبارات.
+
+يتم بعد ذلك تقديم التقرير للطبيب السريري الذي قام بطلب الاختبار في سياق تقرير معملي متكامل.">
+			keywords = <"المعمل - المختبر", "الباثولوجيا - المرضية", "الكيمياء الحيوية", "الدمويات", "الميكروبيولوجيا", "المناعيات - علم المناعة">
+			misuse = <"قد تكون التخصيصات أكثر مناسبة للتقارير المركبة مثل حالات الميكروبيولوجيا أو الهيستوباثولوجيا.">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record the findings and interpretation of histopathology (anatomic pathology) tests performed on tissues and body fluids.">
+			use = <"Use to record any histopathology  test result, including intra-operative, microscopic, macroscopic examinations of tissue.
+
+Detailed structured findings are captured within child cluster archetypes.
+
+Ancillary laboratory tests may also be captured via the Ancillary Laboratory Test Findings slot.
+
+Will normally be reported back to the requesting clinician as one component within the context of an overall COMPOSITION-based report.">
+			keywords = <"lab", "pathology", "biochemistry", "haematology", "microbiology", "immunology", "laboratory", "anatomical", "chemical", "clinical", "immunopathology", "cytology", "histopathology", "test", "biopsy", "specimen", "forensic", "genetic">
+			misuse = <"Not to be used for reporting on non-histopathology test results e.g. biochemistry or haematology tests.
+
+Not to be used to represent an entire cumulative report. This laboratory test result archetype represents only one of the result sets that is usually viewed as a vertical in a cumulative test report. A cumulative report is a view that is constructed from the results represented by multiple OBSERVATION archetypes.
+
+Not to be used to record an Autopsy report, although tests on some specimens that are taken at autopsy may be represented using this archetype.">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Koray Atalag, University of Auckland, New Zealand", "Sharmila Biswas, Dr Sharmila Biswas GP, Australia", "Doug Chesher, PaLMS, Australia", "Stephen Chu, NEHTA, Australia (Editor)", "Matthew Cordell, NEHTA, Australia", "Andre de Wolf, NeHTA, Australia", "Gail Easterbrook, Flinders Medical Centre, Australia", "David Evans, Queensland Health, Australia", "Shahla Foozonkhah, Ocean Informatics, Australia", "Heath Frankel, Ocean Informatics, Australia", "Grahame Grieve, Health Intersections Pyty Ltd, Australia (Editor)", "Sam Heard, Ocean Informatics, Australia", "Mary Kelaher, NEHTA, Australia", "Michael Legg, Michael Legg & associates, Australia", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Mike Martyn, The Hobart Anaesthetic Group, Australia", "Andrew McIntyre, Medical-Objects, Australia", "David McKillop, NEHTA, Australia", "Ian McNicoll, Ocean Informatics UK, United Kingdom", "Chris Mitchell, RACGP, Australia", "Stewart Morrison, NEHTA, Australia", "Michael Osborne, Mater Health Services, Australia", "Kyle Shore, Charm Health, Australia", "Michael Thompson, Queensland Health, Australia", "Gordon Tomes, Australian Institute of Health and Welfare, Australia", "Richard Townley-O'Neill, NEHTA, Australia", "David Rowed, VAMC Clinic, Australia (Editor)", "Mona Saleh (Translator)">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["revision"] = <"0.0.1">
+		["references"] = <"Based on NEHTA 'Pathology Test' archetype. Available from: http://dcm.nehta.org.au/ckm/OKM.html#showarchetype_1013.1.839_8
+
+Pathology (Data Specifications) Version 1.0 [Internet]. Sydney, Australia: National E-Health Transition Authority; 2007 May 29 [cited 2011 Jul 11]; Available at http://www.nehta.gov.au/component/docman/doc_download/962-pathology-v10.
+
+Laboratory Technical Framework, Volume 3: Content, Revision 3.0 [Internet]. USA: IHE International; 2011 May 19; [cited 2011 Jul 11]. Available from: http://www.ihe.net/Technical_Framework/index.cfm#laboratory
+
+Hl7 FHIR Diagnostic Report resource: HL7 FHIR; Available from http://www.hl7.org/implement/standards/fhir/diagnosticreport.html">
+		["build_uid"] = <"a3fb9eb4-8b44-48f2-8f72-3aed8c0700c4">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["MD5-CAM-1.0.1"] = <"B659D4EEECBF32ADBB29370A8DCB70DF">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Histopathology test
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..*} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {3..*; unordered} matches {
+									ELEMENT[at0005] matches {	-- Test name
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0077] occurrences matches {0..1} matches {	-- Diagnostic service category
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									allow_archetype CLUSTER[at0065] occurrences matches {0..*} matches {	-- Specimen detail
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v0/}
+									}
+									ELEMENT[at0073] occurrences matches {0..1} matches {	-- Test status
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0107, 	-- Registered
+													at0037, 	-- Partial
+													at0038, 	-- Final
+													at0115, 	-- Corrected
+													at0040, 	-- Amended
+													at0074, 	-- Cancelled
+													at0116]	-- Entered in error
+												}
+											}
+										}
+									}
+									ELEMENT[at0075] occurrences matches {0..1} matches {	-- Test status timestamp
+										value matches {
+											DV_DATE_TIME matches {*}
+										}
+									}
+									ELEMENT[at0100] occurrences matches {0..1} matches {	-- Clinical information provided
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									CLUSTER[at0.118] occurrences matches {0..*} matches {	-- Histopathology findings
+										name matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0.120, 	-- Intra-operative findings
+													at0.121, 	-- Macroscopic findings
+													at0.122, 	-- Microscopic findings
+													at0.119]	-- Histopathology  findings
+												}
+											}
+										}
+										items cardinality matches {1..*; unordered} matches {
+											CLUSTER[at0.123] occurrences matches {0..*} matches {	-- Histopathology finding
+												items cardinality matches {1..*; unordered} matches {
+													ELEMENT[at0.124] occurrences matches {0..1} matches {	-- Tissue available
+														value matches {
+															DV_BOOLEAN matches {
+																value matches {True, False}
+															}
+														}
+													}
+													allow_archetype CLUSTER[at0.125] occurrences matches {0..*} matches {	-- Specimen detail
+														include
+															archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v0/}
+													}
+													ELEMENT[at0.126] occurrences matches {0..1} matches {	-- Description
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+													allow_archetype CLUSTER[at0.127] occurrences matches {0..*} matches {	-- Structured findings
+														include
+															archetype_id/value matches {/.*/}
+													}
+													ELEMENT[at0.128] occurrences matches {0..*} matches {	-- Pathological interpretation
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+												}
+											}
+											ELEMENT[at0.129] occurrences matches {0..1} matches {	-- Description
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+										}
+									}
+									allow_archetype CLUSTER[at0097.1] occurrences matches {0..*} matches {	-- Ancillary laboratory test findings
+										include
+											archetype_id/value matches {/.*/}
+									}
+									ELEMENT[at0057] occurrences matches {0..1} matches {	-- Conclusion
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0098] occurrences matches {0..*} matches {	-- Pathological diagnosis
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									allow_archetype CLUSTER[at0.130] occurrences matches {0..*} matches {	-- Staging
+										include
+											archetype_id/value matches {/.*/}
+									}
+									ELEMENT[at0101] occurrences matches {0..1} matches {	-- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0010] occurrences matches {0..*} matches {	-- Test representation
+										value matches {
+											DV_MULTIMEDIA matches {
+												media_type matches {[openEHR::]}
+											}
+										}
+									}
+								}
+							}
+						}
+						state matches {
+							ITEM_TREE[at0112] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0113] occurrences matches {0..*} matches {	-- Confounding factors
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									allow_archetype CLUSTER[at0114] occurrences matches {0..*} matches {	-- Patient state details
+										include
+											archetype_id/value matches {/.*/}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0004] matches {	-- Tree
+				items cardinality matches {0..*; unordered} matches {
+					allow_archetype CLUSTER[at0017] occurrences matches {0..1} matches {	-- Responsible laboratory
+						include
+							archetype_id/value matches {/.*/}
+					}
+					ELEMENT[at0068] occurrences matches {0..1} matches {	-- Laboratory test identifier
+						value matches {
+							DV_IDENTIFIER matches {*}
+						}
+					}
+					CLUSTER[at0094] occurrences matches {0..*} matches {	-- Test request details
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0106] occurrences matches {0..*} matches {	-- Original test requested Name
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0062] occurrences matches {0..1} matches {	-- Requester order identifier
+								value matches {
+									DV_IDENTIFIER matches {*}
+								}
+							}
+							ELEMENT[at0063] occurrences matches {0..1} matches {	-- Receiver order identifier
+								value matches {
+									DV_IDENTIFIER matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0090] occurrences matches {0..1} matches {	-- Requester
+								include
+									archetype_id/value matches {/.*/}
+							}
+							allow_archetype CLUSTER[at0035] occurrences matches {0..*} matches {	-- Distribution list
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.distribution(-[a-zA-Z0-9_]+)*\.v1/}
+							}
+						}
+					}
+					ELEMENT[at0111] occurrences matches {0..1} matches {	-- Point of care device
+						value matches {
+							DV_BOOLEAN matches {
+								value matches {True, False; False}
+							}
+						}
+					}
+					allow_archetype CLUSTER[at0110] occurrences matches {0..*} matches {	-- Test method/device details
+						include
+							archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1/}
+					}
+					allow_archetype CLUSTER[at0117] occurrences matches {0..*} matches {	-- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["ar-sy"] = <
+			items = <
+				["at0.118"] = <
+					text = <"*Histopathology findings(en)">
+					description = <"*Findings of a broad category of histopathological examination e.g. \"Microscopic findings\".(en)">
+				>
+				["at0.119"] = <
+					text = <"*Histopathology  findings(en)">
+					description = <"*Gneral histopathology findings.(en)">
+				>
+				["at0.120"] = <
+					text = <"*Intra-operative findings(en)">
+					description = <"*Findings related to tissue examined intra-operatively.(en)">
+				>
+				["at0.121"] = <
+					text = <"*Macroscopic findings(en)">
+					description = <"*Findings recorded on examination of a gross specimen.(en)">
+				>
+				["at0.122"] = <
+					text = <"*Microscopic findings(en)">
+					description = <"*Findings recorded after microsopic examination.(en)">
+				>
+				["at0.123"] = <
+					text = <"*Histopathology finding(en)">
+					description = <"*Details of an individual histopathology finding, often related to a specific anatomical location or specimen.(en)">
+				>
+				["at0.124"] = <
+					text = <"*Tissue available(en)">
+					description = <"*True if the tissue is available for examination.(en)">
+				>
+				["at0.125"] = <
+					text = <"*Specimen detail(en)">
+					description = <"*Details of specimen(s) realted to this finding.(en)">
+				>
+				["at0.126"] = <
+					text = <"*Description(en)">
+					description = <"*A narrative description of the histopathology finding.(en)">
+				>
+				["at0.127"] = <
+					text = <"*Structured findings(en)">
+					description = <"*Detailed structured findings.(en)">
+				>
+				["at0.128"] = <
+					text = <"*Pathological interpretation(en)">
+					description = <"*Single word, phrase of brief description representing the interpretation of the histopathology finding. A coded term is preferred.(en)">
+				>
+				["at0.129"] = <
+					text = <"*Description(en)">
+					description = <"*A narrative description of the group of histopathology findings.(en)">
+				>
+				["at0.130"] = <
+					text = <"*Staging(en)">
+					description = <"*Details of pathological staging, particularly for malignancy.(en)">
+				>
+				["at0000"] = <
+					text = <"*Laboratory Test Report(en)">
+					description = <"*The findings and interpretation of a pathology laboratory test performed on patient-related specimens.(en)">
+					comment = <"*This archetype may be used to record a single valued test, but will often be specialised or templated to represent multiple value or 'panel' tests. This archetype also acts as the parent for specialisations appropriate for more specific laboratory tests, e.g. microbiology, histopathology.(en)">
+				>
+				["at0000.1"] = <
+					text = <"*Histopathology Test(en)">
+					description = <"*The findings and interpretation of a histopathology  test performed on patient-related specimens.(en)">
+					comment = <"*This archetype may be used to record a single valued test, but will often be specialised or templated to represent multiple value or 'panel' tests. This archetype also acts as the parent for specialisations appropriate for more specific laboratory tests, e.g. microbiology, histopathology.!(en)">
+				>
+				["at0001"] = <
+					text = <"*Event Series(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"إحدى الوقائع">
+					description = <"إحدى الوقائع">
+				>
+				["at0003"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0005"] = <
+					text = <"*Test Report Name(en)">
+					description = <"*Identification of the pathology test performed, sometimes including specimen type and patient state.(en)">
+					comment = <"*A test result may be for a single analyte, or a group of items, including panel tests. Coding with a terminology, potientially a pre-coordinated term including specimen type, is preferred, where possible. May be coded with LOINC or Snomed-CT. Examples include \"Glucose\", \"Urea and Electrolytes\", \"Swab\",  “Cortisol (am)” or \"Liver Biopsy\".(en)">
+					fhirmapping = <"*Diagnostic.Reportname(en)">
+					fhirvalueset = <"*reportnames(en)">
+				>
+				["at0010"] = <
+					text = <"*Test Report Representation(en)">
+					description = <"*Rich text or other multimedia  representation of the entire result as issued by the diagnostic service.(en)">
+					comment = <"*Multiple formats are allowed but they must be semantically equivalent.(en)">
+				>
+				["at0017"] = <
+					text = <"*Responsible Laboratory(en)">
+					description = <"*Demographic details of the laboratory with responsibility for the test.(en)">
+				>
+				["at0035"] = <
+					text = <"*Distribution List(en)">
+					description = <"*Details of a clinician or organisation who will receive a copy of the laboratory test result.(en)">
+				>
+				["at0037"] = <
+					text = <"*Partial(en)">
+					description = <"*This is a partial (e.g. initial, interim or preliminary) Test Result: data in the Test Result may be incomplete or unverified.(en)">
+				>
+				["at0038"] = <
+					text = <"*Final(en)">
+					description = <"*The Test result is complete and verified by an authorised person.(en)">
+				>
+				["at0040"] = <
+					text = <"*Amended(en)">
+					description = <"*The result has been modified subsequent to being Final, and is complete and verified by the responsible pathologist, and result data has been changed.(en)">
+				>
+				["at0057"] = <
+					text = <"*Conclusion(en)">
+					description = <"*Concise and clinically contextualised narrative interpretation of the laboratory test results.(en)">
+				>
+				["at0062"] = <
+					text = <"*Requester Order Identifier(en)">
+					description = <"*The local ID assigned to the test order by the order requester.(en)">
+					comment = <"*Equivalent to the HL7 Placer Order Identifier.(en)">
+				>
+				["at0063"] = <
+					text = <"*Receiver Order Identifier(en)">
+					description = <"*The local ID assigned to the test order by the order filler, usually by the Laboratory Information System (LIS).(en)">
+					comment = <"*Assigning an identifier to a request by the Laboratory lnformation System (LIS) enables tracking progress of the request and enables linking results to requests. It also provides a reference to assist with enquiries and it is usually equivalent to the HL7 Filler Order Identifier.(en)">
+				>
+				["at0065"] = <
+					text = <"*Specimen Detail(en)">
+					description = <"*Details about the specimen if all individual test results are derived from the same specimen. If the specimen type is sufficiently specified with a code in the Test result name, then this additional data is not required.  If there are multiple specimens, these may be represented per 'Result group'.(en)">
+				>
+				["at0068"] = <
+					text = <"*Laboratory Test Report Identifier(en)">
+					description = <"*The local identifier given to the laboratory test result  by the Laboratory Information System.(en)">
+				>
+				["at0073"] = <
+					text = <"*Test Report Status(en)">
+					description = <"*The status of the laboratory test result as a whole.(en)">
+				>
+				["at0074"] = <
+					text = <"*Cancelled(en)">
+					description = <"*The result is unavailable because the test was not started or not completed (also sometimes called 'aborted').(en)">
+				>
+				["at0075"] = <
+					text = <"*Test Report Timestamp(en)">
+					description = <"*The date and/or time that the entire result was issued for the recorded ‘Test Report Status’.(en)">
+					fhir_mapping = <"*DiagnosticReport.issued(en)">
+				>
+				["at0077"] = <
+					text = <"*Diagnostic Service Category(en)">
+					description = <"*The diagnostic service that performs the examination.(en)">
+					comment = <"*For example, biochemistry, haematology. This helps clinicians filter for broad categories of results accoridng to local laboratory arrangements. Coding with a terminology is desirable, where possible.
+(en)">
+				>
+				["at0090"] = <
+					text = <"*Requester(en)">
+					description = <"*Details of the clinician or organisation requesting the laboratory test result.(en)">
+				>
+				["at0094"] = <
+					text = <"*Test Request Details(en)">
+					description = <"*Details concerning a single laboratory test requested.(en)">
+					comment = <"*Usually there is one test request (or \"order\") for each result, however in some circumstances multiple test requests may be represented using a single Pathology test result archetype.(en)">
+				>
+				["at0097"] = <
+					text = <"*Test Report Findings(en)">
+					description = <"*Details about the  reported results, possibly an individual analyte, a group, panel or battery of multiple results, or a more complex and specific structure.(en)">
+				>
+				["at0097.1"] = <
+					text = <"*Ancillary laboratory test findings(en)">
+					description = <"*Details about additional laboratory results, possibly an individual analyte, a group, panel or battery of multiple results, or a more complex and specific structure.(en)">
+				>
+				["at0098"] = <
+					text = <"*Pathological Diagnosis(en)">
+					description = <"*Single word, phrase or brief description representing the narrative in the 'Conclusion'.(en)">
+					comment = <"*Coding with a terminology is preferred, where possible.(en)">
+				>
+				["at0100"] = <
+					text = <"*Clinical Information Provided(en)">
+					description = <"*Description of clinical information available at the time of interpretation of results, which may include a link to the original clinical information provided in the test request.(en)">
+					comment = <"*In HL7 fhir this information is held within the linked requestDetail.clinical Notes.(en)">
+				>
+				["at0101"] = <
+					text = <"*Comment(en)">
+					description = <"*Additional narrative about the test not captured in other fields.(en)">
+				>
+				["at0106"] = <
+					text = <"*Original Test Requested Name(en)">
+					description = <"*Identification of the original laboratory test requested, where the test requested differs from the test actually performed.(en)">
+				>
+				["at0107"] = <
+					text = <"*Registered(en)">
+					description = <"*The existence of the test is registered in the Laboratory Information System, but there is nothing yet available.(en)">
+				>
+				["at0110"] = <
+					text = <"*Test Method/Device Details(en)">
+					description = <"*Additional structured details of laboratory test methodology followed. For example, structured details about the laboratory method and data interpretation used.(en)">
+				>
+				["at0111"] = <
+					text = <"*Point of Care Device(en)">
+					description = <"*True if a point of care device supplies the test result rather than a formal laboratory service.(en)">
+				>
+				["at0112"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0113"] = <
+					text = <"*Confounding factors(en)">
+					description = <"*Aspects of the condition or cicumstances of the patient that may alter interpretation of the laboratory test.(en)">
+				>
+				["at0114"] = <
+					text = <"*Patient state details(en)">
+					description = <"*Details of patient state that may alter interpretation of the laboratory test.(en)">
+				>
+				["at0115"] = <
+					text = <"*Corrected(en)">
+					description = <"*The result has been modified subsequent to being Final, and is complete and verified by the responsible pathologist.(en)">
+				>
+				["at0116"] = <
+					text = <"*Entered in error(en)">
+					description = <"*The Test Result has been withdrawn following previous Final release.(en)">
+				>
+				["at0117"] = <
+					text = <"*Extension(en)">
+					description = <"*Slot to allow extension to support localisation or alignment with other standards/ reference models.(en)">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0.118"] = <
+					text = <"Histopathology findings">
+					description = <"Findings of a broad category of histopathological examination e.g. \"Microscopic findings\".">
+				>
+				["at0.119"] = <
+					text = <"Histopathology  findings">
+					description = <"General histopathology findings.">
+				>
+				["at0.120"] = <
+					text = <"Intra-operative findings">
+					description = <"Findings related to tissue examined intra-operatively.">
+				>
+				["at0.121"] = <
+					text = <"Macroscopic findings">
+					description = <"Findings recorded on examination of a gross specimen.">
+				>
+				["at0.122"] = <
+					text = <"Microscopic findings">
+					description = <"Findings recorded after microsopic examination.">
+				>
+				["at0.123"] = <
+					text = <"Histopathology finding">
+					description = <"Details of an individual histopathology finding, often related to a specific anatomical location or specimen.">
+				>
+				["at0.124"] = <
+					text = <"Tissue available">
+					description = <"True if the tissue is available for examination.">
+				>
+				["at0.125"] = <
+					text = <"Specimen detail">
+					description = <"Details of specimen(s) realted to this finding.">
+				>
+				["at0.126"] = <
+					text = <"Description">
+					description = <"A narrative description of the histopathology finding.">
+				>
+				["at0.127"] = <
+					text = <"Structured findings">
+					description = <"Detailed structured findings.">
+				>
+				["at0.128"] = <
+					text = <"Pathological interpretation">
+					description = <"Single word, phrase of brief description representing the interpretation of the histopathology finding. A coded term is preferred.">
+				>
+				["at0.129"] = <
+					text = <"Description">
+					description = <"A narrative description of the group of histopathology findings.">
+				>
+				["at0.130"] = <
+					text = <"Staging">
+					description = <"Details of pathological staging, particularly for malignancy.">
+				>
+				["at0000"] = <
+					text = <"Laboratory test">
+					description = <"The findings and interpretation of a pathology laboratory test performed on patient-related specimens.">
+					comment = <"This archetype may be used to record a single valued test, but will often be specialised or templated to represent multiple value or 'panel' tests. This archetype also acts as the parent for specialisations appropriate for more specific laboratory tests, e.g. microbiology, histopathology.">
+				>
+				["at0000.1"] = <
+					text = <"Histopathology test">
+					description = <"The findings and interpretation of a histopathology test performed on patient-related specimens.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Test name">
+					description = <"Identification of the pathology test performed, sometimes including specimen type and patient state.">
+					comment = <"A test result may be for a single analyte, or a group of items, including panel tests. Coding with a terminology, potientially a pre-coordinated term including specimen type, is preferred, where possible. May be coded with LOINC or Snomed-CT. Examples include \"Glucose\", \"Urea and Electrolytes\", \"Swab\",  “Cortisol (am)” or \"Liver Biopsy\".">
+					fhirmapping = <"Diagnostic.Reportname">
+					fhirvalueset = <"reportnames">
+				>
+				["at0010"] = <
+					text = <"Test representation">
+					description = <"Rich text or other multimedia  representation of the entire result as issued by the diagnostic service.">
+					comment = <"Multiple formats are allowed but they must be semantically equivalent.">
+					fhir_mapping = <"DiagnosticReport.presentedForm">
+				>
+				["at0017"] = <
+					text = <"Responsible laboratory">
+					description = <"Demographic details of the laboratory with responsibility for the test.">
+					fhir_mapping = <"DiagnosticReport.performer">
+				>
+				["at0035"] = <
+					text = <"Distribution list">
+					description = <"Details of a clinician or organisation who will receive a copy of the laboratory test result.">
+				>
+				["at0037"] = <
+					text = <"Partial">
+					description = <"This is a partial (e.g. initial, interim or preliminary) Test Result: data in the Test Result may be incomplete or unverified.">
+				>
+				["at0038"] = <
+					text = <"Final">
+					description = <"The Test result is complete and verified by an authorised person.">
+				>
+				["at0040"] = <
+					text = <"Amended">
+					description = <"The result has been modified subsequent to being Final, and is complete and verified by the responsible pathologist, and result data has been changed.">
+				>
+				["at0057"] = <
+					text = <"Conclusion">
+					description = <"Concise and clinically contextualised narrative interpretation of the laboratory test results.">
+					fhir_mapping = <"DiagnosticReport.conclusion">
+				>
+				["at0062"] = <
+					text = <"Requester order identifier">
+					description = <"The local ID assigned to the test order by the order requester.">
+					comment = <"Equivalent to the HL7 Placer Order Identifier.">
+				>
+				["at0063"] = <
+					text = <"Receiver order identifier">
+					description = <"The local ID assigned to the test order by the order filler, usually by the Laboratory Information System (LIS).">
+					comment = <"Assigning an identifier to a request by the Laboratory lnformation System (LIS) enables tracking progress of the request and enables linking results to requests. It also provides a reference to assist with enquiries and it is usually equivalent to the HL7 Filler Order Identifier.">
+				>
+				["at0065"] = <
+					text = <"Specimen detail">
+					description = <"Details about the specimen if all individual test results are derived from the same specimen. If the specimen type is sufficiently specified with a code in the Test result name, then this additional data is not required.  If there are multiple specimens, these may be represented per 'Result group'.">
+					fhir_Mapping = <"DiagnosticReport.specimen">
+				>
+				["at0068"] = <
+					text = <"Laboratory test identifier">
+					description = <"The local identifier given to the laboratory test result  by the Laboratory Information System.">
+					fhir_mapping = <"DiagnosticReport.identifier">
+				>
+				["at0073"] = <
+					text = <"Test status">
+					description = <"The status of the laboratory test result as a whole.">
+					fhir_mapping = <"DiagnosticReport.status">
+				>
+				["at0074"] = <
+					text = <"Cancelled">
+					description = <"The result is unavailable because the test was not started or not completed (also sometimes called 'aborted').">
+				>
+				["at0075"] = <
+					text = <"Test status timestamp">
+					description = <"The date and/or time that the entire result was issued for the recorded ‘Test Report Status’.">
+					fhir_mapping = <"DiagnosticReport.issued">
+				>
+				["at0077"] = <
+					text = <"Diagnostic service category">
+					description = <"The diagnostic service that performs the examination.">
+					comment = <"For example, biochemistry, haematology. This helps clinicians filter for broad categories of results accoridng to local laboratory arrangements. Coding with a terminology is desirable, where possible.
+									">
+					fhir_mapping = <"DiagnosticReport.serviceCategory">
+					fhir_valueset = <"diagnostic-service-sections">
+				>
+				["at0090"] = <
+					text = <"Requester">
+					description = <"Details of the clinician or organisation requesting the laboratory test result.">
+				>
+				["at0094"] = <
+					text = <"Test request details">
+					description = <"Details concerning a single laboratory test requested.">
+					comment = <"Usually there is one test request (or \"order\") for each result, however in some circumstances multiple test requests may be represented using a single Pathology test result archetype.">
+					fhir_mapping = <"DiagnosticReport.requestDetail">
+				>
+				["at0097"] = <
+					text = <"Test findings">
+					description = <"Details about the  reported results, possibly an individual analyte, a group, panel or battery of multiple results, or a more complex and specific structure.">
+					fhir_mapping = <"DiagnosticReport.result">
+				>
+				["at0097.1"] = <
+					text = <"Ancillary laboratory test findings">
+					description = <"Details about additional laboratory results, possibly an individual analyte, a group, panel or battery of multiple results, or a more complex and specific structure.">
+				>
+				["at0098"] = <
+					text = <"Pathological diagnosis">
+					description = <"Single word, phrase or brief description representing the narrative in the 'Conclusion'.">
+					comment = <"Coding with a terminology is preferred, where possible.">
+					fhir_mapping = <"DiagnosticReport.codedDiagnosis">
+				>
+				["at0100"] = <
+					text = <"Clinical information provided">
+					description = <"Description of clinical information available at the time of interpretation of results, which may include a link to the original clinical information provided in the test request.">
+					comment = <"In HL7 fhir this information is held within the linked requestDetail.clinical Notes.">
+					fhir_mapping = <"DiagnosticReport.requestDetail.clinicalNotes">
+				>
+				["at0101"] = <
+					text = <"Comment">
+					description = <"Additional narrative about the test not captured in other fields.">
+				>
+				["at0106"] = <
+					text = <"Original test requested Name">
+					description = <"Identification of the original laboratory test requested, where the test requested differs from the test actually performed.">
+				>
+				["at0107"] = <
+					text = <"Registered">
+					description = <"The existence of the test is registered in the Laboratory Information System, but there is nothing yet available.">
+				>
+				["at0110"] = <
+					text = <"Test method/device details">
+					description = <"Additional structured details of laboratory test methodology followed. For example, structured details about the laboratory method and data interpretation used.">
+				>
+				["at0111"] = <
+					text = <"Point of care device">
+					description = <"True if a point of care device supplies the test result rather than a formal laboratory service.">
+				>
+				["at0112"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0113"] = <
+					text = <"Confounding factors">
+					description = <"Aspects of the condition or circumstances of the patient that may alter interpretation of the laboratory test.">
+				>
+				["at0114"] = <
+					text = <"Patient state details">
+					description = <"Details of patient state that may alter interpretation of the laboratory test.">
+				>
+				["at0115"] = <
+					text = <"Corrected">
+					description = <"The result has been modified subsequent to being Final, and is complete and verified by the responsible pathologist.">
+				>
+				["at0116"] = <
+					text = <"Entered in error">
+					description = <"The Test Result has been withdrawn following previous Final release.">
+				>
+				["at0117"] = <
+					text = <"Extension">
+					description = <"Slot to allow extension to support localisation or alignment with other standards/ reference models.">
+				>
+			>
+		>
+	>

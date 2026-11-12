@@ -1,0 +1,166 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-EVALUATION.check_list.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck, Sebastian Garde">
+                ["organisation"] = <"University of Heidelberg, Central Queensland University">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Infomatics, Australia">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2008-02-01">
+    >
+    lifecycle_state = <"Rejected">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"ED4C37D594D9E37FC82758FB15A45057">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Dient der Dokumentation von Fragen und Antworten, ermöglicht strukturierte Aufzeichnung. ">
+            use = <"">
+            misuse = <"Tatsächliche Befunde werden in anderen Strukturen aufgezeichnet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record questions and answers to allow structured recording.">
+            use = <"">
+            misuse = <"Do not use for actual findings; these are recorded in other structures.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل الأسئلة و الإجابات بما يسمح تسجيل مركب">
+            use = <"">
+            misuse = <"لا يستخدم للموجودات الفعلية, حيث يتم تسجيلها باستخدام تراكيب أخرى">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- A health oriented check list
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    CLUSTER[at0004] occurrences matches {1..*} matches {    -- Question group
+                        items cardinality matches {1..*; unordered} matches {
+                            CLUSTER[at0002] occurrences matches {1..*} matches {    -- Question
+                                items cardinality matches {1..2; unordered} matches {
+                                    ELEMENT[at0003] occurrences matches {1}    -- Answer
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- A comment on the answer
+                                        value matches {
+                                            DV_TEXT[at9000]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Summary
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"*A health oriented check list(en)">
+                description = <"*A generic archetype for recording questions and answers to allow structured recording. Actual findings are recorded in other structures.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Question(en)">
+                description = <"*The name of the cluster is the question.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Answer(en)">
+                description = <"*The answer(s) to the question.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Question group(en)">
+                description = <"*A grouping for questions and answers.(en)">
+            >
+            ["at0005"] = <
+                text = <"*A comment on the answer(en)">
+                description = <"*A comment on the answer.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Summary(en)">
+                description = <"*Summary of questions.(en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"A health oriented check list">
+                description = <"A generic archetype for recording questions and answers to allow structured recording. Actual findings are recorded in other structures.">
+            >
+            ["at0002"] = <
+                text = <"Question">
+                description = <"The name of the cluster is the question.">
+            >
+            ["at0003"] = <
+                text = <"Answer">
+                description = <"The answer(s) to the question.">
+            >
+            ["at0004"] = <
+                text = <"Question group">
+                description = <"A grouping for questions and answers.">
+            >
+            ["at0005"] = <
+                text = <"A comment on the answer">
+                description = <"A comment on the answer.">
+            >
+            ["at0006"] = <
+                text = <"Summary">
+                description = <"Summary of questions.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"قائمة مراجعة مُوَجَّهة صحيا">
+                description = <"نموذج جنيس - غير محدود الملكية - لتسجيل الأسئلة و الإجابات بما يسمح للتسجيل بشكل مركب. و يتم تسجيل الموجودات الفعلية في تراكيب أخرى.">
+            >
+            ["at0002"] = <
+                text = <"السؤال">
+                description = <"اسم العنقود هو السؤال">
+            >
+            ["at0003"] = <
+                text = <"الإجابة">
+                description = <"الإجابة/الإجابات للسؤال">
+            >
+            ["at0004"] = <
+                text = <"مجموعة الأسئلة">
+                description = <"تجميع للأسئلة و الإجابات">
+            >
+            ["at0005"] = <
+                text = <"تعليق حول الإجابة">
+                description = <"تعليق حول الإجابة">
+            >
+            ["at0006"] = <
+                text = <"ملخص">
+                description = <"ملخص للأسئلة">
+            >
+        >
+    >

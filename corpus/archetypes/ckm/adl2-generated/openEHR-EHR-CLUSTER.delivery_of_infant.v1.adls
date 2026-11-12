@@ -1,0 +1,243 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.delivery_of_infant.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck, Sebastian Garde">
+                ["organisation"] = <"University of Heidelberg, Central Queensland University">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"13/04/2007">
+    >
+    lifecycle_state = <"Rejected">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"93F07E7CE5C796540B2555E76ABBFCA7">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Dient der Dokumentation von Einzelheiten zur Entbindung eines Kindes.">
+            keywords = <"Neugeborenes", "Entbindung", "Plazenta">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Record of details related to delivery of infant.">
+            keywords = <"infant", "delivery", "placenta">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Delivery of infant
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Presentation
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {}
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Position
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {}
+                    }
+                }
+            }
+            CLUSTER[at0006] occurrences matches {0..1} matches {    -- Delivery details
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_CODED_TEXT[at9003] matches {
+                                defining_code matches {}
+                            }
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Difficult delivery
+                        value matches {
+                            DV_BOOLEAN[at9004] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    CLUSTER[at0007] occurrences matches {0..1} matches {    -- Assisted extraction
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Method
+                                value matches {
+                                    DV_TEXT[at9005]
+                                }
+                            }
+                            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Details of method used
+                                value matches {
+                                    DV_CODED_TEXT[at9006] matches {
+                                        defining_code matches {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0009] occurrences matches {0..1} matches {    -- Placenta
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Delivery method
+                        value matches {
+                            DV_CODED_TEXT[at9007] matches {
+                                defining_code matches {[ac9000]}    -- Delivery method (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Entbindung eines Kindes">
+                description = <"Zur Dokumentation von Einzelheiten zur Entbindung eines Kindes.">
+            >
+            ["at0001"] = <
+                text = <"Einstellung">
+                description = <"Einstellung bei der Entbindung.">
+            >
+            ["at0002"] = <
+                text = <"Lage">
+                description = <"Lage bei der Entbindung.">
+            >
+            ["at0003"] = <
+                text = <"Verfahren">
+                description = <"Methode der Geburtshilfe.">
+            >
+            ["at0004"] = <
+                text = <"Schwere Entbindung">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung der Entbindung.">
+            >
+            ["at0006"] = <
+                text = <"Einzelheiten zur Entbindung">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Geburtshilfe">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Einzelheiten zur angewendeten Methoden">
+                description = <"Detaillierte Beschreibung der angewendeten Entbindungsmethode.">
+            >
+            ["at0009"] = <
+                text = <"Plazenta">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Entbindungsmethode">
+                description = <"Entbindungsmethode der Plazenta.">
+            >
+            ["at0011"] = <
+                text = <"kontrollierte Nabelschnurdistraktion">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Manuelle Entfernung">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Nicht entfernt">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Entbindungsmethode (synthesised)">
+                description = <"Entbindungsmethode der Plazenta. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Delivery of infant">
+                description = <"Record of details related to delivery of infant.">
+            >
+            ["at0001"] = <
+                text = <"Presentation">
+                description = <"Presentation at delivery.">
+            >
+            ["at0002"] = <
+                text = <"Position">
+                description = <"Position at delivery.">
+            >
+            ["at0003"] = <
+                text = <"Method">
+                description = <"Method of assisted extraction.">
+            >
+            ["at0004"] = <
+                text = <"Difficult delivery">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Description">
+                description = <"Description of delivery.">
+            >
+            ["at0006"] = <
+                text = <"Delivery details">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Assisted extraction">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Details of method used">
+                description = <"Detailed description of extraction method use.">
+            >
+            ["at0009"] = <
+                text = <"Placenta">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Delivery method">
+                description = <"Method of delivery of placenta.">
+            >
+            ["at0011"] = <
+                text = <"Controlled cord traction">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Manual removal">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Not removed">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Delivery method (synthesised)">
+                description = <"Method of delivery of placenta. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0011", "at0012", "at0013">
+        >
+    >

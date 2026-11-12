@@ -1,5 +1,5 @@
-archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=87e2704b-955b-43bc-b569-755e06dbd3f5; build_uid=3321723b-2135-4156-9c39-39a0cea7e845)
-    openEHR-EHR-EVALUATION.clinical_synopsis.v1.0.5
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=87e2704b-955b-43bc-b569-755e06dbd3f5; build_uid=718a4a7a-6274-48f9-a58f-a0aa317728d6)
+    openEHR-EHR-EVALUATION.clinical_synopsis.v1.0.6
 
 language
     original_language = <[ISO_639-1::en]>
@@ -19,22 +19,6 @@ language
                 ["name"] = <"Kirsi Poikela">
                 ["organisation"] = <"Tieto Sweden AB">
                 ["email"] = <"ext.kirsi.poikela@tieto.com">
-            >
-        >
-        ["es-ar"] = <
-            language = <[ISO_639-1::es-ar]>
-            author = <
-                ["name"] = <"Dr. Leonardo Der Jachadurian">
-                ["organisation"] = <"Bitios.com">
-            >
-            accreditation = <"Medical Doctor (Internal Medicine Specialist)">
-        >
-        ["nb"] = <
-            language = <[ISO_639-1::nb]>
-            author = <
-                ["name"] = <"Ingrid Heitmann">
-                ["organisation"] = <"NTNU and OUS, Registered nurse">
-                ["email"] = <"john.tore.valand@helse-bergen.no">
             >
         >
         ["pt-br"] = <
@@ -58,14 +42,6 @@ language
                 ["name"] = <"Mona Saleh">
             >
         >
-        ["fa"] = <
-            language = <[ISO_639-1::fa]>
-            author = <
-                ["name"] = <"Shahla Foozonkhah">
-                ["organisation"] = <"Ocean Informatics">
-                ["email"] = <"shahla.foozonkhah@oceaninformatics.com">
-            >
-        >
         ["fr"] = <
             language = <[ISO_639-1::fr]>
             author = <
@@ -83,6 +59,54 @@ language
             >
             accreditation = <"What goes here?">
         >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Clara Calleja Vega">
+                ["organisation"] = <"CatSalut. Servei Català de la Salut.">
+                ["email"] = <"ccalleja@catsalut.cat">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Dr. Leonardo Der Jachadurian">
+                ["organisation"] = <"Bitios.com">
+            >
+            accreditation = <"Medical Doctor (Internal Medicine Specialist)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Ingrid Heitmann">
+                ["organisation"] = <"NTNU and OUS, Registered nurse">
+                ["email"] = <"john.tore.valand@helse-bergen.no">
+            >
+        >
+        ["ja"] = <
+            language = <[ISO_639-1::ja]>
+            author = <
+                ["name"] = <"Shinji KOBAYASHI">
+                ["organisation"] = <"NPO openEHR Japan">
+                ["email"] = <"skoba@moss.gr.jp">
+            >
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"Vanja Maravić, Lara Škufca, Anđela Marjanović, Ana Milošev">
+                ["organisation"] = <"Better Deutschland GmbH, Better d.o.o.">
+                ["email"] = <"vanja.maravic@better.care, laras@better.care, andjela.marjanovic@better.care, ana.milosev@better.care">
+            >
+        >
+        ["fa"] = <
+            language = <[ISO_639-1::fa]>
+            author = <
+                ["name"] = <"Shahla Foozonkhah">
+                ["organisation"] = <"Ocean Informatics">
+                ["email"] = <"shahla.foozonkhah@oceaninformatics.com">
+            >
+        >
         ["ca"] = <
             language = <[ISO_639-1::ca]>
             author = <
@@ -92,14 +116,6 @@ language
             >
             other_details = <
                 ["other_contributors"] = <"TRADCREA">
-            >
-        >
-        ["es"] = <
-            language = <[ISO_639-1::es]>
-            author = <
-                ["name"] = <"Clara Calleja Vega">
-                ["organisation"] = <"CatSalut. Servei Català de la Salut.">
-                ["email"] = <"ccalleja@catsalut.cat">
             >
         >
     >
@@ -123,7 +139,7 @@ description
     >
     other_details = <
         ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
-        ["MD5-CAM-1.0.1"] = <"73009E1DDDC081E23EE2C74228EAE006">
+        ["MD5-CAM-1.0.1"] = <"2A7F7E860F6B197FD24B5EACECA56D97">
     >
     details = <
         ["de"] = <
@@ -252,6 +268,26 @@ I praksis er Klinisk sammendrag en overordnet (meta) observasjon som vil fungere
 
 Begrepet \"Klinisk sammendrag\" kan i enkelte tilfeller henvise til sammensatte og omfattende dokumenter, som epikriser og ut-notater. I openEHR vil en epikrise eller ut-notat representeres med aggregert informasjon fra underliggende arketyper ved hjelp av templater. Klinisk Sammendrag vil da være kun én av flere arketyper som blir inkludert.">
             copyright = <"© openEHR Foundation">
+        >
+        ["ja"] = <
+            language = <[ISO_639-1::ja]>
+            purpose = <"医療従事者の視点から、患者についての叙述的な要約を手作業で総合的に記録するため。">
+            keywords = <"要約", "結論", "概要", "大意", "抄録", "アセスメント", "退院時サマリー", "サマリー", "エピクリーゼ", "コメント", "記録", "臨床要約", "経過要約">
+            use = <"患者の健康状態を文章で要約して記録するために用いる。この構造化されていない要約には、把握された健康上のプロブレム、患者が受けた医療、それらについての解釈、患者自身の理解などを含めることができる。また、患者の経験やこれまでの経過にまつわる、細かなニュアンスや主観的な側面も共有できる。通常は、診察や入院などの特定の健康イベントに関連する要約として用いられるが、さまざまな期間にわたる患者の健康に関する経験をまとめるためにも使用できる。 
+臨床要約は、既存の構造化された臨床記録を補完するメタ観察として機能する。構造化データだけでは読み取りにくい、患者に関する細かなニュアンスや主観的な情報、解釈を伴う情報を表現することで、EHR の記録に文脈を補い、全体のバランスを整える。 
+例えば、包括的で構造化された退院時サマリー文書の一部として臨床要約を用い、患者の入院に関する簡潔な要約を伝えることができる。">
+            misuse = <"特定の構造化された健康情報を記録するために用いてはならない。例えば、プロブレム、診断、検査結果に関する詳細情報は、それぞれに対応する EVALUATION.problem、EVALUATION.problem-diagnosis、および OBSERVATION の臨床検査や放射線検査の結果の各archetypeを用いて記録すべきである。臨床要約は、要約の完全性のために重要と判断される場合には、これらの構造化された詳細の中から重要で選択された数値結果を伝えてもよいが、それらの主たる記録場所ではない。
+「臨床要約（Clinical Synopsis）」という語は、退院時サマリーや報告書のような複雑で包括的な文書を指すこともある。openEHR では、これらの文書は制約されたarchetypeの集合、すなわち複数の独立したarchetypeからなる退院時サマリーのテンプレートや報告書のテンプレートとして表現されるべきであり、本臨床要約archetypeはその一つになることもある。">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"Za ročno sestavljanje in beleženje pripovednega povzetka o pacientu, iz perspektive izvajalca zdravstvenih storitev.">
+            keywords = <"povzetek", "sklep", "oris", "kratek", "pregled", "abstrakt", "ocena", "sinopsa", "epikríza", "komentar", "opomba">
+            use = <"Uporabite za beleženje pripovednega, povzetega pogleda na zdravje pacienta. Ta nestrukturirani povzetek lahko vključuje identificirane zdravstvene težave; zagotovljeno zdravstveno oskrbo; povezano interpretacijo; razumevanje pacienta; in omogoča komunikacijo o nekaterih bolj subjektivnih vidikih izkušenj in poti pacienta. Najpogosteje je ta povzetek verjetno povezan s specifičnim zdravstvenim dogodkom, kot je specifičen posvet ali bolnišnična obravnava, lahko pa se uporabi tudi za povzemanje zdravstvenih izkušenj pacienta skozi različna časovna obdobja.
+V praksi je klinični povzetek meta opazovanje, ki bo dopolnilo obstoječi strukturirani klinični zapis, kar omogoča izražanje subtilnih, subjektivnih ali interpretativnih informacij o pacientu, ki sicer morda ne bi bile očitne samo skozi strukturirane podatke, kar zagotavlja ravnovesje in kontekst zapisu EHR.
+Na primer, klinični povzetek lahko sporoči jedrnat povzetek bolnišnične obravnave pacienta kot eno komponento celovitega in strukturiranega dokumenta odpustnega povzetka.">
+            misuse = <"Ne uporabljajte za beleženje specifičnih in strukturiranih zdravstvenih informacij. Na primer, podrobne informacije o težavah, diagnozah in rezultatih testov je treba beležiti z uporabo specifičnih ustreznih arhetipov EVALUATION.problem, EVALUATION.problem-diagnosis in laboratorijskih ali radioloških rezultatov v OBSERVATION. Klinični povzetek lahko posreduje nekaj kritičnih in izbranih številčnih rezultatov iz teh strukturiranih podrobnosti, ko se šteje za pomembno za popolnost povzetka, vendar NI primarno mesto za njihovo beleženje.
+Izraz \"klinični povzetek\" se lahko včasih nanaša na kompleksne in celovite dokumente, kot je odpustni povzetek ali poročilo. V openEHR je treba te dokumente predstaviti kot agregacije omejenih arhetipov, torej predlogo odpustnega povzetka ali predlogo poročila, ki vsebuje številne ločene arhetipe, od katerih je lahko eden ta arhetip kliničnega povzetka.">
         >
         ["fa"] = <
             language = <[ISO_639-1::fa]>
@@ -467,6 +503,36 @@ terminology
                 text = <"Tilleggsinformasjon">
                 description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
                 comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+        >
+        ["ja"] = <
+            ["at0000"] = <
+                text = <"臨床要約">
+                description = <"患者についての叙述的な要約または概要で、特に医療従事者の視点からのもの。関連する解釈を伴う場合も伴わない場合もある。">
+            >
+            ["at0002"] = <
+                text = <"要約">
+                description = <"臨床所見の要約、アセスメント、まとめ、または評価。">
+            >
+            ["at0004"] = <
+                text = <"Extension">
+                description = <"ローカルコンテンツを捕捉するため、あるいは他の参照モデルや形式手法と整合させるために必要な追加情報。">
+                comment = <"例：ローカルな情報要件や、FHIR または CIMI の相当するものに適合させるための追加メタデータ。">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"Klinični povzetek">
+                description = <"Pripovedni povzetek ali pregled o pacientu, specifično iz perspektive izvajalca zdravstvenih storitev, z ali brez povezanih interpretacij.">
+            >
+            ["at0002"] = <
+                text = <"Povzetek">
+                description = <"Povzetek, ocena, sklepi ali evalvacija kliničnih ugotovitev.">
+            >
+            ["at0004"] = <
+                text = <"Razširitev">
+                description = <"Dodatne informacije, potrebne za zajemanje lokalnega konteksta ali za uskladitev z drugimi referenčnimi modeli/formalizmi.">
+                comment = <"Na primer: informacije lokalnega bolnišničnega oddelka ali dodatni metapodatki za uskladitev z ekvivalenti FHIR ali CIMI.">
             >
         >
         ["fa"] = <

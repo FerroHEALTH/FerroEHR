@@ -1,0 +1,313 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b62375c7-302d-4e74-a01c-74eefcb03ae5; build_uid=6e5df1de-a81d-45f7-b454-aaac6ec48240)
+    openEHR-EHR-OBSERVATION.blood_match.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck, Sebastian Garde">
+                ["organisation"] = <"University of Heidelberg, Central Queensland University">
+            >
+        >
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            author = <
+                ["name"] = <"Igor Lizunov">
+                ["email"] = <"i.lizunov@infinnity.ru">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"127C41E73242A6B5080B3B045BEB167F">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation der Blutgruppe und Befunde der Antikörper.">
+            keywords = <"Gruppe", "Transfusion">
+            use = <"Dokumentiert von einem Bluttransfusion-Labor.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            purpose = <"Запись группы крови и обнаруженных антител.">
+            keywords = <"группа", "переливание">
+            use = <"Записывает лаборатория переливания крови.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            keywords = <"group", "transfusion">
+            use = <"Reporting by blood transfusion laboratory.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"*">
+            keywords = <"المجموعة", "نقل الدم">
+            use = <"يتم استخدامها كتقرير من معمل نقل الدم">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Blood matching
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- ABO
+                                        value matches {
+                                            DV_TEXT[at9000]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Rhesus
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Antibodies detected
+                                        value matches {
+                                            DV_BOOLEAN[at9002] matches {
+                                                value matches {True, False}
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0008] matches {    -- Antibodies
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Antibody
+                                                value matches {
+                                                    DV_TEXT[at9003]
+                                                }
+                                            }
+                                            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Details
+                                                value matches {
+                                                    DV_TEXT[at9004]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Overall comment
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_LIST[at0011] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Blutgruppe">
+                description = <"Informationen zur Blutgruppe, einschließlich AB0, Rhesus, Antikörper, usw.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Generic event">
+            >
+            ["at0004"] = <
+                text = <"AB0">
+                description = <"Informationen zur AB0 Blutgruppe.">
+            >
+            ["at0005"] = <
+                text = <"Rhesus">
+                description = <"Informationen zur Rhesus Blutgruppe.">
+            >
+            ["at0006"] = <
+                text = <"Antikörper">
+                description = <"Die Art der Antikörper.">
+            >
+            ["at0007"] = <
+                text = <"Einzelheiten">
+                description = <"Einzelheiten zu den Antikörpern.">
+            >
+            ["at0008"] = <
+                text = <"Antikörper">
+                description = <"Bestimmung oder Befund eines Antikörpers.">
+            >
+            ["at0009"] = <
+                text = <"Antikörper ermittelt">
+                description = <"Antikörper wurden ermittelt.">
+            >
+            ["at0010"] = <
+                text = <"Allgemeine Bemerkung">
+                description = <"Bemerkung zum gesamten Befund.">
+            >
+            ["at0012"] = <
+                text = <"Methode">
+                description = <"Die Methode des Matching/Zuordnung.">
+            >
+        >
+        ["ru"] = <
+            ["at0000"] = <
+                text = <"Кровь соответствия">
+                description = <"Информация о группе крови по ABO, резус-факторе и антителах.">
+            >
+            ["at0002"] = <
+                text = <"Любое событие">
+                description = <"Создать событие.">
+            >
+            ["at0004"] = <
+                text = <"ABO">
+                description = <"Группа крови по ABO.">
+            >
+            ["at0005"] = <
+                text = <"Резус">
+                description = <"Резус крови.">
+            >
+            ["at0006"] = <
+                text = <"Антитела">
+                description = <"Природа антител.">
+            >
+            ["at0007"] = <
+                text = <"Подробности">
+                description = <"Подробности об антителах.">
+            >
+            ["at0008"] = <
+                text = <"Антитела">
+                description = <"Отнесение обнаруженных антител к группе.">
+            >
+            ["at0009"] = <
+                text = <"Антитела обнаружены">
+                description = <"Антитела были обнаружены.">
+            >
+            ["at0010"] = <
+                text = <"Комментарии">
+                description = <"Комментарии ко всему исследованию.">
+            >
+            ["at0012"] = <
+                text = <"Метод">
+                description = <"Метод определения.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Blood matching">
+                description = <"Blood group information including ABO, Rhesus and antibodies etc.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Generic event">
+            >
+            ["at0004"] = <
+                text = <"ABO">
+                description = <"ABO blood group information.">
+            >
+            ["at0005"] = <
+                text = <"Rhesus">
+                description = <"Rhesus blood group information.">
+            >
+            ["at0006"] = <
+                text = <"Antibody">
+                description = <"The nature of the antibody.">
+            >
+            ["at0007"] = <
+                text = <"Details">
+                description = <"Details about the antibody.">
+            >
+            ["at0008"] = <
+                text = <"Antibodies">
+                description = <"Grouping of findings relating to one antibody.">
+            >
+            ["at0009"] = <
+                text = <"Antibodies detected">
+                description = <"Antibodies have been detected.">
+            >
+            ["at0010"] = <
+                text = <"Overall comment">
+                description = <"Comment on the findings overall.">
+            >
+            ["at0012"] = <
+                text = <"Method">
+                description = <"The method of matching.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"توافق الدم">
+                description = <"معلومات حول مجموعة الدم بما في ذلك مجموعات أ , ب , أ ب, و , و عامل ريسس و الأجسام المضادة, إلى آخره">
+            >
+            ["at0002"] = <
+                text = <"إحدى الوقائع">
+                description = <"واقعة جنيسة - غير محدودة الملكية">
+            >
+            ["at0004"] = <
+                text = <"المجموعات أ ب و">
+                description = <"معلومات حول مجموعة الدم أ ب أب و">
+            >
+            ["at0005"] = <
+                text = <"عامل ريسس">
+                description = <"معلومات حول عامل ريسس">
+            >
+            ["at0006"] = <
+                text = <"الجسم المضاد">
+                description = <"طبيعة الجسم المضاد">
+            >
+            ["at0007"] = <
+                text = <"التفاصيل">
+                description = <"تفاصيل حول الجسم المضاد">
+            >
+            ["at0008"] = <
+                text = <"الأجسام المضادة">
+                description = <"مجموعة من الموجودات المتعلقة بجسم مضاد واحد">
+            >
+            ["at0009"] = <
+                text = <"الأجسام المضادة التي تم اكتشافها">
+                description = <"الأجسام المضادة التي تم اكتشافها">
+            >
+            ["at0010"] = <
+                text = <"تعليق إجمالي">
+                description = <"تعليق إجمالي حول الموجودات">
+            >
+            ["at0012"] = <
+                text = <"الطريقة">
+                description = <"طريقة اختبار التوافق">
+            >
+        >
+    >

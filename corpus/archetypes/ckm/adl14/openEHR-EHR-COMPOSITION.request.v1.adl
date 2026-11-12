@@ -14,6 +14,14 @@ language
 				["email"] = <"Strauch.Natalia@mh-hannover.de">
 			>
 		>
+		["pt-pt"] = <
+			language = <[ISO_639-1::pt-pt]>
+			author = <
+				["name"] = <"Hugo Silva">
+				["organisation"] = <"University of Minho">
+				["email"] = <"pg50416@uminho.pt">
+			>
+		>
 		["sv"] = <
 			language = <[ISO_639-1::sv]>
 			author = <
@@ -27,6 +35,14 @@ language
 			author = <
 				["name"] = <"Lars Bitsch-Larsen, John Tore Valand">
 				["organisation"] = <"Haukeland Universitetssjukehus">
+			>
+		>
+		["ja"] = <
+			language = <[ISO_639-1::ja]>
+			author = <
+				["name"] = <"Shinji KOBAYASHI">
+				["organisation"] = <"NPO openEHR Japan">
+				["email"] = <"skoba@moss.gr.jp">
 			>
 		>
 		["ar-sy"] = <
@@ -73,6 +89,26 @@ Anforderungen können gezielt (Identifizierung eines bestimmten Gesundheitsdiens
 
 Darf nicht verwendet werden, um eine Zusammenfassung der Leistungsübertragung an eine andere Organisation oder einen anderen Anbieter bereitzustellen - Verwenden Sie COMPOSITION.transfer_summary für diesen Zweck.">
 		>
+		["pt-pt"] = <
+			language = <[ISO_639-1::pt-pt]>
+			purpose = <"Para pedir aconselhamento, um serviço específico ou a transferência dos cuidados de um sujeito de uma organização ou prestador de cuidados de saúde para outra.">
+			use = <"Utilizar como base para um pedido de aconselhamento, um serviço ou a transferência dos cuidados de um sujeito de uma organização ou prestador de cuidados de saúde. Normalmente, este documento incluirá detalhes sobre o âmbito e a duração da validade do pedido, bem como informações clínicas relevantes sobre o sujeito. Os pedidos podem variar desde um simples pedido de consulta, procura de recomendações sobre ações futuras, pedido de um procedimento específico ou um teste de diagnóstico, até à transferência total dos cuidados e responsabilidade clínica para o prestador de cuidados de saúde recetor.
+
+Os casos de uso incluem, mas não estão limitados a, um pedido de:
+- uma consulta, segunda opinião ou aconselhamento de gestão de um especialista;
+- um teste de diagnóstico;
+- atendimento domiciliário de enfermeiros de visita;
+- transferência de cuidados para uma instalação de reabilitação;
+- para avaliação de cuidados a idosos;
+- para revisão de medicamentos por um farmacêutico;
+- e para a prestação de fisioterapia ou terapia ocupacional.
+
+Os pedidos podem ser direcionados (identificando um prestador de cuidados de saúde ou organização específica para realizar o pedido) ou não direcionados (identificando apenas o tipo de cuidados pretendidos).">
+			keywords = <"orientação", "pedido", "serviço">
+			misuse = <"Não deve ser utilizado para representar o documento registado como parte de um encontro ou visita clínica única. Utilize COMPOSITION.encounter para esta finalidade.
+
+Não deve ser utilizado para fornecer um resumo de transferência de cuidados para outra organização ou prestador - utilize COMPOSITION.transfer_summary para esta finalidade.">
+		>
 		["sv"] = <
 			language = <[ISO_639-1::sv]>
 			purpose = <"Att begära rådgivning, en specifik tjänst, eller vårdöverföring mellan vårdgivare eller organisation avseende en patient.">
@@ -113,6 +149,26 @@ Forespørselsdokumentet kan ha en spesifikk mottaker (spesifikk helsetjenesteyte
 			misuse = <"Brukes ikke for å registrere detaljer om en enkel interaksjon, kontakt eller omsorgshendelse mellom et individ og helsepersonell. Bruk arketypen Klinisk kontakt (COMPOSITION.encounter) for dette formålet
 
 Brukes ikke som overflyttingsnotat/epikrise til andre organisasjoner eller tjenesteytere. Bruk Overføringsdokument (COMPOSITION.transfer_summary) for dette formålet.">
+		>
+		["ja"] = <
+			language = <[ISO_639-1::ja]>
+			purpose = <"ケア対象者について、医療従事者または医療機関に対し、助言、特定のサービス、または診療の移管を依頼するため。">
+			use = <"ケア対象者について、医療従事者または医療機関に対し、助言、サービス、または診療の移管を依頼する際の基盤として用いる。この文書には通常、依頼の範囲および有効期間に関する詳細と、ケア対象者に関する関連する臨床情報が含まれる。依頼の内容は、単純なコンサルテーションの依頼、今後の対応についての推奨を求めるもの、特定の処置や臨床検査の依頼から、受け手となる医療従事者への診療および臨床的責任の完全な引き継ぎまで多岐にわたる。
+
+ユースケースには以下の依頼が含まれるが、これらに限定されない：
+- 専門医によるコンサルテーション、セカンドオピニオン、または診療方針に関する助言；
+- 臨床検査；
+- 訪問看護師による在宅ケア；
+- リハビリテーション施設への診療の移管；
+- 高齢者ケアのアセスメント；
+- 薬剤師による薬剤監査；および
+- 理学療法または作業療法の提供。
+
+依頼は、依頼を実施する特定の医療従事者または医療機関を指定するもの（宛先指定あり）でも、希望するケアの種類のみを示すもの（宛先指定なし）でもよい。">
+			keywords = <"紹介", "依頼", "サービス", "紹介状", "診療依頼">
+			misuse = <"単一の診察の一部として記録される文書を表現するために用いてはならない。その目的にはCOMPOSITION.encounterを用いること。
+
+他の医療機関または医療従事者への診療移管サマリーを提供するために用いてはならない。その目的にはCOMPOSITION.transfer_summaryを用いること。">
 		>
 		["ar-sy"] = <
 			language = <[ISO_639-1::ar-sy]>
@@ -174,9 +230,9 @@ Niet te gebruiken om een samenvattende zorgoverdracht te leveren aan een andere 
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"B8AD0C7EB492491CE6F7968C1AFFB40C">
-		["build_uid"] = <"3a928712-c81a-4d9b-82ad-c01857468560">
-		["revision"] = <"1.1.3">
+		["MD5-CAM-1.0.1"] = <"1AE1CE5FEEA2C7BF49E562CF8F9521EA">
+		["build_uid"] = <"0a3df5b6-9bf5-4746-add4-36d6652a2872">
+		["revision"] = <"1.1.4">
 	>
 
 definition
@@ -201,8 +257,6 @@ definition
 			}
 		}
 	}
-
-
 
 ontology
 	term_definitions = <
@@ -305,6 +359,40 @@ ontology
 					text = <"Erweiterung">
 					description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
 					comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+				>
+			>
+		>
+		["ja"] = <
+			items = <
+				["at0000"] = <
+					text = <"診療依頼書">
+					description = <"助言、サービス、または診療の移管を依頼する目的で、診療を担当する医療従事者または医療機関から別の医療従事者・医療機関へ送付される文書。">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0042"] = <
+					text = <"Extension">
+					description = <"ローカルな文脈を取り込むため、または他の参照モデル／形式体系と整合させるために必要な追加情報。">
+					comment = <"例：院内の部門情報や、FHIRまたはCIMIの等価物と整合させるための追加メタデータ。">
+				>
+			>
+		>
+		["pt-pt"] = <
+			items = <
+				["at0000"] = <
+					text = <"Pedido de serviço">
+					description = <"Documento enviado de um prestador ou organização de cuidados de saúde para outro, com a finalidade de solicitar aconselhamento, um serviço ou transferência de cuidados.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0042"] = <
+					text = <"Extensão">
+					description = <"Informação adicional necessária para captar o contexto local ou para alinhar com outros modelos/formalismos de referência.">
+					comment = <"Por exemplo: Informação departamental do hospital local ou metadados adicionais para alinhar com os equivalentes FHIR ou CIMI.">
 				>
 			>
 		>

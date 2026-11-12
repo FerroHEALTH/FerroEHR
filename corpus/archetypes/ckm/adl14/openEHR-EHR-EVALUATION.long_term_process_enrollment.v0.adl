@@ -5,6 +5,20 @@ concept
 	[at0000]	-- Enrollment in a long-term healthcare process
 language
 	original_language = <[ISO_639-1::en]>
+	translations = <
+		["sv"] = <
+			language = <[ISO_639-1::sv]>
+			author = <
+				["name"] = <"Alicia Lindmark">
+				["organisation"] = <"Tieto">
+				["email"] = <"alicia.lindmark@tieto.com">
+			>
+			other_details = <
+				["other_contributors"] = <"Josefin Ankarblom, Tieto, Sweden
+Therése Oresten, Tieto, Sweden">
+			>
+		>
+	>
 description
 	original_author = <
 		["name"] = <"Aitor Eguzkitza">
@@ -13,6 +27,13 @@ description
 		["date"] = <"2015-06-24">
 	>
 	details = <
+		["sv"] = <
+			language = <[ISO_639-1::sv]>
+			purpose = <"Dokumentera ett underlag för beslut om patientens inkludering i ett specifikt långvarigt vårdförlopp.">
+			use = <"Kan användas både för att inkludera nya patienter i ett specifikt vårdförlopp och för att bedöma om redan inkluderade patienter ska fortsätta i vårdförloppet.">
+			keywords = <"kronisk", "långvarigt vårdförlopp", "Inskrivning">
+			misuse = <"De flesta arketyper är inriktade på dokumentation av akuta vårdhändelser i klinisk verksamhet. Den här arketypen är däremot avsedd för regelbunden omprövning av beslut som rör ett långvarigt vårdförlopp, till exempel ett behandlingsbeslut vid ett kroniskt tillstånd som kräver regelbunden behandling. Arketypen är därför inte avsedd för dokumentation av beslut om enstaka vårdåtgärder.">
+		>
 		["en"] = <
 			language = <[ISO_639-1::en]>
 			purpose = <"Record a contribution to the decision of admittance of a patient in a specific long-term healthcare process.">
@@ -25,14 +46,14 @@ description
 	lifecycle_state = <"in_development">
 	other_contributors = <"Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
 	other_details = <
-		["revision"] = <"0.0.1-alpha">
 		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-		["build_uid"] = <"6e092c05-496e-4411-ac7b-bbe50641d92a">
+		["custodian_organisation"] = <"openEHR Foundation">
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
-		["MD5-CAM-1.0.1"] = <"079F0EABA6122DE0912BD63BA7C83453">
 		["custodian_namespace"] = <"org.openehr">
-		["custodian_organisation"] = <"openEHR Foundation">
+		["MD5-CAM-1.0.1"] = <"CEA54BB44E61F6ADB77EBDCC48935E82">
+		["build_uid"] = <"4b9bc0ac-f2ee-4d83-93ee-4fe74223b4bd">
+		["revision"] = <"0.0.1-alpha">
 	>
 
 definition
@@ -87,7 +108,6 @@ definition
 		}
 	}
 
-
 ontology
 	term_definitions = <
 		["en"] = <
@@ -127,6 +147,46 @@ ontology
 				["at0012"] = <
 					text = <"Admittance">
 					description = <"If true, the patient meets the criteria required to be inscribed in the healthcare process.">
+				>
+			>
+		>
+		["sv"] = <
+			items = <
+				["at0000"] = <
+					text = <"Inskrivning i ett långvarigt vårdförlopp">
+					description = <"Hanterar inskrivning av patienter i ett specifikt långvarigt vårdförlopp.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0003"] = <
+					text = <"Beslutsdatum">
+					description = <"Datum då beslut fattades om patienten skulle inkluderas i eller exkluderas från vårdförloppet.">
+				>
+				["at0004"] = <
+					text = <"Vårdförlopp">
+					description = <"Anger vilket vårdförlopp patienten diskuteras för inkludering i.">
+				>
+				["at0005"] = <
+					text = <"Beskrivning">
+					description = <"Beskrivning av den vårdinsats som patienten föreslås få.">
+				>
+				["at0010"] = <
+					text = <"Kriterier">
+					description = <"Beskrivning av de kriterier som beaktas vid beslut om patientens inkludering i vårdförloppet.">
+				>
+				["at0011"] = <
+					text = <"Granskning av beslut">
+					description = <"Datum för nästa planerade granskning av det aktuella beslutet om inkludering i vårdförloppet. ">
+				>
+				["at0012"] = <
+					text = <"Inskrivning">
+					description = <"Om sant uppfyller patienten kriterierna för att inkluderas i vårdförloppet.">
 				>
 			>
 		>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -636,7 +636,7 @@ Screening of dietary habits based on a Swedish dietary index etc. The archetype 
       </items>
       <items code="at0002">
         <items id="text">Kostindex</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0003">
         <items id="text">Frukostvanor</items>
@@ -648,19 +648,19 @@ Screening of dietary habits based on a Swedish dietary index etc. The archetype 
       </items>
       <items code="at0005">
         <items id="text">Två gånger per dag eller oftare</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">En gång per dag</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Några gånger i veckan</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">En gång i veckan eller mer sällan</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Frukt och bär</items>
@@ -668,19 +668,19 @@ Screening of dietary habits based on a Swedish dietary index etc. The archetype 
       </items>
       <items code="at0010">
         <items id="text">En gång i veckan eller mer sällan</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Några gånger i veckan</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">En gång per dag</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Två gånger per dag eller oftare</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Fisk och skaldjur</items>
@@ -688,19 +688,19 @@ Screening of dietary habits based on a Swedish dietary index etc. The archetype 
       </items>
       <items code="at0015">
         <items id="text">Tre gånger i veckan eller oftare</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Två gånger i veckan</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">En gång i veckan</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Några gånger i månaden eller mer sällan</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Kaffebröd, choklad, godis, chips, läsk, saft</items>
@@ -708,19 +708,19 @@ Screening of dietary habits based on a Swedish dietary index etc. The archetype 
       </items>
       <items code="at0020">
         <items id="text">Två gånger per dag eller oftare</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">En gång per dag</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Några gånger i veckan</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">En gång i veckan eller mer sällan</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Kostindexberäkning</items>
@@ -749,4 +749,3 @@ Screening of dietary habits based on a Swedish dietary index etc. The archetype 
     </term_definitions>
   </ontology>
 </archetype>
-

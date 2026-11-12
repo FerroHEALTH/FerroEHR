@@ -1,0 +1,935 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-OBSERVATION.laboratory_result-histology-haematopoietic_tumour.v1
+specialise
+	openEHR-EHR-OBSERVATION.laboratory_result-histology.v1
+
+concept
+	[at0000.1.1]	-- Histology result haematopoietic tumours
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Dr Ian McNicoll">
+		["organisation"] = <"openEHR Archetype Editorial Group / Ocean Informatics">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"26/04/2009">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Histology result specialised for lymphomas and other haematopietic tumours.
+
+
+
+
+
+">
+			use = <"Will generally be used in combination with archetypes reprensenting other parts of the laboratory test ordering and processing process.">
+			keywords = <"lab", "pathology", "laboratory", "histology", "lymphoma", "hodgkin's", "haematopoietic", "malignancy", "haematology">
+			misuse = <"">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Initial">
+	other_contributors = <"Heather Leslie AEG / Ocean Infomatics", "Sam Heard Ocean Informatics">
+	other_details = <
+		["MD5-CAM-1.0.1"] = <"CE88D120673322CD6220FC609540B0F1">
+		["references"] = <"">
+	>
+
+definition
+	OBSERVATION[at0000.1.1] matches {	-- Histology result haematopoietic tumours
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0005] occurrences matches {0..1} matches {	-- Test performed
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									CLUSTER[at0006] occurrences matches {0..*} matches {	-- Results
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0007] occurrences matches {0..*} matches {*}
+											CLUSTER[at0.58] occurrences matches {0..1} matches {	-- Macroscopic
+												items cardinality matches {0..*; unordered} matches {
+													ELEMENT[at0007.1] occurrences matches {0..*} matches {	-- Description
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+													allow_archetype CLUSTER[at0.61] occurrences matches {0..*} matches {	-- Structured
+														include
+															archetype_id/value matches {/.*/}
+													}
+													ELEMENT[at0007.3] occurrences matches {0..*} matches {	-- Image
+														value matches {
+															DV_MULTIMEDIA matches {
+																media_type matches {
+																	[openEHR::
+																	425, 
+																	426, 
+																	427, 
+																	428, 
+																	429, 
+																	401, 
+																	402, 
+																	404, 
+																	405, 
+																	406, 
+																	407, 
+																	414]
+																}
+															}
+														}
+													}
+												}
+											}
+											CLUSTER[at0.59] occurrences matches {0..*} matches {	-- Microscopic
+												items cardinality matches {0..*; unordered} matches {
+													ELEMENT[at0007.2] occurrences matches {0..*} matches {	-- Description
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+													allow_archetype CLUSTER[at0.66] occurrences matches {0..*} matches {	-- Structured
+														include
+															archetype_id/value matches {/.*/}
+													}
+													CLUSTER[at0.0.74] occurrences matches {0..1} matches {	-- Abnormal cells
+														items cardinality matches {0..*; unordered} matches {
+															ELEMENT[at0.0.78] occurrences matches {0..1} matches {	-- Pattern of infiltration
+																value matches {
+																	DV_TEXT matches {*}
+																}
+															}
+															ELEMENT[at0.0.79] occurrences matches {0..1} matches {	-- Tumour cell size
+																value matches {
+																	DV_CODED_TEXT matches {
+																		defining_code matches {
+																			[local::
+																			at0.0.98, 	-- Small or Intermediate
+																			at0.0.99, 	-- Medium
+																			at0.0.100, 	-- Large
+																			at0.0.101]	-- Indeterminate
+																		}
+																	}
+																}
+															}
+															CLUSTER[at0.0.80] occurrences matches {0..1} matches {	-- Cytomorphology
+																items cardinality matches {0..*; unordered} matches {
+																	ELEMENT[at0.0.81] occurrences matches {0..*} matches {	-- Generic
+																		value matches {
+																			DV_CODED_TEXT matches {
+																				defining_code matches {
+																					[local::
+																					at0.0.102, 	-- Pleomorphic
+																					at0.0.103, 	-- Hyperbolate
+																					at0.0.104, 	-- Anaplastic
+																					at0.0.105, 	-- Clear cell
+																					at0.0.106, 	-- Giant Cell
+																					at0.0.107, 	-- Spindle cell
+																					at0.0.108, 	-- Signet ring cell
+																					at0.0.109, 	-- Blastic
+																					at0.0.110]	-- Indeterminate
+																				}
+																			}
+																			DV_TEXT matches {*}
+																		}
+																	}
+																	ELEMENT[at0.0.82] occurrences matches {0..*} matches {	-- Specific
+																		value matches {
+																			DV_CODED_TEXT matches {
+																				defining_code matches {
+																					[local::
+																					at0.0.111, 	-- Centroblastic
+																					at0.0.112, 	-- Centrocytic
+																					at0.0.113, 	-- Immunoblastic
+																					at0.0.114, 	-- Plasmacytic
+																					at0.0.115, 	-- Lymphoplasmacytic
+																					at0.0.116, 	-- Lymphoplasmacytoid
+																					at0.0.117, 	-- Prolymphocytic
+																					at0.0.118, 	-- Paraimmunoblastic
+																					at0.0.119, 	-- Plasmablastic
+																					at0.0.120, 	-- Monocytoid
+																					at0.0.121, 	-- Centrocyte-like
+																					at0.0.122, 	-- Popcorn cell
+																					at0.0.123]	-- Reed-Sternberg cell-like
+																				}
+																			}
+																			DV_TEXT matches {*}
+																		}
+																	}
+																}
+															}
+															CLUSTER[at0.0.75] occurrences matches {0..1} matches {	-- Host cell reactions
+																items cardinality matches {0..*; unordered} matches {
+																	ELEMENT[at0.0.76] occurrences matches {0..*} matches {	-- Host cell reaction
+																		value matches {
+																			DV_CODED_TEXT matches {
+																				defining_code matches {
+																					[local::
+																					at0.0.92, 	-- T-cell rich
+																					at0.0.93, 	-- Eosinophil rich
+																					at0.0.94, 	-- Histiocyte-rich
+																					at0.0.95, 	-- Neutrophil-rich
+																					at0.0.96, 	-- Plasma cell-rich
+																					at0.0.97]	-- Erythrophagocytic
+																				}
+																			}
+																			DV_TEXT matches {*}
+																		}
+																	}
+																}
+															}
+															CLUSTER[at0.0.83] occurrences matches {0..1} matches {	-- Host tissue reactions
+																items cardinality matches {0..*; unordered} matches {
+																	ELEMENT[at0.0.77] occurrences matches {0..*} matches {	-- Host tissue reaction
+																		value matches {
+																			DV_CODED_TEXT matches {
+																				defining_code matches {
+																					[local::
+																					at0.0.84, 	-- Necrotic
+																					at0.0.85, 	-- Sclerotic
+																					at0.0.86, 	-- Granulomatous
+																					at0.0.87, 	-- Suppurative
+																					at0.0.88, 	-- High Endothelial Venule (HEV) hyperplasia
+																					at0.0.89, 	-- Starry sky pattern
+																					at0.0.90, 	-- Amyloid
+																					at0.0.91]	-- Increased reticulin
+																				}
+																			}
+																			DV_TEXT matches {*}
+																		}
+																	}
+																}
+															}
+															CLUSTER[at0.0.124] occurrences matches {0..1} matches {	-- Tumour features
+																items cardinality matches {0..*; unordered} matches {
+																	ELEMENT[at0.0.125] occurrences matches {0..1} matches {	-- Tumour feature
+																		value matches {
+																			DV_CODED_TEXT matches {
+																				defining_code matches {
+																					[local::
+																					at0.0.126, 	-- Necrosis
+																					at0.0.127, 	-- Apoptosis
+																					at0.0.128, 	-- Mitotic rate
+																					at0.0.129]	-- Ki67
+																				}
+																			}
+																			DV_TEXT matches {*}
+																		}
+																	}
+																}
+															}
+														}
+													}
+													ELEMENT[at0007.4] occurrences matches {0..*} matches {	-- Image
+														value matches {
+															DV_MULTIMEDIA matches {
+																media_type matches {
+																	[openEHR::
+																	425, 
+																	426, 
+																	427, 
+																	428, 
+																	429]
+																}
+															}
+														}
+													}
+													CLUSTER[at0.62] occurrences matches {0..*} matches {	-- Specific findings
+														items cardinality matches {0..*; unordered} matches {
+															ELEMENT[at0.67] occurrences matches {0..1} matches {	-- Slide identifier
+																value matches {
+																	DV_TEXT matches {*}
+																}
+															}
+															ELEMENT[at0007.5] occurrences matches {0..*} matches {	-- Description
+																value matches {
+																	DV_TEXT matches {*}
+																}
+															}
+															allow_archetype CLUSTER[at0.65] occurrences matches {0..*} matches {	-- Structured 
+																include
+																	archetype_id/value matches {/.*/}
+															}
+															ELEMENT[at0007.6] occurrences matches {0..*} matches {	-- Image
+																value matches {
+																	DV_MULTIMEDIA matches {
+																		media_type matches {
+																			[openEHR::
+																			425, 
+																			426, 
+																			427, 
+																			428, 
+																			429]
+																		}
+																	}
+																}
+															}
+															ELEMENT[at0.64] occurrences matches {0..1} matches {	-- Magnification
+																value matches {
+																	DV_COUNT matches {
+																		magnitude matches {|>=1|}
+																	}
+																}
+															}
+															ELEMENT[at0.63] occurrences matches {0..1} matches {	-- Stain
+																value matches {
+																	DV_TEXT matches {*}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+									CLUSTER[at0055] occurrences matches {0..*} matches {	-- Comments
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0008] occurrences matches {0..1} matches {	-- Comment
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+											ELEMENT[at0056] occurrences matches {0..1} matches {	-- Path to result
+												value matches {
+													DV_EHR_URI matches {*}
+												}
+											}
+										}
+									}
+									ELEMENT[at0057] occurrences matches {0..1} matches {	-- Overall conclusion
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0010] occurrences matches {0..*} matches {	-- Multimedia representation
+										value matches {
+											DV_MULTIMEDIA matches {
+												media_type matches {[openEHR::]}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0004] matches {	-- Tree
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0035] occurrences matches {0..1} matches {	-- Processing status
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0037, 	-- Interim
+									at0038, 	-- Final
+									at0039, 	-- Supplementary
+									at0040]	-- Corrected
+								}
+							}
+						}
+					}
+					CLUSTER[at0013] occurrences matches {0..1} matches {	-- Request identification
+						items cardinality matches {0..*; unordered} matches {
+							allow_archetype CLUSTER[at0046] occurrences matches {0..*} matches {	-- Request identification 
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.request_identification\.v1/}
+								exclude
+									archetype_id/value matches {/.*/}
+							}
+						}
+					}
+					CLUSTER[at0011] occurrences matches {0..1} matches {	-- Specimen details
+						items cardinality matches {0..*; unordered} matches {
+							allow_archetype CLUSTER[at0012] occurrences matches {0..*} matches {	-- Specimen details 
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen\.v1/}
+							}
+						}
+					}
+					CLUSTER[at0016] occurrences matches {0..1} matches {	-- Laboratory details
+						items cardinality matches {0..*; unordered} matches {
+							allow_archetype CLUSTER[at0017] occurrences matches {0..*} matches {	-- Laboratory details
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation\.v2/}
+							}
+						}
+					}
+					CLUSTER[at0018] occurrences matches {0..1} matches {	-- Method
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0019] occurrences matches {0..1} matches {	-- Description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0020] occurrences matches {0..*} matches {	-- Device
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.device\.v1/}
+								exclude
+									archetype_id/value matches {/.*/}
+							}
+						}
+					}
+					CLUSTER[at0021] occurrences matches {0..1} matches {	-- Quality
+						items cardinality matches {0..*; unordered} matches {
+							CLUSTER[at0022] occurrences matches {0..*} matches {	-- Received specimen
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0023] occurrences matches {0..1} matches {	-- Issue
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0051, 	-- Haemolysed
+													at0052, 	-- Lipaemic
+													at0053, 	-- Incorrect preservative
+													at0054]	-- Insufficient sample
+												}
+											}
+										}
+									}
+									ELEMENT[at0024] occurrences matches {0..1} matches {	-- Rating
+										value matches {
+											DV_COUNT matches {
+												magnitude matches {|0..100|}
+											}
+										}
+									}
+									ELEMENT[at0058] occurrences matches {0..1} matches {	-- Description
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+							CLUSTER[at0026] occurrences matches {0..1} matches {	-- Handling
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0027] occurrences matches {0..1} matches {	-- Issue
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0047, 	-- Handling error
+													at0048, 	-- Age
+													at0049, 	-- Laboratory accident
+													at0050]	-- Fail
+												}
+											}
+										}
+									}
+									ELEMENT[at0059] occurrences matches {0..1} matches {	-- Rating
+										value matches {
+											DV_COUNT matches {
+												magnitude matches {|0..100|}
+											}
+										}
+									}
+									ELEMENT[at0029] occurrences matches {0..1} matches {	-- Description
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.0.100"] = <
+					text = <"Large">
+					description = <"Large tumour cell size (larger than a histiocyte)">
+				>
+				["at0.0.101"] = <
+					text = <"Indeterminate">
+					description = <"The tumour cell size could not be ascertained">
+				>
+				["at0.0.102"] = <
+					text = <"Pleomorphic">
+					description = <"*">
+				>
+				["at0.0.103"] = <
+					text = <"Hyperbolate">
+					description = <"*">
+				>
+				["at0.0.104"] = <
+					text = <"Anaplastic">
+					description = <"*">
+				>
+				["at0.0.105"] = <
+					text = <"Clear cell">
+					description = <"*">
+				>
+				["at0.0.106"] = <
+					text = <"Giant Cell">
+					description = <"*">
+				>
+				["at0.0.107"] = <
+					text = <"Spindle cell">
+					description = <"*">
+				>
+				["at0.0.108"] = <
+					text = <"Signet ring cell">
+					description = <"*">
+				>
+				["at0.0.109"] = <
+					text = <"Blastic">
+					description = <"*">
+				>
+				["at0.0.110"] = <
+					text = <"Indeterminate">
+					description = <"*">
+				>
+				["at0.0.111"] = <
+					text = <"Centroblastic">
+					description = <"*">
+				>
+				["at0.0.112"] = <
+					text = <"Centrocytic">
+					description = <"*">
+				>
+				["at0.0.113"] = <
+					text = <"Immunoblastic">
+					description = <"*">
+				>
+				["at0.0.114"] = <
+					text = <"Plasmacytic">
+					description = <"*">
+				>
+				["at0.0.115"] = <
+					text = <"Lymphoplasmacytic">
+					description = <"*">
+				>
+				["at0.0.116"] = <
+					text = <"Lymphoplasmacytoid">
+					description = <"*">
+				>
+				["at0.0.117"] = <
+					text = <"Prolymphocytic">
+					description = <"*">
+				>
+				["at0.0.118"] = <
+					text = <"Paraimmunoblastic">
+					description = <"*">
+				>
+				["at0.0.119"] = <
+					text = <"Plasmablastic">
+					description = <"*">
+				>
+				["at0.0.120"] = <
+					text = <"Monocytoid">
+					description = <"*">
+				>
+				["at0.0.121"] = <
+					text = <"Centrocyte-like">
+					description = <"*">
+				>
+				["at0.0.122"] = <
+					text = <"Popcorn cell">
+					description = <"*">
+				>
+				["at0.0.123"] = <
+					text = <"Reed-Sternberg cell-like">
+					description = <"*">
+				>
+				["at0.0.124"] = <
+					text = <"Tumour features">
+					description = <"General tumour features noted on microscopy">
+				>
+				["at0.0.125"] = <
+					text = <"Tumour feature">
+					description = <"General tumour features">
+				>
+				["at0.0.126"] = <
+					text = <"Necrosis">
+					description = <"*">
+				>
+				["at0.0.127"] = <
+					text = <"Apoptosis">
+					description = <"*">
+				>
+				["at0.0.128"] = <
+					text = <"Mitotic rate">
+					description = <"*">
+				>
+				["at0.0.129"] = <
+					text = <"Ki67">
+					description = <"*">
+				>
+				["at0.0.74"] = <
+					text = <"Abnormal cells">
+					description = <"Abnormal cells seen on microscopy of the specimen">
+				>
+				["at0.0.75"] = <
+					text = <"Host cell reactions">
+					description = <"Descriptions of reactions of host cells to tumour. Additional text / coded terms can be entered">
+				>
+				["at0.0.76"] = <
+					text = <"Host cell reaction">
+					description = <"Descriptions of reactions of host cells to tumour. Additional text / coded terms can be entered">
+				>
+				["at0.0.77"] = <
+					text = <"Host tissue reaction">
+					description = <"Descriptions of reactions of host tissue to tumour. Additional text / coded terms can be entered">
+				>
+				["at0.0.78"] = <
+					text = <"Pattern of infiltration">
+					description = <"The pattern of tumour infiltration">
+				>
+				["at0.0.79"] = <
+					text = <"Tumour cell size">
+					description = <"Estimates of tumour cell size">
+				>
+				["at0.0.80"] = <
+					text = <"Cytomorphology">
+					description = <"Detailed features of abnormal cell morphology">
+				>
+				["at0.0.81"] = <
+					text = <"Generic">
+					description = <"Generic abnormal cell cytomorphology features. ">
+				>
+				["at0.0.82"] = <
+					text = <"Specific">
+					description = <"Specific abnormal cell cytomorphology features">
+				>
+				["at0.0.83"] = <
+					text = <"Host tissue reactions">
+					description = <"Descriptions of reactions of host tissue to tumour. Additional text / coded terms can be entered">
+				>
+				["at0.0.84"] = <
+					text = <"Necrotic">
+					description = <"Necrotic host tissue reaction to tumour">
+				>
+				["at0.0.85"] = <
+					text = <"Sclerotic">
+					description = <"Sclerotic host tissue reaction to tumour">
+				>
+				["at0.0.86"] = <
+					text = <"Granulomatous">
+					description = <"Granulomatous host tissue reaction to tumour">
+				>
+				["at0.0.87"] = <
+					text = <"Suppurative">
+					description = <"Suppurative host tissue reaction to tumour">
+				>
+				["at0.0.88"] = <
+					text = <"High Endothelial Venule (HEV) hyperplasia">
+					description = <"High Endothelial Venule (HEV) hyperplasia -  host tissue reaction to tumour">
+				>
+				["at0.0.89"] = <
+					text = <"Starry sky pattern">
+					description = <"\"Starry sky pattern\" host tissue reaction to tumour">
+				>
+				["at0.0.90"] = <
+					text = <"Amyloid">
+					description = <"Amyloid host tissue reaction to tumour">
+				>
+				["at0.0.91"] = <
+					text = <"Increased reticulin">
+					description = <"Increased reticulin - host tissue reaction to tumour">
+				>
+				["at0.0.92"] = <
+					text = <"T-cell rich">
+					description = <"T-cell rich host cell reaction">
+				>
+				["at0.0.93"] = <
+					text = <"Eosinophil rich">
+					description = <"Eosinophil rich host cell reaction">
+				>
+				["at0.0.94"] = <
+					text = <"Histiocyte-rich">
+					description = <"Histiocyte-rich host cell reaction">
+				>
+				["at0.0.95"] = <
+					text = <"Neutrophil-rich">
+					description = <"Neutrophil-rich host cell reaction">
+				>
+				["at0.0.96"] = <
+					text = <"Plasma cell-rich">
+					description = <"Plasma cell-rich host cell reaction">
+				>
+				["at0.0.97"] = <
+					text = <"Erythrophagocytic">
+					description = <"Erythrophagocytic host cell reaction">
+				>
+				["at0.0.98"] = <
+					text = <"Small or Intermediate">
+					description = <"Smal or intermediate tumour cell size (smaller than a histiocyte)">
+				>
+				["at0.0.99"] = <
+					text = <"Medium">
+					description = <"Medium tumour cell size (equal to a histiocyte)">
+				>
+				["at0.58"] = <
+					text = <"Macroscopic">
+					description = <"Macroscopic pathology findings">
+				>
+				["at0.59"] = <
+					text = <"Microscopic">
+					description = <"An overview of microscopic findings. Per-slide findings should be recorded under specific findings">
+				>
+				["at0.60"] = <
+					text = <"Description">
+					description = <"*">
+				>
+				["at0.61"] = <
+					text = <"Structured">
+					description = <"*">
+				>
+				["at0.62"] = <
+					text = <"Specific findings">
+					description = <"Potentially multiple specific microscopic findings on a per-slide basis">
+				>
+				["at0.63"] = <
+					text = <"Stain">
+					description = <"The stain used">
+				>
+				["at0.64"] = <
+					text = <"Magnification">
+					description = <"The magnification used">
+				>
+				["at0.65"] = <
+					text = <"Structured ">
+					description = <"Structured recording of specific microscopic findings">
+				>
+				["at0.66"] = <
+					text = <"Structured">
+					description = <"Structured general nicroscopic findings ">
+				>
+				["at0.67"] = <
+					text = <"Slide identifier">
+					description = <"The label of the slide from which the image was taken">
+				>
+				["at0.68"] = <
+					text = <"Insufficient preservative">
+					description = <"There was insufficient preservative to maintain sample quality">
+				>
+				["at0.69"] = <
+					text = <"Damaged sample">
+					description = <"The specimen or sample was damaged on receipt">
+				>
+				["at0000"] = <
+					text = <"Laboratory result">
+					description = <"Generic laboratory result archetype to allow a framework for terminology driven results or for further specialisation. ">
+				>
+				["at0000.1"] = <
+					text = <"Laboratory histology">
+					description = <"Laboratory result specialised for histology reports">
+				>
+				["at0000.1.1"] = <
+					text = <"Histology result haematopoietic tumours">
+					description = <"Laboratory result specialised for histology reports concenred with lymphomas and other haematopoietic tumours">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Test performed">
+					description = <"A specific identifier for this result - often a coded term e.g from LOINC or SNOMED">
+				>
+				["at0006"] = <
+					text = <"Results">
+					description = <"Zero, one or more results. May be zero if the result is cancelled. ">
+				>
+				["at0007"] = <
+					text = <"Any result">
+					description = <"The value of the result. Will be constrained to an actual data type by specialisation, templating, or at run-time.">
+				>
+				["at0007.1"] = <
+					text = <"Description">
+					description = <"Text description of macroscopic pathology findings ">
+				>
+				["at0007.2"] = <
+					text = <"Description">
+					description = <"The value of the result. Will be constrained to an actual data type by specialisation, templating, or at run-time.">
+				>
+				["at0007.3"] = <
+					text = <"Image">
+					description = <"Images associated with macroscopic pathology">
+				>
+				["at0007.4"] = <
+					text = <"Image">
+					description = <"The value of the result. Will be constrained to an actual data type by specialisation, templating, or at run-time.">
+				>
+				["at0007.5"] = <
+					text = <"Description">
+					description = <"A text description of specific microscopic findings">
+				>
+				["at0007.6"] = <
+					text = <"Image">
+					description = <"The value of the result. Will be constrained to an actual data type by specialisation, templating, or at run-time.">
+				>
+				["at0008"] = <
+					text = <"Comment">
+					description = <"A comment against a specific result value">
+				>
+				["at0010"] = <
+					text = <"Multimedia representation">
+					description = <"Zero, one or more representations of the result in mutlimedia e.g image, audio, video.">
+				>
+				["at0011"] = <
+					text = <"Specimen details">
+					description = <"Details of the specimen">
+				>
+				["at0012"] = <
+					text = <"Specimen details ">
+					description = <"Details of the specimen">
+				>
+				["at0013"] = <
+					text = <"Request identification">
+					description = <"Unique identifiers used in delivery of the care process.">
+				>
+				["at0016"] = <
+					text = <"Laboratory details">
+					description = <"Demographic details of the laboratory responsible for the test">
+				>
+				["at0017"] = <
+					text = <"Laboratory details">
+					description = <"Demogprahic details of the laboratory responsible for the test">
+				>
+				["at0018"] = <
+					text = <"Method">
+					description = <"Method used to perform the test">
+				>
+				["at0019"] = <
+					text = <"Description">
+					description = <"Description of the method used to perform the test">
+				>
+				["at0020"] = <
+					text = <"Device">
+					description = <"Device used to preform the test">
+				>
+				["at0021"] = <
+					text = <"Quality">
+					description = <"Issues of test quality">
+				>
+				["at0022"] = <
+					text = <"Received specimen">
+					description = <"Issues with the quality of the specimen when received by the laboratory.">
+				>
+				["at0023"] = <
+					text = <"Issue">
+					description = <"Short description of the quality issue. Will often be a coded term e.g Hamolysed, Lipaemic, Incorrect preservative., Insufficient Sample">
+				>
+				["at0024"] = <
+					text = <"Rating">
+					description = <"Estimate of the quality of the specimen.">
+				>
+				["at0026"] = <
+					text = <"Handling">
+					description = <"Issues of quality arising during handling and processing within the lab.">
+				>
+				["at0027"] = <
+					text = <"Issue">
+					description = <"Issue arising with handling or processing of the specimen within the laboratory">
+				>
+				["at0029"] = <
+					text = <"Description">
+					description = <"Detailed description of the quality issues related to handling">
+				>
+				["at0035"] = <
+					text = <"Processing status">
+					description = <"The processing status of the result.">
+				>
+				["at0037"] = <
+					text = <"Interim">
+					description = <"This is an initial or interim result - further updates are anticipated">
+				>
+				["at0038"] = <
+					text = <"Final">
+					description = <"This is the final result. No further alterations are anticipated">
+				>
+				["at0039"] = <
+					text = <"Supplementary">
+					description = <"This is a supplememtary result in addition to the Interim result">
+				>
+				["at0040"] = <
+					text = <"Corrected">
+					description = <"This is a Correction which should replace any previous results">
+				>
+				["at0046"] = <
+					text = <"Request identification ">
+					description = <"Identifiers used in the care process">
+				>
+				["at0047"] = <
+					text = <"Handling error">
+					description = <"An error arose when handling the specimen">
+				>
+				["at0048"] = <
+					text = <"Age">
+					description = <"The specimen was too old to analyse accurately">
+				>
+				["at0049"] = <
+					text = <"Laboratory accident">
+					description = <"An accident occurred with the sample in the laboratory">
+				>
+				["at0050"] = <
+					text = <"Fail">
+					description = <"The specimen could not be analysed for technical reasons">
+				>
+				["at0051"] = <
+					text = <"Haemolysed">
+					description = <"The specimen was haemolysed">
+				>
+				["at0052"] = <
+					text = <"Lipaemic">
+					description = <"The specimen was lipaemic">
+				>
+				["at0053"] = <
+					text = <"Incorrect preservative">
+					description = <"An incorrect preservative was used when transporting the specimen">
+				>
+				["at0054"] = <
+					text = <"Insufficient sample">
+					description = <"An insufficient sample was given to undertake measurement">
+				>
+				["at0055"] = <
+					text = <"Comments">
+					description = <"One or more comments against specific results">
+				>
+				["at0056"] = <
+					text = <"Path to result">
+					description = <"The internal archetype path to the result on which the comment is being made">
+				>
+				["at0057"] = <
+					text = <"Overall conclusion">
+					description = <"An overall comment on this test">
+				>
+				["at0058"] = <
+					text = <"Description">
+					description = <"Detailed description of the quality of the received specimen.">
+				>
+				["at0059"] = <
+					text = <"Rating">
+					description = <"Estimate of the quality of handling">
+				>
+			>
+		>
+	>

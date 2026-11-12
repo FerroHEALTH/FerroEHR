@@ -1,0 +1,85 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-INSTRUCTION.intravenous_fluid_order.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck">
+                ["organisation"] = <"University of Heidelberg">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"10/04/2007">
+    >
+    lifecycle_state = <"Rejected">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"90436B313BC49573F707EFF2A080DAF7">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation einer Verordnung einer intravenösen Gabe einer Flüssigkeit.">
+            keywords = <"intravenös", "Flüssigkeit", "Verschreibung", "IV">
+            use = <"">
+            misuse = <"">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Record an order for intravenous fluids to be administered">
+            keywords = <"intravenous", "fluid ", "order", "IV">
+            use = <"">
+            misuse = <"">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+    >
+
+definition
+    INSTRUCTION[at0000] matches {    -- Intravenous fluid order
+        activities cardinality matches {0..*; unordered} matches {
+            ACTIVITY[at0001] occurrences matches {0..1} matches {    -- new activity
+                action_archetype_id matches {/openEHR-EHR-ACTION\.intravenous_fluid_administration\.v1/}
+                description matches {
+                    allow_archetype ITEM_TREE[at9000] matches {
+                        include
+                            archetype_id/value matches {/openEHR-EHR-ITEM_TREE\.intravenous_fluids\.v1/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Verschreibung intravenöser Flüssigkeit">
+                description = <"Dokumentation der Verschreibung einer intravenösen Flüssigkeit">
+            >
+            ["at0001"] = <
+                text = <"neue Handlung">
+                description = <"*">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Intravenous fluid order">
+                description = <"Record of intravenous fluid order">
+            >
+            ["at0001"] = <
+                text = <"new activity">
+                description = <"*">
+            >
+        >
+    >

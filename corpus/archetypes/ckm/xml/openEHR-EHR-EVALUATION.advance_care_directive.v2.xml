@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -97,8 +97,7 @@ Die Anordnung zur medizinischen Versorgung kann auch als Patientenverfügung, Pa
 &#xD;
 Dieser Archetyp wurde speziell als Rahmen oder Struktur entwickelt, die für die komplexe Vielfalt von Anwendungsfällen und lokalen Anforderungen erweitert werden kann, indem eine Vielzahl möglicher CLUSTER-Archetypen verschachtelt wird, die je nach nationalen oder anderen lokalen Anforderungen spezifische Angaben enthalten. &#xD;
 &#xD;
-In einigen Ländern ist eine Patientenverfügung rechtlich überzeugend, ohne einen offiziellen Rechtsstatus zu haben. In anderen Ländern handelt es sich um ein rechtsverbindliches Dokument und es MUSS sichergestellt werden, dass der Archetyp der Patientenverfügung und alle verschachtelten Archetypen den einschlägigen rechtlichen Anforderungen entsprechen.&#xD;
-</use>
+In einigen Ländern ist eine Patientenverfügung rechtlich überzeugend, ohne einen offiziellen Rechtsstatus zu haben. In anderen Ländern handelt es sich um ein rechtsverbindliches Dokument und es MUSS sichergestellt werden, dass der Archetyp der Patientenverfügung und alle verschachtelten Archetypen den einschlägigen rechtlichen Anforderungen entsprechen.</use>
       <misuse>Nicht zur Erfassung von Organspendepräferenzen verwenden. Verwenden Sie hierfür einen spezifischen Archetyp.&#xD;
 &#xD;
 Nicht zur Erfassung von Angaben zu einer Vollmacht oder einem anderen gesetzlichen Vertreter/Bevollmächtigten verwenden. Verwenden Sie hierfür einen spezifischen Archetyp.&#xD;
@@ -122,8 +121,7 @@ Et individ som har mental kapasitet til det kan lage en viljesrerklæring som ut
 Denne arketypen har blitt designet som et rammeverk for å kunne dekke et vidt spekter av brukssituasjoner ved å nøste inn en eller flere CLUSTER-arketyper med spesifikke detaljer og nasjonale eller lokale krav. &#xD;
 &#xD;
 I noen land er et et fremtidig behandlingsvalg retningsgivende uten å være et offisielt juridisk dokument. I andre land er det juridisk bindende, og det må da sikres at arketypen "Fremtidig behandlingsvalg" og eventuelle arketyper som nøstes inn i denne, tilfredsstiller de juridiske krav som stilles lokalt.</use>
-      <misuse>	&#xD;
-Skal ikke brukes for å registrere ønsker knyttet til organdonasjon. Bruk spesifikke arketyper for dette formålet.&#xD;
+      <misuse>Skal ikke brukes for å registrere ønsker knyttet til organdonasjon. Bruk spesifikke arketyper for dette formålet.&#xD;
 &#xD;
 Skal ikke brukes for å registrere stedfortredende beslutningstaker eller annen juridisk representant, som for eksempel verge, for individet. Bruk spesifikke arketyper for dette formålet.&#xD;
 &#xD;
@@ -1030,8 +1028,7 @@ In the UK, advance care directive types include 'Advance Decision', 'Advance Dir
         <items id="description">The conditions or situations in which the individual wishes the advance care directive to apply.</items>
         <items id="comment">For example: dementia, brain injury, diseases of the central nervous system, and terminal illness. Coding with a terminology is preferred, where possible.&#xD;
 &#xD;
-The advance care directive applies to all specified conditions if the individual can no longer make or communicate decisions about their medical treatment and is unlikely to regain the ability to make such decisions. Details of specific decisions that apply to different conditions or situations can be included using CLUSTER archetypes in the 'Directive details' slot.&#xD;
-</items>
+The advance care directive applies to all specified conditions if the individual can no longer make or communicate decisions about their medical treatment and is unlikely to regain the ability to make such decisions. Details of specific decisions that apply to different conditions or situations can be included using CLUSTER archetypes in the 'Directive details' slot.</items>
       </items>
       <items code="at0010">
         <items id="text">Item tree</items>
@@ -1243,23 +1240,19 @@ Det fremtidige behandlingsvalget gjøres gjeldende for alle tilstander eller sit
 &#xD;
 In den Niederlanden beispielsweise umfassen die Arten von Patientenverfügungen unter anderem "Behandlungsverbot", " Behandlungsverbot mit Beendigung des abgeschlossenen Lebens", "Euthanasieantrag" und "Lebenserklärung".&#xD;
 &#xD;
-Im Vereinigten Königreich gehören zu den Arten von Patientenverfügungen im Rahmen der medizinischen Versorgung die "Vorabentscheidung", die "Patientenverfügung" und die " Voraberklärung".&#xD;
- &#xD;
-</items>
+Im Vereinigten Königreich gehören zu den Arten von Patientenverfügungen im Rahmen der medizinischen Versorgung die "Vorabentscheidung", die "Patientenverfügung" und die " Voraberklärung".</items>
       </items>
       <items code="at0006">
         <items id="text">Beschreibung</items>
         <items id="description">Beschreibung der allgemeinen Patientenverfügung.</items>
-        <items id="comment">Kann verwendet werden, um eine Übersicht über die gesamte Patientenverfügung zu erfassen, die durch strukturierte Daten unterstützt werden kann. Angaben zu bestimmten strukturierten Befunden können unter Verwendung von CLUSTER-Archetypen in den Slot "Einzelheiten zur Richtlinie" aufgenommen werden. Dieses Datenelement kann verwendet werden, um Altdaten zu erfassen, die nicht in einem strukturierten Format verfügbar sind.&#xD;
-</items>
+        <items id="comment">Kann verwendet werden, um eine Übersicht über die gesamte Patientenverfügung zu erfassen, die durch strukturierte Daten unterstützt werden kann. Angaben zu bestimmten strukturierten Befunden können unter Verwendung von CLUSTER-Archetypen in den Slot "Einzelheiten zur Richtlinie" aufgenommen werden. Dieses Datenelement kann verwendet werden, um Altdaten zu erfassen, die nicht in einem strukturierten Format verfügbar sind.</items>
       </items>
       <items code="at0007">
         <items id="text">Voraussetzung</items>
         <items id="description">Die Bedingungen oder Situationen, in denen die Person wünscht, dass die Patientenverfügung zur Anwendung kommt.</items>
         <items id="comment">Zum Beispiel: Demenz, Hirnverletzungen, Erkrankungen des Zentralnervensystems und unheilbare Krankheiten. Die Kodierung mit einer Terminologie wird, bevorzugt.&#xD;
 &#xD;
-Die Patientenverfügung gilt für alle genannten Erkrankungen, wenn die betroffene Person keine Entscheidungen über ihre medizinische Behandlung mehr treffen oder mitteilen kann und es unwahrscheinlich ist, dass sie die Fähigkeit, solche Entscheidungen zu treffen, wiedererlangen wird. Einzelheiten spezifischer Entscheidungen, die für unterschiedliche Bedingungen oder Situationen gelten, können unter Verwendung von CLUSTER-Archetypen in den Slot "Einzelheiten der Richtlinie" aufgenommen werden.&#xD;
-</items>
+Die Patientenverfügung gilt für alle genannten Erkrankungen, wenn die betroffene Person keine Entscheidungen über ihre medizinische Behandlung mehr treffen oder mitteilen kann und es unwahrscheinlich ist, dass sie die Fähigkeit, solche Entscheidungen zu treffen, wiedererlangen wird. Einzelheiten spezifischer Entscheidungen, die für unterschiedliche Bedingungen oder Situationen gelten, können unter Verwendung von CLUSTER-Archetypen in den Slot "Einzelheiten der Richtlinie" aufgenommen werden.</items>
       </items>
       <items code="at0010">
         <items id="text">Item tree</items>
@@ -1373,8 +1366,7 @@ In the UK, advance care directive types include 'Advance Decision', 'Advance Dir
         <items id="description">De voorwaarde of situatie waarin het individu wil dat de wilsverklaring van toepassing is.</items>
         <items id="comment">* For example: dementia, brain injury, diseases of the central nervous system, and terminal illness. Coding with a terminology is preferred, where possible.&#xD;
 &#xD;
-The advance care directive applies to all specified conditions if the individual can no longer make or communicate decisions about their medical treatment and is unlikely to regain the ability to make such decisions. Details of specific decisions that apply to different conditions or situations can be included using CLUSTER archetypes in the 'Directive details' slot.&#xD;
-</items>
+The advance care directive applies to all specified conditions if the individual can no longer make or communicate decisions about their medical treatment and is unlikely to regain the ability to make such decisions. Details of specific decisions that apply to different conditions or situations can be included using CLUSTER archetypes in the 'Directive details' slot.</items>
       </items>
       <items code="at0010">
         <items id="text">Item tree</items>
@@ -1599,4 +1591,3 @@ Ou 'as Testemunhas de Jeová acreditam que a Bíblia proíbe os cristãos de ace
     </term_bindings>
   </ontology>
 </archetype>
-

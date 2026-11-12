@@ -53,6 +53,14 @@ language
 				["other_contributors"] = <"None">
 			>
 		>
+		["nl"] = <
+			language = <[ISO_639-1::nl]>
+			author = <
+				["name"] = <"Mattijs Kuhlmann">
+				["organisation"] = <"Nedap">
+				["email"] = <"mattijs.kuhlmann@nedap.com">
+			>
+		>
 	>
 description
 	original_author = <
@@ -123,6 +131,15 @@ The ASA (2020) reference defines each classification and provides some adult, pa
 			misuse = <"">
 			copyright = <"© openEHR Foundation, openEHR Norway">
 		>
+		["nl"] = <
+			language = <[ISO_639-1::nl]>
+			purpose = <"Voor het vastleggen van het classificatiesysteem van de American Society of Anesthesiologists (ASA) als onderdeel van een preoperatieve risicobeoordeling.">
+			use = <"Voor het vastleggen van het classificatiesysteem van de American Society of Anesthesiologists (ASA) als onderdeel van een preoperatieve risicobeoordeling.
+
+De ASA (2020)-referentie definieert elke classificatie en geeft enkele voorbeelden voor volwassenen, kinderen en obstetrie om zorgverleners te helpen een classificatieniveau voor de fysieke status toe te kennen. Omdat deze voorbeelden talrijk zijn en op instellingsniveau verder verfijnd of beschreven kunnen worden, zijn specifieke voorbeelden niet in dit archetype opgenomen.">
+			keywords = <"ASA", "preoperatief", "chirurgie", "anesthesiologie", "anesthesie">
+			misuse = <"">
+		>
 	>
 	lifecycle_state = <"published">
 	other_contributors = <"Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Lars Bitsch-Larsen, Haukeland University Hospital, Bergen, Norway", "paul cooper, NHS Orkney, United Kingdom", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Torsten Eken, Oslo universitetssykehus HF, Ullevål, Norway", "Grant Forrest, Lunaria Ltd, United Kingdom", "Heather Grain, Llewelyn Grain Informatics, Australia", "Martin Grundberg, Cambio Healthcare Systems, Sweden", "Kristian Heldal, Telemark Hospital Trust, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Rikard Lovstrom, Swedish Medical Association, Sweden", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Terje Meling, Stavanger University Hospital, Norway", "Mette Monsen, Helse Bergen HF, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden (openEHR Editor)", "Bjørn Næss, DIPS ASA, Norway", "Åsa Skagerhult, Region Östergötland, Sweden (openEHR Translation Editor)", "Niclas Skyttberg, Karolinska Institutet, Sweden", "Erik Sundvall, Karolinska University Hospital, Region Stockholm + Linköping University, Sweden", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Ørjan Vermeer, Haukeland Universitetssjukehus, Kvinneklinikken, Norway", "Nils Widnes, Helse-Bergen, Norway", "Tina Sand, UNN, Norway">
@@ -140,10 +157,10 @@ Derived from: ASA-klassifikasjon, Publisert arketype [Internet]. Nasjonal IKT, N
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"4C4DD4CF98D10F540319C3ECFC498330">
-		["build_uid"] = <"f7d26beb-edb0-4d66-86e4-fc63147b95df">
+		["MD5-CAM-1.0.1"] = <"9BD22711FC3BF6FA7E17E92B980EEE11">
+		["build_uid"] = <"0d17a85b-5724-4152-afea-6ae59de7cdd3">
 		["ip_acknowledgements"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
-		["revision"] = <"1.1.0">
+		["revision"] = <"1.1.1">
 	>
 
 definition
@@ -188,7 +205,6 @@ definition
 			}
 		}
 	}
-
 
 ontology
 	terminologies_available = <"SNOMED-CT", ...>
@@ -568,6 +584,69 @@ ontology
 					text = <"Emergencia (E)">
 					description = <"Registra como Verdadero si la cirugía se llevó a cabo en una situación de emergencia.">
 					comment = <"Representado por el sufijo 'E' añadido a la clase. Por ejemplo: '3E'. La Clase 5 suele ser una emergencia y por lo tanto casi siempre se designa solo como '5E'. La clase '6E' no es válida y simplemente se registra como clase '6', ya que la extracción de órganos en pacientes en estado de muerte cerebral se realiza en la urgencia. La definición de una emergencia se puede encontrar en la referencia de la ASA (2020).">
+				>
+			>
+		>
+		["nl"] = <
+			items = <
+				["at0000"] = <
+					text = <"ASA-classificatiesysteem fysieke status">
+					description = <"Classificatiesysteem van de American Society of Anesthesiologists (ASA) als onderdeel van een preoperatieve risicobeoordeling.">
+				>
+				["at0001"] = <
+					text = <"Classificatie">
+					description = <"Vastgestelde classificatie van een patiënt.">
+					comment = <"Voorbeelden voor elke klasse zijn te vinden in de ASA (2020)-referentie.">
+				>
+				["at0003"] = <
+					text = <"ASA 1">
+					description = <"Een normale, gezonde patiënt.">
+				>
+				["at0004"] = <
+					text = <"ASA 2">
+					description = <"Een patiënt met een milde systemische aandoening.">
+				>
+				["at0005"] = <
+					text = <"ASA 3">
+					description = <"Een patiënt met een ernstige systemische aandoening.">
+				>
+				["at0006"] = <
+					text = <"ASA 4">
+					description = <"Een patiënt met een ernstige systemische aandoening die een constante bedreiging voor het leven vormt.">
+				>
+				["at0007"] = <
+					text = <"ASA 5">
+					description = <"Een moribunde patiënt van wie niet verwacht wordt dat die zonder de operatie overleeft.">
+				>
+				["at0008"] = <
+					text = <"ASA 6">
+					description = <"Een hersendode patiënt van wie organen worden uitgenomen voor donatie.">
+				>
+				["at0015"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0016"] = <
+					text = <"Willekeurig moment in de tijd">
+					description = <"Ongespecificeerd moment in de tijd dat expliciet gedefinieerd kan worden in een template of tijdens het vastleggen van de data.">
+				>
+				["at0017"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0018"] = <
+					text = <"ItemTree">
+					description = <"@ internal @">
+				>
+				["at0019"] = <
+					text = <"Uitbreiding">
+					description = <"Aanvullende informatie die nodig is om het model uit te breiden met lokale inhoud of af te stemmen op andere referentiemodellen of formalismen.">
+					comment = <"Bijvoorbeeld: lokale informatiebehoeften; of aanvullende metadata voor afstemming met FHIR.">
+				>
+				["at0020"] = <
+					text = <"Spoed (E)">
+					description = <"Registreer als Waar als de operatie in een spoedsituatie werd uitgevoerd.">
+					comment = <"Weergegeven door het achtervoegsel 'E' achter de klasse. Bijvoorbeeld: '3E'. Klasse 5 is meestal een spoedsituatie en wordt daarom vrijwel altijd als '5E' aangeduid. De klasse '6E' is niet geldig en wordt eenvoudigweg als klasse '6' vastgelegd, omdat alle orgaanuitname bij hersendode patiënten met spoed plaatsvindt. De definitie van een spoedsituatie is te vinden in de ASA (2020)-referentie.">
 				>
 			>
 		>

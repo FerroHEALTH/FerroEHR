@@ -1,0 +1,156 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=69876541-af05-38de-8427-02b634d3e2ea; build_uid=22bbb065-e227-450d-94c0-44c08cc55486)
+    openEHR-EHR-EVALUATION.pregnancy_bf_status.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2012-12-02">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sam Heard, Ocean Informatics, Australia", ...>
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"356E81B22F339290D056643FF5BB2C0E">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Um festzuhalten, dass eine Frau derzeit schwanger ist oder derzeit stillt.">
+            keywords = <"schwanger", "Schwangerschaft", "Stillen">
+            use = <"Verwenden Sie diesen Archetyp, um die positive Schwangerschaft, aktuell schwangeren und / oder stillenden Zustand in einem klinischen Systems zu kennzeichnen.
+
+Wenn die Frau nicht mehr schwanger ist und / oder stillt, sollte das Kennzeichen entfernt werden.
+
+Dieser Archetyp wurde entwickelt, um Entscheidungsunterstützung und therapeutische Vorsichtsmaßnahmen in klinischen Systemen auszulösen, ohne dass Details über die Schwangerschaft oder das Stillen bekannt sind.">
+            misuse = <"Nicht zur Darstellung des positiven Ausschlusses von Schwangerschaft oder Stillzeit verwenden. Verwenden Sie zu diesem Zweck spezifischen Archetypen von EVALUATION.exclusion.
+
+Nicht zur Darstellung der Informationen über eine bestimmte Schwangerschaft - verwenden Sie EVALUATION.pregnancy für diesen Zweck.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record that a woman is currently pregnant or is currently breast feeding only.">
+            keywords = <"pregnant", "pregnancy", "breast feeding">
+            use = <"Use to flag the positive, currently pregnant, and/or currently breast feeding state, within a clinical system.
+
+If the woman is no longer pregnant and/or breast feeding, then this flag should be removed.
+
+This archetype has been designed to trigger decision support and therapeutic precautions in clinical systems, without necessarily having knowledge of details about the pregnancy or breast feeding.">
+            misuse = <"Not to be used to record the positive exclusion of pregnancy or breast feeding - use specific EVALUATION.exclusion archetypes for this purpose.
+
+Not to be used to record details about a specific pregnancy - use EVALUATION.pregnancy for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Pregnancy/breast feeding status
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Pregnant
+                        value matches {
+                            DV_BOOLEAN[at9000] matches {
+                                value matches {True}
+                            }
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Breast feeding
+                        value matches {
+                            DV_BOOLEAN[at9001] matches {
+                                value matches {True}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9002]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0006] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Status Schwangerschaft/Stillzeit">
+                description = <"Repräsentation des positiven Zustands der Schwangerschaft oder der Stillzeit.">
+            >
+            ["at0002"] = <
+                text = <"Schwanger">
+                description = <"Die Frau ist schwanger.">
+                comment = <"Als \"WAHR\" darstellen, wenn eine klinisches Gutachten vorliegt oder ein positiver Schwangerschaftszustand durch einen diagnostischen Test bestätigt wird.">
+            >
+            ["at0003"] = <
+                text = <"Stillzeit">
+                description = <"Die Frau befindet sich in der Stillzeit">
+                comment = <"Als \"WAHR\" darstellen, wenn bekannt ist, dass die Frau gerade stillt.">
+            >
+            ["at0005"] = <
+                text = <"Zuletzt aktualisiert">
+                description = <"Datum und optionale Uhrzeit der letzten Aktualisierung des Statements zur Schwangerschaft und / oder Stillzeit.">
+            >
+            ["at0006"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Pregnancy/breast feeding status">
+                description = <"Record of the positive state of pregnancy or breast feeding.">
+            >
+            ["at0002"] = <
+                text = <"Pregnant">
+                description = <"The woman is pregnant.">
+                comment = <"Record as True if there is clinical opinion or confirmation by diagnostic test of a positive pregnancy state. ">
+            >
+            ["at0003"] = <
+                text = <"Breast feeding">
+                description = <"The woman is breast feeding.">
+                comment = <"Record as True if there is knowledge that the woman is currently breastfeeding.">
+            >
+            ["at0005"] = <
+                text = <"Last updated">
+                description = <"Date and optional time when the pregnancy and /or breast feeding statement was last updated.">
+            >
+            ["at0006"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+        >
+    >

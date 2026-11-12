@@ -1,0 +1,661 @@
+﻿archetype (adl_version=1.4; uid=db097853-f946-4925-9c74-02a594fd9064)
+	openEHR-EHR-OBSERVATION.lab_test-histopathology.v1
+specialise
+	openEHR-EHR-OBSERVATION.lab_test.v1
+
+concept
+	[at0000.1]	-- Histopathology
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Dr Ian McNicoll">
+		["organisation"] = <"openEHR Archetype Editorial Group / Ocean Informatics">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"27/01/2009">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Generic entry for an anatomical pathology test or histopathology test . This may be used for very simple reporting formats but will often be specialised or extended via the Structured Detail slots.">
+			use = <"Normally used only as the basis for further specialisation but is suitable for very simple tests with only a free text conclusion. Will generally be used in combination with archetypes representing other parts of the laboratory test ordering and processing process to form a full lab test report within a Composition.
+
+Specimen slots are available in a number of positions to reflect the variation in pathology reporting styles.
+">
+			keywords = <"lab", "pathology", "laboratory", "histopathology", "anatomic pathology", "surgical pathology">
+			misuse = <"Do not use for standard itemised value-driven lab tests such as haematology and biochemistry- use OBSERVATION.lab_test.
+Do not use for microbiology - use OBSERVATION.lab_test-microbiology.">
+			copyright = <"© openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"مدخل جنيس ( غير محدود الملكية) لتحليل هيستوباثولوجي ( أو متعلق بالباثولوجيا (المرضية) التشريحية). و قد يستخدم لتصميم التقارير البسيطة جدا, و لكنه دائما ما يحتاج إلى مزيد من التخصيص أو الإطالة عن طريق الشُرَف التفصيلية.">
+			use = <"عادة ما يستخدم كأساس للمزيد من التخصيص لكنه مناسب للاختبارات البسيطة جدا ذات الاستنتاج على هيئة النص الحر. عادة ما يستخدم وسط مجموعة من النماذج التي تمثل أجزاء أخرى من الأمر بإجراء الاختبار و طريقة المعالجة لتكوين تقرير معملي متكامل. 
+الشرفات الخاصة بالعينة متواجدة في عدد من المواضع لتعكس التعدد (التنوع) في أنماط تقارير الباثولوجيا.">
+			keywords = <"المعمل - المختبر", "الباثولوجيا - المرضية", "الهيستوباثولوجيا", "الباثولوجيا (المَرَضية) التشريحية", "الباثولوجيا (المرضية) الجراحية">
+			misuse = <"لا يستخدم للاختبارات ذات القيمة العيارية المحددة مثل اختبارات الدموية و الكيمياء الحيوية. استخدم بدلا منه نموذج ملاحظة. اختبار معملي. 
+
+لا يستخدم للميكروبيولوجيا, استخدم بدلا منه: ملاحظة اختبار معملي ميكروبيولوجي.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Heather Leslie AEG / Ocean Infomatics", "Sam Heard Ocean Informatics">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["references"] = <"">
+		["build_uid"] = <"323e6bb2-7562-4044-b111-d861137bf731">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"1AEFA309936CAB1544A01C01BA5FE6DA">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Histopathology
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0005] occurrences matches {0..1} matches {	-- Test name
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0077] occurrences matches {0..1} matches {	-- Diagnostic service
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0073] occurrences matches {0..1} matches {	-- Test status
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0037, 	-- Interim
+													at0038, 	-- Final
+													at0039, 	-- Supplementary
+													at0040, 	-- Corrected (amended)
+													at0074, 	-- Aborted
+													at0079]	-- Never performed
+												}
+											}
+										}
+									}
+									allow_archetype CLUSTER[at0065] occurrences matches {0..*} matches {	-- Specimen detail
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v1/}
+										exclude
+											archetype_id/value matches {/.*/}
+									}
+									CLUSTER[at0.86] occurrences matches {0..1} matches {	-- Macroscopic findings
+										items cardinality matches {0..*; unordered} matches {
+											CLUSTER[at0.76] occurrences matches {0..*} matches {	-- Macroscopic finding
+												items cardinality matches {0..*; unordered} matches {
+													ELEMENT[at0.90] occurrences matches {0..1} matches {	-- Tissue present
+														value matches {
+															DV_CODED_TEXT matches {
+																defining_code matches {
+																	[local::
+																	at0.91, 	-- Present
+																	at0.92]	-- Absent
+																}
+															}
+														}
+													}
+													allow_archetype CLUSTER[at0.78] occurrences matches {0..*} matches {	-- Macroscopic specimen detail 
+														include
+															archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v1/}
+														exclude
+															archetype_id/value matches {/.*/}
+													}
+													allow_archetype CLUSTER[at0.79] occurrences matches {0..*} matches {	-- Structured macroscopic detail  
+														include
+															archetype_id/value matches {/openEHR-EHR-CLUSTER\.macroscopy_colorectal_carcinoma(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.macroscopy_lung_carcinoma(-[a-zA-Z0-9_]+)*\.v1/}
+													}
+													ELEMENT[at0.77] occurrences matches {0..1} matches {	-- Description
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+												}
+											}
+											ELEMENT[at0.88] occurrences matches {0..1} matches {	-- Overall macroscopic description
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+										}
+									}
+									CLUSTER[at0.87] occurrences matches {0..1} matches {	-- Microscopic findings
+										items cardinality matches {0..*; unordered} matches {
+											CLUSTER[at0.81] occurrences matches {0..*} matches {	-- Microscopic finding
+												items cardinality matches {0..*; unordered} matches {
+													ELEMENT[at0078.2] occurrences matches {0..1} matches {	-- Histopathological result
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+													allow_archetype CLUSTER[at0.98] occurrences matches {0..*} matches {	-- Location
+														include
+															archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location-precise\.v1/}
+													}
+													allow_archetype CLUSTER[at0.97] occurrences matches {0..*} matches {	-- Size
+														include
+															archetype_id/value matches {/openEHR-EHR-CLUSTER\.physical_properties\.v1/}
+													}
+													allow_archetype CLUSTER[at0.83] occurrences matches {0..*} matches {	-- Microscopic specimen detail 
+														include
+															archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v1/}
+														exclude
+															archetype_id/value matches {/.*/}
+													}
+													allow_archetype CLUSTER[at0.84] occurrences matches {0..*} matches {	-- Structured microscopic detail   
+														include
+															archetype_id/value matches {/openEHR-EHR-CLUSTER\.microscopy_lymphoma(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.microscopy_melanoma(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.microscopy_lung_carcinoma(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.microscopy_breast_carcinoma(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.microscopy_colorectal_carcinoma(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.microscopy_prostate_carcinoma(-[a-zA-Z0-9_]+)*\.v1/}
+													}
+													ELEMENT[at0.82] occurrences matches {0..1} matches {	-- Description
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+												}
+											}
+											ELEMENT[at0.89] occurrences matches {0..1} matches {	-- Overall microscopic description
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+										}
+									}
+									allow_archetype CLUSTER[at0.95] occurrences matches {0..*} matches {	-- Pathological Staging 
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.tnm_staging(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.tumour_colorectal_staging_non_tnm(-[a-zA-Z0-9_]+)*\.v1/}
+									}
+									ELEMENT[at0078.1] occurrences matches {0..*} matches {	-- Histopathological result
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0.100] occurrences matches {0..1} matches {	-- Histopathological subtype
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0057] occurrences matches {0..1} matches {	-- Overall interpretation
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0010] occurrences matches {0..*} matches {	-- Multimedia representation
+										value matches {
+											DV_MULTIMEDIA matches {
+												media_type matches {[openEHR::]}
+											}
+										}
+									}
+									allow_archetype CLUSTER[at0089] occurrences matches {0..*} matches {	-- Per-result annotation
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.lab_result_annotation(-[a-zA-Z0-9_]+)*\.v1/}
+										exclude
+											archetype_id/value matches {/.*/}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0004] matches {	-- Tree
+				items cardinality matches {0..*; unordered} matches {
+					CLUSTER[at0013] occurrences matches {0..1} matches {	-- Test identification
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0062] occurrences matches {0..1} matches {	-- Placer order identifier
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0063] occurrences matches {0..1} matches {	-- Filler order Identifier
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0068] occurrences matches {0..1} matches {	-- Laboratory test result identifier
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0017] occurrences matches {0..*} matches {	-- Laboratory details  
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation\.v1/}
+								exclude
+									archetype_id/value matches {/.*/}
+							}
+						}
+					}
+					ELEMENT[at0075] occurrences matches {0..1} matches {	-- Datetime result issued
+						value matches {
+							DV_DATE_TIME matches {*}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.100"] = <
+					text = <"Histopathological subtype">
+					description = <"A subtype of the histopthological result.">
+				>
+				["at0.76"] = <
+					text = <"Macroscopic finding">
+					description = <"A single set of macroscopic pathology findings.">
+				>
+				["at0.77"] = <
+					text = <"Description">
+					description = <"Narrative text recorded at the time of specimen macroscopic dissection.">
+				>
+				["at0.78"] = <
+					text = <"Macroscopic specimen detail ">
+					description = <"Details of the macroscopic specimen being reported.">
+				>
+				["at0.79"] = <
+					text = <"Structured macroscopic detail  ">
+					description = <"Further structured detail concerning macroscopic findings">
+				>
+				["at0.81"] = <
+					text = <"Microscopic finding">
+					description = <"Single set of microscopic pathology findings. Usually equates to a single specimen.">
+				>
+				["at0.82"] = <
+					text = <"Description">
+					description = <"Narrative text recorded at the time of specimen microscopic examination.">
+				>
+				["at0.83"] = <
+					text = <"Microscopic specimen detail ">
+					description = <"Details of a microscopic specimen.">
+				>
+				["at0.84"] = <
+					text = <"Structured microscopic detail   ">
+					description = <"Further structured detail of microscopic findings, often disease or organ specific.">
+				>
+				["at0.86"] = <
+					text = <"Macroscopic findings">
+					description = <"Macroscopic findings - more than one set of findings may be recorded.">
+				>
+				["at0.87"] = <
+					text = <"Microscopic findings">
+					description = <"Microscopic findings - more than one set of findings may be recorded.">
+				>
+				["at0.88"] = <
+					text = <"Overall macroscopic description">
+					description = <"General comment or description about macroscopy findings.">
+				>
+				["at0.89"] = <
+					text = <"Overall microscopic description">
+					description = <"General comment or description about microscopy findings as a whole.">
+				>
+				["at0.90"] = <
+					text = <"Tissue present">
+					description = <"Confirmation, or otherwise, that the tissue or structure referred to by this macroscopic finding is present in the specimen for analysis.">
+				>
+				["at0.91"] = <
+					text = <"Present">
+					description = <"The anatomical structure or tissue is present.">
+				>
+				["at0.92"] = <
+					text = <"Absent">
+					description = <"The anatomical structure or tissue is absent">
+				>
+				["at0.95"] = <
+					text = <"Pathological Staging ">
+					description = <"Details of pathological staging, particularly for malignancy.">
+				>
+				["at0.96"] = <
+					text = <"Size and location">
+					description = <"Details of size of one or more components of a single microscopy report e.g details of one or more tumour locations within a single tissue such as lung">
+				>
+				["at0.97"] = <
+					text = <"Size">
+					description = <"Details of the size or other physical properties of the microscopic finding.">
+				>
+				["at0.98"] = <
+					text = <"Location">
+					description = <"Details of the anatomical location of the microscopic finding being described.">
+				>
+				["at0000"] = <
+					text = <"Laboratory test">
+					description = <"To record the result of a laboratory test which may be used to record a single valued test but will often be specialised or templated to represent multiple value or 'panel' tests.
+This archetype also acts as the parent for specialisations appropriate for more specific laboratory tests microbiology, histopathology.">
+				>
+				["at0000.1"] = <
+					text = <"Histopathology">
+					description = <"Simple histopathology lab test result.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Test name">
+					description = <"Specific identifier for this lab test. e.g. Full blood count , blood glucose, urine microbiology.  May equate to the result name for a single value result. Commonly a coded term e.g from LOINC or SNOMED-CT.">
+				>
+				["at0010"] = <
+					text = <"Multimedia representation">
+					description = <"Representations of the whole test in mutlimedia e.g image, audio, video.">
+				>
+				["at0013"] = <
+					text = <"Test identification">
+					description = <"Unique identifiers used in delivery of the care process.">
+				>
+				["at0017"] = <
+					text = <"Laboratory details  ">
+					description = <"Demographic details of the laboratory with responsibility for the test. Details of secondary laboratories may also be included.">
+				>
+				["at0037"] = <
+					text = <"Interim">
+					description = <"This is an initial or interim result - further updates are anticipated">
+				>
+				["at0038"] = <
+					text = <"Final">
+					description = <"This is the final result. No further alterations are anticipated">
+				>
+				["at0039"] = <
+					text = <"Supplementary">
+					description = <"This is a supplememtary result in addition to the Interim result">
+				>
+				["at0040"] = <
+					text = <"Corrected (amended)">
+					description = <"This is a Correction which should replace any previous results">
+				>
+				["at0057"] = <
+					text = <"Overall interpretation">
+					description = <"An overall interpretative comment on this test.">
+				>
+				["at0062"] = <
+					text = <"Placer order identifier">
+					description = <"The ID assigned to the order by the order requester. Equivalent to the NEHTA Requester Order Identifier.">
+				>
+				["at0063"] = <
+					text = <"Filler order Identifier">
+					description = <"The ID assigned to the test order by the order filler, usually by the (LIS) Laboratory Information System. Equivalent to the DICOM Accession Number and NEHTA Laboratory Request Identifier.">
+				>
+				["at0065"] = <
+					text = <"Specimen detail">
+					description = <"Details of the specimen being reported where all individual results are derived from the same specimen">
+				>
+				["at0068"] = <
+					text = <"Laboratory test result identifier">
+					description = <"The identifier given to the laboratory test result of a pathology 
+investigation.">
+				>
+				["at0073"] = <
+					text = <"Test status">
+					description = <"The status of the lab test as a whole.">
+				>
+				["at0074"] = <
+					text = <"Aborted">
+					description = <"*">
+				>
+				["at0075"] = <
+					text = <"Datetime result issued">
+					description = <"The date and/or time that the result was issued for the recorded 
+‘test status’. ">
+					comment = <"The date and time related to the results status is
+useful for version control and cumulative results for the report.">
+				>
+				["at0077"] = <
+					text = <"Diagnostic service">
+					description = <"The type of high-level diagnostic service e.g. biochemistry, haematology. ">
+				>
+				["at0078"] = <
+					text = <"Result">
+					description = <"The result of the test.">
+				>
+				["at0078.1"] = <
+					text = <"Histopathological result">
+					description = <"Conclusions or 'pathological diagnoses' for the whole test.">
+				>
+				["at0078.2"] = <
+					text = <"Histopathological result">
+					description = <"A conclusion or 'pathological diagnosis' for this individual  microscopic finding.">
+				>
+				["at0079"] = <
+					text = <"Never performed">
+					description = <"The test was never performed.">
+				>
+				["at0089"] = <
+					text = <"Per-result annotation">
+					description = <"Slot to allow an annotation to be added to a particular test result at run-time. Generally unused in this specialisation.">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0.100"] = <
+					text = <"النُمَيْط الهيستوباثولوجي ">
+					description = <"نُمَيْط من النتيجة الهيستوباثولوجية.">
+				>
+				["at0.76"] = <
+					text = <"الموجودة العيانية">
+					description = <"رتل (طاقم) واحد من الموجودات العيانية الباثولوجية">
+				>
+				["at0.77"] = <
+					text = <"الوصف">
+					description = <"نص وصفي يسجل عند التشريح العياني للعينة">
+				>
+				["at0.78"] = <
+					text = <"التفاصيل العيانية للعينة">
+					description = <"تفاصيل حول الموجودات العيانية للعينة التي يتم تقديم التقرير عنها.">
+				>
+				["at0.79"] = <
+					text = <"تفاصيل مركَّبة للموجودات العيانية">
+					description = <"المزيد من التفاصيل المركبة التي تتعلق بالموجودات العيانية للعينة">
+				>
+				["at0.81"] = <
+					text = <"الموجودة المجهرية">
+					description = <"رتل (طاقم) واحد من الموجودات الباثولوجية (المرضية) المجهرية. عادة ما يكافئ عينة واحدة.">
+				>
+				["at0.82"] = <
+					text = <"الوصف">
+					description = <"نص وصفي يسجل عند التشريح العياني للعينة">
+				>
+				["at0.83"] = <
+					text = <"التفاصيل المجهرية للعينة">
+					description = <"تفاصيل حول عينة مجهرية.">
+				>
+				["at0.84"] = <
+					text = <"تفاصيل مركَّبة للموجودات المجهرية">
+					description = <"المزيد من التفاصيل المركبة التي تتعلق بالموجودات المجهرية للعينة">
+				>
+				["at0.86"] = <
+					text = <"الموجودات العيانية - الكبيرة">
+					description = <"الموجودات العيانية, يمكن تسجيل أكثر من رتل (طاقم) من الموجودات.">
+				>
+				["at0.87"] = <
+					text = <"الموجودات المجهرية">
+					description = <"الموجودات المجهرية - أكثر من رتل (طاقم) من الموجودات قد يتم تسجيله.">
+				>
+				["at0.88"] = <
+					text = <"إجمالي الوصف العياني">
+					description = <"تعليق عام عن الوصف المتعلق بالموجودات العيانية.">
+				>
+				["at0.89"] = <
+					text = <"إجمالي الوصف المجهري">
+					description = <"تعليق عام عن الوصف المتعلق بالموجودات المجهرية.">
+				>
+				["at0.90"] = <
+					text = <"النسيج موجود">
+					description = <"بالتأكيد أو ما سواه, يذكر أن النسيج أو التركيب الذي تتم الإشارة له بهذه الموجودة العيانية موجود بالفعل في العينة التي يتم تحليلها.">
+				>
+				["at0.91"] = <
+					text = <"موجود">
+					description = <"التركيب التشريحي أو النسيج موجود.">
+				>
+				["at0.92"] = <
+					text = <"غائب - غير موجود">
+					description = <"التركيب التشريحي أو النسيج غير موجود - غائب">
+				>
+				["at0.95"] = <
+					text = <"تصنيف المرحلة الباثولوجية - المرضية">
+					description = <"تفاصيل حول تصنيف المرحلة الباثولوجية (المرضية), خاصة فيما يتعلق بالخباثة.">
+				>
+				["at0.96"] = <
+					text = <"*Size and location(en)">
+					description = <"*Details of size of one or more components of a single microscopy report e.g details of one or more tumour locations within a single tissue such as lung(en)">
+				>
+				["at0.97"] = <
+					text = <"الحجم">
+					description = <"تفاصيل حول الحجم و الخصائص الباثولوجية الأخرى للموجودة المجهرية.">
+				>
+				["at0.98"] = <
+					text = <"المكان - الموقع">
+					description = <"تفاصيل حول المكان - الموقع - التشريحي للموجودة المجهرية التي يتم وصفها.">
+				>
+				["at0000"] = <
+					text = <"*Laboratory test(en)">
+					description = <"*To record the result of a laboratory test which may be used to record a single valued test but will often be specialised or templated to represent multiple value or 'panel' tests.
+This archetype also acts as the parent for specialisations appropriate for more specific laboratory tests microbiology, histopathology.(en)">
+				>
+				["at0000.1"] = <
+					text = <"الهيستوباثولوجيا">
+					description = <"نتيجة اختبار معملي هيستوباثولوجي بسيط">
+				>
+				["at0001"] = <
+					text = <"*Event Series(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"إحدى الوقائع">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0005"] = <
+					text = <"اسم الاختبار">
+					description = <"تعريف معين لهوية هذا الاختبار. مثل العد الدموي الشامل, الغلوكوز (سكر العنب) في الدم. قد يكون هو نفسه اسم النتيجة في الاختبارات ذات النتيجة المتكونة من قيمة وحيدة. عادة ما يكون مُصطَلحاً مُرمَزًا مثل لوينك و سنوميد-سي تي.">
+				>
+				["at0010"] = <
+					text = <"تمثيل الوسائط المتعددة">
+					description = <"تمثيلات الاختبار الكلي عن طريق الوسائط المتعددة مثل: الصورة, الصوت, و الفيديو">
+				>
+				["at0013"] = <
+					text = <"تعريف الاختبار">
+					description = <"عناصر معرِّفة فريدة تستخدم في تقديم عملية الخدمة">
+				>
+				["at0017"] = <
+					text = <"تفاصيل حول المعمل">
+					description = <"التفاصيل الديموغرافية عن المعمل المسئول عن الاختبار. قد يتضمن معلومات عن معامل أخرى ثانوية.">
+				>
+				["at0037"] = <
+					text = <"مؤقت">
+					description = <"هذه هي النتيجة المبدئية أو المؤقتة - المزيد من التحديثات للنتيجة متوقَّعة أو منتظَرة">
+				>
+				["at0038"] = <
+					text = <"نهائية">
+					description = <"هذه هي النتيجة النهائية. لا يوجد المزيد من التعديلات المتوقَّعة">
+				>
+				["at0039"] = <
+					text = <"تكميلية">
+					description = <"هذه هي نتيجة تكميلية بالإضافة إلى النتيجة الموَقتة">
+				>
+				["at0040"] = <
+					text = <"بعد التصحيح – معدَّلة">
+					description = <"هذا هو تصحيح لابد و أن يحل محلّ أي نتائج سابقة">
+				>
+				["at0057"] = <
+					text = <"التفسير الإجمالي">
+					description = <"تعليق تفسيري إجمالي حول هذا الاختبار">
+				>
+				["at0062"] = <
+					text = <"عنصر معرِّف فريد بواسطة الآمر بالاختبار">
+					description = <"العنصر التعريفي الفريد الذي يتم إعطاؤه للأمر بالاختبار بواسطة من يقوم بإجراء الأمر. مكافئ للعنصر التعريفي للأمر بواسطة من يقوم به لدى نيهتا">
+				>
+				["at0063"] = <
+					text = <"عنصر معرِّف فريد بواسطة منفذ الاختبار">
+					description = <"العنصر التعريفي الذي يتم إعطاؤه للأمر بالاختبار بواسطة منفذ الاختبار, عادةً النظام المعلومات الخاص بالمعمل. يكافئ رقم الإضافة الخاص بـ دايكوم, و معرِّف أمر الاختبار الخاص بـ نيهتا.">
+				>
+				["at0065"] = <
+					text = <"تفاصيل العيِّنة">
+					description = <"تفاصيل العينة حيث جميع النتائج مشتقة من نفس العينة">
+				>
+				["at0068"] = <
+					text = <"العنصر التعريفي الخاص بنتيجة الاختبار">
+					description = <"العنصر التعريفي الذي تم إعطاؤه لنتيجة اختبار معملي خاص بالباثولوجيا – المَرَضية">
+				>
+				["at0073"] = <
+					text = <"حالة الاختبار">
+					description = <"حالة الاختبار المعملي ككل">
+				>
+				["at0074"] = <
+					text = <"مُلغاة">
+					description = <"*">
+				>
+				["at0075"] = <
+					text = <"تاريخ و وقت إصدار النتيجة">
+					description = <"التاريخ و / أو الوقت الذي تم فيه إصدار النتيجة لحالة الاختبار المسجَّلة.">
+					comment = <"التاريخ و الوقت المتعلق بحالة النتائج هو من النقاط المفيدة للتحكم في الروايات المتعددة و النتائج التراكمية الخاصة بالتقرير.">
+				>
+				["at0077"] = <
+					text = <"الخدمة التشخيصية">
+					description = <"نوع الخدمة التشخيصية - مستوى عالي من التشخيص - مثلا: الكيمياء الحيوية و الدمويات">
+				>
+				["at0078"] = <
+					text = <"*Result(en)">
+					description = <"*The result of the test.(en)">
+				>
+				["at0078.1"] = <
+					text = <"النتيجة الهيستوباثولوجية">
+					description = <"الاستنتاجات أو (التشخيصات الباثولوجية ( المرضية)) المتعلقة بالاختبار ككل.">
+				>
+				["at0078.2"] = <
+					text = <"النتيجة الهيستوباثولوجية">
+					description = <"استنتاج أو (تشخيص باثولوجي) لهذه الموجودة المجهرية بمفردها.">
+				>
+				["at0079"] = <
+					text = <"لم يتم عملها على الإطلاق">
+					description = <"لم يتم عمل الاختبار على الإطلاق">
+				>
+				["at0089"] = <
+					text = <"ملاحظات ما قبل الاختبار">
+					description = <"شرفة تسمح بإضافة ملاحظات حول نتيجة اختبار معين في أثناء إجرائه">
+				>
+			>
+		>
+	>

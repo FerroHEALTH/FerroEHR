@@ -1,0 +1,269 @@
+﻿archetype (adl_version=1.4; uid=85ecf2f1-4c12-4fc9-9337-fc713791c11a)
+	openEHR-EHR-CLUSTER.biobank_storage.v0
+
+concept
+	[at0000]	-- Biobank storage
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Natalia Strauch">
+				["organisation"] = <"Medizinische Hochschule Hannover">
+				["email"] = <"Strauch.Natalia@mh-hannover.de">
+			>
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			author = <
+				["name"] = <"Liv Laugen">
+				["organisation"] = <"​Oslo University Hospital, Norway">
+				["email"] = <"liv.laugen@ous-hf.no">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Atomica Informatics">
+		["email"] = <"heather.leslie@atomicainformatics.com">
+		["date"] = <"2021-11-30">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Darstellung von Informationen über einen externen Lagerungsort, wo menschliche Proben oder Gewebeproben aufbewahrt/gelagert werden.">
+			use = <"Verwenden Sie diesen Archetyp, um Informationen über ein externes Lager, in dem sich menschliche Proben oder Gewebeproben befinden, darzustellen.
+
+Zu den Anwendungsfällen gehören:
+- Blut und Hautgewebe zur autologen Verwendung oder Spende;
+- Zelllinien;
+- gefrorenes Sperma, Eizellen und Embryonen im Rahmen der Behandlung der assistierten Reproduktion;
+- Muttermilch zur Spende und
+- biologische Proben und Biomaterial für Forschungszwecke.">
+			keywords = <"Lagerung", "Biobank", "Biologische Datenbank">
+			misuse = <"">
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			purpose = <"For å registrere informasjon om et ekstern biologisk lager/biobank som inneholder humant biologisk materiale.">
+			use = <"Brukes for å registrere informasjon om et ekstern biologisk lager/biobank som inneholder humant biologisk materiale.
+
+Brukstilfeller inkluderer:
+- blod og hudvev for autolog bruk eller donasjon;
+- cellelinjer;
+- nedfrosset sæd, oocytter og embryoer som en del av assistert reproduksjonsbehandling;
+- morsmelk for donasjon; og
+- biologiske prøver og biologisk prøvemateriale til forskning.">
+			keywords = <"biolager", "biorepository", "biologisk database", "depot">
+			misuse = <"">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record information about an external storage repository holding human specimens or tissue samples.">
+			use = <"Use to record information about an external storage repository holding human specimens or tissue samples.
+
+Use cases include:
+- blood and skin tissue for autologous use or donation;
+- cell lines;
+- frozen semen, oocytes and embryos as part of assisted reproduction treatment;
+- breast milk for donation; and
+- biological samples and biomaterial for research.">
+			keywords = <"storage", "biorepository", "Biological database">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Vebjørn Arntzen, Oslo University Hospital", "Liv Laugen, Oslo University Hospital", "Peter Fedorcsak, Oslo University Hospital">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"BABBDC122A1E40862A8A1A85BAC92C24">
+		["build_uid"] = <"6230eae8-0c09-4c2e-9983-f6b1b5730079">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	CLUSTER[at0000] matches {    -- Biobank storage
+		items cardinality matches {1..*; unordered} matches {
+			ELEMENT[at0001] occurrences matches {0..1} matches {    -- Biobank name
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0002] occurrences matches {0..*} matches {    -- Biobank ID
+				value matches {
+					DV_IDENTIFIER matches {*}
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0003] occurrences matches {0..1} matches {    -- Sample ID
+				value matches {
+					DV_IDENTIFIER matches {*}
+					DV_TEXT matches {*}
+				}
+			}
+			allow_archetype CLUSTER[at0008] occurrences matches {0..*} matches {    -- Contents
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.specimen_container\.v1/}
+			}
+			ELEMENT[at0005] occurrences matches {0..*} matches {    -- Donor ID
+				value matches {
+					DV_IDENTIFIER matches {*}
+					DV_TEXT matches {*}
+				}
+			}
+			allow_archetype CLUSTER[at0004] occurrences matches {0..*} matches {    -- Biobank details
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1/}
+			}
+			allow_archetype CLUSTER[at0007] occurrences matches {0..*} matches {    -- Additional details
+				include
+					archetype_id/value matches {/.*/}
+			}
+			ELEMENT[at0006] occurrences matches {0..1} matches {    -- Comment
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Biobank storage">
+					description = <"Storage repository for human biological material and associated information.">
+				>
+				["at0001"] = <
+					text = <"Biobank name">
+					description = <"Name of the specimen, biospecimen or tissue repository.">
+				>
+				["at0002"] = <
+					text = <"Biobank ID">
+					description = <"Identifier of the biobank/storage or tissue establishment.">
+					comment = <"Use of an established biobank classification is preferred, e.g. the EU Tissue Establishment Compendium.">
+				>
+				["at0003"] = <
+					text = <"Sample ID">
+					description = <"Identifier of the specimen, biospecimen or tissue stored in the biobank/storage.">
+				>
+				["at0004"] = <
+					text = <"Biobank details">
+					description = <"Details about the organisation or location of the biobank/storage.">
+				>
+				["at0005"] = <
+					text = <"Donor ID">
+					description = <"Identifier of the human source of the specimen, biospecimen or tissue sample.">
+					comment = <"For example: the tissue donor ID, or the donor ID for both the egg donor and the sperm donor to an embryo.">
+				>
+				["at0006"] = <
+					text = <"Comment">
+					description = <"Additional narrative about the biobank, not captured in other fields.">
+				>
+				["at0007"] = <
+					text = <"Additional details">
+					description = <"Additional structured details related to the biobank storage.">
+				>
+				["at0008"] = <
+					text = <"Contents">
+					description = <"The contents of this biobank/storage.">
+					comment = <"For example: specimen or a specimen container.">
+				>
+			>
+		>
+		["nb"] = <
+			items = <
+				["at0000"] = <
+					text = <"Biobank">
+					description = <"Lagringssted for humant biologisk materiale og dens tilhørende informasjon.
+">
+				>
+				["at0001"] = <
+					text = <"Biobank navn">
+					description = <"Navnet til det biologisk lageret/biobanken som inneholder det biologiske prøvematerialet.">
+				>
+				["at0002"] = <
+					text = <"Biobank ID">
+					description = <"Identifikator for det biologisk lageret/biobanken.">
+					comment = <"Bruk av etablert biobankklassifisering foretrekkes, f.eks. EU Tissue Establishment Compendium.">
+				>
+				["at0003"] = <
+					text = <"Prøvemateriale ID">
+					description = <"Identifikator for prøvematerialet eller vevet som er lagret i det biologiske lageret/biobanken.">
+				>
+				["at0004"] = <
+					text = <"Biobank detaljer">
+					description = <"Detaljer om organisering eller plassering av lageret/biobanken.">
+				>
+				["at0005"] = <
+					text = <"Donor ID">
+					description = <"Identifikator til den humane kilden til det biologiske prøvematerialet.">
+					comment = <"For eksempel: IDen til vevsdonoren eller IDen til både eggdonor og sæddonor til et embryo.">
+				>
+				["at0006"] = <
+					text = <"Kommentar">
+					description = <"Ytterligere kommentarer om det biologiske materialet/biobanken som ikke passer i andre felter.">
+				>
+				["at0007"] = <
+					text = <"Ytterligere detaljer">
+					description = <"Ytterligere strukturerte detaljer om biobanken / biologiske lageret.">
+				>
+				["at0008"] = <
+					text = <"Innhold">
+					description = <"Inneholdet i lageret/biobanken.">
+					comment = <"For eksempel et prøvemateriale eller en prøvebeholder.">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Biobank-Lagerung">
+					description = <"Aufbewahrungsort für menschliches biologisches Material und zugehörige Informationen.">
+				>
+				["at0001"] = <
+					text = <"Biobank-Name">
+					description = <"Name der Probe-, Bioprobe- oder des Gewebelagers.">
+				>
+				["at0002"] = <
+					text = <"Biobank-ID">
+					description = <"Kennung der Biobank/Lagerung- oder Gewebeeinrichtung.">
+					comment = <"Die Verwendung einer etablierten Biobank-Klassifikation wird bevorzugt, z. das \"EU Tissue Establishment Compendium\".">
+				>
+				["at0003"] = <
+					text = <"Proben-ID">
+					description = <"Identifikation der Probe, Bioprobe oder des Gewebes, die in der Biobank/Lagerung aufbewahrt werden.">
+				>
+				["at0004"] = <
+					text = <"Angaben zur Biobank">
+					description = <"Angaben zur Organisation oder zum Standort der Biobank/Lagerung.">
+				>
+				["at0005"] = <
+					text = <"Spender-ID">
+					description = <"Identifikation der menschlichen Quelle der Probe, Bioprobe oder Gewebeprobe.">
+					comment = <"Zum Beispiel: die Gewebespender-ID oder die Spender-ID sowohl für die Eizellspenderin als auch für den Samenspender eines Embryos.">
+				>
+				["at0006"] = <
+					text = <"Kommentar">
+					description = <"Zusätzliche Beschreibung über die Biobank, die in anderen Bereichen nicht erfasst ist.">
+				>
+				["at0007"] = <
+					text = <"Zusätzliche Angaben">
+					description = <"Zusätzliche strukturierte Angaben in Bezug auf die Biobanklagerung.">
+				>
+				["at0008"] = <
+					text = <"Inhalt">
+					description = <"Die Inhalte dieser Biobank/Lagerung.">
+					comment = <"Zum Beispiel: Probe oder ein Probenbehälter.">
+				>
+			>
+		>
+	>

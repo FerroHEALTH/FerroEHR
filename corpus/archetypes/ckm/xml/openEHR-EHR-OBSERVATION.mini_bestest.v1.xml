@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -51,8 +51,7 @@ Hamre C, Botolfsen P, Tangen GG, Helbostad JL. Interrater and test-retest reliab
 &#xD;
 Balance Evaluation Systems Test [Internet]. BESTest [cited 2025 May 28]. Available from: https://www.bestest.us/&#xD;
 &#xD;
-Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 2025 May 28]. Available from: https://bestest.us/files/5414/5651/1621/Mini-BESTest_Norwegian_version.pdf&#xD;
-</other_details>
+Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 2025 May 28]. Available from: https://bestest.us/files/5414/5651/1621/Mini-BESTest_Norwegian_version.pdf</other_details>
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
@@ -2535,11 +2534,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0005">
         <items id="text">Anticipatory</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">1. Sit to stand</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Normal</items>
@@ -2555,7 +2554,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0010">
         <items id="text">2. Rise to toes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Normal</items>
@@ -2571,11 +2570,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0015">
         <items id="text">3. Stand on one leg</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Left stand on one leg</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Use the trial with the longest time.</items>
       </items>
       <items code="at0017">
@@ -2592,7 +2591,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0020">
         <items id="text">Right stand on one leg</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Use the trial with the longest time.</items>
       </items>
       <items code="at0021">
@@ -2609,19 +2608,19 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0024">
         <items id="text">Time left leg trial 1</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Time left leg trial 2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Time right leg trial 1</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Time right leg trial 2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Sub score</items>
@@ -2630,11 +2629,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0029">
         <items id="text">Reactive postural control</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">4. Compensatory stepping correction - forward</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Normal</items>
@@ -2650,7 +2649,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0034">
         <items id="text">5. Compensatory stepping correction - backward</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Normal</items>
@@ -2666,11 +2665,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0039">
         <items id="text">6. Compensatory stepping correction - lateral</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Left</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Normal</items>
@@ -2686,7 +2685,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0044">
         <items id="text">Right</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Normal</items>
@@ -2707,11 +2706,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0055">
         <items id="text">Sensory orientation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">7. Stance (feet together); eyes open, firm surface</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">Normal</items>
@@ -2727,7 +2726,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0060">
         <items id="text">8. Stance (feet together); eyes closed, foam surface</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Normal</items>
@@ -2743,7 +2742,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0064">
         <items id="text">9. Incline - eyes closed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Normal</items>
@@ -2763,11 +2762,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0069">
         <items id="text">Dynamic gait</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">10. Change in gait speed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Normal</items>
@@ -2783,7 +2782,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0074">
         <items id="text">12. Walk with pivot turns</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0075">
         <items id="text">Normal</items>
@@ -2799,7 +2798,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0079">
         <items id="text">11. Walk with head turns - horizontal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0080">
         <items id="text">Normal</items>
@@ -2815,7 +2814,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0083">
         <items id="text">13. Step over obstacles</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0084">
         <items id="text">Normal</items>
@@ -2831,12 +2830,12 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0088">
         <items id="text">14. Timed up &amp; go with dual task [3 meter walk]</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Timed up &amp; go (TUG)</items>
       </items>
       <items code="at0093">
         <items id="text">Dual Task TUG</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0094">
         <items id="text">Normal</items>
@@ -2852,11 +2851,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0097">
         <items id="text">Time TUG</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0098">
         <items id="text">Time Dual Task TUG</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0099">
         <items id="text">Sub score</items>
@@ -2906,11 +2905,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0005">
         <items id="text">Antisipatorisk stillingsendring</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">1. Sittende til stående</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Normal</items>
@@ -2926,7 +2925,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0010">
         <items id="text">2. Reise seg opp på tå</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Normal</items>
@@ -2942,11 +2941,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0015">
         <items id="text">3. Stå på et ben</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Venstre stå på et ben</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Bruk forsøket med lengst tid.</items>
       </items>
       <items code="at0017">
@@ -2963,7 +2962,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0020">
         <items id="text">Høyre stå på et ben</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Bruk forsøket med lengst tid.</items>
       </items>
       <items code="at0021">
@@ -2980,19 +2979,19 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0024">
         <items id="text">Tid venstre fot forsøk 1</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Tid venstre fot forsøk 2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Tid høyre fot forsøk 1</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Tid høyre fot forsøk 2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Delskår</items>
@@ -3001,11 +3000,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0029">
         <items id="text">Reaktiv postural kontroll</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">4. Korreksjon ved hjelp av kompensatorisk skritt - fremover</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Normal</items>
@@ -3021,7 +3020,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0034">
         <items id="text">5. Korreksjon ved hjelp av kompensatorisk skritt - bakover</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Normal</items>
@@ -3037,11 +3036,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0039">
         <items id="text">6. Korreksjon ved hjelp av kompensatorisk skritt - til siden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Venstre</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Normal</items>
@@ -3057,7 +3056,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0044">
         <items id="text">Høyre</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Normal</items>
@@ -3078,11 +3077,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0055">
         <items id="text">Sensorisk orientering</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">7. Stå med samlede føtter; åpne øyne, fast underlag</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">Normal</items>
@@ -3098,7 +3097,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0060">
         <items id="text">8. Stå med samlede føtter; lukkede øyne, balansepute</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Normal</items>
@@ -3114,7 +3113,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0064">
         <items id="text">9. Skråbrett - lukkede øyne</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Normal</items>
@@ -3134,11 +3133,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0069">
         <items id="text">Dynamisk gange</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">10. Endring i ganghastighet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Normal</items>
@@ -3154,7 +3153,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0074">
         <items id="text">12. Gange med 180 graders vending</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0075">
         <items id="text">Normal</items>
@@ -3170,7 +3169,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0079">
         <items id="text">11. Gange med horisontale hodebevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0080">
         <items id="text">Normal</items>
@@ -3186,7 +3185,7 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0083">
         <items id="text">13. Gå over hindring</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0084">
         <items id="text">Normal</items>
@@ -3202,11 +3201,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0088">
         <items id="text">14. Timed up &amp; go (TUG) med dual task</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0093">
         <items id="text">Dual task TUG</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0094">
         <items id="text">Normal</items>
@@ -3222,11 +3221,11 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
       </items>
       <items code="at0097">
         <items id="text">Tid TUG</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0098">
         <items id="text">Tid Dual Task TUG</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0099">
         <items id="text">Delskår</items>
@@ -3255,4 +3254,3 @@ Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 
     </term_definitions>
   </ontology>
 </archetype>
-

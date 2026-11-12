@@ -1,0 +1,3118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2004-05-18</original_author>
+    <original_author id="name">Sam Heard</original_author>
+    <original_author id="organisation">Ocean Informatics</original_author>
+    <original_author id="email">sam.heard@oceaninformatics.com</original_author>
+    <other_contributors>Paul Donaldson, Nursing Informatics Australia, Australia</other_contributors>
+    <other_contributors>Sebastian Garde, Ocean Informatics, Germany (Editor)</other_contributors>
+    <other_contributors>Anneke Goossen, Results 4 Care, Netherlands</other_contributors>
+    <other_contributors>Anne Harbison, CPCER, Australia</other_contributors>
+    <other_contributors>Sam Heard, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Omer Hotomaroglu, Turkey</other_contributors>
+    <other_contributors>Pieter Hummel, Medisch Centrum Alkmaar, Netherlands</other_contributors>
+    <other_contributors>Andrew James, University of Toronto, Canada</other_contributors>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia (Editor)</other_contributors>
+    <other_contributors>Ian McNicoll, Ocean Informatics, United Kingdom (Editor)</other_contributors>
+    <lifecycle_state>deprecated</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Apgar V.  A proposal of a New Method of Evaluation of the Newborn Infant. Curr Res Anesth Analg.  1953 Jul-Aug;32(4):260-7.&#xD;
+&#xD;
+Apgar V, Holaday DA, James LS, Weisbrod IM, and Berrien C.  Evaluation of the newborn infant; second report.  J Am Med Assoc.  1958 Dec 13;168(15):1985-8.&#xD;
+&#xD;
+Apgar V.  The newborn (Apgar) scoring system.  Pediatr Clin North Am. 1966 Aug;13(3):645-50.&#xD;
+&#xD;
+Whaley LF, Wong DL (1979).  Nursing Care of Infants and Children.  St. Louis, Toronto, London, The C.V. Mosby Company.&#xD;
+&#xD;
+http://en.wikipedia.org/wiki/Apgar_score</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">9AA679DE4754F1F0067919F4183050E9</other_details>
+    <other_details id="build_uid">781ef2b4-46f6-4e0b-a3aa-002f443f6666</other_details>
+    <other_details id="revision">1.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Dokumentation des Apgar Wertes als eine einfache, nachvollziehbare Methode zur Dokumentation des Status eines Neugeborenen direkt nach der Geburt. Der zu Grunde liegende Zeitpunkt der Ereignisreihe ist immer die Geburt.</purpose>
+      <keywords>Neugeborenes</keywords>
+      <keywords>Index</keywords>
+      <keywords>Score</keywords>
+      <keywords>Geburt</keywords>
+      <keywords>Säugling</keywords>
+      <keywords>neonatal</keywords>
+      <keywords>Beurteilung</keywords>
+      <use>Ermöglicht die Dokumentation des Wohlergehens des Säuglings 1, 2, 3, 5 und/oder 10 Minuten nach der Geburt, sowie zu anderen Zeitpunkten bei Bedarf. &#xD;
+Normale Praxis ist es, den Apgar Wert 1 und 5 Minuten nach der Geburt zu dokumentieren, weitere Werte können je nach klinischer Indikation ergänzt werden. Mit diesem Archetype ist es möglich, den Apgar Wert zu jedem Zeitpunkt nach der Geburt zu dokumentieren.&#xD;
+Normale klinische Praxis ist es, alle 5 Parameter und den Gesamtwert zu dokumentieren, jedoch erlaubt dieser Archetyp die Dokumentation einer beliebigen Untermenge, wenn z.B. aus Altdaten nicht mehr verfügbar ist.&#xD;
+Wenn der Gesamtwert errechnet werden soll, müssen Werte für alle 5 Komponenten dokumentiert werden. Der Geamtwert ergibt sich dann aus der Summe der fünf Einzelwerte (minimal: 0, maximal: 10),&#xD;
+&#xD;
+Häufig werden mnemonische Merkhilfen für APGAR gelehrt. Z.B. in Englisch: A für Appearance (Hautfarbe), P für Pulse (Herzfrequenz), G für Grimace (Reflexauslösbarkeit), A für Activity (Muskeltonus), und R für Respiration (Atmung). Da dies nicht generell in allen Sprachen anwendbar ist, wird empfohlen, dass solche Merkhilfen durch Umbenennung innerhalb von Templates erstellt werden können, wenn dies für ein bestimmtes klinisches Szenario erwünscht ist.</use>
+      <misuse>Completar el score parcialmente y no sumar los 5 valores para dar el total.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ru</code_string>
+      </language>
+      <purpose>Запись оценки по шкале Апгар - простой, повторяемый метод оценки состояния новорожденного сразу после рождения.&#xD;
+Первая оценка производится сразу после рождения, далее может быть серия повторных.</purpose>
+      <keywords>новорожденный</keywords>
+      <keywords>оценка</keywords>
+      <keywords>балл</keywords>
+      <keywords>младенец</keywords>
+      <keywords>оценка состояния</keywords>
+      <use>Позволяет записывать состояние новорожденного по шкале Апгар  на 1, 2, 3, 4, 5 и / или 10 минуту после рождения, плюс дополнительно в более поздние сроки, если требуется&#xD;
+Обычно практикуется документирование состояния новорожденного по Апгар на 1 и 5 минуте, друге оценки могут быть записаны по клиническим показаниям.&#xD;
+Этот архетип позволяет записывать оценку по шкале Апгар в любое время после рождения.&#xD;
+В общеклинической практике записывают 5 параметров плюс общую оценку, однако этот архетип позволяет вносить информацию частичное, если требуется, для формирования истории данных.&#xD;
+Если общая оценка считается, то необходимо записать все 5 обычно используемых признаков. Общая оценка получается суммированием 5 обычных значений (мин 0, макс 10).</use>
+      <misuse>Completar el score parcialmente y no sumar los 5 valores para dar el total.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>Registrerer APGAR score som en enkel, repeterbare metode til dokumentasjon av tilstanden til den nyfødte barnet umiddelbart etter fødsel. Start tidspunkt for registrering er alltid fødselstidspunktet.</purpose>
+      <keywords>Nyfødt</keywords>
+      <keywords>Spebarn</keywords>
+      <keywords>Indeks</keywords>
+      <keywords>score</keywords>
+      <keywords>fødsel</keywords>
+      <keywords>neonatal</keywords>
+      <keywords>vurdering</keywords>
+      <keywords>respirasjon</keywords>
+      <keywords>hud farge</keywords>
+      <keywords>tonus</keywords>
+      <keywords>refleks</keywords>
+      <keywords>muskeltonus</keywords>
+      <keywords>hjertefrekvens</keywords>
+      <use>Anvendes til registrering av tilstanden til en nyfødte ut fra enkle basale parametre vurdert etter 1, 2, 3, 5 og / eller 10 minutters tidspunkter etter fødselen, pluss ytterligere vurderinger etter behov. &#xD;
+Vanlig praksis er å dokumentere Apgar score på 1 og 5 minutter; ytterligere score kan registreres. Det er mulig å registrere Apgar score når som helst etter fødselen ved hjelp av denne arketypen. &#xD;
+Der scores en verdi på 0 som laveste score og 2 for normale forhold for hver parameter.&#xD;
+Vanlig klinisk praksis er å registrere alle 5 parametere pluss total, men denne arketypen tillater også registrering av enkelt parametrene, hvis de er tilgjengelig f.eks fra historiske data. &#xD;
+Hvis den totale score skal beregnes, er det nødvendig at alle 5 ordinale verdier blir registreret Det er summen av de fem ordinale verdier (min 0, max 10) som er det egentlige APGAR.&#xD;
+&#xD;
+Den engelske mnemotekniske regel for å huske alle parametre er: A for Appearance (hudfarge), P for Pulse (puls), G for Grimace (refleks irritabilitet), A for Activity (muskeltonus), og R for respirasjon.</use>
+      <misuse>Misbruk er at anvende ufullstendig score og legge til 5 for å gi de totale verdiene.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Registra a escala de Apgar como um método simples e reproduzível de documentar o estado de saúde do recém-nato imediatamente após o nascimento</purpose>
+      <keywords>*recém-nascido(s), recém-nato(s)</keywords>
+      <keywords>*índice</keywords>
+      <keywords>*escore, escala</keywords>
+      <keywords>*nascimento(s),</keywords>
+      <keywords>*bebê(s)</keywords>
+      <keywords>*neonato(s)</keywords>
+      <keywords>*avaliação(ões)</keywords>
+      <use>Permite o registro de uma avaliação do estado de saúde de um recém-nascido explicitamente em eventos a 1, 2, 3, 5 e/ou 10 minutos depois do nascimento, e outros eventos adicionais se requeridos.&#xD;
+Geralmente se documenta os escores obtidos nos primeiro e quinto minutos na escala de Apgar, os demais podem ser registrados se tiver indicação clínica. É possível registrar o escore Apgar a qualquer tempo após o nascimento usando esse arquétipo.&#xD;
+A prática clínica comum é registrar todos os cinco parâmetros, mais o resultado global, entretanto esse arquétipo permite que qualquer informação parcial seja registrada, se for essa a única informação disponível, por exemplo, no histórico do paciente.&#xD;
+O total só pode ser calculado se os cinco valores ordinais forem registrados. O total é a soma dos cinco valores ordinais (min0, max 10).&#xD;
+&#xD;
+Se reconhece que uma ajuda mnemônica para aprender a interpretar o escore Apgar é comumente ensinada. Em Português, por exemplo: A para Aparência (cor da pele), P para pulso ( frequência cardíaca), G para Contração do rosto (grimace-fr); A para atividade (tônus muscular) e R pra Respiração. Embora não seja aplicável em todas as línguas, se sugere que se possa utilizar esse mnemônico para renomear os elementos de dados dentro dos templates se desejado para um cenário clínico específico.</use>
+      <misuse>Escore parcialmente completado e adicionar o 5 para obter o valor total.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>Records the Apgar score as a simple, repeatable method to document the state of the newborn infant immediately after birth.&#xD;
+The root time of the event series is always birth.</purpose>
+      <keywords>newborn</keywords>
+      <keywords>index</keywords>
+      <keywords>score</keywords>
+      <keywords>birth</keywords>
+      <keywords>infant</keywords>
+      <keywords>neonate</keywords>
+      <keywords>assessment</keywords>
+      <use>Allows recording of an assessment of the state of a neonate explicitly as 1, 2, 3, 5 and/or 10 minute events after birth, plus additional events as required. &#xD;
+Usual practice is to document the Apgar score at 1 and 5 minutes; further scores can be recorded as clinically indicated.  It is possible to record the Apgar score at any time after birth using this archetype.&#xD;
+Common clinical practice is to record all 5 parameters plus the total, however this archetype allows any partial information to be recorded, if that is all that is available eg from historical data.&#xD;
+If the total is to be calculated, it is necessary for all 5 ordinal values to be recorded.  The total is the sum of the five ordinal values (min 0, max 10).&#xD;
+&#xD;
+It is recognised that mnemonic learning aid for APGAR is commonly taught.  For example, in English: A for Appearance (skin color), P for Pulse (heart rate), G for Grimace (reflex irritability), A for Activity (muscle tone), and R for Respiration.  As this is not universally applicable for all languages, it is suggested that this mnemonic can be applied by renaming the data elements within templates if desired for a specific clinical scenario.</use>
+      <misuse>Partially complete score and add the 5 to give the total values​​.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ar-sy</code_string>
+      </language>
+      <purpose>تسجيل حرز أبغار كطريقة بسيطة متكررة لتوثيق حالة الرضيع حديث الولادة بعد الولادة/ الوضع مباشرة.&#xD;
+الوقت الجذري لهذه السلسة من الوقائع هي دائما الولادة/الوضع</purpose>
+      <keywords>حديث الولادة</keywords>
+      <keywords>معامل</keywords>
+      <keywords>الحرز</keywords>
+      <keywords>الولادة/الوضع</keywords>
+      <keywords>الرضيع</keywords>
+      <keywords>حديث الولادة</keywords>
+      <keywords>تقييم</keywords>
+      <use>يسمح بتسجيل تقييم حالة حديث الولادة بشكل صريح عند وقائع زمنية بالتحديد هي 1, 2, 3, 5 و/أو 10 دقائق بعد الولادة/الوضع, بالإضافة إلى أي وقائع إضافية حسب الحاجة.&#xD;
+&#xD;
+تتضمن الممارسة المعتادة تسجيل حرز أبغار عند 1 و 5 دقائق, و يمكن تسجيل أحراز أخرى حسب الحاجة السريرية. و من الممكن تسجيل حرز أبغار عند أي نقطة زمنية بعد الولادة باستخدام هذا النموذج.&#xD;
+&#xD;
+تقتضي الممارسة السريرية المعتادة تسجيل الـ 5 معايير بالإضافة إلى الإجمالي, إلا أن هذا النموذج يسمح بتسجيل أي معلمات جزئية, إذا كان هذا هو المتاح, مثل التسجيل من بيانات تاريخية.&#xD;
+&#xD;
+إذا كان لابد من حساب الإجمالي, فإنه من الضروري لجميع الـ 5 قيم أن يتم تسجيلها. الإجمالي هو مجموع القيم المنفردة الخمسة - الحد الأدنى هو 0 و الحد الأقصى هو 10&#xD;
+&#xD;
+و من المعروف أن كلمة أبغار تضم الأحرف الأولى للمعايير التي يتم قياسها - باللغة الإنجليزية. و هي تكافئ المظهر (لون الجلد/البشرة), و النبض (معدل القلب), و التكشيرة (التوتر الانعكاسي) و النشاط (توتر العضلات) و التنفس.&#xD;
+و حيث إن ذلك ليس قابلا للتطبيق حرفيا على اللغات الأخرى, فينبغي تطبيق هذا الاختصار بإعادة تسمية العناصر في داخل القوالب إذا كان من المرغوب في سيناريو سريري مُعيَّن.</use>
+      <misuse>Completar el score parcialmente y no sumar los 5 valores para dar el total.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>fa</code_string>
+      </language>
+      <purpose>برای ثبت نمره آپگار به عنوان روشی ساده و قابل تکرار در اسناد حالت نوزاد بلافاصله بعد از تولد بکار می رود&#xD;
+زمان اصلی سری رویدادها همیشه زمان تولد است</purpose>
+      <keywords>تازه بدنیا آمده</keywords>
+      <keywords>شاخص</keywords>
+      <keywords>نمره</keywords>
+      <keywords>تولد</keywords>
+      <keywords>شیر خوار</keywords>
+      <keywords>نوزاد</keywords>
+      <keywords>ارزیابی</keywords>
+      <use>ثبت ارزیابی حالت نوزاد را بطور آشکار در دقایق یک ، دو ، سه و پنج و یا ده بعد تولد بعلاوه رویدادهای بیشتر در صورت نیاز را امکان پذیر می کند&#xD;
+عملکرد معمول ثبت نمره آپگار در دقایق یک و پنج است ، نمرات بیشتر را می توان در صورت نیاز بالینی می توان ثبت نمود با این الگو ساز ثبت نمره آپگار در عر لحظه بعد از تولد امگان پذیر است&#xD;
+عملکرد مشترک بالینی ثبت کلیه پنج پارامتر به علاوه کل است اما در صورتی که همه اطلاعات در دسترس باشند، این الگو ساز امکان ثبت هر گونه اطلاعات جزیی را امکان پذیر می کند به عنوان مثال داد های بیمارستانی&#xD;
+در صورتی که کل نمره باید محاسبه شود باید کلیه ارزشها ی ترتیبی ثبت شوند . کل مجموع پنج ارزش ترتیبی حداقل صفرو حداکثر ده می باشد&#xD;
+مشحص شده است که یادگیری حافظه ای آپکار معمولا تدریس می شودبرای مثال در انگلیس حرف "ا" برای ظاهر (رنگ پوست)و حرف "پ" برای نبض (میزان قلبی) ، حرف "جی " برای شکلک(رفلکس تحریک پذیری) ، حرف "ا" برای فعالیت (تون عضلانی ) و  حرف "ر" برای تنفس استفاده می شود.گرچه این مورد برای تمام زبانها و بطور کلی قابل کاربرد نیست ، پیشنهاد می شود که  در صورت تمایل  در سناریوهای بالینی خاص ،یادگیری حافظه ای می تواند با نامگذاری مجدد عناصر داده ای در داخل الگو بکار رود</use>
+      <misuse>Completar el score parcialmente y no sumar los 5 valores para dar el total.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>es-cl</code_string>
+      </language>
+      <purpose>Registrar el índice del Apgar o la valoración del recién nacido. El tiempo inicial de medida de la serie de eventos es siempre la hora de nacimiento.</purpose>
+      <keywords>score</keywords>
+      <keywords>apgar</keywords>
+      <keywords>index</keywords>
+      <keywords>recién nacido</keywords>
+      <use>Permite registrar el bienestar del neonato al 1,2,5 y o 10 minutos después del nacimiento. Se puede registrar sólo el total - si es todo lo que está disponible - aúnque se deben completar los cinco valores númericos para que pueda ser calculado el total.  El total es la suma de los cinco valores númericos (el mínimo 0, el máximo 10).</use>
+      <misuse>Completar el score parcialmente y no sumar los 5 valores para dar el total.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>zh-cn</code_string>
+      </language>
+      <purpose>旨在将Apgar评分记录为简单的可重复性的方法，用于记载新生儿刚刚出生之后的状态。事件系列的根时间始终为出生。</purpose>
+      <keywords>新生儿</keywords>
+      <keywords>指标</keywords>
+      <keywords>指数</keywords>
+      <keywords>分数</keywords>
+      <keywords>评分</keywords>
+      <keywords>分值</keywords>
+      <keywords>得分</keywords>
+      <keywords>出生</keywords>
+      <keywords>生产</keywords>
+      <keywords>婴幼儿</keywords>
+      <keywords>婴儿</keywords>
+      <keywords>新生婴儿</keywords>
+      <keywords>评价</keywords>
+      <keywords>评估</keywords>
+      <use>可用于记录对出生之后1、2、3、5和/或10分钟后新生儿状态的评估，以及所需要的额外事件。&#xD;
+通常记载1分钟和5分钟时的Apgar评分；依据临床需要，可进一步记录其他评分。利用当前原始型，可以记录出生之后任何时候的Apgar评分。&#xD;
+常见的临床做法是记录所有5项参数及其总分；不过，当前原始型还允许记录任何不完整的信息，如果现成可用的只是这些信息的话，如来自于历史数据的不完整信息。&#xD;
+如果要计算总分的话，则需要记录所有5项分级分值（等级型分值）。总分是5项分级分值的总和（最小为0，最大为10）。&#xD;
+&#xD;
+目前，在教学时采用助记手段来帮助学习APGAR。例如，采用英语时：&#xD;
+      A 表示外貌（Appearance）（肤色）&#xD;
+      P 表示脉搏（Pulse）（心率）&#xD;
+      G 表示皱眉（Grimace）（反射应激性）&#xD;
+      A 表示活动（Activity）（肌张力）&#xD;
+      R 表示呼吸（Respiration）&#xD;
+这种方法并不普遍适用于所有的语种，因此建议，如果特定的临床场景需要的话，可以通过在模板之中对相应的数据元重新命名，以便能够运用这种助记方法。</use>
+      <misuse>不完整的评分加上5，得到总分。</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nl</code_string>
+      </language>
+      <purpose>Registreren van de Apgar score; een eenvoudige, te herhalen score, om de toestand van de pasgeborene onmiddelijk na de geboorte te documenteren.</purpose>
+      <keywords>pasgeborene</keywords>
+      <keywords>index</keywords>
+      <keywords>score</keywords>
+      <keywords>geboorte</keywords>
+      <keywords>kind</keywords>
+      <keywords>neonaat</keywords>
+      <keywords>beoordeling</keywords>
+      <keywords>baby</keywords>
+      <use>Staat registratie toe van de beoordeling van de toestand van een pasgeborene, op 1, 2, 3, 5, en/of 10 minuten na de geboorte, plus toegevoegde gebeurtenissen, indien gewenst.&#xD;
+Gewoonlijk wordt de Apgar score na 1 en 5 minuten gedaan, meerdere scores kunnen geregistreerd worden als dat klinisch geïndiceerd is. Het is bij gebruik van dit archetype mogelijk de Apgar score op ieder gewenst moment na de geboorte te registreren.&#xD;
+Algemeen klinische praktijk is om alle 5 parameters plus het totaal te registreren, maar in dit archtype kan iedere gedeeltelijke informatie opgeslagen worden, dat beschikbaar is in b.v. historische data. Als het totaal berekend wordt, is het noodzakelijk dat alle 5 parameters als waarde geregistreerd worden. Het totaal is de som van de 5 waardes (min 0, max 10).&#xD;
+Erkend wordt dat er gewoonlijk een ezelsbruggetje word gebruikt bij het aanleren van de Apgar score. Bijvoorbeeld: Appearance (kleur), Pulse (hartslag), Grimace (reactie op prikkels), Activity (spiertonus) en Respiration (ademhaling). Dit is niet universeel bruikbaar voor alle talen, gesuggereerd wordt dat dit geheugensteuntje kan worden toegepast door het hernoemen van de data elementen binnen templates, indien gewenst voor een specifiek klinisch scenario.</use>
+      <misuse>Completar el score parcialmente y no sumar los 5 valores para dar el total.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Jasmin Buck, Sebastian Garde, Thilo Schuler</author>
+    <author id="organisation">University of Heidelberg, Central Queensland University, Ocean Informatics</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ru</code_string>
+    </language>
+    <author id="name">Igor Lizunov</author>
+    <author id="email">i.lizunov@infinnity.ru</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Lars Bitsch-Larsen</author>
+    <author id="organisation">Haukeland University Hospital, Bergen, Norway</author>
+    <accreditation>MD, DEAA, specialist in anestesia and intensive care, Tropical medicin &amp; MBA</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>pt-br</code_string>
+    </language>
+    <author id="name">Jussara Rötzsch</author>
+    <author id="organisation">OpenEHR Foundation</author>
+    <accreditation>Medical Doctor,  Psychiatrist, Clinical Modeler, OpenEHR Director, Coordinator of  WG ehealth infostructure of brazilian e-health program</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ar-sy</code_string>
+    </language>
+    <author id="name">Mona Saleh</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>fa</code_string>
+    </language>
+    <author id="name">Shahla Foozonkhah</author>
+    <author id="organisation">Ocean Informatics</author>
+    <author id="email">Shahla.foozonkhah@oceanInformatics.com</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>es-cl</code_string>
+    </language>
+    <author id="name">Sergio Carmona</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>zh-cn</code_string>
+    </language>
+    <author id="name">Lin Zhang</author>
+    <author id="organisation">BIPH</author>
+    <author id="email">linforest@163.com</author>
+    <accreditation>What goes here?</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nl</code_string>
+    </language>
+    <author id="name">Marja Buur</author>
+    <author id="organisation">Medisch Centrum Alkmaar</author>
+    <author id="email">m.buur-krom@mca.nl</author>
+    <accreditation>Erna Vreeke</accreditation>
+  </translations>
+  <uid>
+    <value>f5362691-d51a-4317-9d55-f50f1b88dd1a</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-OBSERVATION.apgar.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>OBSERVATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>HISTORY</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0002</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>events</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>POINT_EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0003</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>offset</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DURATION</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_PRIMITIVE_OBJECT">
+                    <rm_type_name>DV_DURATION</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <item xsi:type="C_DURATION">
+                      <range>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>PT1M</lower>
+                        <upper>PT1M</upper>
+                      </range>
+                    </item>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ITEM_LIST</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0001</node_id>
+                <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                  <rm_attribute_name>items</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0009</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_ORDINAL">
+                        <rm_type_name>DV_ORDINAL</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <list>
+                          <value>0</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0010</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>1</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0011</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>2</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0012</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0005</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_ORDINAL">
+                        <rm_type_name>DV_ORDINAL</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <list>
+                          <value>0</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0006</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>1</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0007</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>2</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0008</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0013</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_ORDINAL">
+                        <rm_type_name>DV_ORDINAL</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <list>
+                          <value>0</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0014</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>1</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0015</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>2</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0016</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0017</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_ORDINAL">
+                        <rm_type_name>DV_ORDINAL</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <list>
+                          <value>0</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0018</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>1</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0019</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>2</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0020</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0021</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_ORDINAL">
+                        <rm_type_name>DV_ORDINAL</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <list>
+                          <value>0</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0022</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>1</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0023</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                        <list>
+                          <value>2</value>
+                          <symbol>
+                            <value />
+                            <defining_code>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at0024</code_string>
+                            </defining_code>
+                          </symbol>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0025</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_COUNT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>magnitude</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_PRIMITIVE_OBJECT">
+                            <rm_type_name>INTEGER</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <item xsi:type="C_INTEGER">
+                              <range>
+                                <lower_included>true</lower_included>
+                                <upper_included>true</upper_included>
+                                <lower_unbounded>false</lower_unbounded>
+                                <upper_unbounded>false</upper_unbounded>
+                                <lower>0</lower>
+                                <upper>10</upper>
+                              </range>
+                            </item>
+                          </children>
+                        </attributes>
+                      </children>
+                    </attributes>
+                  </children>
+                  <cardinality>
+                    <is_ordered>true</is_ordered>
+                    <is_unique>false</is_unique>
+                    <interval>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>6</upper>
+                    </interval>
+                  </cardinality>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>POINT_EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0026</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>offset</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DURATION</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_PRIMITIVE_OBJECT">
+                    <rm_type_name>DV_DURATION</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <item xsi:type="C_DURATION">
+                      <range>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>PT2M</lower>
+                        <upper>PT2M</upper>
+                      </range>
+                    </item>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="ARCHETYPE_INTERNAL_REF">
+                <rm_type_name>ITEM_LIST</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <target_path>/data[at0002]/events[at0003]/data[at0001]</target_path>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>POINT_EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0027</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>offset</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DURATION</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_PRIMITIVE_OBJECT">
+                    <rm_type_name>DV_DURATION</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <item xsi:type="C_DURATION">
+                      <range>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>PT3M</lower>
+                        <upper>PT3M</upper>
+                      </range>
+                    </item>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="ARCHETYPE_INTERNAL_REF">
+                <rm_type_name>ITEM_LIST</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <target_path>/data[at0002]/events[at0003]/data[at0001]</target_path>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>POINT_EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0028</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>offset</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DURATION</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_PRIMITIVE_OBJECT">
+                    <rm_type_name>DV_DURATION</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <item xsi:type="C_DURATION">
+                      <range>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>PT5M</lower>
+                        <upper>PT5M</upper>
+                      </range>
+                    </item>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="ARCHETYPE_INTERNAL_REF">
+                <rm_type_name>ITEM_LIST</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <target_path>/data[at0002]/events[at0003]/data[at0001]</target_path>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>POINT_EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0031</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>offset</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DURATION</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_PRIMITIVE_OBJECT">
+                    <rm_type_name>DV_DURATION</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <item xsi:type="C_DURATION">
+                      <range>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>PT10M</lower>
+                        <upper>PT10M</upper>
+                      </range>
+                    </item>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="ARCHETYPE_INTERNAL_REF">
+                <rm_type_name>ITEM_LIST</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <target_path>/data[at0002]/events[at0003]/data[at0001]</target_path>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0037</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="ARCHETYPE_INTERNAL_REF">
+                <rm_type_name>ITEM_LIST</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <target_path>/data[at0002]/events[at0003]/data[at0001]</target_path>
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_LIST</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0029</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0030</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Apgar score</items>
+        <items id="description">Clinical score derived from assessment of respiratory effort, heart rate, reflex irritability, muscle tone and skin colour.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">history</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">1 minute</items>
+        <items id="description">Apgar score 1 minute after birth.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Heart Rate</items>
+        <items id="description">Recording of the infant's heart rate.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Absent</items>
+        <items id="description">No heart beat is seen, felt or heard.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">&lt;100 beats per minute</items>
+        <items id="description">Heart rate less than 100 beats per minute.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">≥100 beats per minute</items>
+        <items id="description">Heart rate greater than or equal to 100 beats per minute.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Respiratory effort</items>
+        <items id="description">Observation of the infant's respiratory effort.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Absent</items>
+        <items id="description">No effort to breath.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Weak or irregular</items>
+        <items id="description">Some effort to breath, moving chest.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Normal</items>
+        <items id="description">Breathing normally or crying.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Muscle tone</items>
+        <items id="description">Observation of the infant's muscle tone.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Limp or flaccid</items>
+        <items id="description">No spontaneous movement.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Reduced tone</items>
+        <items id="description">Some flexion of extremities.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Normal tone</items>
+        <items id="description">Normal, vigorous movements.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Reflex irritability</items>
+        <items id="description">Observation of the response of the infant to an irritant stimulation, for example, suctioning the oropharynx and nares with a soft rubber catheter.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">No response</items>
+        <items id="description">No response to stimulation.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Reduced response</items>
+        <items id="description">Grimace or feeble cry when stimulated.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Normal response</items>
+        <items id="description">Grimace, sneeze, cough or pulls away when stimulated.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Skin colour</items>
+        <items id="description">Observation of the skin colour of the infant.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Completely blue</items>
+        <items id="description">Body and extremities are blue.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Body pink; extremities blue</items>
+        <items id="description">Body is pink; extremities are blue.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Completely pink</items>
+        <items id="description">Body and extremities are pink; no cyanosis.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Total</items>
+        <items id="description">The sum of the 5 ordinal scores for each component parameter.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">2 minute</items>
+        <items id="description">Apgar score 2 minutes after birth.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">3 minute</items>
+        <items id="description">Apgar score 3 minutes after birth.</items>
+      </items>
+      <items code="at0028">
+        <items id="text">5 minute</items>
+        <items id="description">Apgar score 5 minutes after birth.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">List</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Notes on measurement</items>
+        <items id="description">Notes on measurement of the Apgar score.</items>
+      </items>
+      <items code="at0031">
+        <items id="text">10 minute</items>
+        <items id="description">Apgar score 10 minutes after birth.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Any event</items>
+        <items id="description">Apgar score at any additional time, as required.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="es-cl">
+      <items code="at0000">
+        <items id="text">*Apgar score(en)</items>
+        <items id="description">*Clinical score derived from assessment of respiratory effort, heart rate, reflex irritability, muscle tone and skin colour.(en)</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Estructura</items>
+        <items id="description">*@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Historia</items>
+        <items id="description">*@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*1 minute(en)</items>
+        <items id="description">*Apgar score 1 minute after birth(en)</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Frecuencia cardíaca</items>
+        <items id="description">Valoración de la función cardíaca en el recién nacido.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Sin latido cardíaco</items>
+        <items id="description">No presenta latidos cardíacos (palpación en la base del cordón umbilical).</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Menos de 100 latidos por minuto</items>
+        <items id="description">Frecuencia cardíaca menor a 100 latidos por minuto.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Mayor o igual a 100 latidos por minutos</items>
+        <items id="description">Frecuencia cardíaca mayor o igual a 100 latidos por minuto.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Respiración</items>
+        <items id="description">Valoración del esfuerzo respiratorio del neonato.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Sin esfuerzo</items>
+        <items id="description">Sin esfuerzo respiratorio.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Esfuerzo moderado</items>
+        <items id="description">Esfuerzo respiratorio debil e irregular.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Llorando</items>
+        <items id="description">Llorando o respirando normalmente.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">*Muscle tone(en)</items>
+        <items id="description">*Observation of the infant's muscle tone(en)</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Flacido</items>
+        <items id="description">Flacido y sin movimientos espontáneos.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">*Reduced tone(en)</items>
+        <items id="description">*Some flexion of extremities(en)</items>
+      </items>
+      <items code="at0016">
+        <items id="text">*Normal tone(en)</items>
+        <items id="description">*Normal, vigorous movements(en)</items>
+      </items>
+      <items code="at0017">
+        <items id="text">*Reflex irritability(en)</items>
+        <items id="description">*Observation of the response of the infant to an irritant stimulation, for example, suctioning the oropharynx and nares with a soft rubber catheter.(en)</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Ninguna respuesta a la aspiración de la vía aérea</items>
+        <items id="description">Ninguna mueca o respuesta a la aspiración de la vía aérea.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Mueca durante aspiración de la vía aérea</items>
+        <items id="description">Sólo mueca como reacción a la aspiración de la vía aérea.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Mueca y tos/estornudo durante la aspiración de la vía aérea</items>
+        <items id="description">Mueca y tos, estornudo o gag como respuesta a la aspiración de la vía aérea.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">*Skin colour(en)</items>
+        <items id="description">*Observation of the skin colour of the infant(en)</items>
+      </items>
+      <items code="at0022">
+        <items id="text">*Completely blue(en)</items>
+        <items id="description">*Body and extremities are blue(en)</items>
+      </items>
+      <items code="at0023">
+        <items id="text">*Body pink; extremities blue(en)</items>
+        <items id="description">*Body is pink; extremities are blue(en)</items>
+      </items>
+      <items code="at0024">
+        <items id="text">*Completely pink(en)</items>
+        <items id="description">*Body and extremities are pink; no cyanosis(en)</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Total</items>
+        <items id="description">El total es la suma de los puntajes de cada parámetro.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">*2 minute(en)</items>
+        <items id="description">*Apgar score 2 minutes after birth(en)</items>
+      </items>
+      <items code="at0027">
+        <items id="text">*3 minute(en)</items>
+        <items id="description">*Apgar score 3 minutes after birth(en)</items>
+      </items>
+      <items code="at0028">
+        <items id="text">*5 minute(en)</items>
+        <items id="description">*Apgar score 5 minutes after birth(en)</items>
+      </items>
+      <items code="at0029">
+        <items id="text">Lista</items>
+        <items id="description">*@ internal @</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Notas de medición</items>
+        <items id="description">Notas sobre la medida del Apgar.</items>
+      </items>
+      <items code="at0031">
+        <items id="text">*10 minute(en)</items>
+        <items id="description">*Apgar score 10 minutes after birth(en)</items>
+      </items>
+      <items code="at0037">
+        <items id="text">*Any event(en)</items>
+        <items id="description">*Apgar score at any additional time, as required.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Apgar-Score</items>
+        <items id="description">Klinischer Score, abgeleitet von der Beurteilung des Atemantriebs, Herzfrequenz, Reflexauslösbarkeit, Muskeltonus und Hautfarbe.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">History</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">1 Minute</items>
+        <items id="description">Apgar-Score 1 Minute nach Geburt.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Herzfrequenz</items>
+        <items id="description">Beurteilung der Herzfrequenz des Neubegorenen.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Kein Herzschlag</items>
+        <items id="description">Kein Herzschlag gesehen, gefühlt oder gehört.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">&lt;100 Schläge pro Minute</items>
+        <items id="description">Herzfrequenz von weniger als 100 Schlägen pro Minute.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">≥100 Schläge pro Minute</items>
+        <items id="description">Herzfrequenz von mehr als oder genau 100 Schlägen pro Minute.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Atemantrieb</items>
+        <items id="description">Beurteilung des Atemantriebs des Neugeborenen.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Kein Bestreben</items>
+        <items id="description">Kein Bestreben zu atmen.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Schwaches oder unregelmäßiges Bestreben</items>
+        <items id="description">Etwas bestrebt zu atmen, Brustkorb bewegt sich.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Normal</items>
+        <items id="description">Normale Atmung oder Schreien.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Muskeltonus</items>
+        <items id="description">Beobachtung des Musketonus des Neugeborenen.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Schlaff</items>
+        <items id="description">Keine spontane Bewegung.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Reduzierter Tonus</items>
+        <items id="description">Geringe Flexion der Extremitäten.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Normaler Tonus</items>
+        <items id="description">Normale, kraftvolle Bewegung der Extremitäten.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Reflexauslösbarkeit</items>
+        <items id="description">Beobachtung der Antwort des Neugeborens auf eine Reizstimulation, z.B. Absaugen des Oropharynxs und der Nasenlöcher mit einem weichem Gummikatheter.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Keine Reaktion</items>
+        <items id="description">Keine Reaktion auf die Stimulation.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Reduzierte Reaktion</items>
+        <items id="description">Grimassieren oder schwaches Schreien als Reaktion auf die Stimulation.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Normale Reaktion</items>
+        <items id="description">Grimassieren, Niesen, Husten oder Wegziehen als Reaktion auf die Stimulation.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Hautfarbe</items>
+        <items id="description">Beobachtung der Hautfarbe des Neugeborenen.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Komplett blau</items>
+        <items id="description">Körper und Extremitäten sind blau.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Akrozyanotisch</items>
+        <items id="description">Stamm ist rosig, Extremitäten sind blau.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Komplett rosig</items>
+        <items id="description">Stamm und Extremitäten sind rosig; keine Zyanose.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Gesamtwert</items>
+        <items id="description">Die Summe der Zahlenwerte aller 5 Komponenten.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">2 Minuten</items>
+        <items id="description">Apgar-Score 2 Minuten nach der Geburt.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">3 Minuten</items>
+        <items id="description">Apgar-Score 3 Minuten nach der Geburt.</items>
+      </items>
+      <items code="at0028">
+        <items id="text">5 Minuten</items>
+        <items id="description">Apgar-Score 5 Minuten nach der Geburt.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">List</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Anmerkungen zur Messung</items>
+        <items id="description">Anmerkungen zur Messung des Apgar-Scores.</items>
+      </items>
+      <items code="at0031">
+        <items id="text">10 Minuten</items>
+        <items id="description">Apgar-Score 10 Minuten nach der Geburt</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Beliebiges Ereignis</items>
+        <items id="description">Apgar-Score zu beliebigen Zeitpunkten, je nach Bedarf.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="fa">
+      <items code="at0000">
+        <items id="text">نمره آپگار</items>
+        <items id="description">نمره بالینی استخراج شده از ارزیابی تلاش تنفسی ، ضربان قلب ، رفلکس تحریک پذیری ، تون عضلانی و رنگ پوست</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*history(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">دقیقه اول</items>
+        <items id="description">نمره آپگار یک دقیقه بعد از تولد</items>
+      </items>
+      <items code="at0005">
+        <items id="text">ضربان قلب</items>
+        <items id="description">ثبت ضربان قلب نوزاد</items>
+      </items>
+      <items code="at0006">
+        <items id="text">عدم وجود</items>
+        <items id="description">ضربان قلبی مشاهده ، احساس یا شنیده نمی شود</items>
+      </items>
+      <items code="at0007">
+        <items id="text">ضربان کمتر از 100 در هر دقیقه</items>
+        <items id="description">ضربان قلب کمتر از 100 ضربه در هر دقیقه است</items>
+      </items>
+      <items code="at0008">
+        <items id="text">ضربان بیشتر یا مساوی 100 در هر دقیقه</items>
+        <items id="description">ضربان قلب بیشتریا برابر  100 ضربه در هر دقیقه است</items>
+      </items>
+      <items code="at0009">
+        <items id="text">تلاش تنفسی</items>
+        <items id="description">مشاهده تلاش تنفسی نوزاد</items>
+      </items>
+      <items code="at0010">
+        <items id="text">غیر موجود</items>
+        <items id="description">برای تنفس تلاش نمی کند</items>
+      </items>
+      <items code="at0011">
+        <items id="text">ضعیف یا نا منظم</items>
+        <items id="description">برای تنفس تلاش می کند  ، سینه حرکت می کند</items>
+      </items>
+      <items code="at0012">
+        <items id="text">ظبیعی</items>
+        <items id="description">تنفس طبیعی یا گریه کردن</items>
+      </items>
+      <items code="at0013">
+        <items id="text">تون عضلانی</items>
+        <items id="description">مشاهده تلون عضلانی نوزاد</items>
+      </items>
+      <items code="at0014">
+        <items id="text">مشاهده تلون عضلانی نوزاد</items>
+        <items id="description">حرکات خودبخودی وجود ندارد</items>
+      </items>
+      <items code="at0015">
+        <items id="text">تون کاهش یافته</items>
+        <items id="description">برخی رفلکسها یا خمیدگی ها وجود دارد</items>
+      </items>
+      <items code="at0016">
+        <items id="text">تون طبیعی</items>
+        <items id="description">طبیعی ، حرکات نیرومند</items>
+      </items>
+      <items code="at0017">
+        <items id="text">رفلکس تحریک پذیری</items>
+        <items id="description">مشاهده پاسخ نوزاد به تحریکات محرک به عنوان مثال مکش دهانی حلقی و سوراخ بینی با کاتتر لاستیکی نرم</items>
+      </items>
+      <items code="at0018">
+        <items id="text">پاسخ نمی دهد</items>
+        <items id="description">عدم پاسخ به تحریکات</items>
+      </items>
+      <items code="at0019">
+        <items id="text">کاهش پاسخ</items>
+        <items id="description">گریه شکلکی یا ضعیف در زمان تحریک</items>
+      </items>
+      <items code="at0020">
+        <items id="text">پاسخ طبیعی</items>
+        <items id="description">شکلک ، عطسه ف سرفه یا عقب کشیدن در زمان تحریک</items>
+      </items>
+      <items code="at0021">
+        <items id="text">رنگ پوست</items>
+        <items id="description">مشاهده رنگ پوست نوزاد</items>
+      </items>
+      <items code="at0022">
+        <items id="text">کاملا آبی</items>
+        <items id="description">دن و دستها و پاها آبی هستند</items>
+      </items>
+      <items code="at0023">
+        <items id="text">بدن صورتی ، دستها و پاها آبی</items>
+        <items id="description">بدن صورتی ، دستها و پاها آبی هستند</items>
+      </items>
+      <items code="at0024">
+        <items id="text">کاملا صورتی</items>
+        <items id="description">دن و دستها و پاها کاملا صورتی هستند هیچ سیانوزی وجود ندارد</items>
+      </items>
+      <items code="at0025">
+        <items id="text">مجموع</items>
+        <items id="description">مجموع پنج نمره ترتیبی برای هر پارامتر جز</items>
+      </items>
+      <items code="at0026">
+        <items id="text">دقیقه دو</items>
+        <items id="description">نمره آپگار دودقیقه بعد از تولد</items>
+      </items>
+      <items code="at0027">
+        <items id="text">دقیقه سه</items>
+        <items id="description">نمره آپگار سه دقیقه بعد از تولد</items>
+      </items>
+      <items code="at0028">
+        <items id="text">دقیقه پنج</items>
+        <items id="description">نمره آپگار پنج دقیقه بعد از تولد</items>
+      </items>
+      <items code="at0029">
+        <items id="text">*List(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0030">
+        <items id="text">یادداشتهایی در مورد اندازه گیری</items>
+        <items id="description">یادداشتهایی در مورد اندازه گیری نمره آپگار</items>
+      </items>
+      <items code="at0031">
+        <items id="text">دقیقه ده</items>
+        <items id="description">نمره آپگار ده دقیقه بعد از تولد</items>
+      </items>
+      <items code="at0037">
+        <items id="text">هر رویداد</items>
+        <items id="description">نمره آپگار در هر زمان ممکن و در صورت نیاز</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ar-sy">
+      <items code="at0000">
+        <items id="text">حرز أبغار</items>
+        <items id="description">الحرز السريري المشتق من تقييم المجهود التنفسي, معدل القلب, التوتر المنعكس, توتر العضلة و لون الجلد</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*history(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">دقيقة واحدة</items>
+        <items id="description">حرز أبغار بعد دقيقة واحدة من الولادة/الوضع</items>
+      </items>
+      <items code="at0005">
+        <items id="text">معدل القلب</items>
+        <items id="description">تسجيل معدل قلب الرضيع</items>
+      </items>
+      <items code="at0006">
+        <items id="text">غائب</items>
+        <items id="description">لا يمكن سماع, رؤية أو الشعور بضربات القلب</items>
+      </items>
+      <items code="at0007">
+        <items id="text">أقل من 100 ضربة في الدقيقة</items>
+        <items id="description">معدل القلب أقل من 100 ضربة في الدقيقة</items>
+      </items>
+      <items code="at0008">
+        <items id="text">أكثر من أو يساوي 100 ضربة في الدقيقة</items>
+        <items id="description">معدل القلب أكبر من أو يساوي 100 ضربة في الدقيقة</items>
+      </items>
+      <items code="at0009">
+        <items id="text">المجهود التنفسي</items>
+        <items id="description">ملاحظة المجهود التنفسي لدى الرضيع</items>
+      </items>
+      <items code="at0010">
+        <items id="text">غائب</items>
+        <items id="description">لا يوجد بذل مجهود للتنفس</items>
+      </items>
+      <items code="at0011">
+        <items id="text">ضعيف أو غير منتظم</items>
+        <items id="description">يوجد بعض المجهود للتنفس, الصدر يتحرك</items>
+      </items>
+      <items code="at0012">
+        <items id="text">طبيعي</items>
+        <items id="description">يتنفس بشكل طبيعي أو يبكي</items>
+      </items>
+      <items code="at0013">
+        <items id="text">توتر العضلة</items>
+        <items id="description">ملاحظة توتر عضلات الرضيع</items>
+      </items>
+      <items code="at0014">
+        <items id="text">مرتخٍ/أعرج</items>
+        <items id="description">لا يوجد حركة تلقائية</items>
+      </items>
+      <items code="at0015">
+        <items id="text">توتر منخفض</items>
+        <items id="description">يوجد بعض الثني للأطراف</items>
+      </items>
+      <items code="at0016">
+        <items id="text">توتر طبيعي</items>
+        <items id="description">حركات طبيعية قوية</items>
+      </items>
+      <items code="at0017">
+        <items id="text">التوتر الانعكاسي</items>
+        <items id="description">ملاحظة استجابة الرضيع لتحفيز مُهَيَّج, مثلا, مص محتويات البلعوم الفمي و فتحات الأنف باستخدام قثطار مطاطي ناعم.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">لا توجد استجابة</items>
+        <items id="description">لا يوجد استجابة للتحفيز</items>
+      </items>
+      <items code="at0019">
+        <items id="text">استجابة منخفضة</items>
+        <items id="description">تكشيرة أو بكاء ضعيف عند التحفيز</items>
+      </items>
+      <items code="at0020">
+        <items id="text">استجابة طبيعية</items>
+        <items id="description">تكشيرة, عُطاس, سعال, أو يتعبد عند تحفيزه</items>
+      </items>
+      <items code="at0021">
+        <items id="text">لون الجلد/البشرة</items>
+        <items id="description">ملاحظة لون بشرة/جلد الرضيع</items>
+      </items>
+      <items code="at0022">
+        <items id="text">أزرق تماما</items>
+        <items id="description">الجسم و الأطراف زرقاء اللون</items>
+      </items>
+      <items code="at0023">
+        <items id="text">الجسم متورد و الأطراف زرقاء</items>
+        <items id="description">الجسم متورد و الأطراف زرقاء</items>
+      </items>
+      <items code="at0024">
+        <items id="text">متورد تماما</items>
+        <items id="description">الجسم و الأطراف متوردة, لا يوجد ازرقاق</items>
+      </items>
+      <items code="at0025">
+        <items id="text">الإجمالي</items>
+        <items id="description">مجموع الأحراز الخمسة المنفردة</items>
+      </items>
+      <items code="at0026">
+        <items id="text">عند دقيقتين</items>
+        <items id="description">حرز أبغار عند دقيقتين من الولادة/الوضع</items>
+      </items>
+      <items code="at0027">
+        <items id="text">عند ثلاث دقائق</items>
+        <items id="description">حرز أبغار بعد ثلاث دقائق من الولادة/الوضع</items>
+      </items>
+      <items code="at0028">
+        <items id="text">بعد خمس دقائق</items>
+        <items id="description">حرز أبغار بعد 5 دقائق من الولادة/الوضع</items>
+      </items>
+      <items code="at0029">
+        <items id="text">*List(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0030">
+        <items id="text">ملاحظات حول القياس</items>
+        <items id="description">ملاحظات حول قياس حرز أبغار</items>
+      </items>
+      <items code="at0031">
+        <items id="text">بعد 10 دقائق</items>
+        <items id="description">حرز أبغار بعد 10 دقائق من الولادة/الوضع</items>
+      </items>
+      <items code="at0037">
+        <items id="text">إحدى الوقائع</items>
+        <items id="description">حرز أبغار عند أي وقت إضافي, حسب الحاجة</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ru">
+      <items code="at0000">
+        <items id="text">Шкала Апгар</items>
+        <items id="description">Клиническая оценка полученная из оценки дыхания, частоты сердечных сокращений, рефлекторной возбудимости, мышечного тонуса и цвета кожи.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*history(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">1 минута</items>
+        <items id="description">Оценка по Апгар в 1 минуту после рождения.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Сердцебиение</items>
+        <items id="description">Запись о ЧСС младенца.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Отсутствует</items>
+        <items id="description">Нет дыхательных движений.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">&lt;100 ударов в минуту</items>
+        <items id="description">ЧСС меньше 100 ударов в минуту.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">≥100 ударов в минуту</items>
+        <items id="description">ЧСС более 100 ударов в минуту.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Дыхание</items>
+        <items id="description">Наблюдается за дыханием.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Отсутствует</items>
+        <items id="description">Сердцебиение не видно, не слышно и не ощутимо.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Слабое или нерегулярное</items>
+        <items id="description">Некоторые дыхательные движения, движения грудной клетки.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Нормальное.</items>
+        <items id="description">Дыхание нормальное или крик.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Мышечный тонус</items>
+        <items id="description">Оценка мышечного тонуса младенца.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Вялый</items>
+        <items id="description">Нет спонтанных движений.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Тонус ослаблен</items>
+        <items id="description">Слабое сгибание конечностей.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Нормальный тонус</items>
+        <items id="description">Нормальные, энергичные движения.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Рефлексы на раздражение</items>
+        <items id="description">Наблюдение за реакцией ребенка на раздражающее стимуляции, например, очищения ротоглотки и носовых отверстий мягким резиновым катетером.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Нет реакции</items>
+        <items id="description">Нет реакци на стимуляцию.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Реакция ослаблена</items>
+        <items id="description">Гримаса или слабый крик при стимуляции.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Нормальная реакция</items>
+        <items id="description">Гримаса, чихание, кашель или отстранение при стимуляции.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Цвет кожи</items>
+        <items id="description">Оценка цвета кожи младенца.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Общий цианоз</items>
+        <items id="description">Цианоз туловища и конечностей.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Акрозианоз, цианоз конечностей</items>
+        <items id="description">Туловище розовое, цианоз конечностей.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Цианоза нет</items>
+        <items id="description">Туловище и конечности розовые. Цианоза нет</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Общая оценка</items>
+        <items id="description">Сумма баллов по 5 параметрам.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">2 минута</items>
+        <items id="description">Оценка по Апгар во 2 минуту после рождения.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">3 минута</items>
+        <items id="description">Оценка по Апгар в 3 минуту после рождения.</items>
+      </items>
+      <items code="at0028">
+        <items id="text">5 минута</items>
+        <items id="description">Оценка по Апгар на 5 минуту после рождения.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">*List(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Примечания по измерению</items>
+        <items id="description">Примечания по измерению по шкале Апгар.</items>
+      </items>
+      <items code="at0031">
+        <items id="text">10 минута</items>
+        <items id="description">Оценка по Апгар в 10 минуту после рождения.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Любое время</items>
+        <items id="description">Оценка по Апгар в дополнительное время, если требуется.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nl">
+      <items code="at0000">
+        <items id="text">Apgar score</items>
+        <items id="description">Score die bereikt wordt door beoordeling van ademhalingsinspanning, hartslag, reflexen,  spiertonus  en kleur.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*history(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">1 minuut</items>
+        <items id="description">Apgar score 1 minuut na de geboorte.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Hartslag</items>
+        <items id="description">Opnemen van de hartslag van het kind.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Afwezig</items>
+        <items id="description">Er is geen hartslag te zien, voelen of horen.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">&lt;100 slagen per minuut</items>
+        <items id="description">Hartfrequentie minder dan 100 slagen per minuut.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">≥100 slagen per minuut</items>
+        <items id="description">Hartslag hoger of gelijk aan 100 slagen per minuut.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Ademhalingsinspanning</items>
+        <items id="description">Observatie van de ademhalingsinspanning van het kind.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Afwezig</items>
+        <items id="description">Geen ademhalingsinspanning.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Matig of onregelmatig</items>
+        <items id="description">Enige ademhalingsinspanning, beweging van de borst.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Normaal</items>
+        <items id="description">Normale ademhaling of huilend.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Spiertonus</items>
+        <items id="description">Observatie van de spiertonus van het kind.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Slap</items>
+        <items id="description">Geen spontane bewegingen.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Verminderde tonus</items>
+        <items id="description">Enige flexie van de ledematen.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Normale tonus</items>
+        <items id="description">Normale, krachtige bewegingen.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Reactie op prikkels</items>
+        <items id="description">Observatie van de reactie van het kind op een irritante prikkeling, bijvoorbeeld het uitzuigen van de keel en neus met een zachte rubberen katheter.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Geen reactie</items>
+        <items id="description">Geen reactie op prikkeling.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Verminderde reactie</items>
+        <items id="description">Grimas of zwak huilen bij prikkeling.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Normale reactie</items>
+        <items id="description">Grimas en niezen, hoesten of terugtrekken bij prikkeling.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Huidskleur</items>
+        <items id="description">Observatie van de huidskleur van het kind.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Helemaal blauw</items>
+        <items id="description">Lichaam en extremiteiten zijn blauw.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Lichaam is roze, extremiteiten blauw</items>
+        <items id="description">Het lichaam van het kind is roze, de extremiteiten zijn blauw.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Helemaal roze</items>
+        <items id="description">Lichaam en eztremiteiten zijn roze, geen cyanose.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Totaal</items>
+        <items id="description">De som van de 5 afzonderlijke scores van iedere observatie.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">2 minuten</items>
+        <items id="description">Apgar score 2 minuten na de geboorte.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">3 minuten</items>
+        <items id="description">Apgar score 3 minuten na de geboorte.</items>
+      </items>
+      <items code="at0028">
+        <items id="text">5 minuten</items>
+        <items id="description">Apgar score 5 minuten na de geboorte.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">*List(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Opmerkingen over de meting</items>
+        <items id="description">Opmerkingen over de meting van de Apgar score.</items>
+      </items>
+      <items code="at0031">
+        <items id="text">10 minuten</items>
+        <items id="description">Apgar score 10 minuten na de geboorte.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Any event</items>
+        <items id="description">Apgar score op elk toe te voegen tijdstip, indien nodig</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="pt-br">
+      <items code="at0000">
+        <items id="text">Escala Apgar</items>
+        <items id="description">Escala clínica derivada da avaliação do esforço respiratório, frequência cardíaca, reflexo de irritabilidade, tônus muscular e cor da pele.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*history(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">1 minuto</items>
+        <items id="description">Escore Apgar obtido 1 minuto apóss o nascimento.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Frequência cardíaca</items>
+        <items id="description">Registro da frequência cardíaca do recém-nascido.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Ausente</items>
+        <items id="description">Nenhum batimento cardíaco é visto, sentido ou escutado.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">&lt;100 batimentos por minuto</items>
+        <items id="description">Frequência cardíaca inferior a 100 batimentos por minuto.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">≥100 batimentos por minuto</items>
+        <items id="description">Frequência cardíaca superior a 100 batimentos por minuto.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Esforço respiratório</items>
+        <items id="description">Observação do esforço respiratório do recém-nascido.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Ausente</items>
+        <items id="description">Nenhum  esforço para respirar.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Fraco ou irregular</items>
+        <items id="description">Algum esforço para respirar, movimento do peito.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Normal</items>
+        <items id="description">Respirando normalmente ou chorando.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Tônus muscular</items>
+        <items id="description">Observação do tônus muscular do recém-nascido.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Atônico ou flácido</items>
+        <items id="description">Sem movimento espontâneo.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Tônus reduzido</items>
+        <items id="description">Alguma flexão de extremidades.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Tônus normal</items>
+        <items id="description">Movimentos normais, vigorosos.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Reflexo de irritabilidade</items>
+        <items id="description">Observação da resposta a um estímulo irritativo, por exemplo, sucção da orofaringe e narinas com um cateter de borracha macia.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Nenhuma resposta</items>
+        <items id="description">Nenhuma resposta ao estímulo.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Resposta reduzida</items>
+        <items id="description">Careta ou choro débil quando estimulado.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Resposta normal</items>
+        <items id="description">Careta, espirro, tosse ou tenta se afastar quando estimulado.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Cor da pele</items>
+        <items id="description">Observação da cor da pele do recém-nascido.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Completamente azul</items>
+        <items id="description">Corpo e extremidades estão azuis</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Corpo cor de rosa; extremiddades azuis</items>
+        <items id="description">Corpo está cor de  rosa, extremidades estão azuis.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Completamente cor de rosa</items>
+        <items id="description">Corpo e extremidade estão cor de  rosa, ausência de cianose.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Total</items>
+        <items id="description">A soma dos 5 escores ordinais para cada parâmetro componente.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">2 minutos</items>
+        <items id="description">Escore Apgar 2 minutos após o nascimento.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">3 minutos</items>
+        <items id="description">escore Apgar 3 minutos após o nascimento.</items>
+      </items>
+      <items code="at0028">
+        <items id="text">5 minutos</items>
+        <items id="description">Escore Apgar 5 minutos após o nascimento.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">*List(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Notas sobre a medida</items>
+        <items id="description">Notas sobre a medida da Escala Apgar.</items>
+      </items>
+      <items code="at0031">
+        <items id="text">10 minutos</items>
+        <items id="description">escore Apgar 10 minutos após o nascimento</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Qualquer evento</items>
+        <items id="description">Escore Apgar em qualquer tempo adicional, se requerido.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="zh-cn">
+      <items code="at0000">
+        <items id="text">Apgar评分</items>
+        <items id="description">依据对新生儿的呼吸力、心率、反射应激性、肌张力及肤色五个方面的评估而获得的临床评分。</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*history(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">1分钟</items>
+        <items id="description">出生1分钟之后的Apgar评分</items>
+      </items>
+      <items code="at0005">
+        <items id="text">心率</items>
+        <items id="description">对新生儿心率的观察</items>
+      </items>
+      <items code="at0006">
+        <items id="text">无</items>
+        <items id="description">没有看到、感到或听到心脏跳动。</items>
+      </items>
+      <items code="at0007">
+        <items id="text">&lt;100次/分钟</items>
+        <items id="description">心率低于100次/分钟。</items>
+      </items>
+      <items code="at0008">
+        <items id="text">≥100次/分钟</items>
+        <items id="description">心率大于等于（不低于）100次/分钟。</items>
+      </items>
+      <items code="at0009">
+        <items id="text">呼吸力</items>
+        <items id="description">对新生儿呼吸力的观察</items>
+      </items>
+      <items code="at0010">
+        <items id="text">无</items>
+        <items id="description">没有力量呼吸</items>
+      </items>
+      <items code="at0011">
+        <items id="text">微弱或不规则</items>
+        <items id="description">呼吸（胸部运动）有一定的力量</items>
+      </items>
+      <items code="at0012">
+        <items id="text">正常</items>
+        <items id="description">呼吸正常或哭声响亮</items>
+      </items>
+      <items code="at0013">
+        <items id="text">肌张力</items>
+        <items id="description">对新生儿肌张力的观察</items>
+      </items>
+      <items code="at0014">
+        <items id="text">软弱或松弛无力</items>
+        <items id="description">肌肉松弛无力，无自发运动。</items>
+      </items>
+      <items code="at0015">
+        <items id="text">张力降低</items>
+        <items id="description">四肢有一定的屈曲。</items>
+      </items>
+      <items code="at0016">
+        <items id="text">张力正常</items>
+        <items id="description">正常，运动有力，四肢能活动。</items>
+      </items>
+      <items code="at0017">
+        <items id="text">反射应激性</items>
+        <items id="description">对新生儿反射应激性的观察</items>
+      </items>
+      <items code="at0018">
+        <items id="text">无反应</items>
+        <items id="description">对刺激无反应。</items>
+      </items>
+      <items code="at0019">
+        <items id="text">反应降低</items>
+        <items id="description">当刺激时皱起眉头或微弱哭泣。</items>
+      </items>
+      <items code="at0020">
+        <items id="text">反应正常</items>
+        <items id="description">当刺激时皱起眉头、打喷嚏、咳嗽或移开（推开）。</items>
+      </items>
+      <items code="at0021">
+        <items id="text">肤色</items>
+        <items id="description">对新生儿皮肤颜色的观察</items>
+      </items>
+      <items code="at0022">
+        <items id="text">全身青紫</items>
+        <items id="description">身体或四肢青紫或苍白。</items>
+      </items>
+      <items code="at0023">
+        <items id="text">身体粉红、四肢青紫</items>
+        <items id="description">身体粉红、四肢青紫。</items>
+      </items>
+      <items code="at0024">
+        <items id="text">全身粉红</items>
+        <items id="description">身体和四肢均粉红，无青紫（发绀）或苍白。</items>
+      </items>
+      <items code="at0025">
+        <items id="text">总分</items>
+        <items id="description">每项组成参数的5级评分的总和。</items>
+      </items>
+      <items code="at0026">
+        <items id="text">2分钟</items>
+        <items id="description">出生2分钟之后的Apgar评分</items>
+      </items>
+      <items code="at0027">
+        <items id="text">3分钟</items>
+        <items id="description">出生3分钟之后的Apgar评分</items>
+      </items>
+      <items code="at0028">
+        <items id="text">5分钟</items>
+        <items id="description">出生5分钟之后的Apgar评分</items>
+      </items>
+      <items code="at0029">
+        <items id="text">*List(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0030">
+        <items id="text">关于测量的注释</items>
+        <items id="description">关于Apgar评分测量的注释</items>
+      </items>
+      <items code="at0031">
+        <items id="text">10分钟</items>
+        <items id="description">出生10分钟之后的Apgar评分</items>
+      </items>
+      <items code="at0037">
+        <items id="text">任何事件</items>
+        <items id="description">所需要的任何额外时候的Apgar评分。</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Apgar score</items>
+        <items id="description">Kilinisk scoring utledet fra vurdering av respirasjonen, hjerte frekvensen, refleks irritabilitet, muskel tonus og hud farge.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">history</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">1 minutt</items>
+        <items id="description">Apgar score etter 1 minutt etter fødsel.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Hjertefrekvens</items>
+        <items id="description">Registrering af den nyfødtes hjertefrekvens.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Ingen hjerte aktivitet</items>
+        <items id="description">Ingen hjerteslag ses, kjennes eller høres.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Puls &lt; 100</items>
+        <items id="description">Hjertefrekvens mindre enn 100.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Puls &gt; 100</items>
+        <items id="description">Hjertefrekvens mer enn 100.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Respirasjon</items>
+        <items id="description">Observasjon av den nyfødtes respirasjon.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Fraværende</items>
+        <items id="description">Ingen respirasjon.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Svak eller uregelmessig</items>
+        <items id="description">Noen puste besvær og økt bryst bevegelse.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Normal</items>
+        <items id="description">Normal pust eller grått.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Muskeltonus</items>
+        <items id="description">Observasjon av den nyfødtes muskeltonus,</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Slapp, inaktiv</items>
+        <items id="description">Ingen spontan bevegelse.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Redusert tonus</items>
+        <items id="description">Noen fleksjon av ekstremiteter.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Normal tonus</items>
+        <items id="description">Normale, kraftige bevegelser.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Refleks irritabilitet</items>
+        <items id="description">Observasjon av den nyfødtes reaksjon til irriterende stimulering, for eksempel, suging i oropharynx og svelget med en myk silikonkateter .</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Ingen respons</items>
+        <items id="description">Ingen respons til stimulasjon.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Redusert respons</items>
+        <items id="description">Grimase eller svak gråte når stimulert.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Normal respons</items>
+        <items id="description">Grimase, nysing, hoste eller avverge bevegelser når stimulert.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Hud farge</items>
+        <items id="description">Observasjon av hudfarge til den nyfødte.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Cyanotisk over hele kroppen</items>
+        <items id="description">Kropp og ekstremiteter er cyanotisk.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Kropp lyserød; ekstremiteter cyanotisk</items>
+        <items id="description">Kropp lyserød; ekstremiteter cyanotisk.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Helt lyserød</items>
+        <items id="description">Normal hudfarge, ingen cyanose.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Total</items>
+        <items id="description">Summen til de 5 ordinale score for de enkelte parametre.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">2 minutt</items>
+        <items id="description">Apgar score etter 2 minutt eller fødselen.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">3 minutt</items>
+        <items id="description">Apgar score etter 3 minutt eller fødselen.</items>
+      </items>
+      <items code="at0028">
+        <items id="text">5 minutt</items>
+        <items id="description">Apgar score etter 5 minutt eller fødselen.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">List</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Merknade til vurderingen</items>
+        <items id="description">Merknade til Apgar score vurderingene.</items>
+      </items>
+      <items code="at0031">
+        <items id="text">10 minutt</items>
+        <items id="description">Apgar score etter 10 minutt eller fødselen.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Enhver hendelse</items>
+        <items id="description">Apgar score kan tilføyes når som helst etter behov.</items>
+      </items>
+    </term_definitions>
+    <term_bindings terminology="SNOMED-CT">
+      <items code="/data[at0002]/events[at0003]/data[at0001]/items[at0025]">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>169895004</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0028]/data[at0001]/items[at0025]">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>169909004</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0031]/data[at0001]/items[at0025]">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>169922007</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0037]/data[at0001]/items[at0025]">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>364592005</code_string>
+        </value>
+      </items>
+      <items code="at0025">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>249228009</code_string>
+        </value>
+      </items>
+    </term_bindings>
+    <term_bindings terminology="LOINC">
+      <items code="/data[at0002]/events[at0003]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>48334-7</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0003]/data[at0001]/items[at0005]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32407-9</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0003]/data[at0001]/items[at0009]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32410-3</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0003]/data[at0001]/items[at0013]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32408-7</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0003]/data[at0001]/items[at0017]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32409-5</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0003]/data[at0001]/items[at0021]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32406-1</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0003]/data[at0001]/items[at0025]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>9272-6</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0026]/data[at0001]/items[at0025]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>9273-4</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0028]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>48333-9</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0028]/data[at0001]/items[at0005]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32412-9</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0028]/data[at0001]/items[at0009]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32415-2</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0028]/data[at0001]/items[at0013]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32413-7</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0028]/data[at0001]/items[at0017]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32414-5</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0028]/data[at0001]/items[at0021]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32411-1</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0028]/data[at0001]/items[at0025]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>9274-2</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0031]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>48332-1</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0031]/data[at0001]/items[at0005]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32402-0</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0031]/data[at0001]/items[at0009]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32405-3</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0031]/data[at0001]/items[at0013]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32403-8</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0031]/data[at0001]/items[at0017]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32404-6</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0031]/data[at0001]/items[at0021]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>32401-2</code_string>
+        </value>
+      </items>
+      <items code="/data[at0002]/events[at0031]/data[at0001]/items[at0025]">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>9271-8</code_string>
+        </value>
+      </items>
+      <items code="at0006">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6716</code_string>
+        </value>
+      </items>
+      <items code="at0007">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6717</code_string>
+        </value>
+      </items>
+      <items code="at0008">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6718</code_string>
+        </value>
+      </items>
+      <items code="at0010">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6725</code_string>
+        </value>
+      </items>
+      <items code="at0011">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6726</code_string>
+        </value>
+      </items>
+      <items code="at0012">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6727</code_string>
+        </value>
+      </items>
+      <items code="at0014">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6713</code_string>
+        </value>
+      </items>
+      <items code="at0015">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6714</code_string>
+        </value>
+      </items>
+      <items code="at0016">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6715</code_string>
+        </value>
+      </items>
+      <items code="at0018">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6719</code_string>
+        </value>
+      </items>
+      <items code="at0019">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6720</code_string>
+        </value>
+      </items>
+      <items code="at0020">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6721</code_string>
+        </value>
+      </items>
+      <items code="at0022">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6722</code_string>
+        </value>
+      </items>
+      <items code="at0023">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6723</code_string>
+        </value>
+      </items>
+      <items code="at0024">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>LA6724</code_string>
+        </value>
+      </items>
+    </term_bindings>
+  </ontology>
+</archetype>

@@ -1,0 +1,594 @@
+﻿archetype (adl_version=1.4; uid=4132f1b7-9c25-4c70-8f19-90a80682790f)
+	openEHR-EHR-OBSERVATION.faeces.v0
+
+concept
+	[at0000]	-- Faeces
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			author = <
+				["name"] = <"Dr. Leonardo Der Jachadurian">
+				["organisation"] = <"Bitios.com">
+				["email"] = <"leoderja@hotmail.com">
+			>
+			accreditation = <"Medical Doctor (Internal Medicine Specialist)">
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			author = <
+				["name"] = <"Anca Heyd">
+				["organisation"] = <"DIPS ASA">
+				["email"] = <"ahe@dips.no">
+			>
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Dr Ian McNicoll">
+		["organisation"] = <"freshEHR Clinical Informatics">
+		["email"] = <"ian@freshehr.com">
+		["date"] = <"2008-07-27">
+	>
+	details = <
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			purpose = <"Para registrar detalles acerca de una deposición de materia fecal.">
+			use = <"">
+			keywords = <"Deposición", "Evacuación intestinal">
+			misuse = <"">
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			purpose = <"For å dokumentere detaljer vedrørende avføring.">
+			use = <"">
+			keywords = <"avføring, faeces, naturlige funksjoner", ...>
+			misuse = <"">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لتسجيل تفاصيل حول نتاج البراز">
+			use = <"">
+			misuse = <"">
+			copyright = <"© 2011 openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record details about faecal output.">
+			use = <"">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Heather Leslie, Atomica Informatics, Australia.", ...>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"80B87864BA36896DB065DA840B025337">
+		["build_uid"] = <"51190c23-3c1b-4f49-aa56-6aeb91bfa4ab">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	OBSERVATION[at0000] matches {	-- Faeces
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..*} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0018] occurrences matches {0..1} matches {	-- Clinical description
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {[local::]}
+											}
+										}
+									}
+									ELEMENT[at0004] occurrences matches {0..1} matches {	-- Colour
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0005] occurrences matches {0..1} matches {	-- Consistency
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0006, 	-- Hard
+													at0007, 	-- Soft
+													at0008, 	-- Loose
+													at0009]	-- Liquid
+												}
+											}
+										}
+									}
+									ELEMENT[at0010] occurrences matches {0..1} matches {	-- Used bowels
+										value matches {
+											DV_BOOLEAN matches {
+												value matches {True, False}
+											}
+										}
+									}
+									ELEMENT[at0020] occurrences matches {0..1} matches {	-- Last opened bowels
+										value matches {
+											DV_DATE_TIME matches {*}
+										}
+									}
+									ELEMENT[at0021] occurrences matches {0..1} matches {	-- Time since last opened bowels
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::128]>
+												list = <
+													["1"] = <
+														units = <"min">
+													>
+													["2"] = <
+														units = <"h">
+													>
+													["3"] = <
+														units = <"d">
+													>
+												>
+											>
+										}
+									}
+									ELEMENT[at0011] occurrences matches {0..1} matches {	-- Amount
+										value matches {
+											0|[local::at0012], 	-- No faeces passed
+											1|[local::at0013], 	-- Very small amount
+											2|[local::at0014], 	-- Small
+											5|[local::at0015], 	-- Usual
+											8|[local::at0016], 	-- Large
+											10|[local::at0017]  	-- Very large
+										}
+									}
+									ELEMENT[at0019] occurrences matches {0..1} matches {	-- Volume
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::124]>
+												list = <
+													["1"] = <
+														units = <"g">
+														magnitude = <|>=0.0|>
+														precision = <|0|>
+													>
+												>
+											>
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0022] matches {	-- Tree
+				items cardinality matches {0..*; unordered} matches {
+					allow_archetype CLUSTER[at0023] occurrences matches {0..*} matches {	-- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Faeces">
+					description = <"For recording faecal output.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Colour">
+					description = <"The colour of the faeces.">
+				>
+				["at0005"] = <
+					text = <"Consistency">
+					description = <"The consistency of faeces.">
+				>
+				["at0006"] = <
+					text = <"Hard">
+					description = <"Very firm and solid.">
+				>
+				["at0007"] = <
+					text = <"Soft">
+					description = <"The faeces are solid (with no liquid) but are not hard.">
+				>
+				["at0008"] = <
+					text = <"Loose">
+					description = <"The faeces are semi liquid but contain a significant amount of solid material.">
+				>
+				["at0009"] = <
+					text = <"Liquid">
+					description = <"The faeces have little solid material.">
+				>
+				["at0010"] = <
+					text = <"Used bowels">
+					description = <"The person has used bowels.">
+				>
+				["at0011"] = <
+					text = <"Amount">
+					description = <"The amount as a category.">
+				>
+				["at0012"] = <
+					text = <"No faeces passed">
+					description = <"No faeces passed at all.">
+				>
+				["at0013"] = <
+					text = <"Very small amount">
+					description = <"Only a very small amount of faeces passed.">
+				>
+				["at0014"] = <
+					text = <"Small">
+					description = <"A small amount of faeces passed.">
+				>
+				["at0015"] = <
+					text = <"Usual">
+					description = <"A normal amount of faeces passed.">
+				>
+				["at0016"] = <
+					text = <"Large">
+					description = <"A large amount of faeces passed.">
+				>
+				["at0017"] = <
+					text = <"Very large">
+					description = <"A very large amount of faeces passed.">
+				>
+				["at0018"] = <
+					text = <"Clinical description">
+					description = <"Narrative description about the bowel habits of the individual.">
+				>
+				["at0019"] = <
+					text = <"Volume">
+					description = <"The volume of faeces passed.">
+				>
+				["at0020"] = <
+					text = <"Last opened bowels">
+					description = <"Date/Time when last opened bowels.">
+				>
+				["at0021"] = <
+					text = <"Time since last opened bowels">
+					description = <"Amount of time since last opened bowels.">
+				>
+				["at0022"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0023"] = <
+					text = <"Extension">
+					description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+					comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0000"] = <
+					text = <"البراز">
+					description = <"لتسجيل ناتج البراز">
+				>
+				["at0001"] = <
+					text = <"*Event Series(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"إحدى الوقائع">
+					description = <"التوقيت">
+				>
+				["at0003"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"اللون">
+					description = <"لون البراز">
+				>
+				["at0005"] = <
+					text = <"الاتساق">
+					description = <"اتساق البراز">
+				>
+				["at0006"] = <
+					text = <"قاسٍ - صلب">
+					description = <"صلب و متماسك جدا">
+				>
+				["at0007"] = <
+					text = <"لين - رخو">
+					description = <"البراز صلب (بدون سائل) و لكنه ليس قاسيا">
+				>
+				["at0008"] = <
+					text = <"مقلقل">
+					description = <"البراز شبه سائل و لكنه يحتوي على كمية معتبرة من المواد الصلبة">
+				>
+				["at0009"] = <
+					text = <"سائل">
+					description = <"البراز به كمية قليلة من المواد الصلبة">
+				>
+				["at0010"] = <
+					text = <"تم استخدام الأمعاء">
+					description = <"قام الشخص باستخدام الأمعاء">
+				>
+				["at0011"] = <
+					text = <"الكمية">
+					description = <"الكمية مُعَبَّرٌ عنها كفئة">
+				>
+				["at0012"] = <
+					text = <"لم يتم إمرار البراز">
+					description = <"لم يتم إمرار البراز على الإطلاق">
+				>
+				["at0013"] = <
+					text = <"كمية صغيرة جدا">
+					description = <"تم إمرار كمية صغيرة جدا من البراز">
+				>
+				["at0014"] = <
+					text = <"صغير">
+					description = <"تم إمرار كمية صغيرة من البراز">
+				>
+				["at0015"] = <
+					text = <"المعتاد">
+					description = <"تم إمرار كمية طبيعية من البراز">
+				>
+				["at0016"] = <
+					text = <"كبيرة">
+					description = <"تم إمرار كمية كبيرة من البراز">
+				>
+				["at0017"] = <
+					text = <"كبيرة جدا">
+					description = <"تم إمرار كمية كبيرة جدا من البراز">
+				>
+				["at0018"] = <
+					text = <"الوصف السريري">
+					description = <"*">
+				>
+				["at0019"] = <
+					text = <"الحجم">
+					description = <"حجم البراز الذي تم إمراره">
+				>
+				["at0020"] = <
+					text = <"آخر مرة تم فيها فتح الأمعاء">
+					description = <"آخر وقت/ تاريخ تم فيه استخدام الأمعاء">
+				>
+				["at0021"] = <
+					text = <"الفترة الزمنية منذ آخر مرة لاستخدام الأمعاء">
+					description = <"مقدار الوقت الذي تم فيه آخر مرة لاستخدام الأمعاء">
+				>
+				["at0022"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0023"] = <
+					text = <"*Item(en)">
+					description = <"**(en)">
+				>
+			>
+		>
+		["es-ar"] = <
+			items = <
+				["at0000"] = <
+					text = <"Heces">
+					description = <"Para registrar una deposición de materia fecal.">
+				>
+				["at0001"] = <
+					text = <"*Event Series(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"Cualquier evento">
+					description = <"Momento">
+				>
+				["at0003"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"Color">
+					description = <"El color de las heces.">
+				>
+				["at0005"] = <
+					text = <"Consistencia">
+					description = <"La consistencia de las heces.">
+				>
+				["at0006"] = <
+					text = <"Duras">
+					description = <"Heces firmes y sólidas.">
+				>
+				["at0007"] = <
+					text = <"Blandas">
+					description = <"Las heces son sólidas, sin líquido, pero no son duras.">
+				>
+				["at0008"] = <
+					text = <"Flojas">
+					description = <"Las heces son semi-líquidas, pero contienen una significativa cantidad de material sólido.">
+				>
+				["at0009"] = <
+					text = <"Líquidas">
+					description = <"Las heces tienen poco material sólido.">
+				>
+				["at0010"] = <
+					text = <"Fue de cuerpo">
+					description = <"La persona tuvo deposiciones de materia fecal. También se dice mas informalmente \"fué de cuerpo\"  o evacuó o movió los intestinos.">
+				>
+				["at0011"] = <
+					text = <"Cantidad">
+					description = <"La cantidad como variable categórica.">
+				>
+				["at0012"] = <
+					text = <"No deposición">
+					description = <"No hubo deposición alguna.">
+				>
+				["at0013"] = <
+					text = <"Muy poca cantidad">
+					description = <"Deposición de muy poca cantidad de heces.">
+				>
+				["at0014"] = <
+					text = <"Poca">
+					description = <"Deposición de poca cantidad de heces.">
+				>
+				["at0015"] = <
+					text = <"Normal">
+					description = <"Deposición de cantidad de heces normal.">
+				>
+				["at0016"] = <
+					text = <"Abundante">
+					description = <"Deposición de una abundante cantidad de materia fecal.">
+				>
+				["at0017"] = <
+					text = <"Muy abundante">
+					description = <"Deposición de una muy abundante cantidad de materia fecal.">
+				>
+				["at0018"] = <
+					text = <"Descripción Clínica">
+					description = <"*">
+				>
+				["at0019"] = <
+					text = <"Volúmen">
+					description = <"El volúmen de la deposición de materia fecal.">
+				>
+				["at0020"] = <
+					text = <"Última deposición">
+					description = <"Fecha y hora de la última deposición.">
+				>
+				["at0021"] = <
+					text = <"Lapso de tiempo desde la última deposición">
+					description = <"Cantidad de tiempo transcurrida desde la última deposición.">
+				>
+				["at0022"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0023"] = <
+					text = <"*Item(en)">
+					description = <"**(en)">
+				>
+			>
+		>
+		["nb"] = <
+			items = <
+				["at0000"] = <
+					text = <"Avføring">
+					description = <"For å dokumentere detaljer om avføring.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"*Any event(en)">
+					description = <"*Timing(en)">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Farge">
+					description = <"Avføringsfarge.">
+				>
+				["at0005"] = <
+					text = <"Konsistens">
+					description = <"Avføringskonsistens.">
+				>
+				["at0006"] = <
+					text = <"Hard">
+					description = <"Formet og veldig fast.">
+				>
+				["at0007"] = <
+					text = <"Myk.">
+					description = <"Avføringen er formet, men myk.">
+				>
+				["at0008"] = <
+					text = <"Løs.">
+					description = <"Avføringen er ikke formet men det er fortsatt en betydelig mengde fast materiale.">
+				>
+				["at0009"] = <
+					text = <"Flytende.">
+					description = <"Avføringen er vanntynn med lite fast materiale.">
+				>
+				["at0010"] = <
+					text = <"Used bowels(en)">
+					description = <"Usikker hva dette betyr, derfor ikke oversatt.">
+				>
+				["at0011"] = <
+					text = <"Mengde">
+					description = <"Mengde som kategori.">
+				>
+				["at0012"] = <
+					text = <"Ingen.">
+					description = <"Ingen avføring.">
+				>
+				["at0013"] = <
+					text = <"Veldig lite.">
+					description = <"Veldig lite avføring.">
+				>
+				["at0014"] = <
+					text = <"Lite.">
+					description = <"Lite avføring.">
+				>
+				["at0015"] = <
+					text = <"Normal.">
+					description = <"Normal mengde avføring.">
+				>
+				["at0016"] = <
+					text = <"Mye.">
+					description = <"Mye avføring.">
+				>
+				["at0017"] = <
+					text = <"Veldig mye.">
+					description = <"Veldig mye avføring.">
+				>
+				["at0018"] = <
+					text = <"Klinisk beskrivelse">
+					description = <"Klinisk beskrivelse av avføring og avføringsmønster.">
+				>
+				["at0019"] = <
+					text = <"Volum">
+					description = <"Avføringens volum.">
+				>
+				["at0020"] = <
+					text = <"Last opened bowels(en)">
+					description = <"Usikker hva dette betyr, derfor ikke oversatt.">
+				>
+				["at0021"] = <
+					text = <"Time since last opened bowels(en)">
+					description = <"Usikker hva dette betyr, derfor ikke oversatt.">
+				>
+				["at0022"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0023"] = <
+					text = <"*Item(en)">
+					description = <"**(en)">
+				>
+			>
+		>
+	>

@@ -1,0 +1,126 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-EVALUATION.excluded-intervention.v1.0.0
+
+specialize
+    openEHR-EHR-EVALUATION.excluded.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"23/04/2006">
+    >
+    lifecycle_state = <"Rejected">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"BD013399454EE59EAD64B19090F60CC9">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording issues and health problems that are excluded from being relevant now or in the past.">
+            keywords = <"no", "significant", "family", "history", "surgery", "hospitalisations", "relevant", "allergies", "negation">
+            use = <"This is for recording negative statements about issues in the record.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Statement of exclusions regarding interventions
+        /data[at0001]/items matches {
+            ELEMENT[at0002] matches {
+                /value[at9001]/defining_code matches {[ac9000.1]}    -- Statement (synthesised)
+            }
+            ELEMENT[at0.22] occurrences matches {0..1} matches {    -- Intervention
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000]}    -- Intervention (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.10"] = <
+                text = <"Not given">
+                description = <"No intervention has been given">
+            >
+            ["at0.11"] = <
+                text = <"Not requested">
+                description = <"No intervention is requested">
+            >
+            ["at0.13"] = <
+                text = <"Not required">
+                description = <"No intervention is required">
+            >
+            ["at0.18"] = <
+                text = <"Not indicated">
+                description = <"The intervention is not indicated">
+            >
+            ["at0.22"] = <
+                text = <"Intervention">
+                description = <"The type of intervention">
+            >
+            ["at0.23"] = <
+                text = <"Treatment">
+                description = <"A treatment for a condition or symptom">
+            >
+            ["at0.24"] = <
+                text = <"Analgesia">
+                description = <"Pain relief">
+            >
+            ["at0.25"] = <
+                text = <"Medical intervention">
+                description = <"An intervention of a medical nature">
+            >
+            ["at0.26"] = <
+                text = <"Surgical procedure">
+                description = <"An intervention of a surgical nature">
+            >
+            ["at0.27"] = <
+                text = <"Investigation">
+                description = <"An investigative intervention or test">
+            >
+            ["at0.28"] = <
+                text = <"Not performed">
+                description = <"The intervention has not been performed">
+            >
+            ["at0.29"] = <
+                text = <"Contraindicated">
+                description = <"The intervention is contraindicated">
+            >
+            ["at0.9"] = <
+                text = <"No previous">
+                description = <"There has been no previous intervention">
+            >
+            ["at0000.1"] = <
+                text = <"Statement of exclusions regarding interventions">
+                description = <"A category of conditions or states which have been excluded!">
+            >
+            ["ac9000.1"] = <
+                text = <"Statement (synthesised)">
+                description = <"The statement about what is excluded. (synthesised)">
+            >
+            ["ac0.9000"] = <
+                text = <"Intervention (synthesised)">
+                description = <"The type of intervention (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.23", "at0.24", "at0.25", "at0.26", "at0.27">
+        >
+        ["ac9000.1"] = <
+            id = <"ac9000.1">
+            members = <"at0.9", "at0.10", "at0.11", "at0.13", "at0.18", "at0.28", "at0.29">
+        >
+    >

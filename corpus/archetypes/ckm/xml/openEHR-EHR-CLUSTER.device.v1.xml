@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -126,9 +126,7 @@ auf die Wirkstoffe, die Dosierung usw. konzentriert.</misuse>
         </terminology_id>
         <code_string>sv</code_string>
       </language>
-      <purpose>Att registrera uppgifter om en medicinteknisk produkt som används vid tillhandahållandet av hälso- och sjukvård.&#xD;
-&#xD;
-</purpose>
+      <purpose>Att registrera uppgifter om en medicinteknisk produkt som används vid tillhandahållandet av hälso- och sjukvård.</purpose>
       <keywords>medicinteknisk produkt</keywords>
       <keywords>maskin</keywords>
       <keywords>implantat</keywords>
@@ -1424,8 +1422,7 @@ Coding with a terminology is desirable, where possible, This may include use of 
       <items code="at0001">
         <items id="text">Device name</items>
         <items id="description">Identification of the medical device, preferably by a common name, a formal fully descriptive name or, if required, by class or category of device.</items>
-        <items id="comment">This data element will capture the term, phrase or category used in clinical practice. For example: &lt;brand name&gt;&lt;machine&gt; (XYZ Audiometer); &lt;size&gt; &lt;brand name&gt; &lt;intravenous catheter&gt; (14G Jelco IV catheter); or &lt;brand name/type&gt; &lt;implant&gt;. Coding with a terminology is desirable, where possible, although this may be local and depending on local supplies available.&#xD;
-</items>
+        <items id="comment">This data element will capture the term, phrase or category used in clinical practice. For example: &lt;brand name&gt;&lt;machine&gt; (XYZ Audiometer); &lt;size&gt; &lt;brand name&gt; &lt;intravenous catheter&gt; (14G Jelco IV catheter); or &lt;brand name/type&gt; &lt;implant&gt;. Coding with a terminology is desirable, where possible, although this may be local and depending on local supplies available.</items>
       </items>
       <items code="at0002">
         <items id="text">Description</items>
@@ -1851,9 +1848,7 @@ Beispiel: Wenn das 'Gerät' als 'Harnkatheter' bezeichnet wird; der 'Typ' kann a
       </items>
       <items code="at0021">
         <items id="text">Eindeutige Identifikationsnummer (ID)</items>
-        <items id="description">Eine numerische oder alphanumerische Zeichenfolge, die diesem Gerät in einem bestimmten System zugeordnet ist.&#xD;
-&#xD;
-</items>
+        <items id="description">Eine numerische oder alphanumerische Zeichenfolge, die diesem Gerät in einem bestimmten System zugeordnet ist.</items>
         <items id="comment">Oft als Barcode am Gerät befestigt.</items>
       </items>
       <items code="at0022">
@@ -1895,8 +1890,7 @@ zur Angleichung an andere Referenzmodelle/Formalismen erforderlich sind.</items>
         <items id="text">Medicinteknisk produkt</items>
         <items id="description">Ett instrument, en apparat, ett implantat, ett material eller liknande, som används vid tillhandahållande av hälso- och sjukvård. &#xD;
 En medicinteknisk produkt i detta sammanhang inkluderar produkter som verkar ex. genom en mängd olika fysiska, mekaniska eller termiska sätt. I sammanhanget exkluderas specifikt produkter som verkar med medicinska medel såsom farmakologiska, metaboliska eller immunologiska metoder.&#xD;
-Arketypen tar höjd för engångsprodukter och produkter med tillfällig-, kort- och långvarig användning som kräver spårning, underhållsaktiviteter eller regelbunden kalibrering. Arketypen tar också höjd för att varje typ av medicinteknisk produkt har sina egna specifika krav på registrering av uppgifter.&#xD;
-</items>
+Arketypen tar höjd för engångsprodukter och produkter med tillfällig-, kort- och långvarig användning som kräver spårning, underhållsaktiviteter eller regelbunden kalibrering. Arketypen tar också höjd för att varje typ av medicinteknisk produkt har sina egna specifika krav på registrering av uppgifter.</items>
       </items>
       <items code="at0001">
         <items id="text">Namn på medicinteknisk produkt</items>
@@ -1911,8 +1905,7 @@ Arketypen tar höjd för engångsprodukter och produkter med tillfällig-, kort-
         <items id="text">Typ</items>
         <items id="description">Kategorin eller typ av medicinteknisk produkt.</items>
         <items id="comment">Ej tillämpligt om en kategori redan har dokumenterats i 'Namn på medicinteknisk produkt'.&#xD;
-Exempel: om 'Medicinteknisk produkt' är kallad 'urinkateter'; kan 'Typ' registreras som 'kvarliggande' eller 'uridom'. Kodning med en terminologi är önskvärt, om möjligt. Detta kan inkludera användning av GTIN eller EAN nummer.&#xD;
-</items>
+Exempel: om 'Medicinteknisk produkt' är kallad 'urinkateter'; kan 'Typ' registreras som 'kvarliggande' eller 'uridom'. Kodning med en terminologi är önskvärt, om möjligt. Detta kan inkludera användning av GTIN eller EAN nummer.</items>
       </items>
       <items code="at0004">
         <items id="text">Tillverkare</items>
@@ -2351,4 +2344,3 @@ Ejemplo: Si el "dispositivo" se llama "catéter urinario", el "Tipo" se puede re
     </term_definitions>
   </ontology>
 </archetype>
-

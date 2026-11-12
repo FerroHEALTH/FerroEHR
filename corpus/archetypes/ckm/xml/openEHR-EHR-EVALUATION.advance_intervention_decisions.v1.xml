@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -85,8 +85,7 @@ ZIB Centrum. [Internet]. Netherlands: Nictiz. BehandelAanwijzing-v3.2(2019NL); 2
         </terminology_id>
         <code_string>de</code_string>
       </language>
-      <purpose>Zur Aufzeichnung vorausschauender Entscheidungen über die Gesamtabsicht der Pflege und mögliche Interventionen, die in der Regel von einem Kliniker durchgeführt werden.&#xD;
-</purpose>
+      <purpose>Zur Aufzeichnung vorausschauender Entscheidungen über die Gesamtabsicht der Pflege und mögliche Interventionen, die in der Regel von einem Kliniker durchgeführt werden.</purpose>
       <keywords>DNR</keywords>
       <keywords>DNAR</keywords>
       <keywords>DNACPR</keywords>
@@ -118,13 +117,10 @@ ZIB Centrum. [Internet]. Netherlands: Nictiz. BehandelAanwijzing-v3.2(2019NL); 2
 &#xD;
 Dieser Archetyp soll als Teil einer integrierten Pflege- oder Lebensendplanung verwendet werden und nicht als Reaktion auf eine akute oder Notfallsituation. Jede Entscheidung sollte als Reaktion auf den allgemeinen Gesundheitszustand und die allgemeinen Umstände der Person getroffen werden und wird in der Regel von einem Arzt nach Berücksichtigung der Patientenverfügung oder der erklärten Präferenzen der Person durchgesetzt.&#xD;
 &#xD;
-Es kann unter bestimmten Umständen notwendig sein vorübergehende Überschreitungen der üblichen Vorausverfügungen zu erfassen, z. B. während einer Schwangerschaft oder präoperativ. In dieser Situation wird es notwendig sein eine separate Instanz dieses Archetyps aufzuzeichnen, unter Verwendung einer Kombination aus relevanten Gültigkeits- und Überprüfungsdaten.&#xD;
-</use>
+Es kann unter bestimmten Umständen notwendig sein vorübergehende Überschreitungen der üblichen Vorausverfügungen zu erfassen, z. B. während einer Schwangerschaft oder präoperativ. In dieser Situation wird es notwendig sein eine separate Instanz dieses Archetyps aufzuzeichnen, unter Verwendung einer Kombination aus relevanten Gültigkeits- und Überprüfungsdaten.</use>
       <misuse>Nicht zur Aufzeichnung einer "Patientenverfügung" oder der Präferenzen der Person für die Pflege verwenden - verwenden Sie zu diesem Zweck EVALUATION.advance_care_directive.&#xD;
 &#xD;
-Nicht zu verwenden für die Aufzeichnung von Anordnungen, die als Folge der getroffenen und mit diesem Archetyp aufgezeichneten Entscheidungen erforderlich sind. Verwenden Sie für diesen Zweck spezifische Archetypen INSTRUCTION oder ACTION.&#xD;
-&#xD;
-</misuse>
+Nicht zu verwenden für die Aufzeichnung von Anordnungen, die als Folge der getroffenen und mit diesem Archetyp aufgezeichneten Entscheidungen erforderlich sind. Verwenden Sie für diesen Zweck spezifische Archetypen INSTRUCTION oder ACTION.</misuse>
       <copyright />
     </details>
     <details>
@@ -1782,8 +1778,7 @@ Coding the intent of care with an external terminology is preferred, where possi
     <term_definitions language="de">
       <items code="at0000">
         <items id="text">Frühzeitige Interventionsentscheidungen</items>
-        <items id="description">Vorausschauende Entscheidungen über die allgemeine Absicht der Versorgung und mögliche Interventionen (einschließlich Behandlungen, Aktivitäten und diagnostische oder therapeutische Verfahren), die von einem Arzt getroffen werden.&#xD;
-</items>
+        <items id="description">Vorausschauende Entscheidungen über die allgemeine Absicht der Versorgung und mögliche Interventionen (einschließlich Behandlungen, Aktivitäten und diagnostische oder therapeutische Verfahren), die von einem Arzt getroffen werden.</items>
       </items>
       <items code="at0001">
         <items id="text">Tree</items>
@@ -1801,13 +1796,11 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
       </items>
       <items code="at0004">
         <items id="text">Restaurativ</items>
-        <items id="description">Die Erkrankung ist behandelbar mit der Möglichkeit der Wiederherstellung des vorherigen Gesundheitszustandes oder einer anhaltenden Remission; alle geeigneten lebensverlängernden Behandlungen werden angeboten.&#xD;
-</items>
+        <items id="description">Die Erkrankung ist behandelbar mit der Möglichkeit der Wiederherstellung des vorherigen Gesundheitszustandes oder einer anhaltenden Remission; alle geeigneten lebensverlängernden Behandlungen werden angeboten.</items>
       </items>
       <items code="at0005">
         <items id="text">Supportiv</items>
-        <items id="description">Die Erkrankung ist unheilbar und fortschreitend; eine aktive Behandlung der zugrundeliegenden Krankheit kann für eine spezifische Symptomlinderung und/oder eine kurzfristige Verlängerung der Lebenserwartung angemessen sein; der Schwerpunkt liegt auf Komfort, Lebensqualität und Würde. Wird auch als "Palliativ" bezeichnet.&#xD;
-</items>
+        <items id="description">Die Erkrankung ist unheilbar und fortschreitend; eine aktive Behandlung der zugrundeliegenden Krankheit kann für eine spezifische Symptomlinderung und/oder eine kurzfristige Verlängerung der Lebenserwartung angemessen sein; der Schwerpunkt liegt auf Komfort, Lebensqualität und Würde. Wird auch als "Palliativ" bezeichnet.</items>
       </items>
       <items code="at0006">
         <items id="text">Terminal</items>
@@ -1820,18 +1813,15 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
       <items code="at0008">
         <items id="text">Beschreibung der Entscheidungen</items>
         <items id="description">Narrative Beschreibung über alle vorausgehenden Interventionsentscheidungen, einschließlich der Entscheidung zur HLW.</items>
-        <items id="comment">Kann verwendet werden, um einen narrativen Überblick über die Entscheidung über einen vorausgehenden Eingriff aufzuzeichnen, der die spezifischen Umstände für die Person widerspiegelt. Dies umfasst alle Einschränkungen oder bedingten Umstände, die für Interventionen gelten. Diese Beschreibung kann, muss aber nicht durch strukturierte Daten unterstützt werden, die mit dem Cluster "Pro Eingriff" erfasst werden. Wenn sowohl diese narrative Beschreibung als auch die strukturierten Daten "Pro Intervention" aufgezeichnet werden, ist Vorsicht geboten, da ein potenzielles Risiko der Divergenz besteht. Dieses Datenelement kann zur Erfassung von Altdaten verwendet werden, die nicht in einem strukturierten Format verfügbar sind.&#xD;
-</items>
+        <items id="comment">Kann verwendet werden, um einen narrativen Überblick über die Entscheidung über einen vorausgehenden Eingriff aufzuzeichnen, der die spezifischen Umstände für die Person widerspiegelt. Dies umfasst alle Einschränkungen oder bedingten Umstände, die für Interventionen gelten. Diese Beschreibung kann, muss aber nicht durch strukturierte Daten unterstützt werden, die mit dem Cluster "Pro Eingriff" erfasst werden. Wenn sowohl diese narrative Beschreibung als auch die strukturierten Daten "Pro Intervention" aufgezeichnet werden, ist Vorsicht geboten, da ein potenzielles Risiko der Divergenz besteht. Dieses Datenelement kann zur Erfassung von Altdaten verwendet werden, die nicht in einem strukturierten Format verfügbar sind.</items>
       </items>
       <items code="at0009">
         <items id="text">CPR Entscheidung</items>
-        <items id="description">Entscheidung über das Ausmaß der kardiopulmonalen Reanimation (CPR), die für diese Person angemessen ist.&#xD;
-</items>
+        <items id="description">Entscheidung über das Ausmaß der kardiopulmonalen Reanimation (CPR), die für diese Person angemessen ist.</items>
       </items>
       <items code="at0010">
         <items id="text">Vollständige CRP</items>
-        <items id="description">Es sollten alle geeigneten kardiopulmonalen Reanimationen versucht werden, um Leben zu retten oder zu verlängern.&#xD;
-</items>
+        <items id="description">Es sollten alle geeigneten kardiopulmonalen Reanimationen versucht werden, um Leben zu retten oder zu verlängern.</items>
       </items>
       <items code="at0011">
         <items id="text">Begrenzte CPR</items>
@@ -1847,15 +1837,12 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
       </items>
       <items code="at0014">
         <items id="text">Pro Intervention</items>
-        <items id="description">Details der Entscheidung über mögliche Behandlungen oder Aktivitäten, die lebensrettend oder lebensverlängernd sein können oder unerwünschte Nebenwirkungen verursachen.&#xD;
-</items>
+        <items id="description">Details der Entscheidung über mögliche Behandlungen oder Aktivitäten, die lebensrettend oder lebensverlängernd sein können oder unerwünschte Nebenwirkungen verursachen.</items>
       </items>
       <items code="at0015">
         <items id="text">Intervention</items>
-        <items id="description">Bezeichnung der möglichen Behandlung, des Verfahrens oder der Tätigkeit.&#xD;
-</items>
-        <items id="comment">Während dieser Archetyp für alle klinischen Entscheidungen über mögliche zukünftige Interventionen gedacht ist, soll der vorgeschlagene DV_CODED_TEXT-Wertesatz für das Datenelement "Intervention" bewusst nicht vollständig sein. Stattdessen wurde er so konzipiert, dass er die meisten der üblichen lebensrettenden Behandlungen in einem Notfallkontext umfasst. Die alternative Auswahl der DV_TEXT-Option kann verwendet werden, um einen lokalen Wertesatz hinzuzufügen oder an einen alternativen externen Wertesatz innerhalb einer Vorlage zu binden.&#xD;
-</items>
+        <items id="description">Bezeichnung der möglichen Behandlung, des Verfahrens oder der Tätigkeit.</items>
+        <items id="comment">Während dieser Archetyp für alle klinischen Entscheidungen über mögliche zukünftige Interventionen gedacht ist, soll der vorgeschlagene DV_CODED_TEXT-Wertesatz für das Datenelement "Intervention" bewusst nicht vollständig sein. Stattdessen wurde er so konzipiert, dass er die meisten der üblichen lebensrettenden Behandlungen in einem Notfallkontext umfasst. Die alternative Auswahl der DV_TEXT-Option kann verwendet werden, um einen lokalen Wertesatz hinzuzufügen oder an einen alternativen externen Wertesatz innerhalb einer Vorlage zu binden.</items>
       </items>
       <items code="at0016">
         <items id="text">Herzdruckmassage</items>
@@ -1863,8 +1850,7 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
       </items>
       <items code="at0017">
         <items id="text">Defibrillation</items>
-        <items id="description">Verwendung eines Elektroschocks, um den elektrischen Zustand des Herzens zurückzusetzen.&#xD;
-</items>
+        <items id="description">Verwendung eines Elektroschocks, um den elektrischen Zustand des Herzens zurückzusetzen.</items>
       </items>
       <items code="at0018">
         <items id="text">Intubation</items>
@@ -1884,8 +1870,7 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
       </items>
       <items code="at0022">
         <items id="text">Zentraler Venenkatheter oder beliebige arterielle Leitung</items>
-        <items id="description">Einlegen eines zentralen Venenkanals oder einer arteriellen Leitung.&#xD;
-</items>
+        <items id="description">Einlegen eines zentralen Venenkanals oder einer arteriellen Leitung.</items>
       </items>
       <items code="at0023">
         <items id="text">Parenterale Flüssigkeiten</items>
@@ -1905,8 +1890,7 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
       </items>
       <items code="at0027">
         <items id="text">Antibiotika, antivirale oder antifungale Mittel</items>
-        <items id="description">Medikamente zur Behandlung von Infektionen.&#xD;
-</items>
+        <items id="description">Medikamente zur Behandlung von Infektionen.</items>
       </items>
       <items code="at0028">
         <items id="text">Blutkonserven</items>
@@ -1914,13 +1898,11 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
       </items>
       <items code="at0029">
         <items id="text">Einsetzen der Thoraxdrainage</items>
-        <items id="description">Einführen eines Schlauches in den Pleuraraum.&#xD;
-</items>
+        <items id="description">Einführen eines Schlauches in den Pleuraraum.</items>
       </items>
       <items code="at0030">
         <items id="text">Herzschrittmacher</items>
-        <items id="description">Einsetzen eines künstlichen Herzschrittmachers zur Kontrolle des Herzschlags.&#xD;
-</items>
+        <items id="description">Einsetzen eines künstlichen Herzschrittmachers zur Kontrolle des Herzschlags.</items>
       </items>
       <items code="at0031">
         <items id="text">Dialyse</items>
@@ -1936,8 +1918,7 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
       </items>
       <items code="at0034">
         <items id="text">Entscheidung</items>
-        <items id="description">Entscheidung über den identifizierten Eingriff.&#xD;
-</items>
+        <items id="description">Entscheidung über den identifizierten Eingriff.</items>
       </items>
       <items code="at0035">
         <items id="text">Empfohlen</items>
@@ -1963,15 +1944,12 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
       <items code="at0040">
         <items id="text">Kommentar</items>
         <items id="description">Zusätzliche Informationen über die Interventionsentscheidung, der nicht in anderen Feldern erfasst wird.</items>
-        <items id="comment">Zum Beispiel: die Rechtfertigung oder Begründung für die Interventionsentscheidung.&#xD;
-</items>
+        <items id="comment">Zum Beispiel: die Rechtfertigung oder Begründung für die Interventionsentscheidung.</items>
       </items>
       <items code="at0041">
         <items id="text">Zusätzliche Details</items>
-        <items id="description">Zusätzliche strukturierte Angaben zu frühzeitigen Interventionsentscheidungen.&#xD;
-</items>
-        <items id="comment">Zum Beispiel: Personen, die am Entscheidungsprozess beteiligt sind, wenn es nicht möglich ist, die Beteiligungen des Referenzmodells zu verwenden; oder zusätzliche lokal relevante Überlegungen.&#xD;
-</items>
+        <items id="description">Zusätzliche strukturierte Angaben zu frühzeitigen Interventionsentscheidungen.</items>
+        <items id="comment">Zum Beispiel: Personen, die am Entscheidungsprozess beteiligt sind, wenn es nicht möglich ist, die Beteiligungen des Referenzmodells zu verwenden; oder zusätzliche lokal relevante Überlegungen.</items>
       </items>
       <items code="at0042">
         <items id="text">Kenntnis des Patienten</items>
@@ -1980,8 +1958,7 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
       </items>
       <items code="at0043">
         <items id="text">Kenntnis der Betreuer</items>
-        <items id="description">Narrative Beschreibung über das Bewusstsein der Familie, der Betreuer oder des gesetzlichen Vertreters für die frühzeitigen Interventionsentscheidungen.&#xD;
-</items>
+        <items id="description">Narrative Beschreibung über das Bewusstsein der Familie, der Betreuer oder des gesetzlichen Vertreters für die frühzeitigen Interventionsentscheidungen.</items>
         <items id="comment">Zum Beispiel: Die Person hat keine Familie.</items>
       </items>
       <items code="at0044">
@@ -1994,20 +1971,16 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
       </items>
       <items code="at0046">
         <items id="text">Zuletzt aktualisiert</items>
-        <items id="description">Das Datum und/oder die Uhrzeit, an dem die frühzeitige Interventionsentscheidung zuletzt aktualisiert wurden.&#xD;
-</items>
+        <items id="description">Das Datum und/oder die Uhrzeit, an dem die frühzeitige Interventionsentscheidung zuletzt aktualisiert wurden.</items>
       </items>
       <items code="at0047">
         <items id="text">Beginn des Gültigkeitszeitraums</items>
-        <items id="description">Das Datum/die Uhrzeit, die den Beginn des gültigen Zeitraums für die frühzeitigen Interventionsentscheidungen markiert.&#xD;
-&#xD;
-</items>
+        <items id="description">Das Datum/die Uhrzeit, die den Beginn des gültigen Zeitraums für die frühzeitigen Interventionsentscheidungen markiert.</items>
       </items>
       <items code="at0048">
         <items id="text">Ende des Gültigkeitszeitraums</items>
         <items id="description">Das Datum/die Uhrzeit, die den Abschluss des gültigen Zeitraums für die frühzeitige Interventionsentscheidung markiert.</items>
-        <items id="comment">Das "Ende des Gültigkeitszeitraums" kann sich oft mit dem "Fälligkeitsdatum der Überprüfung" überschneiden. Sie müssen jedoch unter Umständen getrennt aufgezeichnet werden, wenn ein Dokument eine längere Gültigkeitsdauer hat, aber eine Zwischenüberprüfung erforderlich ist. Dies kann durch veränderte persönliche Umstände/Ereignisse oder lokale Richtlinien bedingt sein.&#xD;
-</items>
+        <items id="comment">Das "Ende des Gültigkeitszeitraums" kann sich oft mit dem "Fälligkeitsdatum der Überprüfung" überschneiden. Sie müssen jedoch unter Umständen getrennt aufgezeichnet werden, wenn ein Dokument eine längere Gültigkeitsdauer hat, aber eine Zwischenüberprüfung erforderlich ist. Dies kann durch veränderte persönliche Umstände/Ereignisse oder lokale Richtlinien bedingt sein.</items>
       </items>
       <items code="at0049">
         <items id="text">Fälligkeit der Überprüfung</items>
@@ -2020,13 +1993,11 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
       </items>
       <items code="at0051">
         <items id="text">Digitale Darstellung</items>
-        <items id="description">Digitales Dokument, Bild oder Video, das die Pflegerichtlinie darstellt.&#xD;
-</items>
+        <items id="description">Digitales Dokument, Bild oder Video, das die Pflegerichtlinie darstellt.</items>
       </items>
       <items code="at0052">
         <items id="text">Speicherort des Dokuments</items>
-        <items id="description">Informationen über den physischen oder digitalen Speicherort der frühzeitigen Interventionsentscheidung.&#xD;
-</items>
+        <items id="description">Informationen über den physischen oder digitalen Speicherort der frühzeitigen Interventionsentscheidung.</items>
       </items>
       <items code="at0053">
         <items id="text">Standort</items>
@@ -2034,15 +2005,12 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
       </items>
       <items code="at0054">
         <items id="text">Kopienhalter</items>
-        <items id="description">Angaben zu einer Person, die eine Kopie des Protokolls über frühzeitige Interventionsentscheidungen besitzt.&#xD;
-</items>
-        <items id="comment">Kommentar: Zum Beispiel: 'John Smith, Rechtsanwalt'.&#xD;
-</items>
+        <items id="description">Angaben zu einer Person, die eine Kopie des Protokolls über frühzeitige Interventionsentscheidungen besitzt.</items>
+        <items id="comment">Kommentar: Zum Beispiel: 'John Smith, Rechtsanwalt'.</items>
       </items>
       <items code="at0055">
         <items id="text">Erweiterung</items>
-        <items id="description">Zusätzliche Informationen, die erforderlich sind, um das Modell um lokale Inhalte zu erweitern oder mit anderen Referenzmodellen oder Formalismen abzugleichen.&#xD;
-</items>
+        <items id="description">Zusätzliche Informationen, die erforderlich sind, um das Modell um lokale Inhalte zu erweitern oder mit anderen Referenzmodellen oder Formalismen abzugleichen.</items>
         <items id="comment">Zum Beispiel: lokale Informationsanforderungen; oder zusätzliche Metadaten zur Anpassung an FHIR.</items>
       </items>
       <items code="at0056">
@@ -2062,4 +2030,3 @@ Die Kodierung des Versorgungszwecks mit einer externen Terminologie wird bevorzu
     </term_bindings>
   </ontology>
 </archetype>
-

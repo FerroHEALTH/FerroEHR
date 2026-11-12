@@ -435,7 +435,6 @@ definition
 		}
 	}
 
-
 ontology
 	terminologies_available = <"ODMLID", ...>
 	term_definitions = <

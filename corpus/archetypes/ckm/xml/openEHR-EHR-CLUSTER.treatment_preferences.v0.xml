@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -23,9 +23,24 @@ Thomas RL, Zubair MY, Hayes B, Ashby MA. Goals of care: a clinical framework for
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">B6F1BE370EE11CB2CB7A432FADE04A9F</other_details>
-    <other_details id="build_uid">451a1a98-6806-4488-80d2-3add72c4dacb</other_details>
+    <other_details id="MD5-CAM-1.0.1">8B888397BB825773FC1D91DC8C2A19E8</other_details>
+    <other_details id="build_uid">ae163ddd-fa19-4e34-bbb1-5a8a8b859c55</other_details>
     <other_details id="revision">0.0.1-alpha</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Erfassung der persönlichen Präferenzen einer Person hinsichtlich ihrer zukünftigen Versorgung und Behandlung, einschließlich des übergeordneten Versorgungsziels sowie von Vorgaben zu möglichen Behandlungen und medizinischen Interventionen, die sich auf die Lebensdauer oder die Lebensqualität auswirken können.</purpose>
+      <keywords>Patient, Präferenzen, Behandlung, Versorgung, Ziel</keywords>
+      <use>Zur Erfassung persönlicher Präferenzen hinsichtlich der zukünftigen Versorgung und Behandlung, die von der betroffenen Person selbst geäussert wurden. Diese Präferenzen umfassen das übergeordnete Versorgungsziel sowie Vorgaben zur kardiopulmonalen Reanimation und zu anderen kritischen medizinischen Interventionen, die das Leben verlängern oder die Lebensqualität beeinflussen können.&#xD;
+&#xD;
+Dieser Archetyp ist dafür vorgesehen, im SLOT «Directive details» des Archetyps EVALUATION.advance_care_directive eingebettet zu werden. Er kann, sofern klinisch angemessen, auch in andere Archetypen eingebettet werden.</use>
+      <misuse>Nicht zur Erfassung einer Verfügung zur Notfallversorgung und -behandlung verwenden. Verwenden Sie hierfür EVALUATION.emergency_care_treatment.</misuse>
+      <copyright />
+    </details>
     <details>
       <language>
         <terminology_id>
@@ -46,6 +61,18 @@ This archetype is designed to be nested in the 'Directive details' SLOT within t
       <copyright>© openEHR Foundation</copyright>
     </details>
   </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Olha Nikolaieva</author>
+    <author id="organisation">University Hospital Basel</author>
+    <author id="email">olha.nikolaieva@usb.ch</author>
+    <other_details id="other_contributors">Maren Diepenbruck, University Hospital Basel, Switzerland</other_details>
+  </translations>
   <uid>
     <value>d917b9bf-ab18-423c-8cf5-16123873fad8</value>
   </uid>
@@ -596,19 +623,19 @@ This archetype is designed to be nested in the 'Directive details' SLOT within t
       </items>
       <items code="at0002">
         <items id="text">Living as long as possible</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0003">
         <items id="text">Balance longevity with quality of life</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0004">
         <items id="text">Quality of life and comfort</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">CPR preference</items>
@@ -632,19 +659,19 @@ This archetype is designed to be nested in the 'Directive details' SLOT within t
       </items>
       <items code="at0011">
         <items id="text">Admission to intensive care</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Admission to hospital; no intensive care</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Admission to hospital; under specific circumstances</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">No admission to hospital</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Hospital admission circumstances</items>
@@ -666,19 +693,19 @@ This archetype is designed to be nested in the 'Directive details' SLOT within t
       </items>
       <items code="at0019">
         <items id="text">Acceptable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Acceptable, under specified circumstances</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Not acceptable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Specific circumstances</items>
@@ -697,6 +724,117 @@ This archetype is designed to be nested in the 'Directive details' SLOT within t
         <items id="description">Additional narrative about the all treatment preferences, not captured in other fields.</items>
       </items>
     </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Behandlungspräferenzen</items>
+        <items id="description">Persönliche Präferenzen hinsichtlich des Versorgungsziels und akzeptabler zukünftiger medizinischer Interventionen, wie sie von der betroffenen Person selbst geäussert wurden.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Versorgungsziel</items>
+        <items id="description">Kategorie zur Beschreibung der Präferenz der betroffenen Person hinsichtlich ihrer eigenen zukünftigen Behandlung.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">So lange wie möglich leben</items>
+        <items id="description" />
+      </items>
+      <items code="at0003">
+        <items id="text">Abwägung zwischen Lebensverlängerung und Lebensqualität</items>
+        <items id="description" />
+      </items>
+      <items code="at0004">
+        <items id="text">Lebensqualität und Wohlbefinden</items>
+        <items id="description" />
+      </items>
+      <items code="at0005">
+        <items id="text">Unbekannt</items>
+        <items id="description" />
+      </items>
+      <items code="at0006">
+        <items id="text">Präferenz zur kardiopulmonalen Reanimation</items>
+        <items id="description">Präferenz hinsichtlich einer zukünftigen kardiopulmonalen Reanimation (CPR).</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Kardiopulmonale Reanimation durchführen</items>
+        <items id="description">Alle angemessenen Massnahmen zur kardiopulmonalen Reanimation sollen durchgeführt werden, um das Leben zu retten oder zu verlängern.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Keine kardiopulmonale Reanimation durchführen.</items>
+        <items id="description">Es sollen keine Massnahmen zur kardiopulmonalen Reanimation durchgeführt werden, um das Leben zu retten oder zu verlängern. Alle Behandlungen sollen auf Symptomlinderung und Lebensqualität ausgerichtet sein. Auch bekannt als "Keine Reanimation (DNR)", "Keine Reanimationsmassnahmen (DNAR)", "Nicht zur Reanimation vorgesehen (NFR)" oder ähnlich.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Unbekannt</items>
+        <items id="description">Die Entscheidung zur kardiopulmonalen Reanimation ist nicht bekannt.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Krankenhausbehandlung</items>
+        <items id="description">Präferenz hinsichtlich des akzeptablen Umfangs der Krankenhausbehandlung.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Aufnahme auf die Intensivstation</items>
+        <items id="description" />
+      </items>
+      <items code="at0012">
+        <items id="text">Aufnahme ins Krankenhaus, jedoch keine intensivmedizinische Behandlung.</items>
+        <items id="description" />
+      </items>
+      <items code="at0013">
+        <items id="text">Aufnahme ins Krankenhaus unter bestimmten Voraussetzungen.</items>
+        <items id="description" />
+      </items>
+      <items code="at0014">
+        <items id="text">Keine Aufnahme ins Krankenhaus.</items>
+        <items id="description" />
+      </items>
+      <items code="at0015">
+        <items id="text">Umstände einer Krankenhausaufnahme</items>
+        <items id="description">Beschreibung der Umstände, unter denen eine Krankenhausaufnahme akzeptabel wäre.</items>
+        <items id="comment">Zum Beispiel: Knochenfraktur.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Je Behandlung</items>
+        <items id="description">Details zu den Präferenzen hinsichtlich einer bestimmten medizinischen Behandlung.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Behandlung</items>
+        <items id="description">Name der Behandlung.</items>
+        <items id="comment">Die Kodierung des Behandlungsnamens mit einer Terminologie wird empfohlen.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Präferenz</items>
+        <items id="description">Entscheidung hinsichtlich der angegebenen Behandlung.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Akzeptabel</items>
+        <items id="description" />
+      </items>
+      <items code="at0020">
+        <items id="text">Akzeptabel unter bestimmten Voraussetzungen</items>
+        <items id="description" />
+      </items>
+      <items code="at0021">
+        <items id="text">Nicht akzeptabel</items>
+        <items id="description" />
+      </items>
+      <items code="at0022">
+        <items id="text">Unbekannt</items>
+        <items id="description" />
+      </items>
+      <items code="at0023">
+        <items id="text">Besondere Voraussetzungen</items>
+        <items id="description">Beschreibung der Voraussetzungen, unter denen die Behandlung akzeptabel wäre.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Kommentar</items>
+        <items id="description">Zusätzlicher Freitext zur festgelegten Behandlungspräferenz, der in anderen Feldern nicht erfasst ist.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Zusätzliche Details</items>
+        <items id="description">Zusätzliche strukturierte Angaben zu Behandlungspräferenzen, die in anderen Feldern nicht erfasst sind.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Kommentar</items>
+        <items id="description">Zusätzlicher Freitext zu allen Behandlungspräferenzen, der nicht in anderen Feldern erfasst werden konnte.</items>
+      </items>
+    </term_definitions>
   </ontology>
 </archetype>
-

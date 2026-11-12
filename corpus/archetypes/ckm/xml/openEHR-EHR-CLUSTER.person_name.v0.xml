@@ -1,0 +1,1047 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2011-11-07</original_author>
+    <original_author id="name">Ian McNicoll</original_author>
+    <original_author id="organisation">Ocean Informatics</original_author>
+    <original_author id="email">ian.mcnicoll@oceaninformatics.com</original_author>
+    <other_contributors>Rigoleta Dutra, Ministry of Defense, Brazil (Editor)</other_contributors>
+    <other_contributors>Sergio Freire, State University of Rio de Janeiro, Brazil (Editor)</other_contributors>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Ian McNicoll, Ocean Informatics, United Kingdom (Editor)</other_contributors>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">From NHS Scotland SCI-XML messaging standards http://www.isdscotland.org/isd/files/general-v2-7.xsd NHS Scotland Interoperability Working Group http://www.isdscotland.org/isd/5194.htm originally based on: Personal name of the person.  ENV 13606 - 4:2000 7.11.12&#xD;
+&#xD;
+Aligned with openEHR-DEMOGRAPHICS-person_name.v1 http://www.openehr.org/ckm/#showArchetype_1013.1.477_9&#xD;
+&#xD;
+ISO/TS 22220:2008(E) - Identification of Subject of Care - Technical Specification- International Organization for Standardization.</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">FBEFB311DE64CEE94A1450268C5DE3F6</other_details>
+    <other_details id="build_uid">0266adb6-11af-4618-ad71-3b81f3524b7f</other_details>
+    <other_details id="revision">0.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Dokumentation des Personennamens eines Patienten, Verwandten, medizinischen Versorgers oder einer anderen dritten Person.</purpose>
+      <keywords>Familenname</keywords>
+      <keywords>Vorname</keywords>
+      <keywords>Name</keywords>
+      <use>Zur Dokumentation der Namensangaben einer Person.</use>
+      <misuse>Nicht zur Erstaufzeichnung des Patientennamens zu benutzen. Nicht zur Identifikation von Individuen zu benutzen, die eindeutig Registern mit demografischen Daten zugeordnet werden können (z.B. einer elektronischen Krankenakte, einem Master Patient Index, etc.).</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>es-ar</code_string>
+      </language>
+      <purpose>Registrar el nombre personal de un paciente, familiar, proveedor de servicios de salud u otra tercera parte.</purpose>
+      <keywords>apellido</keywords>
+      <keywords>nombre de pila</keywords>
+      <keywords>primer nombre</keywords>
+      <use>Utilizar para registrar detalles del nombre de un individuo.</use>
+      <misuse>No utilizar para el registro primario del nombre del paciente. No utilizar para identificar individuos que pueden ser unívocamente referenciados desde registros de datos demográficos. ej.: dentro del registro de salud electrónico, índices maestros de pacientes, etc.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Registrar o nome pessoal de um paciente, parente, provedor de saúde ou terceiros.</purpose>
+      <keywords>último nome</keywords>
+      <keywords>nome próprio</keywords>
+      <keywords>primeiro nome</keywords>
+      <use>Usado para registrar detalhes do nome de um indivíduo.</use>
+      <misuse>Não deve ser usado para registro primário do nome do paciente. Não deve ser usado para identificar os indivíduos que podem ser referenciados unicamente por meio de detalhes do registro demográfico p.e. registro eletrônico de saúde, prontuário eletrônico em saúde e etc.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ar-sy</code_string>
+      </language>
+      <purpose>لتسجيل الاسم الشخصي للمريض, قريب المريض, مقدم الرعاية الصحية أو أي طرف ثالث.</purpose>
+      <keywords>اسم العائلة/اللقب</keywords>
+      <keywords>الاسم الشخصي</keywords>
+      <keywords>الاسم الأول</keywords>
+      <use>لتسجيل تفاصيل الاسم حول شخص ما.</use>
+      <misuse>لا يستخدم للتسجيل الأولي لاسم المريض. لا يستخدم لتعريف الأفراد الذين يمكن الرجوع إليهم في سجلات التفاصيل الديموغرافية, مثلا: السجل الطبي الإلكتروني و فهرس المرضى الرئيسي.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record the personal name of a patient, relative, healthcare provider or other third party.</purpose>
+      <keywords>surname</keywords>
+      <keywords>forename</keywords>
+      <keywords>first name</keywords>
+      <use>Use to record name details about an individual.</use>
+      <misuse>Not to be used for primary recording of patient name. Not to be used to identify the individuals who can be uniquely referenced from registers of demographic details eg within the electronic health record, master patient indexes etc.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Hans Demski, Natalia Strauch</author>
+    <author id="organisation">Helmholtz Zentrum München, Medizinische Hochschule Hannover</author>
+    <author id="email">demski@helmholtz-muenchen.de, Strauch.Natalia@mh-hannover.de</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>es-ar</code_string>
+    </language>
+    <author id="name">Alan March</author>
+    <author id="organisation">Hospital Universitario Austral, Pilar, Buenos Aires, Argentina</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>pt-br</code_string>
+    </language>
+    <author id="name">Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão</author>
+    <author id="organisation">Core Consulting</author>
+    <author id="email">contato@coreconsulting.com.br</author>
+    <accreditation>Hospital Alemão Oswaldo Cruz (HAOC)</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ar-sy</code_string>
+    </language>
+    <author id="name">Mona Saleh</author>
+  </translations>
+  <uid>
+    <value>c4afe75a-0176-402c-824e-debdf25766e7</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-CLUSTER.person_name.v0</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0006</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_CODE_PHRASE">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <terminology_id>
+                  <value>local</value>
+                </terminology_id>
+                <code_list>at0020</code_list>
+                <code_list>at0008</code_list>
+                <code_list>at0009</code_list>
+                <code_list>at0010</code_list>
+                <code_list>at0011</code_list>
+                <code_list>at0012</code_list>
+                <code_list>at0019</code_list>
+                <code_list>at0021</code_list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0022</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_BOOLEAN</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_PRIMITIVE_OBJECT">
+                <rm_type_name>BOOLEAN</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <item xsi:type="C_BOOLEAN">
+                  <true_valid>true</true_valid>
+                  <false_valid>false</false_valid>
+                </item>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0002</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>1</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0017</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0003</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0004</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0005</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0018</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>2</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0014</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_INTERVAL&lt;DV_DATE_TIME&gt;</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>upper</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>lower</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Person name</items>
+        <items id="description">Details of personal name of an individual, provider or third party.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Unstructured name</items>
+        <items id="description">Name in free text unstructured format.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Structured name</items>
+        <items id="description">Name in structured format.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Given name</items>
+        <items id="description">Given / personal / first name.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Middle name</items>
+        <items id="description">Middle name or names.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Family name</items>
+        <items id="description">Family name or Surname.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Name type</items>
+        <items id="description">Type of name described.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Previous name</items>
+        <items id="description">Name previously used by this person.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Birth name</items>
+        <items id="description">Name given to this person at birth.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">AKA</items>
+        <items id="description">Person also known as.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Alias</items>
+        <items id="description">Other name used by this person.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Maiden name</items>
+        <items id="description">Name used by this persion before marriage.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Validity period</items>
+        <items id="description">The date interval at which this name was valid.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Title</items>
+        <items id="description">The prefix or title used by the subject.</items>
+        <items id="comment">e.g. 'Mr', 'Mrs', 'Ms', 'Dr', 'Lord'</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Suffix</items>
+        <items id="description">Additional term used following a person name.</items>
+        <items id="comment">e.g. 'Snr'</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Professional name</items>
+        <items id="description">The name used by the subject for business or professional purposes.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Registered name</items>
+        <items id="description">The name by which the subject is officially registered.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Reporting name</items>
+        <items id="description">The subject’s name as it is to be used for reporting, when used with a specific identifier.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Preferred name</items>
+        <items id="description">Indicates that this is the name by which a person chooses to be identified.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Personenname</items>
+        <items id="description">Details des Personennamens einer Privatperson, eines Versorgers oder einer Dritten Person.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Name unstrukturiert</items>
+        <items id="description">Name in unstrukturierter Form als Freitext.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Name strukturiert</items>
+        <items id="description">Name in strukturierter Form.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Vorname</items>
+        <items id="description">Vorname</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Weiterer Vorname</items>
+        <items id="description">Zweiter Vorname oder zweite Namen.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Nachname</items>
+        <items id="description">Familienname oder Nachname.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Namensart</items>
+        <items id="description">Art des beschriebenen Namens.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Früherer Name</items>
+        <items id="description">Von der Person früher benutzter Name.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Geburtsname</items>
+        <items id="description">Der Person bei Geburt gegebener Name.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">AKA</items>
+        <items id="description">Die Person ist auch bekannt als.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Alias</items>
+        <items id="description">Ein Anderer von der Person benutzter Name.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Mädchenname</items>
+        <items id="description">Der Name der bis zur Heirat benutzt wurde.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Gültigkeitszeitraum</items>
+        <items id="description">Das Datumsintervall, in dem dieser Name gültig war.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Titel</items>
+        <items id="description">Das von der Person verwendete Präfix oder Titel.</items>
+        <items id="comment">z.B. "Mr", "Mrs", "Ms", "Dr", "Lord".</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Suffix</items>
+        <items id="description">Zusätzlicher Begriff, der nach einem Personennamen verwendet wird.</items>
+        <items id="comment">z.B. "Snr".</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Berufsname</items>
+        <items id="description">Der Name, den die Person für geschäftliche oder berufliche Zwecke verwendet.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Registrierter Name</items>
+        <items id="description">Der Name, unter dem die Person offiziell registriert ist.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Berichtsname</items>
+        <items id="description">Der Name der Person, wie er für die Berichterstellung verwendet werden soll, wenn er mit einer bestimmten Kennung verwendet wird.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Bevorzugter Name</items>
+        <items id="description">Gibt an, dass dies der Name ist, unter dem eine Person identifiziert werden soll.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="es-ar">
+      <items code="at0000">
+        <items id="text">Nombre personal</items>
+        <items id="description">Detalles del nombre personal de un individuo, proveedor o tercera parte.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Nombre no estructurado</items>
+        <items id="description">Nombre en formato no estructurado de texto libre.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Nombre estructurado</items>
+        <items id="description">Nombre en formato estructurado.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Nombre de pila</items>
+        <items id="description">Primer nombre / nombre de pila.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Segundo nombre</items>
+        <items id="description">Segundo nombre o nombres</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Apellido</items>
+        <items id="description">Nombre de familia o apellido.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Tipo de nombre</items>
+        <items id="description">Descripción del tipo de nombre.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Nombre previo</items>
+        <items id="description">Nombre previamente utilizado por esta persona.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Nombre de nacimiento</items>
+        <items id="description">Nombre dado a esta persona al momento de su nacimiento.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">tambien conocido como</items>
+        <items id="description">La persona es también conocida como.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Alias</items>
+        <items id="description">Otro nombre utilizado por esta persona.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Nombre de soltera</items>
+        <items id="description">Nombre utilizado por esta persona antes de su casamiento.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Nombre válido desde</items>
+        <items id="description">La fecha a partir de la cual este nombre se tornó válido.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">*Title(en)</items>
+        <items id="description">*The prefix or title used by the subject.(en)</items>
+        <items id="comment">*e.g. 'Mr', 'Mrs', 'Ms', 'Dr', 'Lord'(en)</items>
+      </items>
+      <items code="at0018">
+        <items id="text">*Suffix(en)</items>
+        <items id="description">*Additional term used following a person name.(en)</items>
+        <items id="comment">*e.g. 'Snr'(en)</items>
+      </items>
+      <items code="at0019">
+        <items id="text">*Professional name(en)</items>
+        <items id="description">*The name used by the subject for business or professional purposes.(en)</items>
+      </items>
+      <items code="at0020">
+        <items id="text">*Registered name(en)</items>
+        <items id="description">*The name by which the subject is officially registered.(en)</items>
+      </items>
+      <items code="at0021">
+        <items id="text">*Reporting name(en)</items>
+        <items id="description">*The subject’s name as it is to be used for reporting, when used with a specific identifier.(en)</items>
+      </items>
+      <items code="at0022">
+        <items id="text">*Preferred name(en)</items>
+        <items id="description">*Indicates that this is the name by which a person chooses to be identified.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ar-sy">
+      <items code="at0000">
+        <items id="text">الاسم الشخصي</items>
+        <items id="description">تفاصيل الاسم الشخصي للفرد, مقدم الخدمة أو طرف ثالث.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">الاسم غير المركب</items>
+        <items id="description">الاسم في تنسيق نصي غير مركب</items>
+      </items>
+      <items code="at0002">
+        <items id="text">الاسم التركيبي</items>
+        <items id="description">الاسم في تنسيق تركيبي</items>
+      </items>
+      <items code="at0003">
+        <items id="text">الاسم المعين</items>
+        <items id="description">الاسم المعين/الشخصي/الأول</items>
+      </items>
+      <items code="at0004">
+        <items id="text">الاسم الأوسط</items>
+        <items id="description">الاسم/الأسماء الوسطى</items>
+      </items>
+      <items code="at0005">
+        <items id="text">اسم العائلة</items>
+        <items id="description">اسم العائلة أو الاسم الأخير</items>
+      </items>
+      <items code="at0006">
+        <items id="text">نوع الاسم</items>
+        <items id="description">نوع الاسم الذي يتم وصفه</items>
+      </items>
+      <items code="at0008">
+        <items id="text">الاسم السابق</items>
+        <items id="description">الاسم الذي استخدم من قبل بواسطة المريض</items>
+      </items>
+      <items code="at0009">
+        <items id="text">الاسم عند الولادة</items>
+        <items id="description">الاسم الذي أعطي للشخص عند الولادة</items>
+      </items>
+      <items code="at0010">
+        <items id="text">يُعْرَف بـ... أيضا</items>
+        <items id="description">الفرد يُعْرَف أيضا بـ...</items>
+      </items>
+      <items code="at0011">
+        <items id="text">الاسم المستعار</items>
+        <items id="description">اسم آخر يتم استخدامه بواسطة هذا الشخص</items>
+      </items>
+      <items code="at0012">
+        <items id="text">الاسم قبل الزواج</items>
+        <items id="description">الاسم الذي كان يستخدم بواسطة الشخص قبل الزواج</items>
+      </items>
+      <items code="at0014">
+        <items id="text">بداية سريان صلاحية الاسم</items>
+        <items id="description">التاريخ الذي أصبح فيه الاسم صالحا للاستخدام</items>
+      </items>
+      <items code="at0017">
+        <items id="text">*Title(en)</items>
+        <items id="description">*The prefix or title used by the subject.(en)</items>
+        <items id="comment">*e.g. 'Mr', 'Mrs', 'Ms', 'Dr', 'Lord'(en)</items>
+      </items>
+      <items code="at0018">
+        <items id="text">*Suffix(en)</items>
+        <items id="description">*Additional term used following a person name.(en)</items>
+        <items id="comment">*e.g. 'Snr'(en)</items>
+      </items>
+      <items code="at0019">
+        <items id="text">*Professional name(en)</items>
+        <items id="description">*The name used by the subject for business or professional purposes.(en)</items>
+      </items>
+      <items code="at0020">
+        <items id="text">*Registered name(en)</items>
+        <items id="description">*The name by which the subject is officially registered.(en)</items>
+      </items>
+      <items code="at0021">
+        <items id="text">*Reporting name(en)</items>
+        <items id="description">*The subject’s name as it is to be used for reporting, when used with a specific identifier.(en)</items>
+      </items>
+      <items code="at0022">
+        <items id="text">*Preferred name(en)</items>
+        <items id="description">*Indicates that this is the name by which a person chooses to be identified.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="pt-br">
+      <items code="at0000">
+        <items id="text">Nome da pessoa</items>
+        <items id="description">Detalhes do nome pessoal de um indivíduo, provedor ou terceiros.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Nome não estruturado</items>
+        <items id="description">Nome em texto livre em formato não estruturado.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Nome estruturado</items>
+        <items id="description">Nome em formato estruturado.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Nome atribuído</items>
+        <items id="description">Informado / pessoal / primeiro nome.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Nome do meio</items>
+        <items id="description">Nome ou nome do meio.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Nome da família</items>
+        <items id="description">Nome de família ou último nome.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Tipo de Nome</items>
+        <items id="description">Tipo do nome descrito.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Nome anterior</items>
+        <items id="description">Nome previamente usado por essa pessoa.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Nome de nascimento</items>
+        <items id="description">Nome dado a essa pessoa no nascimento.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Apelido</items>
+        <items id="description">Nome pelo qual a pessoa também é conhecida.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Pseudônimo</items>
+        <items id="description">Outro nome usado por essa pessoa.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Nome de solteiro</items>
+        <items id="description">Nome utilizado por essa pessoa antes do casamento.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Período de validade</items>
+        <items id="description">Intervalo de tempo no qual esse nome foi válido.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Título</items>
+        <items id="description">O prefixo ou título usado pelo indivíduo.</items>
+        <items id="comment">p.e. Sr, Sra, Srta, Dr.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Sufixo</items>
+        <items id="description">Termo adicional usado em sequência ao nome da pessoa</items>
+        <items id="comment">p.e. Jr.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Nome profissional</items>
+        <items id="description">O nome usado pelo pelo indivíduo para negócios ou assuntos profissionais.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Nome de registro</items>
+        <items id="description">O nome no qual o sujeito é oficialmente registrado.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Nome informado</items>
+        <items id="description">O nome do sujeito que é usado para relatórios, quando usado com um identificador específico.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Nome favorito</items>
+        <items id="description">Indica o nome pelo qual a pessoa prefere ser identificada.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

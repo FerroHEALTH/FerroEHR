@@ -1,0 +1,473 @@
+﻿archetype (adl_version=1.4; uid=b96e93c1-4a4e-42f7-8434-7eec0e4688c2)
+	openEHR-EHR-CLUSTER.fluid.v1
+
+concept
+	[at0000]	-- Body fluid or substance
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Dr Ian McNicoll">
+		["organisation"] = <"Ocean Informatics, United Kingdom">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"12/06/2010">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To describe body fluids, secretions and substances.">
+			use = <"">
+			keywords = <"fluid", "solid", "excretion", "substance", "secretion">
+			misuse = <"">
+			copyright = <"copyright (c) 2010 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Sebastian Garde, Ocean Informatics, Germany (Editor)", "Omer Hotomaroglu, Turkey (Editor)", "Heather Leslie, Ocean Informatics, Australia (Editor)">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["references"] = <"">
+		["build_uid"] = <"cb6ff985-d843-4a09-a525-a05f87f13e91">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"DF1F760BFEA716C048D2B3848A23E5A2">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	CLUSTER[at0000] matches {	-- Body fluid or substance
+		items cardinality matches {1..*; unordered} matches {
+			ELEMENT[at0001] matches {	-- Substance
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0002] occurrences matches {0..1} matches {	-- Source
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0003] occurrences matches {0..*} matches {	-- Normal statements
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0005] occurrences matches {0..1} matches {	-- Clinical description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0006] occurrences matches {0..1} matches {	-- Quantity
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0075] occurrences matches {0..1} matches {	-- Substance present
+						value matches {
+							DV_BOOLEAN matches {
+								value matches {True, False}
+							}
+						}
+					}
+					ELEMENT[at0025] occurrences matches {0..1} matches {	-- Amount
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0026, 	-- None
+									at0027, 	-- Scant
+									at0028, 	-- Minimal
+									at0029, 	-- Moderate
+									at0030, 	-- Heavy
+									at0031]	-- Large
+								}
+							}
+						}
+					}
+					ELEMENT[at0008] occurrences matches {0..1} matches {	-- Change in amount
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0009, 	-- Increasing
+									at0010, 	-- Stable
+									at0011, 	-- Decreasing
+									at0012]	-- Ceased
+								}
+							}
+						}
+					}
+					ELEMENT[at0007] occurrences matches {0..1} matches {	-- Volume
+						value matches {
+							C_DV_QUANTITY <
+								property = <[openehr::129]>
+								list = <
+									["1"] = <
+										units = <"ml">
+										magnitude = <|>=0.0|>
+										precision = <|1|>
+									>
+									["2"] = <
+										units = <"l">
+										magnitude = <|>=0.0|>
+									>
+								>
+							>
+						}
+					}
+					ELEMENT[at0071] occurrences matches {0..1} matches {	-- Mass
+						value matches {
+							C_DV_QUANTITY <
+								property = <[openehr::124]>
+								list = <
+									["1"] = <
+										units = <"gm">
+									>
+									["2"] = <
+										units = <"kg">
+										magnitude = <|>=0.0|>
+									>
+								>
+							>
+						}
+					}
+					ELEMENT[at0068] occurrences matches {0..1} matches {	-- Flow category
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0069] occurrences matches {0..1} matches {	-- Flow rate
+						value matches {
+							C_DV_QUANTITY <
+								property = <[openehr::126]>
+							>
+						}
+					}
+					ELEMENT[at0070] occurrences matches {0..1} matches {	-- Comment
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+			ELEMENT[at0013] occurrences matches {0..1} matches {	-- Colour
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0067] occurrences matches {0..1} matches {	-- Smell
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0081] occurrences matches {0..1} matches {	-- Age
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0049, 	-- Fresh
+							at0050]	-- Old
+						}
+					}
+				}
+			}
+			CLUSTER[at0072] occurrences matches {0..1} matches {	-- Fluid details
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0014] occurrences matches {0..1} matches {	-- Turbidity
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0015, 	-- Clear
+									at0016, 	-- Slightly cloudy
+									at0017, 	-- Cloudy
+									at0018, 	-- Opaque
+									at0019]	-- Flocculent
+								}
+							}
+						}
+					}
+					ELEMENT[at0020] occurrences matches {0..1} matches {	-- Consistency
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0021, 	-- Watery
+									at0022, 	-- Oily/viscous
+									at0023, 	-- Creamy/sticky
+									at0024, 	-- Thick
+									at0063, 	-- Waxy
+									at0082]	-- Particulate
+								}
+							}
+						}
+					}
+					ELEMENT[at0037] occurrences matches {0..1} matches {	-- Sediment
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0038, 	-- Scant
+									at0039, 	-- Moderate
+									at0040]	-- Profuse
+								}
+							}
+						}
+					}
+				}
+			}
+			CLUSTER[at0073] occurrences matches {0..1} matches {	-- Solid details
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0074] occurrences matches {0..1} matches {	-- Consistency
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0077, 	-- Normal
+									at0078, 	-- Soft
+									at0079, 	-- Loose
+									at0080]	-- Liquid
+								}
+							}
+						}
+					}
+				}
+			}
+			CLUSTER[at0032] occurrences matches {0..*} matches {	-- Contained substances
+				items cardinality matches {1..*; unordered} matches {
+					allow_archetype CLUSTER[at0083] occurrences matches {0..1} matches {	-- Contained substance detail
+						include
+							archetype_id/value matches {/openEHR-EHR-CLUSTER\.fluid(-[a-zA-Z0-9_]+)*\.v1/}
+						exclude
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Body fluid or substance">
+					description = <"Details of the findings relating to a bodily fluid, secretion or substance.">
+				>
+				["at0001"] = <
+					text = <"Substance">
+					description = <"The fluid or substance.">
+				>
+				["at0002"] = <
+					text = <"Source">
+					description = <"The source of the fluid or substance.">
+				>
+				["at0003"] = <
+					text = <"Normal statements">
+					description = <"A statement about the normality of the fluid or substance.">
+				>
+				["at0005"] = <
+					text = <"Clinical description">
+					description = <"A description of the fluid or substance.">
+				>
+				["at0006"] = <
+					text = <"Quantity">
+					description = <"Statements about the quantity of fluid or secretion.">
+				>
+				["at0007"] = <
+					text = <"Volume">
+					description = <"The volume of the fluid or secretion.">
+				>
+				["at0008"] = <
+					text = <"Change in amount">
+					description = <"Statement about the change in volume of the fluid or secretion.">
+				>
+				["at0009"] = <
+					text = <"Increasing">
+					description = <"Increasing volumes of fluid.">
+				>
+				["at0010"] = <
+					text = <"Stable">
+					description = <"The volume of fluid or liquid is stable.">
+				>
+				["at0011"] = <
+					text = <"Decreasing">
+					description = <"The volume of fluid is decreasing.">
+				>
+				["at0012"] = <
+					text = <"Ceased">
+					description = <"The quantity of body fluid is now zero.">
+				>
+				["at0013"] = <
+					text = <"Colour">
+					description = <"The colour of the fluid.">
+				>
+				["at0014"] = <
+					text = <"Turbidity">
+					description = <"The degree of solid material suspended in the fluid.">
+				>
+				["at0015"] = <
+					text = <"Clear">
+					description = <"The fluid or secretion is crystal clear.">
+				>
+				["at0016"] = <
+					text = <"Slightly cloudy">
+					description = <"There is a small amount of solid suspended in the fluid.">
+				>
+				["at0017"] = <
+					text = <"Cloudy">
+					description = <"There is a large amount of solid suspended but it still transmits light.">
+				>
+				["at0018"] = <
+					text = <"Opaque">
+					description = <"There is so much solid suspended that the fluid does not transmit light.">
+				>
+				["at0019"] = <
+					text = <"Flocculent">
+					description = <"The fluid is mostly composed of suspended solids.">
+				>
+				["at0020"] = <
+					text = <"Consistency">
+					description = <"The consistency of the fluid.">
+				>
+				["at0021"] = <
+					text = <"Watery">
+					description = <"The fluid flows like water.">
+				>
+				["at0022"] = <
+					text = <"Oily/viscous">
+					description = <"The fluid flows like an oil.">
+				>
+				["at0023"] = <
+					text = <"Creamy/sticky">
+					description = <"The fluid is quite thick and flows like cream.">
+				>
+				["at0024"] = <
+					text = <"Thick">
+					description = <"The fluid does not flow.">
+				>
+				["at0025"] = <
+					text = <"Amount">
+					description = <"The amount of substance as a category.">
+				>
+				["at0026"] = <
+					text = <"None">
+					description = <"There is no longer any fluid /substance.">
+				>
+				["at0027"] = <
+					text = <"Scant">
+					description = <"There is a small amount of fluid/substance.">
+				>
+				["at0028"] = <
+					text = <"Minimal">
+					description = <"There is a minimal amount of fluid/substance.">
+				>
+				["at0029"] = <
+					text = <"Moderate">
+					description = <"There is a moderate amount of fluid/ substance.">
+				>
+				["at0030"] = <
+					text = <"Heavy">
+					description = <"There is a heavy amount of fluid/substance.">
+				>
+				["at0031"] = <
+					text = <"Large">
+					description = <"There is a large amount of fluid or substance.">
+				>
+				["at0032"] = <
+					text = <"Contained substances">
+					description = <"Other substances mixed within the main bodily substance being described.">
+				>
+				["at0037"] = <
+					text = <"Sediment">
+					description = <"The amount of sediment in the fluid.">
+				>
+				["at0038"] = <
+					text = <"Scant">
+					description = <"There is a very small amount of sediment in the fluid.">
+				>
+				["at0039"] = <
+					text = <"Moderate">
+					description = <"There is a moderate amount of sediment in the fluid.">
+				>
+				["at0040"] = <
+					text = <"Profuse">
+					description = <"There is a large amount of sediment in the fluid.">
+				>
+				["at0049"] = <
+					text = <"Fresh">
+					description = <"The bodily substance appears fresh.">
+				>
+				["at0050"] = <
+					text = <"Old">
+					description = <"The bodily substance appears old.">
+				>
+				["at0063"] = <
+					text = <"Waxy">
+					description = <"The fluid has a consistency like wax.">
+				>
+				["at0067"] = <
+					text = <"Smell">
+					description = <"The smell of the bodily substance.">
+				>
+				["at0068"] = <
+					text = <"Flow category">
+					description = <"A text description of the flow rate.">
+				>
+				["at0069"] = <
+					text = <"Flow rate">
+					description = <"A numerical expression of flow rate.">
+				>
+				["at0070"] = <
+					text = <"Comment">
+					description = <"A text comment about the substance amount.">
+				>
+				["at0071"] = <
+					text = <"Mass">
+					description = <"The quantity expressed as a mass or weight.">
+				>
+				["at0072"] = <
+					text = <"Fluid details">
+					description = <"Findings specific to substances that are normally fluid.">
+				>
+				["at0073"] = <
+					text = <"Solid details">
+					description = <"Findings specific to substances that are normally solid.">
+				>
+				["at0074"] = <
+					text = <"Consistency">
+					description = <"Findings realted to the consistency of the substance.">
+				>
+				["at0075"] = <
+					text = <"Substance present">
+					description = <"Substance is present.">
+				>
+				["at0077"] = <
+					text = <"Normal">
+					description = <"The solid is of a normal consistency.">
+				>
+				["at0078"] = <
+					text = <"Soft">
+					description = <"The solid is soft but with no liquid.">
+				>
+				["at0079"] = <
+					text = <"Loose">
+					description = <"The substance, normally solid, is semi liquid but contains a significant amount of solid material.">
+				>
+				["at0080"] = <
+					text = <"Liquid">
+					description = <"The substance, normally solid, has little solid material.">
+				>
+				["at0081"] = <
+					text = <"Age">
+					description = <"Estimated age of the bodily substance.">
+				>
+				["at0082"] = <
+					text = <"Particulate">
+					description = <"The fluid has become partially solidified and dispersed within a containing fluid e.g. particulate meconium within liquor.">
+				>
+				["at0083"] = <
+					text = <"Contained substance detail">
+					description = <"Details of a contained substance.">
+				>
+			>
+		>
+	>

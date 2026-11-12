@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1477,7 +1477,7 @@
       </items>
       <items code="at0007">
         <items id="text">Current Activity</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Item tree</items>
@@ -1485,103 +1485,103 @@
       </items>
       <items code="at0014">
         <items id="text">Inflation Type</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Volume Control</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Pressure Control</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Pressure Support</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Effort Support</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Other</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Ventilator Pattern</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Ventilator Adjunct</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Assistance Type</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Invasive</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Non-Invasive</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Assured Constant Airway Pressure (ACAP)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Tube Compensation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Leak Compensation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Compliance Compensation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Other</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Trigger Type</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Flow</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Pressure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Electromyogram</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Neural</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Complex Computed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Chest wall Motion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Transthoracic Impedance</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Trigger Value</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Has to allow for a range of units e.g.&#xD;
 Flow: L/min&#xD;
 Pressure: cmH2O&#xD;
@@ -1618,7 +1618,7 @@ Expanding-width scale; Linearly-numbered scale</items>
       </items>
       <items code="at0049">
         <items id="text">Group</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">1A</items>
@@ -1650,123 +1650,123 @@ Expanding-width scale; Linearly-numbered scale</items>
       </items>
       <items code="at0057">
         <items id="text">Ventilation Device</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Systematic Code</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">CMV-VC</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">CMV-PC</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">A/C-PC</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">A/C-vtPC</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">IMV-PC(S)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">IMV-PC(S)\PS</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">Set Rate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Inspiratory Pressure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0068">
         <items id="text">Maximum Inspiratory Pressure Pmax</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0069">
         <items id="text">Plateau Airway Pressure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">Peak End-Expiratory Pressure (PEEP)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Tidal Volume</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0072">
         <items id="text">Baseline Airway Pressure (BAP)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0073">
         <items id="text">Assured Constant Airway Pressure (ACAP)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0074">
         <items id="text">Inspiratory Time</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0075">
         <items id="text">Expiratory Time</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0077">
         <items id="text">Inspiratory Pause Time</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0079">
         <items id="text">I:E Ratio</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0080">
         <items id="text">Inspiratory Time Fraction</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0082">
         <items id="text">Humidification</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0083">
         <items id="text">Breathing System</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0084">
         <items id="text">Circle/Circuit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0085">
         <items id="text">Facemask</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0086">
         <items id="text">Nasal Cannula</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0087">
         <items id="text">T-piece</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0088">
         <items id="text">C-Circuit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0089">
         <items id="text">Other (e.g. Mapleson 'D')</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0091">
         <items id="text">Airway Device</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0092">
         <items id="text">Extension</items>
@@ -1776,4 +1776,3 @@ Expanding-width scale; Linearly-numbered scale</items>
     </term_definitions>
   </ontology>
 </archetype>
-

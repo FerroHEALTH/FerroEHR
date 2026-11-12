@@ -1,0 +1,124 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-EVALUATION.excluded.v1
+
+concept
+	[at0000]	-- General statement of exclusions or states
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.com">
+		["date"] = <"23/04/2006">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording issues and health problems that are excluded from being relevant now or in the past.">
+			use = <"This is for recording negative statements about issues in the record.">
+			keywords = <"no", "significant", "family", "history", "surgery", "hospitalisations", "relevant", "allergies", "negation">
+			misuse = <"">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"AuthorDraft">
+	other_contributors = <>
+	other_details = <
+		["MD5-CAM-1.0.1"] = <"EE61235CB34EE455BC3AE2913E3B79CD">
+		["references"] = <"">
+	>
+
+definition
+	EVALUATION[at0000] matches {	-- General statement of exclusions or states
+		data matches {
+			ITEM_TREE[at0001] matches {	-- Tree
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0002] occurrences matches {1..*} matches {	-- Statement
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0003, 	-- No significant illness
+									at0004, 	-- No significant past history
+									at0005, 	-- No significant family history
+									at0006, 	-- No known adverse reactions
+									at0009, 	-- No relevant past history
+									at0012, 	-- No relevant family history
+									at0013, 	-- No known allergies
+									at0010, 	-- No hospitalisations
+									at0011, 	-- No major surgery
+									at0007, 	-- No known sensitivities
+									at0008]	-- No known intolerances
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"General statement of exclusions or states">
+					description = <"A category of conditions or states which have been excluded">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Statement">
+					description = <"The statement about what is excluded">
+				>
+				["at0003"] = <
+					text = <"No significant illness">
+					description = <"The person has no significant medical condition">
+				>
+				["at0004"] = <
+					text = <"No significant past history">
+					description = <"The person has no significant past medical history">
+				>
+				["at0005"] = <
+					text = <"No significant family history">
+					description = <"The person has no relatives with significant health problems">
+				>
+				["at0006"] = <
+					text = <"No known adverse reactions">
+					description = <"The person has had no adverse reactions, including intolerances, sensitivities or allergies, to medications, food, animals or chemicals">
+				>
+				["at0007"] = <
+					text = <"No known sensitivities">
+					description = <"No sensitivity to any medications, foods or substances">
+				>
+				["at0008"] = <
+					text = <"No known intolerances">
+					description = <"No known or recorded intolerances to medications, foods or other substances">
+				>
+				["at0009"] = <
+					text = <"No relevant past history">
+					description = <"No past problems or procedures relevant to the current situation">
+				>
+				["at0010"] = <
+					text = <"No hospitalisations">
+					description = <"No admissions to hospital">
+				>
+				["at0011"] = <
+					text = <"No major surgery">
+					description = <"No major operations or procedures">
+				>
+				["at0012"] = <
+					text = <"No relevant family history">
+					description = <"No family history relevant to the current situation">
+				>
+				["at0013"] = <
+					text = <"No known allergies">
+					description = <"No allergies known to any medications, foods or substances">
+				>
+			>
+		>
+	>

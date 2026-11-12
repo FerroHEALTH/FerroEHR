@@ -94,7 +94,7 @@ impl Authenticator {
     /// served document with no `described_issuer` and several or no issuers
     /// it can describe, a
     /// `patient_claim` that names no claim, or a party binding the shared
-    /// crate refuses.
+    /// crate refuses or that has `[[auth.party]]` tables and no `source`.
     pub async fn new(
         config: &AppConfig,
         patient_claim: Option<&str>,
@@ -103,7 +103,8 @@ impl Authenticator {
     ) -> Result<Arc<Self>, String> {
         let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
-        let party = super::party::binding(config, &resolved, source)?;
+        let party = super::party::binding(config, &resolved, source)
+            .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
         let mut gate = Gate::open();
         let mut primary = None;
         let claim = patient_claim

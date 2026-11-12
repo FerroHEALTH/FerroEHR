@@ -1,0 +1,1264 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a2bc5e0d-c67e-4d7e-bb87-b3b74cdefd0d; build_uid=966aca22-7a83-409c-bfde-a7ba1b1abc03)
+    openEHR-EHR-CLUSTER.medication.v1.0.6
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Ramona Wellmann, Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"wellmann.ramona@mh-hannover.de, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Sofia Janstad">
+                ["organisation"] = <"SLL">
+                ["email"] = <"sofia.lang-janstad@sll.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+            >
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            author = <
+                ["name"] = <"Beatriz de Faria Leao">
+                ["organisation"] = <"Bleao Informática em Saúde">
+                ["email"] = <"bfleao@terra.com.br">
+            >
+            accreditation = <"MD, PhD">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Joost Holslag">
+                ["organisation"] = <"Nedap">
+                ["email"] = <"joost.holslag@nedap.com">
+            >
+            accreditation = <"MD">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Nasjonal IKT HF">
+        ["email"] = <"silje.ljosland.bakke@nasjonalikt.no">
+        ["date"] = <"2018-06-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Morten Aas, Oslo Universitetssykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "John Bennett, NEHTA, Australia", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Sharmila Biswas, Australia", "Laila Bruun, Oslo universitetssykehus HF, Norway", "Stephen Chu, NEHTA, Australia (Editor)", "Matthew Cordell, NEHTA, Australia", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Gail Easterbrook, Flinders Medical Centre, Australia", "Stig Erik Hegrestad, Helse Førde, Norway", "David Evans, Queensland Health, Australia", "Sarah Gaunt, NEHTA, Australia", "Heather Grain, Llewelyn Grain Informatics, Australia", "Trina Gregory, cpc, Australia", "Sam Heard, Ocean Informatics, Australia (Editor)", "Hilde Hollås, DIPS AS, Norway", "Roar Holm, Helse Vest IKT A/S, Norway", "Alfred Honore, Haukeland, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Mary Kelaher, NEHTA, Australia", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Harmony Kosola, Alberta Health Services, Canada", "Robert L'egan, NEHTA, Australia", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Mark Luciani, Gloucestershire Hospital NHS Foundation Trust, United Kingdom", "Colin Macfarlane, Elsevier, United Kingdom", "Siv Marie Lien, DIPS ASA, Norway", "James McClay, University of Nebraska Medical Center, United States", "Susan McIndoe, Royal District Nursing Service, Australia", "David McKillop, NEHTA, Australia", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Chris Mitchell, RACGP, Australia", "Stewart Morrison, NEHTA, Australia", "Andrej Orel, Marand d.o.o., Slovenia", "Chris Pearce, Melbourne East GP Network, Australia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Camilla Preeston, Royal Australian College of General Practitioners, Australia", "Margaret Prichard, NEHTA, Australia", "Cathy Richardson, NEHTA, Australia", "Robyn Richards, NEHTA - Clinical Terminology, Australia", "Martha Schei Hynne, The Norwegian Medicines Agency, Norway", "Anoop Shah, University College London, United Kingdom", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Trine Strand, Oslo Universitetssykehus (OUS), Norway", "Andreas Sundstrom, Capio S:t Gorans Hospital, Sweden", "John Taylor, NEHTA, Australia", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Richard Townley-O'Neill, NEHTA, Australia (Editor)", "Guri Tømmervåg, DIPS AS, Norway", "Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Pelle Viana Lindén, Capio, Sweden", "Kylie Young, The Royal Australian College of General Practitioners, Australia", "Sam Heard, Ocean Health Systems, Australia">
+    lifecycle_state = <"deprecated">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"ISO 11238:2018, Health informatics -- Identification of medicinal products -- Data elements and structures for the unique identification and exchange of regulated information on substances. Available from: https://www.iso.org/standard/69697.html.">
+        ["2"] = <"ISO 11239:2012, Health informatics -- Identification of medicinal products -- Data elements and structures for the unique identification and exchange of regulated information on pharmaceutical dose forms, units of presentation, routes of administration and packaging. Available from: https://www.iso.org/standard/55032.html.">
+        ["3"] = <"ISO 11240:2012, Health informatics -- Identification of medicinal products -- Data elements and structures for the unique identification and exchange of units of measurement. Available from: https://www.iso.org/standard/55033.html.">
+        ["4"] = <"ISO 11616:2017, Health informatics -- Identification of medicinal products -- Data elements and structures for unique identification and exchange of regulated pharmaceutical product information. Available from: https://www.iso.org/standard/70044.html.">
+        ["5"] = <"ISO 11615:2017, Health informatics -- Identification of medicinal products -- Data elements and structures for the unique identification and exchange of regulated medicinal product information. Available from: https://www.iso.org/standard/70150.html.">
+        ["6"] = <"FHIR Resource Medication, HL7 [Internet]. Available at: https://www.hl7.org/fhir/medication.html (Accessed 12 April 2018)">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"2AC0A5FC5AAC3D72188CB7118467A627">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung von Details eines Arzneimittels oder einer Komponente eines Arzneimittels, einschließlich der Wirkstärke, der Darreichungsform und den Details über bestimmte Inhaltsstoffe.">
+            keywords = <"Arzneimittel", "Medikament", "Verordnung", "Verschreibung", "Rezept", "ein Rezept ausstellen", "Therapie", "Substanz", "Stoff", "Arznei", "Therapeutikum", "Wirkstoff", "Heilmittel", "ad-hoc", "ad hoc", "Rezeptur", "Zusammensetzung", "Medizin", "Pharmakon">
+            use = <"Zur Darstellung von Angaben zu einem Arzneimittel oder einer Arzneimittelkomponente, einschließlich der Wirkstärke, der Darreichungsform und den Angaben über spezielle Inhaltsstoffe.
+
+Dieser Archetyp soll für die Darstellung von Angaben zu einem Arzneimittel oder einer Arzneimittelkomponente verwendet werden. Dabei sollen vor allem die Darreichungsform und die Inhaltsstoffe detailliert beschrieben werden, z.B. zu einer Infusion oder einer Ad-hoc-Mixtur. Im Rahmen einer Verordnung oder Abgabe eines Arzneimittels kann dieser Archetyp in den SLOT \"Arzneimitteldetails\" innerhalb des INSTRUCTION.medication_order Archetyps eingebettet werden. Für die Darstellung einer gegenwärtigen Verabreichung, Abgabe oder Anwendung eines Arzneimittels muss dieser Archetyp innerhalb des SLOTs \"Arzneimitteldetails\" in den Archetyp ACTION.medication eingefügt werden.
+
+Dieser Archetyp kann überflüssig sein, wenn die Verordnung eines verschreibungsfähigen Arzneimittels eine Terminologie zur Identifizierung des Arzneimittelproduktes verwendet. In diesem Fall kann der Marken- oder Produktname Informationen über die Darreichungsform und die Wirkstärke der Stoffe beinhalten.">
+            misuse = <"Nicht für die Kontrolle des Apothekenbestands oder zur Verwaltung von Arzneimittellisten verwenden.
+
+Nicht zur Darstellung einer beabsichtigten oder verabreichten Dosis eines Arzneimittels einsetzen. Für diesen Zweck müssen die Archetypen INSTRUCTION.medication_order oder CLUSTER.dosage verwendet werden.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"För att registrera information om ett läkemedel eller en läkemedelskomponent, inklusive styrka, form och detaljer om någon specifika beståndsdel.">
+            keywords = <"läkemedel", "beställnförskrivning", "terapi", "substans", "drog eller läkemedel", "behandlingsavsikt", "therapeutic good", "ad-hoc", "adhoc", "ad hoc", "*extemporaneous", "läkemedelsform", "farmaceutisk produkt">
+            use = <"Används för att registrera information om ett läkemedel eller en läkemedelskomponent, inklusive styrka, form och detaljer för någon specifika beståndsdel.
+
+Denna arketyp är avsedd att användas för att registrera detaljer om ett läkemedel eller en komponent av ett läkemedel där formen och detaljerade ingredienser i läkemedlet behöver specificeras mer detaljerat, till exempel infusioner och ad hoc-blandningar. Inom ramen för en beställning om administrering eller utdelning av ett läkemedel, nestla den här arketypen i förberedelsesdetaljerna i INSTRUKTIONEN.medicin_order-arketypen. Inom ramen för registrering av den faktiska administreringen eller utmatningen eller ett läkemedel, nestla den här arketypen i 'Medicineringsdetaljer' -SOTTEN inom ACTION.medication arketyp.
+
+Denna arketyp kan vara överflödig i situationer där man beställer ett läkemedel via recept och använder en terminologi för att identifiera läkemedelsartikeln. I så fall kan varumärket eller produktnamnet identifiera ämnets form och styrka.">
+            misuse = <"Ska inte användas för ett apoteks lagerkontroller eller inom läkemedelskataloger.
+
+Ska inte användas för att registrera den tänkta eller administrerade dosen av ett läkemedel. Använd antingen INSTRUCTION.medication_order eller CLUSTER.dosage-arketyperna för detta ändamål.">
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            purpose = <"Para registrar detalhes de uma preparação de medicamentos, incluindo, quando necessário, detalhes de múltiplos ingredientes, no contexto de uma infusão ou preparação ad-hoc (manipulada). A maioria das prescrições baseadas em dose terá sua precisa preparação determinada pelo estoque disponível na unidade, ou pelo fornecimento de farmácia, enquanto que, com a prescrição baseada em produtos, o nome da medicação traz detalhes da forma e concentração da preparação.">
+            keywords = <"medicação", "ordem", "prescrever", "terapia", "substância", "droga", "terapêutico", "venda livre", "ítem terapêutico", "Ad hoc", "manipulados">
+            use = <"Para registrar os detalhes da preparação de um medicamento prescrito na INSTRUCTION de medicamentos, obedecendo a intenção do prescritor, no momento da execução da prescrição registrada pela ACTION de medicamentos, anotando a preparação efetivamente fornecida.">
+            misuse = <"Utilização em controle de estoque de farmácias está fora do escopo deste arquétipo.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om et legemiddel eller en komponent av et legemiddel, inkludert detaljer om spesifikke bestanddeler.">
+            keywords = <"legemiddel", "tilbereding", "ordinering", "forskrive", "terapi", "substans", "medikament", "terapeutisk", "medikamenter solgt over disk", "vare", "magistrell", "ex tempore", "blanding", "virkestoff", "hjelpestoff", "utblanding", "foreskrive", "forordne">
+            use = <"Brukes for å registrere detaljer om et legemiddel eller en komponent av et legemiddel, inkludert detaljer om spesifikke bestanddeler.
+
+Denne arketypen er laget for å brukes til å registrere detaljer om et legemiddel eller en komponent av et legemiddel, der formen og detaljer om bestanddelene må oppgis i mer detalj. Eksempler kan være infusjoner og magistrellforskrevne blandinger. I sammenhenger der et legemiddel skal administreres eller ekspederes skal denne arketypen nøstes i SLOTet Legemiddeldetaljer i arketypen INSTRUCTION.medication_order. I sammenhenger der det skal registreres hvilket legemiddel som faktisk ble administrert eller ekspedert skal denne arketypen nøstes i SLOTet Legemiddeldetaljer i arketypen ACTION.medication.
+
+Denne arketypen kan være overflødig i situasjoner der en legemiddelordinering via resept bruker terminologi for å spesifisere legemiddelet. I slike tilfeller vil ofte form og styrke være angitt som en del av terminologibegrepet.">
+            misuse = <"Skal ikke brukes innen varelageroversikt for apotek, eller innen legemiddelkataloger.
+
+Skal ikke brukes for å registrere den tilsiktede eller administrerte dosen av et legemiddel. Bruk enten INSTRUCTION.medication_order eller CLUSTER.dosage til dette formålet.
+
+">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a medication or component of a medication, including strength, form and details of any specific constituents.">
+            keywords = <"medication", "order", "prescribe", "therapy", "substance", "drug", "therapeutic", "therapeutic good", "ad-hoc", "adhoc", "ad hoc", "extemporaneous", "formulation", "medicine">
+            use = <"Use to record details about a medication or component of a medication, including strength, form and details of any specific constituents.
+
+This archetype is intended to be used to record details of a medication or component of a medication where the form and detailed ingredients of the medication need to be specified in more detail, for example, infusions and ad hoc mixtures. In the context of an order for administration or dispensing of a medication, nest this archetype within the Preparation details SLOT within the INSTRUCTION.medication_order archetype. In the context of recording the actual administration or dispensing or a medication, nest this archetype within the 'Medication details' SLOT within the ACTION.medication archetype.
+
+This archetype may be redundant in situations where ordering a medication via prescription uses a terminology to identify the medication item. In that case the brand or product name may identify the form and strength of the substance.">
+            misuse = <"Not to be used for pharmacy stock-control or within medication catalogues.
+
+Not to be used to record the intended or administered dose of a medication. Use either the INSTRUCTION.medication_order or the CLUSTER.dosage archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Het vastleggen van gegevens over een medicament of een onderdeel van een medicament, inclusief sterkte, vorm en details van een specifiek bestandsdeel.">
+            keywords = <"medicatie", "recept", "voorschrijven", "behandeling", "substantie", "medicament", "therapeuticum", "therapeutische substantie", "ad-hoc", "adhoc", "ad hoc", "medicijn">
+            use = <"Gebruik voor het vastleggen van gegevens over een medicament of een onderdeel van een medicament, inclusief dosis, vorm en details over een specifiek bestandsdeel.">
+            misuse = <"Niet te gebruiken voor apotheek voorraad beheer of voor een formularium.
+Niet te gebruiken voor het vastleggen van de bedoelde of toegediende dosis medicatie. Gebruik hiervoor de INSTRUCTION.medication_order of CLUSTER.dosage archetypes.">
+        >
+    >
+
+definition
+    CLUSTER[at0000] occurrences matches {0..1} matches {    -- Medication
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0132] occurrences matches {0..1} matches {    -- Name
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0071] matches {    -- Form
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0142] occurrences matches {0..1} matches {    -- Category
+                value matches {
+                    DV_CODED_TEXT[at9007] matches {
+                        defining_code matches {[ac9000]}    -- Category (synthesised)
+                    }
+                    DV_TEXT[at9008]
+                }
+            }
+            CLUSTER[at0152] occurrences matches {0..1} matches {    -- Strength (presentation)
+                items cardinality matches {4..*; unordered} matches {
+                    ELEMENT[at0153] occurrences matches {1} matches {    -- Strength numerator
+                        value matches {
+                            DV_QUANTITY[at9011] matches {
+                                property matches {[at9021]}    -- Qualified real
+                                magnitude matches {|>=0.0|}
+                                units matches {"1"}
+                            }
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {1} matches {    -- Strength numerator unit
+                        value matches {
+                            DV_TEXT[at9032]
+                        }
+                    }
+                    ELEMENT[at0157] occurrences matches {1} matches {    -- Strength denominator
+                        value matches {
+                            DV_QUANTITY[at9012] matches {
+                                property matches {[at9021]}    -- Qualified real
+                                magnitude matches {|>=0.0|}
+                                units matches {"1"}
+                            }
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {1} matches {    -- Strength denominator unit
+                        value matches {
+                            DV_TEXT[at9024]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0158] occurrences matches {0..1} matches {    -- Unit of presentation
+                value matches {
+                    DV_TEXT[at9033]
+                }
+            }
+            ELEMENT[at0115] occurrences matches {0..1} matches {    -- Strength (concentration)
+                value matches {
+                    DV_QUANTITY[at9022] matches {
+                        property matches {[at9001]}    -- Concentration
+                    }
+                }
+            }
+            ELEMENT[at0151] occurrences matches {0..1} matches {    -- Manufacturer
+                value matches {
+                    DV_TEXT[at9013]
+                }
+            }
+            ELEMENT[at0150] matches {    -- Batch ID
+                value matches {
+                    DV_TEXT[at9014]
+                    DV_IDENTIFIER[at9025]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Expiry
+                value matches {
+                    DV_DATE_TIME[at9015]
+                }
+            }
+            allow_archetype CLUSTER[at0138] matches {    -- Constituent
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.medication(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.medication(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0139] occurrences matches {0..1} matches {    -- Amount
+                value matches {
+                    DV_QUANTITY[at9026] matches {
+                        property matches {[at9021]}    -- Qualified real
+                        magnitude matches {|>=0.0|}
+                        units matches {"1"}
+                    }
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Amount unit
+                value matches {
+                    DV_TEXT[at9027]
+                }
+            }
+            ELEMENT[at0148] occurrences matches {0..1} matches {    -- Alternate amount
+                value matches {
+                    DV_QUANTITY[at9028] matches {
+                        property matches {[at9021]}    -- Qualified real
+                        magnitude matches {|>=0.0|}
+                        units matches {"1"}
+                    }
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Alternate amount unit
+                value matches {
+                    DV_TEXT[at9029]
+                }
+            }
+            ELEMENT[at0127] occurrences matches {0..1} matches {    -- Role
+                value matches {
+                    DV_CODED_TEXT[at9030] matches {
+                        defining_code matches {[ac9004]}    -- Role (synthesised)
+                    }
+                    DV_TEXT[at9031]
+                }
+            }
+            ELEMENT[at0133] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9020]
+                }
+            }
+            allow_archetype CLUSTER[at0141] matches {    -- Structured details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Arzneimittel">
+                description = <"Angaben über ein Arzneimittel oder eine Arzneimittelkomponente, einschließlich der Wirkstärke, der Darreichungsform und Informationen über spezifische Bestandteile.">
+            >
+            ["at0001"] = <
+                text = <"Kombinationsprodukt">
+                description = <"Das Arzneimittel oder die Arzneimittelkomponente besteht aus einer Reihe von separaten Produkten, die vom Hersteller vorverpackt werden, z.B. Canesten Combi.">
+            >
+            ["at0003"] = <
+                text = <"Verfallsdatum">
+                description = <"Das Verfallsdatum und/oder die Verfallszeit des Arzneimittels oder der Arzneimittelkomponente. Diese Angabe wird vom Hersteller oder einer Person während der Mixtur-Zubereitung gemacht.">
+                comment = <"Jegliche andere Formen des Verfallsdatums, wie z.B. die Zeit ab Produktion oder Abhängigkeiten von der Lagerumgebung, können in einem spezifischen CLUSTER-Archetyp aufgenommen werden. Darüber hinaus können diese Angaben auch in einem SLOT, der Details über die Substanz dokumentiert, oder als Teil einer Beschreibung erfasst werden. Zum Beispiel: \"23.05.2017\".">
+            >
+            ["at0004"] = <
+                text = <"Einheit der Wirkstärke (Zähler)">
+                description = <"Die Einheit des Zählers des Wirkstärkeanteils.">
+                comment = <"Der Zähler der Wirkstärke wird üblicherweise mit Massen-, Volumen- oder beliebigen Einheiten erfasst. Zum Beispiel: \"mg\", \"ml\", \"IU\". Bei einer Wirkstärke (Darreichungsform) von \"300 µg / 0,3 ml\" ist die Einheit des Zählers der Wirkstärke \"µg\". Die Einheit des Zählers der Wirkstärke \"100 mg/Tablette\" ist \"mg\".">
+            >
+            ["at0005"] = <
+                text = <"Einheit der Wirkstärke (Nenner)">
+                description = <"Die Einheit des Nenners des Wirkstärkeanteils.">
+                comment = <"Der Nenner der Wirkstärke wird üblicherweise in Massen- oder Volumeneinheiten erfasst. Zum Beispiel: \"g\", \"ml\". Die Einheit des Nenners der Wirkstärke \"300 µg/0,3 ml\" ist \"ml\". Die Einheit des Nenners der Wirkstärke \"100 mg/Tablette\" ist \"1\". In diesem Beispiel wird die \"Einheit der Darreichungsform\", bezogen auf das angewendete Arzneimittel, \"Tablette\" angegeben.">
+            >
+            ["at0007"] = <
+                text = <"Alternative Mengeneinheit">
+                description = <"Die Einheit einer äquivalenten Darstellung der Menge des Arzneimittels oder der Arzneimittelkomponente.">
+                comment = <"Der Wert der alternativen Menge wird im Element \"Alternative Menge\" erfasst. Beispiel: Für ein Arzneimittel mit einer Wirkstoffkonzentration von \"5 mg/ml\" und einer Menge von \"1 ml\" wäre die äquivalente Menge \"5 mg\" und der in diesem Datenelement aufgezeichnete Wert wäre \"mg\".">
+            >
+            ["at0008"] = <
+                text = <"Mengeneinheit">
+                description = <"Die Einheit der Menge eines Arzneimittels oder einer Arzneimittelkomponente.">
+                comment = <"Zum Beispiel: \"mg\", \"ml\", \"IU\".
+Hinweis: Der Wert der Menge wird in dem Element \"Menge\" erfasst.">
+            >
+            ["at0071"] = <
+                text = <"Darreichungsform">
+                description = <"Die Zubereitung oder die Darstellung eines Arzneimittels oder einer Arzneimittelkomponente.">
+                comment = <"Zum Beispiel: \"Tablette\", \"Kapsel\", \"Creme\", \"Infusionslösung\" oder \"Inhalationspulver\". Die Codierung der Darreichungsform mit einer Terminologie wird, sofern dies möglich ist, bevorzugt. Die Arzneimittelkataloge können zwischen der Form zur Verabreichung \"Injektionslösung\" und der Form des Produktes \"Pulver zur Zubereitung der Injektionslösung\" unterscheiden. Die dargestellte Form hängt vom Kontext der Anwendung ab. Es wird meist jedoch die Verabreichungsform verwendet.">
+            >
+            ["at0080"] = <
+                text = <"Wirkstoff">
+                description = <"Bestandteil, der allein oder in Kombination mit einem oder mehreren anderen Inhaltsstoffen die beabsichtigte Wirkung eines Arzneimittels erfüllt.">
+            >
+            ["at0083"] = <
+                text = <"Hilfsstoff">
+                description = <"Ein Bestandteil mit der primären Funktion, die Wirkung des aktiven Bestandteils zu verändern. Ein unterstützender (adjuvant) Bestandteil kann selbst therapeutisch wirksam sein, muss es aber nicht.">
+            >
+            ["at0084"] = <
+                text = <"Sonstiger Bestandteil">
+                description = <"Bestandteil, der in Bezug auf die beabsichtigte Wirkung des Arzneimittels unbeteiligt ist.">
+            >
+            ["at0115"] = <
+                text = <"Wirkstoffkonzentration">
+                description = <"Die Wirkstärke eines Arzneimittels oder einer Arzneimittelkomponente als Konzentration.">
+                comment = <"Dieses Element wird für Flüssigkeiten, halbfesten Arzneimitteln oder Arzneimitteln, die vor der Verabreichung in einer Flüssigkeit gelöst werden müssen, verwendet. Zum Beispiel: \"10 mg/ml\", \"20 mg/g\", \"5 %\", \"10,000 SQ-U/ml\".">
+            >
+            ["at0127"] = <
+                text = <"Funktion">
+                description = <"Die Funktion eines Arzneimittels oder einer Arzneimittelkomponente innerhalb einer Mixtur.">
+            >
+            ["at0132"] = <
+                text = <"Name">
+                description = <"Der Name des Arzneimittels oder der Arzneimittelkomponente.">
+                comment = <"Zum Beispiel: \"Zinacef 750 mg Puder\" oder \"Cefuroxim\". Dieses Item sollte möglichst codiert werden, z.B. mittels RxNorm, DM+D, Australian Medicines Terminology oder FEST. Die Verwendung dieses Elements variiert je nach Anwendungskontext. Dieses Element kann weggelassen werden, wenn der Name des Arzneimittels in dem übergeordneten INSTRUCTION- oder ACTION-Archetyp vorhanden ist, und dieser Archetyp nur zur Darstellung der Darreichungsform genutzt wird, z.B. \"Flüssigkeit\".">
+            >
+            ["at0133"] = <
+                text = <"Beschreibung">
+                description = <"Eine Möglichkeit zur Beschreibung des Arzneimittels oder der Arzneimittelkomponente, wenn dies nicht mit vollständig strukturierten Elementen möglich war.">
+            >
+            ["at0138"] = <
+                text = <"Bestandteil">
+                description = <"Angaben zu einem Inhaltsstoff oder Produkt, das zur Herstellung einer Mischpackung, eines Präparats oder einer Infusion verwendet wird.">
+                comment = <"Dieser Slot ist dazu gedacht, dem Archetyp Details über Bestandteile des Arzneimittels oder der Arzneimittelkomponente unter Verwendung verschachtelter Instanzen hinzuzufügen. Dies ist in der Regel nur dann erforderlich, wenn eine Mixtur beschrieben wird.">
+            >
+            ["at0139"] = <
+                text = <"Menge">
+                description = <"Die Angabe zur Menge des Arzneimittels oder der Arzneimittelkomponente.">
+                comment = <"Zum Beispiel: \"1\", \"1,5\", \"1000\".
+Hinweis: Die diesem Wert zugeordnete Einheit wird mit dem Element \"Mengeneinheit\" erfasst.">
+            >
+            ["at0141"] = <
+                text = <"Strukturierte Angaben">
+                description = <"Zusätzliche Angaben über das Arzneimittel oder die Arzneimittelkomponente.">
+                comment = <"Zum Beispiel: Detaillierte Informationen über Wirkstoffgruppe oder vorgesehene Verabreichungswege, oder zusätzliche Informationen zum Verfallsdatum.">
+            >
+            ["at0142"] = <
+                text = <"Kategorie">
+                description = <"Die Kategorie des Arzneimittels oder der Arzneimittelkomponente, hinsichtlich der Herstellung oder Zubereitung und der Anzahl der Inhaltsstoffe.">
+                comment = <"Zum Beispiel: \"Paracetamol/Codein\" ist ein Produkt mit mehreren Inhaltsstoffen, im Gegensatz dazu ist \"Morphin 60 mg + Haloperidol 2 mg + Midazolam 5 mg\" eine Ad-hoc-Mixtur, deren Zusammensetzung innerhalb der Verordnung spezifiziert wird.">
+            >
+            ["at0143"] = <
+                text = <"Ad-hoc Mixtur">
+                description = <"Das Arzneimittel oder die Arzneimittelkomponente besteht aus einer Mischung von Inhaltsstoffen, die in der Verordnung angegeben sind. Diese werden in der Regel von Apotheken- oder Stationspersonal individuell für den Patienten zubereitet.">
+            >
+            ["at0144"] = <
+                text = <"Produkt mit meheren Inhaltsstoffen">
+                description = <"Das Arzneimittel oder die Arzneimittelkomponente besteht aus einer Reihe von Wirkstoffen, die vom Hersteller in einer Darreichungsform, wie z.B. als eine Tablette, Creme oder ein Pulver, zusammengesetzt werden. Ein Beispiel hierfür ist Paracetamol/Codein.">
+            >
+            ["at0145"] = <
+                text = <"Produkt mit einem Inhaltsstoff">
+                description = <"Das Arzneimittel oder die Arzneimittelkomponente ist ein hergestelltes Produkt, das einen einzigen Wirkstoff enthält.">
+            >
+            ["at0146"] = <
+                text = <"Inhaltsstoff">
+                description = <"Das Arzneimittel oder die Arzneimittelkomponente ist ein einzelner Inhaltsstoff des Arzneimittels. Dieser Begriff wird verwendet, wenn der Archetyp innerhalb einer übergeordneten Instanz seines eigenen Archetyps verschachtelt ist, um die einzelnen Bestandteile eines Arzneimittels zu beschreiben.">
+            >
+            ["at0148"] = <
+                text = <"Alternative Menge">
+                description = <"Der Wert einer äquivalenten Darstellung der Menge des Arzneimittels oder der Arzneimittelkomponente.">
+                comment = <"Die Einheit der alternativen Menge wird im Element \"Alternative Mengeneinheit\" erfasst. Beispiel: Für ein Arzneimittel mit einer Wirkstoffkonzentration von \"5 mg/ml\" und einer Menge von \"1 ml\" wäre die äquivalente Menge \"5 mg\" und der in diesem Datenelement erfasste Wert wäre \"5\".">
+            >
+            ["at0150"] = <
+                text = <"Batch ID">
+                description = <"Die Kennung der Produktionscharge, die vom Hersteller während der Produktion zugewiesen wird.">
+            >
+            ["at0151"] = <
+                text = <"Hersteller">
+                description = <"Der Hersteller des Arzneimittels oder der Arzneimittelkomponente.">
+                comment = <"Zum Beispiel: \"Abbott\".">
+            >
+            ["at0152"] = <
+                text = <"Wirkstärke (Darreichungsform)">
+                description = <"Die Wirkstärke des Arzneimittels oder der Arzneimittelkomponente, ausgedrückt als Verhältniszahl.">
+                comment = <"In einigen Fällen, wie bei flüssigen oder halbfesten Arzneimitteln, ist der Nenner des Stärkeverhältnisses eine physikalische Größe, zum Beispiel 2 mg/5 ml. In einigen dieser Fälle spiegelt der Nenner auch das tatsächliche Volumen der Komponente wider: 5 ml im vorherigen Beispiel. In diesem Fall würde die \"Wirkstoffkonzentration\" 0,4 mg/ml betragen. In anderen Fällen, wenn die Stärke einen Nenner betrifft, der keine physikalische Größe ist, z.B. 4 mg/Tablette, wird der Nenner als einheitlicher Wert \"1\" mit einer Einheit \"1\" ausgedrückt, und \"Tablette\" wird im Element \"Einheit der Darreichungsform\" geführt. Diese Regelung wurde gewählt, um dem Ansatz der ISO IDMP-Norm für Medikamentenkataloge gerecht zu werden.
+">
+            >
+            ["at0153"] = <
+                text = <"Wirkstärke (Zähler)">
+                description = <"Der Wert des Zählers des Wirkstärkeanteils.">
+                comment = <"Zum Beispiel: Lautet die Wirkstärke (Darreichungsform) \"300 µg/0,3 ml\", so beträgt die Wirkstärke (Zähler) \"300\". Bei einer Wirkstärke von \"100 mg/Tablette\" ist der Wirkstärke-Zähler \"100\".">
+            >
+            ["at0157"] = <
+                text = <"Wirkstärke (Nenner)">
+                description = <"Der Wert des Nenners des Wirkstärkeanteils.">
+                comment = <"Zum Beispiel: Der Wert des Nenners der Wirkstärke \"300 µg/0,3 ml\" ist \"0,3\". Der Wert des Nenners der Wirkstärke \"100 mg/Tablette\" ist \"1\".">
+            >
+            ["at0158"] = <
+                text = <"Einheit der Darreichungsform">
+                description = <"Die Einheit der Darreichungsform einer Einzeldosis des Arzneimittels zur Verwendung mit dem Element \"Einheit der Wirkstärke (Nenner)\".">
+                comment = <"Zum Beispiel: \"Tablette\", \"Kapsel\", \"Atemzug\", \"Inhalation\". In den meisten Fällen, vor allem bei Tabletten und Kapseln, ist die Einheit der Darreichungsform gleich der Darreichungsform des Arzneimittels. Bei einigen Darreichungsformen, wie z.B. beim Inhalator, kann die Form des Arzneimittels \"Inhalationspulver\", \"Inhalations-Aerosol\" oder \"Inhaler\" sein, während die Einheit der Darreichungsform \"Inhalation\", \"Atemzug\" oder \"Dosis\" ist.">
+            >
+            ["at9001"] = <
+                text = <"* Concentration (en)">
+                description = <"* Concentration (en)">
+            >
+            ["at9021"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9000"] = <
+                text = <"Kategorie (synthesised)">
+                description = <"Die Kategorie des Arzneimittels oder der Arzneimittelkomponente, hinsichtlich der Herstellung oder Zubereitung und der Anzahl der Inhaltsstoffe. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Funktion (synthesised)">
+                description = <"Die Funktion eines Arzneimittels oder einer Arzneimittelkomponente innerhalb einer Mixtur. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Läkemedel">
+                description = <"Detaljer om ett läkemedel eller en läkemedelskomponent, inkluderat styrka, form och detaljer för alla specifika beståndsdelar.">
+            >
+            ["at0001"] = <
+                text = <"Kombinationsprodukt">
+                description = <"Läkemedlet eller läkemedelskomponenten består av ett antal separata produkter som förpackas av tillverkaren, till exempel Canesten Combi.">
+            >
+            ["at0003"] = <
+                text = <"Hållbarhetsdatum">
+                description = <"Utgångsdatum och/eller tidpunkt för läkemedels- eller läkemedelskomponenten, enligt tillverkarens eller individens beredning av blandningen.">
+                comment = <"Annan form av utgångsdatum, till exempel tid från produktion eller beroende på lagringsmiljö, kan infogas med en specifikt CLUSTER i substansdetaljer eller läggas till som en del av beskrivningen.
+Till exempel: '2017-05-23'.">
+            >
+            ["at0004"] = <
+                text = <"Styrkans enhet i täljaren">
+                description = <"Enheten för täljaren styrkefraktion.">
+                comment = <"Styrkans täljare dokumenteras vanligtvis med massa, volym eller godtyckliga enheter. Till exempel: 'mg', 'ml', 'IE'. För en presentationsstyrka på '300 µg/0,3 ml' är räknarenheten för styrka 'µg'. För en presentationsstyrka på '100 mg/tablett' är täljarens enhet på styrka 'mg'.">
+            >
+            ["at0005"] = <
+                text = <"Styrkans enhet i nämnaren">
+                description = <"Nämnarens enheten för styrka.">
+                comment = <"Styrka i nämnaren registreras vanligtvis med hjälp av massa eller volymenheter. Till exempel: 'g', 'ml'. För en presentationsstyrka på '300 µg/0,3 ml' är styrkans nämnares enhet 'ml'. För en presentationsstyrka på \"100 mg/tablett\" är styrkans nämnares enhet \"1\". I detta exempel används elementet 'Unit of presentation' (Presentationsenhet) för att registrera presentationsenheten för läkemedlet, 'tablett'.">
+            >
+            ["at0007"] = <
+                text = <"Alternativ mängd enhet">
+                description = <"Enheten för mängden läkemedel eller läkemedelskomponent.">
+                comment = <"Värdet på den alternativa mängden registreras i elementet 'Alternativ mängd' 
+Till exempel: för ett läkemedel med en styrka av '5 mg/ml' där mängden är '1 ml' skulle motsvarande mängd vara 5 mg och värdet som registreras i detta dataelement skulle vara 'mg'.">
+            >
+            ["at0008"] = <
+                text = <"Mängd enhet">
+                description = <"Enheten för mängden läkemedel eller läkemedelskomponent.">
+                comment = <"Till exempel: 'mg', 'ml', 'IE'.
+Anmärkning: Mängdens värde registreras med dataelementet 'Amount' (Mängd).">
+            >
+            ["at0071"] = <
+                text = <"Form">
+                description = <"Formen eller presentationen av ett läkemedel eller läkemedelskomponent.">
+                comment = <"Till exempel: \"tablett\", \"kapsel\", \"infusionsvätska\" eller \"inhalationspulver\". 
+Kodning av formen med en terminologi är att föredra, där det är möjligt. Läkemedelskataloger kan skilja mellan administrerbar form 'lösning för injektion' och produktform 'pulver för injektionsvätska, lösning'. Den dokumenterade formen beror på det exakta sammanhanget för användning. Administrerbar form kommer sannolikt att användas i de flesta fall.">
+            >
+            ["at0080"] = <
+                text = <"Terapeutisk">
+                description = <"Beståndsdel som ensam eller i kombination med en eller flera andra ingredienser anses uppfylla läkemedlets avsedda aktivitet.">
+            >
+            ["at0083"] = <
+                text = <"Adjuvant">
+                description = <"Beståndsdel vars primära funktion är att modifiera aktiviteten hos en aktiv beståndsdel. En adjuvant beståndsdel kan i sig eller inte vara terapeutiskt aktiv.">
+            >
+            ["at0084"] = <
+                text = <"Hjälpämne">
+                description = <"Beståndsdel som är trögt i förhållande till läkemedlets avsedda aktivitet.">
+            >
+            ["at0115"] = <
+                text = <"Styrka (koncentration)">
+                description = <"Styrkan hos läkemedlet eller läkemedelskomponenten, som koncentration.">
+                comment = <"Detta dataelement används för flytande eller halvfasta läkemedel, eller läkemedel som är avsedda att spädas i en vätska före administrering. 
+Till exempel: '10 mg/ml ', '20 mg/g', '5%', '10, 000 SQ-U/ml '.">
+            >
+            ["at0127"] = <
+                text = <"Roll">
+                description = <"Läkemedlets eller läkemedelskomponentens roll i en blandning.">
+            >
+            ["at0132"] = <
+                text = <"Namn">
+                description = <"Namnet på läkemedlet eller läkemedelskomponenten.">
+                comment = <"Till exempel: 'Zinacef 750 mg pulver' eller 'cefuroxim'. Detta dataelement bör om möjligt kodas, med exempelvis RxNorm, DM + D, Australian Medicines Terminology eller FEST. Användningen av detta dataelement kommer att variera beroende på användningssammanhang. Detta dataelement kan utelämnas om läkemedlets namn registreras i föräldrarnas INSTRUKTION eller ÅTGÄRD, och denna arketyp endast används för att registrera att formen måste vara eller var \"flytande\".">
+            >
+            ["at0133"] = <
+                text = <"Beskrivning">
+                description = <"Utförlig beskrivning av läkemedlet eller läkemedelskomponenten där det inte är möjligt att beskriva detta fullständigt med hjälp av de strukturerade dataelementen.">
+            >
+            ["at0138"] = <
+                text = <"Beståndsdelar">
+                description = <"Detaljer om en ingrediens eller produkt som används för att göra en blandad förpackning, beredning eller infusion.">
+                comment = <"Denna öppning är avsedd att användas för att lägga till detaljer om beståndsdelar i läkemedlet eller läkemedelskomponenten, med hjälp av nästlade instanser av denna arketyp. Detta krävs normalt inte annat än när en blandning beskrivs">
+            >
+            ["at0139"] = <
+                text = <"Mängd">
+                description = <"Värdet av mängden läkemedel eller av en läkemedelskomponent.">
+                comment = <"Till exempel: '1', '1,5', '1000'.
+Obs! Den tillhörande enheten för denna mängd registreras med hjälp av elementet 'Amount unit' (Mängd enhet).">
+            >
+            ["at0141"] = <
+                text = <"Strukturerade detaljer">
+                description = <"Ytterligare information om läkemedlet eller läkemedelskomponenten.">
+                comment = <"Till exempel: detaljerad information om läkemedelsklass eller avsedda administreringsvägar, eller ytterligare hållbarhetsinformation.
+">
+            >
+            ["at0142"] = <
+                text = <"Kategori">
+                description = <"Kategori av läkemedels- eller läkemedelskomponenten, med avseende på tillverkning eller beredning, och antalet ingredienser.">
+                comment = <"Till exempel: 'Paracetamol/codeine' är en produkt med flera ingredienser, medan 'Morfin 60 mg + Haloperidol 2 mg + Midazolam 5 mg' är en ad-hoc-blandning vars sammansättning är fullständigt specificerad i beställningen.">
+            >
+            ["at0143"] = <
+                text = <"Ad-hoc blandning">
+                description = <"Läkemedels- eller läkemedelskomponenten består av en blandning av ingredienser som anges i beställningen. Dessa bereds vanligtvis av apotek eller avdelningspersonal för att passa enskilda patienter">
+            >
+            ["at0144"] = <
+                text = <"Produkt med flera ingredienser">
+                description = <"Läkemedels- eller läkemedelskomponenten består av ett antal aktiva ingredienser som i förväg kombineras till en enda form såsom en tablett eller pulver av tillverkaren, till exempel Paracetamol / kodein.">
+            >
+            ["at0145"] = <
+                text = <"En-ingrediens produkt">
+                description = <"Läkemedlet eller läkemedelskomponenten är en tillverkad produkt som innehåller en enda aktiv ingrediens.">
+            >
+            ["at0146"] = <
+                text = <"Ingrediens">
+                description = <"Läkemedlet eller läkemedelskomponenten är en enskild ingrediens i läkemedlet. Denna term används när arketypen är kapslad i en förälder-instans av sig själv för att beskriva de enskilda ingredienserna i ett läkemedel.">
+            >
+            ["at0148"] = <
+                text = <"Alternativ mängd">
+                description = <"Värdet av en motsvarande representation av mängden läkemedel eller läkemedelskomponent.">
+                comment = <"Enheten för den alternativa mängden registreras i dataelementet 'Alternate amount unit' (Alternativ mängd enhet). 
+Till exempel: för ett läkemedel med en styrka av '5 mg/ml' där mängden är '1 ml' skulle motsvarande mängd vara 5 mg och värdet som registreras i detta dataelement skulle vara '5'.">
+            >
+            ["at0150"] = <
+                text = <"Batch ID">
+                description = <"Identifieraren som tillverkaren tilldelade batchen med, under produktionen.">
+            >
+            ["at0151"] = <
+                text = <"Tillverkare">
+                description = <"Tillverkaren av läkemedlet eller läkemedelskomponenten.">
+                comment = <"Till exempel: 'Abbott'.">
+            >
+            ["at0152"] = <
+                text = <"Styrka">
+                description = <"Styrkan hos läkemedlet eller läkemedelskomponenten, uttryckt som ett förhållande.">
+                comment = <"I vissa fall, som för flytande eller halvfasta läkemedel, är nämnaren av styrka förhållandet en fysisk kvantitet, till exempel 2mg/5ml. I några av dessa fall återspeglar nämnaren också komponentens faktiska volym: 5 ml i föregående exempel. I detta fall skulle \"Styrka (koncentration)\" vara 0,4 mg/ml. I andra fall, där styrkan innefattar en nämnare som inte är en fysisk kvantitet, till exempel 4 mg/tablett, uttrycks nämnaren som ett enhetsvärde '1' med en enhet av '1' och 'tablett' bärs in i elementet \"Presentationsenhet\". Detta arrangemang valdes för att ligga i linje med den metod som antagits av ISO IDMP-standarden för läkemedelskataloger.">
+            >
+            ["at0153"] = <
+                text = <"Styrka i täljare">
+                description = <"Värdet på täljaren för styrkefraktionen.">
+                comment = <"Exempel: För en presentationsstyrka på '300 µg/0,3 ml' är styrka täljaren '300'. För en presentationsstyrka på \"100 mg/tablett\" är styrka täljaren \"100\"">
+            >
+            ["at0157"] = <
+                text = <"Styrka i nämnare">
+                description = <"Värdet av nämnaren för styrkan.">
+                comment = <"Till exempel: För en presentationsstyrka på '300 µg/0,3 ml' är nämnarens värde '0,3'. För en presentationsstyrka på '100 mg/tablett' är nämnarens värde '1'.">
+            >
+            ["at0158"] = <
+                text = <"Presentationsenhet">
+                description = <"Presentationsenheten för en enda dos av läkemedlet, för användning med dataelementet 'Strength denominator unit' (Styrkans enhet i nämnare)">
+                comment = <"Till exempel: \"tablett\", \"kapsel\", \"puff\", \"inandning\". I de flesta fall, som för tabletter och kapslar, är presentationsenheten identisk med form. För vissa presentationer, såsom inhalatorer, kan form vara \"inhalationspulver\", \"inhalations aerosol\" eller \"inhalator\" medan presentationsenheten är \"inhalation\", \"puff\" eller \"dos\".">
+            >
+            ["at9001"] = <
+                text = <"* Concentration (en)">
+                description = <"* Concentration (en)">
+            >
+            ["at9021"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9000"] = <
+                text = <"Kategori (synthesised)">
+                description = <"Kategori av läkemedels- eller läkemedelskomponenten, med avseende på tillverkning eller beredning, och antalet ingredienser. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Roll (synthesised)">
+                description = <"Läkemedlets eller läkemedelskomponentens roll i en blandning. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Legemiddel">
+                description = <"Detaljer om et legemiddel eller en komponent av et legemiddel, inkludert detaljer om spesifikke bestanddeler.">
+            >
+            ["at0001"] = <
+                text = <"Kombinasjonspakning">
+                description = <"Legemiddelet eller legemiddelkomponenten består av flere separate produkter som er forhåndspakket av produsenten, for eksempel Canesten vaginalkapsel + krem.">
+            >
+            ["at0003"] = <
+                text = <"Holdbarhetsdato">
+                description = <"Tidspunktet for når legemiddelet ikke lenger skal benyttes, som angitt av produsenten eller den som tilbereder blandingen.">
+                comment = <"For eksempel \"2017-05-23\". Andre former for utløpsdatoer som må dokumenteres, som for eksempel tid fra produksjonstidspunktet eller avhengighet av lagringsforhold, kan legges til som en spesifikk CLUSTER-arketype eller som en kommentar.">
+            >
+            ["at0004"] = <
+                text = <"Styrketellerenhet">
+                description = <"Enheten for telleren i styrkebrøken.">
+                comment = <"Styrketelleren registreres som regel ved hjelp av masseenheter, volumenheter eller arbitrære enheter, for eksempel \"mg\", \"ml\", eller \"IU\". For en presentasjonsstyrke på \"300 µg/0,3 ml\", er Styrketellerenhet \"µg\". For en presentasjonsstyrke på \"100 mg/tablett\", er Styrketellerenhet \"mg\".">
+            >
+            ["at0005"] = <
+                text = <"Styrkenevnerenhet">
+                description = <"Enheten for nevneren i styrkebrøken.">
+                comment = <"Styrkenevneren registreres som regel ved hjelp av masseenheter eller volumenheter, for eksempel \"g\" eller \"ml\". For en presentasjonsstyrke på \"300 µg/0,3 ml\", er Styrkenevnerenhet \"ml\". For en presentasjonsstyrke på \"100 mg/tablett\", er Styrkenevnerenhet \"1\". I dette eksempelet brukes elementet \"Presentasjonsenhet\" for å registrere presentasjonsenheten for legemiddelet, \"tablett\".">
+            >
+            ["at0007"] = <
+                text = <"Alternativ mengdeenhet">
+                description = <"En alternativ men tilsvarende angivelse av enheten for mengden legemiddel eller legemiddelkomponent.">
+                comment = <"Verdien av den alternative mengden registreres i elementet Alternativ mengde. For eksempel dersom et legemiddel har styrke 5 mg/ml og mengden er \"1 ml\", vil en alternativ mengde være \"5 mg\". I dette tilfellet er \"Alternativ mengdeenhet\" \"mg\".">
+            >
+            ["at0008"] = <
+                text = <"Mengdeenhet">
+                description = <"Enheten for mengden av legemiddelet eller legemiddelkomponenten.">
+                comment = <"Verdien av mengden registreres i elementet Mengde. For eksempel \"mg\", \"ml\" eller \"IE\".">
+            >
+            ["at0071"] = <
+                text = <"Form">
+                description = <"Formulering eller form av legemiddelet.">
+                comment = <"For eksempel \"tablett\", \"kapsel\", \"krem\", infusjonsvæske\". Koding av legemiddelformen med en terminologi foretrekkes der det er mulig. Legemiddelkataloger differensierer i noen tilfeller mellom administrerbar form, \"injeksjonsvæske\", og formen slik den er i pakken, \"pulver til injeksjonsvæske\". Formen som skal registreres kommer an på den eksakte brukssammenhengen, men i de fleste tilfeller vil administrerbar form være mest aktuelt.">
+            >
+            ["at0080"] = <
+                text = <"Terapeutisk">
+                description = <"Bestanddel som alene eller i kombinasjon med en eller flere andre ingredienser oppfyller den tiltenkte aktiviteten av legemiddelet.">
+            >
+            ["at0083"] = <
+                text = <"Adjuvans">
+                description = <"Bestanddel hvis hovedfunksjon er å modifisere aktiviteten av en aktiv bestanddel. En adjuvans kan i seg selv være enten aktiv eller inaktiv.">
+            >
+            ["at0084"] = <
+                text = <"Hjelpestoff">
+                description = <"Bestanddel som er inaktiv i forhold til den tiltenkte aktiviteten av legemiddelet.">
+            >
+            ["at0115"] = <
+                text = <"Styrke (konsentrasjon)">
+                description = <"Styrken av legemiddelet eller legemiddelkomponenten, angitt som konsentrasjon.">
+                comment = <"Dette elementet brukes for flytende eller halvfaste legemidler, eller legemidler som skal blandes ut til å bli flytende før administrering. For eksempel \"10 mg/ml\", \"20 mg/g\", \"5 %\" eller \"10 000 SQ-U/ml\".">
+            >
+            ["at0127"] = <
+                text = <"Rolle">
+                description = <"Legemiddelet eller legemiddelkomponentens rolle i en blanding eller infusjon.">
+            >
+            ["at0132"] = <
+                text = <"Navn">
+                description = <"Navnet på legemiddelet eller legemiddelkomponenten.">
+                comment = <"For eksempel \"Zinacef 750 mg pulver til infusjonsvæske\" eller \"cefuroxim\". Dette elementet bør kodes om mulig, for eksempel med FEST. Bruk av dette elementet vil variere med brukssammenhengen. For eksempel vil elementet ikke brukes dersom legemiddelnavnet er registrert i den overordnede INSTRUCTION- eller ACTION-arketypen, og denne arketypen kun brukes for å registrere at legemiddelformen må være eller var \"væske\".">
+            >
+            ["at0133"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse av legemiddelet eller legemiddelkomponenten, der det ikke lar seg gjøre å beskrive dette fullstendig ved hjelp av strukturerte elementer.">
+            >
+            ["at0138"] = <
+                text = <"Bestanddel">
+                description = <"Detaljer om en ingrediens eller produkt som brukes til å lage en blandet pakning, preparat eller infusjon.">
+                comment = <"Dette SLOTet benyttes når arketypen nøstes inni en overordnet instans av den samme arketypen, for å beskrive de individuelle bestanddelene av et legemiddel. Dette er som regel ikke nødvendig, annet enn der en beskriver en blanding.">
+            >
+            ["at0139"] = <
+                text = <"Mengde">
+                description = <"Verdien av mengden av legemiddelet eller legemiddelkomponenten.">
+                comment = <"Enheten for mengden registreres i elementet Mengdeenhet. For eksempel \"mg\", \"ml\" eller \"IE\".">
+            >
+            ["at0141"] = <
+                text = <"Strukturerte detaljer">
+                description = <"Ytterligere detaljer om legemiddelet eller legemiddelkomponenten.">
+                comment = <"For eksempel detaljert informasjon om legemiddelklassen, tiltenkte administrasjonsveier, eller ytterligere informasjon om holdbarhet.">
+            >
+            ["at0142"] = <
+                text = <"Kategori">
+                description = <"Legemiddelet eller legemiddelkomponentens kategori med tanke på tilvirkning eller tilberedning, og antall ingredienser.">
+                comment = <"For eksempel er Paralgin Forte et kombinasjonsprodukt, mens \"Morfin 60 mg + Haloperidol 2 mg + Midazolam 5 mg\" er en magistrellforskrevet blanding, som er fullt spesifisert i ordineringen.">
+            >
+            ["at0143"] = <
+                text = <"Magistrellforskrevet blanding">
+                description = <"Legemiddelet eller legemiddelkomponenten er en sammensatt blanding av ingredienser som er spesifisert i en ordinering. Disse tillages typisk av apotek- eller sengepostpersonell for individuelle pasienter.">
+            >
+            ["at0144"] = <
+                text = <"Kombinasjonsprodukt">
+                description = <"Komponenten består av flere aktive ingredienser som er satt sammen til én form som en tablett, krem eller pulver av produsenten. For eksempel Paralgin Forte.">
+            >
+            ["at0145"] = <
+                text = <"Produkt som inneholder én aktiv ingrediens">
+                description = <"Legemiddelet eller legemiddelkomponenten er et fabrikkframstilt produkt som kun har én aktiv ingrediens.">
+            >
+            ["at0146"] = <
+                text = <"Bestanddel">
+                description = <"Legemiddelkomponenten er en ingrediens i legemiddelet. Denne termen benyttes når arketypen nøstes inni en overordnet instans av den samme arketypen, for å beskrive de individuelle ingrediensene i et legemiddel.">
+            >
+            ["at0148"] = <
+                text = <"Alternativ mengde">
+                description = <"En alternativ men tilsvarende angivelse av verdien av mengden legemiddel eller legemiddelkomponent.">
+                comment = <"Enheten for den alternative mengden registreres i elementet Alternativ mengdeenhet. For eksempel dersom et legemiddel har styrke 5 mg/ml og mengden er \"1 ml\", vil en alternativ mengde være \"5 mg\". I dette tilfellet er \"Alternativ mengde\" \"5\".">
+            >
+            ["at0150"] = <
+                text = <"Batch-ID">
+                description = <"Identifikatoren tilordnet av produsenten for å identifisere produksjons-batchen for produktet.">
+            >
+            ["at0151"] = <
+                text = <"Produsent">
+                description = <"Produsenten av komponenten.">
+                comment = <"For eksempel \"Abbott\".">
+            >
+            ["at0152"] = <
+                text = <"Styrke (presentasjon)">
+                description = <"Styrken av legemiddelet eller legemiddelkomponenten, angitt som en brøk.">
+                comment = <"I noen tilfeller, som for flytende eller halvfaste legemidler, er nevneren i styrkebrøken en fysisk størrelse, for eksempel 2 mg/5 ml. I noen av disse tilfellene reflekterer nevneren også det faktiske volumet av komponenten: For det forrige eksempelet 5 ml. I dette tilfelles ville \"Styrke (konsentrasjon)\" vært 0,4 mg/ml.
+
+I andre tilfeller, der styrken involverer en nevner som ikke er en fysisk størrelse, for eksempen 4 mg/tablett, uttrykkes nevneren som verdien \"1\", med enheten \"1\", og \"tablett\" registreres i \"Presentasjonsenhet\"-elementet. Dette mønsteret ble valgt som en tilpasning til ISO IDMP-standarden.
+
+For eksempel 4 mg/tablett, 2 mg/5 ml, 100 mg/dose.">
+            >
+            ["at0153"] = <
+                text = <"Styrketeller">
+                description = <"Verdien av telleren i styrkebrøken.">
+                comment = <"For eksempel: For en presentasjonsstyrke på \"300 µg/0,3 ml\", er Styrketeller \"300\". For en presentasjonsstyrke på \"100 mg/tablett\", er Styrketeller \"100\".">
+            >
+            ["at0157"] = <
+                text = <"Styrkenevner">
+                description = <"Verdien av nevneren i styrkebrøken.">
+                comment = <"For eksempel: For en presentasjonsstyrke på \"300 µg/0,3 ml\", er Styrkenevner \"0,3\". For en presentasjonsstyrke på \"100 mg/tablett\", er Styrkenevner \"1\".">
+            >
+            ["at0158"] = <
+                text = <"Presentasjonsenhet">
+                description = <"Presentasjonsenheten for én dose av legemiddelet, for bruk sammen med elementet \"Styrkenevnerenhet\".">
+                comment = <"For eksempel \"tablett\", \"kapsel\" eller \"inhalasjon\". I de fleste tilfeller, som for tabletter og kapsler, vil presentasjonsenheten være lik formen. For noen legemiddelprodukter vil imidlertid formen være for eksempel \"inhalasjonspulver\", \"inhalasjonsaerosol\" eller \"inhalator\", mens presentasjonsenheten vil være \"inhalasjon\" eller \"dose\".">
+            >
+            ["at9001"] = <
+                text = <"* Concentration (en)">
+                description = <"* Concentration (en)">
+            >
+            ["at9021"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9000"] = <
+                text = <"Kategori (synthesised)">
+                description = <"Legemiddelet eller legemiddelkomponentens kategori med tanke på tilvirkning eller tilberedning, og antall ingredienser. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Rolle (synthesised)">
+                description = <"Legemiddelet eller legemiddelkomponentens rolle i en blanding eller infusjon. (synthesised)">
+            >
+        >
+        ["pt"] = <
+            ["at0000"] = <
+                text = <"*Medication(en)">
+                description = <"*Details about a medication or component of a medication, including strength, form, and details of any specific constituents.(en)">
+            >
+            ["at0001"] = <
+                text = <"*Combination pack(en)">
+                description = <"*The component consists of a number of separate products which are pre-packaged by the manufacturer.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Expiry(en)">
+                description = <"*The expiry date and/or time of the medication or medication component, as given by the manufacturer or individual preparing the mixture.(en)">
+                comment = <"*Any other form of expiry date, such as time from production or depending on storage environment, can be inserted using a specific CLUSTER archetype in the Substance Details slot or added as part of the Description.
+ For example: '2017-05-23'.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Strength numerator unit(en)">
+                description = <"*The unit of the numerator of the strength fraction.(en)">
+                comment = <"*The strength numerator is usually recorded using mass, volume or arbitrary units. For example: 'mg', 'ml', 'IU'. For a presentation strength of '300 µg/0.3 ml', the strength numerator unit is 'µg'. For a presentation strength of '100 mg/tablet', the strength numerator value is 'mg'.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Strength denominator unit(en)">
+                description = <"*The unit of the denominator of the strength fraction.(en)">
+                comment = <"*The strength denominator is usually recorded using mass or volume units. For example: 'g', 'ml'. For a presentation strength of '300 µg/0.3 ml', the strength denominator unit is 'ml'. For a presentation strength of '100 mg/tablet', the strength denominator unit is '1'. For this example, the 'Unit of presentation' element is used to record the presentation unit of the medication, 'tablet'.(en)">
+            >
+            ["at0007"] = <
+                text = <"*Alternate amount unit(en)">
+                description = <"*The unit of an equivalent representation of the amount of the medication or medication component.(en)">
+                comment = <"*The value of the alternate amount is recorded in the 'Alternate amount' element. For example: For a medication with a strength of '5mg/ml' and where the Amount is '1 ml', an alternate ingredient amount would be '5 mg'. In this case the 'Alternate amount unit' would be 'mg'.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Amount unit(en)">
+                description = <"*The unit of the amount of medication or medication component.(en)">
+                comment = <"*The value of the amount is recorded in the 'Amount value' element. For example: 'mg', 'ml', 'IU'.(en)">
+            >
+            ["at0071"] = <
+                text = <"*Form(en)">
+                description = <"*The formulation or presentation of the medication or medication component.(en)">
+                comment = <"*For example: 'tablet', 'capsule', 'cream', 'infusion fluid' or 'inhalation powder'. Coding of the form with a terminology is preferred, where possible. Medicines catalogues may differentiate between administrable form 'solution for injection' and product form 'powder for solution for injection'. The recorded form will depend on the exact context of use but administrable form is likely to be used in most instances.(en)">
+            >
+            ["at0080"] = <
+                text = <"Terapêutico">
+                description = <"Este elemento químico tem um efeito conhecido e considerado como positivo.">
+            >
+            ["at0083"] = <
+                text = <"Coadjuvante">
+                description = <"Este elemento químico é ativo mas apoia o efeito terapêutico de outro ingrediente.">
+            >
+            ["at0084"] = <
+                text = <"Diluente">
+                description = <"Diluente inerte.">
+            >
+            ["at0115"] = <
+                text = <"*Strength (concentration)(en)">
+                description = <"*The strength of the medication or medication component, as a concentration.(en)">
+                comment = <"*This element is used for liquid or semisolid medications, or medications intended to be diluted in a liquid before administration. For example: '10 mg/ml', '20 mg/g', '5 %', '10,000 SQ-U/ml'. (en)">
+            >
+            ["at0127"] = <
+                text = <"*Role(en)">
+                description = <"*The role of the constituent within the mixture or infusion.(en)">
+            >
+            ["at0132"] = <
+                text = <"*Name(en)">
+                description = <"*The name of the medication or medication component.(en)">
+                comment = <"*For example: 'Zinacef 750 mg powder' or 'cefuroxim'. This item should be coded if possible, using for example, RxNorm, DM+D, Australian Medicines Terminology or FEST. Usage of this element will vary according to context of use. This element may be omitted where the name of the medication is recorded in the parent INSTRUCTION or ACTION archetype, and this archetype is only used to record that the form must be or was 'liquid'.(en)">
+            >
+            ["at0133"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description of the medication or medication component where it is not possible to describe this fully using structured elements.(en)">
+            >
+            ["at0138"] = <
+                text = <"*Constituent details(en)">
+                description = <"*Details of the constituent.(en)">
+            >
+            ["at0139"] = <
+                text = <"*Amount(en)">
+                description = <"*The value of the amount of medication or medication component.(en)">
+                comment = <"*The unit of the amount is recorded in the Amount unit element. For example: '1', '1.5', '1000'.(en)">
+            >
+            ["at0141"] = <
+                text = <"*Structured details(en)">
+                description = <"*Additional details about the medication or medication component.(en)">
+                comment = <"*For example: detailed information about the drug class or intended routes, or additional expiry information.(en)">
+            >
+            ["at0142"] = <
+                text = <"*Category(en)">
+                description = <"*The category of the medication or medication component, with regard to manufacturing or preparation, and the number of ingredients.(en)">
+                comment = <"*For example: 'Paracetamol/codeine' is a Multi-ingredient product, while 'Morphine 60 mg + Haloperidol 2 mg + Midazolam 5 mg' is an Ad-hoc mixture, whose composition is fully specified within the order.(en)">
+            >
+            ["at0143"] = <
+                text = <"*Ad-hoc mixture(en)">
+                description = <"*The component is composed of a mixture of ingredients specified within the order.(en)">
+            >
+            ["at0144"] = <
+                text = <"*Multi-ingredient product(en)">
+                description = <"*The medication or medication component consists of a number of active ingredients which are pre-combined into a single form such as a tablet, cream or powder by the manufacturer, for example Paracetamol/codeine.(en)">
+            >
+            ["at0145"] = <
+                text = <"*Single-substance product(en)">
+                description = <"*The component is a manufactured product containing a single ingredient.(en)">
+            >
+            ["at0146"] = <
+                text = <"*Ingredient(en)">
+                description = <"*The medication or medication component is an individual ingredient of the medication. This term is used when the archetype is nested within a parent instance of itself, to describe the individual ingredients of a medication.(en)">
+            >
+            ["at0148"] = <
+                text = <"*Alternate amount(en)">
+                description = <"*The value of an equivalent representation of the amount of the medication or medication component.(en)">
+                comment = <"*The unit of the alternate amount is recorded in the 'Alternate amount unit' element. For example: for a medication with a strength of '5 mg/ml' and where the Amount is '1 ml', the equivalent amount would be 5 mg and the value recorded in this data element would be '5' .(en)">
+            >
+            ["at0150"] = <
+                text = <"*Batch ID(en)">
+                description = <"*The identifier assigned to the batch of medications by the manufacturer during production.(en)">
+            >
+            ["at0151"] = <
+                text = <"*Manufacturer(en)">
+                description = <"*The manufacturer of the component.(en)">
+                comment = <"*For example: 'Abbott'.(en)">
+            >
+            ["at0152"] = <
+                text = <"*Strength (presentation)(en)">
+                description = <"*The strength of the medication or medication component, expressed as a ratio.(en)">
+                comment = <"*In some cases, like for liquid or semisolid medications, the denominator of the strength ratio is a physical quantity, for example 2 mg/5 ml. In some of these cases the denominator also reflects the actual volume of the component: 5 ml in the previous example. In this case the 'Strength (concentration)' would be 0.4 mg/ml.
+
+
+
+In other cases, where the strength involves a denominator which is not a physical quantity, for example 4 mg/tablet, the denominator is expressed as a unitary value '1' with a unit of '1', and 'tablet' is carried in the 'Unit of presentation' element. This arrangement was chosen to align with the approach adopted by the ISO IDMP standard for medication catalogues.
+
+
+
+For example:  4 mg/tablet, 2 mg/5 ml, 100 mg/actuation.(en)">
+            >
+            ["at0153"] = <
+                text = <"*Strength numerator(en)">
+                description = <"*The value of the numerator of the strength fraction.(en)">
+                comment = <"*For example: For a presentation strength of '300 µg/0.3 ml', the strength numerator value is '300'. For a presentation strength of '100 mg/tablet', the strength numerator value is '100'.(en)">
+            >
+            ["at0157"] = <
+                text = <"*Strength denominator(en)">
+                description = <"*The value of the denominator of the strength fraction.(en)">
+                comment = <"*For example: For a presentation strength of '300 µg/0.3 ml', the strength denominator value is '0.3'. For a presentation strength of '100 mg/tablet', the strength denominator value is '1'.(en)">
+            >
+            ["at0158"] = <
+                text = <"*Unit of presentation(en)">
+                description = <"*The unit of presentation for a single dose of the medication, for use with the 'Strength denominator unit' element.(en)">
+                comment = <"*For example: 'tablet', 'capsule', 'puff', 'inhalation'. In most cases, like for tablets and capsules, the unit of presentation is identical to the Form. For some presentations such as inhalers, the Form may be 'inhalation powder', 'inhalation aerosol' or 'inhaler' while the unit of presentation is 'inhalation', 'puff', or 'dose'.(en)">
+            >
+            ["at9001"] = <
+                text = <"concentração">
+                description = <"concentração">
+            >
+            ["at9021"] = <
+                text = <"real qualificado">
+                description = <"real qualificado">
+            >
+            ["ac9000"] = <
+                text = <"*Category(en) (synthesised)">
+                description = <"*The category of the medication or medication component, with regard to manufacturing or preparation, and the number of ingredients.(en) (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"*Role(en) (synthesised)">
+                description = <"*The role of the constituent within the mixture or infusion.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Medication">
+                description = <"Details about a medication or component of a medication, including strength, form and details of any specific constituents.">
+            >
+            ["at0001"] = <
+                text = <"Combination product">
+                description = <"The medication or medication component consists of a number of separate products which are pre-packaged by the manufacturer, for example Canesten Combi.">
+            >
+            ["at0003"] = <
+                text = <"Expiry">
+                description = <"The expiry date and/or time of the medication or medication component, as given by the manufacturer or individual preparing the mixture.">
+                comment = <"Any other form of expiry date, such as time from production or depending on storage environment, can be inserted using a specific CLUSTER archetype in the Substance Details slot or added as part of the Description.
+ For example: '2017-05-23'.">
+            >
+            ["at0004"] = <
+                text = <"Strength numerator unit">
+                description = <"The unit of the numerator of the strength fraction.">
+                comment = <"The strength numerator is usually recorded using mass, volume or arbitrary units. For example: 'mg', 'ml', 'IU'. For a presentation strength of '300 µg/0.3 ml', the strength numerator unit is 'µg'. For a presentation strength of '100 mg/tablet', the strength numerator value is 'mg'.">
+            >
+            ["at0005"] = <
+                text = <"Strength denominator unit">
+                description = <"The unit of the denominator of the strength fraction.">
+                comment = <"The strength denominator is usually recorded using mass or volume units. For example: 'g', 'ml'. For a presentation strength of '300 µg/0.3 ml', the strength denominator unit is 'ml'. For a presentation strength of '100 mg/tablet', the strength denominator unit is '1'. For this example, the 'Unit of presentation' element is used to record the presentation unit of the medication, 'tablet'.">
+            >
+            ["at0007"] = <
+                text = <"Alternate amount unit">
+                description = <"The unit of an equivalent representation of the amount of the medication or medication component.">
+                comment = <"The value of the alternate amount is recorded in the 'Alternate amount' element. For example: for a medication with a strength of '5 mg/ml' and where the Amount is '1 ml', the equivalent amount would be 5 mg and the value recorded in this data element would be 'mg'.">
+            >
+            ["at0008"] = <
+                text = <"Amount unit">
+                description = <"The unit of the amount of medication or medication component.">
+                comment = <"For example: 'mg', 'ml', 'IU'.
+Note: The value of the amount is recorded using the 'Amount' element.">
+            >
+            ["at0071"] = <
+                text = <"Form">
+                description = <"The formulation or presentation of the medication or medication component.">
+                comment = <"For example: 'tablet', 'capsule', 'cream', 'infusion fluid' or 'inhalation powder'. Coding of the form with a terminology is preferred, where possible. Medicines catalogues may differentiate between administrable form 'solution for injection' and product form 'powder for solution for injection'. The recorded form will depend on the exact context of use but administrable form is likely to be used in most instances.">
+            >
+            ["at0080"] = <
+                text = <"Therapeutic">
+                description = <"Constituent that alone or in combination with one or more other ingredients is considered to fulfil the intended activity of a medicinal product.">
+            >
+            ["at0083"] = <
+                text = <"Adjuvant">
+                description = <"Constituent whose primary function is to modify the activity of an active constituent. An adjuvant constituent itself may or may not be therapeutically active.">
+            >
+            ["at0084"] = <
+                text = <"Excipient">
+                description = <"Constituent that is inert in relation to the intended activity of the medicinal product.">
+            >
+            ["at0115"] = <
+                text = <"Strength (concentration)">
+                description = <"The strength of the medication or medication component, as a concentration.">
+                comment = <"This element is used for liquid or semisolid medications, or medications intended to be diluted in a liquid before administration. For example: '10 mg/ml', '20 mg/g', '5 %', '10,000 SQ-U/ml'.">
+            >
+            ["at0127"] = <
+                text = <"Role">
+                description = <"The role of the medication or medication component within a mixture.">
+            >
+            ["at0132"] = <
+                text = <"Name">
+                description = <"The name of the medication or medication component.">
+                comment = <"For example: 'Zinacef 750 mg powder' or 'cefuroxim'. This item should be coded if possible, using for example, RxNorm, DM+D, Australian Medicines Terminology or FEST. Usage of this element will vary according to context of use. This element may be omitted where the name of the medication is recorded in the parent INSTRUCTION or ACTION archetype, and this archetype is only used to record that the form must be or was 'liquid'.">
+            >
+            ["at0133"] = <
+                text = <"Description">
+                description = <"Narrative description of the medication or medication component where it is not possible to describe this fully using structured elements.">
+            >
+            ["at0138"] = <
+                text = <"Constituent">
+                description = <"Details of an ingredient or product used to make up a mixed pack, preparation or infusion.">
+                comment = <"This slot is intended to be used to add details about constituents of the medication or medication component, using nested instances of this archetype. This is not normally required other than where a mixture is being described.">
+            >
+            ["at0139"] = <
+                text = <"Amount">
+                description = <"The value of the amount of medication or medication component.">
+                comment = <"For example: '1', '1.5', '1000'. 
+Note: the associated unit for this amount is recorded using the 'Amount unit' element.">
+            >
+            ["at0141"] = <
+                text = <"Structured details">
+                description = <"Additional details about the medication or medication component.">
+                comment = <"For example: detailed information about the drug class or intended routes, or additional expiry information.">
+            >
+            ["at0142"] = <
+                text = <"Category">
+                description = <"The category of the medication or medication component, with regard to manufacturing or preparation, and the number of ingredients.">
+                comment = <"For example: 'Paracetamol/codeine' is a Multi-ingredient product, while 'Morphine 60 mg + Haloperidol 2 mg + Midazolam 5 mg' is an Ad-hoc mixture, whose composition is fully specified within the order.">
+            >
+            ["at0143"] = <
+                text = <"Ad-hoc mixture">
+                description = <"The medication or medication component is composed of a mixture of ingredients specified within the order. These are typically prepared by pharmacy or ward personnel to suit individual patients.">
+            >
+            ["at0144"] = <
+                text = <"Multi-ingredient product">
+                description = <"The medication or medication component consists of a number of active ingredients which are pre-combined into a single form such as a tablet, cream or powder by the manufacturer, for example Paracetamol/codeine.">
+            >
+            ["at0145"] = <
+                text = <"Single-ingredient product">
+                description = <"The medication or medication component is a manufactured product containing a single active ingredient.">
+            >
+            ["at0146"] = <
+                text = <"Ingredient">
+                description = <"The medication or medication component is an individual ingredient of the medication. This term is used when the archetype is nested within a parent instance of itself, to describe the individual ingredients of a medication.">
+            >
+            ["at0148"] = <
+                text = <"Alternate amount">
+                description = <"The value of an equivalent representation of the amount of the medication or medication component.">
+                comment = <"The unit of the alternate amount is recorded in the 'Alternate amount unit' element. For example: for a medication with a strength of '5 mg/ml' and where the Amount is '1 ml', the equivalent amount would be 5 mg and the value recorded in this data element would be '5'.">
+            >
+            ["at0150"] = <
+                text = <"Batch ID">
+                description = <"The identifier assigned to the production batch by the manufacturer during production.">
+            >
+            ["at0151"] = <
+                text = <"Manufacturer">
+                description = <"The manufacturer of the medication or medication component.">
+                comment = <"For example: 'Abbott'.">
+            >
+            ["at0152"] = <
+                text = <"Strength (presentation)">
+                description = <"The strength of the medication or medication component, expressed as a ratio.">
+                comment = <"In some cases, as for liquid or semisolid medications, the denominator of the strength ratio is a physical quantity, for example 2 mg/5 ml. In some of these cases the denominator also reflects the actual volume of the component: 5 ml in the previous example. In this case the 'Strength (concentration)' would be 0.4 mg/ml. In other cases, where the strength involves a denominator which is not a physical quantity, for example 4 mg/tablet, the denominator is expressed as a unitary value '1' with a unit of '1', and 'tablet' is carried in the 'Unit of presentation' element. This arrangement was chosen to align with the approach adopted by the ISO IDMP standard for medication catalogues.">
+            >
+            ["at0153"] = <
+                text = <"Strength numerator">
+                description = <"The value of the numerator of the strength fraction.">
+                comment = <"For example: For a presentation strength of '300 µg/0.3 ml', the strength numerator value is '300'. For a presentation strength of '100 mg/tablet', the strength numerator value is '100'.">
+            >
+            ["at0157"] = <
+                text = <"Strength denominator">
+                description = <"The value of the denominator of the strength fraction.">
+                comment = <"For example: For a presentation strength of '300 µg/0.3 ml', the strength denominator value is '0.3'. For a presentation strength of '100 mg/tablet', the strength denominator value is '1'.">
+            >
+            ["at0158"] = <
+                text = <"Unit of presentation">
+                description = <"The unit of presentation for a single dose of the medication, for use with the 'Strength denominator unit' element.">
+                comment = <"For example: 'tablet', 'capsule', 'puff', 'inhalation'. In most cases, like for tablets and capsules, the unit of presentation is identical to the Form. For some presentations such as inhalers, the Form may be 'inhalation powder', 'inhalation aerosol' or 'inhaler' while the unit of presentation is 'inhalation', 'puff', or 'dose'.">
+            >
+            ["at9001"] = <
+                text = <"Concentration">
+                description = <"Concentration">
+            >
+            ["at9021"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9000"] = <
+                text = <"Category (synthesised)">
+                description = <"The category of the medication or medication component, with regard to manufacturing or preparation, and the number of ingredients. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Role (synthesised)">
+                description = <"The role of the medication or medication component within a mixture. (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Medicatie">
+                description = <"Gegevens over een medicament of onderdeel van een medicament, inclusief dosis, vorm en details over een specifiek bestandsdeel.">
+            >
+            ["at0001"] = <
+                text = <"Combinatie product">
+                description = <"Het medicament of medicatie bestanddeel bestaat uit een aantal onafhankelijke producten die voorverpakt zijn door de fabrikant, bijvoorbeeld 'Canesten Combi'.">
+            >
+            ["at0003"] = <
+                text = <"Houdbaarheid">
+                description = <"De houdbaarheidsdatum en/of tijd van het medicament of medicatie bestanddeel, zoals bepaald door de fabrikant of het individu dat het mengsel bereidt.">
+                comment = <"*Any other form of expiry date, such as time from production or depending on storage environment, can be inserted using a specific CLUSTER archetype in the Substance Details slot or added as part of the Description.
+ For example: '2017-05-23'. (en)">
+            >
+            ["at0004"] = <
+                text = <"Dosis teller eenheid">
+                description = <"De eenheid van de teller van de dosis ratio.">
+                comment = <"De dosis teller wordt meestal vastgelegd als massa, volume of arbitraire eenheid. Bijvoorbeeld: 'mg', 'ml', 'IU'. Voor een presentatiedosis van '300 µg/0,3 ml', is de dosis noemer eenheid 'µg'. Voor een presentatie dosis van '100 mg/tablet', de dosis noemer waarde is 'mg'.">
+            >
+            ["at0005"] = <
+                text = <"Dosis noemer eenheid">
+                description = <"De eenheid van de noemer van de dosis ratio.">
+                comment = <"De dosis noemer wordt meestal vastgelegd middels massa of volume eenheden. Bijvoorbeeld: 'g' of 'ml'. Voor een presentatie dosis van '300 µg/0,3 ml' is de dosis noemer eenheid 'ml'. Voor een presentatie dosis van '100 mg/tablet', is de dosis noemer eenheid '1'. In dit voorbeeld, wordt het 'presentatie eenheid' element gebruikt voor het vastleggen van de eenheid van presentatie van het medicament: 'tablet'.">
+            >
+            ["at0007"] = <
+                text = <"Alternatieve eenheid van de hoeveelheid">
+                description = <"De eenheid van de equivalente vorm van de hoeveelheid van het medicament of het medicatie bestanddeel.">
+                comment = <"*The value of the alternate amount is recorded in the 'Alternate amount' element. For example: for a medication with a strength of '5 mg/ml' and where the Amount is '1 ml', the equivalent amount would be 5 mg and the value recorded in this data element would be 'mg'. (en)">
+            >
+            ["at0008"] = <
+                text = <"Eenheid van de hoeveelheid">
+                description = <"De eenheid van de hoeveelheid van het medicament of het medicatie bestanddeel.">
+                comment = <"Bijvoorbeeld: 'mg', 'ml', 'IU'.
+NB: de waarde van de hoeveelheid wordt vastgelegd middels het 'Hoeveelheid' element.">
+            >
+            ["at0071"] = <
+                text = <"Vorm">
+                description = <"De vorm waarin het medicament of medicatie bestandsdeel aangeboden wordt.">
+                comment = <"Bijvoorbeeld: 'tablet', 'capsule', 'creme', 'infusie vloeistof' of 'inhalatie poeder'. Coderen van de vorm met een terminology verdient de voorkeur, indien mogelijk. Medicatie formularia kunnen onderscheid maken tussen vormen die toegediend kunnen worden: 'oplossing voor injectie' en productvormen: 'poeder voor oplossing voor injectie'. De vastgelegde vorm zal afhangen van de specifieke gebruikscontext maar toedienbare vorm zal waarschijnlijk het meest gebruikt worden.">
+            >
+            ["at0080"] = <
+                text = <"Therapeuticum">
+                description = <"*Constituent that alone or in combination with one or more other ingredients is considered to fulfil the intended activity of a medicinal product. (en)">
+            >
+            ["at0083"] = <
+                text = <"Adjuvans">
+                description = <"*Constituent whose primary function is to modify the activity of an active constituent. An adjuvant constituent itself may or may not be therapeutically active.">
+            >
+            ["at0084"] = <
+                text = <"*Excipient (en)">
+                description = <"*Constituent that is inert in relation to the intended activity of the medicinal product. (en)">
+            >
+            ["at0115"] = <
+                text = <"Dosis (concentratie)">
+                description = <"*The strength of the medication or medication component, as a concentration. (en)">
+                comment = <"*This element is used for liquid or semisolid medications, or medications intended to be diluted in a liquid before administration. For example: '10 mg/ml', '20 mg/g', '5 %', '10,000 SQ-U/ml'. (en)">
+            >
+            ["at0127"] = <
+                text = <"Rol">
+                description = <"De rol van het medicament of het medicatie bestanddeel in een mengsel.">
+            >
+            ["at0132"] = <
+                text = <"Naam">
+                description = <"De naam van het medicament of medicatie bestandsdeel.">
+                comment = <"Bijvoorbeeld: 'Zinacef 750mg poeder' of 'cefuroxim'. Dit veld dient, indien mogelijk, gecodeerd te worden met behulp van bijvoorbeeld RxNorm, DM+D, Autralian Medicines Terminology, FEST of de G-Standaard. Gebruik van dit veld zal verschillen per gebruikscontext. Dit element can overgeslagen worden wanneer de naam van het medicament vastgelegd is in het bovenliggende INSTRUCTION of ACTION archetype en dit archetype zelf alleen gebruikt wordt voor het vastleggen dat de vorm 'vloeibaar' is, of dient te zijn.">
+            >
+            ["at0133"] = <
+                text = <"Beschrijving">
+                description = <"*Narrative description of the medication or medication component where it is not possible to describe this fully using structured elements. (en)">
+            >
+            ["at0138"] = <
+                text = <"Bestanddeel">
+                description = <"Gegevens over een bestanddeel of product als onderdeel van een gemengde strip, bereiding of infusie.">
+                comment = <"*This slot is intended to be used to add details about constituents of the medication or medication component, using nested instances of this archetype. This is not normally required other than where a mixture is being described. (en)">
+            >
+            ["at0139"] = <
+                text = <"Hoeveelheid">
+                description = <"De waarde van de hoeveelheid medicatie of van het medicatie bestanddeel.">
+                comment = <"*For example: '1', '1.5', '1000'. 
+Note: the associated unit for this amount is recorded using the 'Amount unit' element. (en)">
+            >
+            ["at0141"] = <
+                text = <"*Structured details (en)">
+                description = <"*Additional details about the medication or medication component. (en)">
+                comment = <"*For example: detailed information about the drug class or intended routes, or additional expiry information. (en)">
+            >
+            ["at0142"] = <
+                text = <"Categorie">
+                description = <"De categorie van het medicament of het medicatie bestandsdeel, gerelateerd aan fabricage of bereiding en het aantal bestandsdelen.">
+                comment = <"Bijvoorbeeld: 'Paracetamol/codeïne' is een combinatiepreparaat, terwijl 'Morphine 60mg + Haloperidol 2 mg +Midazolam 5 mg' een ad-hoc mix is waarvan de samenstelling in het recept wordt beschreven.">
+            >
+            ["at0143"] = <
+                text = <"Ad-hoc mengsel">
+                description = <"Het medicament of medicatie bestandsdeel bestaat uit een mengsel van bestanddelen vastgelegd in het recept. Deze worden normaal specifiek voor een patient bereidt door apotheek- of verpleegafdelingspersoneel.">
+            >
+            ["at0144"] = <
+                text = <"Samengesteld product">
+                description = <"Het medicament of het medicatie bestanddeel bestaat uit een aantal actieve onderdelen die in enkele vorm zoals een table, creme of poeder, bereid zijn door de fabrikant, bijvoorbeeld 'Paracetamol/codeïne'.">
+            >
+            ["at0145"] = <
+                text = <"Enkelvoudig productie">
+                description = <"Een medicament of medicatie bestanddeel is een gefabriceerd product dat een enkel actief bestanddeel bevat.">
+            >
+            ["at0146"] = <
+                text = <"Bestanddeel">
+                description = <"Het medicament of het medicatie bestanddeel is een enkel bestanddeel van het medicament. Deze term wordt gebruikt wanneer het archetype onderdeel is van een 'parent instance' van zichzelf, voor het beschrijven van individuele bestanddelen van een medicament.">
+            >
+            ["at0148"] = <
+                text = <"Alternatieve hoeveelheid">
+                description = <"De waarde van een equivalente vorm van de hoeveelheid van het medicament of het medicatie bestanddeel.">
+                comment = <"*The unit of the alternate amount is recorded in the 'Alternate amount unit' element. For example: for a medication with a strength of '5 mg/ml' and where the Amount is '1 ml', the equivalent amount would be 5 mg and the value recorded in this data element would be '5'. (en)">
+            >
+            ["at0150"] = <
+                text = <"Batch ID">
+                description = <"De identificatie toegewezen aan de productie batch door de fabrikant tijdens de productie. Ook wel partij-, lot- of chargenummer genoemd.">
+            >
+            ["at0151"] = <
+                text = <"Fabrikant">
+                description = <"De fabrikant van het medicament of medicatie bestanddeel.">
+                comment = <"Bijvoorbeeld: 'Abbott'.">
+            >
+            ["at0152"] = <
+                text = <"Dosis (presentatie)">
+                description = <"De dosis van het medicament of medicatie bestanddeel, uitgedrukt als een ratio.">
+                comment = <"*In some cases, as for liquid or semisolid medications, the denominator of the strength ratio is a physical quantity, for example 2 mg/5 ml. In some of these cases the denominator also reflects the actual volume of the component: 5 ml in the previous example. In this case the 'Strength (concentration)' would be 0.4 mg/ml. In other cases, where the strength involves a denominator which is not a physical quantity, for example 4 mg/tablet, the denominator is expressed as a unitary value '1' with a unit of '1', and 'tablet' is carried in the 'Unit of presentation' element. This arrangement was chosen to align with the approach adopted by the ISO IDMP standard for medication catalogues. (en)">
+            >
+            ["at0153"] = <
+                text = <"Dosis teller">
+                description = <"De waarde van de teller van de dosis ratio.">
+                comment = <"Bijvoorbeeld: voor een presentatie dosis van '300 µg/0,3 ml', is de dosis teller '300'. Voor een presentatie dosis van '100 mg/tablet', is de dosis teller waarde '100'.">
+            >
+            ["at0157"] = <
+                text = <"Dosis noemer">
+                description = <"De waarde van de noemer van de dosis ratio.">
+                comment = <"Bijvoorbeeld: voor een presentatie dosis van '300 µg/0,3 ml', is de dosis noemer waarde '0,3'. Voor een presentatie dosis van '100 mg/tablet', is de dosis noemer waarde '1'.">
+            >
+            ["at0158"] = <
+                text = <"Eenheid van presentatie">
+                description = <"De eenheid van presentatie voor een enkele toediening van het medicament, te gebruiken met het 'Dosis noemer eenheid' element.">
+                comment = <"Bijvoorbeeld: 'tablet', 'capsule' 'pufje' of 'inhalatie'. In de meeste gevallen, zoals voor tabletten of capsules, is de eenheid van presentatie gelijk aan de vorm. Voor sommige presentaties zoals inhalators kan de vorm 'inhalatiepoeder, 'inhalatie aerosol' of 'inhalator' zijn terwijl de eenheid van presentatie 'inhalatie', 'pufje' of 'dosis' is.">
+            >
+            ["at9001"] = <
+                text = <"* Concentration (en)">
+                description = <"* Concentration (en)">
+            >
+            ["at9021"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9000"] = <
+                text = <"Categorie (synthesised)">
+                description = <"De categorie van het medicament of het medicatie bestandsdeel, gerelateerd aan fabricage of bereiding en het aantal bestandsdelen. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Rol (synthesised)">
+                description = <"De rol van het medicament of het medicatie bestanddeel in een mengsel. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/119>
+            ["at9021"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0143", "at0146", "at0144", "at0145", "at0001">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0080", "at0083", "at0084">
+        >
+    >

@@ -195,7 +195,6 @@ definition
 		}
 	}
 
-
 ontology
 	terminologies_available = <"SNOMED-CT", ...>
 	term_definitions = <

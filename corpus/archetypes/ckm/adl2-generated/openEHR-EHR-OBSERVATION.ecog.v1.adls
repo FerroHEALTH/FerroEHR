@@ -1,0 +1,581 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=800383fa-4560-47d7-9720-3d6e45273f4e; build_uid=2335388b-31ab-4f2e-af3d-50dd52be6134)
+    openEHR-EHR-OBSERVATION.ecog.v1.0.5
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Eva-Maria Rieß">
+                ["organisation"] = <"Universitätsmedizin Göttingen">
+                ["email"] = <"eva-maria.riess@med.uni-goettingen.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Oscar Karlsson">
+                ["organisation"] = <"Karolinska Universitetssjukhuset">
+                ["email"] = <"oscar.karlsson@regionstockholm.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Bergen HF">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Bassem Khouzam, Vanessa Pereira">
+                ["organisation"] = <"Medtronic, Better - Pathfinder">
+                ["email"] = <"bassem.khouzam@medtronic.com, vanessapereira@protonmail.com">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Christian Ghan">
+        ["organisation"] = <"The Chris O'Brien Lifehouse at RPA">
+        ["email"] = <"christian.ghan@lifehouserpa.org.au">
+        ["date"] = <"2012-12-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Bjørn Christensen, Helse Bergen HF, Norway", "Kristin Eik, Kreftregisteret, Norway", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Hilde Hollås, DIPS AS, Norway", "Alfred Honore, Haukeland, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Thomas Kilvær, Universitetssykehuset Nord Norge, Norway", "Siri Laronningen, Kreftregisteret, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Cailin Lowry, Lifehouse, Australia", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Omar Peña-Curiel, TECSalud, Mexico", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Laila Storesund, Haraldsplass diakonale sykehus, Norway", "Nyree Taylor, Ocean Informatics, Australia", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"deprecated">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Oken, M.M., Creech, R.H., Tormey, D.C., Horton, J., Davis, T.E., McFadden, E.T., Carbone, P.P.: Toxicity And Response Criteria Of The Eastern Cooperative Oncology Group. Am J Clin Oncol 5:649-655, 1982.">
+        ["2"] = <"Cowap, Jane, Janet R. Hardy, and Roger A'Hern. \"Outcome of malignant spinal cord compression at a cancer center: implications for palliative care services.\" Journal of pain and symptom management 19.4 (2000): 257-264.">
+        ["3"] = <"http://www.ecog.org/general/perf_stat.html">
+        ["4"] = <"The Norwegian translation is based on: Helsedirektoratet (2016). Nasjonalt handlingsprogram med retningslinjer for diagnostikk, behandling og oppfølging av lungekreft, mesoteliom og thymom. IS-2487. Oslo: Helsedirektoratet. Hentet fra: www.helsebiblioteket.no/retningslinjer/lungekreft/diagnostikk-og-utredning/funksjonsstatus-performance-stadium-%28PS%29">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"915F1B547D5707B2C16255ADCC567E24">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation der funktionellen Leistungsfähigkeit von diagnostizierten Krebspatienten.">
+            keywords = <"Performance", "Status", "Onkologie", "WHO", "Zubrod", "Weltgesundheitsorganisation", "Zubrod-Skala">
+            use = <"Zur Darstellung der funktionellen Leistungsfähigkeit von Krebspatienten um:
+- zu bewerten wie die Erkrankung des Patienten voranschreitet;
+- zu bewerten wie die Erkrankung die Fähigkeiten des täglichen Lebens beeinflusst; und
+- um eine angemessene Behandlung und Prognose festzulegen.
+
+Der \"ECOG Performance Status\" ist öffentliches Eigentum und daher öffentlich nutzbar. Für mehr Informationen kontaktieren sie die Eastern Cooperative Oncology Group, Robert Comis M.D., Group Chair - http://www.ecog.org/general/perf_stat.html.">
+            misuse = <"">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera mätningen av funktionsstatus hos en patient med cancerdiagnos.">
+            keywords = <"funktion", "status", "onkologi", "who", "zubrod", "World Health Organization", "Världshälsoorganisationen">
+            use = <"Används för att registrera mätningen av funktionsstatus hos en patient med cancerdiagnos, i syfte att:
+- bedöma hur patientens sjukdom utvecklas,
+- bedöma hur sjukdomen påverkar patientens förmåga att klara dagliga aktiviteter, samt
+- fastställa lämplig behandling och prognos.
+
+Funktionsstatus enligt ECOG är inte skyddat av upphovsrätt och är därmed fritt tillgängligt för allmänt bruk. För mer information, kontakta Eastern Cooperative Oncology Group, Robert Comis M.D., Group Chair – http://www.ecog.org/general/perf_stat.html.">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere funksjonsstatus hos en pasient med kreft.">
+            keywords = <"prestasjon", "prestasjonsevne", "status", "onkologi", "zubrod", "performance status", "World Health Organization">
+            use = <"Brukes for å registrere funksjonsstatus hos en pasient med kreft for å:
+- vurdere hvordan pasientens sykdom utvikler seg.
+- vurdere hvordan sykdommen påvirker pasientens evne til å fungere i dagliglivet.
+- vurdere passende behandling og prognose.
+
+Erklæring om opphavsrett: ECOG performance status er ikke beheftet med opphavsrett og derfor tilgjengelig for offentlig bruk. 
+For mer informasjon kontakt: The Eastern Cooperative Oncology Group, Robert Comis M.D., Group Chair - http://www.ecog.org/general/perf_stat.html.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the measurement of the functional performance status of a patient with a diagnosis of cancer.">
+            keywords = <"performance", "status", "oncology", "who", "zubrod", "World Health Organization">
+            use = <"Used to record the measurement of the functional performance status of a patient with a diagnosis of cancer, to:
+- assess how a patient's disease is progressing;
+- assess how the disease affects the daily living abilities of the patient; and 
+- determine appropriate treatment and prognosis. 
+
+The ECOG performance status is in the public domain therefore available for public use. For more information, contact the Eastern Cooperative Oncology Group, Robert Comis M.D., Group Chair - http://www.ecog.org/general/perf_stat.html.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"*To record the measurement of the functional performance status of a patient with a diagnosis of cancer.(en)">
+            keywords = <"performance", "statut", "oncologie", "WHO", "Zubrod", "World Health Organization">
+            use = <"*Used to record the measurement of the functional performance status of a patient with a diagnosis of cancer, to:
+- assess how a patient's disease is progressing;
+- assess how the disease affects the daily living abilities of the patient; and 
+- determine appropriate treatment and prognosis. 
+
+The ECOG performance status is in the public domain therefore available for public use. For more information, contact the Eastern Cooperative Oncology Group, Robert Comis M.D., Group Chair - http://www.ecog.org/general/perf_stat.html.(en)">
+            misuse = <"">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Enregistrar el mesurament de l'estat funcional d'un pacient diagnosticat de càncer.">
+            keywords = <"exercici", "estat", "oncologia", "OMS", "Zubrod", "Organització Mundial de la Salut">
+            use = <"S'utilitza per registrar el mesurament de l'estat funcional d'un pacient diagnosticat de càncer per:
+- avaluar com progressa la malaltia d'un pacient;
+- avaluar com la malaltia afecta les capacitats de la vida diària del pacient; i
+- determinar el pronòstic i el tractament adequats.
+
+L'estat d'acompliment ECOG és de domini públic i, per tant, està disponible per a ús públic. Per obtenir més informació, contacteu amb l'Eastern Cooperative Oncology Group, Robert Comis M.D., president del grup: http://www.ecog.org/general/perf_stat.html.">
+            misuse = <"">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar la medición del estado funcional de un paciente diagnosticado de cáncer.">
+            keywords = <"desempeño", "estado", "oncología", "OMS", "Zubrod", "Organización Mundial de la Salud">
+            use = <"Se utiliza para registrar la medición del estado funcional de un paciente diagnosticado de cáncer, para:
+- evaluar cómo progresa la enfermedad de un paciente;
+- evaluar cómo la enfermedad afecta a las capacidades de la vida diaria del paciente; y
+- determinar el pronóstico y tratamiento adecuados.
+
+El estado de desempeño ECOG es de dominio público, y, por lo tanto, está disponible para uso público. Para obtener más información, contactar con el Eastern Cooperative Oncology Group, Robert Comis M.D., presidente del grupo: http://www.ecog.org/general/perf_stat.html.">
+            misuse = <"">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- ECOG performance status
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- ECOG performance status
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Asymptomatic
+                                                    [{1}, {[at0006]}],    -- Symptomatic, fully ambulatory
+                                                    [{2}, {[at0007]}],    -- Symptomatic, in bed <50% of the day
+                                                    [{3}, {[at0008]}],    -- Symptomatic, in bed >50% of the day (but not bedridden)
+                                                    [{4}, {[at0009]}],    -- Bedridden
+                                                    [{5}, {[at0010]}]    -- Dead
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0011] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0012] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"ECOG Performance Status">
+                description = <"Eine Skala die von klinischem Personal verwendet wird, um die funktionelle Leistungsfähigkeit von diagnostizierten Krebspatienten zu bewerten. Auch bekannt als WHO- oder Zubrod-Skala.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann. 
+">
+            >
+            ["at0004"] = <
+                text = <"ECOG Performance Status">
+                description = <"Der funktionelle Leistungsstatus von diagnostizierten Krebspatienten.">
+            >
+            ["at0005"] = <
+                text = <"Asymptomatisch">
+                description = <"Uneingeschränkt aktiv und in der Lage alle Aktivitäten, wie vor der Erkrankung, ohne Einschränkungen weiterzuführen.">
+            >
+            ["at0006"] = <
+                text = <"Symptomatisch, vollkommen gehfähig">
+                description = <"Bei körperlicher Anstrengung eingeschränkt, aber gehfähig und in der Lage leichte oder im Sitzen durchgeführte Arbeiten auszuführen, wie z.B. leichte Hausarbeit, Büroarbeit.">
+            >
+            ["at0007"] = <
+                text = <"Symptomatisch, tagsüber <50% im Bett">
+                description = <"Gehfähig und zur Selbstversorgung in der Lage, aber nicht arbeitsfähig. Aufstehen ist mehr als 50% der Wachzeit möglich.">
+            >
+            ["at0008"] = <
+                text = <"Symptomatisch, >50% der Zeit im Bett (aber nicht bettlägerig)">
+                description = <"Zu eingeschränkter Selbstversorgung in der Lage. Während der Wachzeit 50% der Zeit oder länger an Bett oder Stuhl gebunden.">
+            >
+            ["at0009"] = <
+                text = <"Bettlägerig">
+                description = <"Vollständig pflegebedürftig; Nicht zur Selbstversorgung in der Lage. Vollkommen an Bett oder Stuhl gebunden.">
+            >
+            ["at0010"] = <
+                text = <"Tot">
+                description = <"Der Patient ist verstorben.">
+            >
+            ["at0012"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at0013"] = <
+                text = <"Kommentar">
+                description = <"Weitere Schilderungen zum allgemeinen ECOG Performance Staus, die nicht durch andere Felder abgedeckt werden.">
+            >
+            ["ac9001"] = <
+                text = <"ECOG Performance Status (synthesised)">
+                description = <"Der funktionelle Leistungsstatus von diagnostizierten Krebspatienten. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Funktionsstatus enligt ECOG">
+                description = <"En skala som används av kliniker för att bedöma funktionsstatus hos en patient med en cancerdiagnos. Kallas även \"WHO performance status\" eller \"Zubrods funktionsstatus\". ECOG står för Eastern Cooperative Oncology Group.">
+            >
+            ["at0002"] = <
+                text = <"Ospecificerad händelse">
+                description = <"Ospecificerad standardhändelse vid en tidpunkt eller inom ett tidsintervall som explicit kan definieras i en mall eller genereras automatiskt av vissa IT-system.">
+            >
+            ["at0004"] = <
+                text = <"Funktionsstatus enligt ECOG">
+                description = <"Bedömd funktionsstatus enligt ECOG hos patienten med cancerdiagnos.">
+            >
+            ["at0005"] = <
+                text = <"Asymtomatisk">
+                description = <"Fullt aktiv, kan utföra alla aktiviteter som innan sjukdomen debuterade, utan restriktioner.">
+            >
+            ["at0006"] = <
+                text = <"Symtomatisk men fullt rörlig">
+                description = <"Begränsningar i fysiskt krävande aktiviteter men rörlig och kan utföra lättare arbeten, till exempel lättare hushållsarbete, kontorsarbete.">
+            >
+            ["at0007"] = <
+                text = <"Symtomatisk, tillbringar mindre än 50 % av tiden i sängen under dagtid">
+                description = <"Rörlig och kan ta hand om sig själv men inte utföra något arbete, är uppegående mer än 50 % under dagtid.">
+            >
+            ["at0008"] = <
+                text = <"Symtomatisk, är inte sängbunden men tillbringar mer än 50 % av tiden till sängs">
+                description = <"Kapabel till begränsad självskötsel, ligger till sängs eller sitter i stol 50 % eller mer under dagtid.">
+            >
+            ["at0009"] = <
+                text = <"Sängbunden">
+                description = <"Kan inte utföra någon självskötsel.">
+            >
+            ["at0010"] = <
+                text = <"Avliden">
+                description = <"Patienten har avlidit.">
+            >
+            ["at0012"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.">
+            >
+            ["at0013"] = <
+                text = <"Kommentar">
+                description = <"Kommentarer avseende funktionsstatus enligt ECOG som inte beskrivs i övriga fält.">
+            >
+            ["ac9001"] = <
+                text = <"Funktionsstatus enligt ECOG (synthesised)">
+                description = <"Bedömd funktionsstatus enligt ECOG hos patienten med cancerdiagnos. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"ECOG funksjonsstatus">
+                description = <"En skala benyttet av klinikere for å vurdere funksjonsstatus hos en pasient med kreft. Også kjent som WHO performance status eller Zubrod perfomance status.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"ECOG funksjonsstatus">
+                description = <"Funksjonsstatus hos en pasient med kreft.">
+            >
+            ["at0005"] = <
+                text = <"Asymptomatisk">
+                description = <"I stand til å utføre enhver normal aktivitet uten begrensning.">
+            >
+            ["at0006"] = <
+                text = <"Symptomatisk, fullt oppegående">
+                description = <"Ikke i stand til fysisk krevende aktivitet, men oppegående og i stand til å utføre lett arbeid.">
+            >
+            ["at0007"] = <
+                text = <"Symptomatisk, sengeliggende <50 % av våken tid">
+                description = <"Oppegående og i stand til all egenpleie, men ikke i stand til noe arbeid; oppe og i bevegelse mer enn 50% av våken tid.">
+            >
+            ["at0008"] = <
+                text = <"Symptomatisk, sengeliggende > 50 % av våken tid">
+                description = <"Bare i stand til begrenset egenpleie, bundet til seng eller stol > 50 % av våken tid.">
+            >
+            ["at0009"] = <
+                text = <"Helt sengeliggende">
+                description = <"Helt hjelpetrengende; klarer ikke noen egenpleie; helt bundet til seng eller stol.">
+            >
+            ["at0010"] = <
+                text = <"Død">
+                description = <"Pasienten er død.">
+            >
+            ["at0012"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0013"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere kommentar til ECOG funksjonsstatus som ikke er fanget opp i andre felt.">
+            >
+            ["ac9001"] = <
+                text = <"ECOG funksjonsstatus (synthesised)">
+                description = <"Funksjonsstatus hos en pasient med kreft. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"ECOG performance status">
+                description = <"A scale used by clinicians to assess the functional performance status of a patient with a diagnosis of cancer. Also known as the WHO performance status or Zubrod performance status.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"ECOG performance status">
+                description = <"The functional performance status of a patient with a diagnosis of cancer.">
+            >
+            ["at0005"] = <
+                text = <"Asymptomatic">
+                description = <"Fully active, able to carry on all pre-disease performance without restriction.">
+            >
+            ["at0006"] = <
+                text = <"Symptomatic, fully ambulatory">
+                description = <"Restricted in physically strenuous activity but ambulatory and able to carry out work of a light or sedentary nature, e.g., light house work, office work.">
+            >
+            ["at0007"] = <
+                text = <"Symptomatic, in bed <50% of the day">
+                description = <"Ambulatory and capable of all selfcare but unable to carry out any work activities; up and about more than 50% of waking hours.">
+            >
+            ["at0008"] = <
+                text = <"Symptomatic, in bed >50% of the day (but not bedridden)">
+                description = <"Capable of only limited selfcare; confined to bed or chair more than 50% of waking hours.">
+            >
+            ["at0009"] = <
+                text = <"Bedridden">
+                description = <"Completely disabled; cannot carry on any selfcare; totally confined to bed or chair.">
+            >
+            ["at0010"] = <
+                text = <"Dead">
+                description = <"Patient has died.">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0013"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the overall ECOG performance status not captured in other fields.">
+            >
+            ["ac9001"] = <
+                text = <"ECOG performance status (synthesised)">
+                description = <"The functional performance status of a patient with a diagnosis of cancer. (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"État des performances de l'ECOG">
+                description = <"Échelle utilisée par les cliniciens pour évaluer l'état des performances fonctionnelles d'un patient diagnostiqué comme ayant un cancer. Également connue sous le nom de statut de performance de WHO ou de statut de performance de Zubrod.">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"État des performances de l'ECOG">
+                description = <"L'état de performance fonctionnelle d'un patient diagnostiqué comme ayant un cancer.">
+            >
+            ["at0005"] = <
+                text = <"Asymptomatique">
+                description = <"Entièrement actif, capable de maintenir toutes ses performances avant la maladie sans restriction.">
+            >
+            ["at0006"] = <
+                text = <"Symptomatique, entièrement ambulatoire">
+                description = <"Limité dans ses activités physiques pénibles mais ambulatoire et capable d'effectuer des travaux de nature légère ou sédentaire, par exemple des travaux légers à la maison ou au bureau.">
+            >
+            ["at0007"] = <
+                text = <"Symptomatique, au lit <50% de la journée">
+                description = <"Ambulatoire et capable de prendre soin de soi-même, mais incapable d'effectuer des activités professionnelles, et ce pendant plus de 50 % des heures de veille.">
+            >
+            ["at0008"] = <
+                text = <"Symptomatique, au lit >50% de la journée (mais pas alité)">
+                description = <"Capable de prendre soin de soi de manière limitée seulement ; confiné au lit ou à une chaise pendant plus de 50 % des heures de veille.">
+            >
+            ["at0009"] = <
+                text = <"Bedridden">
+                description = <"Complètement handicapé ; ne peut pas prendre soin de lui-même ; totalement alité ou confiné à une chaise.">
+            >
+            ["at0010"] = <
+                text = <"Mort">
+                description = <"Le patient est décédé.">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires requises pour saisir le contenu local ou pour s'aligner sur d'autres modèles/formalismes de référence.">
+                comment = <"Par exemple : exigences locales en matière d'information ou métadonnées supplémentaires à aligner sur les équivalents FHIR ou CIMI.">
+            >
+            ["at0013"] = <
+                text = <"Commentaire">
+                description = <"Informations supplémentaires sur l'état général des performances de l'ECOG qui ne sont pas saisies dans d'autres champs.">
+            >
+            ["ac9001"] = <
+                text = <"État des performances de l'ECOG (synthesised)">
+                description = <"L'état de performance fonctionnelle d'un patient diagnostiqué comme ayant un cancer. (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Estat funcional ECOG">
+                description = <"Escala utilitzada pels metges per avaluar l'estat funcional d'un pacient diagnosticat de càncer. També conegut com a estat funcional de l'OMS o estat funcional de Zubrod.">
+            >
+            ["at0002"] = <
+                text = <"Qualsevol esdeveniment">
+                description = <"Esdeveniment predeterminat, en un interval de temps o moment no específic, que es pot definir de forma expressa en una plantilla o en temps d'execució.">
+            >
+            ["at0004"] = <
+                text = <"Estat funcional ECOG">
+                description = <"Estat funcional d'un pacient diagnosticat de càncer.">
+            >
+            ["at0005"] = <
+                text = <"Asimptomàtic">
+                description = <"Totalment actiu, capaç de realitzar sense restriccions totes les activitats prèvies a la malaltia.">
+            >
+            ["at0006"] = <
+                text = <"Simptomàtic, ambulatori">
+                description = <"Limitat per realitzar activitats físicament extenuants, encara que amb caràcter ambulatori. Capaç de realitzar feines de naturalesa lleugera o sedentària, per exemple, feines senzilles o d'oficina.">
+            >
+            ["at0007"] = <
+                text = <"Simptomàtic, al llit <50% del dia">
+                description = <"Caràcter ambulatori. Capaç de cuidar-se a si mateix, però incapaç de fer cap activitat laboral; drets aproximadament més del 50% de les hores de vigília.">
+            >
+            ["at0008"] = <
+                text = <"Simptomàtic, al llit >50% del dia (però no postrat al llit)">
+                description = <"Capaç de cuidar-se només de manera limitada; confinat a llit o cadira més del 50% de les hores de vigília.">
+            >
+            ["at0009"] = <
+                text = <"Postrat al llit">
+                description = <"Completament incapacitat; no pot tenir cura de si mateix; totalment confinat al llit o cadira.">
+            >
+            ["at0010"] = <
+                text = <"Mort">
+                description = <"El pacient ha mort.">
+            >
+            ["at0012"] = <
+                text = <"Extensió">
+                description = <"Es requereix informació addicional per registrar el contingut local o per alinear-se amb altres models/formalismes de referència.">
+                comment = <"Per exemple: requisits d'informació local o metadades addicionals per alinear-se amb els equivalents de FHIR o CIMI.">
+            >
+            ["at0013"] = <
+                text = <"Comentaris">
+                description = <"Narrativa addicional sobre l'estat funcional ECOG, no registrat a altres camps.">
+            >
+            ["ac9001"] = <
+                text = <"Estat funcional ECOG (synthesised)">
+                description = <"Estat funcional d'un pacient diagnosticat de càncer. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Estado funcional ECOG">
+                description = <"Escala utilizada por los médicos para evaluar el estado funcional de un paciente diagnosticado de cáncer. También conocido como estado funcional de la OMS o estado funcional de Zubrod.">
+            >
+            ["at0002"] = <
+                text = <"Cualquier evento">
+                description = <"Evento predeterminado, en un intervalo de tiempo o momento no específico, que puede ser definido de forma expresa en una plantilla o en tiempo de ejecución.">
+            >
+            ["at0004"] = <
+                text = <"Estado funcional ECOG">
+                description = <"Estado funcional de un paciente diagnosticado de cáncer.">
+            >
+            ["at0005"] = <
+                text = <"Asintomático">
+                description = <"Totalmente activo, capaz de realizar sin restricciones todas las actividades previas a su enfermedad.">
+            >
+            ["at0006"] = <
+                text = <"Sintomático, ambulatorio">
+                description = <"Limitado para realizar actividades físicamente extenuantes, aunque con carácter ambulatorio. Capaz de realizar trabajos de naturaleza liviana o sedentaria, por ejemplo, trabajos sencillos o de oficina.">
+            >
+            ["at0007"] = <
+                text = <"Sintomático, en cama <50% del día">
+                description = <"Carácter ambulatorio. Capaz de cuidarse a sí mismo, pero incapaz de realizar ninguna actividad laboral; en pie aproximadamente más del 50% de las horas de vigilia.">
+            >
+            ["at0008"] = <
+                text = <"Sintomático, en cama >50% del día (pero no postrado en cama)">
+                description = <"Capaz de cuidarse solo de forma limitada; confinado a cama o silla más del 50% de las horas de vigilia.">
+            >
+            ["at0009"] = <
+                text = <"Postrado en cama">
+                description = <"Completamente incapacitado; no puede cuidar de sí mismo; totalmente confinado en la cama o silla.">
+            >
+            ["at0010"] = <
+                text = <"Fallecido">
+                description = <"El paciente ha muerto.">
+            >
+            ["at0012"] = <
+                text = <"Extensión">
+                description = <"Se requiere información adicional para registrar el contenido local o para alinearse con otros modelos/formalismos de referencia.">
+                comment = <"Por ejemplo: requisitos de información local o metadatos adicionales para alinearse con los equivalentes de FHIR o CIMI.">
+            >
+            ["at0013"] = <
+                text = <"Comentarios">
+                description = <"Narrativa adicional sobre el estado funcional ECOG, no registrado en otros campos.">
+            >
+            ["ac9001"] = <
+                text = <"Estado funcional ECOG (synthesised)">
+                description = <"Estado funcional de un paciente diagnosticado de cáncer. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+    >

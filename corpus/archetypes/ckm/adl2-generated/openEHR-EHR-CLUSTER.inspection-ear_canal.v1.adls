@@ -1,0 +1,198 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.inspection-ear_canal.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.inspection.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics">
+        ["date"] = <"02/11/2007">
+    >
+    other_contributors = <"Heather Leslie", ...>
+    lifecycle_state = <"Rejected">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"An archetype for recording the findings on inspection of the ear canal">
+            keywords = <"inspect", "visual", "ear", "canal", "wax", "discharge">
+            use = <"For use with the exam clusters for recording findings on inspection of the ear canal">
+            misuse = <"Should only be used in the exam observation">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Inspection of Ear Canal
+        items matches {
+            CLUSTER[at0001] matches {
+                items matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {
+                        value matches {
+                            DV_CODED_TEXT[at9007.1] matches {
+                                defining_code matches {[ac0.9000]}    -- Normal statement (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0006] matches {
+                items matches {
+                    after [at0034]
+                    CLUSTER[at0.62] occurrences matches {0..1} matches {    -- Foreign body
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0.63] occurrences matches {0..1} matches {    -- Present
+                                value matches {
+                                    DV_BOOLEAN[at0.9002] matches {
+                                        value matches {True, False}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.64] occurrences matches {0..1} matches {    -- Name/Identification
+                                value matches {
+                                    DV_TEXT[at0.9003]
+                                }
+                            }
+                            ELEMENT[at0.52] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at0.9004]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0.54] occurrences matches {0..1} matches {    -- Presence of Wax
+                        value matches {
+                            DV_ORDINAL[at0.9005] matches {
+                                [value, symbol] matches {
+                                    [{0}, {[at0.56]}],    -- No wax present
+                                    [{1}, {[at0.57]}],    -- Scant wax present
+                                    [{2}, {[at0.58]}],    -- Moderate wax present
+                                    [{3}, {[at0.59]}]    -- Profuse wax present
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0.55] occurrences matches {0..1} matches {    -- Discharge
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0.65] occurrences matches {0..1} matches {    -- Present
+                                value matches {
+                                    DV_BOOLEAN[at0.9006] matches {
+                                        value matches {True, False}
+                                    }
+                                }
+                            }
+                            CLUSTER[at0.61] occurrences matches {0..1} matches {    -- Detail
+                                items cardinality matches {1..*; unordered} matches {
+                                    allow_archetype CLUSTER[at0.67] matches {    -- Cluster: Fluids
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.fluid\.v1\..*/}
+                                    }
+                                }
+                            }
+                            use_node ELEMENT[at0.9007] occurrences matches {0..1} /items[at0048]    -- Discharge (synthesised)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.52"] = <
+                text = <"Description">
+                description = <"A description of any foreign body in the ear canal">
+            >
+            ["at0.53"] = <
+                text = <"Discharge">
+                description = <"*">
+            >
+            ["at0.54"] = <
+                text = <"Presence of Wax">
+                description = <"The amount of wax visible">
+            >
+            ["at0.55"] = <
+                text = <"Discharge">
+                description = <"The nature of any discharge in the ear canal">
+            >
+            ["at0.56"] = <
+                text = <"No wax present">
+                description = <"*">
+            >
+            ["at0.57"] = <
+                text = <"Scant wax present">
+                description = <"*">
+            >
+            ["at0.58"] = <
+                text = <"Moderate wax present">
+                description = <"*">
+            >
+            ["at0.59"] = <
+                text = <"Profuse wax present">
+                description = <"*">
+            >
+            ["at0.60"] = <
+                text = <"Ear canal normal">
+                description = <"*">
+            >
+            ["at0.61"] = <
+                text = <"Detail">
+                description = <"Detailed description of the discharge">
+            >
+            ["at0.62"] = <
+                text = <"Foreign body">
+                description = <"Details of any foreign body present">
+            >
+            ["at0.63"] = <
+                text = <"Present">
+                description = <"Foreign body is present">
+            >
+            ["at0.64"] = <
+                text = <"Name/Identification">
+                description = <"Identify foreign body">
+            >
+            ["at0.65"] = <
+                text = <"Present ">
+                description = <"Discharge present">
+            >
+            ["at0.66"] = <
+                text = <"No foreign body">
+                description = <"*">
+            >
+            ["at0.67"] = <
+                text = <"Cluster: Fluids">
+                description = <"*">
+            >
+            ["at0000.1"] = <
+                text = <"Inspection of Ear Canal">
+                description = <"The findings on physical examination of the ear canal by inspection!">
+            >
+            ["ac0.9000"] = <
+                text = <"Normal statement (synthesised)">
+                description = <"A specific statement about the normality of inspection (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Presence of Wax (synthesised)">
+                description = <"The amount of wax visible (synthesised)">
+            >
+            ["at0.9007"] = <
+                text = <"Discharge (synthesised)">
+                description = <"The nature of any discharge in the ear canal (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.60", "at0.66">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.56", "at0.57", "at0.58", "at0.59">
+        >
+    >

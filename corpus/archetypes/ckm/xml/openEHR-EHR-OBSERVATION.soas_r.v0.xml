@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -32,8 +32,7 @@ Nijman, H.L.I., Palmstierna, T., Almvik, R. and Stolker, J.J. (2005), Fifteen ye
         </terminology_id>
         <code_string>nb</code_string>
       </language>
-      <purpose>For å registrere hyppigheten, karakteren og alvorlighetsgraden av aggressive hendelser.&#xD;
-</purpose>
+      <purpose>For å registrere hyppigheten, karakteren og alvorlighetsgraden av aggressive hendelser.</purpose>
       <keywords>verbal, fysisk, angrep, voldelig, oppførsel</keywords>
       <use>Brukes for å registrere hyppigheten, karakteren og alvorlighetsgraden av aggressive hendelser.&#xD;
 &#xD;
@@ -1538,7 +1537,7 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0002">
         <items id="text">Any event</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0003">
         <items id="text">Tree</items>
@@ -1550,51 +1549,51 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0009">
         <items id="text">Provocation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Target of aggression</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Means used by the patient</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Consequence(s) for victim(s)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Measures to stop aggression</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">No understandle provocation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Provoked by</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Other patient(s)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Help with ADL</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Patient being denied something</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Staff requiering patient to take medication</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Other provocations, namely</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Other named provocations</items>
@@ -1602,23 +1601,23 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0022">
         <items id="text">Verbal aggression</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Ordinary objects</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Chari(s)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Glass(ware)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Other, namely</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Other named objects</items>
@@ -1626,7 +1625,7 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0028">
         <items id="text">Parts of the body</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Hand</items>
@@ -1642,7 +1641,7 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0032">
         <items id="text">Other, namely</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Other</items>
@@ -1650,19 +1649,19 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0034">
         <items id="text">Dangerous objects or methods</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Knife</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Strangulation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Other, namely</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Other objects or methods</items>
@@ -1670,31 +1669,31 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0039">
         <items id="text">Nothing/nobody</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Target</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Objetc(s)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Other patient(s)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Patient self</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Staff member(s)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Other persons, namely</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Other persons</items>
@@ -1702,51 +1701,51 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0047">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Objects</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Damaged, replacement not necessary</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Damaged, replacement necessary</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Persons</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Felt threatened</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Pain &lt; 10 min</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Pain &gt; 10 min</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Visible injury</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Need for treatment</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">Need for treatment by a physician</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Other, namely</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Other, namely</items>
@@ -1754,31 +1753,31 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0060">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Measures</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Talk to patient</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Calmly brought away</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Peroral medication</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Parenteral medication</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">Held with force</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Seclusion/isolation</items>
@@ -1786,11 +1785,11 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0068">
         <items id="text">Mechanical restraints</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0069">
         <items id="text">Other measures, namely</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">Other measures</items>
@@ -1829,35 +1828,35 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0009">
         <items id="text">Provokasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Mål for aggresjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Hva brukte pasienten</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Følge(r) for offer/ofre</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Tiltak for å stoppe aggresjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Ingen observerbar provokasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Provosert av</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Andre pasienter</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Hjelp i daglige gjøremål</items>
@@ -1865,15 +1864,15 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0018">
         <items id="text">Pasienten nektes noe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Krav om å ta medisiner</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Annet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Andre provokasjoner</items>
@@ -1881,23 +1880,23 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0022">
         <items id="text">Verbal aggresjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Vanlige gjenstander</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Stol(er)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Glass</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Andre, oppgi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Andre objekter</items>
@@ -1905,7 +1904,7 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0028">
         <items id="text">Kroppsdeler</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Hånd</items>
@@ -1921,7 +1920,7 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0032">
         <items id="text">Andre, oppgi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Andre</items>
@@ -1929,19 +1928,19 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0034">
         <items id="text">Farlige gjenstander eller metoder</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Kniv</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Kvelningsforsøk</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Andre, oppgi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Andre gjenstander eller metoder</items>
@@ -1949,31 +1948,31 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0039">
         <items id="text">Ingen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Mål</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Ting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Andre pasienter</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Pasienten selv</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Personell</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Andre personer, oppgi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Andre personer</items>
@@ -1981,39 +1980,39 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0047">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Gjenstander</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Skadet, men brukbart</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Skadet, må kasseres</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Personer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Opplevde sin sikkerhet truet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Smerte &lt; 10 min</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Smerte &gt; 10 min</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Synlig skade</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Behandlingsbehov</items>
@@ -2021,11 +2020,11 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0057">
         <items id="text">Behov for legebehandling</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Andre, oppgi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Andre</items>
@@ -2033,15 +2032,15 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0060">
         <items id="text">Ingen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Tiltak</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Snakket med pasienten</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Ble rolig tatt til side</items>
@@ -2049,15 +2048,15 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0064">
         <items id="text">Medikasjon, tabletter/flytende</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Medikasjon, injeksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">Holdt med makt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Bruk av isolat</items>
@@ -2065,11 +2064,11 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0068">
         <items id="text">Bruk av mekanisk tvangsmiddel</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0069">
         <items id="text">Andre tiltak, oppgi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">Andre tiltak</items>
@@ -2087,4 +2086,3 @@ While openEHR archetypes are all freely available under an open license, the spe
     </term_definitions>
   </ontology>
 </archetype>
-
