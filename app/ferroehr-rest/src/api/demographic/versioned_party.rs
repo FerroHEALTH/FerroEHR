@@ -21,6 +21,8 @@ use openehr_its::rest::generated::demographic::{
     VersionedPartyVersionGetByIdParams,
 };
 
+use ferroehr::config::profile::SpecProfile;
+use ferroehr::ids::VoId;
 use ferroehr::versioning::object_version_id::parse_version_uid;
 
 use crate::api::RequestParts;
@@ -79,14 +81,15 @@ pub(crate) async fn version_get_at_time(
     )?;
     // 200_VERSION_at_time analogue: the served VERSION's ETag +
     // Last-Modified (its commit instant rides the response metadata).
-    let resp = state
+    let vo_id = super::object_of(&p.versioned_object_uid)?;
+    let mut resp = state
         .backend()
-        .versioned_party_version_get_at_time(
-            super::object_of(&p.versioned_object_uid)?,
-            p.version_at_time,
-        )
+        .versioned_party_version_get_at_time(vo_id, p.version_at_time)
         .await?;
-    Ok(super::respond_versioned(h, &resp))
+    let served = version_reverse_relationships(&state, vo_id, &mut resp.body).await?;
+    let mut out = super::respond_versioned(h, &resp);
+    super::party::audit_served(&mut out, served);
+    Ok(out)
 }
 
 /// The `versioned_party_version_get_by_id` operation.
@@ -100,14 +103,40 @@ pub(crate) async fn version_get_by_id(
         VersionedPartyVersionGetByIdParams::PARAMS,
     )?;
     let vo = p.versioned_object_uid.clone();
-    let resp = state
+    let vo_id = super::object_of(&vo)?;
+    let mut resp = state
         .backend()
-        .versioned_party_version_get_by_id(
-            super::object_of(&vo)?,
-            parse_version_uid(&p.version_uid)?.1,
-        )
+        .versioned_party_version_get_by_id(vo_id, parse_version_uid(&p.version_uid)?.1)
         .await?;
+    let served = version_reverse_relationships(&state, vo_id, &mut resp.body).await?;
     // ETag from VERSION.uid.value; Last-Modified from the served
     // ORIGINAL_VERSION's commit_audit.time_committed.
-    Ok(super::read_versioned(h, &vo, &resp.body))
+    let mut out = super::read_versioned(h, &vo, &resp.body);
+    super::party::audit_served(&mut out, served);
+    Ok(out)
+}
+
+/// Adds `reverse_relationships` to the `data` of a stable-profile
+/// `VERSION<PARTY>` `version`, as they stood at its commit: the PARTY a
+/// `VERSION` carries is the RM 1.1.0 class (ITS-REST `VersionOfParty.yaml`),
+/// whose attribute it is, and the list is the one a read of that version by
+/// its id serves (#5473). Returns the source parties it discloses.
+///
+/// # Errors
+/// The storage failure of the index read.
+async fn version_reverse_relationships(
+    state: &AppState,
+    vo_id: VoId,
+    version: &mut serde_json::Value,
+) -> Result<Vec<String>, RestError> {
+    if state.config().spec_profile != SpecProfile::Stable {
+        return Ok(Vec::new());
+    }
+    let at = super::commit_time(version);
+    match version.get_mut("data") {
+        Some(data) if data.is_object() => {
+            super::party::add_reverse_relationships(state, vo_id, at, data).await
+        }
+        _ => Ok(Vec::new()),
+    }
 }

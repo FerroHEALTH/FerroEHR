@@ -4609,6 +4609,116 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/demographic/party/{uid_based_id}/reverse_relationships": {
+      "get": {
+        "tags": [
+          "demographic-relationship"
+        ],
+        "summary": "Evaluate `PARTY.reverse_relationships()`\n(`GET /demographic/party/{uid_based_id}/reverse_relationships`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (see the\nmodule docs). The answer is the list of `LOCATABLE_REF`s to the\n`PARTY_RELATIONSHIP`s other parties hold with this party as target (RM\ndemographic `master02-demographic_package.adoc` §Party Relationships),\nthe list a stable-profile read of the same party and version carries\nin `reverse_relationships`.",
+        "operationId": "party_reverse_relationships_get",
+        "parameters": [
+          {
+            "name": "uid_based_id",
+            "in": "path",
+            "description": "The party: its `HIER_OBJECT_ID` container id, for the relationships as they stand now, or one version's `OBJECT_VERSION_ID`, for the relationships as they stood when that version was committed. Any of the five party kinds.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "8849182c-82ad-4088-a07f-48ead4180515"
+          },
+          {
+            "name": "version_at_time",
+            "in": "query",
+            "description": "An extended ISO 8601 instant: the version of the party current at that instant is found as the released party read finds it, and the relationships are answered as they stood when that version was committed.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2015-01-20T19:30:22.765+01:00"
+          },
+          {
+            "name": "Accept",
+            "in": "header",
+            "description": "`application/json` (default). The list is served in canonical JSON only.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "example": "application/json"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The evaluated function: a JSON array of canonical `LOCATABLE_REF`s, each naming the source party's container and the relationship's path in its data; `[]` when no relationship targets the party.",
+            "content": {
+              "application/json": {
+                "schema": {},
+                "example": [
+                  {
+                    "_type": "LOCATABLE_REF",
+                    "namespace": "local",
+                    "type": "PARTY_RELATIONSHIP",
+                    "id": {
+                      "_type": "HIER_OBJECT_ID",
+                      "value": "6cb19121-4307-4648-9da0-d62e4d51f19b"
+                    },
+                    "path": "/relationships[openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.relationship.v1 and name/value='parent-of']"
+                  }
+                ]
+              }
+            }
+          },
+          "204": {
+            "description": "The version the request selects is a deletion marker, as the released party read answers it."
+          },
+          "400": {
+            "description": "The `uid_based_id` is neither an OBJECT_VERSION_ID nor a HIER_OBJECT_ID, or `version_at_time` is not an extended ISO 8601 instant.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated (auth enabled, no valid principal).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No party has this id, or it has no version at the requested version or instant.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The `Accept` header admits no JSON.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/demographic/party_relationship": {
       "post": {
         "tags": [

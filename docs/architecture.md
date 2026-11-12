@@ -245,6 +245,35 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `search_path`, so one set of storage code serves both; a `CHECK` on each side
   refuses the other's rows. GDPR Art. 4(5) and Art. 32(1)(a); no openEHR spec
   governs storage layout or database roles.
+- **`PARTY.reverse_relationships` at a version or at a time** (#5473). RM
+  1.1.0 makes it an attribute of `PARTY` and RM 1.2.0 a function
+  (`master00-amendment_record.adoc` SPECRM-124), whose result a repository
+  lookup defines (`Post_reverse_relationships_validity`). No openEHR spec says
+  how a derived list behaves on an old version, and no REST resource serves the
+  1.2.0 function, so both rules here are our own design:
+  - A read of the current version by its container id serves the list as it
+    stands now. Every read addressed to one version, by its
+    `OBJECT_VERSION_ID`, at a `version_at_time`, or as the `data` of a
+    `VERSION<PARTY>`, and the representation a create or update returns, serves
+    it as it stood when that version was committed. The `ETag` of each of
+    those responses names that version, so one version has one document.
+  - `party_relationship_target` keeps one row per interval over which a source
+    party's trunk named the target (`valid_from`, `valid_to`, open while the
+    current trunk version names it), written incrementally in the commit
+    transaction and rebuilt from the stored trunk versions by an import or an
+    archive load (`storage::party_reverse::rebuild`). A point-in-time read is
+    an indexed probe of the intervals plus one indexed lookup of each source's
+    trunk version at that instant, never a walk of a source's versions.
+  - The stable profile carries the list in the body of every PARTY
+    representation, canonical JSON and XML. The development profile does not:
+    ITS-JSON publishes no RM 1.2.0 schema, its released schemas are generated
+    from the BMM properties with `additionalProperties: false`, and the 1.2.0
+    BMM lists `reverse_relationships` among the functions, so a member in the
+    body would be refused by a development reader, FerroEHR's own included,
+    when the document comes back. The evaluated function is served instead on
+    the extension route `GET {extensions}/demographic/party/{uid_based_id}/reverse_relationships`
+    (optional `version_at_time`), under the same pinning rule, in both
+    profiles: a JSON array of `LOCATABLE_REF`s, `[]` when none.
 - **Which EHR belongs to which subject** is the `ehr` table's subject columns,
   promoted from `EHR_STATUS.subject.external_ref` on every EHR create and
   `EHR_STATUS` update. A cohort, the AQL demographic join and the EHR index

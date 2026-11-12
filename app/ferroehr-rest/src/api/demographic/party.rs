@@ -31,6 +31,7 @@ use crate::overview::error::RestError;
 use crate::overview::negotiate::resource::Tree;
 use crate::state::AppState;
 use ferroehr::error::ServiceError;
+use ferroehr::ids::VoId;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::response::ServiceResponse;
 
@@ -64,15 +65,17 @@ pub(crate) async fn create(
     // The party must exist first (`item_tag.target_vo_id` FK), so the
     // request-header tags are persisted after the create.
     persist_request_tags(&state, kind, pending_tags, &mut resp).await?;
+    let served = written_reverse_relationships(&state, h, &mut resp).await?;
     let mut out = write_party(
+        &state,
         kind,
         h,
         &base,
-        StatusCode::CREATED,
-        StatusCode::CREATED,
+        (StatusCode::CREATED, StatusCode::CREATED),
         &resp,
     );
     super::set_item_tag_headers(&mut out, &resp);
+    audit_served(&mut out, served);
     Ok(out)
 }
 
@@ -106,15 +109,17 @@ pub(crate) async fn update(
     {
         Ok(mut resp) => {
             persist_request_tags(&state, kind, pending_tags, &mut resp).await?;
+            let served = written_reverse_relationships(&state, h, &mut resp).await?;
             let mut out = write_party(
+                &state,
                 kind,
                 h,
                 &base,
-                StatusCode::NO_CONTENT,
-                StatusCode::OK,
+                (StatusCode::NO_CONTENT, StatusCode::OK),
                 &resp,
             );
             super::set_item_tag_headers(&mut out, &resp);
+            audit_served(&mut out, served);
             Ok(out)
         }
         // person_update.yaml: `If-Match` mismatch → 412 + latest version_uid.
@@ -137,7 +142,9 @@ pub(crate) async fn update(
 
 /// Reads a party (`person_get.yaml`): a deleted current version is `204`, and
 /// a stable-profile read carries `reverse_relationships` in canonical JSON and
-/// XML alike ([`serves_reverse_relationships`]).
+/// XML alike ([`serves_reverse_relationships`]), as they stand now, or, for a
+/// read of a version by its id or at a time, as they stood at that version's
+/// commit ([`pinned_instant`]).
 pub(crate) async fn get(
     state: AppState,
     kind: PartyKind,
@@ -150,6 +157,7 @@ pub(crate) async fn get(
     let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
     let address = parse_uid_based_id(&p.uid_based_id)?;
     let vo_id = address.vo_id;
+    let pinned = address.tree().is_some() || p.version_at_time.is_some();
     let mut resp = state
         .backend()
         .party_get(kind, address, p.version_at_time)
@@ -159,29 +167,98 @@ pub(crate) async fn get(
         return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
     }
     let profile = state.config().spec_profile;
-    let mut served_sources = Vec::new();
+    let mut served = Vec::new();
     if serves_reverse_relationships(profile, h) {
-        let reverse = state.backend().party_reverse_relationships(vo_id).await?;
-        if !reverse.references.is_empty()
-            && let serde_json::Value::Object(map) = &mut resp.body
-        {
-            map.insert(
-                "reverse_relationships".to_owned(),
-                serde_json::Value::Array(reverse.references),
-            );
-            served_sources = reverse.sources;
-        }
+        let at = pinned_instant(pinned, &resp);
+        served = add_reverse_relationships(&state, vo_id, at, &mut resp.body).await?;
     }
     let mut out = read_party(kind, h, &resp, profile);
-    // The references disclose each source party's container and relationship,
-    // so each source gets its own access record beside the target's.
-    if !served_sources.is_empty() {
-        out.extensions_mut()
-            .insert(crate::system_log::served::AuditServedParties {
-                parties: served_sources,
-            });
-    }
+    audit_served(&mut out, served);
     Ok(out)
+}
+
+/// The instant a party read serves `reverse_relationships` at: `None`, now,
+/// for a read of the current version by its container id, else the commit
+/// instant of the version a read by version id or at a time serves.
+///
+/// No openEHR spec says how the derived list behaves on an old version (RM
+/// 1.1.0 `PARTY` §Attributes; SPECRM-124 makes it a function in RM 1.2.0).
+/// Pinning a version-addressed read to its version's commit gives every
+/// representation of one version, whose `ETag` names that version, one list:
+/// our own design (#5473).
+pub(super) fn pinned_instant(pinned: bool, resp: &ServiceResponse) -> Option<jiff::Timestamp> {
+    if !pinned {
+        return None;
+    }
+    resp.meta.as_ref().and_then(|meta| meta.last_modified)
+}
+
+/// Adds the `reverse_relationships` of the party `vo_id`, as they stood at
+/// `at` (now when `None`), to the canonical `body` of one of its versions, and
+/// returns the source party containers the references disclose; a party no
+/// relationship targets gets no member, the RM 1.1.0 attribute being `0..1`
+/// and never empty (`Reverse_relationships_validity`).
+///
+/// # Errors
+/// The storage failure of the index read.
+pub(super) async fn add_reverse_relationships(
+    state: &AppState,
+    vo_id: VoId,
+    at: Option<jiff::Timestamp>,
+    body: &mut serde_json::Value,
+) -> Result<Vec<String>, RestError> {
+    let reverse = state
+        .backend()
+        .party_reverse_relationships(vo_id, at)
+        .await?;
+    if reverse.references.is_empty() {
+        return Ok(Vec::new());
+    }
+    let serde_json::Value::Object(map) = body else {
+        return Ok(Vec::new());
+    };
+    map.insert(
+        "reverse_relationships".to_owned(),
+        serde_json::Value::Array(reverse.references),
+    );
+    Ok(reverse.sources)
+}
+
+/// Records the source parties `served` disclosed on the response `out`: the
+/// references name each source's container and relationship, so each source
+/// gets its own access record beside the addressed party's.
+pub(super) fn audit_served(out: &mut Response, served: Vec<String>) {
+    if served.is_empty() {
+        return;
+    }
+    out.extensions_mut()
+        .insert(crate::system_log::served::AuditServedParties { parties: served });
+}
+
+/// Adds `reverse_relationships` to the representation a stable-profile
+/// create or update returns, as they stood at the commit it made, so the
+/// written document is the one a read of that version serves.
+///
+/// Only a write that returns its representation reads the index.
+///
+/// # Errors
+/// The storage failure of the index read.
+async fn written_reverse_relationships(
+    state: &AppState,
+    h: &HeaderMap,
+    resp: &mut ServiceResponse,
+) -> Result<Vec<String>, RestError> {
+    let representation =
+        negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation);
+    if !representation || !serves_reverse_relationships(state.config().spec_profile, h) {
+        return Ok(Vec::new());
+    }
+    let Some(meta) = resp.meta.as_ref() else {
+        return Ok(Vec::new());
+    };
+    let vo_id = parse_uid_based_id(&meta.uid)?.vo_id;
+    let at = pinned_instant(true, resp);
+    add_reverse_relationships(state, vo_id, at, &mut resp.body).await
 }
 
 /// Stores the `ITEM_TAG` lists the wrapper headers asked for on the just-written
@@ -413,9 +490,14 @@ fn respond_party(
 /// Renders a stable-profile party read, re-typed for XML through the RM 1.1.0
 /// generation, whose `PARTY` declares the `reverse_relationships` element the
 /// ITS-XML RM Release-1.1.0 `Demographic.xsd` carries.
-fn respond_released_party(kind: PartyKind, h: &HeaderMap, body: &serde_json::Value) -> Response {
+fn respond_released_party(
+    kind: PartyKind,
+    h: &HeaderMap,
+    ok: StatusCode,
+    body: &serde_json::Value,
+) -> Response {
     use openehr_rm::v1_1::demographic::{agent, group, organisation, person, role};
-    let (root, ok) = (openehr_its::xml::LOCATABLE_ROOT, StatusCode::OK);
+    let root = openehr_its::xml::LOCATABLE_ROOT;
     match kind {
         PartyKind::Agent => negotiate::body::respond_rm::<agent::Agent>(h, ok, body, root),
         PartyKind::Group => negotiate::body::respond_rm::<group::Group>(h, ok, body, root),
@@ -433,21 +515,30 @@ fn respond_released_party(kind: PartyKind, h: &HeaderMap, body: &serde_json::Val
 ///
 /// The body and `Preference-Applied` go through the shared
 /// [`negotiate::prefer::write_negotiated`] seam, so a demographic write honours the full
-/// `Prefer` triad and declares the preference it applied.
+/// `Prefer` triad and declares the preference it applied. `statuses` are the
+/// minimal and the representation status; a representation is rendered in the
+/// RM generation the active profile serves, as a read of it is.
 fn write_party(
+    state: &AppState,
     kind: PartyKind,
     h: &HeaderMap,
     base: &str,
-    minimal_status: StatusCode,
-    repr_status: StatusCode,
+    (minimal_status, repr_status): (StatusCode, StatusCode),
     resp: &ServiceResponse,
 ) -> Response {
+    let stable = state.config().spec_profile == ferroehr::config::profile::SpecProfile::Stable;
     let mut out = negotiate::prefer::write_negotiated(
         h,
         minimal_status,
         repr_status,
         resp.meta.as_ref().map(|m| m.uid.as_str()),
-        |status| respond_party(kind, h, status, &resp.body),
+        |status| {
+            if stable {
+                respond_released_party(kind, h, status, &resp.body)
+            } else {
+                respond_party(kind, h, status, &resp.body)
+            }
+        },
     );
     if let Some(meta) = resp.meta.as_ref() {
         negotiate::resource::set_resource_headers(
@@ -474,7 +565,7 @@ fn read_party(
     profile: ferroehr::config::profile::SpecProfile,
 ) -> Response {
     let mut out = if profile == ferroehr::config::profile::SpecProfile::Stable {
-        respond_released_party(kind, h, &resp.body)
+        respond_released_party(kind, h, StatusCode::OK, &resp.body)
     } else {
         respond_party(kind, h, StatusCode::OK, &resp.body)
     };
