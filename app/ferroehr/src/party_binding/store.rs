@@ -165,14 +165,19 @@ pub(crate) async fn reindex_committed(
         }
     };
     let head = with_last(tx, ctx.binding, committed.kind, head).await?;
+    let targets = head
+        .facts
+        .as_ref()
+        .map_or(&[][..], |f| f.targets.as_slice());
+    party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
     reindex_heads(tx, ctx.binding, committed.kind, vec![head])
         .await
         .map_err(selector_in_use)
 }
 
-/// Brings the reverse-relationship index and the side-table rows of the party
-/// `vo_id` of `kind` to its stored head, on `tx`: what an import or an archive
-/// load writes after the versions it lands.
+/// Rebuilds the reverse-relationship index of the party `vo_id` of `kind` from
+/// its stored versions and brings its side-table rows to its stored head, on
+/// `tx`: what an import or an archive load writes after the versions it lands.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -182,9 +187,10 @@ pub(crate) async fn reindex_stored(
     kind: Kind,
     vo_id: VoId,
 ) -> Result<(), StorageError> {
+    party_reverse::rebuild(tx, vo_id).await?;
     let mut heads = stored_heads(tx, mapping, kind, Some(&[vo_id.0]), None).await?;
     let Some(head) = heads.pop() else {
-        return party_reverse::replace(tx, vo_id, &[]).await;
+        return Ok(());
     };
     let head = with_last(tx, mapping, kind, head).await?;
     reindex_heads(tx, mapping, kind, vec![head]).await
@@ -206,25 +212,17 @@ pub(crate) async fn reindex_loaded(
 ) -> Result<(), StorageError> {
     match Kind::from_type(kind) {
         Some(kind) => reindex_stored(tx, mapping, kind, vo_id).await,
-        None => party_reverse::replace(tx, vo_id, &[]).await,
+        None => party_reverse::rebuild(tx, vo_id).await,
     }
 }
 
-/// Writes the reverse index and the side-table rows of `heads`, each of
-/// `kind`.
+/// Writes the side-table rows of `heads`, each of `kind`.
 async fn reindex_heads(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
     kind: Kind,
     heads: Vec<Head>,
 ) -> Result<(), StorageError> {
-    for head in &heads {
-        let targets = head
-            .facts
-            .as_ref()
-            .map_or(&[][..], |f| f.targets.as_slice());
-        party_reverse::replace(tx, VoId(head.vo_id), targets).await?;
-    }
     if mapping.is_empty() {
         return Ok(());
     }
