@@ -234,20 +234,20 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # (`[[auth.attributes]]`, `[[auth.federation]]`, `[[auth.party]]`,
 # `auth.scopeless_subjects`); 0.19.1 signs a client assertion valid for 60
 # seconds. Verified on crates.io 2026-11-11.
-ferrohealth-smart = { version = "=0.19.1", default-features = false, features = ["fetch", "idp-entra"] }
+ferrohealth-smart = { version = "=0.20.0", default-features = false, features = ["fetch", "idp-entra"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroAUTH, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
 # ferrohealth-smart's relying party; 0.13 types the provider issuer and the
 # redirect URIs as `SecretUrl`, and 0.14 is the release on ferrohealth-smart
 # 0.19. Verified on crates.io 2026-11-11.
-ferrohealth-session = { version = "=0.14.0", default-features = false }
+ferrohealth-session = { version = "=0.15.0", default-features = false }
 # The policy decision of the FerroHEALTH family (FerroAUTH, the same
 # Licensor's BUSL-1.1 code): the attribute-based request over the subject
 # ferrohealth-smart authenticates, the Cedar engine (`cedar`) and the remote
 # decision point (`remote`). Pinned exactly beside ferrohealth-smart.
 # Verified on crates.io 2026-11-11.
-ferrohealth-authz = { version = "=0.12.0", default-features = false }
+ferrohealth-authz = { version = "=0.13.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -295,7 +295,7 @@ ferrohealth-usage-report = { version = "=0.4.1", features = ["telemetry"] }
 # crates.io 2026-11-11, on ferrohealth-smart 0.19; `smart` builds its client
 # from ferrohealth-smart's outbound client, and `r4b` the one wire release the
 # terminology client speaks.
-ferrobridge-term = { version = "0.6.0", default-features = false, features = ["r4b", "smart"] }
+ferrobridge-term = { version = "0.7.0", default-features = false, features = ["r4b", "smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
@@ -307,8 +307,8 @@ ferrobridge-term = { version = "0.6.0", default-features = false, features = ["r
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
 # crates.io 2026-11-11, on ferrohealth-smart 0.19.
-ihe-atna = { version = "=0.13.0", default-features = false }
-ehds-logging = { version = "=0.13.0", default-features = false }
+ihe-atna = { version = "=0.14.0", default-features = false }
+ehds-logging = { version = "=0.14.0", default-features = false }
 # The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
 # the viewer reads the ITI-81 searchset, each BALP `AuditEvent` and a refusal's
 # `OperationOutcome` through it. `r4-resources` compiles R4's resources alone;
@@ -328,7 +328,7 @@ fhir-search = { version = "0.1.131", default-features = false }
 # identity source of the EHR index is asked through (`[pixm]`), built from
 # ferrohealth-smart's outbound client. Verified on crates.io 2026-11-11, on
 # ferrohealth-smart 0.19.
-ihe-iti = { version = "=0.5.0", default-features = false }
+ihe-iti = { version = "=0.6.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
