@@ -118,6 +118,17 @@ model requires them, and a party reference has to name a legal type and
 namespace. A body that fails these is refused as unprocessable, with the
 offending path named.
 
+A relationship a party carries in its own `relationships` list is stored
+under its source, so its `source` must name that party's version container
+(the Reference Model's `PARTY.Relationships_validity`). This holds on every
+write: `POST` and `PUT` on the party routes and each version of a demographic
+CONTRIBUTION. The server assigns a new party's container id when it commits
+the party, and ignores a `uid` you put in the body of a create, so a create
+that carries a relationship is refused **422**: create the party first, then
+add the relationship with a `PUT`. On a `PUT`, and on a CONTRIBUTION version
+that modifies a party, a body `uid` that names another container than the one
+you write to is refused **422** as well.
+
 Two limits are worth knowing because they are deliberate rather than accidental:
 
 - There is **no demographic archetype or template store**, so a party is checked
