@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The template layer of a demographic write: a party of a mapped template, or
-//! a `PARTY_RELATIONSHIP` of the mapped membership archetype, is validated
-//! against its operational template.
+//! a `PARTY_RELATIONSHIP` of the mapped membership or acts-for archetype, is
+//! validated against its operational template.
 //!
 //! The shared party mapping (SCIM, just-in-time creation and the login
 //! binding) names the templates its `PERSON`s and `GROUP`s are written under
@@ -63,6 +63,8 @@ pub struct MappedPartyTemplates {
     role: Option<String>,
     group: Option<String>,
     membership: Option<String>,
+    policy: Vec<String>,
+    acts_for: Option<String>,
 }
 
 impl MappedPartyTemplates {
@@ -94,6 +96,21 @@ impl MappedPartyTemplates {
         self
     }
 
+    /// Adds a template a policy party, the system `AGENT` or a policy
+    /// `ROLE`, is written under.
+    #[must_use]
+    pub fn with_policy_template(mut self, template_id: impl Into<String>) -> Self {
+        self.policy.push(template_id.into());
+        self
+    }
+
+    /// Sets the archetype of an acts-for `PARTY_RELATIONSHIP`.
+    #[must_use]
+    pub fn with_acts_for_archetype(mut self, archetype_id: impl Into<String>) -> Self {
+        self.acts_for = Some(archetype_id.into());
+        self
+    }
+
     /// Whether `template_id` is one of the party templates.
     fn names(&self, template_id: &str) -> bool {
         let key = canonical_key(template_id);
@@ -101,6 +118,7 @@ impl MappedPartyTemplates {
             .iter()
             .chain(&self.role)
             .chain(&self.group)
+            .chain(&self.policy)
             .any(|mapped| canonical_key(mapped) == key)
     }
 }
@@ -238,16 +256,19 @@ impl FerroEhrService {
         body: &Value,
     ) -> Result<Option<Arc<WebTemplate>>, ServiceError> {
         if rm_type == RELATIONSHIP {
-            let Some(membership) = &self.party_templates.membership else {
-                return Ok(None);
-            };
-            let wt = self.web_template(membership).await?;
-            let is_membership = body
-                .pointer("/archetype_details/archetype_id/value")
-                .and_then(Value::as_str)
-                .zip(wt.tree.node_id.as_deref())
-                .is_some_and(|(id, root)| canonical_key(id) == canonical_key(root));
-            return Ok(is_membership.then_some(wt));
+            let mapped = self.party_templates.membership.iter();
+            for archetype in mapped.chain(&self.party_templates.acts_for) {
+                let wt = self.web_template(archetype).await?;
+                let is_mapped = body
+                    .pointer("/archetype_details/archetype_id/value")
+                    .and_then(Value::as_str)
+                    .zip(wt.tree.node_id.as_deref())
+                    .is_some_and(|(id, root)| canonical_key(id) == canonical_key(root));
+                if is_mapped {
+                    return Ok(Some(wt));
+                }
+            }
+            return Ok(None);
         }
         match body
             .pointer("/archetype_details/template_id/value")

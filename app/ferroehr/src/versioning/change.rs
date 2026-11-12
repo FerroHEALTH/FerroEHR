@@ -815,7 +815,7 @@ async fn apply_change(
     // future over the size the lint allows.
     let committed = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
     crate::versioning::access_delay::hold_on_creation(tx, ctx, ehr_id, &committed.0).await?;
-    if committed.0.kind.is_party() {
+    if committed.0.kind.is_demographic() {
         Box::pin(crate::party_binding::store::reindex_committed(
             tx,
             ctx,

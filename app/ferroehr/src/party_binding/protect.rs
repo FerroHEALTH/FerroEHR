@@ -10,7 +10,12 @@
 //! role template, and a `GROUP` of the group template with its memberships.
 //! Only an administrator writes one through the demographic API, so nobody
 //! can plant a key-bearing `PERSON`, grant themselves the professional
-//! `ROLE` or point a colleague's `PERSON` at their own login. A SCIM client
+//! `ROLE` or point a colleague's `PERSON` at their own login. The policy
+//! parties ([`super::policy`]) are protected too: an `AGENT` of the agent
+//! template, a `ROLE` of a policy role template, and any party holding an
+//! acts-for relationship, inline or as a `PARTY_RELATIONSHIP` of its own.
+//! Only an administrator writes one, never a SCIM client, so no other
+//! caller can grant itself or anyone a capability. A SCIM client
 //! writes the ones it owns: a `PERSON` whose binding keys its
 //! `binding_issuer` issues, a professional `ROLE` that `PERSON` performs, and
 //! a `GROUP` it created (RFC 7644 §3: a client manages its own resources). A present
@@ -78,9 +83,13 @@ struct Protected {
     /// The selector identifiers of a `PERSON` of a mapped template.
     identifiers: BTreeSet<Held>,
     /// Whether the body is of a template or archetype the protection
-    /// covers as a whole: the professional `ROLE`, the group, or a `PERSON`
-    /// that is the source of a representation relationship.
+    /// covers as a whole: the professional `ROLE`, the group, a `PERSON`
+    /// that is the source of a representation relationship, or a policy
+    /// party.
     whole: bool,
+    /// Whether the body is a policy party, which only an administrator
+    /// writes.
+    policy: bool,
 }
 
 impl Protected {
@@ -111,7 +120,8 @@ impl Protected {
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) when a caller who is neither an
 /// administrator nor, inside [`provisioning`], the SCIM client that owns it
-/// writes a protected party, or a write changes a present
+/// writes a protected party, a caller who is no administrator writes a
+/// policy party, or a write changes a present
 /// binding key outside [`rekey`]; [`ServiceError::Unprocessable`] (`422`)
 /// naming the identifier when an administrator's version leaves a protected
 /// identifier out; a storage error when the versions cannot be read.
@@ -122,7 +132,8 @@ pub(crate) async fn check(
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
     let (kind, vo_id) = (committed.kind, committed.vo_id);
-    if mapping.is_empty() || !matches!(kind, Kind::Person | Kind::Role | Kind::Group) {
+    let binding = !mapping.is_empty() && matches!(kind, Kind::Person | Kind::Role | Kind::Group);
+    if !(binding || (mapping.names_policy() && kind.is_demographic())) {
         return Ok(());
     }
     let (current, previous) = versions(tx, vo_id).await?;
@@ -137,6 +148,12 @@ pub(crate) async fn check(
     };
     if !(before.protected() || after.protected()) {
         return Ok(());
+    }
+    if (before.policy || after.policy) && !administrator(mapping) {
+        return Err(ServiceError::not_permitted(format!(
+            "the {} {vo_id} is a policy party: only an administrator writes it",
+            kind.as_str()
+        )));
     }
     let owner = match PROVISIONER.try_with(Clone::clone) {
         Ok(issuer) => {
@@ -412,30 +429,68 @@ async fn read(
     .fetch_optional(&mut *tx)
     .await?
     .flatten();
+    let acts_for = match &mapping.acts_for {
+        Some(archetype) => holds_relationship(tx, vo_id, sys_version, archetype).await?,
+        None => false,
+    };
     let facts = Facts {
         template: template
             .as_deref()
             .map(crate::templates::identity::canonical_key),
+        acts_for,
         ..Facts::default()
     };
     Ok(protected(mapping, kind, &facts))
 }
 
+/// Whether the version `sys_version` of `vo_id` holds a `PARTY_RELATIONSHIP`
+/// of the canonical archetype `archetype`, as its root or inline, read from
+/// its nodes so no body is parsed (#5220).
+async fn holds_relationship(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+    sys_version: i32,
+    archetype: &str,
+) -> Result<bool, ServiceError> {
+    Ok(sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM version v \
+         JOIN node n ON n.tier = v.tier AND n.vo_id = v.vo_id AND n.sys_version = v.content_key \
+         WHERE v.vo_id = $1 AND v.sys_version = $2 \
+           AND n.rm_type = 'PARTY_RELATIONSHIP' AND n.archetype = $3)",
+    )
+    .bind(vo_id)
+    .bind(sys_version)
+    .bind(archetype)
+    .fetch_one(&mut *tx)
+    .await?)
+}
+
 /// What `facts`, held by a party of `kind`, hold that is protected.
 fn protected(mapping: &BindingMapping, kind: Kind, facts: &Facts) -> Protected {
-    let mut protected = Protected::default();
+    let mut protected = Protected {
+        policy: facts.acts_for,
+        ..Protected::default()
+    };
+    if let Some(template) = &facts.template {
+        protected.policy |= match kind {
+            Kind::Agent => mapping.agent.as_ref().is_some_and(|a| &a.template == template),
+            Kind::Role => mapping.policy_roles.contains_key(template),
+            _ => false,
+        };
+    }
+    protected.whole = protected.policy;
     let Some(template) = &facts.template else {
         return protected;
     };
     match kind {
-        Kind::Role => protected.whole = mapping.professional_role.as_ref() == Some(template),
+        Kind::Role => protected.whole |= mapping.professional_role.as_ref() == Some(template),
         Kind::Group => {
-            protected.whole = mapping
+            protected.whole |= mapping
                 .group
                 .as_ref()
                 .is_some_and(|g| &g.template == template);
         }
-        _ => {
+        Kind::Person => {
             if !mapping.persons.contains_key(template) {
                 return protected;
             }
@@ -447,8 +502,9 @@ fn protected(mapping: &BindingMapping, kind: Kind, facts: &Facts) -> Protected {
                     identifier.canonical(),
                 ));
             }
-            protected.whole = facts.represents;
+            protected.whole = facts.represents || protected.policy;
         }
+        _ => {}
     }
     protected
 }

@@ -1,0 +1,92 @@
+archetype (adl_version=2.0.6; rm_release=1.1.0)
+    openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"FerroEHR">
+        ["organisation"] = <"Cadasto B.V.">
+    >
+    lifecycle_state = <"unmanaged">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The ROLE a professional's PERSON performs to hold a privilege beyond clinical access: reading the access log of a subject, acting as an EHDS access service, reading protected national identifiers, or importing EHRs.">
+            use = <"One CAPABILITY per privilege, named by its kind; time_validity bounds it by day, for example the cover of an absent colleague. The administrator privilege and emergency access are never granted here: the identity provider and the configuration grant those. Adapted from the openEHR CKM archetypes the derived_from entry names: the ROLE and its CAPABILITY structure, with the credentials FerroEHR's own.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+    other_details = <
+        ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0, openEHR-DEMOGRAPHIC-CAPABILITY.individual_credentials.v0 (openEHR CKM)">
+    >
+
+definition
+    ROLE[id1] matches {
+        identities matches {
+            PARTY_IDENTITY[id2] matches {
+                details matches {
+                    ITEM_TREE[id3] matches {
+                        items matches {
+                            ELEMENT[id4] occurrences matches {0..1} matches {
+                                value matches { DV_TEXT[id5] }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        capabilities matches {
+            CAPABILITY[id6] occurrences matches {1..*} matches {
+                name matches {
+                    DV_CODED_TEXT[id7] matches {
+                        defining_code matches {[ac1]}
+                    }
+                }
+                credentials matches {
+                    ITEM_TREE[id8] matches {
+                        items matches {
+                            ELEMENT[id9] occurrences matches {0..1} matches {
+                                value matches { DV_DATE_TIME[id30] }
+                            }
+                            ELEMENT[id10] occurrences matches {0..1} matches {
+                                value matches { DV_DATE_TIME[id31] }
+                            }
+                            ELEMENT[id11] occurrences matches {0..1} matches {
+                                value matches { DV_TEXT[id32] }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["id1"] = <text = <"Privileged role"> description = <"The role of a person who holds a privilege beyond clinical access.">>
+            ["id2"] = <text = <"Role name"> description = <"The name of the role.">>
+            ["id3"] = <text = <"Name"> description = <"The structure of the name.">>
+            ["id4"] = <text = <"Full name"> description = <"The name of the role as it is written in full.">>
+            ["id6"] = <text = <"Privilege"> description = <"One privilege the performer holds.">>
+            ["id7"] = <text = <"Kind"> description = <"The kind of the grant, which is the name of the capability.">>
+            ["id8"] = <text = <"Grant"> description = <"What the capability grants, held in its credentials.">>
+            ["id9"] = <text = <"Not before"> description = <"The instant before which the grant does not hold, for a bound finer than the day of time_validity.">>
+            ["id10"] = <text = <"Not after"> description = <"The instant after which the grant does not hold, for a bound finer than the day of time_validity.">>
+            ["id11"] = <text = <"Authorisation reference"> description = <"The reference of the decision that authorised the grant, such as a change ticket or a processing agreement.">>
+            ["ac1"] = <text = <"Privileges"> description = <"The privileges a person may hold through this role.">>
+            ["at10"] = <text = <"Subject audit"> description = <"Read the access log of one subject, by the subject's pseudonym.">>
+            ["at11"] = <text = <"Access service"> description = <"Act as an EHDS Article 10 access service, held to a subject's opt-out.">>
+            ["at12"] = <text = <"Identifier reader"> description = <"Read a party's protected national identifiers.">>
+            ["at13"] = <text = <"Import"> description = <"Import an EHR or an EHR extract.">>
+        >
+    >
+    value_sets = <
+        ["ac1"] = <
+            id = <"ac1">
+            members = <"at10", "at11", "at12", "at13">
+        >
+    >

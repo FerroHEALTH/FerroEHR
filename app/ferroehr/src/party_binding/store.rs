@@ -115,6 +115,8 @@ pub(crate) fn selector_in_use(e: StorageError) -> ServiceError {
 /// Judges the party commit `committed` against the protection rules
 /// ([`crate::party_binding::protect`]), then brings its reverse-relationship
 /// index and side-table rows to its new head, on its commit transaction `tx`.
+/// A `PARTY_RELATIONSHIP` of its own is judged only: it is no party, so it has
+/// no rows.
 ///
 /// `facts` is what the committed body holds, `None` for a logical delete: the
 /// hooks read it and never the stored body (#5220).
@@ -128,6 +130,9 @@ pub(crate) async fn reindex_committed(
     committed: &Committed,
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
+    if committed.kind == Kind::PartyRelationship {
+        return crate::party_binding::protect::check(tx, ctx.binding, committed, None).await;
+    }
     if crate::versioning::committer::person_commits() {
         // NOTE: RM common master04 §Audit Details, PARTY_SELF names the record
         // subject, and a demographic version has none (#5005).
