@@ -3,9 +3,11 @@
 Party binding and SCIM provisioning write demographic parties under the
 templates and archetypes the [party mapping](config-auth.md#the-party-mapping)
 names, and the server refuses to boot while the definition store lacks one of
-them. FerroEHR ships a default set of seven ADL 2 archetypes that the
-documented mappings name, so a deployment can load them and boot those
-mappings as they stand:
+them. FerroEHR ships a default set of seven ADL 2 archetypes. The binary
+carries them, every boot stores each one whose id the definition store does
+not hold, and with no mapping key set the party mapping names them, so an
+empty configuration boots with SCIM Users, Groups and representation
+working:
 
 - a professional's `PERSON` and the professional `ROLE` it performs, with
   the professional's registrations and qualifications as its capabilities;
@@ -18,12 +20,14 @@ mappings as they stand:
   a federation partner.
 
 The policy definitions of [Operational policy](../operational-policy.md#the-policy-parties) are
-not in this set: the binary carries their defaults and stores each one at
-boot when no definition of its id is stored.
+not in this set, and are stored at boot the same way.
 
-These are defaults. A deployment may load its own templates instead, or
-beside them, and point `[authz.party_binding]` at those. Nothing in FerroEHR
-depends on these ids beyond the configuration that names them.
+A stored definition is never overwritten: a definition stored under one of
+these ids before the first boot, with its own text, is kept, and so is every
+later version uploaded through the definition API. These are defaults. A
+deployment may load its own templates instead, or beside them, and set the
+`[authz.party_binding]` sections that name them; the server stores nothing
+under its ids.
 
 ## The files
 
@@ -37,7 +41,7 @@ every release as an asset of its own, with a `.sha256sum` file beside it.
 | [`openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls) | A care team's `GROUP`: its `externalId` as an identifier in `details` (`/details[id2]/items[id3]`) and its `displayName` in `identities` (`/identities[id4]/details[id5]/items[id6]`). | `[authz.party_binding.group] template_id` |
 | [`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls) | The membership of a `PERSON` in a `GROUP`, held in the member's `relationships`, with an optional role in the team. | `[authz.party_binding.membership] archetype_id`, as `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1` |
 | [`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls) | The relationship from a representative's `PERSON` to the subject's, whose coded name is its type: `at10` (parent) or `at11` (guardian). | `[authz.party_binding.representation] archetype_id`, as `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1`, and its `relationship_codes` |
-| [`openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls) | A patient's `PERSON`: its patient identifiers (`/details[id2]/items[id3]`), date of birth (`id4`) and sex (`id5`) in `details`, its names in `identities`, each named by its usage (`/identities[id6]/details[id7]/items[id8]`, `id9`, `id10`), a postal and an electronic address, and its relationships to personal contacts, third-party payers and providers, each payer and provider with the patient identifiers it issues. | none: the party mapping maps professionals |
+| [`openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls) | A patient's `PERSON`: its patient identifiers (`/details[id2]/items[id3]`), date of birth (`id4`) and sex (`id5`) in `details`, its names in `identities`, each named by its usage (`/identities[id6]/details[id7]/items[id8]`, `id9`, `id10`), a postal and an electronic address, and its relationships to personal contacts, third-party payers and providers, each payer and provider with the patient identifiers it issues. | `[authz.party_binding.patient] template_id`, with its `identifier` and `name` paths |
 | [`openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls) | A healthcare provider's `ORGANISATION`: its provider identifiers in `details` (`/details[id2]/items[id3]`, such as the Dutch URA, mandatory), its names named by their usage, and a postal and an electronic address. The acts-for relationship targets it, and a federation partner is one. | none |
 
 The links above fetch the newest release's copy. To fetch the copy of a
@@ -86,65 +90,50 @@ CKM's `individual_credentials`: the openEHR RM and CKM use a capability for a
 performer's qualifications. The files carry the
 CKM sources' licence, Creative Commons Attribution-ShareAlike 3.0.
 
-## Loading them
+## How they are stored
 
-Load them, in the order of the table, before the server starts:
+Every boot stores each file whose id the definition store does not hold,
+through the same path as `POST /definition/template/adl2`, before it judges
+the party mapping. A file stored already is left alone, whatever its text.
+No lane loads them with `ferroehr definitions load` any more: the
+quickstart, the hosted sandbox, the development and conformance lanes and
+the [Helm chart](kubernetes.md) boot on them as the binary stores them. The
+chart's `definitions.files` is empty by default and lists only definitions
+of your own.
 
-```sh
-ferroehr definitions load \
-  openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls \
-  openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls \
-  openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls \
-  openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls \
-  openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls \
-  openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls \
-  openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls
-```
-
-A file stored already with the same text is left alone, so the step runs at
-every start ([`ferroehr definitions load`](config-cli.md#ferroehr-definitions-load)).
-The shipped deployments load all seven:
-
-- the [Docker Compose quickstart](compose.md), through its
-  `ferroehr-definitions` one-shot, which the Keycloak overlay keeps;
-- the hosted sandbox, through the same one-shot;
-- the [Helm chart](kubernetes.md), whose default `definitions.files` lists
-  them, stored by an init container. Setting `definitions.files` replaces the
-  list, so a deployment that loads its own templates lists those.
+To store them before the first boot, for example to inspect them, use
+[`ferroehr definitions load`](config-cli.md#ferroehr-definitions-load) with
+the files above; the first boot then keeps them.
 
 ## The mapping that names them
 
-The worked example of [the party mapping](config-auth.md#the-party-mapping)
-maps the first five, and boots on them as they stand. A test loads the files,
-boots that example from the page and provisions a SCIM User, a Group with the
-User as its member and a representation through it, so the example and the
-files cannot drift apart. SCIM serves `/scim/v2/Groups` once the group table
-names a `display_name` and the membership table is set, and each client's
-`[[auth.party]]` table needs a `group_claim` and a
-`group_identifier_issuer` ([Groups](config-auth.md#groups)).
+With no mapping key set, `[authz.party_binding]` maps all of them but the
+provider `ORGANISATION`, which the acts-for relationship of the policy parties
+targets ([the default mapping](config-auth.md#the-party-mapping)). SCIM serves
+`/scim/v2/Groups`, and each client's Groups' `externalId`s are written under
+its `[[auth.party]]` table's `group_identifier_issuer`, or under one derived
+from its `binding_issuer` when the table sets none
+([Groups](config-auth.md#groups)). A test boots an empty configuration,
+stores the set as boot does, and provisions a SCIM User, a Group with the
+User as its member and a representation through it, so the default mapping
+and the files cannot drift apart.
 
-The quickstart, its Keycloak overlay, the hosted sandbox and the
-development lanes map all five, so SCIM Users, Groups and representation
-work there out of the box. No configuration key names the patient `PERSON`
-or the provider `ORGANISATION`. The Helm chart's party mapping is yours: its
-`values-production.yaml` maps the `PERSON` and the `ROLE`, and you add the
-rest when you want them.
-
-For the Helm chart, the same tables go under `config.authz.party_binding`:
+A deployment with templates of its own sets the section that names them, and
+only that section: the others keep their default. For the Helm chart, the
+sections go under `config.authz.party_binding`, for example a person key of
+another identifier type:
 
 ```yaml
 config:
   authz:
     party_binding:
-      group:
-        template_id: openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0
-        external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
-        display_name: "/identities[id4]/details[id5]/items[id6]"
-      membership:
-        archetype_id: openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1
-      representation:
-        archetype_id: openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1
-        relationship_codes: { at10: "254", at11: "264" }
+      person:
+        template:
+          - template_id: openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0
+            default: true
+            key: { path: "/details[id2]/items[id3]", type: uuid }
+            user_name: { path: "/details[id2]/items[id3]", type: scim_user_name }
+            external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
 ```
 
 Set the mapping before the first start. The binding side table is filled

@@ -160,7 +160,7 @@ pub fn errors(
 
 /// The refusals of a mapping just-in-time creation cannot write with.
 fn mapping_errors(binding: &PartyBindingConfig, at: &str, errors: &mut Vec<String>) {
-    let Some(template) = binding.person.template.iter().find(|t| t.default) else {
+    let Some(template) = binding.person().template.iter().find(|t| t.default) else {
         errors.push(format!(
             "{at} sets jit, and no [[authz.party_binding.person.template]] sets default = true"
         ));
@@ -178,7 +178,7 @@ fn mapping_errors(binding: &PartyBindingConfig, at: &str, errors: &mut Vec<Strin
              [authz.party_binding.professional_role] is not set"
         ));
     }
-    let named = binding.person.attribute.iter().any(|attribute| {
+    let named = binding.person().attribute.iter().any(|attribute| {
         attribute.oidc.is_some()
             && attribute.source() == Source::Name
             && attribute.path_for(&template.template_id).is_some()
@@ -195,7 +195,7 @@ fn mapping_errors(binding: &PartyBindingConfig, at: &str, errors: &mut Vec<Strin
 /// The refusals of an attribute just-in-time creation is told to write and
 /// cannot read.
 fn attribute_errors(binding: &PartyBindingConfig, errors: &mut Vec<String>) {
-    for attribute in binding.person.attribute.iter().filter(|a| a.jit) {
+    for attribute in binding.person().attribute.iter().filter(|a| a.jit) {
         if attribute.oidc.is_none() {
             errors.push(format!(
                 "{} sets jit = true and names no oidc claim to read it from",
@@ -242,14 +242,14 @@ mod tests {
             identifier_type: kind.to_owned(),
         };
         let mut binding = PartyBindingConfig::default();
-        binding.person.template = vec![PersonTemplate {
+        binding.person.get_or_insert_default().template = vec![PersonTemplate {
             template_id: "professional".to_owned(),
             key: selector("guid"),
             user_name: Some(selector("scim_user_name")),
             external_id: None,
             default: true,
         }];
-        binding.person.attribute = vec![PersonAttribute {
+        binding.person.get_or_insert_default().attribute = vec![PersonAttribute {
             oidc: Some("name".to_owned()),
             name: true,
             path: [(
@@ -358,10 +358,11 @@ mod tests {
     #[test]
     fn jit_needs_a_user_name_selector_a_role_and_a_name_claim() {
         let mut binding = with(jit());
-        binding.person.template[0].user_name = None;
+        binding.person.get_or_insert_default().template[0].user_name = None;
         binding.professional_role = None;
-        binding.person.attribute[0].oidc = None;
-        binding.person.attribute[0].scim = Some("name.formatted".to_owned());
+        binding.person.get_or_insert_default().attribute[0].oidc = None;
+        binding.person.get_or_insert_default().attribute[0].scim =
+            Some("name.formatted".to_owned());
         let errors = errors(&binding, &resolved(false), &AssuranceSection::default());
         for wanted in ["user_name selector", "professional_role", "name claim"] {
             assert!(
@@ -374,11 +375,15 @@ mod tests {
     #[test]
     fn a_jit_attribute_without_a_claim_is_refused() {
         let mut binding = with(jit());
-        binding.person.attribute.push(PersonAttribute {
-            scim: Some("emails[type eq \"work\"].value".to_owned()),
-            jit: true,
-            ..PersonAttribute::default()
-        });
+        binding
+            .person
+            .get_or_insert_default()
+            .attribute
+            .push(PersonAttribute {
+                scim: Some("emails[type eq \"work\"].value".to_owned()),
+                jit: true,
+                ..PersonAttribute::default()
+            });
         let errors = errors(&binding, &resolved(false), &AssuranceSection::default());
         assert!(
             errors.iter().any(|e| e.contains("names no oidc claim")),

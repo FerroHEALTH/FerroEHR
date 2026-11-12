@@ -1,10 +1,10 @@
 # Care-team GROUP and membership definitions: provenance
 
-Two ADL 2 archetypes of FerroEHR's default demographic definitions, which a
-deployment loads with `ferroehr definitions load` before `serve` so that a
-party mapping of groups (`[authz.party_binding.group]` and
-`[authz.party_binding.membership]`) finds them at boot and SCIM can provision
-Groups:
+Two ADL 2 archetypes of FerroEHR's default demographic definitions, which
+the binary carries and stores at boot when absent, so that the party mapping
+of groups (`[authz.party_binding.group]` and
+`[authz.party_binding.membership]`, whose defaults name them) finds them and
+SCIM can provision Groups:
 
 1. `openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls`: the `GROUP` of a care
    team, named by `[authz.party_binding.group] template_id`.

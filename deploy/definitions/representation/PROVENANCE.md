@@ -1,9 +1,9 @@
 # Representation definition: provenance
 
-One ADL 2 archetype of FerroEHR's default demographic definitions, which a
-deployment loads with `ferroehr definitions load` before `serve` so that a
-party mapping of representation (`[authz.party_binding.representation]`)
-finds it at boot:
+One ADL 2 archetype of FerroEHR's default demographic definitions, which the
+binary carries and stores at boot when absent, so that the party mapping of
+representation (`[authz.party_binding.representation]`, whose default names
+it) finds it:
 
 - `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls`: the
   relationship a representative acts through, from the representative's
