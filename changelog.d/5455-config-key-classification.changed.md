@@ -14,3 +14,10 @@
   chart's `api`, `database`, `authz.rbac`, `authz.abac`, `authz.party_binding.namespace`,
   `management.endpoints`, `record.signing`, `record.multimedia` and `audit.store` defaults and
   the like. The server reads the same values as before.
+- **Breaking (chart):** the chart moves to 26.0.0. Its `values.yaml` no longer carries
+  `config.deployment.spec_profile`, `config.api.openapi_ui`, `admin`, `terminology`,
+  `config.database.migrations`, `acquire_timeout`, `statement_timeout`, `config.authz.rbac`,
+  `config.authz.abac`, `config.authz.party_binding.namespace`, `config.management.endpoints`,
+  `config.record.signing`, `config.record.multimedia` or `config.audit.store`, each of which
+  only restated the server's default. A values file that sets them still works; a tool that
+  reads them from the chart's defaults finds them unset.
