@@ -108,41 +108,50 @@ versions is set inactive, never deleted, because it is their committer.
 
 ### Who writes and reads a policy party
 
-The rule keys on the archetype a party is built on, so a renamed, versioned
-or specialised template is guarded too. A policy party is:
+The rule keys on what a party holds, in any archetype or template you model
+it with, never on its archetype id. A party is a policy party when a version
+of it holds:
 
-- an `AGENT` whose root archetype is the system `AGENT` archetype or a
-  specialisation of it, under any template;
-- a `ROLE` whose root archetype is one of the four policy `ROLE` archetypes
-  or a specialisation, under any template;
-- any party holding an acts-for relationship, and an acts-for
-  `PARTY_RELATIONSHIP` written on FerroEHR's own relationship routes.
+- a `CAPABILITY` whose `credentials` hold, anywhere in their tree, a
+  `DV_CODED_TEXT` of FerroEHR's operation terminology, terminology id
+  `ferroehr-operations`, such as `ferroehr-operations::import_ehr`;
+- a `PARTY_RELATIONSHIP`, held inline or written on FerroEHR's own
+  relationship routes, whose `name` or `details` hold the code
+  `ferroehr-operations::acts_for`;
+- a `DV_IDENTIFIER` of type `client_id`, which binds an actor to an OAuth 2.0
+  client.
+
+A deployment that creates an `AGENT` "Legacy migration" with a `ROLE` of its
+own archetype, whose capability's credentials hold `import_ehr`, has written
+a policy party; the same `ROLE` with a code of another terminology is an
+ordinary one.
 
 Only a caller holding `[authz.rbac] admin_role` creates, updates or deletes
 one, through its own route or in a `POST /demographic/contribution`. Any
-other caller is answered `403`, and the answer names the archetype, for
-example `the AGENT … is a policy party of the archetype
-openehr-demographic-agent.system.v1: only an administrator writes it`. A
+other caller is answered `403`, and the answer names what makes it one, for
+example `the ROLE … is a policy party, as it holds a capability granting
+ferroehr-operations::import_ehr: only an administrator writes it`. A
 SCIM client never writes one, even for a `PERSON` it provisioned, and
 neither does a holder of a `demographic_clients` grant, so no client grants
 itself a capability. The rule judges the version before the write as well
 as the new one, so a non-administrator can neither change nor delete a
-policy party, nor turn one into an ordinary party.
+policy party, nor turn one into an ordinary party. Once a version of a party
+is a policy party, the party is marked, in the commit's own transaction, and
+the mark is never cleared: every later write of it is an administrator's.
 
 Only an administrator reads one too: `GET` of the party, of
 `/demographic/versioned_party/{id}` and its `revision_history` and
-`version` reads, and of its tags answer `403` to any other caller, naming
-the archetype, when any version of the party is a policy party. Every
-other party stays readable as before.
+`version` reads, and of its tags answer `403` to any other caller when
+the party carries the mark. A party
+an administrator turns into an ordinary one stays an administrator's to
+read, every version of it. Every other party stays readable as before.
 
 AQL over the demographic store applies the same rule. For a caller without
 `admin_role`, a query rooted at any demographic class (`PERSON`,
 `ORGANISATION`, `GROUP`, `AGENT`, `ROLE`, the abstract `PARTY` and `ACTOR`,
 or `PARTY_RELATIONSHIP`), alone or under `VERSION`, leaves out every version
-of a party or relationship whose root archetype is a policy archetype or a
-specialisation of one, and every version of a party that holds an acts-for
-relationship. The query answers as if those parties
-were not stored, and it is not refused:
+of a party or relationship that carries the mark. The query answers as if
+those parties were not stored, and it is not refused:
 
 - The rule is a condition of the one SQL statement the query runs, so
   `COUNT` and the other aggregates, `LIMIT`, `OFFSET` and the REST `fetch`
@@ -153,9 +162,11 @@ were not stored, and it is not refused:
   `CAPABILITY`, or through a path belongs to its party and is left out with
   it. The party half of a query that joins a party to its `EHR` is filtered
   the same way.
-- The rule reads the archetype columns of the party's root row and the
-  relationships that row holds, which the query reads anyway, so it adds no
-  statement and no transaction.
+- The commit that stores a policy version marks the party, in the same
+  transaction, and nothing clears the mark. The rule reads that mark from
+  the party's head row, which the query reaches by its key anyway, so it
+  adds no statement and no transaction. The Demographic API read checks the
+  same mark.
 - An administrator's query returns the policy parties.
 
 So `FROM AGENT` and `FROM PARTY` never return a system's `AGENT` to such a
@@ -165,18 +176,15 @@ written as a `PARTY_RELATIONSHIP` of its own.
 Every write and every read is an access record of the Demographic API, with
 its committer, as any demographic access is.
 
-### The policy archetypes
+### The example policy archetypes
 
-FerroEHR recognises a policy party by its root archetype, never by its
-template. A party is a system `AGENT`, a policy `ROLE` or an acts-for
-relationship when its root archetype, or the archetype of a relationship it
-holds, is one of the archetypes below or an ADL 2 specialisation of one
-(`openEHR-DEMOGRAPHIC-ROLE.system_client-hospital.v1` specialises
-`openEHR-DEMOGRAPHIC-ROLE.system_client.v1`), at any minor version of the
-same major version. You version, rename or constrain the templates built on
-these archetypes, or build your own, and they stay policy parties: openEHR
-expects data of a specialised archetype to conform to its parent (AM ADL 2
-§Specialisation). No configuration key names them.
+FerroEHR ships the archetypes below as examples of the model. They carry
+the codes: each `ROLE`'s capability holds an `Operation` element whose value
+is a `ferroehr-operations` code, the acts-for relationship holds
+`ferroehr-operations::acts_for` in its details, and the `AGENT` holds a
+`client_id` identifier. A party of one of them is a policy party because of
+those codes, as a party of your own archetypes is. No configuration key
+names them.
 
 | Kind | Archetype |
 |---|---|
@@ -200,8 +208,10 @@ examples below write among them. Every write of a policy party is validated agai
 and every change from them are in
 `app/ferroehr/assets/definitions/policy/PROVENANCE.md`.
 
-**The contract.** The archetype ids above and the node ids below are what
-FerroEHR reads, and every template and version built on an archetype keeps
+**The contract.** The `ferroehr-operations` codes and the `client_id`
+identifier type make a party a policy party, in any archetype. The archetype
+ids above and the node ids below are what FerroEHR reads the terms of an
+example grant by, and every template and version built on an archetype keeps
 them. A breaking change to them is a new archetype major version (`.v2`),
 which FerroEHR does not take for the `.v1` kind. Each grant is a
 `CAPABILITY` at `/capabilities[id6]`, its kind the coded `name`, its
@@ -213,7 +223,9 @@ credentials at `/capabilities[id6]/credentials[id8]`, and its `time_validity` th
 | `AGENT.system` | Name | `/identities[id4]/details[id5]/items[id6]` | `DV_TEXT` |
 | `PARTY_RELATIONSHIP.acts_for` | Type (its `name`) | `at10` acts for | `DV_CODED_TEXT` |
 | `PARTY_RELATIONSHIP.acts_for` | Agreement reference | `/details[id3]/items[id4]` | `DV_TEXT` |
+| `PARTY_RELATIONSHIP.acts_for` | Acts-for code, `ferroehr-operations::acts_for` | `/details[id3]/items[id6]` | `DV_CODED_TEXT` |
 | every policy `ROLE` | Kind of grant (the capability's `name`) | `/capabilities[id6]/name` | `DV_CODED_TEXT` |
+| every policy `ROLE` | Operation, a `ferroehr-operations` code | `/capabilities[id6]/credentials[id8]/items[id90]` | `DV_CODED_TEXT` |
 | `ROLE.system_client` | Kind | `at10` relay, `at11` device | |
 | `ROLE.system_client` | Template written | `/capabilities[id6]/credentials[id8]/items[id9]` | `DV_TEXT` |
 | `ROLE.system_client` | Facility: issuer, identifier, identifier prefix | `/capabilities[id6]/credentials[id8]/items[id10]/items[id11]`, `[id12]`, `[id13]` | `DV_TEXT` |
@@ -345,6 +357,13 @@ writes and the facility it writes at.
       "_type": "ITEM_TREE", "archetype_node_id": "id8", "name": { "_type": "DV_TEXT", "value": "Grant" },
       "items": [
         {
+          "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
+          "value": {
+            "_type": "DV_CODED_TEXT", "value": "Commit composition",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "commit_composition" }
+          }
+        },
+        {
           "_type": "ELEMENT", "archetype_node_id": "id9", "name": { "_type": "DV_TEXT", "value": "Template written" },
           "value": { "_type": "DV_TEXT", "value": "openEHR-EHR-COMPOSITION.report-result.v1" }
         },
@@ -418,6 +437,16 @@ relationship goes in this second version.
       "_type": "DV_CODED_TEXT", "value": "Acts for",
       "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" }, "code_string": "at10" }
     },
+    "details": {
+      "_type": "ITEM_TREE", "archetype_node_id": "id3", "name": { "_type": "DV_TEXT", "value": "Details" },
+      "items": [{
+        "_type": "ELEMENT", "archetype_node_id": "id6", "name": { "_type": "DV_TEXT", "value": "Acts-for code" },
+        "value": {
+          "_type": "DV_CODED_TEXT", "value": "Acts for",
+          "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "acts_for" }
+        }
+      }]
+    },
     "source": {
       "_type": "PARTY_REF", "namespace": "demographic", "type": "AGENT",
       "id": { "_type": "HIER_OBJECT_ID", "value": "5b8e2c91-7d4a-4f3e-8a1c-6e9f0b2d4c73" }
@@ -480,6 +509,20 @@ data migration template, `POST /demographic/role`. The capability's
     "credentials": {
       "_type": "ITEM_TREE", "archetype_node_id": "id8", "name": { "_type": "DV_TEXT", "value": "Grant" },
       "items": [
+        {
+          "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
+          "value": {
+            "_type": "DV_CODED_TEXT", "value": "Import EHR",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "import_ehr" }
+          }
+        },
+        {
+          "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
+          "value": {
+            "_type": "DV_CODED_TEXT", "value": "Import EHR extract",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "import_ehr_extract" }
+          }
+        },
         {
           "_type": "ELEMENT", "archetype_node_id": "id9", "name": { "_type": "DV_TEXT", "value": "Operation" },
           "value": {
@@ -582,6 +625,13 @@ accessor, here `person`.
     "credentials": {
       "_type": "ITEM_TREE", "archetype_node_id": "id8", "name": { "_type": "DV_TEXT", "value": "Grant" },
       "items": [
+        {
+          "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
+          "value": {
+            "_type": "DV_CODED_TEXT", "value": "Federated person access",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "federated_person_access" }
+          }
+        },
         {
           "_type": "ELEMENT", "archetype_node_id": "id9", "name": { "_type": "DV_TEXT", "value": "Agreement name" },
           "value": { "_type": "DV_TEXT", "value": "Regional care network exchange" }
@@ -702,7 +752,15 @@ configuration grant those.
     },
     "credentials": {
       "_type": "ITEM_TREE", "archetype_node_id": "id8", "name": { "_type": "DV_TEXT", "value": "Grant" },
-      "items": [{
+      "items": [
+        {
+          "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
+          "value": {
+            "_type": "DV_CODED_TEXT", "value": "Read subject audit",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "read_subject_audit" }
+          }
+        },
+        {
         "_type": "ELEMENT", "archetype_node_id": "id11", "name": { "_type": "DV_TEXT", "value": "Authorisation reference" },
         "value": { "_type": "DV_TEXT", "value": "Cover for the privacy officer, approved by the CMIO" }
       }]

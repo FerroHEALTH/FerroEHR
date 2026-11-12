@@ -483,23 +483,21 @@ optional. No openEHR spec governs configuration: our own design.
   access rights that "take into account the origins and categories" are what
   the grants express.
 
-**Recognised by archetype, seeded as defaults.** Definitions are versioned
-and a deployment models its own way, so nothing is locked in the binary.
-FerroEHR recognises a policy party by its root archetype (or, for acts-for,
-the archetype of a relationship it holds): `openEHR-DEMOGRAPHIC-AGENT.system.v1`,
+**Recognised by coded content, seeded as examples.** Definitions are
+versioned and a deployment models its own parties from any archetype, so
+FerroEHR never recognises a policy party by archetype id (owner decision on
+#5433, 2026-11-12). A version is a policy party when it holds a `CAPABILITY`
+whose `credentials` hold a `DV_CODED_TEXT` of the operation terminology
+`ferroehr-operations`, a `PARTY_RELATIONSHIP` whose `name` or `details`
+hold `ferroehr-operations::acts_for`, or a `DV_IDENTIFIER` of type
+`client_id` (`party_binding::policy_mark::policy_content`, the RM's
+`ITEM_STRUCTURE` with a terminology binding). The shipped archetypes
+`openEHR-DEMOGRAPHIC-AGENT.system.v1`,
 `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1` and
-`openEHR-DEMOGRAPHIC-ROLE.{system_client,data_migration,federation_partner,privileged}.v1`,
-or an ADL 2 specialisation of one within the same major version
-(`party_binding::policy::PolicyKind::of`; AM `ADL2/master09.01-spec_overview.adoc`
-§Specialisation: "All possible data instance arrangements that conform to the
-specialised archetype must also conform to all of its parents"; BASE
-`base_types` §Archetype Identifiers, `domain_concept = concept_name { '-'
-specialisation }`). It reads the credentials by the archetype's node ids,
-which every template and version on the archetype keeps; those ids and the
-archetype ids are the documented contract (the book's "Operational policy"
-page), and a breaking change to them is a new archetype major version. The
-binary carries a default template of each (`party_binding::policy::DEFINITIONS`,
-from `app/ferroehr/assets/definitions/policy/`); each boot stores one
+`openEHR-DEMOGRAPHIC-ROLE.{system_client,data_migration,federation_partner,privileged}.v1`
+are examples that carry those codes; `PolicyKind::of` names them only so a
+party of one is validated against its own template. The binary carries
+a default template of each (`party_binding::policy::DEFINITIONS`, from `app/ferroehr/assets/definitions/policy/`); each boot stores one
 through the normal definition path only when no definition of its id is
 stored, never overwriting, never refusing a deployment's change and never
 re-seeding over it (`seed_default_definitions`). After that they are ordinary
@@ -521,25 +519,26 @@ table names no `group_identifier_issuer` writes its Groups' `externalId`s
 under its `binding_issuer` with `/groups` appended
 (`ScimClient::group_issuer`). **Our own design.**
 
-**Who writes and reads a policy party.** A policy party is an `AGENT` or a
-`ROLE` whose root archetype is a policy archetype or a specialisation, under
-any template, or a party holding an acts-for relationship (or such a
-relationship on our own relationship routes). Only a caller holding `admin_role` creates,
-updates or deletes one, on its own route or inside a demographic
-`CONTRIBUTION`; any other caller, a SCIM client included, is `403` naming
-the template or archetype. `party_binding::protect` judges the version
-before and after the write in the commit's transaction, so a policy party is
-never planted, changed, deleted or turned into an ordinary one by anyone
-else. Reads are an administrator's too: the Demographic API reads of a
+**Who writes and reads a policy party.** A party is a policy party once a
+version of it holds the coded content above, inline or on our own
+relationship routes. Only a caller holding `admin_role` creates, updates or
+deletes one, on its own route or inside a demographic `CONTRIBUTION`; any
+other caller, a SCIM client included, is `403` naming what makes it one.
+`party_binding::protect` judges the new version and the party's mark in the
+commit's transaction, so a policy party is never planted, changed, deleted
+or turned into an ordinary one by anyone else. Reads are an administrator's too: the Demographic API reads of a
 party or relationship any of whose versions is a policy party are `403` to
-any other caller (`protect::check_read`, read from the root node rows and the
-relationships' node ids, no body parsed). Demographic AQL by such a caller
-leaves out every version whose root is of a policy archetype or holds an
-acts-for relationship inline (`aql::sql::policy`, #5450): one predicate of
-the statement, on the root row's `arch_entity`, `arch_major` and
-`arch_concept` and on its inline `relationships`, so counts and paging see
-only what the caller may read and no extra statement runs; the inline ids are
-matched by `PolicyKind::id_pattern`, a test pinned to `PolicyKind::of`.
+any other caller, and demographic AQL by such a caller leaves out every
+version of it (#5450, #5485). Both read one mark: `vo_head.policy_party_at`
+(party migration `0034_policy_party_mark.sql`), which the commit of a policy
+version sets in its own transaction (`protect::check`, from the body the
+commit holds), which nothing clears, and which an import, an archive load
+and `party-binding refill` set from the stored bodies
+(`policy_mark::mark_stored`, by the SQL/JSON path `POLICY_PATH`, which a test
+runs against `policy_content` over one set of bodies). `protect::check_read` reads it by the head's primary key,
+and AQL adds it to the head join every versioned-object source makes
+(`aql::sql::gates`), so counts and paging see only what the caller may read
+and no extra statement runs.
 **Our own design:** the RM's
 `ACCESS_CONTROL_SETTINGS` is "Currently implementation dependent" and the
 Demographic API defines no access rule for its operations.

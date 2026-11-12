@@ -4,11 +4,12 @@
 //! The policy parties (#5434) over a real PostgreSQL 18: the default policy
 //! definitions are seeded when absent and never overwritten, no
 //! configuration key names them, each worked example on the book's
-//! "Operational policy" page fits its definition, a deployment's own
-//! version or specialisation of a policy archetype is recognised by
-//! archetype, and only an administrator writes or reads a policy party (the
-//! system `AGENT`, a policy `ROLE`, an acts-for relationship inline or of its
-//! own). No openEHR spec governs who writes a party: our own design.
+//! "Operational policy" page fits its definition and carries the codes that
+//! make it a policy party, a deployment's own version or specialisation of
+//! an example archetype carrying them is one too, and only an administrator
+//! writes or reads a policy party (an `AGENT` holding a client identifier, a
+//! `ROLE` holding an operation code, an acts-for relationship inline or of
+//! its own). No openEHR spec governs who writes a party: our own design.
 
 use std::collections::HashMap;
 
@@ -266,7 +267,11 @@ pub(crate) async fn update(
 }
 
 /// Deletes the party at `uid`.
-async fn delete(svc: &FerroEhrService, kind: PartyKind, uid: &str) -> Result<(), ServiceError> {
+pub(crate) async fn delete(
+    svc: &FerroEhrService,
+    kind: PartyKind,
+    uid: &str,
+) -> Result<(), ServiceError> {
     Box::pin(svc.party_delete(
         kind,
         object(uid),
@@ -277,16 +282,12 @@ async fn delete(svc: &FerroEhrService, kind: PartyKind, uid: &str) -> Result<(),
     .map(|_| ())
 }
 
-/// Asserts `refused` is the `403` of a policy party, naming the archetype
-/// that makes it one.
-fn assert_policy_refusal<T: std::fmt::Debug>(refused: Result<T, ServiceError>) {
+/// Asserts `refused` is the `403` of a policy party.
+pub(crate) fn assert_policy_refusal<T: std::fmt::Debug>(refused: Result<T, ServiceError>) {
     let refused = refused.expect_err("a policy party is written by an administrator only");
     assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
     let text = refused.to_string();
-    assert!(
-        text.contains("is a policy party of the archetype openehr-demographic-"),
-        "{text}"
-    );
+    assert!(text.contains(" is a policy party"), "{text}");
 }
 
 fn text(value: &str) -> Value {
@@ -647,9 +648,9 @@ async fn only_an_administrator_reads_a_policy_party() {
 }
 
 /// The professional `ROLE`'s `CAPABILITY` holds a clinician's
-/// qualifications (CKM `individual_credentials`), never a grant: its
-/// template is no policy role, so a `ROLE` of it is no policy party, and a
-/// clinician reads it.
+/// qualifications (CKM `individual_credentials`), never a grant: it holds no
+/// code of FerroEHR's operation terminology, so a `ROLE` of it is no policy
+/// party, and a clinician reads it.
 #[tokio::test]
 async fn a_professional_credentials_capability_is_never_read_as_a_grant() {
     let (_db, svc) = loaded().await;
@@ -729,8 +730,8 @@ pub(crate) fn system_client_under(template_id: &str, archetype: &str, agent: VoI
 
 /// A deployment versions the system client `ROLE` and builds a specialised
 /// one under another id, through the definition upload the REST route
-/// calls: both are recognised by their archetype and guarded, and a boot
-/// keeps them.
+/// calls: both carry the operation code of the example, so both are policy
+/// parties, and a boot keeps them.
 #[tokio::test]
 async fn a_deployments_version_and_specialisation_are_policy_parties() {
     let (_db, svc) = mapped().await;
