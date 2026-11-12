@@ -12,123 +12,151 @@
 # "7d"), a size a string with an IEC binary unit ("64MiB"). Each key can
 # also be set as FERROEHR__<TABLE>__<KEY>, such as
 # FERROEHR__DATABASE__MAX_CONNECTIONS; `--set key=value` wins over it.
+#
+# What you must set
+#
+# This file lists 913 keys. A deployment that holds real data sets the 10
+# below; every other key is optional and runs on the built-in default its line
+# shows, or stays unset where its note says so.
+#
+#   [deployment] profile
+#   [[auth.issuer]] issuer, kind, audience
+#   [authz.party_binding.provider] issuer, id
+#   [api] system_id
+#   [database] url
+#   [privacy] subject_namespaces
+#   [record] subject_index
+#
+# Each note ends with why the key is in the file: infrastructure (what the
+# server needs before it reaches its store), trust (what it trusts, its floors
+# and its secrets), or nothing more for a tuning key.
 
 # The declared posture, the openEHR specification set and the licence token.
 [deployment]
 # The declared posture (`sandbox` | `production`; default `sandbox`).
 # `production` refuses to start while a separation it asserts is missing and
-# not accepted by name (#3226).
+# not accepted by name (#3226). Must set (infrastructure).
 profile = "sandbox"
 # The `DeploymentGap`s a `production` deployment runs without, each stated on
 # every boot and on `/management/status`. Ignored under `sandbox`, which
-# accepts everything.
+# accepts everything. Optional (infrastructure).
 accepts = []
 # The openEHR specification generation set the server runs (`development` |
-# `stable`; default `development`).
+# `stable`; default `development`). Optional (infrastructure).
 spec_profile = "development"
 # The commercial licence token file the licensor issued. Optional in every
 # respect: an unset, missing, malformed or expired token is logged once at boot
-# and the server runs unlicensed, identically in every other way.
+# and the server runs unlicensed, identically in every other way. Optional,
+# unset by default (infrastructure).
 #? licence_file = ""
 
 # The HTTP listener: the family's section (the listen address, the timeouts,
 # the body limit, the overload bound, the drain, TLS, the trusted proxies, the
 # caller rate and compression).
 [server]
-# The socket address the listener binds.
+# The socket address the listener binds. Optional (infrastructure).
 listen = "0.0.0.0:8080"
 # The path every route is served under: empty, or starting with `/` and not
-# ending with one.
+# ending with one. Optional (infrastructure).
 base_path = ""
-# How long one request may take before the server answers `408`.
+# How long one request may take before the server answers `408`. Optional
+# (infrastructure).
 request_timeout = "30s"
 # How long a client may take to send its first byte once it connected, and each
 # HTTP/1.1 request head from that head's first byte; a client still sending its
 # head then is disconnected, which bounds a connection that never finishes one.
-# Never zero.
+# Never zero. Optional (infrastructure).
 header_read_timeout = "30s"
 # How long a kept-alive HTTP/1.1 connection may wait for its next request
 # before the server closes it. Keep it longer than the idle timeout of the
 # clients and proxies in front, so they close an idle connection first. Never
-# zero.
+# zero. Optional (infrastructure).
 idle_timeout = "2min"
-# The largest request body the server reads before answering `413`.
+# The largest request body the server reads before answering `413`. Optional
+# (infrastructure).
 body_limit = "64MiB"
 # How long readiness stays withdrawn before the listener closes, so an
-# orchestrator stops sending requests first.
+# orchestrator stops sending requests first. Optional (infrastructure).
 drain_delay = "0s"
-# How long the requests in flight may take once the listener closed.
+# How long the requests in flight may take once the listener closed. Optional
+# (infrastructure).
 shutdown_timeout = "10s"
 # How many requests the server serves at once; past it a request is answered
-# `503`. Unset, there is no bound.
+# `503`. Unset, there is no bound. Optional, unset by default (infrastructure).
 #? max_concurrent_requests = 0
 # How long a refused request is told to wait (`Retry-After`), a whole number of
-# seconds, since the header carries delay-seconds (RFC 9110 §10.2.3).
+# seconds, since the header carries delay-seconds (RFC 9110 §10.2.3). Optional
+# (infrastructure).
 retry_after = "1s"
 # The reverse proxies whose forwarded client address is believed, each an
-# address or a CIDR block; empty, every request is named by its peer.
+# address or a CIDR block; empty, every request is named by its peer. Optional
+# (infrastructure).
 trusted_proxies = []
-# The header a trusted proxy names the client in.
+# The header a trusted proxy names the client in. Optional (infrastructure).
 forwarded_header = "forwarded"
 # Whether a response is compressed with gzip or Brotli when the client accepts
-# one.
+# one. Optional (infrastructure).
 compression = true
-# The smallest response body that is compressed.
+# The smallest response body that is compressed. Optional (infrastructure).
 compression_min_size = "1KiB"
 
 # The listener's TLS; unset, the listener speaks plain HTTP behind a proxy that
 # terminates TLS.
 #? [server.tls]
-# The certificate chain, the leaf first.
+# The certificate chain, the leaf first. Required in its table
+# (infrastructure).
 #? certificate_file = ""
-# The private key of the leaf.
+# The private key of the leaf. Required in its table (infrastructure).
 #? key_file = ""
-# Whether the listener asks a client certificate.
+# Whether the listener asks a client certificate. Optional (infrastructure).
 #? client_auth = "none"
 # The CA bundle a client certificate must chain to; required unless
-# `client_auth` is `none`, and refused when it is.
+# `client_auth` is `none`, and refused when it is. Optional, unset by default
+# (infrastructure).
 #? client_ca_file = ""
 # How often the files are read again, never zero; unset, only `SIGHUP` reads
-# them again.
+# them again. Optional, unset by default (infrastructure).
 #? reload_interval = "500ms"
 # The client certificate chain and key, in one PEM, the healthcheck presents to
-# a listener that asks one.
+# a listener that asks one. Optional, unset by default (infrastructure).
 #? healthcheck_identity_file = ""
 # The oldest TLS version the listener speaks: `"1.3"` unless lowered to
-# `"1.2"`.
+# `"1.2"`. Optional (infrastructure).
 #? min_version = "1.3"
 
 # The requests one caller may send; unset, a caller is not limited.
 #? [server.caller_rate]
-# The requests per second a caller may send once its burst is spent.
+# The requests per second a caller may send once its burst is spent. Required
+# in its table (infrastructure).
 #? requests_per_second = 0
-# The requests a caller may send at once.
+# The requests a caller may send at once. Required in its table
+# (infrastructure).
 #? burst = 0
 
 # The console, the request log and the OpenTelemetry export, the family's
 # shared section.
 [telemetry]
-# The console rendering.
+# The console rendering. Optional (infrastructure).
 format = "auto"
-# The `tracing` filter directive of the console.
+# The `tracing` filter directive of the console. Optional (infrastructure).
 filter = "info,hyper=warn,tower=warn,h2=warn"
 # The query parameters whose values the request log may carry; empty, it
-# carries none.
+# carries none. Optional (infrastructure).
 logged_query_parameters = []
 # The deployment environment, `deployment.environment.name` on the resource,
-# such as `production`.
+# such as `production`. Optional, unset by default (infrastructure).
 #? environment = ""
 
 # The OTLP collector, when spans and metrics are exported.
 #? [telemetry.otlp]
 # The collector's OTLP/gRPC endpoint; `https://` speaks TLS. It may carry a
-# credential, so it renders masked.
+# credential, so it renders masked. Optional (infrastructure).
 #? endpoint = ""
-# Whether the product's spans are exported.
+# Whether the product's spans are exported. Optional (infrastructure).
 #? traces = true
-# Whether the metrics are pushed.
+# Whether the metrics are pushed. Optional (infrastructure).
 #? metrics = true
-# The share of the server's traces that are sampled.
+# The share of the server's traces that are sampled. Optional (infrastructure).
 #? sample_ratio = 1.0
 
 # The TLS to the collector: trust roots beside the platform's, the client
@@ -137,187 +165,209 @@ logged_query_parameters = []
 # the built configuration to `Telemetry::with_tls`. TLS material is refused
 # beside an endpoint that is not `https://`.
 #? [telemetry.otlp.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (infrastructure).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default
+# (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (infrastructure).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
 
 # The installation report to `FerroPULSE` (on by default).
 [usage_report]
-# The off switch: `false` sends nothing.
+# The off switch: `false` sends nothing. Optional (infrastructure).
 enabled = true
-# The collector.
+# The collector. Optional (infrastructure).
 endpoint = "https://report.ferropulse.eu/v1/report"
 # The directory the instance id lives in; without one nothing is sent, since
-# every restart would count as a new installation.
+# every restart would count as a new installation. Optional, unset by default
+# (infrastructure).
 #? state_dir = ""
-# How the product is deployed.
+# How the product is deployed. Optional (infrastructure).
 deployment = "unknown"
 
 # Authentication: the `ferrohealth-smart` section, whose serialization writes
 # every secret as `***`, `[auth.idp]`, `[auth.smart]` and `[auth.scim]`.
 [auth]
-# Whether inbound authentication is on; a product may refuse `false`.
+# Whether inbound authentication is on; a product may refuse `false`. Optional
+# (trust).
 enabled = true
 # The realm the challenges name; empty for none, which a product replaces with
-# its own default.
+# its own default. Optional.
 realm = ""
 # The SMART capabilities the discovery document adds, each a capability SMART
 # App Launch 2.2.0 or the SMART on openEHR draft defines, or a full URI.
+# Optional.
 capabilities = []
 # The scopes the discovery document lists as `scopes_supported`: only scopes
 # the product honours, because "the server SHALL support all scopes listed
-# here".
+# here". Optional.
 scopes_supported = []
+# The issuer the discovery document describes; absent for the one eligible
+# issuer (`crate::resource::described`). It renders with any userinfo masked.
+# Optional, unset by default (trust).
+#? described_issuer = ""
 # The product's own scope, a full URI or a string starting with `__`; empty for
-# none.
+# none. Optional (trust).
 product_scope = ""
 
 # The `[auth.issuer]` tables, each issuer with its own settings.
 #? [[auth.issuer]]
 # The issuer identifier. It renders with any userinfo masked, as `SecretUrl`
-# renders itself.
+# renders itself. Must set (trust).
 #? issuer = ""
-# Whose tokens the issuer signs; required, with no default.
+# Whose tokens the issuer signs; required, with no default. Must set (trust).
 #? kind = "persons"
-# The preset the profile starts from.
+# The preset the profile starts from. Optional (trust).
 #? profile = "rfc9068"
-# The audiences, of which a token's `aud` must contain one.
+# The audiences, of which a token's `aud` must contain one. Must set (trust).
 #? audience = []
-# The signature algorithms admitted.
+# The signature algorithms admitted. Optional (trust).
 #? algorithms = ["RS256", "RS384", "PS256", "PS384", "ES256", "ES384"]
-# The clock skew, at most `300s`.
+# The clock skew, at most `300s`. Optional (trust).
 #? clock_skew = "1min"
-# How long a held key set is used.
+# How long a held key set is used. Optional (trust).
 #? jwks_max_age = "10min"
-# The shortest time between two reads of the key set.
+# The shortest time between two reads of the key set. Optional (trust).
 #? jwks_refresh_interval = "1min"
 # A key set file handed over out of band, in place of the issuer's `jwks_uri`;
-# empty for none.
+# empty for none. Optional (trust).
 #? jwks_file = ""
-# How long one call to the authorization server may take.
+# How long one call to the authorization server may take. Optional (trust).
 #? timeout = "10s"
-# How the issuer's tokens are checked.
+# How the issuer's tokens are checked. Optional (trust).
 #? mode = "jwt"
 # Whether the issuer's tokens must be bound to a `DPoP` key or a client
-# certificate: `none` (the default) or `required` (`crate::sender`).
+# certificate: `none` (the default) or `required` (`crate::sender`). Optional
+# (trust).
 #? sender_constraint = "none"
 # The claims the issuer's roles are read from, each a dotted path; by default
 # `roles`, `groups` and `entitlements` (RFC 9068 §2.2.3.1), and none, never
-# settable, on a `federation` issuer.
+# settable, on a `federation` issuer. Optional, unset by default (trust).
 #? role_claims = []
-# `ProfileKeys::person_key`.
+# `ProfileKeys::person_key`. Optional, unset by default (trust).
 #? person_key = ""
-# `ProfileKeys::tenant_claim`.
+# `ProfileKeys::tenant_claim`. Optional, unset by default (trust).
 #? tenant_claim = ""
-# `ProfileKeys::client_claims`.
+# `ProfileKeys::client_claims`. Optional, unset by default (trust).
 #? client_claims = []
-# `ProfileKeys::impersonation_marker`.
+# `ProfileKeys::impersonation_marker`. Optional, unset by default (trust).
 #? impersonation_marker = ""
-# `ProfileKeys::expect`.
+# `ProfileKeys::expect`. Optional, unset by default (trust).
 #? expect = {}
-# `ProfileKeys::user_claims`.
+# `ProfileKeys::user_claims`. Optional, unset by default (trust).
 #? user_claims = []
-# `ProfileKeys::person_equality`.
+# `ProfileKeys::person_equality`. Optional, unset by default (trust).
 #? person_equality = []
-# `ProfileKeys::unstable_claims`.
+# `ProfileKeys::unstable_claims`. Optional, unset by default (trust).
 #? unstable_claims = []
-# `ProfileKeys::first_party_clients`.
+# `ProfileKeys::first_party_clients`. Optional, unset by default (trust).
 #? first_party_clients = []
-# `ProfileKeys::max_actor_chain`.
+# `ProfileKeys::max_actor_chain`. Optional, unset by default (trust).
 #? max_actor_chain = 0
-# `ProfileKeys::act_represents_patient`.
+# `ProfileKeys::act_represents_patient`. Optional, unset by default (trust).
 #? act_represents_patient = false
-# `ProfileKeys::token_types`.
+# `ProfileKeys::token_types`. Optional, unset by default (trust).
 #? token_types = []
-# `ProfileKeys::required_claims`.
+# `ProfileKeys::required_claims`. Optional, unset by default (trust).
 #? required_claims = []
-# `ProfileKeys::adapter`.
+# `ProfileKeys::adapter`. Optional, unset by default (trust).
 #? adapter = ""
-# `ProfileKeys::max_onward_lifetime`.
+# `ProfileKeys::max_onward_lifetime`. Optional, unset by default (trust).
 #? max_onward_lifetime = "500ms"
-# `ProfileKeys::onward_grant`.
+# `ProfileKeys::onward_grant`. Optional, unset by default (trust).
 #? onward_grant = "token_exchange"
-# `ProfileKeys::onward_indicator`.
+# `ProfileKeys::onward_indicator`. Optional, unset by default (trust).
 #? onward_indicator = "resource"
-# `ProfileKeys::onward_parameters`.
+# `ProfileKeys::onward_parameters`. Optional, unset by default (trust).
 #? onward_parameters = {}
-# `ProfileKeys::onward_client_id`.
+# `ProfileKeys::onward_client_id`. Optional, unset by default (trust).
 #? onward_client_id = false
-# `ProfileKeys::onward_subject_audience`.
+# `ProfileKeys::onward_subject_audience`. Optional, unset by default (trust).
 #? onward_subject_audience = false
-# `ProfileKeys::onward_preview`.
+# `ProfileKeys::onward_preview`. Optional, unset by default (trust).
 #? onward_preview = []
 
 # The introspection check, under `mode = "introspection"`.
 #? [auth.issuer.introspection]
 # The introspection endpoint; empty for the one the issuer's metadata names. It
-# renders with its userinfo and its query masked.
+# renders with its userinfo and its query masked. Optional (trust).
 #? endpoint = ""
-# The longest an active response is used; `0s` caches nothing.
+# The longest an active response is used; `0s` caches nothing. Optional
+# (trust).
 #? cache_max_age = "1min"
-# The most responses held at once.
+# The most responses held at once. Optional (trust).
 #? cache_capacity = 10000
 
 # The client authentication of the introspection call.
 #? [auth.issuer.introspection.client]
 # The issuer whose metadata names the token endpoint; exclusive with
 # `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
-# itself.
+# itself. Optional (trust).
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
-# userinfo and its query masked.
+# userinfo and its query masked. Optional (trust).
 #? token_endpoint = ""
-# The client identifier.
+# The client identifier. Optional (trust).
 #? client_id = ""
-# How the client authenticates.
+# How the client authenticates. Optional (trust).
 #? client_auth = "client_secret_basic"
-# The client secret, rendered redacted.
+# The client secret, rendered redacted. Optional, unset by default (trust).
 #? client_secret = ""
-# The file holding the client secret.
+# The file holding the client secret. Optional, unset by default (trust).
 #? client_secret_file = ""
 # The PEM file holding the private key of the client assertion under
 # `private_key_jwt`, and of the actor assertion of an onward exchange
 # (`credentials.onward.actor_assertion`) whatever the client authentication.
+# Optional, unset by default (trust).
 #? private_key_file = ""
-# The `kid` the assertion names; the RFC 7638 thumbprint when empty.
+# The `kid` the assertion names; the RFC 7638 thumbprint when empty. Optional
+# (trust).
 #? kid = ""
 # The algorithm the assertion is signed with; when unset, by key type, an EC
-# key by its curve (P-256 ES256, P-384 ES384).
+# key by its curve (P-256 ES256, P-384 ES384). Optional, unset by default
+# (trust).
 #? assertion_alg = ""
-# The `scope` request parameter; empty for none.
+# The `scope` request parameter; empty for none. Optional (trust).
 #? scope = ""
-# The RFC 8707 resource indicator; empty for none.
+# The RFC 8707 resource indicator; empty for none. Optional (trust).
 #? resource = ""
-# The `audience` request parameter; empty for none.
+# The `audience` request parameter; empty for none. Optional (trust).
 #? audience = ""
-# How long before the token expires a new one is fetched.
+# How long before the token expires a new one is fetched. Optional (trust).
 #? refresh_margin = "30s"
-# How long one call to the authorization server may take.
+# How long one call to the authorization server may take. Optional (trust).
 #? timeout = "10s"
 # The `aud` of a `private_key_jwt` assertion: `token_endpoint` (the default) or
-# `issuer`, which needs `issuer` set.
+# `issuer`, which needs `issuer` set. Optional (trust).
 #? assertion_audience = "token_endpoint"
-# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449).
+# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449). Optional,
+# unset by default (trust).
 #? dpop_key_file = ""
 # Whether the tokens are bound to the client certificate (RFC 8705 §3).
+# Optional (trust).
 #? certificate_bound = false
-# The security profile: `oauth2` (the default) or `fapi2`.
+# The security profile: `oauth2` (the default) or `fapi2`. Optional (trust).
 #? security_profile = "oauth2"
-# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5).
+# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5). Optional
+# (trust).
 #? mtls_alias_hosts = []
 # The PEM file of the previous assertion key, published, never signing.
+# Optional, unset by default (trust).
 #? previous_private_key_file = ""
 # How long the previous key stays published; `0s` for as long as it is set.
+# Optional (trust).
 #? previous_key_overlap = "0s"
 # The PEM file of the next assertion key, published and never signing.
+# Optional, unset by default (trust).
 #? next_private_key_file = ""
-# The RFC 9396 `authorization_details` JSON text; empty for none.
+# The RFC 9396 `authorization_details` JSON text; empty for none. Optional
+# (trust).
 #? authorization_details = ""
 
 # The TLS of the token endpoint connection: trust roots beside the platform's,
@@ -325,70 +375,82 @@ product_scope = ""
 # version. The crate reads none of it: a table that names material resolves
 # through the product's `TlsBuilder`.
 #? [auth.issuer.introspection.client.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (trust).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default (trust).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (trust).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (trust).
 #? min_version = "1.3"
 
 # The client credentials grant whose token authorizes the call.
 #? [auth.issuer.introspection.bearer]
 # The issuer whose metadata names the token endpoint; exclusive with
 # `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
-# itself.
+# itself. Optional (trust).
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
-# userinfo and its query masked.
+# userinfo and its query masked. Optional (trust).
 #? token_endpoint = ""
-# The client identifier.
+# The client identifier. Optional (trust).
 #? client_id = ""
-# How the client authenticates.
+# How the client authenticates. Optional (trust).
 #? client_auth = "client_secret_basic"
-# The client secret, rendered redacted.
+# The client secret, rendered redacted. Optional, unset by default (trust).
 #? client_secret = ""
-# The file holding the client secret.
+# The file holding the client secret. Optional, unset by default (trust).
 #? client_secret_file = ""
 # The PEM file holding the private key of the client assertion under
 # `private_key_jwt`, and of the actor assertion of an onward exchange
 # (`credentials.onward.actor_assertion`) whatever the client authentication.
+# Optional, unset by default (trust).
 #? private_key_file = ""
-# The `kid` the assertion names; the RFC 7638 thumbprint when empty.
+# The `kid` the assertion names; the RFC 7638 thumbprint when empty. Optional
+# (trust).
 #? kid = ""
 # The algorithm the assertion is signed with; when unset, by key type, an EC
-# key by its curve (P-256 ES256, P-384 ES384).
+# key by its curve (P-256 ES256, P-384 ES384). Optional, unset by default
+# (trust).
 #? assertion_alg = ""
-# The `scope` request parameter; empty for none.
+# The `scope` request parameter; empty for none. Optional (trust).
 #? scope = ""
-# The RFC 8707 resource indicator; empty for none.
+# The RFC 8707 resource indicator; empty for none. Optional (trust).
 #? resource = ""
-# The `audience` request parameter; empty for none.
+# The `audience` request parameter; empty for none. Optional (trust).
 #? audience = ""
-# How long before the token expires a new one is fetched.
+# How long before the token expires a new one is fetched. Optional (trust).
 #? refresh_margin = "30s"
-# How long one call to the authorization server may take.
+# How long one call to the authorization server may take. Optional (trust).
 #? timeout = "10s"
 # The `aud` of a `private_key_jwt` assertion: `token_endpoint` (the default) or
-# `issuer`, which needs `issuer` set.
+# `issuer`, which needs `issuer` set. Optional (trust).
 #? assertion_audience = "token_endpoint"
-# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449).
+# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449). Optional,
+# unset by default (trust).
 #? dpop_key_file = ""
 # Whether the tokens are bound to the client certificate (RFC 8705 §3).
+# Optional (trust).
 #? certificate_bound = false
-# The security profile: `oauth2` (the default) or `fapi2`.
+# The security profile: `oauth2` (the default) or `fapi2`. Optional (trust).
 #? security_profile = "oauth2"
-# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5).
+# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5). Optional
+# (trust).
 #? mtls_alias_hosts = []
 # The PEM file of the previous assertion key, published, never signing.
+# Optional, unset by default (trust).
 #? previous_private_key_file = ""
 # How long the previous key stays published; `0s` for as long as it is set.
+# Optional (trust).
 #? previous_key_overlap = "0s"
 # The PEM file of the next assertion key, published and never signing.
+# Optional, unset by default (trust).
 #? next_private_key_file = ""
-# The RFC 9396 `authorization_details` JSON text; empty for none.
+# The RFC 9396 `authorization_details` JSON text; empty for none. Optional
+# (trust).
 #? authorization_details = ""
 
 # The TLS of the token endpoint connection: trust roots beside the platform's,
@@ -396,85 +458,90 @@ product_scope = ""
 # version. The crate reads none of it: a table that names material resolves
 # through the product's `TlsBuilder`.
 #? [auth.issuer.introspection.bearer.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (trust).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default (trust).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (trust).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (trust).
 #? min_version = "1.3"
 
 # The assurance level the issuer's tokens carry.
 #? [auth.issuer.assurance]
 # The claim carrying the authentication context class, a dotted path; `acr` by
-# default (OpenID Connect Core 1.0 §2).
+# default (OpenID Connect Core 1.0 §2). Optional (trust).
 #? claim = "acr"
 # The level each claim value the issuer emits stands for; a value the map does
-# not name carries none.
+# not name carries none. Optional (trust).
 #? levels = {}
 # The level a request held to the section must carry; none refuses nothing.
+# Optional, unset by default (trust).
 #? minimum = "low"
 
 # `ProfileKeys::app_only`.
 #? [[auth.issuer.app_only]]
-# The claim of `{ claim, value }`.
+# The claim of `{ claim, value }`. Optional, unset by default (trust).
 #? claim = ""
-# The value of `{ claim, value }`.
+# The value of `{ claim, value }`. Optional, unset by default (trust).
 #? value = ""
-# The claim of `{ absent_claim }`.
+# The claim of `{ absent_claim }`. Optional, unset by default (trust).
 #? absent_claim = ""
-# The subjects of `{ subjects }`.
+# The subjects of `{ subjects }`. Optional, unset by default (trust).
 #? subjects = []
-# The `{ sub_is_client = true }` form.
+# The `{ sub_is_client = true }` form. Optional, unset by default (trust).
 #? sub_is_client = false
-# The claim of `{ differs_from_iss }`.
+# The claim of `{ differs_from_iss }`. Optional, unset by default (trust).
 #? differs_from_iss = ""
 
 # `ProfileKeys::guest`.
 #? [[auth.issuer.guest]]
-# The claim of `{ claim, value }`.
+# The claim of `{ claim, value }`. Optional, unset by default (trust).
 #? claim = ""
-# The value of `{ claim, value }`.
+# The value of `{ claim, value }`. Optional, unset by default (trust).
 #? value = ""
-# The claim of `{ absent_claim }`.
+# The claim of `{ absent_claim }`. Optional, unset by default (trust).
 #? absent_claim = ""
-# The subjects of `{ subjects }`.
+# The subjects of `{ subjects }`. Optional, unset by default (trust).
 #? subjects = []
-# The `{ sub_is_client = true }` form.
+# The `{ sub_is_client = true }` form. Optional, unset by default (trust).
 #? sub_is_client = false
-# The claim of `{ differs_from_iss }`.
+# The claim of `{ differs_from_iss }`. Optional, unset by default (trust).
 #? differs_from_iss = ""
 
 # `ProfileKeys::delegates`.
 #? [[auth.issuer.delegates]]
-# The actor's issuer.
+# The actor's issuer. Optional, unset by default (trust).
 #? issuer = ""
-# The actor's `sub`.
+# The actor's `sub`. Optional, unset by default (trust).
 #? sub = ""
-# The client.
+# The client. Optional, unset by default (trust).
 #? client = ""
 
 # `ProfileKeys::representation`.
 #? [auth.issuer.representation]
-# The claim naming the subject the person represents.
+# The claim naming the subject the person represents. Required in its table
+# (trust).
 #? claim = ""
-# The claim carrying the ground of the representation, as asserted.
+# The claim carrying the ground of the representation, as asserted. Optional,
+# unset by default (trust).
 #? ground_claim = ""
 
 # `ProfileKeys::scope_claim`.
 #? [auth.issuer.scope_claim]
-# The claim.
+# The claim. Required in its table (trust).
 #? claim = ""
-# Its JSON form.
+# Its JSON form. Optional (trust).
 #? form = "string"
 
 # `ProfileKeys::app_only_scope_claim`.
 #? [auth.issuer.app_only_scope_claim]
-# The claim.
+# The claim. Required in its table (trust).
 #? claim = ""
-# Its JSON form.
+# Its JSON form. Optional (trust).
 #? form = "string"
 
 # The subjects granted system-wide access without a scope, each `{ issuer, sub
@@ -482,41 +549,43 @@ product_scope = ""
 # ever admitted by an entry.
 #? [[auth.scopeless_subjects]]
 # The issuer. It renders with any userinfo masked, as `SecretUrl` renders
-# itself.
+# itself. Required in its table (trust).
 #? issuer = ""
-# The `sub`.
+# The `sub`. Required in its table (trust).
 #? sub = ""
 
 # The Basic users of the surface; absent for no Basic.
 #? [auth.basic]
 # How long a credential that verified is kept, so a repeat request skips the
-# key derivation; `5min` by default, `0s` keeps none.
+# key derivation; `5min` by default, `0s` keeps none. Optional.
 #? cache_ttl = "5min"
 
 # The users.
 #? [[auth.basic.users]]
-# The user-id.
+# The user-id. Optional (trust).
 #? user = ""
-# The Argon2id PHC string of the password, rendered redacted.
+# The Argon2id PHC string of the password, rendered redacted. Optional, unset
+# by default (trust).
 #? password_hash = ""
-# The file holding that PHC string.
+# The file holding that PHC string. Optional, unset by default (trust).
 #? password_hash_file = ""
-# The scopes the user is granted.
+# The scopes the user is granted. Optional (trust).
 #? scopes = []
-# The roles the user is granted (`crate::roles`).
+# The roles the user is granted (`crate::roles`). Optional (trust).
 #? roles = []
 
 # The `DPoP` proof check of the surface; absent for none, so a `DPoP` request
 # is refused as carrying no admitted credential.
 #? [auth.dpop]
 # The surface's base URL as its clients address it, which a proof's `htu` is
-# compared with, the request path appended; required.
+# compared with, the request path appended; required. Optional (trust).
 #? external_url = ""
-# How long after its `iat` a proof is accepted, at most `300s`.
+# How long after its `iat` a proof is accepted, at most `300s`. Optional
+# (trust).
 #? max_age = "1min"
-# How far a proof's `iat` may lie ahead, at most `300s`.
+# How far a proof's `iat` may lie ahead, at most `300s`. Optional (trust).
 #? clock_skew = "10s"
-# The signature algorithms a proof may use; asymmetric only.
+# The signature algorithms a proof may use; asymmetric only. Optional (trust).
 #? algorithms = ["RS256", "RS384", "PS256", "PS384", "ES256", "ES384"]
 
 # The TLS of the discovery document, the key set and the introspection calls of
@@ -524,55 +593,66 @@ product_scope = ""
 # private certificate authority, a client identity and the minimum version. The
 # crate reads none of it: the product's `TlsBuilder` builds it once at start.
 [auth.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (trust).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default (trust).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (trust).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (trust).
 min_version = "1.3"
 
 # The `[auth.federation]` tables, one per `federation` issuer.
 #? [[auth.federation]]
 # The `[auth.issuer]` this table describes, of kind `federation`. It renders
-# with any userinfo masked, as `SecretUrl` renders itself.
+# with any userinfo masked, as `SecretUrl` renders itself. Optional (trust).
 #? issuer = ""
 # Whether the issuer is a MyHealth@EU contact point; required, with no default.
+# Optional, unset by default (trust).
 #? contact_point = false
-# The default sources the table starts from.
+# The default sources the table starts from. Optional, unset by default
+# (trust).
 #? mapping = "iua"
-# The sources of each field, over the mapping's.
+# The sources of each field, over the mapping's. Optional (trust).
 #? fields = {}
-# The country codes a professional may carry.
+# The country codes a professional may carry. Optional (trust).
 #? countries = []
-# The issuing authorities a professional or provider may name.
+# The issuing authorities a professional or provider may name. Optional
+# (trust).
 #? issuing_authorities = []
-# The prefixes a healthcare provider identifier must start with.
+# The prefixes a healthcare provider identifier must start with. Optional
+# (trust).
 #? provider_identifier_prefixes = []
 # Whether the issuer attests the `authorization_details` it puts in a token,
-# which RFC 9396 §12 has "sent through the user agent".
+# which RFC 9396 §12 has "sent through the user agent". Optional (trust).
 #? attests_authorization_details = false
-# The `authorization_details` type the attributes are read from.
+# The `authorization_details` type the attributes are read from. Optional,
+# unset by default (trust).
 #? authorization_details_type = ""
 # The `authorization_details` types that state an organisation's access.
+# Optional (trust).
 #? organisation_types = []
 # The claim holding the Verifiable Presentations of a Nuts RFC021 §6
-# introspection response, `vps`.
+# introspection response, `vps`. Optional, unset by default (trust).
 #? presentations_claim = ""
-# The credential types the deployment declares user-authenticated.
+# The credential types the deployment declares user-authenticated. Optional
+# (trust).
 #? user_credential_types = []
-# The fields every token of the issuer must carry, each with a source.
+# The fields every token of the issuer must carry, each with a source. Optional
+# (trust).
 #? required_fields = []
 # Whether the issuer's tokens must be sender-constrained, so the issuer fails
-# to load without `sender_constraint = "required"`.
+# to load without `sender_constraint = "required"`. Optional (trust).
 #? requires_sender_constraint = false
 # The subject-token issuers whose persons this issuer is trusted to map to its
-# own, when it issues onward tokens (`client::onward`).
+# own, when it issues onward tokens (`client::onward`). Optional (trust).
 #? exchanges_from = []
 # The subject-token claim, a dotted path, whose value an onward token of this
-# issuer must carry as `professional.hp_identifier`.
+# issuer must carry as `professional.hp_identifier`. Optional, unset by default
+# (trust).
 #? person_mapping = ""
 
 # The `[auth.attributes]` tables, at most one per `persons` issuer: where it
@@ -580,35 +660,38 @@ min_version = "1.3"
 #? [[auth.attributes]]
 # The `[auth.issuer]` this table describes, of kind `persons`, `patients` or
 # `machines`. It renders with any userinfo masked, as `SecretUrl` renders
-# itself.
+# itself. Optional (trust).
 #? issuer = ""
-# The default sources the table starts from.
+# The default sources the table starts from. Optional, unset by default
+# (trust).
 #? mapping = "iua"
-# The sources of each field, over the mapping's.
+# The sources of each field, over the mapping's. Optional (trust).
 #? fields = {}
 # Whether the `purpose_of_use` of each RFC 9396 `authorization_details` entry,
-# written `system|code`, is read as a purpose of use.
+# written `system|code`, is read as a purpose of use. Optional (trust).
 #? authorization_details_purposes = false
 
 # The `[auth.party]` tables, one per `persons` issuer whose logins are bound to
 # a party.
 #? [[auth.party]]
 # The `persons` issuer whose logins the table binds. It renders with any
-# userinfo masked, as `SecretUrl` renders itself.
+# userinfo masked, as `SecretUrl` renders itself. Optional (trust).
 #? issuer = ""
 # The issuer of the identifiers the key is matched against; no two tables share
-# one.
+# one. Optional (trust).
 #? identifier_issuer = ""
 # The type of those identifiers, which declares the key's canonical form:
-# `guid` or `uuid` is compared in lower case, any other type exactly.
+# `guid` or `uuid` is compared in lower case, any other type exactly. Optional
+# (trust).
 #? identifier_type = ""
 # The claim naming the groups the token asserts, an array of strings; empty to
-# read no group.
+# read no group. Optional (trust).
 #? group_claim = ""
 # The issuer of the group identifiers the group claim names; set with
-# `group_claim`.
+# `group_claim`. Optional (trust).
 #? group_identifier_issuer = ""
 # Whether a guest of the issuer is looked up; a guest is not by default.
+# Optional (trust).
 #? guests = false
 
 # The `[auth.idp]` table: the vendor adapters a profile may name, each read in
@@ -619,16 +702,16 @@ min_version = "1.3"
 # which resolves an Entra ID groups overage.
 #? [auth.idp.entra]
 # The Microsoft Graph root every URL is built from, `https` without a query or
-# a fragment.
+# a fragment. Optional (infrastructure).
 #? base_url = "https://graph.microsoft.com/v1.0"
 # The adapter's budget for one call, the token fetch and the Graph round trip
-# together; never zero.
+# together; never zero. Optional (infrastructure).
 #? timeout = "2s"
-# The largest Graph answer read; never zero.
+# The largest Graph answer read; never zero. Optional (infrastructure).
 #? max_response_size = "1MiB"
 # The `securityEnabledOnly` parameter of `getMemberObjects`: `false` reads
 # every group, administrative unit and directory role, `true` only the security
-# groups.
+# groups. Optional (infrastructure).
 #? security_enabled_only = false
 
 # The client credentials grant the Graph token is obtained with, under the
@@ -636,56 +719,71 @@ min_version = "1.3"
 #? [auth.idp.entra.credentials]
 # The issuer whose metadata names the token endpoint; exclusive with
 # `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
-# itself.
+# itself. Optional (infrastructure).
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
-# userinfo and its query masked.
+# userinfo and its query masked. Optional (infrastructure).
 #? token_endpoint = ""
-# The client identifier.
+# The client identifier. Optional (infrastructure).
 #? client_id = ""
-# How the client authenticates.
+# How the client authenticates. Optional (infrastructure).
 #? client_auth = "client_secret_basic"
-# The client secret, rendered redacted.
+# The client secret, rendered redacted. Optional, unset by default
+# (infrastructure).
 #? client_secret = ""
-# The file holding the client secret.
+# The file holding the client secret. Optional, unset by default
+# (infrastructure).
 #? client_secret_file = ""
 # The PEM file holding the private key of the client assertion under
 # `private_key_jwt`, and of the actor assertion of an onward exchange
 # (`credentials.onward.actor_assertion`) whatever the client authentication.
+# Optional, unset by default (infrastructure).
 #? private_key_file = ""
-# The `kid` the assertion names; the RFC 7638 thumbprint when empty.
+# The `kid` the assertion names; the RFC 7638 thumbprint when empty. Optional
+# (infrastructure).
 #? kid = ""
 # The algorithm the assertion is signed with; when unset, by key type, an EC
-# key by its curve (P-256 ES256, P-384 ES384).
+# key by its curve (P-256 ES256, P-384 ES384). Optional, unset by default
+# (infrastructure).
 #? assertion_alg = ""
-# The `scope` request parameter; empty for none.
+# The `scope` request parameter; empty for none. Optional (infrastructure).
 #? scope = ""
-# The RFC 8707 resource indicator; empty for none.
+# The RFC 8707 resource indicator; empty for none. Optional (infrastructure).
 #? resource = ""
-# The `audience` request parameter; empty for none.
+# The `audience` request parameter; empty for none. Optional (infrastructure).
 #? audience = ""
-# How long before the token expires a new one is fetched.
+# How long before the token expires a new one is fetched. Optional
+# (infrastructure).
 #? refresh_margin = "30s"
-# How long one call to the authorization server may take.
+# How long one call to the authorization server may take. Optional
+# (infrastructure).
 #? timeout = "10s"
 # The `aud` of a `private_key_jwt` assertion: `token_endpoint` (the default) or
-# `issuer`, which needs `issuer` set.
+# `issuer`, which needs `issuer` set. Optional (infrastructure).
 #? assertion_audience = "token_endpoint"
-# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449).
+# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449). Optional,
+# unset by default (infrastructure).
 #? dpop_key_file = ""
 # Whether the tokens are bound to the client certificate (RFC 8705 §3).
+# Optional (infrastructure).
 #? certificate_bound = false
-# The security profile: `oauth2` (the default) or `fapi2`.
+# The security profile: `oauth2` (the default) or `fapi2`. Optional
+# (infrastructure).
 #? security_profile = "oauth2"
-# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5).
+# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5). Optional
+# (infrastructure).
 #? mtls_alias_hosts = []
 # The PEM file of the previous assertion key, published, never signing.
+# Optional, unset by default (infrastructure).
 #? previous_private_key_file = ""
 # How long the previous key stays published; `0s` for as long as it is set.
+# Optional (infrastructure).
 #? previous_key_overlap = "0s"
 # The PEM file of the next assertion key, published and never signing.
+# Optional, unset by default (infrastructure).
 #? next_private_key_file = ""
-# The RFC 9396 `authorization_details` JSON text; empty for none.
+# The RFC 9396 `authorization_details` JSON text; empty for none. Optional
+# (infrastructure).
 #? authorization_details = ""
 
 # The TLS of the token endpoint connection: trust roots beside the platform's,
@@ -693,68 +791,66 @@ min_version = "1.3"
 # version. The crate reads none of it: a table that names material resolves
 # through the product's `TlsBuilder`.
 #? [auth.idp.entra.credentials.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (infrastructure).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default
+# (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (infrastructure).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
 
 # The SMART App Launch resource-server posture.
 [auth.smart]
 # Serve the `/.well-known/smart-configuration` discovery document (SMART App
 # Launch 2.x §Conformance; default `false`). The document is built from the
-# metadata of one `[auth]` issuer that serves a user launch:
-# `Self::described_issuer`, else the one issuer that is not of kind `machines`
-# and whose metadata is available. Several such issuers and no
-# `described_issuer`, or none, refuse the start.
+# metadata of one `[auth]` issuer that serves a user launch: `[auth]
+# described_issuer`, else the one issuer that is not of kind `machines` and
+# whose metadata is available. Several such issuers and no `described_issuer`,
+# or none, refuse the start. Optional (infrastructure).
 discovery = false
-# The `[auth]` issuer the discovery document describes: an issuer of kind
-# `persons`, `patients` or `federation` whose metadata is read from it,
-# introspected, or supplied by `Self::issuer_metadata_file`. A `machines`
-# issuer signs client credentials tokens only, so it serves no user launch.
-# Required when more than one issuer could be described. It renders with any
-# userinfo masked.
-#? described_issuer = ""
 # The RFC 8414 §2 authorization-server metadata of the `[auth]` issuer it
 # names, whose key set is a `jwks_file` and carries none: a JSON document read
 # at boot. SMART App Launch 2.2.0, Conformance, §Metadata requires the
-# `token_endpoint` it names.
+# `token_endpoint` it names. Optional, unset by default (infrastructure).
 #? issuer_metadata_file = ""
 # The SMART platform base URL the discovery document hangs off (master04
 # §Service Discovery: the document is served relative to the platform or
 # gateway base, not the FHIR base). Unset, the REST root (`/ferroehr/rest`). A
 # leading path segment is honoured, e.g. `/gateway/v1` →
-# `/gateway/v1/.well-known/smart-configuration`.
+# `/gateway/v1/.well-known/smart-configuration`. Optional, unset by default
+# (infrastructure).
 #? platform_base_url = ""
 # The server's externally reachable origin (scheme + host [+ port]), e.g.
 # `https://cdr.example.com`. master04 §Services makes every `services.*`
 # entry's `baseUrl` an "Absolute URL to the root of the API (required)", so the
 # document prefixes this origin onto the served base paths. Required when
-# `Self::discovery` is set.
+# `Self::discovery` is set. Optional, unset by default (infrastructure).
 #? public_base_url = ""
 # Episode context (master09 §Experimental: Episode Context), advertised only:
 # `episode_launch = true` adds `context-openehr-episode` to the document's
 # capabilities and applies no episode filtering (openEHR has no first-class
 # Episode resource; master09 calls the semantics "currently
-# implementation-defined").
+# implementation-defined"). Optional (infrastructure).
 episode_launch = false
 # The `client_id`s of the backend clients a `system/aql-*` grant counts for:
 # master08 §Resource Scopes says such a grant "would grant access to all
-# registered and ad-hoc AQL queries system-wide". Empty, no client.
+# registered and ad-hoc AQL queries system-wide". Empty, no client. Optional
+# (trust).
 backend_clients = []
 # The issuers whose `patient/` grants count, each confined to the `ehrId` of
 # the token's launch context (master07 §Context Selection: the `ehrId` names
 # an EHR of the platform that issued it). Empty, a `patient/` grant grants
-# nothing. Each renders with any userinfo masked.
+# nothing. Each renders with any userinfo masked. Optional (trust).
 patient_issuers = []
 # The `client_id`s that reach the DEMOGRAPHIC API. master08 §Resource Scopes
 # defines no resource family for demographic data, so no SMART scope covers it:
 # a listed client, or a caller holding the `[auth] product_scope`, reaches it
-# (no openEHR spec governs this: our own design).
+# (no openEHR spec governs this: our own design). Optional (trust).
 demographic_clients = []
 
 # The SCIM 2.0 service provider and its provisioning clients; absent,
@@ -763,38 +859,42 @@ demographic_clients = []
 # The externally reachable origin the SCIM base URL hangs off, such as
 # `https://cdr.example.com`; every `meta.location` and discovery document names
 # `<public_base_url>/scim/v2` (RFC 7643 §3.1: `location` is "The URI of the
-# resource being returned"). Required.
+# resource being returned"). Required. Optional, unset by default
+# (infrastructure).
 #? public_base_url = ""
 # The most resources one list response returns (RFC 7643 §5, the
-# `ServiceProviderConfig` `filter.maxResults`).
+# `ServiceProviderConfig` `filter.maxResults`). Optional.
 #? filter_max_results = 100
 # The most Users one client deactivates or deletes in one window; past it, a
-# deactivation or a deletion is refused with `429`.
+# deactivation or a deletion is refused with `429`. Optional.
 #? max_deactivations = 100
-# The length of that window.
+# The length of that window. Optional.
 #? deactivation_window = "1h"
 # How long after a User's deletion the contacts of every version of its
 # `PERSON` are erased (GDPR Art. 17), at most 30 days; `"0s"` erases them in
 # the deletion itself. The name, the binding key and the identifiers stay.
+# Optional.
 #? contact_erasure_delay = "0s"
 # The most members one Group holds; an add past it is refused with `400`. Each
 # membership change stores every membership of the Group again (RM demographic
 # master02 §Versioning Semantics), so the cap bounds a Group's version
-# storage.
+# storage. Optional.
 #? max_group_members = 5000
 
 # The provisioning clients.
 #? [[auth.scim.client]]
 # The issuer of the client's access tokens: the deployment's own authorization
 # server, an `[auth.issuer]` of kind `machines`. It renders with any userinfo
-# masked.
+# masked. Optional (trust).
 #? issuer = ""
-# The client the token names (`client_id`, failing that `azp`).
+# The client the token names (`client_id`, failing that `azp`). Optional
+# (trust).
 #? client_id = ""
-# The scope a token of the client must hold.
+# The scope a token of the client must hold. Optional (trust).
 #? scope = ""
 # The identifier issuer of the binding keys the client provisions, the
 # `identifier_issuer` of an `[auth.party]` table; no two clients share one.
+# Optional (trust).
 #? binding_issuer = ""
 
 # RBAC, ABAC, assurance, the party binding, the system clients, the federation
@@ -804,57 +904,65 @@ demographic_clients = []
 # Role-based access control.
 [authz.rbac]
 # Master switch of the coarse role gate, active only when auth is enabled
-# (`FERROEHR__AUTHZ__RBAC__ENABLED`, default `true`).
+# (`FERROEHR__AUTHZ__RBAC__ENABLED`, default `true`). Optional (trust).
 enabled = true
-# The role required for Admin-class operations (default `ADMIN`).
+# The role required for Admin-class operations (default `ADMIN`). Optional
+# (trust).
 admin_role = "ADMIN"
 # The role marking a principal as read-only (default `READONLY`): a caller
 # carrying it is refused on every write operation even when it also holds
 # granting roles (a restriction overrides a grant). Supports the conformance
-# catalogue's authorization-separation cases.
+# catalogue's authorization-separation cases. Optional (trust).
 readonly_role = "READONLY"
 # The role that may read the access log for ONE subject at a time
-# (`FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE`, default unset).
+# (`FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE`, default unset). Optional, unset
+# by default (trust).
 #? subject_audit_role = ""
 # The role that may reach data under an EHDS Art. 8 access restriction in an
 # emergency (`FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE`, default unset).
+# Optional, unset by default (trust).
 #? emergency_access_role = ""
 # The roles of an EHDS Art. 10 access-service caller, held to an opt-out
 # (`FERROEHR__AUTHZ__RBAC__ACCESS_SERVICE_ROLES`; empty, the default, holds
-# nobody).
+# nobody). Optional (trust).
 access_service_roles = []
 # The role that may read a party's protected national identifiers
-# (`FERROEHR__AUTHZ__RBAC__IDENTIFIER_READER_ROLE`, default unset).
+# (`FERROEHR__AUTHZ__RBAC__IDENTIFIER_READER_ROLE`, default unset). Optional,
+# unset by default (trust).
 #? identifier_reader_role = ""
 # The role that may import an EHR or an EHR extract (`message_import_ehr`,
-# `message_import_ehr_extract`; default unset).
+# `message_import_ehr_extract`; default unset). Optional, unset by default
+# (trust).
 #? import_role = ""
 # The issuers whose role claims may grant `admin_role`,
 # `emergency_access_role`, `import_role` and `identifier_reader_role`, each a
 # `persons` issuer; empty, the default, lets no token grant them. Each renders
-# with any userinfo masked.
+# with any userinfo masked. Optional (trust).
 role_issuers = []
 # What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default `open`).
+# Optional (trust).
 ehr_access_default = "open"
 
 # Attribute-based access control (opt-in).
 [authz.abac]
-# Master ABAC switch (default `false`).
+# Master ABAC switch (default `false`). Optional (infrastructure).
 enabled = false
-# Which PDP engine to use (default `cedar`).
+# Which PDP engine to use (default `cedar`). Optional (infrastructure).
 engine = "cedar"
 # The JWT claim carrying the caller's organization (default `organization_id`);
-# resolved opportunistically (absent → no attribute).
+# resolved opportunistically (absent → no attribute). Optional
+# (infrastructure).
 organization_claim = "organization_id"
 # The JWT claim carrying the patient id (default `patient_id`); its presence
-# enables the local subject gate. Set to empty to disable the gate.
+# enables the local subject gate. Set to empty to disable the gate. Optional
+# (infrastructure).
 patient_claim = "patient_id"
 # The subject namespace patient-claim ids are issued in
 # (`EHR_STATUS.subject.external_ref.namespace`, RM ehr master04 §EHR Status),
-# default unset.
+# default unset. Optional, unset by default (infrastructure).
 #? patient_namespace = ""
 # Whether DIRECTORY (FOLDER) operations are submitted to the PDP (default
-# `false`).
+# `false`). Optional (infrastructure).
 check_directory = false
 
 # Remote-PDP settings.
@@ -869,97 +977,119 @@ check_directory = false
 # masked in every rendering.
 [authz.abac.remote.endpoint]
 # The service's URL (RFC 3986); required. It renders with its userinfo and its
-# query masked, in `Debug` and when serialized.
+# query masked, in `Debug` and when serialized. Optional (infrastructure).
 url = ""
-# How long one whole call may take; never zero.
+# How long one whole call may take; never zero. Optional (infrastructure).
 timeout = "5s"
 # How long opening the connection may take; unset, only `timeout` bounds it.
+# Optional (infrastructure).
 connect_timeout = "2s"
 
 # How a failed call is tried again.
 [authz.abac.remote.endpoint.retry]
-# How many times one call is tried in all; 1 tries once.
+# How many times one call is tried in all; 1 tries once. Optional
+# (infrastructure).
 max_attempts = 3
-# The wait before the second try.
+# The wait before the second try. Optional (infrastructure).
 initial_backoff = "200ms"
-# The longest wait between two tries.
+# The longest wait between two tries. Optional (infrastructure).
 max_backoff = "5s"
 
 # The TLS of the connection, built by the product's reader of TLS material.
 [authz.abac.remote.endpoint.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (infrastructure).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default
+# (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (infrastructure).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (infrastructure).
 min_version = "1.3"
 
 # The credential the calls carry: HTTP Basic or the client credentials grant.
 [authz.abac.remote.endpoint.credentials]
-# The Basic user-id.
+# The Basic user-id. Optional (infrastructure).
 user = ""
-# The Basic password, rendered redacted.
+# The Basic password, rendered redacted. Optional, unset by default
+# (infrastructure).
 #? password = ""
-# The file holding the Basic password.
+# The file holding the Basic password. Optional, unset by default
+# (infrastructure).
 #? password_file = ""
 
 # The client credentials grant.
 #? [authz.abac.remote.endpoint.credentials.oauth]
 # The issuer whose metadata names the token endpoint; exclusive with
 # `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
-# itself.
+# itself. Optional (infrastructure).
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
-# userinfo and its query masked.
+# userinfo and its query masked. Optional (infrastructure).
 #? token_endpoint = ""
-# The client identifier.
+# The client identifier. Optional (infrastructure).
 #? client_id = ""
-# How the client authenticates.
+# How the client authenticates. Optional (infrastructure).
 #? client_auth = "client_secret_basic"
-# The client secret, rendered redacted.
+# The client secret, rendered redacted. Optional, unset by default
+# (infrastructure).
 #? client_secret = ""
-# The file holding the client secret.
+# The file holding the client secret. Optional, unset by default
+# (infrastructure).
 #? client_secret_file = ""
 # The PEM file holding the private key of the client assertion under
 # `private_key_jwt`, and of the actor assertion of an onward exchange
 # (`credentials.onward.actor_assertion`) whatever the client authentication.
+# Optional, unset by default (infrastructure).
 #? private_key_file = ""
-# The `kid` the assertion names; the RFC 7638 thumbprint when empty.
+# The `kid` the assertion names; the RFC 7638 thumbprint when empty. Optional
+# (infrastructure).
 #? kid = ""
 # The algorithm the assertion is signed with; when unset, by key type, an EC
-# key by its curve (P-256 ES256, P-384 ES384).
+# key by its curve (P-256 ES256, P-384 ES384). Optional, unset by default
+# (infrastructure).
 #? assertion_alg = ""
-# The `scope` request parameter; empty for none.
+# The `scope` request parameter; empty for none. Optional (infrastructure).
 #? scope = ""
-# The RFC 8707 resource indicator; empty for none.
+# The RFC 8707 resource indicator; empty for none. Optional (infrastructure).
 #? resource = ""
-# The `audience` request parameter; empty for none.
+# The `audience` request parameter; empty for none. Optional (infrastructure).
 #? audience = ""
-# How long before the token expires a new one is fetched.
+# How long before the token expires a new one is fetched. Optional
+# (infrastructure).
 #? refresh_margin = "30s"
-# How long one call to the authorization server may take.
+# How long one call to the authorization server may take. Optional
+# (infrastructure).
 #? timeout = "10s"
 # The `aud` of a `private_key_jwt` assertion: `token_endpoint` (the default) or
-# `issuer`, which needs `issuer` set.
+# `issuer`, which needs `issuer` set. Optional (infrastructure).
 #? assertion_audience = "token_endpoint"
-# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449).
+# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449). Optional,
+# unset by default (infrastructure).
 #? dpop_key_file = ""
 # Whether the tokens are bound to the client certificate (RFC 8705 §3).
+# Optional (infrastructure).
 #? certificate_bound = false
-# The security profile: `oauth2` (the default) or `fapi2`.
+# The security profile: `oauth2` (the default) or `fapi2`. Optional
+# (infrastructure).
 #? security_profile = "oauth2"
-# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5).
+# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5). Optional
+# (infrastructure).
 #? mtls_alias_hosts = []
 # The PEM file of the previous assertion key, published, never signing.
+# Optional, unset by default (infrastructure).
 #? previous_private_key_file = ""
 # How long the previous key stays published; `0s` for as long as it is set.
+# Optional (infrastructure).
 #? previous_key_overlap = "0s"
 # The PEM file of the next assertion key, published and never signing.
+# Optional, unset by default (infrastructure).
 #? next_private_key_file = ""
-# The RFC 9396 `authorization_details` JSON text; empty for none.
+# The RFC 9396 `authorization_details` JSON text; empty for none. Optional
+# (infrastructure).
 #? authorization_details = ""
 
 # The TLS of the token endpoint connection: trust roots beside the platform's,
@@ -967,14 +1097,17 @@ user = ""
 # version. The crate reads none of it: a table that names material resolves
 # through the product's `TlsBuilder`.
 #? [authz.abac.remote.endpoint.credentials.oauth.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (infrastructure).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default
+# (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (infrastructure).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
 
 # The onward target the lane reaches on a caller's behalf, authenticating with
@@ -982,243 +1115,273 @@ user = ""
 #? [authz.abac.remote.endpoint.credentials.onward]
 # The identifier of the issuer of the onward tokens, whose metadata names its
 # token endpoint unless `token_endpoint` is set. It renders with any userinfo
-# masked, as `SecretUrl` renders itself.
+# masked, as `SecretUrl` renders itself. Optional (infrastructure).
 #? issuer = ""
 # Whose tokens the issuer signs: `persons` (a delegated exchange), `patients`
-# (a patient's own token) or `federation`; required, with no default.
+# (a patient's own token) or `federation`; required, with no default. Optional,
+# unset by default (infrastructure).
 #? kind = "persons"
-# The preset the issuer's profile starts from.
+# The preset the issuer's profile starts from. Optional (infrastructure).
 #? profile = "rfc9068"
 # The token endpoint itself; empty to discover it from `issuer`. It renders
-# with its userinfo and its query masked.
+# with its userinfo and its query masked. Optional (infrastructure).
 #? token_endpoint = ""
-# The client id at this issuer; empty for the lane's own.
+# The client id at this issuer; empty for the lane's own. Optional
+# (infrastructure).
 #? client_id = ""
-# The audiences an onward token may name, at least one.
+# The audiences an onward token may name, at least one. Optional
+# (infrastructure).
 #? audiences = []
 # The `resource` or `audience` values the request names, as the profile's
-# `onward_indicator` says.
+# `onward_indicator` says. Optional (infrastructure).
 #? indicators = []
-# The `scope` the request names; empty for none.
+# The `scope` the request names; empty for none. Optional (infrastructure).
 #? scope = ""
 # The claim a chained federation route carries from the subject token to the
-# onward token; empty for none.
+# onward token; empty for none. Optional (infrastructure).
 #? correlation_claim = ""
 # Whether the lane holds the tokens it obtains until they near their `exp`.
 # `false` exchanges a token at the issuer on every call, a setting for a
 # performance measurement's self-test, never for production. `true` by default.
+# Optional (infrastructure).
 #? cache = true
 # Whether every token exchange sent without an actor token names the lane's
 # client as its actor with an assertion signed by the current key of its
 # `oauth` table's key ring (RFC 8693 §2.1; `Onward::with_actor_assertion`).
-# `false` by default.
+# `false` by default. Optional (infrastructure).
 #? actor_assertion = false
 
 # The profile keys set over the preset; `max_onward_lifetime` is required, here
 # or in the preset.
 #? [authz.abac.remote.endpoint.credentials.onward.keys]
-# `Profile::person_key`.
+# `Profile::person_key`. Optional, unset by default (infrastructure).
 #? person_key = ""
-# `Profile::tenant_claim`.
+# `Profile::tenant_claim`. Optional, unset by default (infrastructure).
 #? tenant_claim = ""
-# `Profile::client_claims`.
+# `Profile::client_claims`. Optional, unset by default (infrastructure).
 #? client_claims = []
-# `Profile::impersonation_marker`.
+# `Profile::impersonation_marker`. Optional, unset by default (infrastructure).
 #? impersonation_marker = ""
-# `Profile::expect`.
+# `Profile::expect`. Optional, unset by default (infrastructure).
 #? expect = {}
-# `Profile::user_claims`.
+# `Profile::user_claims`. Optional, unset by default (infrastructure).
 #? user_claims = []
-# `Profile::person_equality`.
+# `Profile::person_equality`. Optional, unset by default (infrastructure).
 #? person_equality = []
-# `Profile::unstable_claims`.
+# `Profile::unstable_claims`. Optional, unset by default (infrastructure).
 #? unstable_claims = []
-# `Profile::first_party_clients`.
+# `Profile::first_party_clients`. Optional, unset by default (infrastructure).
 #? first_party_clients = []
-# `Profile::max_actor_chain`.
+# `Profile::max_actor_chain`. Optional, unset by default (infrastructure).
 #? max_actor_chain = 0
-# `Profile::act_represents_patient`.
+# `Profile::act_represents_patient`. Optional, unset by default
+# (infrastructure).
 #? act_represents_patient = false
-# `Profile::token_types`.
+# `Profile::token_types`. Optional, unset by default (infrastructure).
 #? token_types = []
-# `Profile::required_claims`.
+# `Profile::required_claims`. Optional, unset by default (infrastructure).
 #? required_claims = []
-# `Profile::adapter`.
+# `Profile::adapter`. Optional, unset by default (infrastructure).
 #? adapter = ""
-# `Profile::max_onward_lifetime`, a duration such as `"10min"`.
+# `Profile::max_onward_lifetime`, a duration such as `"10min"`. Optional, unset
+# by default (infrastructure).
 #? max_onward_lifetime = "500ms"
-# `Profile::onward_grant`.
+# `Profile::onward_grant`. Optional, unset by default (infrastructure).
 #? onward_grant = "token_exchange"
-# `Profile::onward_indicator`.
+# `Profile::onward_indicator`. Optional, unset by default (infrastructure).
 #? onward_indicator = "resource"
-# `Profile::onward_parameters`.
+# `Profile::onward_parameters`. Optional, unset by default (infrastructure).
 #? onward_parameters = {}
-# `Profile::onward_client_id`.
+# `Profile::onward_client_id`. Optional, unset by default (infrastructure).
 #? onward_client_id = false
-# `Profile::onward_subject_audience`.
+# `Profile::onward_subject_audience`. Optional, unset by default
+# (infrastructure).
 #? onward_subject_audience = false
-# `Profile::onward_preview`.
+# `Profile::onward_preview`. Optional, unset by default (infrastructure).
 #? onward_preview = []
 
 # `Profile::app_only`.
 #? [[authz.abac.remote.endpoint.credentials.onward.keys.app_only]]
-# The claim of `{ claim, value }`.
+# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? claim = ""
-# The value of `{ claim, value }`.
+# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? value = ""
-# The claim of `{ absent_claim }`.
+# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
 #? absent_claim = ""
-# The subjects of `{ subjects }`.
+# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
 #? subjects = []
-# The `{ sub_is_client = true }` form.
+# The `{ sub_is_client = true }` form. Optional, unset by default
+# (infrastructure).
 #? sub_is_client = false
-# The claim of `{ differs_from_iss }`.
+# The claim of `{ differs_from_iss }`. Optional, unset by default
+# (infrastructure).
 #? differs_from_iss = ""
 
 # `Profile::guest`.
 #? [[authz.abac.remote.endpoint.credentials.onward.keys.guest]]
-# The claim of `{ claim, value }`.
+# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? claim = ""
-# The value of `{ claim, value }`.
+# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? value = ""
-# The claim of `{ absent_claim }`.
+# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
 #? absent_claim = ""
-# The subjects of `{ subjects }`.
+# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
 #? subjects = []
-# The `{ sub_is_client = true }` form.
+# The `{ sub_is_client = true }` form. Optional, unset by default
+# (infrastructure).
 #? sub_is_client = false
-# The claim of `{ differs_from_iss }`.
+# The claim of `{ differs_from_iss }`. Optional, unset by default
+# (infrastructure).
 #? differs_from_iss = ""
 
 # `Profile::delegates`.
 #? [[authz.abac.remote.endpoint.credentials.onward.keys.delegates]]
-# The actor's issuer.
+# The actor's issuer. Optional, unset by default (infrastructure).
 #? issuer = ""
-# The actor's `sub`.
+# The actor's `sub`. Optional, unset by default (infrastructure).
 #? sub = ""
-# The client.
+# The client. Optional, unset by default (infrastructure).
 #? client = ""
 
 # `Profile::representation`.
 #? [authz.abac.remote.endpoint.credentials.onward.keys.representation]
-# The claim naming the subject the person represents.
+# The claim naming the subject the person represents. Required in its table
+# (infrastructure).
 #? claim = ""
-# The claim carrying the ground of the representation, as asserted.
+# The claim carrying the ground of the representation, as asserted. Optional,
+# unset by default (infrastructure).
 #? ground_claim = ""
 
 # `Profile::scope_claim`.
 #? [authz.abac.remote.endpoint.credentials.onward.keys.scope_claim]
-# The claim.
+# The claim. Required in its table (infrastructure).
 #? claim = ""
-# Its JSON form.
+# Its JSON form. Optional (infrastructure).
 #? form = "string"
 
 # `Profile::app_only_scope_claim`.
 #? [authz.abac.remote.endpoint.credentials.onward.keys.app_only_scope_claim]
-# The claim.
+# The claim. Required in its table (infrastructure).
 #? claim = ""
-# Its JSON form.
+# Its JSON form. Optional (infrastructure).
 #? form = "string"
 
 # What a `federation` issuer asserts, over its preset's defaults;
 # `exchanges_from` and `person_mapping` are required.
 #? [authz.abac.remote.endpoint.credentials.onward.federation]
 # The `[auth.issuer]` this table describes, of kind `federation`. It renders
-# with any userinfo masked, as `SecretUrl` renders itself.
+# with any userinfo masked, as `SecretUrl` renders itself. Optional
+# (infrastructure).
 #? issuer = ""
 # Whether the issuer is a MyHealth@EU contact point; required, with no default.
+# Optional, unset by default (infrastructure).
 #? contact_point = false
-# The default sources the table starts from.
+# The default sources the table starts from. Optional, unset by default
+# (infrastructure).
 #? mapping = "iua"
-# The sources of each field, over the mapping's.
+# The sources of each field, over the mapping's. Optional (infrastructure).
 #? fields = {}
-# The country codes a professional may carry.
+# The country codes a professional may carry. Optional (infrastructure).
 #? countries = []
-# The issuing authorities a professional or provider may name.
+# The issuing authorities a professional or provider may name. Optional
+# (infrastructure).
 #? issuing_authorities = []
-# The prefixes a healthcare provider identifier must start with.
+# The prefixes a healthcare provider identifier must start with. Optional
+# (infrastructure).
 #? provider_identifier_prefixes = []
 # Whether the issuer attests the `authorization_details` it puts in a token,
-# which RFC 9396 §12 has "sent through the user agent".
+# which RFC 9396 §12 has "sent through the user agent". Optional
+# (infrastructure).
 #? attests_authorization_details = false
-# The `authorization_details` type the attributes are read from.
+# The `authorization_details` type the attributes are read from. Optional,
+# unset by default (infrastructure).
 #? authorization_details_type = ""
 # The `authorization_details` types that state an organisation's access.
+# Optional (infrastructure).
 #? organisation_types = []
 # The claim holding the Verifiable Presentations of a Nuts RFC021 §6
-# introspection response, `vps`.
+# introspection response, `vps`. Optional, unset by default (infrastructure).
 #? presentations_claim = ""
-# The credential types the deployment declares user-authenticated.
+# The credential types the deployment declares user-authenticated. Optional
+# (infrastructure).
 #? user_credential_types = []
-# The fields every token of the issuer must carry, each with a source.
+# The fields every token of the issuer must carry, each with a source. Optional
+# (infrastructure).
 #? required_fields = []
 # Whether the issuer's tokens must be sender-constrained, so the issuer fails
-# to load without `sender_constraint = "required"`.
+# to load without `sender_constraint = "required"`. Optional (infrastructure).
 #? requires_sender_constraint = false
 # The subject-token issuers whose persons this issuer is trusted to map to its
-# own, when it issues onward tokens (`client::onward`).
+# own, when it issues onward tokens (`client::onward`). Optional
+# (infrastructure).
 #? exchanges_from = []
 # The subject-token claim, a dotted path, whose value an onward token of this
-# issuer must carry as `professional.hp_identifier`.
+# issuer must carry as `professional.hp_identifier`. Optional, unset by default
+# (infrastructure).
 #? person_mapping = ""
 
 # The assurance level the issuer's tokens carry.
 #? [authz.abac.remote.endpoint.credentials.onward.assurance]
 # The claim carrying the authentication context class, a dotted path; `acr` by
-# default (OpenID Connect Core 1.0 §2).
+# default (OpenID Connect Core 1.0 §2). Optional (infrastructure).
 #? claim = "acr"
 # The level each claim value the issuer emits stands for; a value the map does
-# not name carries none.
+# not name carries none. Optional (infrastructure).
 #? levels = {}
 # The level a request held to the section must carry; none refuses nothing.
+# Optional, unset by default (infrastructure).
 #? minimum = "low"
 
 # Per-resource-kind policy bindings, keyed by the canonical kind name (`ehr`,
 # `ehr_status`, `composition`, `contribution`, `query`, `directory`).
 # [authz.abac.policy.<name>]
-# The policy name (the path segment appended to `abac.remote.url`).
+# The policy name (the path segment appended to `abac.remote.url`). Required in
+# its table (infrastructure).
 # name = ""
 # The parameters the PDP body carries; empty = an unparameterized policy.
+# Optional (infrastructure).
 # parameters = []
 
 # The authentication assurance a patient-data request must carry
 # (`[authz.assurance]`, off by default).
 [authz.assurance]
 # The claim carrying the authentication context class, a dotted path; `acr` by
-# default (OpenID Connect Core 1.0 §2).
+# default (OpenID Connect Core 1.0 §2). Optional (trust).
 claim = "acr"
 # The level each claim value the issuer emits stands for; a value the map does
-# not name carries none.
+# not name carries none. Optional (trust).
 levels = {}
 # The level a request held to the section must carry; none refuses nothing.
+# Optional, unset by default (trust).
 #? minimum = "low"
 
 # The party binding: the provider, the namespace and the Basic users' keys
 # (`[authz.party_binding]`).
 [authz.party_binding]
 # The `PARTY_REF.namespace` a bound party is written under, held to the
-# `OBJECT_REF.namespace` pattern.
+# `OBJECT_REF.namespace` pattern. Optional.
 namespace = "demographic"
 # The age past which `ferroehr party-binding check` reports a provisional
-# `PERSON`.
+# `PERSON`. Optional.
 provisional_report_after = "30d"
 
 # The healthcare provider this deployment acts for, which every access record
 # of a bound person and every version a person commits name (EHDS Art. 13(4),
 # Annex II 3.2(a)): one provider, or one table per tenant.
 #? [authz.party_binding.provider]
-# The issuer of the identifier.
+# The issuer of the identifier. Must set (trust).
 #? issuer = ""
-# The identifier.
+# The identifier. Must set (trust).
 #? id = ""
 
 # The key each Basic user is bound by (`[authz.party_binding.basic_user]`).
 #? [[authz.party_binding.basic_user]]
-# The `[auth.basic.users]` user-id.
+# The `[auth.basic.users]` user-id. Optional (trust).
 #? user = ""
 # The `identifier_issuer` of the `[auth.party]` table the key belongs to.
+# Optional (trust).
 #? key_issuer = ""
-# The binding key the user's `PERSON` carries.
+# The binding key the user's `PERSON` carries. Optional (trust).
 #? key = ""
 
 # The person templates and attributes of the shared party mapping. Every
@@ -1230,142 +1393,152 @@ provisional_report_after = "30d"
 # `[authz.party_binding.person.template]`, one per template a professional's
 # `PERSON` may use.
 #? [[authz.party_binding.person.template]]
-# An operational template in the definition store rooted at `PERSON`.
+# An operational template in the definition store rooted at `PERSON`. Optional
+# (infrastructure).
 #? template_id = ""
 # Whether SCIM and just-in-time creation create new persons with this template;
-# exactly one table sets it.
+# exactly one table sets it. Optional (infrastructure).
 #? default = false
 
 # The binding key.
 #? [authz.party_binding.person.template.key]
-# The openEHR path.
+# The openEHR path. Optional (infrastructure).
 #? path = ""
-# The `DV_IDENTIFIER.type`.
+# The `DV_IDENTIFIER.type`. Optional (infrastructure).
 #? type = ""
 
 # The SCIM `userName`.
 #? [authz.party_binding.person.template.user_name]
-# The openEHR path.
+# The openEHR path. Optional (infrastructure).
 #? path = ""
-# The `DV_IDENTIFIER.type`.
+# The `DV_IDENTIFIER.type`. Optional (infrastructure).
 #? type = ""
 
 # The SCIM `externalId`.
 #? [authz.party_binding.person.template.external_id]
-# The openEHR path.
+# The openEHR path. Optional (infrastructure).
 #? path = ""
-# The `DV_IDENTIFIER.type`.
+# The `DV_IDENTIFIER.type`. Optional (infrastructure).
 #? type = ""
 
 # `[authz.party_binding.person.attribute]`, one per mapped value.
 #? [[authz.party_binding.person.attribute]]
 # A SCIM attribute path, with the RFC 7644 §3.4.2.2 `valuePath` filter form
-# (`emails[type eq "work"].value`).
+# (`emails[type eq "work"].value`). Optional, unset by default
+# (infrastructure).
 #? scim = ""
-# An OpenID Connect Core 1.0 §5.1 claim.
+# An OpenID Connect Core 1.0 §5.1 claim. Optional, unset by default
+# (infrastructure).
 #? oidc = ""
-# Whether just-in-time creation writes the value.
+# Whether just-in-time creation writes the value. Optional (infrastructure).
 #? jit = false
 # Whether this is the name the committer reads; at most one table sets it.
+# Optional (infrastructure).
 #? name = false
-# The path the value goes to, per template id.
+# The path the value goes to, per template id. Optional (infrastructure).
 #? path = {}
 
 # The professional `ROLE` template.
 #? [authz.party_binding.professional_role]
-# An operational template rooted at `ROLE`.
+# An operational template rooted at `ROLE`. Optional (infrastructure).
 #? template_id = ""
 
 # The provisioned `GROUP` template.
 #? [authz.party_binding.group]
-# An operational template rooted at `GROUP`.
+# An operational template rooted at `GROUP`. Optional (infrastructure).
 #? template_id = ""
-# The path of the group's `displayName`, a `DV_TEXT` in `identities`.
+# The path of the group's `displayName`, a `DV_TEXT` in `identities`. Optional,
+# unset by default (infrastructure).
 #? display_name = ""
 
 # The group's `externalId`.
 #? [authz.party_binding.group.external_id]
-# The openEHR path.
+# The openEHR path. Optional (infrastructure).
 #? path = ""
-# The `DV_IDENTIFIER.type`.
+# The `DV_IDENTIFIER.type`. Optional (infrastructure).
 #? type = ""
 
 # The membership `PARTY_RELATIONSHIP` archetype.
 #? [authz.party_binding.membership]
-# A `PARTY_RELATIONSHIP` archetype.
+# A `PARTY_RELATIONSHIP` archetype. Optional (infrastructure).
 #? archetype_id = ""
 
 # The representation `PARTY_RELATIONSHIP` archetype.
 #? [authz.party_binding.representation]
 # A `PARTY_RELATIONSHIP` archetype whose `source` is the representative and
-# whose `target` is the subject.
+# whose `target` is the subject. Optional (infrastructure).
 #? archetype_id = ""
 # Each relationship type code of the archetype, mapped to a code of the openEHR
-# `subject_relationship` group.
+# `subject_relationship` group. Optional (infrastructure).
 #? relationship_codes = {}
 
 # What FerroEHR does for each `persons` issuer beyond the lookup
 # (`[authz.party_binding.issuer]`): just-in-time creation.
 #? [[authz.party_binding.issuer]]
 # The `persons` issuer the table holds for. It renders with any userinfo
-# masked.
+# masked. Optional (trust).
 #? issuer = ""
-# Whether a first login with no party creates a provisional `PERSON`.
+# Whether a first login with no party creates a provisional `PERSON`. Optional
+# (trust).
 #? jit = false
 # Whether a guest the issuer's `[auth.party]` table admits is created too.
+# Optional (trust).
 #? guests_jit = false
 # The claim the `userName` is read from; the issuer profile's `person_key` when
-# unset.
+# unset. Optional, unset by default (trust).
 #? user_name_claim = ""
-# The dotted claim path the identity provider is read from.
+# The dotted claim path the identity provider is read from. Optional (trust).
 #? idp_claim = "idp"
-# The identity providers whose logins are created.
+# The identity providers whose logins are created. Optional (trust).
 #? admit_idp = []
 # The groups, read from the `[auth.party]` table's `group_claim`, one of which
-# a created login holds.
+# a created login holds. Optional (trust).
 #? admit_groups = []
 # The roles, read from `[auth] role_claims`, one of which a created login
-# holds.
+# holds. Optional (trust).
 #? admit_roles = []
-# The lowest `[authz.assurance]` level a created login carries.
+# The lowest `[authz.assurance]` level a created login carries. Optional, unset
+# by default (trust).
 #? admit_assurance = "low"
 
 # The systems whose imported committers are trusted (`[authz.import]`).
 [authz.import]
 # The `creating_system_id` values whose wrapped committers may name a local
-# party; never this node's own system id.
+# party; never this node's own system id. Optional (trust).
 trusted_systems = []
 
 # The system clients that commit (`[authz.system_client]`).
 #? [[authz.system_client]]
 # The `machines` or `persons` issuer of the client's tokens. It renders with
-# any userinfo masked.
+# any userinfo masked. Optional (trust).
 #? issuer = ""
-# The client the token names.
+# The client the token names. Optional (trust).
 #? client_id = ""
-# The template ids the client may commit; none by default.
+# The template ids the client may commit; none by default. Optional (trust).
 #? writes = []
 # What the client commits: a relayed record of a human act, a device's
-# registration, or both.
+# registration, or both. Optional (trust).
 #? origins = []
-# The issuers of the device identifiers a `device` client names.
+# The issuers of the device identifiers a `device` client names. Optional
+# (trust).
 #? device_identifier_issuers = []
 
 # The healthcare provider the client acts for, recorded on every system access.
 #? [authz.system_client.provider]
-# The issuer of the identifier.
+# The issuer of the identifier. Optional (trust).
 #? issuer = ""
-# The identifier.
+# The identifier. Optional (trust).
 #? id = ""
 
 # The facilities the client may commit for.
 #? [[authz.system_client.facilities]]
-# The issuer of the facility identifier.
+# The issuer of the facility identifier. Optional (trust).
 #? issuer = ""
-# The facility identifier; exclusive with `id_prefix`.
+# The facility identifier; exclusive with `id_prefix`. Optional, unset by
+# default (trust).
 #? id = ""
 # The prefix every admitted facility identifier starts with; exclusive with
-# `id`.
+# `id`. Optional, unset by default (trust).
 #? id_prefix = ""
 
 # The federation agreements (`[authz.federation]`).
@@ -1374,63 +1547,70 @@ trusted_systems = []
 # The agreements, one per issuer and accessor.
 #? [[authz.federation.agreement]]
 # The `federation` issuer of the external callers. It renders with any userinfo
-# masked.
+# masked. Optional (trust).
 #? issuer = ""
-# Who the agreement admits: named persons, or the organisation.
+# Who the agreement admits: named persons, or the organisation. Optional, unset
+# by default (trust).
 #? accessor = "person"
-# The agreement's name.
+# The agreement's name. Optional (trust).
 #? name = ""
-# The agreement's version.
+# The agreement's version. Optional (trust).
 #? version = ""
 # The ISO 3166-1 alpha-2 jurisdiction; a `profile = "nl"` issuer implies `NL`.
+# Optional (trust).
 #? jurisdiction = ""
-# The kind of exchange the agreement covers.
+# The kind of exchange the agreement covers. Optional (trust).
 #? exchange = ""
 # What the exchange is for; required of an NL agreement, which may not serve a
-# keuring (Wabvpz Art. 15f(2)).
+# keuring (Wabvpz Art. 15f(2)). Optional, unset by default (trust).
 #? purpose = "care"
 # The source of the consent the exchange is conditioned on, never its legal
-# ground.
+# ground. Optional, unset by default (trust).
 #? consent = "mitz"
-# The most an external caller may read: `patient/` scopes only.
+# The most an external caller may read: `patient/` scopes only. Optional
+# (trust).
 #? reads = []
-# The template ids an external person may commit; none by default.
+# The template ids an external person may commit; none by default. Optional
+# (trust).
 #? writes = []
 # Whether an external person may discard a dispensation of the same point of
-# care within `discard_window`.
+# care within `discard_window`. Optional (trust).
 #? discard = false
 # The window of a discard, a whole number of hours (MyHealth@EU Requirements
-# Catalogue 10.0.0, requirement 07.04, sets `"24h"`).
+# Catalogue 10.0.0, requirement 07.04, sets `"24h"`). Optional (trust).
 #? discard_window = "1d"
 # The MyHealth@EU service a contact point's person agreement serves, which
 # names the `*_NOT_FOUND` code of a request outside the TRC patient; required
-# on a `contact_point` issuer and refused elsewhere.
+# on a `contact_point` issuer and refused elsewhere. Optional, unset by default
+# (trust).
 #? ehdsi_service = "patient_summary"
 # Whether a professional of the agreement may read an opted-out EHR where
-# national law provides the EHDS Art. 10(2) vital-interest access.
+# national law provides the EHDS Art. 10(2) vital-interest access. Optional
+# (trust).
 #? opt_out_override = false
 # For an organisation: whether no natural person views the data, or the
-# requester logs the person.
+# requester logs the person. Optional, unset by default (trust).
 #? access_class = "automated"
 # For a `chained` access: how long the requester keeps its log, a calendar
-# period (`"P5Y"`).
+# period (`"P5Y"`). Optional, unset by default (trust).
 #? chained_log_retention = "P5Y"
 
 # The legal ground of the processing.
 #? [authz.federation.agreement.legal_ground]
-# The point of GDPR Art. 6(1), `a` to `f`.
+# The point of GDPR Art. 6(1), `a` to `f`. Optional (trust).
 #? gdpr_6_1 = ""
-# The point of GDPR Art. 9(2), `a` to `j`.
+# The point of GDPR Art. 9(2), `a` to `j`. Optional (trust).
 #? gdpr_9_2 = ""
-# The national provision, such as `UAVG Art. 30(3)(a)`.
+# The national provision, such as `UAVG Art. 30(3)(a)`. Optional (trust).
 #? national = ""
 
 # The admission rate per caller, above which a request is refused before any
 # patient lookup; required.
 #? [authz.federation.agreement.caller_rate]
-# The requests per second a caller may send once its burst is spent.
+# The requests per second a caller may send once its burst is spent. Required
+# in its table (trust).
 #? requests_per_second = 0
-# The requests a caller may send at once.
+# The requests a caller may send at once. Required in its table (trust).
 #? burst = 0
 
 # The origins of data this deployment recognises, which a retention period and
@@ -1439,11 +1619,12 @@ trusted_systems = []
 # The id the origin's data carry: the
 # `FEEDER_AUDIT.originating_system_audit.system_id` its feeds commit under, and
 # the origin a direct commit by one of `Self::clients` is stamped with.
-# Compared exactly.
+# Compared exactly. Required in its table (trust).
 #? id = ""
 # The authenticated clients whose direct commits come from this origin: a Basic
 # user name, or the `client_id` (failing that the `azp`) of an OAuth 2.0 access
-# token (RFC 9068 §2.2). Each client belongs to one origin at most.
+# token (RFC 9068 §2.2). Each client belongs to one origin at most. Optional
+# (trust).
 #? clients = []
 
 # The kinds of grant the policy parties may hold (`[authz.grants]`).
@@ -1458,6 +1639,7 @@ allowed = ["system_client.relay", "system_client.device"]
 [api]
 # The ITS-REST base path all API routes hang off, from the root of the
 # listener. `management.base_path` is set the same way; the two never overlap.
+# Optional (infrastructure).
 base_path = "/ferroehr/rest/openehr/v1"
 # Who may read the Swagger UI and the `OpenAPI` documents at the REST root:
 # `off` (not mounted), `admin_only`, `private` (any authenticated principal;
@@ -1465,18 +1647,20 @@ base_path = "/ferroehr/rest/openehr/v1"
 # surface, admin and message groups included, so `public` discloses it to
 # anyone who can reach the port. The same vocabulary the management endpoints
 # use; the name is the `OpenAPI` Specification's, the document the UI renders.
+# Optional (infrastructure).
 openapi_ui = "private"
 # This CDR's own openEHR **system identifier** — the identity the deployment
-# stamps into the data it authors (`FERROEHR__API__SYSTEM_ID`).
+# stamps into the data it authors (`FERROEHR__API__SYSTEM_ID`). Must set
+# (infrastructure).
 system_id = "ferroehr.local"
 # The largest body the ordinary clinical surface accepts, below the listener's
-# `server.body_limit`.
+# `server.body_limit`. Optional, unset by default (infrastructure).
 #? body_limit = "512KiB"
-# Whether the ADMIN API group is served.
+# Whether the ADMIN API group is served. Optional (infrastructure).
 admin = false
 # Whether the terminology extension API is mounted. Off by default — the
 # routes answer `404` unless enabled. The terminology server the CDR asks is
-# `[terminology]`.
+# `[terminology]`. Optional (infrastructure).
 terminology = false
 
 # The CORS protocol answers of the API (Fetch Standard §3.2). Absent, no CORS
@@ -1484,23 +1668,23 @@ terminology = false
 #? [api.cors]
 # `Access-Control-Allow-Origin`: the origins a browser may read responses for,
 # each a serialized origin such as `https://app.example`, or `["*"]` for any
-# origin (dev only).
+# origin (dev only). Optional (infrastructure).
 #? allow_origins = []
 # `Access-Control-Allow-Methods`: the methods a preflight admits; empty admits
-# the method the preflight asks for.
+# the method the preflight asks for. Optional (infrastructure).
 #? allow_methods = []
 # `Access-Control-Allow-Headers`: the request headers a preflight admits; empty
-# admits the headers the preflight asks for.
+# admits the headers the preflight asks for. Optional (infrastructure).
 #? allow_headers = []
 # `Access-Control-Expose-Headers`: the response headers a script may read
-# beyond the CORS-safelisted ones.
+# beyond the CORS-safelisted ones. Optional (infrastructure).
 #? expose_headers = []
 # `Access-Control-Allow-Credentials`: whether a credentialed request's response
 # may be read. Refused beside `allow_origins = ["*"]`, which the Fetch Standard
-# forbids together.
+# forbids together. Optional (infrastructure).
 #? allow_credentials = false
 # `Access-Control-Max-Age`: how long a preflight answer may be cached; unset
-# sends no header.
+# sends no header. Optional, unset by default (infrastructure).
 #? max_age = "500ms"
 
 # The `OPTIONS /` System-Options manifest identity (`[api.options]`). Sourced
@@ -1509,132 +1693,151 @@ terminology = false
 # This is the *display* identity of the manifest — the data-authoring
 # identity is `Self::system_id`.
 [api.options]
-# `Options.solution` — the product name.
+# `Options.solution` — the product name. Optional.
 solution = "FerroEHR"
 # `Options.vendor` — the organisation providing the solution (ITS-REST
 # `specifications/schemas/others/Options.yaml`, a plain string); defaults to
-# the manufacturer's name (`crate::manufacturer::MANUFACTURER`).
+# the manufacturer's name (`crate::manufacturer::MANUFACTURER`). Optional.
 vendor = "Cadasto B.V."
 
 # The shared `PostgreSQL` DSN, pool tuning, migrations and one table per
 # storage domain.
 [database]
 # `PostgreSQL` connection DSN (`postgres://user:pass@host:port/db`).
-# Credentials are redacted from every rendering (`SecretUrl`).
+# Credentials are redacted from every rendering (`SecretUrl`). Must set
+# (infrastructure).
 #? url = ""
 # Path to a file holding the DSN, read at boot in place of `Self::url`.
+# Optional, unset by default (infrastructure).
 #? url_file = ""
 # DSN that schema preparation (`prepare`) authenticates as; unset (the default)
-# reuses `Self::url`.
+# reuses `Self::url`. Optional, unset by default (infrastructure).
 #? migrate_url = ""
 # Path to a file holding `Self::migrate_url`, read at boot in place of it —
 # the mounted-secret route, as `Self::url_file` is for the clinical DSN.
-# Setting both is a boot error.
+# Setting both is a boot error. Optional, unset by default (infrastructure).
 #? migrate_url_file = ""
-# Upper bound of the connection pool.
+# Upper bound of the connection pool. Optional.
 max_connections = 20
 # Connections the pool keeps open when idle (avoids cold reopen + `SET
-# search_path` churn under variable load).
+# search_path` churn under variable load). Optional.
 min_connections = 2
-# How long to wait for a free connection before failing.
+# How long to wait for a free connection before failing. Optional.
 acquire_timeout = "30s"
 # `statement_timeout` applied to every pooled connection; `"0s"` leaves the
-# server default (usually unlimited).
+# server default (usually unlimited). Optional.
 statement_timeout = "1min"
 # Whether the server applies its embedded migrations at boot (`MigrationMode`).
+# Optional (infrastructure).
 migrations = "apply"
 
 # The clinical record's own DSN and the credential that prepares its database.
 [database.clinical]
-# This domain's `PostgreSQL` DSN. Unset reuses `[database] url`.
+# This domain's `PostgreSQL` DSN. Unset reuses `[database] url`. Optional,
+# unset by default (infrastructure).
 #? url = ""
 # Path to a file holding `Self::url`, read at boot in place of it — the route
 # for a deployment that mounts its database credential as a file rather than
 # passing it as an environment value, which is readable through
 # `/proc/<pid>/environ` and inherited by every child process. Setting both is a
-# boot error.
+# boot error. Optional, unset by default (infrastructure).
 #? url_file = ""
 # The credential that prepares the database this domain lives in when that is
-# not the database `[database] migrate_url` reaches.
+# not the database `[database] migrate_url` reaches. Optional, unset by default
+# (infrastructure).
 #? migrate_url = ""
 # Path to a file holding `Self::migrate_url`, read at boot in place of it.
-# Setting both is a boot error.
+# Setting both is a boot error. Optional, unset by default (infrastructure).
 #? migrate_url_file = ""
 
 # The identities' own DSN and the credential that prepares their database.
 [database.party]
-# This domain's `PostgreSQL` DSN. Unset reuses `[database] url`.
+# This domain's `PostgreSQL` DSN. Unset reuses `[database] url`. Optional,
+# unset by default (infrastructure).
 #? url = ""
 # Path to a file holding `Self::url`, read at boot in place of it — the route
 # for a deployment that mounts its database credential as a file rather than
 # passing it as an environment value, which is readable through
 # `/proc/<pid>/environ` and inherited by every child process. Setting both is a
-# boot error.
+# boot error. Optional, unset by default (infrastructure).
 #? url_file = ""
 # The credential that prepares the database this domain lives in when that is
-# not the database `[database] migrate_url` reaches.
+# not the database `[database] migrate_url` reaches. Optional, unset by default
+# (infrastructure).
 #? migrate_url = ""
 # Path to a file holding `Self::migrate_url`, read at boot in place of it.
-# Setting both is a boot error.
+# Setting both is a boot error. Optional, unset by default (infrastructure).
 #? migrate_url_file = ""
 
 # The audit repository's own DSN and the credential that prepares its database.
 [database.audit]
-# This domain's `PostgreSQL` DSN. Unset reuses `[database] url`.
+# This domain's `PostgreSQL` DSN. Unset reuses `[database] url`. Optional,
+# unset by default (infrastructure).
 #? url = ""
 # Path to a file holding `Self::url`, read at boot in place of it — the route
 # for a deployment that mounts its database credential as a file rather than
 # passing it as an environment value, which is readable through
 # `/proc/<pid>/environ` and inherited by every child process. Setting both is a
-# boot error.
+# boot error. Optional, unset by default (infrastructure).
 #? url_file = ""
 # The credential that prepares the database this domain lives in when that is
-# not the database `[database] migrate_url` reaches.
+# not the database `[database] migrate_url` reaches. Optional, unset by default
+# (infrastructure).
 #? migrate_url = ""
 # Path to a file holding `Self::migrate_url`, read at boot in place of it.
-# Setting both is a boot error.
+# Setting both is a boot error. Optional, unset by default (infrastructure).
 #? migrate_url_file = ""
 
 # The management/observability surface.
 [management]
 # Master switch. When `false`, no management routes are mounted at all.
+# Optional (infrastructure).
 enabled = false
-# The base path the management endpoints hang off.
+# The base path the management endpoints hang off. Optional (infrastructure).
 base_path = "/management"
 # When set, the management surface is served from its **own** listener on this
 # socket address (a separate axum server task in the binary) instead of the
 # main API listener — so production can keep it off the public listener
-# entirely. The same form as `server.listen`.
+# entirely. The same form as `server.listen`. Optional, unset by default
+# (infrastructure).
 #? listen = ""
 # Span-timing capture: every span's folded stacks are written to this file, for
-# `inferno-flamegraph` to render offline. Unset, nothing is captured.
+# `inferno-flamegraph` to render offline. Unset, nothing is captured. Optional,
+# unset by default (infrastructure).
 #? flame_file = ""
 
 # Per-endpoint access levels — the SINGLE authority for this surface.
 [management.endpoints]
-# `/management/info`.
+# `/management/info`. Optional (infrastructure).
 info = "off"
-# `/management/metrics` (+ `/{name}`) — the JSON registry view.
+# `/management/metrics` (+ `/{name}`) — the JSON registry view. Optional
+# (infrastructure).
 metrics = "off"
 # `/management/prometheus` — the text exposition scraped by Prometheus.
+# Optional (infrastructure).
 prometheus = "off"
-# `/management/env` — the redacted effective configuration.
+# `/management/env` — the redacted effective configuration. Optional
+# (infrastructure).
 env = "off"
-# `/management/loggers` — the runtime `EnvFilter` control.
+# `/management/loggers` — the runtime `EnvFilter` control. Optional
+# (infrastructure).
 loggers = "off"
 # `/management/flamegraph` — the on-demand CPU flamegraph (pprof sampling).
+# Optional (infrastructure).
 flamegraph = "off"
-# `/management/health` — every readiness indicator with its detail.
+# `/management/health` — every readiness indicator with its detail. Optional
+# (infrastructure).
 health = "off"
 # `/management/status` — the status document with the licence, the deployment
-# posture and the support period.
+# posture and the support period. Optional (infrastructure).
 status = "off"
 
 # Limits for the on-demand CPU profiler (`endpoints.flamegraph`).
 [management.profiling]
 # The longest sample window a single request may ask for, in whole seconds.
+# Optional.
 max_duration = "30s"
-# The highest sampling frequency a request may ask for, in Hz.
+# The highest sampling frequency a request may ask for, in Hz. Optional.
 max_frequency = 999
 
 # The IHE ATNA audit trail / System Log (local Audit Record Repository + the
@@ -1642,114 +1845,129 @@ max_frequency = 999
 [audit]
 # Master switch (`FERROEHR__AUDIT__ENABLED`). **On by default** — every
 # deployment gets a queryable audit trail with zero external dependencies (the
-# sinks decide where records go).
+# sinks decide where records go). Optional (infrastructure).
 enabled = true
 # Enterprise/site id → `AuditEnterpriseSiteID`
-# (`FERROEHR__AUDIT__ENTERPRISE_SITE_ID`).
+# (`FERROEHR__AUDIT__ENTERPRISE_SITE_ID`). Optional, unset by default
+# (infrastructure).
 #? enterprise_site_id = ""
 # Audit source id → `AuditSourceID` and the destination participant
-# (`FERROEHR__AUDIT__SOURCE_ID`).
+# (`FERROEHR__AUDIT__SOURCE_ID`). Optional (infrastructure).
 source_id = "ferroehr"
 # Fill value for empty mandatory fields (`FERROEHR__AUDIT__VALUE_IF_MISSING`).
+# Optional.
 value_if_missing = "UNKNOWN"
 # Skip successful-login records (`FERROEHR__AUDIT__SUPPRESS_LOGIN_EVENTS`).
-# Rejected accesses (401/403) are always recorded.
+# Rejected accesses (401/403) are always recorded. Optional.
 suppress_login_events = true
-# Failure mode (`FERROEHR__AUDIT__FAIL_MODE`): `open` | `closed`.
+# Failure mode (`FERROEHR__AUDIT__FAIL_MODE`): `open` | `closed`. Optional
+# (trust).
 fail_mode = "open"
 # Enrich the patient participant via a background indexed lookup of
 # `ehr.subject_id` (`FERROEHR__AUDIT__RESOLVE_SUBJECT`). On by default — the
 # IHE BALP `Patient*` patterns and the patient-centric audit search need the
-# subject; the lookup runs only on the background drain.
+# subject; the lookup runs only on the background drain. Optional.
 resolve_subject = true
 # Bounded audit queue capacity (`FERROEHR__AUDIT__QUEUE_CAPACITY`). Sized for
 # write-path bursts: the drain persists in multi-row batches, so the queue only
 # needs to ride out sink latency spikes, but a loaded write path can enqueue
-# thousands per second.
+# thousands per second. Optional.
 queue_capacity = 8192
 # This node's advertised network address → the destination
 # network-access-point (`FERROEHR__AUDIT__SERVER_HOST`); the `value_if_missing`
-# fill when unset.
+# fill when unset. Optional, unset by default (infrastructure).
 #? server_host = ""
 # The request header carrying the caller's declared purpose of use
 # (`FERROEHR__AUDIT__PURPOSE_HEADER`), recorded on every access record.
+# Optional.
 purpose_header = "x-purpose-of-use"
 # The request header carrying the data permit the caller acts under
 # (`FERROEHR__AUDIT__PERMIT_HEADER`), recorded on every access record.
+# Optional.
 permit_header = "x-data-permit"
 # The purpose codes this deployment accepts (`FERROEHR__AUDIT__PURPOSE_CODES`).
+# Optional.
 purpose_codes = []
 # The declared purpose codes that mark an access as an emergency access
 # (`FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES`). Empty (the default) marks
-# nothing.
+# nothing. Optional (trust).
 emergency_purpose_codes = []
 # The legal basis this deployment processes under
-# (`FERROEHR__AUDIT__LEGAL_BASIS`), recorded on every access record.
+# (`FERROEHR__AUDIT__LEGAL_BASIS`), recorded on every access record. Optional,
+# unset by default (infrastructure).
 #? legal_basis = ""
 
 # The local Audit Record Repository.
 [audit.store]
 # Persist every record locally (`FERROEHR__AUDIT__STORE__ENABLED`). **On by
-# default** (owner posture: compliance out of the box).
+# default** (owner posture: compliance out of the box). Optional
+# (infrastructure).
 enabled = true
 # How long records are kept, a calendar period (`"P5Y"`, `"P1830D"`); unset
 # keeps them forever (`FERROEHR__AUDIT__STORE__RETENTION`). Applied hourly by
-# the retention reaper.
+# the retention reaper. Optional, unset by default (infrastructure).
 #? retention = "P5Y"
 # Whether this deployment is one of the controllers SGB V § 307 names for a
 # German telematics-infrastructure application
 # (`FERROEHR__AUDIT__STORE__SGB_V_309_CONTROLLER`). **Off by default.**
+# Optional (infrastructure).
 sgb_v_309_controller = false
 # The time between two scheduled verifications of the store's hash chain
 # (`FERROEHR__AUDIT__STORE__VERIFY_INTERVAL`); `"0s"` turns the schedule off.
-# Default one hour.
+# Default one hour. Optional.
 verify_interval = "1h"
 # The time between two scheduled full passes over the hash chain
 # (`FERROEHR__AUDIT__STORE__FULL_VERIFY_INTERVAL`), which also recompute the
 # records before the checkpoint; `"0s"` leaves the full pass to `SELECT * FROM
 # audit.verify_audit_chain()` on demand. Default one week. A run that found
-# damage is always followed by a full pass.
+# damage is always followed by a full pass. Optional.
 full_verify_interval = "7d"
 
 # The classic DICOM-over-syslog feed; absent, off.
 #? [audit.syslog]
 # The Audit Record Repository, `tls://host:port`
 # (`FERROEHR__AUDIT__SYSLOG__URL`): RFC 5425 TLS, on the §4.1 port 6514 by
-# default.
+# default. Optional (infrastructure).
 #? url = "tls://localhost:6514"
 # The directory of the `ihe-atna` spool every record is stored in before it is
 # sent (`FERROEHR__AUDIT__SYSLOG__SPOOL_DIR`), owner-only; unset, the spool is
-# held in memory and a restart loses what it holds.
+# held in memory and a restart loses what it holds. Optional, unset by default
+# (infrastructure).
 #? spool_dir = ""
 # The most records the spool holds
-# (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_EVENTS`).
+# (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_EVENTS`). Optional.
 #? spool_max_events = 100000
 # The most the spool holds in size (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_SIZE`).
+# Optional.
 #? spool_max_size = "256MiB"
 
 # The TLS material of the connection to the ARR (`[audit.syslog.tls]`): the
 # family's outbound TLS keys, the client identity for mutual TLS and the trust
 # roots beside the platform's.
 #? [audit.syslog.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (infrastructure).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default
+# (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (infrastructure).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
 
 # The wait between two delivery attempts.
 #? [audit.syslog.retry]
-# The longest wait between two delivery attempts after a failure.
+# The longest wait between two delivery attempts after a failure. Optional.
 #? max_backoff = "1min"
 
 # The RESTful-ATNA FHIR `AuditEvent` feed; absent, off.
 #? [audit.fhir_feed]
 # How long the forwarder waits for a new record before it reads the store again
 # (`FERROEHR__AUDIT__FHIR_FEED__POLL_INTERVAL`); at least 100 ms is waited.
+# Optional.
 #? poll_interval = "2s"
 
 # `[audit.fhir_feed.endpoint]`, the family's outbound endpoint: the ARR's FHIR
@@ -1759,97 +1977,119 @@ full_verify_interval = "7d"
 # client. Credentials in the URL are masked in every rendering.
 #? [audit.fhir_feed.endpoint]
 # The service's URL (RFC 3986); required. It renders with its userinfo and its
-# query masked, in `Debug` and when serialized.
+# query masked, in `Debug` and when serialized. Optional (infrastructure).
 #? url = ""
-# How long one whole call may take; never zero.
+# How long one whole call may take; never zero. Optional (infrastructure).
 #? timeout = "10s"
 # How long opening the connection may take; unset, only `timeout` bounds it.
+# Optional, unset by default (infrastructure).
 #? connect_timeout = "500ms"
 
 # How a failed call is tried again.
 #? [audit.fhir_feed.endpoint.retry]
-# How many times one call is tried in all; 1 tries once.
+# How many times one call is tried in all; 1 tries once. Optional
+# (infrastructure).
 #? max_attempts = 3
-# The wait before the second try.
+# The wait before the second try. Optional (infrastructure).
 #? initial_backoff = "200ms"
-# The longest wait between two tries.
+# The longest wait between two tries. Optional (infrastructure).
 #? max_backoff = "1min"
 
 # The TLS of the connection, built by the product's reader of TLS material.
 #? [audit.fhir_feed.endpoint.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (infrastructure).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default
+# (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (infrastructure).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
 
 # The credential the calls carry: HTTP Basic or the client credentials grant.
 #? [audit.fhir_feed.endpoint.credentials]
-# The Basic user-id.
+# The Basic user-id. Optional (infrastructure).
 #? user = ""
-# The Basic password, rendered redacted.
+# The Basic password, rendered redacted. Optional, unset by default
+# (infrastructure).
 #? password = ""
-# The file holding the Basic password.
+# The file holding the Basic password. Optional, unset by default
+# (infrastructure).
 #? password_file = ""
 
 # The client credentials grant.
 #? [audit.fhir_feed.endpoint.credentials.oauth]
 # The issuer whose metadata names the token endpoint; exclusive with
 # `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
-# itself.
+# itself. Optional (infrastructure).
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
-# userinfo and its query masked.
+# userinfo and its query masked. Optional (infrastructure).
 #? token_endpoint = ""
-# The client identifier.
+# The client identifier. Optional (infrastructure).
 #? client_id = ""
-# How the client authenticates.
+# How the client authenticates. Optional (infrastructure).
 #? client_auth = "client_secret_basic"
-# The client secret, rendered redacted.
+# The client secret, rendered redacted. Optional, unset by default
+# (infrastructure).
 #? client_secret = ""
-# The file holding the client secret.
+# The file holding the client secret. Optional, unset by default
+# (infrastructure).
 #? client_secret_file = ""
 # The PEM file holding the private key of the client assertion under
 # `private_key_jwt`, and of the actor assertion of an onward exchange
 # (`credentials.onward.actor_assertion`) whatever the client authentication.
+# Optional, unset by default (infrastructure).
 #? private_key_file = ""
-# The `kid` the assertion names; the RFC 7638 thumbprint when empty.
+# The `kid` the assertion names; the RFC 7638 thumbprint when empty. Optional
+# (infrastructure).
 #? kid = ""
 # The algorithm the assertion is signed with; when unset, by key type, an EC
-# key by its curve (P-256 ES256, P-384 ES384).
+# key by its curve (P-256 ES256, P-384 ES384). Optional, unset by default
+# (infrastructure).
 #? assertion_alg = ""
-# The `scope` request parameter; empty for none.
+# The `scope` request parameter; empty for none. Optional (infrastructure).
 #? scope = ""
-# The RFC 8707 resource indicator; empty for none.
+# The RFC 8707 resource indicator; empty for none. Optional (infrastructure).
 #? resource = ""
-# The `audience` request parameter; empty for none.
+# The `audience` request parameter; empty for none. Optional (infrastructure).
 #? audience = ""
-# How long before the token expires a new one is fetched.
+# How long before the token expires a new one is fetched. Optional
+# (infrastructure).
 #? refresh_margin = "30s"
-# How long one call to the authorization server may take.
+# How long one call to the authorization server may take. Optional
+# (infrastructure).
 #? timeout = "10s"
 # The `aud` of a `private_key_jwt` assertion: `token_endpoint` (the default) or
-# `issuer`, which needs `issuer` set.
+# `issuer`, which needs `issuer` set. Optional (infrastructure).
 #? assertion_audience = "token_endpoint"
-# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449).
+# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449). Optional,
+# unset by default (infrastructure).
 #? dpop_key_file = ""
 # Whether the tokens are bound to the client certificate (RFC 8705 §3).
+# Optional (infrastructure).
 #? certificate_bound = false
-# The security profile: `oauth2` (the default) or `fapi2`.
+# The security profile: `oauth2` (the default) or `fapi2`. Optional
+# (infrastructure).
 #? security_profile = "oauth2"
-# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5).
+# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5). Optional
+# (infrastructure).
 #? mtls_alias_hosts = []
 # The PEM file of the previous assertion key, published, never signing.
+# Optional, unset by default (infrastructure).
 #? previous_private_key_file = ""
 # How long the previous key stays published; `0s` for as long as it is set.
+# Optional (infrastructure).
 #? previous_key_overlap = "0s"
 # The PEM file of the next assertion key, published and never signing.
+# Optional, unset by default (infrastructure).
 #? next_private_key_file = ""
-# The RFC 9396 `authorization_details` JSON text; empty for none.
+# The RFC 9396 `authorization_details` JSON text; empty for none. Optional
+# (infrastructure).
 #? authorization_details = ""
 
 # The TLS of the token endpoint connection: trust roots beside the platform's,
@@ -1857,14 +2097,17 @@ full_verify_interval = "7d"
 # version. The crate reads none of it: a table that names material resolves
 # through the product's `TlsBuilder`.
 #? [audit.fhir_feed.endpoint.credentials.oauth.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (infrastructure).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default
+# (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (infrastructure).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
 
 # The onward target the lane reaches on a caller's behalf, authenticating with
@@ -1872,195 +2115,221 @@ full_verify_interval = "7d"
 #? [audit.fhir_feed.endpoint.credentials.onward]
 # The identifier of the issuer of the onward tokens, whose metadata names its
 # token endpoint unless `token_endpoint` is set. It renders with any userinfo
-# masked, as `SecretUrl` renders itself.
+# masked, as `SecretUrl` renders itself. Optional (infrastructure).
 #? issuer = ""
 # Whose tokens the issuer signs: `persons` (a delegated exchange), `patients`
-# (a patient's own token) or `federation`; required, with no default.
+# (a patient's own token) or `federation`; required, with no default. Optional,
+# unset by default (infrastructure).
 #? kind = "persons"
-# The preset the issuer's profile starts from.
+# The preset the issuer's profile starts from. Optional (infrastructure).
 #? profile = "rfc9068"
 # The token endpoint itself; empty to discover it from `issuer`. It renders
-# with its userinfo and its query masked.
+# with its userinfo and its query masked. Optional (infrastructure).
 #? token_endpoint = ""
-# The client id at this issuer; empty for the lane's own.
+# The client id at this issuer; empty for the lane's own. Optional
+# (infrastructure).
 #? client_id = ""
-# The audiences an onward token may name, at least one.
+# The audiences an onward token may name, at least one. Optional
+# (infrastructure).
 #? audiences = []
 # The `resource` or `audience` values the request names, as the profile's
-# `onward_indicator` says.
+# `onward_indicator` says. Optional (infrastructure).
 #? indicators = []
-# The `scope` the request names; empty for none.
+# The `scope` the request names; empty for none. Optional (infrastructure).
 #? scope = ""
 # The claim a chained federation route carries from the subject token to the
-# onward token; empty for none.
+# onward token; empty for none. Optional (infrastructure).
 #? correlation_claim = ""
 # Whether the lane holds the tokens it obtains until they near their `exp`.
 # `false` exchanges a token at the issuer on every call, a setting for a
 # performance measurement's self-test, never for production. `true` by default.
+# Optional (infrastructure).
 #? cache = true
 # Whether every token exchange sent without an actor token names the lane's
 # client as its actor with an assertion signed by the current key of its
 # `oauth` table's key ring (RFC 8693 §2.1; `Onward::with_actor_assertion`).
-# `false` by default.
+# `false` by default. Optional (infrastructure).
 #? actor_assertion = false
 
 # The profile keys set over the preset; `max_onward_lifetime` is required, here
 # or in the preset.
 #? [audit.fhir_feed.endpoint.credentials.onward.keys]
-# `Profile::person_key`.
+# `Profile::person_key`. Optional, unset by default (infrastructure).
 #? person_key = ""
-# `Profile::tenant_claim`.
+# `Profile::tenant_claim`. Optional, unset by default (infrastructure).
 #? tenant_claim = ""
-# `Profile::client_claims`.
+# `Profile::client_claims`. Optional, unset by default (infrastructure).
 #? client_claims = []
-# `Profile::impersonation_marker`.
+# `Profile::impersonation_marker`. Optional, unset by default (infrastructure).
 #? impersonation_marker = ""
-# `Profile::expect`.
+# `Profile::expect`. Optional, unset by default (infrastructure).
 #? expect = {}
-# `Profile::user_claims`.
+# `Profile::user_claims`. Optional, unset by default (infrastructure).
 #? user_claims = []
-# `Profile::person_equality`.
+# `Profile::person_equality`. Optional, unset by default (infrastructure).
 #? person_equality = []
-# `Profile::unstable_claims`.
+# `Profile::unstable_claims`. Optional, unset by default (infrastructure).
 #? unstable_claims = []
-# `Profile::first_party_clients`.
+# `Profile::first_party_clients`. Optional, unset by default (infrastructure).
 #? first_party_clients = []
-# `Profile::max_actor_chain`.
+# `Profile::max_actor_chain`. Optional, unset by default (infrastructure).
 #? max_actor_chain = 0
-# `Profile::act_represents_patient`.
+# `Profile::act_represents_patient`. Optional, unset by default
+# (infrastructure).
 #? act_represents_patient = false
-# `Profile::token_types`.
+# `Profile::token_types`. Optional, unset by default (infrastructure).
 #? token_types = []
-# `Profile::required_claims`.
+# `Profile::required_claims`. Optional, unset by default (infrastructure).
 #? required_claims = []
-# `Profile::adapter`.
+# `Profile::adapter`. Optional, unset by default (infrastructure).
 #? adapter = ""
-# `Profile::max_onward_lifetime`, a duration such as `"10min"`.
+# `Profile::max_onward_lifetime`, a duration such as `"10min"`. Optional, unset
+# by default (infrastructure).
 #? max_onward_lifetime = "500ms"
-# `Profile::onward_grant`.
+# `Profile::onward_grant`. Optional, unset by default (infrastructure).
 #? onward_grant = "token_exchange"
-# `Profile::onward_indicator`.
+# `Profile::onward_indicator`. Optional, unset by default (infrastructure).
 #? onward_indicator = "resource"
-# `Profile::onward_parameters`.
+# `Profile::onward_parameters`. Optional, unset by default (infrastructure).
 #? onward_parameters = {}
-# `Profile::onward_client_id`.
+# `Profile::onward_client_id`. Optional, unset by default (infrastructure).
 #? onward_client_id = false
-# `Profile::onward_subject_audience`.
+# `Profile::onward_subject_audience`. Optional, unset by default
+# (infrastructure).
 #? onward_subject_audience = false
-# `Profile::onward_preview`.
+# `Profile::onward_preview`. Optional, unset by default (infrastructure).
 #? onward_preview = []
 
 # `Profile::app_only`.
 #? [[audit.fhir_feed.endpoint.credentials.onward.keys.app_only]]
-# The claim of `{ claim, value }`.
+# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? claim = ""
-# The value of `{ claim, value }`.
+# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? value = ""
-# The claim of `{ absent_claim }`.
+# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
 #? absent_claim = ""
-# The subjects of `{ subjects }`.
+# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
 #? subjects = []
-# The `{ sub_is_client = true }` form.
+# The `{ sub_is_client = true }` form. Optional, unset by default
+# (infrastructure).
 #? sub_is_client = false
-# The claim of `{ differs_from_iss }`.
+# The claim of `{ differs_from_iss }`. Optional, unset by default
+# (infrastructure).
 #? differs_from_iss = ""
 
 # `Profile::guest`.
 #? [[audit.fhir_feed.endpoint.credentials.onward.keys.guest]]
-# The claim of `{ claim, value }`.
+# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? claim = ""
-# The value of `{ claim, value }`.
+# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? value = ""
-# The claim of `{ absent_claim }`.
+# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
 #? absent_claim = ""
-# The subjects of `{ subjects }`.
+# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
 #? subjects = []
-# The `{ sub_is_client = true }` form.
+# The `{ sub_is_client = true }` form. Optional, unset by default
+# (infrastructure).
 #? sub_is_client = false
-# The claim of `{ differs_from_iss }`.
+# The claim of `{ differs_from_iss }`. Optional, unset by default
+# (infrastructure).
 #? differs_from_iss = ""
 
 # `Profile::delegates`.
 #? [[audit.fhir_feed.endpoint.credentials.onward.keys.delegates]]
-# The actor's issuer.
+# The actor's issuer. Optional, unset by default (infrastructure).
 #? issuer = ""
-# The actor's `sub`.
+# The actor's `sub`. Optional, unset by default (infrastructure).
 #? sub = ""
-# The client.
+# The client. Optional, unset by default (infrastructure).
 #? client = ""
 
 # `Profile::representation`.
 #? [audit.fhir_feed.endpoint.credentials.onward.keys.representation]
-# The claim naming the subject the person represents.
+# The claim naming the subject the person represents. Required in its table
+# (infrastructure).
 #? claim = ""
-# The claim carrying the ground of the representation, as asserted.
+# The claim carrying the ground of the representation, as asserted. Optional,
+# unset by default (infrastructure).
 #? ground_claim = ""
 
 # `Profile::scope_claim`.
 #? [audit.fhir_feed.endpoint.credentials.onward.keys.scope_claim]
-# The claim.
+# The claim. Required in its table (infrastructure).
 #? claim = ""
-# Its JSON form.
+# Its JSON form. Optional (infrastructure).
 #? form = "string"
 
 # `Profile::app_only_scope_claim`.
 #? [audit.fhir_feed.endpoint.credentials.onward.keys.app_only_scope_claim]
-# The claim.
+# The claim. Required in its table (infrastructure).
 #? claim = ""
-# Its JSON form.
+# Its JSON form. Optional (infrastructure).
 #? form = "string"
 
 # What a `federation` issuer asserts, over its preset's defaults;
 # `exchanges_from` and `person_mapping` are required.
 #? [audit.fhir_feed.endpoint.credentials.onward.federation]
 # The `[auth.issuer]` this table describes, of kind `federation`. It renders
-# with any userinfo masked, as `SecretUrl` renders itself.
+# with any userinfo masked, as `SecretUrl` renders itself. Optional
+# (infrastructure).
 #? issuer = ""
 # Whether the issuer is a MyHealth@EU contact point; required, with no default.
+# Optional, unset by default (infrastructure).
 #? contact_point = false
-# The default sources the table starts from.
+# The default sources the table starts from. Optional, unset by default
+# (infrastructure).
 #? mapping = "iua"
-# The sources of each field, over the mapping's.
+# The sources of each field, over the mapping's. Optional (infrastructure).
 #? fields = {}
-# The country codes a professional may carry.
+# The country codes a professional may carry. Optional (infrastructure).
 #? countries = []
-# The issuing authorities a professional or provider may name.
+# The issuing authorities a professional or provider may name. Optional
+# (infrastructure).
 #? issuing_authorities = []
-# The prefixes a healthcare provider identifier must start with.
+# The prefixes a healthcare provider identifier must start with. Optional
+# (infrastructure).
 #? provider_identifier_prefixes = []
 # Whether the issuer attests the `authorization_details` it puts in a token,
-# which RFC 9396 §12 has "sent through the user agent".
+# which RFC 9396 §12 has "sent through the user agent". Optional
+# (infrastructure).
 #? attests_authorization_details = false
-# The `authorization_details` type the attributes are read from.
+# The `authorization_details` type the attributes are read from. Optional,
+# unset by default (infrastructure).
 #? authorization_details_type = ""
 # The `authorization_details` types that state an organisation's access.
+# Optional (infrastructure).
 #? organisation_types = []
 # The claim holding the Verifiable Presentations of a Nuts RFC021 §6
-# introspection response, `vps`.
+# introspection response, `vps`. Optional, unset by default (infrastructure).
 #? presentations_claim = ""
-# The credential types the deployment declares user-authenticated.
+# The credential types the deployment declares user-authenticated. Optional
+# (infrastructure).
 #? user_credential_types = []
-# The fields every token of the issuer must carry, each with a source.
+# The fields every token of the issuer must carry, each with a source. Optional
+# (infrastructure).
 #? required_fields = []
 # Whether the issuer's tokens must be sender-constrained, so the issuer fails
-# to load without `sender_constraint = "required"`.
+# to load without `sender_constraint = "required"`. Optional (infrastructure).
 #? requires_sender_constraint = false
 # The subject-token issuers whose persons this issuer is trusted to map to its
-# own, when it issues onward tokens (`client::onward`).
+# own, when it issues onward tokens (`client::onward`). Optional
+# (infrastructure).
 #? exchanges_from = []
 # The subject-token claim, a dotted path, whose value an onward token of this
-# issuer must carry as `professional.hp_identifier`.
+# issuer must carry as `professional.hp_identifier`. Optional, unset by default
+# (infrastructure).
 #? person_mapping = ""
 
 # The assurance level the issuer's tokens carry.
 #? [audit.fhir_feed.endpoint.credentials.onward.assurance]
 # The claim carrying the authentication context class, a dotted path; `acr` by
-# default (OpenID Connect Core 1.0 §2).
+# default (OpenID Connect Core 1.0 §2). Optional (infrastructure).
 #? claim = "acr"
 # The level each claim value the issuer emits stands for; a value the map does
-# not name carries none.
+# not name carries none. Optional (infrastructure).
 #? levels = {}
 # The level a request held to the section must carry; none refuses nothing.
+# Optional, unset by default (infrastructure).
 #? minimum = "low"
 
 # The data-minimisation policy: the subject namespaces, the identifier scan and
@@ -2069,51 +2338,55 @@ full_verify_interval = "7d"
 # The namespaces an `EHR_STATUS.subject.external_ref` may name
 # (`FERROEHR__PRIVACY__SUBJECT_NAMESPACES`, comma-separated in the environment)
 # — the pseudonymisation domains this deployment issues subject pseudonyms
-# in.
+# in. Must set (trust).
 subject_namespaces = []
 # Accept `PARTY_IDENTIFIED` / `PARTY_RELATED` carrying `name` or `identifiers`
 # in clinical content (`FERROEHR__PRIVACY__ALLOW_IDENTIFIED_PARTIES_IN_EHR`).
+# Optional (trust).
 allow_identified_parties_in_ehr = false
 
 # The identifier scanner.
 [privacy.identifier_scan]
 # `strict` (refuse) or `warn` (accept and record)
-# (`FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE`).
+# (`FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE`). Optional (trust).
 mode = "strict"
 # The national personal-identifier rules this deployment scans for, by rule key
 # (`FERROEHR__PRIVACY__IDENTIFIER_SCAN__RULES`, comma-separated in the
-# environment). An unknown key is a boot error naming it.
+# environment). An unknown key is a boot error naming it. Optional (trust).
 rules = ["ch-ahvn13", "ch-epd-pid", "de-kvnr", "fi-hetu", "gb-nhs-number", "nl-bsn", "no-fodselsnummer", "se-personnummer"]
 # Extra identifier patterns this deployment refuses, as Rust regular
 # expressions (`FERROEHR__PRIVACY__IDENTIFIER_SCAN__PATTERNS`, comma-separated
-# in the environment).
+# in the environment). Optional (trust).
 patterns = []
 
 # The national-identifier protection of the demographic domain; absent, off.
 #? [privacy.identifier_protection]
 # The scheme codes to protect
-# (`FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__SCHEMES`).
+# (`FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__SCHEMES`). Optional (trust).
 #? schemes = ["nl-bsn"]
 # The root key, 64 hex characters
 # (`FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__KEY`), or its `key_file` sibling.
+# Optional, unset by default (trust).
 #? key = ""
 # A file holding the root key, read at boot
-# (`FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__KEY_FILE`).
+# (`FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__KEY_FILE`). Optional, unset by
+# default (trust).
 #? key_file = ""
 
 # The cross-domain cohort-query allow-list and limits.
 [privacy.cohort]
 # The distinct-EHR floor a result set must reach to be served
 # (`FERROEHR__PRIVACY__COHORT__SMALL_CELL_THRESHOLD`); `0` disables
-# suppression.
+# suppression. Optional (trust).
 small_cell_threshold = 5
 # The largest cohort a predicate may select
-# (`FERROEHR__PRIVACY__COHORT__MAX_COHORT_SIZE`).
+# (`FERROEHR__PRIVACY__COHORT__MAX_COHORT_SIZE`). Optional (trust).
 max_cohort_size = 100000
 # Whether a cohort may name its subjects by identifier
 # (`FERROEHR__PRIVACY__COHORT__SUBJECTS`), each resolved through the installed
 # EHR index provider. The one cohort form an IHE patient identity source
-# serves, so it turns the surface on without a bound predicate.
+# serves, so it turns the surface on without a bound predicate. Optional
+# (trust).
 subjects = false
 
 # The bound predicates, keyed by the name a caller uses
@@ -2124,10 +2397,13 @@ subjects = false
 # (`openEHR-DEMOGRAPHIC-ADDRESS.address.v1`), matched case-insensitively
 # against the stored, case-folded column (BASE `base_types`
 # `master05-identification_package.adoc` §"Composite Identifiers and Case").
+# Required in its table (trust).
 # archetype = ""
-# The ELEMENT's `archetype_node_id` at-code (`at0012`).
+# The ELEMENT's `archetype_node_id` at-code (`at0012`). Required in its table
+# (trust).
 # node = ""
-# How the caller's value is matched against the leaf.
+# How the caller's value is matched against the leaf. Required in its table
+# (trust).
 # kind = "text"
 
 # The record itself: the subject index, versioning, signing, the query engine,
@@ -2135,7 +2411,7 @@ subjects = false
 [record]
 # Who holds the subject-to-EHR cross-reference, the IHE patient identity source
 # of `[pixm]` (`pixm`) or the in-instance map (`local`). No default: an unset
-# index refuses the start.
+# index refuses the start. Must set (infrastructure).
 #? subject_index = "pixm"
 
 # The answer to an identical re-send.
@@ -2146,43 +2422,48 @@ subjects = false
 # log. No `commit_audit` and no CONTRIBUTION then record the act (RM common
 # master06 §Committal and Audits), which is why the default records every
 # commit. The name is RFC 9110 §9.2.2's: a re-send then has the effect of one
-# request.
+# request. Optional (infrastructure).
 idempotent_resend = false
 
 # VERSION signing.
 [record.signing]
 # Server-side signing of committed versions. Defaults **on** so the STANDARD
-# "Signing" capability is demonstrably met.
+# "Signing" capability is demonstrably met. Optional (infrastructure).
 enabled = true
-# Signing mode: `digest` | `pgp`.
+# Signing mode: `digest` | `pgp`. Optional (infrastructure).
 mode = "digest"
 # Armored RFC 4880 secret key; **required for `pgp` mode** (validated at boot,
-# fail-closed).
+# fail-closed). Optional, unset by default (infrastructure).
 #? key_file = ""
 # Key passphrase, kept in `ferrohealth_secret::secret::Secret` and redacted
-# from any config snapshot.
+# from any config snapshot. Optional, unset by default (infrastructure).
 #? key_passphrase = ""
 # File-based indirection for `Self::key_passphrase` (K8s/Docker secrets).
 # Exactly one of the pair may be set; the loader reads and trims the file.
+# Optional, unset by default (infrastructure).
 #? key_passphrase_file = ""
 # Armored RFC 4880 **public** keys retired from signing but retained for
 # verification, so versions signed before a key rotation keep verifying.
+# Optional (infrastructure).
 retired_key_files = []
 # Read-time verification policy: `off` | `warn` | `strict`. **Unset** (the
 # default) resolves via `Self::effective_verify_on_read` to `strict` when
 # signing is enabled — the explicit "sign but never check" state is reachable
-# only by deliberately setting `off`.
+# only by deliberately setting `off`. Optional, unset by default
+# (infrastructure).
 #? verify_on_read = "off"
 
 # AQL execution knobs.
 [record.query]
 # Max distinct cached query plans; `0` disables the plan cache (every lookup
-# misses and the full parse→lower path runs).
+# misses and the full parse→lower path runs). Optional.
 plan_cache_capacity = 256
 # Per-query DB execution budget; `"0s"` disables it. Overrun reports `408`
-# (ITS-REST `Requests_and_responses` §HTTP status codes).
+# (ITS-REST `Requests_and_responses` §HTTP status codes). Optional
+# (infrastructure).
 timeout = "30s"
 # The largest page of rows one query execution serves; `0` means unbounded.
+# Optional (infrastructure).
 max_result_rows = 10000
 
 # The commit-event outbox readers and their retention.
@@ -2190,12 +2471,12 @@ max_result_rows = 10000
 # The readers of the outbox feed, each a name matching `^[a-z][a-z0-9-]{0,62}$`
 # (`ferrobridge`, for one). Boot registers each one and marks every reader the
 # list no longer names inactive. Empty by default: no commit writes an outbox
-# row.
+# row. Optional.
 readers = []
 # How long a row is kept once every active reader has acknowledged it, counted
-# from its commit instant.
+# from its commit instant. Optional.
 retention = "7d"
-# How often the retention prune runs.
+# How often the retention prune runs. Optional.
 prune_interval = "1h"
 
 # `DV_MULTIMEDIA` externalization to object storage. It keeps `enabled`,
@@ -2203,34 +2484,40 @@ prune_interval = "1h"
 # back from `url`.
 [record.multimedia]
 # Master switch. `false` (default) = today's inline behaviour, byte for byte;
-# no object store is built or contacted.
+# no object store is built or contacted. Optional (infrastructure).
 enabled = false
 # A decoded `DV_MULTIMEDIA.data` strictly larger than this is offloaded to the
-# object store; at or below it stays inline. Default `"256KiB"`.
+# object store; at or below it stays inline. Default `"256KiB"`. Optional
+# (infrastructure).
 threshold = "256KiB"
 # S3-compatible endpoint URL (e.g. a SeaweedFS S3 gateway in dev/test, or an
 # AWS/MinIO endpoint in prod). `None` uses the object_store default AWS
 # endpoint resolution. Any `userinfo` in it is masked in every rendering. An
 # `http://` URL is plain HTTP, which a dev SeaweedFS speaks; a `production`
-# deployment names it as a gap.
+# deployment names it as a gap. Optional, unset by default (infrastructure).
 #? url = ""
-# Target bucket for content-addressed blobs.
+# Target bucket for content-addressed blobs. Optional (infrastructure).
 bucket = "openehr-multimedia"
-# AWS region (S3 requires one even for non-AWS endpoints).
+# AWS region (S3 requires one even for non-AWS endpoints). Optional
+# (infrastructure).
 region = "us-east-1"
 # Access key id. `None` (with `secret_access_key` also `None`) runs the client
-# unsigned/anonymous — the mode a keyless dev SeaweedFS accepts.
+# unsigned/anonymous — the mode a keyless dev SeaweedFS accepts. Optional,
+# unset by default (infrastructure).
 #? access_key_id = ""
-# Secret access key (paired with `access_key_id`); never rendered.
+# Secret access key (paired with `access_key_id`); never rendered. Optional,
+# unset by default (infrastructure).
 #? secret_access_key = ""
 # File-based indirection for `Self::secret_access_key` (K8s/Docker secrets).
 # Exactly one of the pair may be set; the loader reads and trims the file.
+# Optional, unset by default (infrastructure).
 #? secret_access_key_file = ""
 
 # The outbound FHIR terminology server; absent, none is asked.
 #? [terminology]
 # On a binding the server cannot resolve: `accept` (the default) or `refuse`. A
-# resolved non-member is refused under either setting.
+# resolved non-member is refused under either setting. Optional
+# (infrastructure).
 #? on_error = "accept"
 
 # `[terminology.endpoint]`, the family's outbound endpoint: the FHIR R4B base
@@ -2239,97 +2526,119 @@ region = "us-east-1"
 # masked in every rendering.
 #? [terminology.endpoint]
 # The service's URL (RFC 3986); required. It renders with its userinfo and its
-# query masked, in `Debug` and when serialized.
+# query masked, in `Debug` and when serialized. Optional (infrastructure).
 #? url = ""
-# How long one whole call may take; never zero.
+# How long one whole call may take; never zero. Optional (infrastructure).
 #? timeout = "10s"
 # How long opening the connection may take; unset, only `timeout` bounds it.
+# Optional, unset by default (infrastructure).
 #? connect_timeout = "500ms"
 
 # How a failed call is tried again.
 #? [terminology.endpoint.retry]
-# How many times one call is tried in all; 1 tries once.
+# How many times one call is tried in all; 1 tries once. Optional
+# (infrastructure).
 #? max_attempts = 3
-# The wait before the second try.
+# The wait before the second try. Optional (infrastructure).
 #? initial_backoff = "200ms"
-# The longest wait between two tries.
+# The longest wait between two tries. Optional (infrastructure).
 #? max_backoff = "5s"
 
 # The TLS of the connection, built by the product's reader of TLS material.
 #? [terminology.endpoint.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (infrastructure).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default
+# (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (infrastructure).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
 
 # The credential the calls carry: HTTP Basic or the client credentials grant.
 #? [terminology.endpoint.credentials]
-# The Basic user-id.
+# The Basic user-id. Optional (infrastructure).
 #? user = ""
-# The Basic password, rendered redacted.
+# The Basic password, rendered redacted. Optional, unset by default
+# (infrastructure).
 #? password = ""
-# The file holding the Basic password.
+# The file holding the Basic password. Optional, unset by default
+# (infrastructure).
 #? password_file = ""
 
 # The client credentials grant.
 #? [terminology.endpoint.credentials.oauth]
 # The issuer whose metadata names the token endpoint; exclusive with
 # `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
-# itself.
+# itself. Optional (infrastructure).
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
-# userinfo and its query masked.
+# userinfo and its query masked. Optional (infrastructure).
 #? token_endpoint = ""
-# The client identifier.
+# The client identifier. Optional (infrastructure).
 #? client_id = ""
-# How the client authenticates.
+# How the client authenticates. Optional (infrastructure).
 #? client_auth = "client_secret_basic"
-# The client secret, rendered redacted.
+# The client secret, rendered redacted. Optional, unset by default
+# (infrastructure).
 #? client_secret = ""
-# The file holding the client secret.
+# The file holding the client secret. Optional, unset by default
+# (infrastructure).
 #? client_secret_file = ""
 # The PEM file holding the private key of the client assertion under
 # `private_key_jwt`, and of the actor assertion of an onward exchange
 # (`credentials.onward.actor_assertion`) whatever the client authentication.
+# Optional, unset by default (infrastructure).
 #? private_key_file = ""
-# The `kid` the assertion names; the RFC 7638 thumbprint when empty.
+# The `kid` the assertion names; the RFC 7638 thumbprint when empty. Optional
+# (infrastructure).
 #? kid = ""
 # The algorithm the assertion is signed with; when unset, by key type, an EC
-# key by its curve (P-256 ES256, P-384 ES384).
+# key by its curve (P-256 ES256, P-384 ES384). Optional, unset by default
+# (infrastructure).
 #? assertion_alg = ""
-# The `scope` request parameter; empty for none.
+# The `scope` request parameter; empty for none. Optional (infrastructure).
 #? scope = ""
-# The RFC 8707 resource indicator; empty for none.
+# The RFC 8707 resource indicator; empty for none. Optional (infrastructure).
 #? resource = ""
-# The `audience` request parameter; empty for none.
+# The `audience` request parameter; empty for none. Optional (infrastructure).
 #? audience = ""
-# How long before the token expires a new one is fetched.
+# How long before the token expires a new one is fetched. Optional
+# (infrastructure).
 #? refresh_margin = "30s"
-# How long one call to the authorization server may take.
+# How long one call to the authorization server may take. Optional
+# (infrastructure).
 #? timeout = "10s"
 # The `aud` of a `private_key_jwt` assertion: `token_endpoint` (the default) or
-# `issuer`, which needs `issuer` set.
+# `issuer`, which needs `issuer` set. Optional (infrastructure).
 #? assertion_audience = "token_endpoint"
-# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449).
+# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449). Optional,
+# unset by default (infrastructure).
 #? dpop_key_file = ""
 # Whether the tokens are bound to the client certificate (RFC 8705 §3).
+# Optional (infrastructure).
 #? certificate_bound = false
-# The security profile: `oauth2` (the default) or `fapi2`.
+# The security profile: `oauth2` (the default) or `fapi2`. Optional
+# (infrastructure).
 #? security_profile = "oauth2"
-# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5).
+# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5). Optional
+# (infrastructure).
 #? mtls_alias_hosts = []
 # The PEM file of the previous assertion key, published, never signing.
+# Optional, unset by default (infrastructure).
 #? previous_private_key_file = ""
 # How long the previous key stays published; `0s` for as long as it is set.
+# Optional (infrastructure).
 #? previous_key_overlap = "0s"
 # The PEM file of the next assertion key, published and never signing.
+# Optional, unset by default (infrastructure).
 #? next_private_key_file = ""
-# The RFC 9396 `authorization_details` JSON text; empty for none.
+# The RFC 9396 `authorization_details` JSON text; empty for none. Optional
+# (infrastructure).
 #? authorization_details = ""
 
 # The TLS of the token endpoint connection: trust roots beside the platform's,
@@ -2337,14 +2646,17 @@ region = "us-east-1"
 # version. The crate reads none of it: a table that names material resolves
 # through the product's `TlsBuilder`.
 #? [terminology.endpoint.credentials.oauth.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (infrastructure).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default
+# (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (infrastructure).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
 
 # The onward target the lane reaches on a caller's behalf, authenticating with
@@ -2352,195 +2664,221 @@ region = "us-east-1"
 #? [terminology.endpoint.credentials.onward]
 # The identifier of the issuer of the onward tokens, whose metadata names its
 # token endpoint unless `token_endpoint` is set. It renders with any userinfo
-# masked, as `SecretUrl` renders itself.
+# masked, as `SecretUrl` renders itself. Optional (infrastructure).
 #? issuer = ""
 # Whose tokens the issuer signs: `persons` (a delegated exchange), `patients`
-# (a patient's own token) or `federation`; required, with no default.
+# (a patient's own token) or `federation`; required, with no default. Optional,
+# unset by default (infrastructure).
 #? kind = "persons"
-# The preset the issuer's profile starts from.
+# The preset the issuer's profile starts from. Optional (infrastructure).
 #? profile = "rfc9068"
 # The token endpoint itself; empty to discover it from `issuer`. It renders
-# with its userinfo and its query masked.
+# with its userinfo and its query masked. Optional (infrastructure).
 #? token_endpoint = ""
-# The client id at this issuer; empty for the lane's own.
+# The client id at this issuer; empty for the lane's own. Optional
+# (infrastructure).
 #? client_id = ""
-# The audiences an onward token may name, at least one.
+# The audiences an onward token may name, at least one. Optional
+# (infrastructure).
 #? audiences = []
 # The `resource` or `audience` values the request names, as the profile's
-# `onward_indicator` says.
+# `onward_indicator` says. Optional (infrastructure).
 #? indicators = []
-# The `scope` the request names; empty for none.
+# The `scope` the request names; empty for none. Optional (infrastructure).
 #? scope = ""
 # The claim a chained federation route carries from the subject token to the
-# onward token; empty for none.
+# onward token; empty for none. Optional (infrastructure).
 #? correlation_claim = ""
 # Whether the lane holds the tokens it obtains until they near their `exp`.
 # `false` exchanges a token at the issuer on every call, a setting for a
 # performance measurement's self-test, never for production. `true` by default.
+# Optional (infrastructure).
 #? cache = true
 # Whether every token exchange sent without an actor token names the lane's
 # client as its actor with an assertion signed by the current key of its
 # `oauth` table's key ring (RFC 8693 §2.1; `Onward::with_actor_assertion`).
-# `false` by default.
+# `false` by default. Optional (infrastructure).
 #? actor_assertion = false
 
 # The profile keys set over the preset; `max_onward_lifetime` is required, here
 # or in the preset.
 #? [terminology.endpoint.credentials.onward.keys]
-# `Profile::person_key`.
+# `Profile::person_key`. Optional, unset by default (infrastructure).
 #? person_key = ""
-# `Profile::tenant_claim`.
+# `Profile::tenant_claim`. Optional, unset by default (infrastructure).
 #? tenant_claim = ""
-# `Profile::client_claims`.
+# `Profile::client_claims`. Optional, unset by default (infrastructure).
 #? client_claims = []
-# `Profile::impersonation_marker`.
+# `Profile::impersonation_marker`. Optional, unset by default (infrastructure).
 #? impersonation_marker = ""
-# `Profile::expect`.
+# `Profile::expect`. Optional, unset by default (infrastructure).
 #? expect = {}
-# `Profile::user_claims`.
+# `Profile::user_claims`. Optional, unset by default (infrastructure).
 #? user_claims = []
-# `Profile::person_equality`.
+# `Profile::person_equality`. Optional, unset by default (infrastructure).
 #? person_equality = []
-# `Profile::unstable_claims`.
+# `Profile::unstable_claims`. Optional, unset by default (infrastructure).
 #? unstable_claims = []
-# `Profile::first_party_clients`.
+# `Profile::first_party_clients`. Optional, unset by default (infrastructure).
 #? first_party_clients = []
-# `Profile::max_actor_chain`.
+# `Profile::max_actor_chain`. Optional, unset by default (infrastructure).
 #? max_actor_chain = 0
-# `Profile::act_represents_patient`.
+# `Profile::act_represents_patient`. Optional, unset by default
+# (infrastructure).
 #? act_represents_patient = false
-# `Profile::token_types`.
+# `Profile::token_types`. Optional, unset by default (infrastructure).
 #? token_types = []
-# `Profile::required_claims`.
+# `Profile::required_claims`. Optional, unset by default (infrastructure).
 #? required_claims = []
-# `Profile::adapter`.
+# `Profile::adapter`. Optional, unset by default (infrastructure).
 #? adapter = ""
-# `Profile::max_onward_lifetime`, a duration such as `"10min"`.
+# `Profile::max_onward_lifetime`, a duration such as `"10min"`. Optional, unset
+# by default (infrastructure).
 #? max_onward_lifetime = "500ms"
-# `Profile::onward_grant`.
+# `Profile::onward_grant`. Optional, unset by default (infrastructure).
 #? onward_grant = "token_exchange"
-# `Profile::onward_indicator`.
+# `Profile::onward_indicator`. Optional, unset by default (infrastructure).
 #? onward_indicator = "resource"
-# `Profile::onward_parameters`.
+# `Profile::onward_parameters`. Optional, unset by default (infrastructure).
 #? onward_parameters = {}
-# `Profile::onward_client_id`.
+# `Profile::onward_client_id`. Optional, unset by default (infrastructure).
 #? onward_client_id = false
-# `Profile::onward_subject_audience`.
+# `Profile::onward_subject_audience`. Optional, unset by default
+# (infrastructure).
 #? onward_subject_audience = false
-# `Profile::onward_preview`.
+# `Profile::onward_preview`. Optional, unset by default (infrastructure).
 #? onward_preview = []
 
 # `Profile::app_only`.
 #? [[terminology.endpoint.credentials.onward.keys.app_only]]
-# The claim of `{ claim, value }`.
+# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? claim = ""
-# The value of `{ claim, value }`.
+# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? value = ""
-# The claim of `{ absent_claim }`.
+# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
 #? absent_claim = ""
-# The subjects of `{ subjects }`.
+# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
 #? subjects = []
-# The `{ sub_is_client = true }` form.
+# The `{ sub_is_client = true }` form. Optional, unset by default
+# (infrastructure).
 #? sub_is_client = false
-# The claim of `{ differs_from_iss }`.
+# The claim of `{ differs_from_iss }`. Optional, unset by default
+# (infrastructure).
 #? differs_from_iss = ""
 
 # `Profile::guest`.
 #? [[terminology.endpoint.credentials.onward.keys.guest]]
-# The claim of `{ claim, value }`.
+# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? claim = ""
-# The value of `{ claim, value }`.
+# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? value = ""
-# The claim of `{ absent_claim }`.
+# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
 #? absent_claim = ""
-# The subjects of `{ subjects }`.
+# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
 #? subjects = []
-# The `{ sub_is_client = true }` form.
+# The `{ sub_is_client = true }` form. Optional, unset by default
+# (infrastructure).
 #? sub_is_client = false
-# The claim of `{ differs_from_iss }`.
+# The claim of `{ differs_from_iss }`. Optional, unset by default
+# (infrastructure).
 #? differs_from_iss = ""
 
 # `Profile::delegates`.
 #? [[terminology.endpoint.credentials.onward.keys.delegates]]
-# The actor's issuer.
+# The actor's issuer. Optional, unset by default (infrastructure).
 #? issuer = ""
-# The actor's `sub`.
+# The actor's `sub`. Optional, unset by default (infrastructure).
 #? sub = ""
-# The client.
+# The client. Optional, unset by default (infrastructure).
 #? client = ""
 
 # `Profile::representation`.
 #? [terminology.endpoint.credentials.onward.keys.representation]
-# The claim naming the subject the person represents.
+# The claim naming the subject the person represents. Required in its table
+# (infrastructure).
 #? claim = ""
-# The claim carrying the ground of the representation, as asserted.
+# The claim carrying the ground of the representation, as asserted. Optional,
+# unset by default (infrastructure).
 #? ground_claim = ""
 
 # `Profile::scope_claim`.
 #? [terminology.endpoint.credentials.onward.keys.scope_claim]
-# The claim.
+# The claim. Required in its table (infrastructure).
 #? claim = ""
-# Its JSON form.
+# Its JSON form. Optional (infrastructure).
 #? form = "string"
 
 # `Profile::app_only_scope_claim`.
 #? [terminology.endpoint.credentials.onward.keys.app_only_scope_claim]
-# The claim.
+# The claim. Required in its table (infrastructure).
 #? claim = ""
-# Its JSON form.
+# Its JSON form. Optional (infrastructure).
 #? form = "string"
 
 # What a `federation` issuer asserts, over its preset's defaults;
 # `exchanges_from` and `person_mapping` are required.
 #? [terminology.endpoint.credentials.onward.federation]
 # The `[auth.issuer]` this table describes, of kind `federation`. It renders
-# with any userinfo masked, as `SecretUrl` renders itself.
+# with any userinfo masked, as `SecretUrl` renders itself. Optional
+# (infrastructure).
 #? issuer = ""
 # Whether the issuer is a MyHealth@EU contact point; required, with no default.
+# Optional, unset by default (infrastructure).
 #? contact_point = false
-# The default sources the table starts from.
+# The default sources the table starts from. Optional, unset by default
+# (infrastructure).
 #? mapping = "iua"
-# The sources of each field, over the mapping's.
+# The sources of each field, over the mapping's. Optional (infrastructure).
 #? fields = {}
-# The country codes a professional may carry.
+# The country codes a professional may carry. Optional (infrastructure).
 #? countries = []
-# The issuing authorities a professional or provider may name.
+# The issuing authorities a professional or provider may name. Optional
+# (infrastructure).
 #? issuing_authorities = []
-# The prefixes a healthcare provider identifier must start with.
+# The prefixes a healthcare provider identifier must start with. Optional
+# (infrastructure).
 #? provider_identifier_prefixes = []
 # Whether the issuer attests the `authorization_details` it puts in a token,
-# which RFC 9396 §12 has "sent through the user agent".
+# which RFC 9396 §12 has "sent through the user agent". Optional
+# (infrastructure).
 #? attests_authorization_details = false
-# The `authorization_details` type the attributes are read from.
+# The `authorization_details` type the attributes are read from. Optional,
+# unset by default (infrastructure).
 #? authorization_details_type = ""
 # The `authorization_details` types that state an organisation's access.
+# Optional (infrastructure).
 #? organisation_types = []
 # The claim holding the Verifiable Presentations of a Nuts RFC021 §6
-# introspection response, `vps`.
+# introspection response, `vps`. Optional, unset by default (infrastructure).
 #? presentations_claim = ""
-# The credential types the deployment declares user-authenticated.
+# The credential types the deployment declares user-authenticated. Optional
+# (infrastructure).
 #? user_credential_types = []
-# The fields every token of the issuer must carry, each with a source.
+# The fields every token of the issuer must carry, each with a source. Optional
+# (infrastructure).
 #? required_fields = []
 # Whether the issuer's tokens must be sender-constrained, so the issuer fails
-# to load without `sender_constraint = "required"`.
+# to load without `sender_constraint = "required"`. Optional (infrastructure).
 #? requires_sender_constraint = false
 # The subject-token issuers whose persons this issuer is trusted to map to its
-# own, when it issues onward tokens (`client::onward`).
+# own, when it issues onward tokens (`client::onward`). Optional
+# (infrastructure).
 #? exchanges_from = []
 # The subject-token claim, a dotted path, whose value an onward token of this
-# issuer must carry as `professional.hp_identifier`.
+# issuer must carry as `professional.hp_identifier`. Optional, unset by default
+# (infrastructure).
 #? person_mapping = ""
 
 # The assurance level the issuer's tokens carry.
 #? [terminology.endpoint.credentials.onward.assurance]
 # The claim carrying the authentication context class, a dotted path; `acr` by
-# default (OpenID Connect Core 1.0 §2).
+# default (OpenID Connect Core 1.0 §2). Optional (infrastructure).
 #? claim = "acr"
 # The level each claim value the issuer emits stands for; a value the map does
-# not name carries none.
+# not name carries none. Optional (infrastructure).
 #? levels = {}
 # The level a request held to the section must carry; none refuses nothing.
+# Optional, unset by default (infrastructure).
 #? minimum = "low"
 
 # The IHE PIXm patient identity source the subject index asks (ITI-83) under
@@ -2549,9 +2887,11 @@ region = "us-east-1"
 # The assigning authority of the clinical domain, an absolute URI such as
 # `urn:oid:2.999.1`: the `targetSystem` of every ITI-83 query and the
 # `EHR_STATUS.subject.external_ref.namespace` the answered identifier is stored
-# under. It must be one of `privacy.subject_namespaces`.
+# under. It must be one of `privacy.subject_namespaces`. Optional
+# (infrastructure).
 #? assigning_authority = ""
-# How the PIX Manager is asked: `post` (the default) or `get`.
+# How the PIX Manager is asked: `post` (the default) or `get`. Optional
+# (infrastructure).
 #? method = "post"
 
 # `[pixm.endpoint]`, the family's outbound endpoint: the FHIR base URL of the
@@ -2563,97 +2903,119 @@ region = "us-east-1"
 # `userinfo` in the URL is masked in every rendering.
 #? [pixm.endpoint]
 # The service's URL (RFC 3986); required. It renders with its userinfo and its
-# query masked, in `Debug` and when serialized.
+# query masked, in `Debug` and when serialized. Optional (infrastructure).
 #? url = ""
-# How long one whole call may take; never zero.
+# How long one whole call may take; never zero. Optional (infrastructure).
 #? timeout = "10s"
 # How long opening the connection may take; unset, only `timeout` bounds it.
+# Optional, unset by default (infrastructure).
 #? connect_timeout = "500ms"
 
 # How a failed call is tried again.
 #? [pixm.endpoint.retry]
-# How many times one call is tried in all; 1 tries once.
+# How many times one call is tried in all; 1 tries once. Optional
+# (infrastructure).
 #? max_attempts = 3
-# The wait before the second try.
+# The wait before the second try. Optional (infrastructure).
 #? initial_backoff = "200ms"
-# The longest wait between two tries.
+# The longest wait between two tries. Optional (infrastructure).
 #? max_backoff = "5s"
 
 # The TLS of the connection, built by the product's reader of TLS material.
 #? [pixm.endpoint.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (infrastructure).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default
+# (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (infrastructure).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
 
 # The credential the calls carry: HTTP Basic or the client credentials grant.
 #? [pixm.endpoint.credentials]
-# The Basic user-id.
+# The Basic user-id. Optional (infrastructure).
 #? user = ""
-# The Basic password, rendered redacted.
+# The Basic password, rendered redacted. Optional, unset by default
+# (infrastructure).
 #? password = ""
-# The file holding the Basic password.
+# The file holding the Basic password. Optional, unset by default
+# (infrastructure).
 #? password_file = ""
 
 # The client credentials grant.
 #? [pixm.endpoint.credentials.oauth]
 # The issuer whose metadata names the token endpoint; exclusive with
 # `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
-# itself.
+# itself. Optional (infrastructure).
 #? issuer = ""
 # The token endpoint itself; exclusive with `issuer`. It renders with its
-# userinfo and its query masked.
+# userinfo and its query masked. Optional (infrastructure).
 #? token_endpoint = ""
-# The client identifier.
+# The client identifier. Optional (infrastructure).
 #? client_id = ""
-# How the client authenticates.
+# How the client authenticates. Optional (infrastructure).
 #? client_auth = "client_secret_basic"
-# The client secret, rendered redacted.
+# The client secret, rendered redacted. Optional, unset by default
+# (infrastructure).
 #? client_secret = ""
-# The file holding the client secret.
+# The file holding the client secret. Optional, unset by default
+# (infrastructure).
 #? client_secret_file = ""
 # The PEM file holding the private key of the client assertion under
 # `private_key_jwt`, and of the actor assertion of an onward exchange
 # (`credentials.onward.actor_assertion`) whatever the client authentication.
+# Optional, unset by default (infrastructure).
 #? private_key_file = ""
-# The `kid` the assertion names; the RFC 7638 thumbprint when empty.
+# The `kid` the assertion names; the RFC 7638 thumbprint when empty. Optional
+# (infrastructure).
 #? kid = ""
 # The algorithm the assertion is signed with; when unset, by key type, an EC
-# key by its curve (P-256 ES256, P-384 ES384).
+# key by its curve (P-256 ES256, P-384 ES384). Optional, unset by default
+# (infrastructure).
 #? assertion_alg = ""
-# The `scope` request parameter; empty for none.
+# The `scope` request parameter; empty for none. Optional (infrastructure).
 #? scope = ""
-# The RFC 8707 resource indicator; empty for none.
+# The RFC 8707 resource indicator; empty for none. Optional (infrastructure).
 #? resource = ""
-# The `audience` request parameter; empty for none.
+# The `audience` request parameter; empty for none. Optional (infrastructure).
 #? audience = ""
-# How long before the token expires a new one is fetched.
+# How long before the token expires a new one is fetched. Optional
+# (infrastructure).
 #? refresh_margin = "30s"
-# How long one call to the authorization server may take.
+# How long one call to the authorization server may take. Optional
+# (infrastructure).
 #? timeout = "10s"
 # The `aud` of a `private_key_jwt` assertion: `token_endpoint` (the default) or
-# `issuer`, which needs `issuer` set.
+# `issuer`, which needs `issuer` set. Optional (infrastructure).
 #? assertion_audience = "token_endpoint"
-# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449).
+# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449). Optional,
+# unset by default (infrastructure).
 #? dpop_key_file = ""
 # Whether the tokens are bound to the client certificate (RFC 8705 §3).
+# Optional (infrastructure).
 #? certificate_bound = false
-# The security profile: `oauth2` (the default) or `fapi2`.
+# The security profile: `oauth2` (the default) or `fapi2`. Optional
+# (infrastructure).
 #? security_profile = "oauth2"
-# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5).
+# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5). Optional
+# (infrastructure).
 #? mtls_alias_hosts = []
 # The PEM file of the previous assertion key, published, never signing.
+# Optional, unset by default (infrastructure).
 #? previous_private_key_file = ""
 # How long the previous key stays published; `0s` for as long as it is set.
+# Optional (infrastructure).
 #? previous_key_overlap = "0s"
 # The PEM file of the next assertion key, published and never signing.
+# Optional, unset by default (infrastructure).
 #? next_private_key_file = ""
-# The RFC 9396 `authorization_details` JSON text; empty for none.
+# The RFC 9396 `authorization_details` JSON text; empty for none. Optional
+# (infrastructure).
 #? authorization_details = ""
 
 # The TLS of the token endpoint connection: trust roots beside the platform's,
@@ -2661,14 +3023,17 @@ region = "us-east-1"
 # version. The crate reads none of it: a table that names material resolves
 # through the product's `TlsBuilder`.
 #? [pixm.endpoint.credentials.oauth.tls]
-# The client certificate chain and its private key, in one PEM.
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (infrastructure).
 #? client_identity = ""
-# A file holding `client_identity`.
+# A file holding `client_identity`. Optional, unset by default
+# (infrastructure).
 #? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's.
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (infrastructure).
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener.
+# as for the listener. Optional (infrastructure).
 #? min_version = "1.3"
 
 # The onward target the lane reaches on a caller's behalf, authenticating with
@@ -2676,193 +3041,219 @@ region = "us-east-1"
 #? [pixm.endpoint.credentials.onward]
 # The identifier of the issuer of the onward tokens, whose metadata names its
 # token endpoint unless `token_endpoint` is set. It renders with any userinfo
-# masked, as `SecretUrl` renders itself.
+# masked, as `SecretUrl` renders itself. Optional (infrastructure).
 #? issuer = ""
 # Whose tokens the issuer signs: `persons` (a delegated exchange), `patients`
-# (a patient's own token) or `federation`; required, with no default.
+# (a patient's own token) or `federation`; required, with no default. Optional,
+# unset by default (infrastructure).
 #? kind = "persons"
-# The preset the issuer's profile starts from.
+# The preset the issuer's profile starts from. Optional (infrastructure).
 #? profile = "rfc9068"
 # The token endpoint itself; empty to discover it from `issuer`. It renders
-# with its userinfo and its query masked.
+# with its userinfo and its query masked. Optional (infrastructure).
 #? token_endpoint = ""
-# The client id at this issuer; empty for the lane's own.
+# The client id at this issuer; empty for the lane's own. Optional
+# (infrastructure).
 #? client_id = ""
-# The audiences an onward token may name, at least one.
+# The audiences an onward token may name, at least one. Optional
+# (infrastructure).
 #? audiences = []
 # The `resource` or `audience` values the request names, as the profile's
-# `onward_indicator` says.
+# `onward_indicator` says. Optional (infrastructure).
 #? indicators = []
-# The `scope` the request names; empty for none.
+# The `scope` the request names; empty for none. Optional (infrastructure).
 #? scope = ""
 # The claim a chained federation route carries from the subject token to the
-# onward token; empty for none.
+# onward token; empty for none. Optional (infrastructure).
 #? correlation_claim = ""
 # Whether the lane holds the tokens it obtains until they near their `exp`.
 # `false` exchanges a token at the issuer on every call, a setting for a
 # performance measurement's self-test, never for production. `true` by default.
+# Optional (infrastructure).
 #? cache = true
 # Whether every token exchange sent without an actor token names the lane's
 # client as its actor with an assertion signed by the current key of its
 # `oauth` table's key ring (RFC 8693 §2.1; `Onward::with_actor_assertion`).
-# `false` by default.
+# `false` by default. Optional (infrastructure).
 #? actor_assertion = false
 
 # The profile keys set over the preset; `max_onward_lifetime` is required, here
 # or in the preset.
 #? [pixm.endpoint.credentials.onward.keys]
-# `Profile::person_key`.
+# `Profile::person_key`. Optional, unset by default (infrastructure).
 #? person_key = ""
-# `Profile::tenant_claim`.
+# `Profile::tenant_claim`. Optional, unset by default (infrastructure).
 #? tenant_claim = ""
-# `Profile::client_claims`.
+# `Profile::client_claims`. Optional, unset by default (infrastructure).
 #? client_claims = []
-# `Profile::impersonation_marker`.
+# `Profile::impersonation_marker`. Optional, unset by default (infrastructure).
 #? impersonation_marker = ""
-# `Profile::expect`.
+# `Profile::expect`. Optional, unset by default (infrastructure).
 #? expect = {}
-# `Profile::user_claims`.
+# `Profile::user_claims`. Optional, unset by default (infrastructure).
 #? user_claims = []
-# `Profile::person_equality`.
+# `Profile::person_equality`. Optional, unset by default (infrastructure).
 #? person_equality = []
-# `Profile::unstable_claims`.
+# `Profile::unstable_claims`. Optional, unset by default (infrastructure).
 #? unstable_claims = []
-# `Profile::first_party_clients`.
+# `Profile::first_party_clients`. Optional, unset by default (infrastructure).
 #? first_party_clients = []
-# `Profile::max_actor_chain`.
+# `Profile::max_actor_chain`. Optional, unset by default (infrastructure).
 #? max_actor_chain = 0
-# `Profile::act_represents_patient`.
+# `Profile::act_represents_patient`. Optional, unset by default
+# (infrastructure).
 #? act_represents_patient = false
-# `Profile::token_types`.
+# `Profile::token_types`. Optional, unset by default (infrastructure).
 #? token_types = []
-# `Profile::required_claims`.
+# `Profile::required_claims`. Optional, unset by default (infrastructure).
 #? required_claims = []
-# `Profile::adapter`.
+# `Profile::adapter`. Optional, unset by default (infrastructure).
 #? adapter = ""
-# `Profile::max_onward_lifetime`, a duration such as `"10min"`.
+# `Profile::max_onward_lifetime`, a duration such as `"10min"`. Optional, unset
+# by default (infrastructure).
 #? max_onward_lifetime = "500ms"
-# `Profile::onward_grant`.
+# `Profile::onward_grant`. Optional, unset by default (infrastructure).
 #? onward_grant = "token_exchange"
-# `Profile::onward_indicator`.
+# `Profile::onward_indicator`. Optional, unset by default (infrastructure).
 #? onward_indicator = "resource"
-# `Profile::onward_parameters`.
+# `Profile::onward_parameters`. Optional, unset by default (infrastructure).
 #? onward_parameters = {}
-# `Profile::onward_client_id`.
+# `Profile::onward_client_id`. Optional, unset by default (infrastructure).
 #? onward_client_id = false
-# `Profile::onward_subject_audience`.
+# `Profile::onward_subject_audience`. Optional, unset by default
+# (infrastructure).
 #? onward_subject_audience = false
-# `Profile::onward_preview`.
+# `Profile::onward_preview`. Optional, unset by default (infrastructure).
 #? onward_preview = []
 
 # `Profile::app_only`.
 #? [[pixm.endpoint.credentials.onward.keys.app_only]]
-# The claim of `{ claim, value }`.
+# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? claim = ""
-# The value of `{ claim, value }`.
+# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? value = ""
-# The claim of `{ absent_claim }`.
+# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
 #? absent_claim = ""
-# The subjects of `{ subjects }`.
+# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
 #? subjects = []
-# The `{ sub_is_client = true }` form.
+# The `{ sub_is_client = true }` form. Optional, unset by default
+# (infrastructure).
 #? sub_is_client = false
-# The claim of `{ differs_from_iss }`.
+# The claim of `{ differs_from_iss }`. Optional, unset by default
+# (infrastructure).
 #? differs_from_iss = ""
 
 # `Profile::guest`.
 #? [[pixm.endpoint.credentials.onward.keys.guest]]
-# The claim of `{ claim, value }`.
+# The claim of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? claim = ""
-# The value of `{ claim, value }`.
+# The value of `{ claim, value }`. Optional, unset by default (infrastructure).
 #? value = ""
-# The claim of `{ absent_claim }`.
+# The claim of `{ absent_claim }`. Optional, unset by default (infrastructure).
 #? absent_claim = ""
-# The subjects of `{ subjects }`.
+# The subjects of `{ subjects }`. Optional, unset by default (infrastructure).
 #? subjects = []
-# The `{ sub_is_client = true }` form.
+# The `{ sub_is_client = true }` form. Optional, unset by default
+# (infrastructure).
 #? sub_is_client = false
-# The claim of `{ differs_from_iss }`.
+# The claim of `{ differs_from_iss }`. Optional, unset by default
+# (infrastructure).
 #? differs_from_iss = ""
 
 # `Profile::delegates`.
 #? [[pixm.endpoint.credentials.onward.keys.delegates]]
-# The actor's issuer.
+# The actor's issuer. Optional, unset by default (infrastructure).
 #? issuer = ""
-# The actor's `sub`.
+# The actor's `sub`. Optional, unset by default (infrastructure).
 #? sub = ""
-# The client.
+# The client. Optional, unset by default (infrastructure).
 #? client = ""
 
 # `Profile::representation`.
 #? [pixm.endpoint.credentials.onward.keys.representation]
-# The claim naming the subject the person represents.
+# The claim naming the subject the person represents. Required in its table
+# (infrastructure).
 #? claim = ""
-# The claim carrying the ground of the representation, as asserted.
+# The claim carrying the ground of the representation, as asserted. Optional,
+# unset by default (infrastructure).
 #? ground_claim = ""
 
 # `Profile::scope_claim`.
 #? [pixm.endpoint.credentials.onward.keys.scope_claim]
-# The claim.
+# The claim. Required in its table (infrastructure).
 #? claim = ""
-# Its JSON form.
+# Its JSON form. Optional (infrastructure).
 #? form = "string"
 
 # `Profile::app_only_scope_claim`.
 #? [pixm.endpoint.credentials.onward.keys.app_only_scope_claim]
-# The claim.
+# The claim. Required in its table (infrastructure).
 #? claim = ""
-# Its JSON form.
+# Its JSON form. Optional (infrastructure).
 #? form = "string"
 
 # What a `federation` issuer asserts, over its preset's defaults;
 # `exchanges_from` and `person_mapping` are required.
 #? [pixm.endpoint.credentials.onward.federation]
 # The `[auth.issuer]` this table describes, of kind `federation`. It renders
-# with any userinfo masked, as `SecretUrl` renders itself.
+# with any userinfo masked, as `SecretUrl` renders itself. Optional
+# (infrastructure).
 #? issuer = ""
 # Whether the issuer is a MyHealth@EU contact point; required, with no default.
+# Optional, unset by default (infrastructure).
 #? contact_point = false
-# The default sources the table starts from.
+# The default sources the table starts from. Optional, unset by default
+# (infrastructure).
 #? mapping = "iua"
-# The sources of each field, over the mapping's.
+# The sources of each field, over the mapping's. Optional (infrastructure).
 #? fields = {}
-# The country codes a professional may carry.
+# The country codes a professional may carry. Optional (infrastructure).
 #? countries = []
-# The issuing authorities a professional or provider may name.
+# The issuing authorities a professional or provider may name. Optional
+# (infrastructure).
 #? issuing_authorities = []
-# The prefixes a healthcare provider identifier must start with.
+# The prefixes a healthcare provider identifier must start with. Optional
+# (infrastructure).
 #? provider_identifier_prefixes = []
 # Whether the issuer attests the `authorization_details` it puts in a token,
-# which RFC 9396 §12 has "sent through the user agent".
+# which RFC 9396 §12 has "sent through the user agent". Optional
+# (infrastructure).
 #? attests_authorization_details = false
-# The `authorization_details` type the attributes are read from.
+# The `authorization_details` type the attributes are read from. Optional,
+# unset by default (infrastructure).
 #? authorization_details_type = ""
 # The `authorization_details` types that state an organisation's access.
+# Optional (infrastructure).
 #? organisation_types = []
 # The claim holding the Verifiable Presentations of a Nuts RFC021 §6
-# introspection response, `vps`.
+# introspection response, `vps`. Optional, unset by default (infrastructure).
 #? presentations_claim = ""
-# The credential types the deployment declares user-authenticated.
+# The credential types the deployment declares user-authenticated. Optional
+# (infrastructure).
 #? user_credential_types = []
-# The fields every token of the issuer must carry, each with a source.
+# The fields every token of the issuer must carry, each with a source. Optional
+# (infrastructure).
 #? required_fields = []
 # Whether the issuer's tokens must be sender-constrained, so the issuer fails
-# to load without `sender_constraint = "required"`.
+# to load without `sender_constraint = "required"`. Optional (infrastructure).
 #? requires_sender_constraint = false
 # The subject-token issuers whose persons this issuer is trusted to map to its
-# own, when it issues onward tokens (`client::onward`).
+# own, when it issues onward tokens (`client::onward`). Optional
+# (infrastructure).
 #? exchanges_from = []
 # The subject-token claim, a dotted path, whose value an onward token of this
-# issuer must carry as `professional.hp_identifier`.
+# issuer must carry as `professional.hp_identifier`. Optional, unset by default
+# (infrastructure).
 #? person_mapping = ""
 
 # The assurance level the issuer's tokens carry.
 #? [pixm.endpoint.credentials.onward.assurance]
 # The claim carrying the authentication context class, a dotted path; `acr` by
-# default (OpenID Connect Core 1.0 §2).
+# default (OpenID Connect Core 1.0 §2). Optional (infrastructure).
 #? claim = "acr"
 # The level each claim value the issuer emits stands for; a value the map does
-# not name carries none.
+# not name carries none. Optional (infrastructure).
 #? levels = {}
 # The level a request held to the section must carry; none refuses nothing.
+# Optional, unset by default (infrastructure).
 #? minimum = "low"

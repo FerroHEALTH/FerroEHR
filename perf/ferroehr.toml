@@ -10,9 +10,6 @@
 [deployment]
 profile = "sandbox"
 
-[auth]
-enabled = true
-
 # The issuer the Basic user binds under. It signs nothing: its key set, which
 # every FerroEHR image carries, is the public half of a key pair whose private
 # key was discarded.

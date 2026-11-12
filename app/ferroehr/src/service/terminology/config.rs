@@ -37,11 +37,13 @@ pub enum OnError {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct TerminologyServerConfig {
     /// `[terminology.endpoint]`, the family's outbound endpoint: the FHIR R4B
     /// base URL (`url`, such as `http://ferroterm:8080/r4b`, required), the
     /// timeouts, the `retry` of a call, the TLS and the credential. Any
     /// `userinfo` in the URL is masked in every rendering.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
     pub endpoint: EndpointSection,
     /// On a binding the server cannot resolve: `accept` (the default) or
     /// `refuse`. A resolved non-member is refused under either setting.

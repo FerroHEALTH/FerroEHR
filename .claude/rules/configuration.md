@@ -79,11 +79,23 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
    the refusal records the release that introduced it, ships in that release
    with the upgrade step in the changelog fragment, and the next release
    deletes it so `deny_unknown_fields` takes over.
-3. If the change is user-visible, update
+3. Classify every key you add (#5455): `x-ferroehr-class` through
+   `#[cfg_attr(feature = "schema", schemars(extend(...)))]`, on the struct
+   (its own keys) or on the field: `infrastructure` or `trust` for a key that
+   stays in the file for that reason, `optional` for a key with a built-in
+   default. A field holding a family crate's type classifies its whole
+   subtree; a struct may instead map relative key paths to classes, as
+   `AuthConfig` does for the flattened `ferrohealth-smart` keys and the
+   root does for the family sections and the database pool. `x-ferroehr-must-set` marks the few keys of the "What
+   you must set" block. The generator refuses an unclassified key, an
+   `optional` key with no default and a relative entry that names no key.
+   A new key is infrastructure or trust, or it is not added (owner,
+   2026-11-12).
+4. If the change is user-visible, update
    `website/book/src/installation/configuration.md`, the Helm `values.yaml`
    `config:` block + golden renders (`deploy/helm/validate.sh --update`), and
    a `changelog.d/` fragment — same PR.
-4. The configuration types are the schema of record, and the generated
+5. The configuration types are the schema of record, and the generated
    template is their rendering; reconcile the deployment/compose
    spellings against them.
 

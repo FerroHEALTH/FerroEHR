@@ -11,16 +11,25 @@ use std::sync::Arc;
 
 use ferroehr::party_binding::source::BindingSource;
 use ferrohealth_smart::guard::Gate;
-use ferrohealth_smart::kind::IssuerKind;
+use ferrohealth_smart::resource::described::{Candidate, DescribeError, describe};
 use ferrohealth_smart::resource::introspection::{IntrospectionSettings, Introspector};
 use ferrohealth_smart::resource::{Caller, Honoured, IssuerSet, PatientClaim, ResourceServer};
 use ferrohealth_smart::sender::proof::ProofCheck;
 use ferrohealth_smart::sender::replay::ReplayStore;
 
-use super::{Authenticator, Primary, issuer, upper_cased};
+use super::{Authenticator, issuer, upper_cased};
 use crate::config::AppConfig;
-use ferroehr::config::smart::SmartConfig;
 use ferrohealth_secret::secret_url::SecretUrl;
+
+/// The check of the described issuer, whose metadata the SMART discovery
+/// document is built from.
+pub(super) enum Primary {
+    /// A JWT access token checked against the issuer's keys.
+    Jwt(Arc<ResourceServer>),
+    /// An opaque access token checked by the issuer's introspection endpoint
+    /// (RFC 7662).
+    Introspection(Arc<Introspector>),
+}
 
 /// The privileged roles of `[authz.rbac]` and the issuers whose tokens may
 /// grant them.
@@ -74,9 +83,10 @@ impl Authenticator {
     ///
     /// `[auth.smart] issuer_metadata_file` is the metadata of the issuer it names,
     /// whose key set is a `jwks_file`, so its discovery document can name a
-    /// `token_endpoint`. The SMART discovery document describes
-    /// `[auth.smart] described_issuer`, else the one
-    /// issuer that is not `machines` and whose metadata is available. Every
+    /// `token_endpoint`. When the SMART discovery document is served, it
+    /// describes the issuer `ferrohealth-smart`'s `describe` chooses:
+    /// `[auth] described_issuer`, else the one issuer that is not `machines`
+    /// and whose metadata is available. Every
     /// caller an issuer admits carries `patient_claim`, the live ABAC patient
     /// claim, as the `ferrohealth-smart` `PatientClaim`. The `DPoP` proof
     /// check of `[auth.dpop]` records each accepted proof in `replay`, which
@@ -89,12 +99,12 @@ impl Authenticator {
     /// # Errors
     /// A message naming the refused setting, the issuer that could not be
     /// read, the metadata file that could not be read, names no `[auth]`
-    /// issuer or does not fit the issuer it names, an `[auth.smart]
-    /// described_issuer` that names no issuer the document can describe, a
-    /// served document with no `described_issuer` and several or no issuers
-    /// it can describe, a
-    /// `patient_claim` that names no claim, or a party binding the shared
-    /// crate refuses or that has `[[auth.party]]` tables and no `source`.
+    /// issuer or does not fit the issuer it names, a served document whose
+    /// issuer `describe` refuses (an `[auth] described_issuer` that names no
+    /// issuer the document can describe, or no `described_issuer` and several
+    /// or no issuers it can describe), a `patient_claim` that names no claim,
+    /// or a party binding the shared crate refuses or that has
+    /// `[[auth.party]]` tables and no `source`.
     pub async fn new(
         config: &AppConfig,
         patient_claim: Option<&str>,
@@ -113,12 +123,12 @@ impl Authenticator {
             .map_err(|e| format!("authz.abac.patient_claim is refused: {e}"))?;
         if resolved.enabled {
             let mut issuers = IssuerSet::new();
-            let mut described = Described::default();
+            let mut candidates = Vec::new();
             issuers = introspected(
                 resolved.introspection,
                 claim.as_ref(),
                 issuers,
-                &mut described,
+                &mut candidates,
             )
             .await?;
             let mut supplied = match config.auth.smart.issuer_metadata_file.as_deref() {
@@ -127,7 +137,6 @@ impl Authenticator {
             };
             for settings in resolved.issuers {
                 let issuer = settings.issuer.clone();
-                let read = settings.jwks_file.is_none();
                 let mut server = ResourceServer::discover(settings)
                     .await
                     .map_err(|e| issuer::unreadable_issuer(&issuer, &e))?;
@@ -145,12 +154,10 @@ impl Authenticator {
                     server = server.with_extension(claim.clone());
                 }
                 let server = Arc::new(server);
-                described.offer(Offer {
-                    kind: resolved.kinds.get(&issuer).copied(),
-                    issuer,
-                    metadata: named || read,
-                    primary: Primary::Jwt(Arc::clone(&server)),
-                });
+                candidates.push(Candidate::of_server(
+                    &server,
+                    Primary::Jwt(Arc::clone(&server)),
+                ));
                 issuers = issuers.with(server);
             }
             if let Some(metadata) = supplied {
@@ -159,7 +166,11 @@ impl Authenticator {
                     metadata.issuer
                 ));
             }
-            primary = described.chosen(&config.auth.smart)?;
+            if config.auth.smart.discovery {
+                let described = describe(candidates, resolved.described_issuer.as_ref())
+                    .map_err(|e| refusal(&e))?;
+                primary = Some(described.into_check());
+            }
             if !issuers.is_empty() {
                 gate = gate.with_bearer(Arc::new(issuers));
             }
@@ -193,7 +204,8 @@ impl Authenticator {
 }
 
 /// Adds the introspection check of each of `settings` to `issuers`, offering
-/// each issuer to `described`, every caller it admits carrying `claim`.
+/// each issuer to the discovery document as one of `candidates`, every caller
+/// it admits carrying `claim`.
 ///
 /// # Errors
 /// A message naming the issuer whose introspection endpoint could not be read.
@@ -201,11 +213,10 @@ async fn introspected(
     settings: Vec<IntrospectionSettings>,
     claim: Option<&PatientClaim>,
     mut issuers: IssuerSet,
-    described: &mut Described,
+    candidates: &mut Vec<Candidate<Primary>>,
 ) -> Result<IssuerSet, String> {
     for settings in settings {
         let issuer = settings.issuer.clone();
-        let kind = Some(settings.kind);
         let mut introspector = Introspector::discover(settings).await.map_err(|e| {
             format!(
                 "the introspection endpoint of {issuer} could not be read: {}",
@@ -216,12 +227,10 @@ async fn introspected(
             introspector = introspector.with_extension(claim.clone());
         }
         let introspector = Arc::new(introspector);
-        described.offer(Offer {
-            issuer,
-            kind,
-            metadata: true,
-            primary: Primary::Introspection(Arc::clone(&introspector)),
-        });
+        candidates.push(Candidate::of_introspector(
+            &introspector,
+            Primary::Introspection(Arc::clone(&introspector)),
+        ));
         issuers = issuers.with_introspector(introspector);
     }
     Ok(issuers)
@@ -242,106 +251,19 @@ fn honoured(config: &AppConfig) -> impl Fn(&Caller) -> Honoured + Send + Sync + 
     }
 }
 
-/// One `[auth]` issuer offered to the discovery document.
-struct Offer {
-    /// The issuer identifier.
-    issuer: String,
-    /// Its `kind`.
-    kind: Option<IssuerKind>,
-    /// Whether its metadata is available: introspected, read from it, or
-    /// supplied by `[auth.smart] issuer_metadata_file`.
-    metadata: bool,
-    /// Its check, which builds the document.
-    primary: Primary,
-}
-
-impl Offer {
-    /// Whether the document may describe this issuer: one whose metadata is
-    /// available and that serves a user launch, which every kind but
-    /// `machines` does; `ferrohealth-smart` refuses every token of a
-    /// `machines` issuer that is not app-only.
-    fn eligible(&self) -> bool {
-        self.metadata && self.kind != Some(IssuerKind::Machines)
-    }
-}
-
-/// The issuers the SMART discovery document may describe. SMART App Launch
-/// 2.2.0, Conformance, §Metadata requires `authorization_endpoint` when a
-/// launch capability is advertised, so the document describes one issuer that
-/// serves a user launch. Which issuer, when a deployment trusts several, is
-/// not governed by SMART: our own design, under which the order of the
-/// `[[auth.issuer]]` tables never decides.
-#[derive(Default)]
-struct Described {
-    /// Every issuer offered.
-    offers: Vec<Offer>,
-}
-
-impl Described {
-    /// Offers `offer`.
-    fn offer(&mut self, offer: Offer) {
-        self.offers.push(offer);
-    }
-
-    /// Returns the check of the issuer `smart` describes: its
-    /// `described_issuer`, when set, else the one eligible issuer. With the
-    /// document not served and no name, several or no eligible issuers
-    /// describe none.
-    ///
-    /// # Errors
-    /// A message naming `auth.smart.described_issuer` when it names no
-    /// eligible issuer; when the document is served with no name, a message
-    /// naming the eligible issuers and the key when there are several, or
-    /// saying no issuer can be described when there is none.
-    fn chosen(self, smart: &SmartConfig) -> Result<Option<Primary>, String> {
-        let served = smart.discovery;
-        if let Some(named) = smart.described_issuer.as_ref().map(SecretUrl::expose) {
-            let offer = self
-                .offers
-                .into_iter()
-                .find(|offer| offer.issuer == named)
-                .ok_or_else(|| {
-                    format!("auth.smart.described_issuer names {named}, which is no [auth] issuer")
-                })?;
-            if offer.kind == Some(IssuerKind::Machines) {
-                return Err(format!(
-                    "auth.smart.described_issuer names the machines issuer {named}: a machines \
-                     issuer signs client credentials tokens only, so the discovery document \
-                     cannot send a user launch to it"
-                ));
-            }
-            if !offer.metadata {
-                return Err(format!(
-                    "auth.smart.described_issuer names {named}, whose metadata FerroEHR does not \
-                     have: its key set is a jwks_file, so auth.smart.issuer_metadata_file must \
-                     supply the metadata"
-                ));
-            }
-            return Ok(Some(offer.primary));
+/// The refusal of the issuer the served discovery document describes,
+/// naming the key that chooses it and, for missing metadata, the key that
+/// supplies it.
+fn refusal(e: &DescribeError) -> String {
+    let supply = match e {
+        DescribeError::NoMetadata { .. } | DescribeError::NoneEligible => {
+            "; auth.smart.issuer_metadata_file supplies the metadata of an issuer whose key set \
+             is a jwks_file"
         }
-        let mut eligible: Vec<Offer> = self.offers.into_iter().filter(Offer::eligible).collect();
-        match (eligible.pop(), eligible.is_empty()) {
-            (Some(offer), true) => Ok(Some(offer.primary)),
-            (Some(last), false) if served => {
-                let listed: Vec<&str> = eligible
-                    .iter()
-                    .chain(std::iter::once(&last))
-                    .map(|offer| offer.issuer.as_str())
-                    .collect();
-                Err(format!(
-                    "auth.smart.discovery = true can describe any of the issuers {}; set \
-                     auth.smart.described_issuer to the one whose authorization server user \
-                     launches start at",
-                    listed.join(", ")
-                ))
-            }
-            (None, _) if served => Err(
-                "auth.smart.discovery = true can describe no issuer: the document needs an [auth] \
-                 issuer that is not of kind machines and whose metadata FerroEHR has (read from \
-                 it, introspected, or supplied by auth.smart.issuer_metadata_file)"
-                    .to_owned(),
-            ),
-            _ => Ok(None),
-        }
-    }
+        _ => "",
+    };
+    format!(
+        "auth.smart.discovery = true cannot describe an issuer (auth.described_issuer): \
+         {e}{supply}"
+    )
 }

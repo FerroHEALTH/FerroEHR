@@ -23,12 +23,11 @@ config:
   # this overlay renders another surface and runs no identity source.
   auth:
     issuer:
-      # One table per issuer: `kind` says whose tokens it signs, `profile`
-      # the preset of their shape, and a persons token is admitted only
-      # through a client in `first_party_clients`.
+      # One table per issuer: `kind` says whose tokens it signs, and a
+      # persons token is admitted only through a client in
+      # `first_party_clients`.
       - issuer: https://idp.example.com/realms/ferroehr
         kind: persons
-        profile: rfc9068
         audience: [ferroehr]
         first_party_clients: [ferroehr-viewer]
     # The issuer's logins bind to the PERSON carrying their `sub` under this

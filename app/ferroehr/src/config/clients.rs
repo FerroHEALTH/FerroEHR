@@ -25,6 +25,7 @@ use crate::config::binding::ProviderId;
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct SystemClient {
     /// The `machines` or `persons` issuer of the client's tokens. It renders with any userinfo masked.
     pub issuer: SecretUrl,
@@ -49,6 +50,7 @@ pub struct SystemClient {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct Facility {
     /// The issuer of the facility identifier.
     pub issuer: String,
@@ -74,6 +76,7 @@ pub enum Origin {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct ImportConfig {
     /// The `creating_system_id` values whose wrapped committers may name a
     /// local party; never this node's own system id.

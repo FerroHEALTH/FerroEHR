@@ -29,7 +29,6 @@ config:
   # The in-instance EHR index, the opt-in of a FerroEHR run on its own:
   # this overlay renders another surface and runs no identity source.
   auth:
-    enabled: true
     # The issuer the Basic users bind under. It signs nothing: its key set,
     # which every FerroEHR image carries, is the public half of a key pair
     # whose private key was discarded, for local lanes only.

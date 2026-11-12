@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment.profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
-![Version: 26.1.0](https://img.shields.io/badge/Version-26.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.7.0](https://img.shields.io/badge/AppVersion-5.7.0-informational?style=flat-square)
+![Version: 27.0.0](https://img.shields.io/badge/Version-27.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.7.0](https://img.shields.io/badge/AppVersion-5.7.0-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 26.1.0 \
+  --version 27.0.0 \
   --namespace ferroehr --create-namespace \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
@@ -62,7 +62,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `26.1.0` |
+| the **chart** (templates, defaults, this document) | `--version` | `27.0.0` |
 | the **server image** | `image.tag` | `5.7.0` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -74,7 +74,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:26.1.0 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:27.0.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -82,7 +82,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:26.1.0 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:26.1.0 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:27.0.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.7.0 \
   -R FerroHEALTH/FerroEHR
@@ -301,44 +301,18 @@ Kubernetes: `>=1.36.0-0`
 | bridge.tolerations | list | `[]` | Tolerations. |
 | bridge.topologySpreadConstraints | list | `[]` | Topology spread for FerroBRIDGE's pods. Empty uses the chart's default: one replica per node, `ScheduleAnyway`, scoped to the ReplicaSet being rolled. Set it to replace that wholesale. |
 | bridge.usageReport.enabled | string | `nil` | FerroBRIDGE's usage report. Empty follows the top-level `usageReport.enabled`; true or false decides for FerroBRIDGE alone. The chart writes it into `[usage_report]` of config.toml, with the deployment `helm`, for a FerroBRIDGE release from 0.0.7 on; a release before it sends no report and refuses the section, so it gets none. |
-| config.api.admin | bool | `false` |  |
 | config.api.base_path | string | `"/ferroehr/rest/openehr/v1"` |  |
 | config.api.body_limit | string | `"16MiB"` |  |
-| config.api.openapi_ui | string | `"private"` |  |
-| config.api.terminology | bool | `false` |  |
 | config.audit.enabled | bool | `true` |  |
-| config.audit.store.enabled | bool | `true` |  |
-| config.audit.store.retention | string | unset |  |
 | config.auth.enabled | bool | `true` |  |
-| config.authz.abac.enabled | bool | `false` |  |
 | config.authz.federation.agreement | list | `[]` |  |
-| config.authz.party_binding.namespace | string | `"demographic"` |  |
-| config.authz.rbac.admin_role | string | `"ADMIN"` |  |
-| config.authz.rbac.enabled | bool | `true` |  |
-| config.authz.rbac.role_issuers | list | `[]` |  |
 | config.authz.system_client | list | `[]` |  |
-| config.database.acquire_timeout | string | `"30s"` |  |
 | config.database.max_connections | int | `10` |  |
-| config.database.migrations | string | `"apply"` |  |
 | config.database.min_connections | int | `0` |  |
-| config.database.statement_timeout | string | `"1min"` |  |
 | config.deployment.profile | string | unset: the chart refuses to render |  |
-| config.deployment.spec_profile | string | `"development"` |  |
 | config.files | object | `{}` |  |
 | config.management.base_path | string | `"/management"` |  |
 | config.management.enabled | bool | `true` |  |
-| config.management.endpoints.env | string | `"off"` |  |
-| config.management.endpoints.flamegraph | string | `"off"` |  |
-| config.management.endpoints.info | string | `"off"` |  |
-| config.management.endpoints.loggers | string | `"off"` |  |
-| config.management.endpoints.metrics | string | `"off"` |  |
-| config.management.endpoints.prometheus | string | `"off"` |  |
-| config.record.multimedia.bucket | string | `"openehr-multimedia"` |  |
-| config.record.multimedia.enabled | bool | `false` |  |
-| config.record.multimedia.region | string | `"us-east-1"` |  |
-| config.record.signing.enabled | bool | `true` |  |
-| config.record.signing.mode | string | `"digest"` |  |
-| config.record.signing.verify_on_read | string | `"strict"` |  |
 | config.server.caller_rate.burst | int | `2048` |  |
 | config.server.caller_rate.requests_per_second | int | `1024` |  |
 | config.server.max_concurrent_requests | int | `256` |  |

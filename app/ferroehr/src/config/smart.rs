@@ -31,22 +31,15 @@ use url::Url;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct SmartConfig {
     /// Serve the `/.well-known/smart-configuration` discovery document
     /// (SMART App Launch 2.x §Conformance; default `false`). The document is
     /// built from the metadata of one `[auth]` issuer that serves a user
-    /// launch: [`Self::described_issuer`], else the one issuer that is not of
+    /// launch: `[auth] described_issuer`, else the one issuer that is not of
     /// kind `machines` and whose metadata is available. Several such issuers
     /// and no `described_issuer`, or none, refuse the start.
     pub discovery: bool,
-
-    /// The `[auth]` issuer the discovery document describes: an issuer of kind
-    /// `persons`, `patients` or `federation` whose metadata is read from it,
-    /// introspected, or supplied by [`Self::issuer_metadata_file`]. A
-    /// `machines` issuer signs client credentials tokens only, so it serves no
-    /// user launch. Required when more than one issuer could be described. It
-    /// renders with any userinfo masked.
-    pub described_issuer: Option<SecretUrl>,
 
     /// The RFC 8414 §2 authorization-server metadata of the `[auth]` issuer
     /// it names, whose key set is a `jwks_file` and carries none: a JSON
@@ -78,12 +71,14 @@ pub struct SmartConfig {
     /// The `client_id`s of the backend clients a `system/aql-*` grant counts
     /// for: master08 §Resource Scopes says such a grant "would grant access to
     /// all registered and ad-hoc AQL queries system-wide". Empty, no client.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub backend_clients: Vec<String>,
 
     /// The issuers whose `patient/` grants count, each confined to the `ehrId`
     /// of the token's launch context (master07 §Context Selection: the `ehrId`
     /// names an EHR of the platform that issued it). Empty, a `patient/` grant
     /// grants nothing. Each renders with any userinfo masked.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub patient_issuers: Vec<SecretUrl>,
 
     /// The `client_id`s that reach the DEMOGRAPHIC API. master08 §Resource
@@ -91,6 +86,7 @@ pub struct SmartConfig {
     /// scope covers it: a listed client, or a caller holding the
     /// `[auth] product_scope`, reaches it (no openEHR spec governs this: our
     /// own design).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub demographic_clients: Vec<String>,
 
     /// Retired in v5.7.0: refused at load, naming `discovery`.

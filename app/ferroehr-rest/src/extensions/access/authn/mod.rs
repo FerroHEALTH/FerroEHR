@@ -60,8 +60,7 @@ use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
-use ferrohealth_smart::resource::introspection::Introspector;
-use ferrohealth_smart::resource::{Access, Honoured, ResourceServer, Via};
+use ferrohealth_smart::resource::{Access, Honoured, Via};
 use http::request::Parts;
 use http::{HeaderValue, StatusCode};
 use openehr_its::rest::runtime::ApiError;
@@ -71,6 +70,7 @@ use crate::extensions::access::authz::AuthzHandle;
 use crate::overview::error::RestError;
 use crate::smart::routes::SmartRoutes;
 use assurance::PatientDataGate;
+use build::Primary;
 use ferroehr::system_log::event::ActorAuthentication;
 use gates::patient_data_refusal;
 
@@ -377,16 +377,6 @@ impl AuthError {
             AuthError::PartyUnavailable { .. } => "party_unavailable",
         }
     }
-}
-
-/// The check of the described issuer, whose metadata the SMART discovery
-/// document is built from.
-enum Primary {
-    /// A JWT access token checked against the issuer's keys.
-    Jwt(Arc<ResourceServer>),
-    /// An opaque access token checked by the issuer's introspection endpoint
-    /// (RFC 7662).
-    Introspection(Arc<Introspector>),
 }
 
 /// The configured authenticator: the crate's gate and the role sources.
@@ -1660,12 +1650,13 @@ mod tests {
         }
     }
 
-    /// A `jwks_file` issuer authenticator reading `[auth.smart] issuer_metadata_file`.
+    /// A `jwks_file` issuer authenticator serving discovery from `issuer_metadata_file`.
     async fn with_metadata_file(file: Option<&MetadataFile>) -> Result<Arc<Authenticator>, String> {
         let mut config = AppConfig {
             auth: test_support::bearer_auth(),
             ..AppConfig::default()
         };
+        config.auth.smart.discovery = true;
         config.auth.smart.issuer_metadata_file = file.map(|file| file.0.display().to_string());
         Authenticator::new(&config, None, None, memory()).await
     }
@@ -1677,8 +1668,12 @@ mod tests {
     #[tokio::test]
     async fn a_jwks_file_issuer_takes_its_metadata_from_the_configured_file() {
         let options = SmartOptions::default();
-        let without = with_metadata_file(None).await.expect("authenticator");
-        assert!(without.smart_configuration(&options).is_none());
+        let without = with_metadata_file(None)
+            .await
+            .expect_err("no issuer to describe");
+        assert!(
+            without.contains("can describe no issuer") && without.contains("issuer_metadata_file")
+        );
 
         let good = MetadataFile::new(
             "good",
