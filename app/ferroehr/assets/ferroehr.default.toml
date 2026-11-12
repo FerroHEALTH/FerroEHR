@@ -2423,13 +2423,13 @@ subjects = false
 # (`openEHR-DEMOGRAPHIC-ADDRESS.address.v1`), matched case-insensitively
 # against the stored, case-folded column (BASE `base_types`
 # `master05-identification_package.adoc` §"Composite Identifiers and Case").
-# Required in its table (infrastructure).
+# Required in its table (trust).
 # archetype = ""
 # The ELEMENT's `archetype_node_id` at-code (`at0012`). Required in its table
-# (infrastructure).
+# (trust).
 # node = ""
 # How the caller's value is matched against the leaf. Required in its table
-# (infrastructure).
+# (trust).
 # kind = "text"
 
 # The EHDS Art. 3(3) delay of the person's own access; absent, off.

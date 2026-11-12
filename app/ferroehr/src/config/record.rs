@@ -28,6 +28,7 @@ pub struct RecordConfig {
     pub query: crate::service::query::config::QueryConfig,
     /// `[record.change_feed]`: the commit-event outbox readers and their
     /// retention.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub change_feed: crate::extensions::outbox::config::OutboxConfig,
     /// `[record.multimedia]`: `DV_MULTIMEDIA` externalization to object
     /// storage. It keeps `enabled`, because its store applies while it is
