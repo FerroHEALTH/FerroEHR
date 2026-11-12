@@ -88,6 +88,9 @@ ferroehr party-binding adopt --admin <ADMIN_PARTY_ID> \
   --migration "<committer name of the migration>" <PARTY_ID>...
 ```
 
+Under Docker Compose or the Helm chart, run it in the server's container
+([Where the binary runs](config-cli.md#where-the-binary-runs)).
+
 It refuses, naming them, every `PERSON` whose binding key was introduced
 by a committer the provenance rule does not accept (step 3), so a key a
 demographic writer planted before the upgrade is never adopted silently.
@@ -98,6 +101,12 @@ At its next start, the server fills the binding side table from the party
 versions and refuses to start on any duplicate key, naming the parties.
 
 ### 2. Upgrade, then provision through SCIM
+
+Check the upgraded configuration before the server starts on it with
+`ferroehr config check`, which runs the boot validation and touches no
+database ([Where the binary runs](config-cli.md#where-the-binary-runs)
+shows it on the new image under Docker and for the configuration a Helm
+release refuses).
 
 Start the upgraded deployment with only the SCIM client's issuer
 configured; the `persons` issuers come in step 4, so no clinician meets a
@@ -114,6 +123,10 @@ ferroehr party-binding check --admin <ADMIN_PARTY_ID> \
   --migration "<committer name of the migration>" \
   --expected assigned-users.txt
 ```
+
+Under Docker Compose or the Helm chart, run it in the server's container,
+with the `--expected` file at a path inside it
+([Where the binary runs](config-cli.md#where-the-binary-runs)).
 
 `ferroehr party-binding check` reads the party versions and writes
 nothing, so it runs before any boot fill. Per key issuer it reports the
