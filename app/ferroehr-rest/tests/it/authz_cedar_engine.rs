@@ -169,7 +169,6 @@ async fn remote_permit_when_patient_ok() -> (MockServer, RemotePdp) {
                 timeout: ferrohealth_config::units::Duration::from_millis(1000),
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
             },
-            ..RemoteConfig::default()
         },
         policy,
         ..AbacConfig::default()

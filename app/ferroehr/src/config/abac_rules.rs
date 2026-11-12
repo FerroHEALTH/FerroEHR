@@ -105,19 +105,6 @@ pub struct RemoteConfig {
     /// Any `userinfo` in the URL is masked in every rendering.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
     pub endpoint: EndpointSection,
-    /// Retired in v5.7.0: refused at load, naming
-    /// `endpoint.credentials.oauth`.
-    #[serde(skip_serializing)]
-    pub oauth: ferrohealth_config::removed::Removed,
-    /// Retired in v5.7.0: refused at load, naming `url`.
-    #[serde(skip_serializing)]
-    pub server: ferrohealth_config::removed::Removed,
-    /// Retired in v5.7.0: refused at load, naming `connect_timeout`.
-    #[serde(skip_serializing)]
-    pub connect_timeout_ms: ferrohealth_config::removed::Removed,
-    /// Retired in v5.7.0: refused at load, naming `timeout`.
-    #[serde(skip_serializing)]
-    pub request_timeout_ms: ferrohealth_config::removed::Removed,
 }
 
 impl Default for RemoteConfig {
@@ -128,10 +115,6 @@ impl Default for RemoteConfig {
                 connect_timeout: Some(ferrohealth_config::units::Duration::from_secs(2)),
                 ..EndpointSection::default()
             },
-            oauth: ferrohealth_config::removed::Removed::default(),
-            server: ferrohealth_config::removed::Removed::default(),
-            connect_timeout_ms: ferrohealth_config::removed::Removed::default(),
-            request_timeout_ms: ferrohealth_config::removed::Removed::default(),
         }
     }
 }

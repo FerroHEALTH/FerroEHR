@@ -45,7 +45,6 @@ fn config(server: &str, name: &str, parameters: Vec<AbacParam>) -> AbacConfig {
                 },
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
             },
-            ..RemoteConfig::default()
         },
         policy,
         ..AbacConfig::default()

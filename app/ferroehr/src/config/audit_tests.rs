@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The `[audit]` section's boot rules: the retention floors and ceilings of
-//! each jurisdiction, and the retired `[audit.syslog]` TLS keys.
+//! each jurisdiction, and the flat `[audit.syslog]` TLS keys refused as unknown.
 
 use super::assemble;
 use super::tests::{env, standalone, toml_file};
@@ -155,17 +155,20 @@ fn retention_years_meets_a_floor_in_years_exactly() {
     assert!(text.contains("ceiling of 3 years"), "{text}");
 }
 
-/// The horizon is one key: the retired day and year keys are refused at load
-/// naming it, and a period of zero is no period.
+/// The horizon is one key: a day or year key is unknown and refused at load,
+/// and a period of zero is no period.
 #[test]
-fn the_retired_retention_keys_are_refused_naming_retention() {
-    for key in ["retention_days = 1096", "retention_years = 3"] {
+fn a_day_or_year_retention_key_is_refused_as_unknown() {
+    for (key, name) in [
+        ("retention_days = 1096", "retention_days"),
+        ("retention_years = 3", "retention_years"),
+    ] {
         let file = toml_file(&format!("[audit.store]\n{key}\n"));
         let text = assemble(Some(file.path()), &env(&[]), &[])
             .expect_err(key)
             .to_string();
         assert!(
-            text.contains("was replaced by audit.store.retention") && text.contains("P5Y"),
+            text.contains(&format!("unknown field `{name}`")) && text.contains("`retention`"),
             "{key}: {text}"
         );
     }
@@ -192,23 +195,21 @@ fn a_ceiling_below_a_floor_is_refused() {
     );
 }
 
-/// The `[audit.syslog]` TLS keys FerroEHR read before the table took the
-/// family's `[audit.syslog.tls]` are refused by name at load, each refusal
-/// naming the key that replaces it (#5217).
+/// The `[audit.syslog]` TLS keys outside the family's `[audit.syslog.tls]`
+/// table are unknown and refused at load by name.
 #[test]
-fn the_retired_syslog_tls_keys_are_refused_by_name() {
-    for (key, replacement) in [
-        ("tls_ca_file", "trust_roots_file"),
-        ("tls_identity_cert_file", "client_identity_file"),
-        ("tls_identity_key_file", "client_identity_file"),
+fn a_flat_syslog_tls_key_is_refused_as_unknown() {
+    for key in [
+        "tls_ca_file",
+        "tls_identity_cert_file",
+        "tls_identity_key_file",
     ] {
         let file = toml_file(&format!("[audit.syslog]\n{key} = \"/etc/a.pem\"\n"));
         let text = assemble(Some(file.path()), &env(&[]), &[])
             .expect_err(key)
             .to_string();
         assert!(
-            text.contains(&format!("audit.syslog.{key} was replaced by"))
-                && text.contains(replacement),
+            text.contains(&format!("unknown field `{key}`")),
             "{key}: {text}"
         );
     }

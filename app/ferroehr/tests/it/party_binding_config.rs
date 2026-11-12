@@ -299,33 +299,32 @@ fn two_issuers_sharing_an_audience_are_refused() {
 }
 
 #[test]
-fn a_removed_key_is_refused_naming_the_new_shape() {
+fn a_removed_key_is_refused_as_unknown() {
     let text = refusal(&with(
         "[authz.party_binding]\n",
         "[authz.party_binding]\nenabled = true\n",
     ));
-    assert!(
-        text.contains("authz.party_binding.enabled was removed"),
-        "{text}"
-    );
+    assert!(text.contains("unknown field `enabled`"), "{text}");
     let text = refusal("[auth]\nissuer = \"https://idp.example\"\n");
     assert!(text.contains("issuer"), "{text}");
-    assert!(text.contains("[[auth.issuer]]"), "{text}");
-    for key in [
-        "acting_for_claim = \"act.sub\"",
-        "client_tokens = \"claim_absent\"",
+    for (key, name) in [
+        ("acting_for_claim = \"act.sub\"", "acting_for_claim"),
+        ("client_tokens = \"claim_absent\"", "client_tokens"),
     ] {
         let text = refusal(&with(
             "first_party_clients = [\"ferroehr-viewer\"]",
             &format!("first_party_clients = [\"ferroehr-viewer\"]\n{key}"),
         ));
-        assert!(text.contains("was replaced by"), "{key}: {text}");
+        assert!(
+            text.contains(&format!("unknown field `{name}`")),
+            "{key}: {text}"
+        );
     }
     let text = refusal(&format!(
         "{}\n[authz.professional]\nclaim = \"sub\"\n",
         full()
     ));
-    assert!(text.contains("authz.professional was removed"), "{text}");
+    assert!(text.contains("unknown field `professional`"), "{text}");
 }
 
 #[test]
@@ -379,15 +378,12 @@ fn a_party_claim_and_a_token_profile_are_refused() {
         "identifier_type = \"guid\"",
         "identifier_type = \"guid\"\nclaim = \"oid\"",
     ));
-    assert!(text.contains("auth.party[0].claim was removed"), "{text}");
+    assert!(text.contains("unknown field `claim`"), "{text}");
     let text = refusal(&with(
         "first_party_clients = [\"ferroehr-viewer\"]",
         "first_party_clients = [\"ferroehr-viewer\"]\ntoken_profile = \"jwt\"",
     ));
-    assert!(
-        text.contains("token_profile was replaced by profile"),
-        "{text}"
-    );
+    assert!(text.contains("unknown field `token_profile`"), "{text}");
 }
 
 #[test]

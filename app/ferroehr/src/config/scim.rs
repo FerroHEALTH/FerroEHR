@@ -14,7 +14,6 @@
 
 use std::collections::BTreeSet;
 
-use ferrohealth_config::removed::Removed;
 use ferrohealth_config::units::Duration;
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::Resolved;
@@ -61,18 +60,6 @@ pub struct ScimConfig {
     pub max_group_members: u32,
     /// The provisioning clients.
     pub client: Vec<ScimClient>,
-    /// Retired in v5.7.0: refused at load, naming the table's presence.
-    #[serde(skip_serializing)]
-    pub enabled: Removed,
-    /// Retired in v5.7.0: refused at load, naming `filter_max_results`.
-    #[serde(skip_serializing)]
-    pub max_results: Removed,
-    /// Retired in v5.7.0: refused at load, naming `deactivation_window`.
-    #[serde(skip_serializing)]
-    pub deactivation_window_minutes: Removed,
-    /// Retired in v5.7.0: refused at load, naming `contact_erasure_delay`.
-    #[serde(skip_serializing)]
-    pub contact_erasure_minutes: Removed,
 }
 
 impl Default for ScimConfig {
@@ -85,10 +72,6 @@ impl Default for ScimConfig {
             contact_erasure_delay: Duration::ZERO,
             max_group_members: 5_000,
             client: Vec::new(),
-            enabled: Removed::default(),
-            max_results: Removed::default(),
-            deactivation_window_minutes: Removed::default(),
-            contact_erasure_minutes: Removed::default(),
         }
     }
 }
