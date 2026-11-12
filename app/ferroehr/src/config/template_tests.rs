@@ -65,23 +65,22 @@ fn template_mentions_every_section() {
 /// inside another key's trailing comment does not count: a key mentioned
 /// only that way stays invisible to an operator reading the template.
 fn template_declares(key: &str) -> bool {
-    DEFAULT_TEMPLATE.lines().any(|line| {
-        let line = line.trim_start();
-        let line = line.strip_prefix("#?").map_or(line, str::trim_start);
-        line.strip_prefix(key)
-            .is_some_and(|rest| rest.trim_start().starts_with('='))
-    })
+    template_values(key).next().is_some()
 }
 
 /// Whether the template declares `key` as a key line whose value is an
 /// inline table: a map key the generator writes as `key = { … }`.
 fn template_declares_inline_table(key: &str) -> bool {
-    DEFAULT_TEMPLATE.lines().any(|line| {
+    template_values(key).any(|value| value.trim_start().starts_with('{'))
+}
+
+/// The value text after `=` of every key line of the template that declares
+/// `key`, live or as a `#?` reference line.
+fn template_values(key: &str) -> impl Iterator<Item = &'static str> + '_ {
+    DEFAULT_TEMPLATE.lines().filter_map(move |line| {
         let line = line.trim_start();
         let line = line.strip_prefix("#?").map_or(line, str::trim_start);
-        line.strip_prefix(key)
-            .and_then(|rest| rest.trim_start().strip_prefix('='))
-            .is_some_and(|value| value.trim_start().starts_with('{'))
+        line.strip_prefix(key)?.trim_start().strip_prefix('=')
     })
 }
 
