@@ -388,9 +388,9 @@ template carrying a selector identifier, its professional `ROLE`, a
 representation relationship, and a `GROUP` of the group template. Only an
 administrator (`authz.rbac.admin_role`) writes one through the demographic
 API, including the creation of a party that carries a selector identifier.
-The policy parties (a system's `AGENT`, a `ROLE` of a policy role template
-and an acts-for relationship) are recognised by their archetypes and take no
-key of this mapping; they are an administrator's to write and to read,
+The policy parties (a party holding a capability coded in
+`ferroehr-operations`, an acts-for relationship or a `client_id` identifier)
+are recognised by what they hold and take no key of this mapping; they are an administrator's to write and to read,
 never a SCIM client's: see [Operational policy](../operational-policy.md#who-writes-and-reads-a-policy-party).
 An administrator's version that leaves a protected identifier out is refused
 with `422`. A present binding key is immutable (RFC 7643 §2.2): a version

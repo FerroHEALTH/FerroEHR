@@ -1,20 +1,18 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The policy parties: the system `AGENT`, the policy `ROLE`s whose
-//! `CAPABILITY.credentials` hold a grant, and the acts-for
+//! The default policy definitions, examples of the policy parties.
+//!
+//! They are archetypes of a system `AGENT`, of the `ROLE`s whose
+//! `CAPABILITY.credentials` grant operations, and of the acts-for
 //! `PARTY_RELATIONSHIP` from a system to the provider it acts for.
 //!
-//! FerroEHR recognises a policy party by its root archetype, never by its
-//! template: the policy archetype itself, or an ADL 2 specialisation of it
-//! (AM `ADL2/master09.01-spec_overview.adoc` §Specialisation: "All possible
-//! data instance arrangements that conform to the specialised archetype must
-//! also conform to all of its parents"; BASE `base_types` §Archetype
-//! Identifiers: `domain_concept = concept_name { '-' specialisation }`). A
-//! deployment versions, renames or constrains the templates built on these
-//! archetypes, or builds its own, and they stay policy parties. The archetype
-//! ids and the node ids FerroEHR reads are the contract; a breaking change to
-//! them is a new archetype major version.
+//! FerroEHR does not recognise a policy party by these archetypes: a party is
+//! one when a version of it holds the coded content
+//! [`crate::party_binding::policy_mark`] reads, in any archetype or template
+//! a deployment models. The archetypes here are examples that use those
+//! codes, and [`PolicyKind`] names them so a party of one is validated
+//! against its own template.
 //!
 //! The binary carries a default definition of each ([`DEFINITIONS`]), which
 //! the first boot stores when no definition of its id is stored; after that
@@ -179,10 +177,6 @@ impl PolicyKind {
     /// Every kind with the parts of its archetype that [`Self::of`] compares:
     /// the lowercased `qualified_rm_entity` and `domain_concept`, and the
     /// major version, as [`archetype_parts`] decomposes them.
-    ///
-    /// The node codec stores the same decomposition of each node's archetype
-    /// in its `arch_entity`, `arch_concept` and `arch_major` columns, so a
-    /// query tests a stored root against these parts.
     #[must_use]
     pub fn parts() -> Vec<(Self, String, String, i32)> {
         Self::all()
@@ -192,39 +186,6 @@ impl PolicyKind {
                 Some((kind, entity, concept, major))
             })
             .collect()
-    }
-
-    /// The POSIX regular expression an archetype id matches exactly when
-    /// [`Self::of`] answers this kind for it.
-    ///
-    /// It spells the lexical form of BASE `base_types` master05 §Archetype
-    /// Identifiers (`[namespace::]` entity `.` concept `{'-' specialisation}`
-    /// `.v` version, the minor, patch and status optional) around this kind's
-    /// parts, their letters in any case, for an id a query reads from stored
-    /// JSON, where no decomposed column holds it.
-    #[must_use]
-    pub fn id_pattern(self) -> Option<String> {
-        let (_, entity, concept, major) =
-            Self::parts().into_iter().find(|(kind, ..)| *kind == self)?;
-        let any_case = |part: &str| -> String {
-            part.chars()
-                .map(|c| {
-                    if c.is_ascii_alphabetic() {
-                        format!("[{}{}]", c.to_ascii_lowercase(), c.to_ascii_uppercase())
-                    } else {
-                        c.to_string()
-                    }
-                })
-                .collect()
-        };
-        let (entity, concept) = (any_case(&entity), any_case(&concept));
-        let segment = "[a-zA-Z][a-zA-Z0-9_]*";
-        let number = "(0|[1-9][0-9]*)";
-        Some(format!(
-            "^[[:space:]]*([a-zA-Z][a-zA-Z0-9_-]*(\\.[a-zA-Z][a-zA-Z0-9_-]*)*::)?{entity}\\.\
-             {concept}(-{segment})*\\.v{major}\
-             (\\.{number}(\\.{number}(-(rc|alpha|beta)(\\.[0-9]+)?)?)?)?[[:space:]]*$"
-        ))
     }
 }
 
@@ -258,57 +219,6 @@ mod tests {
             "id6",
         ] {
             assert_eq!(PolicyKind::of(other), None, "{other}");
-        }
-    }
-
-    /// The pattern a query reads a stored id with answers what
-    /// [`PolicyKind::of`] answers, for every kind and every id below.
-    #[test]
-    fn the_id_pattern_agrees_with_the_archetype_test() {
-        let ids = [
-            "openEHR-DEMOGRAPHIC-ROLE.system_client.v1",
-            "openehr-demographic-role.system_client.v1.4.2",
-            "OPENEHR-DEMOGRAPHIC-ROLE.SYSTEM_CLIENT.V1",
-            " openEHR-DEMOGRAPHIC-ROLE.system_client.v1\n",
-            "openEHR-DEMOGRAPHIC-ROLE.system_client-hospital.v1",
-            "openEHR-DEMOGRAPHIC-ROLE.system_client-hospital-ward.v1.0.0",
-            "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.2",
-            "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0-rc.1",
-            "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0-beta",
-            "org.example::openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0",
-            "openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0",
-            "openEHR-DEMOGRAPHIC-AGENT.system-gateway.v1",
-            "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1",
-            "openehr-demographic-party_relationship.acts_for.v1.0.0",
-            "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for-regional.v1.1.0",
-            "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v2",
-            "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_formerly.v1",
-            "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1",
-            "openEHR-DEMOGRAPHIC-ROLE.system_client.v2",
-            "openEHR-DEMOGRAPHIC-ROLE.system_client.v10",
-            "openEHR-DEMOGRAPHIC-ROLE.system_clientele.v1",
-            "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1",
-            "openEHR-DEMOGRAPHIC-PERSON.system_client.v1",
-            "openEHR-DEMOGRAPHIC-ROLE.data_migration.v1",
-            "openEHR-DEMOGRAPHIC-ROLE.federation_partner-eu.v1",
-            "openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0",
-            "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0-gamma",
-            "openEHR-DEMOGRAPHIC-ROLE.system_client.v01",
-            "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.",
-            "x-openEHR-DEMOGRAPHIC-ROLE.system_client.v1",
-            "id6",
-            "",
-        ];
-        for (kind, _) in PolicyKind::all() {
-            let pattern = kind.id_pattern().expect("a policy archetype parses");
-            let matcher = regex::Regex::new(&pattern).expect("the pattern compiles");
-            for id in ids {
-                assert_eq!(
-                    matcher.is_match(id),
-                    PolicyKind::of(id) == Some(kind),
-                    "{kind:?} on {id:?}"
-                );
-            }
         }
     }
 }
