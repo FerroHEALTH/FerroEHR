@@ -989,7 +989,8 @@ whose grants count for what. See [SMART App Launch](../smart-app-launch.md).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `discovery` | bool | `false` | Serve `/.well-known/smart-configuration`. It is built from the metadata of one `[auth]` issuer (the first introspected `[auth]` issuer, else the issuer `[auth.smart] issuer_metadata_file` names, else the first issuer whose metadata is read from it, else the first issuer), so it needs an issuer whose metadata names a `token_endpoint` (SMART App Launch 2.2.0, Conformance, §Metadata); an issuer read from a `jwks_file` refuses the start with `discovery = true` unless `issuer_metadata_file` supplies that metadata. |
+| `discovery` | bool | `false` | Serve `/.well-known/smart-configuration`. It is built from the metadata of one `[auth]` issuer, the [described issuer](#the-described-issuer), so it needs an issuer whose metadata names a `token_endpoint` (SMART App Launch 2.2.0, Conformance, §Metadata). |
+| `described_issuer` | string | unset | The `[auth]` issuer the discovery document describes: one of kind `persons`, `patients` or `federation` whose metadata FerroEHR has, read from it, introspected, or supplied by `issuer_metadata_file`. Naming an unknown issuer, a `machines` issuer or one without metadata is a boot error. Required with `discovery = true` when more than one issuer could be described. It renders with any userinfo masked. |
 | `issuer_metadata_file` | path | unset | A JSON file holding the RFC 8414 §2 metadata of the `[auth]` issuer it names, whose key set is a `jwks_file`, read at boot. It must name an `[auth]` issuer, wherever it stands in the list, repeat no member name, and every endpoint it names must be `https` (a loopback host excepted); the discovery document takes its `token_endpoint` and the other endpoints from it. Set for an issuer whose metadata is read from the issuer, it is a boot error. |
 | `platform_base_url` | string | unset ⇒ the REST root | The path the discovery document hangs off, e.g. `/gateway/v1`. |
 | `public_base_url` | string | **required with `discovery`** | The server's externally reachable origin (e.g. `https://cdr.example.com`), from which the discovery document's absolute `services.*.baseUrl` values are built. |
@@ -1006,6 +1007,41 @@ document is served; `discovery` alone turns the document on.
 No `smart` URL may carry a user name or password, whether or not the document
 is served: the discovery document publishes these URLs to every application,
 so a credential in one would be served to anyone who asks.
+
+### The described issuer
+
+The discovery document describes one authorization server: SMART App Launch
+2.2.0, Conformance, §Metadata requires its `authorization_endpoint` whenever
+the document advertises `launch-standalone` or `launch-ehr`, so it is where
+every user launch starts. FerroEHR describes an issuer that serves a user
+launch and whose metadata it has:
+
+- **`persons` and `patients`:** eligible. A practitioner's launch and a patient
+  standalone launch both start at the issuer's login.
+- **`federation`:** eligible. Another party's professionals sign in at it, and
+  an agreement admits them.
+- **`machines`:** never described. It signs client credentials tokens only:
+  `ferrohealth-smart` refuses every token of a `machines` issuer that is not
+  app-only, and FerroEHR refuses a system caller that holds a `user/` or
+  `patient/` scope, so no user launch can work there.
+
+An issuer has metadata when it is introspected, when its metadata is read from
+it, or when `issuer_metadata_file` supplies it. An issuer read from a
+`jwks_file` alone has none.
+
+With `discovery = true`, the start is refused unless exactly one issuer is
+described:
+
+- `described_issuer` set: it must name an eligible issuer, else the start is
+  refused, naming the key and why.
+- `described_issuer` unset: the one eligible issuer is described. With more
+  than one, the start is refused, naming them and `described_issuer`. With
+  none, as when the only issuer with metadata is a `machines` issuer, the start
+  is refused, saying no issuer can be described.
+
+The order of the `[[auth.issuer]]` tables never decides. SMART does not say
+which of several trusted issuers a resource server describes, so this rule is
+FerroEHR's own design.
 
 ## `[management]`
 

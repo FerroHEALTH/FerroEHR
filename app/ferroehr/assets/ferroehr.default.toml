@@ -706,10 +706,19 @@ min_version = "1.3"
 # The SMART App Launch resource-server posture.
 [auth.smart]
 # Serve the `/.well-known/smart-configuration` discovery document (SMART App
-# Launch 2.x §Conformance; default `false`). The document is built from one
-# `[auth]` issuer's metadata: the issuer `Self::issuer_metadata_file` names,
-# else the first whose metadata is read from it, else the first.
+# Launch 2.x §Conformance; default `false`). The document is built from the
+# metadata of one `[auth]` issuer that serves a user launch:
+# `Self::described_issuer`, else the one issuer that is not of kind `machines`
+# and whose metadata is available. Several such issuers and no
+# `described_issuer`, or none, refuse the start.
 discovery = false
+# The `[auth]` issuer the discovery document describes: an issuer of kind
+# `persons`, `patients` or `federation` whose metadata is read from it,
+# introspected, or supplied by `Self::issuer_metadata_file`. A `machines`
+# issuer signs client credentials tokens only, so it serves no user launch.
+# Required when more than one issuer could be described. It renders with any
+# userinfo masked.
+#? described_issuer = ""
 # The RFC 8414 §2 authorization-server metadata of the `[auth]` issuer it
 # names, whose key set is a `jwks_file` and carries none: a JSON document read
 # at boot. SMART App Launch 2.2.0, Conformance, §Metadata requires the
