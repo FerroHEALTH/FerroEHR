@@ -111,6 +111,10 @@ services:
       FERROEHR__AUTH__PARTY__1__ISSUER: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:ferroehr:keycloak-quickstart-login
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: login
+      # The realm's group claim, read under the identifier issuer the Groups
+      # its SCIM client provisions are named under.
+      FERROEHR__AUTH__PARTY__1__GROUP_CLAIM: groups
+      FERROEHR__AUTH__PARTY__1__GROUP_IDENTIFIER_ISSUER: urn:ferroehr:keycloak-quickstart-groups
       FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
       # A person is refused until a demographic party carries their login, so
       # the realm's four users are provisioned through SCIM under that
