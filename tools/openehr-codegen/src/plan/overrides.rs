@@ -2484,10 +2484,10 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
     InvariantRealization {
         class: "PARTY",
         name: "Relationships_validity",
-        venue: InvariantVenue::Excluded,
-        site: "",
+        venue: InvariantVenue::App,
+        site: "app/ferroehr/src/service/demographic/validate.rs",
         spec_file: "org.openehr.rm.demographic.party.adoc",
-        reason: "reads the source-party aggregate, which FerroEHR's own design does not maintain: RM demographic master02 §Party Relationships stores a PARTY_RELATIONSHIP as data of its source PARTY, and FerroEHR instead gives every relationship its own version container (our own design; the two representations are DISJOINT); an inline `relationships` list in a committed PARTY body stays validated and served verbatim.",
+        reason: "`relationships /= Void implies (not relationships.is_empty and then relationships.for_all (r | r.source = self))`: the non-empty arm holds by construction (`Option<NonEmptyVec<PartyRelationship>>`, a present-empty list refused at the strict reader); the source arm is a rule over the party's own version container, which only the write boundary holds, so `party_invariants` at the named site refuses an inline relationship whose `source` names another container (RM demographic master02 §Party Relationships stores a relationship with its source party). It runs on every party write lane, the direct create and update and each CONTRIBUTION party version, and judges against the body `uid`'s container, else on a direct update the path container; a create or CONTRIBUTION version without a body `uid` names no container yet and is not judged (#5471).",
     },
     InvariantRealization {
         class: "PARTY",
@@ -2503,7 +2503,7 @@ pub(crate) const INVARIANT_REALIZATIONS: &[InvariantRealization] = &[
         venue: InvariantVenue::Excluded,
         site: "",
         spec_file: "org.openehr.rm.demographic.party_relationship.adoc",
-        reason: "`source.relationships.has (self)` reads the source party's aggregate through the back-reference the generated model breaks; under FerroEHR's own disjoint relationship containers (our own design) the RM compositional linkage of master02 §Party Relationships is deliberately not maintained (the `PARTY.Relationships_validity` adjudication).",
+        reason: "`source.relationships.has (self)` reads the source party's aggregate through the back-reference the generated model breaks; under FerroEHR's own disjoint relationship containers (our own design) the RM compositional linkage of master02 §Party Relationships is not maintained as a back-reference; its converse for an inline relationship, `source = self`, is `PARTY.Relationships_validity` at the application write boundary.",
     },
     InvariantRealization {
         class: "PARTY_RELATIONSHIP",

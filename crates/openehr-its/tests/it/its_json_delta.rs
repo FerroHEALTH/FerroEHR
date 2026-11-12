@@ -33,9 +33,9 @@ const MODEL_ONLY: &[&str] = &[
 /// the oracle ACCEPTS shapes that are no longer valid RM 1.2.0. Format:
 /// `CLASS.attribute`.
 const SCHEMA_ONLY: &[&str] = &[
-    // RM 1.2.0 removed PARTY.reverse_relationships (RM demographic master05
-    // §PARTY class — the attribute is gone from the 1.2.0 generation); the
-    // 1.1.0 schema still declares it on every concrete PARTY subtype.
+    // RM 1.2.0 removed PARTY.reverse_relationships (RM demographic
+    // master00-amendment_record.adoc, issue 2.0.6, SPECRM-124); the 1.1.0
+    // schema still declares it on every concrete PARTY subtype.
     "AGENT.reverse_relationships",
     "GROUP.reverse_relationships",
     "ORGANISATION.reverse_relationships",
