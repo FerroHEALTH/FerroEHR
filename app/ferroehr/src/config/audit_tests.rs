@@ -5,7 +5,7 @@
 //! each jurisdiction, and the flat `[audit.syslog]` TLS keys refused as unknown.
 
 use super::assemble;
-use super::tests::{env, standalone, toml_file};
+use super::tests::{env, file_refusal, standalone, toml_file};
 use crate::config::retention::RetentionPeriod;
 
 /// A retention below a jurisdiction's floor is a boot error naming both
@@ -163,10 +163,7 @@ fn a_day_or_year_retention_key_is_refused_as_unknown() {
         ("retention_days = 1096", "retention_days"),
         ("retention_years = 3", "retention_years"),
     ] {
-        let file = toml_file(&format!("[audit.store]\n{key}\n"));
-        let text = assemble(Some(file.path()), &env(&[]), &[])
-            .expect_err(key)
-            .to_string();
+        let text = file_refusal(&format!("[audit.store]\n{key}\n"));
         assert!(
             text.contains(&format!("unknown field `{name}`")) && text.contains("`retention`"),
             "{key}: {text}"
@@ -204,10 +201,7 @@ fn a_flat_syslog_tls_key_is_refused_as_unknown() {
         "tls_identity_cert_file",
         "tls_identity_key_file",
     ] {
-        let file = toml_file(&format!("[audit.syslog]\n{key} = \"/etc/a.pem\"\n"));
-        let text = assemble(Some(file.path()), &env(&[]), &[])
-            .expect_err(key)
-            .to_string();
+        let text = file_refusal(&format!("[audit.syslog]\n{key} = \"/etc/a.pem\"\n"));
         assert!(
             text.contains(&format!("unknown field `{key}`")),
             "{key}: {text}"
