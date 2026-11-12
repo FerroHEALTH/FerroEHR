@@ -173,11 +173,13 @@ id = "lab.example"
 clients = ["lab-gateway"]
 ```
 
+Each `[[authz.origin]]` table declares one origin; with none, no retention
+period or access rule can name an origin.
+
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `registered` | list of tables | empty | The recognised origins. |
-| `registered[].id` | string | (required) | The id the origin's data carry: the `FEEDER_AUDIT` `system_id` its feed writes, compared exactly, and the origin a direct commit by one of its clients is stamped with. |
-| `registered[].clients` | list of string | empty | The clients whose direct commits come from this origin: a Basic user name, or an access token's `client_id`, failing that its `azp`. |
+| `id` | string | (required) | The id the origin's data carry: the `FEEDER_AUDIT` `system_id` its feed writes, compared exactly, and the origin a direct commit by one of its clients is stamped with. |
+| `clients` | list of string | empty | The clients whose direct commits come from this origin: a Basic user name, or an access token's `client_id`, failing that its `azp`. |
 
 A body that carries no `FEEDER_AUDIT`, committed by a listed client, is stamped
 with that client's origin; a direct commit by any other caller keeps this

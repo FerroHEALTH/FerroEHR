@@ -81,8 +81,10 @@ Successfully verified Basic credentials are cached for
 and checks every request) so a busy client pays the deliberately expensive Argon2 verification
 once per TTL instead of on every request. The cache names each entry by a keyed
 hash of the credential, never the password, and an entry exists only after a
-successful verification; the TTL bounds how long a removed user can still
-authenticate, exactly like a session lifetime.
+successful verification. The user list and its password hashes are read at
+boot, so removing a user or changing a password takes effect at the restart
+that loads the new list, and that restart also empties the cache: the TTL never
+keeps a removed user working.
 
 The bearer settings:
 
@@ -563,7 +565,9 @@ once: the holds stay in the register, and no new one can be placed.
 
 Every openEHR operation is classified as **Public**, **Clinical**, or
 **Admin**, and a role model gates each class. Roles are plain,
-case-insensitive strings; the defaults are `USER` and `ADMIN`.
+case-insensitive strings. A Clinical operation needs an authenticated caller
+and no role; the configured roles default to `ADMIN` (`admin_role`, every
+Admin operation) and `READONLY` (`readonly_role`, refused on every write).
 
 | Environment variable | Default | Meaning |
 |---|---|---|
