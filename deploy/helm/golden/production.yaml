@@ -243,6 +243,8 @@ data:
       [audit.categories]
         [audit.categories.archetypes]
         [audit.categories.templates]
+      [audit.store]
+        enabled = true
     
     [auth]
       enabled = true
@@ -284,6 +286,7 @@ data:
           issuer = "urn:oid:2.999.7.9"
       [authz.rbac]
         ehr_access_default = "restricted"
+        enabled = true
         role_issuers = ["https://idp.example.com/realms/ferroehr"]
     
     [database]
@@ -865,7 +868,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited Cedar policy propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 65677c1a5ba6321ef14fc8817e9708712804c8a71c57e30163aaade5a6c440fc
+        checksum/config: 5f3a7709f6c47e896a1ef1cdaabccdab3c88784f3eddf77bbfb7f366bd3ebbba
         # A changed definition list rolls the pods, so the init container loads it.
         checksum/definitions: 3755fd863c9f72a1eb98519a38f76b4769be6b893a23ca13c76471c8bbcdfcf4
       labels:

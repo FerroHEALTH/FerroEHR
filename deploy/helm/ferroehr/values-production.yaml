@@ -138,6 +138,9 @@ config:
       professional_role:
         template_id: openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0
     rbac:
+      # Stated, as every separation this overlay claims (validate.sh checks
+      # the render names it).
+      enabled: true
       role_issuers: [https://idp.example.com/realms/ferroehr]
       # An EHR without ACCESS_CONTROL_SETTINGS admits no one until its settings
       # are authored.
@@ -157,6 +160,9 @@ config:
   audit:
     # Refuse an auditable operation with 503 when its record cannot be queued.
     fail_mode: closed
+    # The local store, stated as a claimed separation.
+    store:
+      enabled: true
   pixm:
     assigning_authority: urn:oid:2.999.7.1
     endpoint:
