@@ -59,3 +59,4 @@ mod validation_adl14;
 mod validation_integrity_cases;
 mod vcarm_quantity_property;
 mod vetdf_terminology;
+mod vttbk_use_node;

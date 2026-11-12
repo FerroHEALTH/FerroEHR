@@ -560,7 +560,7 @@ const ADJUDICATED_ADL2_VALIDITY: &[ValidityRefusal] = &[
     (
         "openEHR-EHR-COMPOSITION.t_encounter_opt_test.v1.0.0.adls",
         ValidationCode::Varxr,
-        "fills `content` with openEHR-EHR-OBSERVATION.apgar.v1, which is refused below, so the reference resolves to no stored archetype (master04.5 VARXR)",
+        "fills `content` with openEHR-EHR-OBSERVATION.apgar.v1, which the upload order (parents first, then by name) stores only after the template, so the reference resolves to no stored archetype (master04.5 VARXR)",
     ),
     (
         "openEHR-EHR-EVALUATION.goal.v1.0.0.adls",
@@ -596,11 +596,6 @@ const ADJUDICATED_ADL2_VALIDITY: &[ValidityRefusal] = &[
         "openEHR-EHR-ITEM_TREE.intravenous_fluids.v1.0.0.adls",
         ValidationCode::Vcarm,
         "constrains `property` on DV_QUANTITY, which RM 1.2.0 does not define (the 2013 converter carried ADL 1.4 C_DV_QUANTITY.property into an attribute position)",
-    ),
-    (
-        "openEHR-EHR-OBSERVATION.apgar.v1.0.0.adls",
-        ValidationCode::Vttbk,
-        "term binding keys name paths that do not exist in the archetype (master03 VTTBK)",
     ),
     (
         "openEHR-EHR-OBSERVATION.blood_pressure.v1.0.0.adls",
@@ -990,6 +985,11 @@ fn upstream_adl2_pack_validates_or_is_adjudicated() {
 /// [`ADJUDICATED_ADL2_VALIDITY`]: the posture of the hosted sandbox, where
 /// `FerroTERM` serves LOINC beside the CDR.
 const ADJUDICATED_ADL2_LOINC: &[ValidityRefusal] = &[
+    (
+        "openEHR-EHR-OBSERVATION.apgar.v1.0.0.adls",
+        ValidationCode::Vetdf,
+        "binds the LOINC answer codes LA6713 to LA6727 without the check digit every LOINC code carries after its hyphen, so LOINC defines none of them (master03 VETDF)",
+    ),
     (
         "openEHR-EHR-OBSERVATION.braden_scale.v1.0.0.adls",
         ValidationCode::Vetdf,

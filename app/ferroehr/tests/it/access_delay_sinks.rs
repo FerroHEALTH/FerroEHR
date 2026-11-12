@@ -21,10 +21,9 @@ use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use crate::fixtures::{composition, uv};
-use ferroehr::config::access_delay::{AccessDelayConfig, AccessDelayPolicy};
 use ferroehr::extensions::outbox::{OutboxDomain, reconcile};
+use ferroehr::policy_register::Register;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::categories::CategoryMapConfig;
 use ferroehr::system_log::config::{AuditConfig, FhirFeedConfig, StoreConfig, SyslogConfig};
 use ferroehr::system_log::event::{
     AuditEvent, EmitOutcome, EventActionCode, EventOutcome, ObjectClass,
@@ -83,16 +82,15 @@ async fn service(
     let (sender, handle) = start(audit, None, Some(pool.clone()))
         .await
         .expect("the audit sender");
-    let classifier = CategoryMapConfig::default()
-        .compile()
-        .expect("the shipped map compiles");
-    let section = AccessDelayConfig {
-        categories: vec!["Patient-Summaries".to_owned()],
-        max_delay: Some(ferrohealth_config::units::Duration::from_hours(72)),
-    };
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
-        .with_audit(sender.clone())
-        .with_access_delay(AccessDelayPolicy::compile(&section, &classifier));
+        .with_audit(sender.clone());
+    svc.put_policy_register(
+        Register::AccessDelay,
+        0,
+        r#"{"enabled": true, "categories": ["Patient-Summaries"], "max_delay": "72h"}"#,
+    )
+    .await
+    .expect("turn the access delay on");
     (svc, sender, handle)
 }
 

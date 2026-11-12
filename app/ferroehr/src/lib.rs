@@ -38,6 +38,9 @@
 //!   — the redacted deployment report `ferroehr report` writes.
 //! - [`support`] — the support period of this release, which every identity
 //!   surface states.
+//! - [`policy_register`] — the operational-policy admin registers (the audit
+//!   category map, the access delay and the Cedar policy set), versioned and
+//!   read on every request.
 //! - [`served_vocabulary`] — the deployment gap codes and OpenAPI family slugs
 //!   the server serves and the viewer names.
 
@@ -58,6 +61,7 @@ pub mod manufacturer;
 pub mod origins;
 pub mod outbound;
 pub mod party_binding;
+pub mod policy_register;
 pub mod privacy;
 pub mod report;
 pub mod served_vocabulary;

@@ -87,21 +87,27 @@ retention = 3
 sgb_v_309_controller = true
 ```
 
-### `[audit.categories]`
+### The audit category register
 
 The map every access record is classified through by EHDS category (Annex II
-3.2(c); see [the EHDS logging elements](../audit.md#the-ehds-logging-elements-mapped)).
-The classification is done by `ehds-logging`, the EHDS logging component the
-FerroHEALTH products share (FerroAUDIT); this section is the deployment's map.
+3.2(c); see [the EHDS logging elements](../audit.md#the-ehds-logging-elements-mapped))
+is an [admin register](../operational-policy.md#the-admin-registers), not a
+configuration key: you read and replace it through
+`{ext}/admin/registers/audit-categories`, every version is kept with its
+committer, and a change applies on the next request without a restart. The
+classification is done by `ehds-logging`, the EHDS logging component the
+FerroHEALTH products share (FerroAUDIT); the register is the deployment's map.
 A template id, or failing that a root archetype id, maps to a list of
 categories, or to the word `none` for data of no category. An access the map
 in force cannot classify is recorded `unclassified` with its ids, never
-refused.
+refused. `[audit.categories]` in `ferroehr.toml` is an unknown key and refuses
+boot.
 
-**The shipped map.** While the section declares no template and no archetype,
-the map FerroEHR ships applies
+**The shipped map.** While the register declares no template and no
+archetype, the map FerroEHR ships applies
 ([`app/ferroehr/assets/audit-categories.default.toml`](https://github.com/FerroHEALTH/FerroEHR/blob/main/app/ferroehr/assets/audit-categories.default.toml)).
-It names the published CKM templates and COMPOSITION archetypes whose purpose
+It is also the register's default, version 0, before anyone writes it. It
+names the published CKM templates and COMPOSITION archetypes whose purpose
 places their data in one priority category:
 
 | Key | Category |
@@ -115,32 +121,34 @@ places their data in one priority category:
 It leaves out the generic `report.v1` and `report-result.v1` containers, which
 carry laboratory, imaging and other reports alike, so an access through them
 is recorded `unclassified` instead of guessed. CKM publishes no composition for
-an electronic dispensation. A deployment that declares any template or
-archetype replaces the shipped map whole, so copy its entries into your own
-map to keep them. A national category declared alone keeps the shipped map.
+an electronic dispensation. A map that declares any template or archetype
+replaces the shipped map whole, so copy its entries into your own map to keep
+them. A national category declared alone keeps the shipped map.
 `shipped_map = false` with nothing declared leaves no map: every access is then
-recorded `unclassified`, and `deployment.profile = "production"` refuses to
-start on the `no_category_map` gap unless `deployment.accepts` names it.
+recorded `unclassified`. With `deployment.profile = "production"` and auditing
+on, the register refuses that write as the `no_category_map` gap unless
+`deployment.accepts` names it; this floor stays in `ferroehr.toml`.
 
-```toml
-[audit.categories]
-national = ["urn:oid:2.16.840.1.113883.2.4.3.11.60.1|beeld"]
-
-[audit.categories.templates]
-"International Patient Summary" = ["Patient-Summaries"]
-"Laboratory Report" = ["Laboratory-Reports"]
-
-[audit.categories.archetypes]
-"openEHR-EHR-COMPOSITION.report-result.v1" = ["Laboratory-Reports"]
-"openEHR-EHR-COMPOSITION.encounter.v1" = "none"
+```json
+{
+  "national": ["urn:oid:2.16.840.1.113883.2.4.3.11.60.1|beeld"],
+  "templates": {
+    "International Patient Summary": ["Patient-Summaries"],
+    "Laboratory Report": ["Laboratory-Reports"]
+  },
+  "archetypes": {
+    "openEHR-EHR-COMPOSITION.report-result.v1": ["Laboratory-Reports"],
+    "openEHR-EHR-COMPOSITION.encounter.v1": "none"
+  }
+}
 ```
 
-| Key | Type | Default | Description |
+| Member | Type | Default | Description |
 |---|---|---|---|
 | `shipped_map` | bool | `true` | Apply the map FerroEHR ships while no template and no archetype is declared. |
 | `national` | list of `<system>\|<code>` | empty | The national categories (EHDS Art. 14(1) third subparagraph) the map may name. |
-| `templates` | table of template id → list of category, or `"none"` | empty | Consulted first, by the template id the object was committed against. |
-| `archetypes` | table of archetype id → list of category, or `"none"` | empty | Consulted for an object whose template the map does not name, by its root archetype id. A key that is not an archetype id refuses boot. |
+| `templates` | object of template id → list of category, or `"none"` | empty | Consulted first, by the template id the object was committed against. |
+| `archetypes` | object of archetype id → list of category, or `"none"` | empty | Consulted for an object whose template the map does not name, by its root archetype id. A key that is not an archetype id refuses the write. |
 
 A priority category of EHDS Art. 14(1) is named by its code in HL7 Europe's
 `EEHRxFDocumentPriorityCategoryCS`: `Patient-Summaries`,
@@ -148,13 +156,15 @@ A priority category of EHDS Art. 14(1) is named by its code in HL7 Europe's
 `Laboratory-Reports` and `Discharge-Reports`, or as `<system>|<code>`. A
 national category is named by the `<system>|<code>` it is declared with. Keys
 compare case-insensitively. An unknown code, an empty list, a word other than
-`none`, or two keys that differ only in case refuses boot with a message naming
-the entry. A record stores each category as its `<system>|<code>` token.
+`none`, or two keys that differ only in case refuses the write with a message
+naming the entry, and so does a map that no longer names a category the
+[access-delay register](config-auth.md#the-access-delay-register) holds. A
+record stores each category as its `<system>|<code>` token.
 
-The map's SHA-256 digest is on the boot line, on `GET /management/info` under
-`audit.category_map`, and on every access record. At boot the map is also
-mirrored into the retention register, so a retention period can be keyed on a
-category through the [admin marks API](../operations-admin-apis.md).
+The digest of the map that classified a record is on the record. A write of
+the register also mirrors the map into the retention register in the same
+transaction, so a retention period can be keyed on a category through the
+[admin marks API](../operations-admin-apis.md).
 
 ### `[[authz.origin]]`: the origins a deployment recognises
 

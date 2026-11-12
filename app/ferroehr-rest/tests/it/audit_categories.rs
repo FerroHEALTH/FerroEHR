@@ -21,9 +21,9 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
 use ferroehr::config::rest::ApiConfig;
+use ferroehr::policy_register::Register;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::categories::CategoryMapConfig;
-use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
@@ -139,17 +139,21 @@ async fn app(
 ) -> (testkit::TestDb, PgPool, Router, String) {
     let (db, pool) = common::migrated_pool().await;
     let categories: CategoryMapConfig = serde_json::from_value(map).expect("the map parses");
-    let audit = AuditConfig {
-        categories,
-        ..common::local_audit()
-    };
-    let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
-        .await
-        .expect("the audit sender");
+    let (sender, _handle): (_, AuditHandle) =
+        start(common::local_audit(), None, Some(pool.clone()))
+            .await
+            .expect("the audit sender");
     let svc = Arc::new(
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
+    svc.put_policy_register(
+        Register::AuditCategories,
+        0,
+        &serde_json::to_string(&categories).expect("the map serializes"),
+    )
+    .await
+    .expect("the category register takes the map");
     let app = ferroehr_rest::build_full(config(), svc, None, observability)
         .await
         .expect("build app");

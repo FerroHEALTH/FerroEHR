@@ -136,8 +136,6 @@ config:
       role_issuers: [https://keycloak.example.com/realms/ferroehr]
     abac:
       enabled: true
-      cedar:
-        policy_dir: /etc/ferroehr
   # Microsoft Entra ID provisions the professionals through SCIM with a
   # token of the machines issuer; the logins of the persons issuer then bind
   # to the PERSON carrying their key under the same identifier issuer.

@@ -2417,6 +2417,285 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/admin/registers/{register}": {
+      "get": {
+        "tags": [
+          "admin-registers"
+        ],
+        "summary": "Read one operational-policy register\n(`GET /admin/registers/{register}`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_policy_register_read",
+        "parameters": [
+          {
+            "name": "register",
+            "in": "path",
+            "description": "`audit-categories`, `access-delay` or `cedar-policies`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{ \"register\": …, \"version\": …, \"committer\": …, \"committed_at\": …, \"document\": … }`: the newest version, or version 0, the default no one committed. The `ETag` is the version.",
+            "content": {
+              "application/json": {
+                "schema": {},
+                "example": {
+                  "register": "access-delay",
+                  "version": 2,
+                  "committer": "admin@example.org",
+                  "committed_at": "2026-11-12T09:15:00Z",
+                  "document": {
+                    "enabled": true,
+                    "categories": [
+                      "Laboratory-Reports"
+                    ],
+                    "max_delay": "72h"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such register.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin-registers"
+        ],
+        "summary": "Replace one operational-policy register whole\n(`PUT /admin/registers/{register}`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_policy_register_write",
+        "parameters": [
+          {
+            "name": "register",
+            "in": "path",
+            "description": "`audit-categories`, `access-delay` or `cedar-policies`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The version this write replaces, as the read's `ETag` gave it.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The whole register document. `audit-categories`: `{ \"shipped_map\": …, \"national\": [...], \"templates\": {...}, \"archetypes\": {...} }`. `access-delay`: `{ \"enabled\": …, \"categories\": [...], \"max_delay\": \"72h\" }`. `cedar-policies`: `{ \"policies\": \"<Cedar text>\" }`.",
+          "content": {
+            "application/json": {
+              "schema": {},
+              "example": {
+                "enabled": true,
+                "categories": [
+                  "Laboratory-Reports"
+                ],
+                "max_delay": "72h"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The new version, as a read answers it, with its version as the `ETag`. The next request on every replica runs under it.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`If-Match` is missing or no version, or the document is refused whole: not the register's shape, a category map that does not compile or classifies nothing under the production floor, an access delay with an unusable limit or an unknown category, or a Cedar policy set that does not parse or validate. The version in force stays.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such register.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "`If-Match` names a version that is no longer the newest: read the register again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not `application/json`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/registers/{register}/history": {
+      "get": {
+        "tags": [
+          "admin-registers"
+        ],
+        "summary": "Read every version of one operational-policy register\n(`GET /admin/registers/{register}/history`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_policy_register_history",
+        "parameters": [
+          {
+            "name": "register",
+            "in": "path",
+            "description": "`audit-categories`, `access-delay` or `cedar-policies`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{ \"register\": …, \"versions\": [...] }`: every version as a read answers it, newest first, ending with version 0, the default.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such register.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/admin/report/composition_version/count": {
       "get": {
         "tags": [
@@ -25920,6 +26199,10 @@
     {
       "name": "message",
       "description": "EHR-Extract export and import. OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no message/extract API at all, so no released operation governs any route here; they carry the ordinary clinical authentication class, not the admin gate."
+    },
+    {
+      "name": "admin-registers",
+      "description": "The operational-policy admin registers: the audit category map, the EHDS Art. 3(3) access delay and the Cedar policy set, each read, replaced whole over the version `If-Match` names and listed by version, by `admin_role` only. Every version keeps its committer, and a change applies on the next request with no restart. OUR OWN EXTENSION: no openEHR spec governs operational policy."
     },
     {
       "name": "admin-outbox",

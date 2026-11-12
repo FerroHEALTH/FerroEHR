@@ -15,7 +15,7 @@
 #
 # What you must set
 #
-# This file lists 921 keys. A deployment that holds real data sets the 10
+# This file lists 913 keys. A deployment that holds real data sets the 10
 # below; every other key is optional and runs on the built-in default its line
 # shows, or stays unset where its note says so.
 #
@@ -968,15 +968,6 @@ patient_claim = "patient_id"
 # `false`). Optional (infrastructure).
 check_directory = false
 
-# Embedded-Cedar settings.
-[authz.abac.cedar]
-# Directory of `*.cedar` policy files (required when `engine = cedar`).
-# Optional, unset by default (infrastructure).
-#? policy_dir = ""
-# Optional periodic hot-reload interval; off when unset. Optional, unset by
-# default (infrastructure).
-#? reload_interval = "500ms"
-
 # Remote-PDP settings.
 [authz.abac.remote]
 
@@ -1903,26 +1894,6 @@ emergency_purpose_codes = []
 # unset by default (infrastructure).
 #? legal_basis = ""
 
-# The template and archetype map every access is classified through by EHDS
-# priority category (Annex II 3.2(c)). Empty by default, so the map FerroEHR
-# ships applies; an unmapped access is recorded `unclassified`.
-[audit.categories]
-# Whether the map FerroEHR ships applies while this section declares no
-# template and no archetype (`shipped_map`, on by default). Off with nothing
-# declared, no map applies and every access is recorded `unclassified`, which
-# `deployment.profile = "production"` refuses as the `no_category_map` gap.
-# Optional.
-shipped_map = true
-# The national categories (Art. 14(1) third subparagraph), each
-# `<system>|<code>`. Optional.
-national = []
-# Template id → categories (`[audit.categories.templates]`), consulted first.
-# Optional.
-templates = {}
-# Archetype id → categories (`[audit.categories.archetypes]`), consulted for
-# an object whose template the map does not name. Optional.
-archetypes = {}
-
 # The local Audit Record Repository.
 [audit.store]
 # Persist every record locally (`FERROEHR__AUDIT__STORE__ENABLED`). **On by
@@ -2431,22 +2402,6 @@ subjects = false
 # How the caller's value is matched against the leaf. Required in its table
 # (trust).
 # kind = "text"
-
-# The EHDS Art. 3(3) delay of the person's own access; absent, off.
-#? [privacy.access_delay]
-# The categories whose new compositions are held at creation, named as
-# `[audit.categories]` names one: a priority category of Art. 14(1) by its code
-# (`Laboratory-Reports`, `Medical-Imaging`, …) or as `<system>|<code>`, or a
-# national category the map declares
-# (`FERROEHR__PRIVACY__ACCESS_DELAY__CATEGORIES`, comma-separated). Empty holds
-# nothing at creation, and a professional still holds an object by hand.
-# Optional (trust).
-#? categories = []
-# How long a hold lasts at most, a whole number of hours from `"1h"` to
-# `MAX_HOURS` hours (`FERROEHR__PRIVACY__ACCESS_DELAY__MAX_DELAY`): the length
-# of a hold placed at creation and the latest end a professional may give one.
-# Required. Optional, unset by default (trust).
-#? max_delay = "500ms"
 
 # The record itself: the subject index, versioning, signing, the query engine,
 # the change feed and multimedia.

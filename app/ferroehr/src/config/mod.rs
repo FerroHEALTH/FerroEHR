@@ -26,7 +26,6 @@
 pub mod loader;
 
 pub mod abac_rules;
-pub mod access_delay;
 pub mod agreement;
 pub mod auth;
 pub mod auth_section;
@@ -170,9 +169,6 @@ pub struct FerroEhrConfig {
     pub ehr_index: Removed,
     /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
-    pub access_delay: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
     pub versioning: Removed,
     /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
     #[serde(skip_serializing)]
@@ -223,7 +219,6 @@ impl Default for FerroEhrConfig {
             demographic: Removed::default(),
             cohort: Removed::default(),
             ehr_index: Removed::default(),
-            access_delay: Removed::default(),
             versioning: Removed::default(),
             scim: Removed::default(),
         }

@@ -8,7 +8,7 @@
 # `secrets:` and `database:`) — mounted as read-only FILES wherever the config key
 # has a `*_file` sibling, which is now everything except `audit.fhir_feed.endpoint.url` and
 # `record.multimedia.access_key_id`; only the mounted PATH is passed as env. `config.files` mounts genuinely file-shaped material
-# (Cedar policies, ATNA PEMs, the PGP key, JWKS) that in-TOML `*_path`/`*_file`
+# (ATNA PEMs, the PGP key, JWKS) that in-TOML `*_path`/`*_file`
 # keys point at. `extraEnv` is the escape hatch for anything not surfaced here.
 #
 # Every feature below defaults to the SAME state as the binary (all optional
@@ -1117,23 +1117,6 @@ config:
   # ([audit.syslog] classic DICOM/syslog, [audit.fhir_feed] RESTful ATNA).
   audit:
     enabled: true
-    # [audit.categories] — the EHDS priority category of every access,
-    # classified by ehds-logging (FerroAUDIT): which categories each template
-    # id, and failing that each root archetype id, holds. A priority category
-    # is its HL7 Europe code (Patient-Summaries, Electronic-Prescriptions,
-    # Electronic-Dispensations, Medical-Imaging, Laboratory-Reports,
-    # Discharge-Reports) or <system>|<code>; a national one is declared under
-    # national as <system>|<code>; data of no category map to the word none.
-    # EMPTY by default: an access the map cannot classify is recorded
-    # "unclassified", never refused. Example:
-    #   templates:
-    #     "International Patient Summary": [Patient-Summaries]
-    #   archetypes:
-    #     openEHR-EHR-COMPOSITION.report-result.v1: [Laboratory-Reports]
-    #     openEHR-EHR-COMPOSITION.encounter.v1: none
-    categories:
-      templates: {}
-      archetypes: {}
 
   # [terminology] — the outbound FHIR terminology server; absent, none is
   # asked. Not defaulted here: with `terminology.enabled` +
@@ -1145,9 +1128,10 @@ config:
   # ── Mounted config files (NOT part of the TOML above) ──────────────────────
   # Each key becomes /etc/ferroehr/<key> from a chart Secret (opaque, read-only),
   # alongside ferroehr.toml. Use for file-shaped material an in-TOML `*_file`
-  # key points at: the PGP key (record.signing.key_file), Cedar policies
-  # (authz.abac.cedar.policy_dir), ATNA PEMs, a JWKS file (auth.jwks_file), the commercial
-  # licence token (deployment.licence_file).
+  # key points at: the PGP key (record.signing.key_file), ATNA PEMs, a JWKS
+  # file (auth.jwks_file), the commercial licence token
+  # (deployment.licence_file). The Cedar policy set is an admin register,
+  # written through the admin API, and no file.
   files: {}
   # signing.asc: |
   #   -----BEGIN PGP PRIVATE KEY BLOCK-----

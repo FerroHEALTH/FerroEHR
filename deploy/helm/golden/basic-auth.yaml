@@ -23,7 +23,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), but from EVERY source — this policy narrows ports, NOT sources (networkPolicy.ingressAllowAll=true). Set networkPolicy.ingressFrom for a PHI workload.
   labels:
-    helm.sh/chart: ferroehr-26.0.0
+    helm.sh/chart: ferroehr-27.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -51,7 +51,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-26.0.0
+    helm.sh/chart: ferroehr-27.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -72,7 +72,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-26.0.0
+    helm.sh/chart: ferroehr-27.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -101,7 +101,7 @@ kind: Secret
 metadata:
   name: ferroehr-env
   labels:
-    helm.sh/chart: ferroehr-26.0.0
+    helm.sh/chart: ferroehr-27.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -113,14 +113,14 @@ stringData:
 ---
 # Source: ferroehr/templates/secret.yaml
 # Mounted config files (TOML/PEM) at /etc/ferroehr — file-shaped material an
-# in-TOML `*_path`/`*_file` key points at: the PGP key, Cedar/ABAC policies,
-# ATNA PEMs, a JWKS blob. Mounted alongside ferroehr.toml.
+# in-TOML `*_path`/`*_file` key points at: the PGP key, ATNA PEMs, a JWKS
+# blob. Mounted alongside ferroehr.toml.
 apiVersion: v1
 kind: Secret
 metadata:
   name: ferroehr-config
   labels:
-    helm.sh/chart: ferroehr-26.0.0
+    helm.sh/chart: ferroehr-27.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -150,7 +150,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-26.0.0
+    helm.sh/chart: ferroehr-27.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -173,9 +173,6 @@ data:
     
     [audit]
       enabled = true
-      [audit.categories]
-        [audit.categories.archetypes]
-        [audit.categories.templates]
     
     [auth]
       enabled = true
@@ -278,7 +275,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr-definitions
   labels:
-    helm.sh/chart: ferroehr-26.0.0
+    helm.sh/chart: ferroehr-27.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -605,7 +602,7 @@ kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-26.0.0
+    helm.sh/chart: ferroehr-27.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -635,7 +632,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-26.0.0
+    helm.sh/chart: ferroehr-27.0.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -658,9 +655,9 @@ spec:
         # Roll pods when anything the process reads AT BOOT changes: the rendered
         # ferroehr.toml (wherever it lands), the mounted config files, and the
         # secret values. Hashing the ConfigMap template alone missed the last two,
-        # so a rotated passphrase or an edited Cedar policy propagated into the
+        # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 09007c18a32ff235a43ff006d532aa8eae2a2086279b0d5738232133c62539e7
+        checksum/config: 72d581ee89d2cfc28838ea1254ad4c7245d29f6adc822646eaeee3f061dc322e
         # A changed definition list rolls the pods, so the init container loads it.
         checksum/definitions: 3755fd863c9f72a1eb98519a38f76b4769be6b893a23ca13c76471c8bbcdfcf4
       labels:

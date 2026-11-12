@@ -227,10 +227,15 @@ pub struct FerroEhrService {
     /// the binary installs the `[pixm]` provider or a test opts in to the
     /// local map.
     pub(in crate::service) ehr_index: ehr_index::provider::EhrIndexProvider,
-    /// The `[privacy.access_delay]` policy (EHDS Art. 3(3)); `None` in [`Self::new`],
-    /// which leaves the person's access immediate.
-    pub(in crate::service) access_delay:
-        Option<Arc<crate::config::access_delay::AccessDelayPolicy>>,
+    /// The operational-policy admin registers in force: the audit category
+    /// map, the EHDS Art. 3(3) access delay and the Cedar policy set, each at
+    /// its default in [`Self::new`] until [`Self::refresh_policy_registers`]
+    /// reads the stored versions.
+    pub(in crate::service) registers: Arc<crate::policy_register::LiveRegisters>,
+    /// Whether a category register that classifies nothing is refused: the
+    /// `no_category_map` floor of a production deployment that audits and has
+    /// not accepted the gap by name. `false` in [`Self::new`].
+    pub(in crate::service) require_category_map: bool,
     /// The demographic definitions of the shared party mapping; empty in
     /// [`Self::new`], which validates no party against a template.
     pub(in crate::service) party_templates: Arc<demographic::template::MappedPartyTemplates>,
@@ -296,7 +301,10 @@ impl FerroEhrService {
             privacy: Arc::new(crate::privacy::PrivacyPolicy::default()),
             cohort: Arc::new(linkage::cohort::config::CohortConfig::default()),
             ehr_index: ehr_index::provider::EhrIndexProvider::Unconfigured,
-            access_delay: None,
+            registers: Arc::new(crate::policy_register::LiveRegisters::new(
+                pools.clinical.clone(),
+            )),
+            require_category_map: false,
             party_templates: Arc::default(),
             binding: Arc::default(),
             import_policy: Arc::default(),
@@ -445,6 +453,7 @@ impl FerroEhrService {
     /// it and wires it here.
     #[must_use]
     pub fn with_audit(mut self, sender: AuditSender) -> Self {
+        self.registers.attach_audit(sender.clone());
         self.audit = Some(sender);
         self
     }
@@ -564,7 +573,7 @@ impl FerroEhrService {
             outbox_enabled: self.outbox_enabled,
             skip_identical_resend: self.skip_identical_resend,
             binding: &self.binding,
-            access_delay: self.access_delay.as_deref(),
+            access_delay: self.registers.access_delay().policy.clone(),
             direct_origin: self.origins.direct_origin(
                 crate::versioning::committer::current_committer()
                     .and_then(|committer| committer.client)

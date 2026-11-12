@@ -141,7 +141,4 @@ pub struct PrivacyConfig {
     /// limits.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub cohort: crate::service::linkage::cohort::config::CohortConfig,
-    /// `[privacy.access_delay]` — the EHDS Art. 3(3) delay of the person's
-    /// own access; absent, off.
-    pub access_delay: Option<crate::config::access_delay::AccessDelayConfig>,
 }

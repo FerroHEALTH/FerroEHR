@@ -611,9 +611,11 @@ applies to queries whether or not `patient_claim` is set. Without
 `patient_namespace`, a query that touches a subject id held under several
 namespaces is refused with `403`, because a bare id would name both subjects.
 
-- **`[authz.abac.cedar]`:** `policy_dir` (path, required when
-  `engine = "cedar"` and ABAC is on) and `reload_interval` (duration, unset,
-  an optional hot-reload interval).
+- **The Cedar policy set** is the
+  [Cedar admin register](../operational-policy.md#the-cedar-policy-register),
+  not a configuration key: `[authz.abac.cedar]` is an unknown table and
+  refuses boot. Until the register is written the set is empty, and Cedar,
+  deny-by-default, permits nothing.
 - **`[authz.abac.remote.endpoint]`:** the policy service, as the family's
   [endpoint table](config-integrations.md#the-endpoint-table): `url` (required
   when `engine = "remote"`, and it must end with `/`, because the policy name
@@ -643,8 +645,8 @@ namespaces is refused with `403`, because a bare id would name both subjects.
 > missing one is a boot error. At runtime a kind with no policy can only be
 > **denied**, since there is no policy to ask and permitting would be a silent
 > hole, so the misconfiguration is caught at startup rather than turning into
-> blanket `403`s on live traffic. The Cedar engine reads its policies from
-> `authz.abac.cedar.policy_dir` and needs no entries here.
+> blanket `403`s on live traffic. The Cedar engine reads its policies from the
+> Cedar admin register and needs no entries here.
 
 ## `[api] admin`
 
@@ -966,26 +968,31 @@ Entra writes `Replace` and `Add` with a capital letter, disables a User with
 null. A value cleared in Entra therefore stays in FerroEHR until the User is
 replaced or deleted, or an administrator removes it.
 
-## `[privacy.access_delay]`
+## The access-delay register
 
-The EHDS Art. 3(3) delay of the person's own access to newly registered data,
-a Member State option: write the table only where your Member State's rule
-provides for the delay; its presence turns the delay on. What it does is on [delayed access by the
-person](../security.md#delayed-access-by-the-person-ehds-art-33).
+The EHDS Art. 3(3) delay of the person's own access to newly registered data
+is a Member State option, and an
+[admin register](../operational-policy.md#the-admin-registers), not a
+configuration key: you turn it on through
+`{ext}/admin/registers/access-delay` only where your Member State's rule
+provides for the delay, every version is kept with its committer, and a
+change applies on the next request without a restart. `[privacy.access_delay]`
+in `ferroehr.toml` is an unknown key and refuses boot. What the delay does is
+on [delayed access by the person](../security.md#delayed-access-by-the-person-ehds-art-33).
 
-| Key | Type | Default | Description |
+| Member | Type | Default | Description |
 |---|---|---|---|
-| `categories` | list of string | `[]` | The categories held at creation, named as [`[audit.categories]`](config-audit.md) names one: a priority category of Art. 14(1) by its code (`Laboratory-Reports`, `Medical-Imaging`, …) or as `<system>|<code>`, or a national category the map declares. A name the map does not hold, and `none`, refuse the start. Empty holds nothing at creation; a professional still holds a composition by hand. |
-| `max_delay` | duration | required | The limit of a hold, a whole number of hours from `"1h"` to `"8784h"` (one year): new compositions of the listed categories are held from patient-context requests until a professional releases them or it passes. Absent, the person's access is immediate (Art. 3(1)), every hold already placed stops withholding, and the admin route refuses a new hold with **400**. It is the length of a hold placed at creation and the latest end a professional may give one. Art. 3(3) allows the delay "for a limited period of time" only; the period is the Member State's to set. |
+| `enabled` | bool | `false` | Whether the delay applies. Off, the person's access is immediate (Art. 3(1)), every hold already placed stops withholding, and the admin route refuses a new hold with **400**. |
+| `categories` | list of string | `[]` | The categories held at creation, named as the [audit category register](config-audit.md#the-audit-category-register) names one: a priority category of Art. 14(1) by its code (`Laboratory-Reports`, `Medical-Imaging`, …) or as `<system>\|<code>`, or a national category the map declares. A name the map does not hold, and `none`, refuse the write. Empty holds nothing at creation; a professional still holds a composition by hand. |
+| `max_delay` | duration | required while enabled | The limit of a hold, a whole number of hours from `"1h"` to `"8784h"` (one year): new compositions of the listed categories are held from patient-context requests until a professional releases them or it passes. It is the length of a hold placed at creation and the latest end a professional may give one. Art. 3(3) allows the delay "for a limited period of time" only; the period is the Member State's to set. |
 
-```toml
-[privacy.access_delay]
-categories = ["Laboratory-Reports", "Medical-Imaging"]
-max_delay = "7d"
+```json
+{
+  "enabled": true,
+  "categories": ["Laboratory-Reports", "Medical-Imaging"],
+  "max_delay": "7d"
+}
 ```
-
-The environment forms are `FERROEHR__PRIVACY__ACCESS_DELAY__CATEGORIES`
-(comma-separated) and `FERROEHR__PRIVACY__ACCESS_DELAY__MAX_DELAY`.
 
 ## `[auth.smart]`
 

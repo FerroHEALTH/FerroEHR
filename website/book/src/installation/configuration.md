@@ -300,7 +300,7 @@ ticked by being present:
 | `open_subject_namespace` | `[privacy] subject_namespaces` declared, so an `EHR_STATUS` subject is an opaque pseudonym |
 | `audit_off` | `[audit]` enabled with a durable sink (the local store, syslog or the FHIR feed) |
 | `audit_fails_open` | `[audit] fail_mode = "closed"`, so an operation whose access record cannot be taken is refused instead of succeeding unlogged |
-| `no_category_map` | A category map applies while auditing is on: the one FerroEHR ships (the default) or `[audit.categories]` templates and archetypes of your own, so every access record names the categories of the data it reached (EHDS Annex II 3.2(c)). The gap opens only with `[audit.categories] shipped_map = false` and nothing declared |
+| `no_category_map` | A category map applies while auditing is on: the one FerroEHR ships (the default) or templates and archetypes of your own in the [audit category register](config-audit.md#the-audit-category-register), which refuses a write that opens this gap, so every access record names the categories of the data it reached (EHDS Annex II 3.2(c)). The gap opens only with `[audit.categories] shipped_map = false` and nothing declared |
 | `open_ehr_access_default` | `[authz.rbac] ehr_access_default = "restricted"`, so an EHR carrying no `ACCESS_CONTROL_SETTINGS` is reachable only by an admin. The shipped default is `open`. The setting is enforced with `[authz.rbac] enabled` on or off |
 | `migrate_on_runtime_credential` | `[database] migrate_url` set, or `migrations = "verify"`, so no credential that serves requests can alter the schema. Evaluated per domain database: a domain relocated to a database of its own is prepared on `[database.<domain>] migrate_url` when that is set, and on that domain's runtime DSN, which opens the gap, when it is not |
 | `auth_off` | `[auth] enabled = true`, so no request is served unauthenticated (CRA Annex I Part I(2)(d)) |
@@ -339,7 +339,6 @@ rather than inherit from a quickstart. See
 | `[auth]`, `[authz]` | Authentication (Basic, OAuth2/OIDC) and RBAC/ABAC | [Authentication & access](config-auth.md) |
 | `[management]` | The ops-introspection surface | [Authentication & access](config-auth.md) |
 | `[auth.smart]` | SMART App Launch discovery and scope enforcement | [Authentication & access](config-auth.md) |
-| `[privacy.access_delay]` | The EHDS Art. 3(3) delay of the person's own access to new data, off by default | [Authentication & access](config-auth.md#privacyaccess_delay) |
 | `[record.signing]` | VERSION signing and read-time verification | [Authentication & access](config-auth.md) |
 | `[record.versioning]` | The opt-in answer to an update whose content equals the current version's, off by default | [Authentication & access](config-auth.md#recordversioning) |
 | `[record.query]` | AQL execution budgets and result ceilings | [Integrations](config-integrations.md) |

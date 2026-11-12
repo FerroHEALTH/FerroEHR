@@ -2,8 +2,10 @@
 
 Illustrative embedded-Cedar policies for the FerroEHR ABAC layer
 (no openEHR spec governs authorization — our own design; the shipped rules
-live in `.claude/rules/auth.md`). Point `abac.cedar.policy_dir` at a
-copy of this directory (or your own) to try the embedded engine.
+live in `.claude/rules/auth.md`). Write a file of this directory (or your
+own policies) as the `cedar-policies` admin register,
+`PUT {ext}/admin/registers/cedar-policies` with `{"policies": "<the file>"}`,
+to try the embedded engine; the write is refused unless the set validates.
 
 `consent.cedar` shows the shape of a consent rule against the shipped schema —
 a decision over subject and resource attributes in NIST SP 800-162's sense:

@@ -195,8 +195,8 @@ true
 
 {{/*
 The directory the file-borne secrets are mounted at. Deliberately NOT under
-/etc/ferroehr: that path is the config projection, and authz.abac.cedar.policy_dir
-commonly points at it, so a secrets subdirectory there would be walked as policy.
+/etc/ferroehr: that path is the config projection the server reads its files
+from, and a secrets subdirectory there would sit among them.
 */}}
 {{- define "ferroehr.secretMountPath" -}}
 /etc/ferroehr-secrets
