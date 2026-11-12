@@ -76,6 +76,11 @@ struct Seeded {
 /// pruned the partition or merely found nothing in it — so the archived EHR is
 /// part of the fixture, not decoration.
 async fn seed(svc: &FerroEhrService, pool: &PgPool) -> Seeded {
+    seed_with_history(svc, pool, 2).await
+}
+
+/// [`seed`] with `supersessions` superseding versions on each composition.
+async fn seed_with_history(svc: &FerroEhrService, pool: &PgPool, supersessions: u32) -> Seeded {
     let mut first: Option<Seeded> = None;
     for index in 0..8 {
         let ehr = crate::fixtures::create_ehr(svc).await;
@@ -89,7 +94,7 @@ async fn seed(svc: &FerroEhrService, pool: &PgPool) -> Seeded {
         // Each supersession carries content of its own, so every version
         // holds its own node rows: content equal to the preceding tip's would
         // share that tip's rows (#4415) and leave the seed one tree per object.
-        for supersession in 1..=2 {
+        for supersession in 1..=supersessions {
             let body = composition(&format!("plan shapes {index} supersession {supersession}"));
             committed = svc
                 .update_composition(ehr, committed.vo_id, uv(&body, "251", Some(&latest)))
@@ -161,6 +166,8 @@ struct Scan {
     relation: String,
     /// The index the node used, where it used one.
     index: Option<String>,
+    /// The condition the node bound that index with, where it used one.
+    index_cond: Option<String>,
     /// Rows the node returned, averaged over its loops — `PostgreSQL` 18
     /// reports this as a fraction rather than an integer
     /// (<https://www.postgresql.org/docs/18/sql-explain.html>).
@@ -197,6 +204,10 @@ fn scans(plan: &Value) -> Vec<Scan> {
                     .get("Index Name")
                     .and_then(Value::as_str)
                     .map(ToOwned::to_owned),
+                index_cond: node
+                    .get("Index Cond")
+                    .and_then(Value::as_str)
+                    .map(ToOwned::to_owned),
                 rows: node
                     .get("Actual Rows")
                     .and_then(Value::as_f64)
@@ -224,6 +235,10 @@ fn scans(plan: &Value) -> Vec<Scan> {
             && last.index.is_none()
         {
             last.index = Some(index.to_owned());
+            last.index_cond = node
+                .get("Index Cond")
+                .and_then(Value::as_str)
+                .map(ToOwned::to_owned);
         }
         for child in node
             .get("Plans")
@@ -250,11 +265,16 @@ fn render(scans: &[Scan]) -> String {
         .iter()
         .map(|scan| {
             format!(
-                "  {} on {} via {} → {} rows{}",
+                "  {} on {} via {}{} → {} rows over {} loops{}",
                 scan.node_type,
                 scan.relation,
                 scan.index.as_deref().unwrap_or("(no index)"),
+                scan.index_cond
+                    .as_deref()
+                    .map(|cond| format!(" {cond}"))
+                    .unwrap_or_default(),
                 scan.rows,
+                scan.loops,
                 if scan.executed {
                     ""
                 } else {
@@ -847,6 +867,13 @@ async fn explain_aql(pool: &PgPool, prepared: ferroehr::aql::sql::PreparedQuery)
     plan
 }
 
+/// Supersessions of each composition in the population test's seed: a
+/// history long enough that reading every version costs the planner more
+/// than probing one per object, as it does on a store whose objects are
+/// edited (#3453). Over the default seed the two plans tie, and the
+/// planner read the whole partition once (#5464).
+const LONG_HISTORY: u32 = 12;
+
 /// The CONTAINS chain both AQL tests run: every COMPOSITION of the store.
 const CONTAINS_AQL: &str = "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c";
 
@@ -903,7 +930,7 @@ async fn aql_over_the_population_reads_the_hot_partition_only() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    seed(&svc, &pool).await;
+    seed_with_history(&svc, &pool, LONG_HISTORY).await;
 
     let plan = explain_aql(&pool, aql_sql(CONTAINS_AQL, Vec::new())).await;
     let scans = scans(&plan);
@@ -922,6 +949,7 @@ async fn aql_over_the_population_reads_the_hot_partition_only() {
         render(&scans)
     );
     assert_head_join_by_key(&scans);
+    assert_version_probed_per_object(&scans);
     // H9: nothing attaches a row-security qual to the population scan.
     assert_no_policy_qual(&plan, &scans);
 }
@@ -1000,11 +1028,10 @@ async fn a_population_count_of_whole_objects_reads_no_node() {
 /// The `LATEST_VERSION` binding under `CONTAINS` costs one key probe per
 /// object, not a walk of its trunk (#3453).
 ///
-/// The head row is reached by `pk_vo_head`, and the version row through its
-/// primary key with `sys_version` bound, never through the at-time index,
-/// which is the only index a `vo_id`-alone probe can use and which made the
-/// planner read every trunk version of the object per node row (75 601 of
-/// 93 255 buffers in the class-`s` population `CONTAINS` recorded on #3350).
+/// The head row is reached by `pk_vo_head`, and the version row by a key
+/// probe, never through the at-time index, which made the planner read every
+/// trunk version of the object per node row (75 601 of 93 255 buffers in the
+/// class-`s` population `CONTAINS` recorded on #3350).
 /// A probe of a row by a three-column key touches the index's root and leaf
 /// and the heap page: a ceiling of eight buffers a loop holds that reading
 /// and fails the walk, whose per-loop cost was about twenty-two.
@@ -1032,6 +1059,28 @@ fn assert_head_join_by_key(scans: &[Scan]) {
             render(scans)
         );
     }
+}
+
+/// The version row of each head is probed with its object's `vo_id` bound
+/// (#3453, #5464).
+///
+/// [`assert_head_join_by_key`] prices a probe at eight buffers a loop, so the
+/// scan it prices must be one: a scan of the partition, run once, costs per
+/// loop the partition's size, which no key lookup decides.
+fn assert_version_probed_per_object(scans: &[Scan]) {
+    let versions = on(scans, "version_hot");
+    assert!(
+        !versions.is_empty()
+            && versions.iter().all(|version| {
+                version
+                    .index_cond
+                    .as_deref()
+                    .is_some_and(|cond| cond.contains("(vo_id = "))
+            }),
+        "#3453: the version row is probed by its object's key, not read off a scan of \
+         every version:\n{}",
+        render(scans)
+    );
 }
 
 /// The newest compositions of the population, the first page: the ordering
