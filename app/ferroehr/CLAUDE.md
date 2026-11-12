@@ -19,9 +19,10 @@ parties by archetype and carries their default definitions from
 `assets/definitions/policy/`, and `shipped` carries the default demographic
 definitions of `deploy/definitions/` and the ids the default mapping names;
 `service::demographic::default_definitions` seeds both sets at boot when
-absent; `grants` derives the system `AGENT`s and the policy `ROLE`
-capabilities into the side table in each commit, refuses a capability above
-`[authz.grants] allowed`, and keeps them in memory per replica
+absent; `grants` derives the client identifiers of any `ACTOR` and the
+operations of the `ferroehr-operations` terminology coded in any `ROLE`'s
+capability credentials into the side table in each commit, never by
+archetype, refuses an operation above `[authz.grants] allowed`, and keeps them in memory per replica
 (`LiveGrants`, invalidated through `NOTIFY`) for `Capabilities::current()`),
 `origins` (the
 `[origins]` register of recognised data origins, EHDS Annex II 3.4),

@@ -1,15 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! [`Capabilities`]: what one caller may do by the policy parties, resolved
-//! once per request, and the typed reading of a grant's credentials.
+//! [`Capabilities`]: what one caller may do by the policy grants, resolved
+//! once per request, and the reading of a grant's credentials.
 //!
 //! The REST layer resolves the caller's capabilities after authentication
 //! and runs the request inside them, so a check anywhere in the request reads
-//! them with [`Capabilities::current`]. A grant is a `CAPABILITY` of a policy
-//! `ROLE` the caller performs that holds on the request's date and instant,
-//! of a kind `[authz.grants] allowed` admits. No openEHR spec gives a
-//! capability an authorization meaning: our own design.
+//! them with [`Capabilities::current`]. A grant is an operation of
+//! [`crate::party_binding::grants::operation::TERMINOLOGY`] a `CAPABILITY` of a `ROLE` the caller performs holds,
+//! in force on the request's date and instant, of an operation
+//! `[authz.grants] allowed` admits. No openEHR spec gives a capability an
+//! authorization meaning: our own design.
 
 #![expect(
     clippy::disallowed_types,
@@ -23,8 +24,8 @@ use std::sync::Arc;
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::party_binding::grants::derive::is_node;
-use crate::party_binding::grants::kind::GrantKind;
+use crate::party_binding::grants::derive::{coded, walk};
+use crate::party_binding::grants::operation::Operation;
 
 tokio::task_local! {
     /// The capabilities of the caller of the running request.
@@ -34,9 +35,9 @@ tokio::task_local! {
 /// Who a capability lookup is for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Actor<'a> {
-    /// A system client, by the issuer of its token and its OAuth 2.0
-    /// `client_id`: the `AGENT` carrying that client identifier.
-    System {
+    /// A client, by the issuer of its token and its OAuth 2.0 `client_id`:
+    /// the `ACTOR` carrying that client identifier.
+    Client {
         /// The token issuer.
         issuer: &'a str,
         /// The token's client.
@@ -46,54 +47,54 @@ pub enum Actor<'a> {
     Party(Uuid),
 }
 
-/// The state of a system `AGENT`'s head (RM common
+/// The state of a client `ACTOR`'s head (RM common
 /// `master06-change_control_package.adoc` §Version Lifecycle, §Abandoned and
 /// Inactive States).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AgentState {
+pub enum ClientState {
     /// `532|complete|`.
     Complete,
     /// `553|incomplete|`.
     Incomplete,
-    /// `800|inactive|`: the `AGENT` holds no grant.
+    /// `800|inactive|`: the `ACTOR` holds no grant.
     Inactive,
-    /// `801|abandoned|`: the `AGENT` holds no grant.
+    /// `801|abandoned|`: the `ACTOR` holds no grant.
     Abandoned,
 }
 
-impl AgentState {
+impl ClientState {
     /// The state a `version_lifecycle_state` code names.
     pub(crate) fn of(code: &str) -> Self {
         match code {
             "553" => Self::Incomplete,
             "800" => Self::Inactive,
             "801" => Self::Abandoned,
-            // NOTE: ck_binding_agent_lifecycle_state admits only 532, 553, 800
+            // NOTE: ck_binding_client_lifecycle_state admits only 532, 553, 800
             // and 801, so every other code is `532|complete|`.
             _ => Self::Complete,
         }
     }
 
-    /// Whether an `AGENT` in this state holds its grants.
+    /// Whether an `ACTOR` in this state holds its grants.
     #[must_use]
     pub const fn grants(self) -> bool {
         matches!(self, Self::Complete | Self::Incomplete)
     }
 }
 
-/// The system `AGENT` a client identifier names.
+/// The `ACTOR` a client identifier names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Agent {
-    /// The `AGENT`'s container.
+pub struct Client {
+    /// The `ACTOR`'s container.
     pub party: Uuid,
     /// The state of its head.
-    pub state: AgentState,
+    pub state: ClientState,
 }
 
-/// One grant in force: a `CAPABILITY` of a policy `ROLE`.
+/// One grant in force: an operation a `CAPABILITY` of a `ROLE` grants.
 #[derive(Clone, PartialEq)]
 pub struct Grant {
-    kind: GrantKind,
+    operation: Operation,
     role: Uuid,
     credentials: Option<Arc<Value>>,
 }
@@ -101,26 +102,26 @@ pub struct Grant {
 impl std::fmt::Debug for Grant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Grant")
-            .field("kind", &self.kind)
+            .field("operation", &self.operation)
             .field("role", &self.role)
             .finish_non_exhaustive()
     }
 }
 
 impl Grant {
-    /// The grant `kind` of the `ROLE` `role`, holding `credentials`.
-    pub(crate) fn new(kind: GrantKind, role: Uuid, credentials: Option<Arc<Value>>) -> Self {
+    /// The grant of `operation` by the `ROLE` `role`, holding `credentials`.
+    pub(crate) fn new(operation: Operation, role: Uuid, credentials: Option<Arc<Value>>) -> Self {
         Self {
-            kind,
+            operation,
             role,
             credentials,
         }
     }
 
-    /// The kind of grant.
+    /// The operation granted.
     #[must_use]
-    pub fn kind(&self) -> GrantKind {
-        self.kind
+    pub fn operation(&self) -> Operation {
+        self.operation
     }
 
     /// The container of the `ROLE` that carries it.
@@ -129,118 +130,115 @@ impl Grant {
         self.role
     }
 
-    /// Its credentials, read by the node ids of its `ROLE` archetype.
+    /// Its credentials, read by the elements the operation terminology names.
     #[must_use]
     pub fn credentials(&self) -> Credentials<'_> {
         Credentials(self.credentials.as_deref())
     }
 }
 
-/// The `credentials` of a grant, or one `CLUSTER` of them, read by node id.
+/// The `credentials` of a grant, or one `CLUSTER` of them, read by the
+/// elements [`crate::party_binding::grants::operation::TERMINOLOGY`] names.
 ///
-/// The node ids are the contract of the policy `ROLE` archetypes (the book's
-/// "Operational policy" page); a node of a specialised archetype (`id9.1`)
-/// is read as the node it redefines.
+/// An element or a cluster is read by the code of its `name`, a
+/// `DV_CODED_TEXT` of the operation terminology, wherever it sits in the
+/// tree, so a check reads a grant's scope (such as `template` or `facility`)
+/// in any archetype that codes it.
 #[derive(Debug, Clone, Copy)]
 pub struct Credentials<'a>(Option<&'a Value>);
 
 impl<'a> Credentials<'a> {
-    /// The items whose node is `node`, in document order.
-    fn items(self, node: &'a str) -> impl Iterator<Item = &'a Value> + 'a {
-        self.0
-            .and_then(|tree| tree.get("items"))
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-            .filter(move |item| {
-                item.get("archetype_node_id")
-                    .and_then(Value::as_str)
-                    .is_some_and(|held| is_node(held, node))
-            })
-    }
-
-    /// The `value` of each element `node`.
-    fn values(self, node: &'a str) -> impl Iterator<Item = &'a Value> + 'a {
-        self.items(node).filter_map(|item| item.get("value"))
-    }
-
-    /// The text of each `DV_TEXT` or `DV_CODED_TEXT` element `node`, such
-    /// as the templates a system client writes (`id9`).
+    /// The items below this tree whose `name` is `code`, in document order.
     #[must_use]
-    pub fn texts(self, node: &'a str) -> Vec<&'a str> {
-        self.values(node)
+    pub fn named(self, code: &str) -> Vec<&'a Value> {
+        let mut out = Vec::new();
+        if let Some(tree) = self.0.and_then(|tree| tree.get("items")) {
+            walk(tree, &mut |item| {
+                if item.get("name").and_then(coded) == Some(code) {
+                    out.push(item);
+                }
+            });
+        }
+        out
+    }
+
+    /// The `value` of each element `code` names.
+    fn values(self, code: &str) -> impl Iterator<Item = &'a Value> + use<'a> {
+        self.named(code)
+            .into_iter()
+            .filter_map(|item| item.get("value"))
+    }
+
+    /// The text of each `DV_TEXT` or `DV_CODED_TEXT` element `code` names,
+    /// such as the templates a grant writes (`template`).
+    #[must_use]
+    pub fn texts(self, code: &str) -> Vec<&'a str> {
+        self.values(code)
             .filter_map(|value| value.get("value").and_then(Value::as_str))
             .collect()
     }
 
-    /// The code of each `DV_CODED_TEXT` element `node`, such as the
-    /// operations of a data migration (`id9`: `at20`, `at21`, `at22`).
+    /// The code of each `DV_CODED_TEXT` element `code` names.
     #[must_use]
-    pub fn codes(self, node: &'a str) -> Vec<&'a str> {
-        self.values(node)
+    pub fn codes(self, code: &str) -> Vec<&'a str> {
+        self.values(code)
             .filter_map(|value| value.get("defining_code")?.get("code_string")?.as_str())
             .collect()
     }
 
-    /// The magnitude of the first `DV_COUNT` element `node`.
+    /// The magnitude of the first `DV_COUNT` element `code` names.
     #[must_use]
-    pub fn count(self, node: &'a str) -> Option<i64> {
-        self.values(node)
+    pub fn count(self, code: &str) -> Option<i64> {
+        self.values(code)
             .find_map(|value| value.get("magnitude").and_then(Value::as_i64))
     }
 
-    /// The value of the first `DV_BOOLEAN` element `node`.
+    /// The value of the first `DV_BOOLEAN` element `code` names.
     #[must_use]
-    pub fn boolean(self, node: &'a str) -> Option<bool> {
-        self.values(node)
+    pub fn boolean(self, code: &str) -> Option<bool> {
+        self.values(code)
             .find_map(|value| value.get("value").and_then(Value::as_bool))
     }
 
-    /// The ISO 8601 text of the first `DV_DURATION` element `node`.
+    /// Each `CLUSTER` `code` names, read the same way, such as a facility.
     #[must_use]
-    pub fn duration(self, node: &'a str) -> Option<&'a str> {
-        self.values(node)
-            .find_map(|value| value.get("value").and_then(Value::as_str))
-    }
-
-    /// Each `CLUSTER` `node`, read the same way, such as a system client's
-    /// facilities (`id10`).
-    #[must_use]
-    pub fn clusters(self, node: &'a str) -> Vec<Credentials<'a>> {
-        self.items(node)
+    pub fn clusters(self, code: &str) -> Vec<Credentials<'a>> {
+        self.named(code)
+            .into_iter()
+            .filter(|item| item.get("items").is_some())
             .map(|item| Credentials(Some(item)))
             .collect()
     }
 }
 
-/// What one caller may do: the system `AGENT` its client identifier names,
-/// and the grants in force on the request.
+/// What one caller may do: the `ACTOR` its client identifier names, and the
+/// grants in force on the request.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Capabilities {
-    agent: Option<Agent>,
+    client: Option<Client>,
     grants: Vec<Grant>,
 }
 
 impl Capabilities {
-    /// The capabilities of the system `AGENT` `agent` or of a party, holding
+    /// The capabilities of the client `client` or of a party, holding
     /// `grants`.
-    pub(crate) fn new(agent: Option<Agent>, grants: Vec<Grant>) -> Self {
-        Self { agent, grants }
+    pub(crate) fn new(client: Option<Client>, grants: Vec<Grant>) -> Self {
+        Self { client, grants }
     }
 
     /// The capabilities of the caller of the running request; none outside
-    /// a request, for a caller who is no system client and binds to no party,
-    /// and for one the policy parties grant nothing.
+    /// a request, for a caller who is no client and binds to no party, and
+    /// for one nothing grants an operation.
     #[must_use]
     pub fn current() -> Arc<Self> {
         CURRENT.try_with(Arc::clone).unwrap_or_default()
     }
 
-    /// The system `AGENT` the caller's client identifier names; `None` for
-    /// a party, or a client no `AGENT` carries.
+    /// The `ACTOR` the caller's client identifier names; `None` for a party,
+    /// or a client no `ACTOR` carries.
     #[must_use]
-    pub fn agent(&self) -> Option<Agent> {
-        self.agent
+    pub fn client(&self) -> Option<Client> {
+        self.client
     }
 
     /// Every grant in force.
@@ -249,15 +247,17 @@ impl Capabilities {
         &self.grants
     }
 
-    /// The grants in force of `kind`.
-    pub fn of_kind(&self, kind: GrantKind) -> impl Iterator<Item = &Grant> {
-        self.grants.iter().filter(move |grant| grant.kind == kind)
+    /// The grants in force of `operation`.
+    pub fn of(&self, operation: Operation) -> impl Iterator<Item = &Grant> {
+        self.grants
+            .iter()
+            .filter(move |grant| grant.operation == operation)
     }
 
-    /// Whether a grant of `kind` is in force.
+    /// Whether a grant of `operation` is in force.
     #[must_use]
-    pub fn holds(&self, kind: GrantKind) -> bool {
-        self.of_kind(kind).next().is_some()
+    pub fn holds(&self, operation: Operation) -> bool {
+        self.of(operation).next().is_some()
     }
 }
 
@@ -272,33 +272,41 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+    use crate::party_binding::grants::operation::TERMINOLOGY;
+
+    fn named(code: &str, value: &Value) -> Value {
+        json!({"_type": "ELEMENT", "archetype_node_id": "at1",
+               "name": {"_type": "DV_CODED_TEXT", "value": code,
+                        "defining_code": {"terminology_id": {"value": TERMINOLOGY},
+                                          "code_string": code}},
+               "value": value})
+    }
 
     #[test]
-    fn credentials_read_by_node_and_through_a_cluster() {
-        let tree = json!({"_type": "ITEM_TREE", "archetype_node_id": "id8", "items": [
-            {"archetype_node_id": "id9", "value": {"_type": "DV_TEXT", "value": "T.v1"}},
-            {"archetype_node_id": "id9.1", "value": {"_type": "DV_CODED_TEXT", "value": "x",
-                "defining_code": {"code_string": "at20"}}},
-            {"archetype_node_id": "id10", "items": [
-                {"archetype_node_id": "id11", "value": {"_type": "DV_TEXT", "value": "urn:x"}}
-            ]},
-            {"archetype_node_id": "id12", "value": {"_type": "DV_COUNT", "magnitude": 50}},
-            {"archetype_node_id": "id21", "value": {"_type": "DV_BOOLEAN", "value": true}}
+    fn credentials_read_by_coded_name_anywhere_and_through_a_cluster() {
+        let mut facility = named("facility", &Value::Null);
+        facility["items"] = json!([named(
+            "subject_namespace",
+            &json!({"_type": "DV_TEXT", "value": "urn:x"})
+        )]);
+        let tree = json!({"_type": "ITEM_TREE", "items": [
+            named("template", &json!({"_type": "DV_TEXT", "value": "T.v1"})),
+            {"_type": "CLUSTER", "items": [named("template", &json!({"_type": "DV_TEXT", "value": "U.v1"}))]},
+            facility,
+            {"_type": "ELEMENT", "name": {"_type": "DV_TEXT", "value": "template"},
+             "value": {"_type": "DV_TEXT", "value": "not coded"}}
         ]});
-        let grant = Grant::new(GrantKind::DataMigration, Uuid::nil(), Some(Arc::new(tree)));
+        let grant = Grant::new(Operation::ImportEhr, Uuid::nil(), Some(Arc::new(tree)));
         let credentials = grant.credentials();
-        assert_eq!(credentials.texts("id9"), vec!["T.v1", "x"]);
-        assert_eq!(credentials.codes("id9"), vec!["at20"]);
-        assert_eq!(credentials.count("id12"), Some(50));
-        assert_eq!(credentials.boolean("id21"), Some(true));
-        let [facility] = credentials.clusters("id10")[..] else {
+        assert_eq!(credentials.texts("template"), vec!["T.v1", "U.v1"]);
+        let [facility] = credentials.clusters("facility")[..] else {
             panic!("one facility");
         };
-        assert_eq!(facility.texts("id11"), vec!["urn:x"]);
+        assert_eq!(facility.texts("subject_namespace"), vec!["urn:x"]);
         assert_eq!(
-            Grant::new(GrantKind::Import, Uuid::nil(), None)
+            Grant::new(Operation::ImportEhr, Uuid::nil(), None)
                 .credentials()
-                .texts("id9"),
+                .texts("template"),
             Vec::<&str>::new()
         );
     }
@@ -308,10 +316,10 @@ mod tests {
         assert_eq!(*Capabilities::current(), Capabilities::default());
         let granted = Arc::new(Capabilities::new(
             None,
-            vec![Grant::new(GrantKind::SubjectAudit, Uuid::nil(), None)],
+            vec![Grant::new(Operation::ReadSubjectAudit, Uuid::nil(), None)],
         ));
         let held = with_capabilities(Arc::clone(&granted), async {
-            Capabilities::current().holds(GrantKind::SubjectAudit)
+            Capabilities::current().holds(Operation::ReadSubjectAudit)
         })
         .await;
         assert!(held);

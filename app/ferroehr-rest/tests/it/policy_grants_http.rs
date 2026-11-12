@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The policy grants at the wire (#5435): a system client's request carries
-//! the capabilities of the `AGENT` its token's issuer and `client_id` name,
+//! the operations granted to the `ACTOR` its token's issuer and `client_id`
+//! name, on the deployment's own archetypes,
 //! a grant an administrator changes through the Demographic API decides the
 //! caller's next request on every replica with no restart, a capability
 //! above `[authz.grants] allowed` is refused at its commit, and a party store
@@ -14,7 +15,7 @@ use std::time::Duration;
 
 use axum::Router;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
-use ferroehr::party_binding::grants::kind::GrantKind;
+use ferroehr::party_binding::grants::operation::{Operation, TERMINOLOGY};
 use ferroehr::service::FerroEhrService;
 use ferrohealth_smart::profile::Preset;
 use http::{StatusCode, header};
@@ -110,7 +111,7 @@ fn written(capabilities: &Capabilities) -> Vec<String> {
     let mut out: Vec<String> = capabilities
         .grants()
         .iter()
-        .flat_map(|grant| grant.credentials().texts("id9"))
+        .flat_map(|grant| grant.credentials().texts("template"))
         .map(str::to_owned)
         .collect();
     out.sort();
@@ -151,65 +152,61 @@ fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
 }
 
+/// A `DV_CODED_TEXT` of the operation terminology.
+fn operation_code(code: &str) -> Value {
+    json!({ "_type": "DV_CODED_TEXT", "value": code,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY },
+                "code_string": code } })
+}
+
 fn archetyped(archetype: &str) -> Value {
     json!({ "_type": "ARCHETYPED",
             "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
-            "template_id": { "_type": "TEMPLATE_ID", "value": format!("{archetype}.0.0") },
             "rm_version": "1.1.0" })
 }
 
-/// The system `AGENT` of the client `client_id`.
+fn identities(name: &str) -> Value {
+    json!([{ "_type": "PARTY_IDENTITY", "archetype_node_id": "at0001", "name": text("name"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("details"),
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003", "name": text("name"),
+                        "value": text(name) }] } }])
+}
+
+/// An `AGENT` of the deployment's own archetype for the client `client_id`.
 fn agent(client_id: &str) -> Value {
-    let archetype = "openEHR-DEMOGRAPHIC-AGENT.system.v1";
+    let archetype = "openEHR-DEMOGRAPHIC-AGENT.lab_system.v1";
     json!({
         "_type": "AGENT", "archetype_node_id": archetype,
-        "archetype_details": archetyped(archetype), "name": text("System agent"),
-        "details": { "_type": "ITEM_TREE", "archetype_node_id": "id2", "name": text("Identifiers"),
-            "items": [{ "_type": "ELEMENT", "archetype_node_id": "id3", "name": text("Identifier"),
+        "archetype_details": archetyped(archetype), "name": text("Laboratory system"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0010", "name": text("details"),
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0011", "name": text("client"),
                 "value": { "_type": "DV_IDENTIFIER", "issuer": MACHINES, "id": client_id,
                            "type": "client_id" } }] },
-        "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "id4", "name": text("Name"),
-            "details": { "_type": "ITEM_TREE", "archetype_node_id": "id5", "name": text("Items"),
-                "items": [{ "_type": "ELEMENT", "archetype_node_id": "id6", "name": text("Name"),
-                            "value": text(client_id) }] } }]
+        "identities": identities(client_id)
     })
 }
 
-/// A policy `ROLE` of `concept` the `AGENT` `performer` performs, holding
-/// one capability of `kind` (`(value, code)`) that writes `template`, valid
-/// until `until` when given.
-fn role(
-    concept: &str,
-    performer: &str,
-    kind: (&str, &str),
-    template: &str,
-    until: Option<&str>,
-) -> Value {
-    let archetype = format!("openEHR-DEMOGRAPHIC-ROLE.{concept}.v1");
-    let item = if concept == "privileged" {
-        json!({ "_type": "ELEMENT", "archetype_node_id": "id11",
-                "name": text("Authorisation reference"), "value": text(template) })
-    } else {
-        json!({ "_type": "ELEMENT", "archetype_node_id": "id9",
-                "name": text("Template written"), "value": text(template) })
-    };
+/// A `ROLE` of the deployment's own archetype the `AGENT` `performer`
+/// performs, granting `operation` for `template`, valid until `until` when
+/// given.
+fn role(performer: &str, operation: &str, template: &str, until: Option<&str>) -> Value {
+    let archetype = "openEHR-DEMOGRAPHIC-ROLE.lab_feed.v1";
     let mut role = json!({
         "_type": "ROLE", "archetype_node_id": archetype,
-        "archetype_details": archetyped(&archetype), "name": text("Grant role"),
-        "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "id2", "name": text("Role name"),
-            "details": { "_type": "ITEM_TREE", "archetype_node_id": "id3", "name": text("Name"),
-                "items": [{ "_type": "ELEMENT", "archetype_node_id": "id4", "name": text("Full name"),
-                            "value": text(concept) }] } }],
+        "archetype_details": archetyped(archetype), "name": text("Laboratory feed"),
+        "identities": identities("laboratory feed"),
         "performer": { "_type": "PARTY_REF", "namespace": "demographic", "type": "AGENT",
                        "id": { "_type": "HIER_OBJECT_ID", "value": performer } },
         "capabilities": [{
-            "_type": "CAPABILITY", "archetype_node_id": "id6",
-            "name": { "_type": "DV_CODED_TEXT", "value": kind.0,
-                      "defining_code": { "_type": "CODE_PHRASE",
-                          "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
-                          "code_string": kind.1 } },
-            "credentials": { "_type": "ITEM_TREE", "archetype_node_id": "id8", "name": text("Grant"),
-                             "items": [item] }
+            "_type": "CAPABILITY", "archetype_node_id": "at0020", "name": text("grant"),
+            "credentials": { "_type": "ITEM_TREE", "archetype_node_id": "at0021",
+                             "name": text("terms"), "items": [
+                { "_type": "ELEMENT", "archetype_node_id": "at0022", "name": text("operation"),
+                  "value": operation_code(operation) },
+                { "_type": "ELEMENT", "archetype_node_id": "at0023",
+                  "name": operation_code("template"), "value": text(template) }
+            ] }
         }]
     });
     if let Some(until) = until {
@@ -221,15 +218,15 @@ fn role(
     role
 }
 
-/// Commits the `AGENT` of `client_id` and a relay `ROLE` writing `template`
-/// it performs through `app`; the `ROLE`'s version uid and the `AGENT`'s
+/// Commits the `AGENT` of `client_id` and a `ROLE` granting it to commit
+/// `template` through `app`; the `ROLE`'s version uid and the `AGENT`'s
 /// container.
 async fn granted_client(app: &Router, client_id: &str, template: &str) -> (String, String) {
     let (status, agent_uid, body) = write(app, "POST", "agent", None, &agent(client_id)).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     let lab = vo(&agent_uid).to_owned();
-    let relay = role("system_client", &lab, ("Relay", "at10"), template, None);
-    let (status, role_uid, body) = write(app, "POST", "role", None, &relay).await;
+    let grant = role(&lab, "commit_composition", template, None);
+    let (status, role_uid, body) = write(app, "POST", "role", None, &grant).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     (role_uid, lab)
 }
@@ -251,28 +248,22 @@ async fn a_grant_changed_through_the_demographic_api_decides_the_next_request() 
     let (role_uid, lab) = granted_client(&app, "lab", "Lab.v1").await;
     let lab_request = capabilities(&app, &system("lab")).await;
     assert_eq!(
-        lab_request.agent().map(|agent| agent.party.to_string()),
+        lab_request.client().map(|client| client.party.to_string()),
         Some(lab.clone())
     );
-    assert!(lab_request.holds(GrantKind::SystemClientRelay));
+    assert!(lab_request.holds(Operation::CommitComposition));
     assert_eq!(written(&lab_request), vec!["Lab.v1"]);
     assert_eq!(
         *capabilities(&app, &system("other")).await,
         Capabilities::default(),
-        "a client no AGENT names has none"
+        "a client no ACTOR names has none"
     );
     assert_eq!(
         *capabilities(&app, &common::basic_credential("root")).await,
         Capabilities::default(),
         "a caller who is no system client and binds to no party has none"
     );
-    let ended = role(
-        "system_client",
-        &lab,
-        ("Relay", "at10"),
-        "Lab.v1",
-        Some(&yesterday()),
-    );
+    let ended = role(&lab, "commit_composition", "Lab.v1", Some(&yesterday()));
     let (status, _, body) = write(
         &app,
         "PUT",
@@ -283,7 +274,7 @@ async fn a_grant_changed_through_the_demographic_api_decides_the_next_request() 
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
     let after = capabilities(&app, &system("lab")).await;
-    assert!(after.agent().is_some());
+    assert!(after.client().is_some());
     assert_eq!(
         after.grants(),
         [],
@@ -296,17 +287,17 @@ async fn a_capability_above_the_ceiling_is_refused_at_the_wire() {
     let (_db, pool) = common::migrated_pool().await;
     let app = Box::pin(replica(&pool, None, false)).await;
     let (_, lab) = granted_client(&app, "lab", "Lab.v1").await;
-    let privilege = role("privileged", &lab, ("Subject audit", "at10"), "CHG-1", None);
+    let privilege = role(&lab, "read_subject_audit", "Lab.v1", None);
     let (status, _, body) = write(&app, "POST", "role", None, &privilege).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
     assert!(
-        body.contains("privileged.subject_audit") && body.contains("[authz.grants] allowed"),
+        body.contains("read_subject_audit") && body.contains("[authz.grants] allowed"),
         "{body}"
     );
     assert!(
         !capabilities(&app, &system("lab"))
             .await
-            .holds(GrantKind::SubjectAudit)
+            .holds(Operation::ReadSubjectAudit)
     );
 }
 

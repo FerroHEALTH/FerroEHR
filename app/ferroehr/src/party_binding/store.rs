@@ -108,7 +108,7 @@ pub(crate) fn selector_in_use(e: StorageError) -> ServiceError {
             "uq_binding_identifier_user_name" => Some("userName"),
             "uq_binding_identifier_external_id" => Some("externalId"),
             "uq_binding_identifier_display_name" => Some("displayName"),
-            "uq_binding_agent_client" => Some("client identifier"),
+            "uq_binding_client" => Some("client identifier"),
             _ => None,
         });
     match selector {

@@ -1638,11 +1638,11 @@ trusted_systems = []
 # (trust).
 #? clients = []
 
-# The kinds of grant the policy parties may hold (`[authz.grants]`).
+# The operations the policy grants may grant (`[authz.grants]`).
 [authz.grants]
-# The kinds of grant the party store may hold
-# (`FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated). Optional (trust).
-allowed = ["system_client.relay", "system_client.device"]
+# The operations the party store may grant (`FERROEHR__AUTHZ__GRANTS__ALLOWED`,
+# comma-separated). Optional (trust).
+allowed = ["commit_composition"]
 
 # The openEHR REST API: the base path, the system identifier, the `OPTIONS`
 # identity, the `OpenAPI` UI, CORS, the clinical body tier and the ADMIN and

@@ -1,16 +1,18 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! What a policy party's body holds that the grant rows read: a system
-//! `AGENT`'s client identifiers and a policy `ROLE`'s capabilities, derived
-//! from the body once, in Rust, with the rest of [`crate::party_binding::derive`].
+//! What a party's body holds that the grant rows read: the client
+//! identifiers of an `ACTOR` and the operations each `CAPABILITY` of a `ROLE`
+//! grants, derived from the body once, in Rust, with the rest of
+//! [`crate::party_binding::derive`].
 //!
-//! The node ids read are the contract of the policy archetypes: the client
-//! identifier at [`AGENT_CLIENT_PATH`], each capability's coded `name`, its
-//! `time_validity` and its `credentials`, and in those the `Not before` and
-//! `Not after` elements of each `ROLE` kind, a node of a specialised archetype
-//! (`id15.1`) standing for the node it redefines. No openEHR spec gives a
-//! capability an authorization meaning: our own design.
+//! Nothing is read by archetype or node id: a client identifier is any
+//! `DV_IDENTIFIER` of type [`CLIENT_ID`] in the actor's `details` or
+//! `identities`, an operation any `DV_CODED_TEXT` value of
+//! [`TERMINOLOGY`] in a capability's `credentials`, and a bound the
+//! `DV_DATE_TIME` of an element that terminology names
+//! [`NOT_BEFORE`] or [`NOT_AFTER`]. No openEHR spec gives a capability an
+//! authorization meaning: our own design.
 
 #![expect(
     clippy::disallowed_types,
@@ -18,24 +20,12 @@
               the grant rows are derived from"
 )]
 
-use std::sync::LazyLock;
-
 use serde_json::Value;
 
-use crate::party_binding::IdentifierSelector;
-use crate::party_binding::grants::kind::stored_name;
-use crate::party_binding::policy::{AGENT_CLIENT_PATH, AGENT_CLIENT_TYPE, PolicyKind, PolicyRole};
+use crate::party_binding::grants::operation::{
+    CLIENT_ID, NOT_AFTER, NOT_BEFORE, TERMINOLOGY, is_qualifier,
+};
 use crate::versioning::Kind;
-
-/// The selector of a system `AGENT`'s client identifiers.
-#[expect(
-    clippy::expect_used,
-    reason = "AGENT_CLIENT_PATH and AGENT_CLIENT_TYPE are constants the unit test compiles"
-)]
-static CLIENT: LazyLock<IdentifierSelector> = LazyLock::new(|| {
-    IdentifierSelector::new(AGENT_CLIENT_PATH, AGENT_CLIENT_TYPE)
-        .expect("the AGENT client path should compile")
-});
 
 /// A `Not before` or `Not after` bound of a capability's credentials.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,12 +39,14 @@ pub(crate) enum Bound {
     Unreadable,
 }
 
-/// One `CAPABILITY` of a policy `ROLE`.
+/// One operation a `CAPABILITY` grants.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct CapabilityFacts {
-    /// The kind it is stored under ([`stored_name`]).
-    pub(crate) kind: String,
-    /// Its `time_validity`.
+    /// The capability's position in `ROLE.capabilities`.
+    pub(crate) ordinal: i32,
+    /// The code of [`TERMINOLOGY`] it holds, as written.
+    pub(crate) code: String,
+    /// The capability's `time_validity`.
     pub(crate) validity: Option<Value>,
     /// The `Not before` bound of its credentials.
     pub(crate) not_before: Bound,
@@ -67,46 +59,48 @@ pub(crate) struct CapabilityFacts {
 /// What a body holds that the grant rows read.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub(crate) struct GrantFacts {
-    /// The policy kind of the body's root archetype.
-    pub(crate) policy: Option<PolicyKind>,
-    /// A system `AGENT`'s client identifiers, as `(issuer, client_id)`,
-    /// distinct, in document order.
+    /// An actor's client identifiers, as `(issuer, client_id)`, distinct, in
+    /// document order.
     pub(crate) clients: Vec<(String, String)>,
-    /// A policy `ROLE`'s capabilities, in document order.
+    /// A `ROLE`'s granted operations, one per capability and code, in
+    /// document order.
     pub(crate) capabilities: Vec<CapabilityFacts>,
 }
 
 impl GrantFacts {
     /// Derives what `body`, a party of `kind`, holds.
     pub(crate) fn of(kind: Kind, body: &Value) -> Self {
-        let policy = body
-            .get("archetype_node_id")
-            .and_then(Value::as_str)
-            .and_then(PolicyKind::of);
-        let mut facts = Self {
-            policy,
-            ..Self::default()
-        };
-        match (kind, policy) {
-            (Kind::Agent, Some(PolicyKind::Agent)) => {
-                for identifier in CLIENT.identifiers(body) {
-                    let client = (identifier.issuer, identifier.id);
-                    if !facts.clients.contains(&client) {
-                        facts.clients.push(client);
-                    }
+        let mut facts = Self::default();
+        match kind {
+            Kind::Agent | Kind::Person | Kind::Organisation | Kind::Group => {
+                let mut found = Vec::new();
+                for root in [body.get("details"), body.get("identities")]
+                    .into_iter()
+                    .flatten()
+                {
+                    walk(root, &mut |value| {
+                        if let Some(client) = client(value)
+                            && !found.contains(&client)
+                        {
+                            found.push(client);
+                        }
+                    });
                 }
+                facts.clients = found;
             }
-            (Kind::Role, Some(PolicyKind::Role(role))) => {
-                facts.capabilities = body
+            Kind::Role => {
+                for (ordinal, capability) in body
                     .get("capabilities")
                     .and_then(Value::as_array)
-                    .map(|capabilities| {
-                        capabilities
-                            .iter()
-                            .map(|capability| CapabilityFacts::of(role, capability))
-                            .collect()
-                    })
-                    .unwrap_or_default();
+                    .into_iter()
+                    .flatten()
+                    .enumerate()
+                {
+                    let ordinal = i32::try_from(ordinal).unwrap_or(i32::MAX);
+                    facts
+                        .capabilities
+                        .extend(CapabilityFacts::of(ordinal, capability));
+                }
             }
             _ => {}
         }
@@ -115,58 +109,78 @@ impl GrantFacts {
 }
 
 impl CapabilityFacts {
-    /// What `capability`, of a `role` kind `ROLE`, holds.
-    fn of(role: PolicyRole, capability: &Value) -> Self {
-        let code = capability
-            .get("name")
-            .and_then(|name| name.get("defining_code"))
-            .and_then(|code| code.get("code_string"))
-            .and_then(Value::as_str);
-        let credentials = capability.get("credentials").cloned();
-        let (before, after) = bound_nodes(role);
-        Self {
-            kind: stored_name(role, code),
-            validity: capability.get("time_validity").cloned(),
-            not_before: bound(credentials.as_ref(), before),
-            not_after: bound(credentials.as_ref(), after),
-            credentials,
-        }
-    }
-}
-
-/// The node ids of the `Not before` and `Not after` elements of a `role`
-/// kind `ROLE`'s credentials, as its default definition defines them.
-const fn bound_nodes(role: PolicyRole) -> (&'static str, &'static str) {
-    match role {
-        PolicyRole::SystemClient | PolicyRole::DataMigration => ("id15", "id16"),
-        PolicyRole::FederationPartner => ("id30", "id31"),
-        PolicyRole::Privileged => ("id9", "id10"),
-    }
-}
-
-/// Whether the node id `held` is `node` or a specialisation of it.
-pub(crate) fn is_node(held: &str, node: &str) -> bool {
-    held == node
-        || held
-            .strip_prefix(node)
-            .is_some_and(|rest| rest.starts_with('.'))
-}
-
-/// The bound the element `node` of `credentials` names.
-fn bound(credentials: Option<&Value>, node: &str) -> Bound {
-    let Some(element) = credentials
-        .and_then(|tree| tree.get("items"))
-        .and_then(Value::as_array)
-        .and_then(|items| {
-            items.iter().find(|item| {
-                item.get("archetype_node_id")
-                    .and_then(Value::as_str)
-                    .is_some_and(|held| is_node(held, node))
+    /// The operations `capability`, at `ordinal`, grants.
+    fn of(ordinal: i32, capability: &Value) -> Vec<Self> {
+        let Some(credentials) = capability.get("credentials") else {
+            return Vec::new();
+        };
+        let mut codes: Vec<String> = Vec::new();
+        let (mut before, mut after) = (Bound::Open, Bound::Open);
+        walk(credentials, &mut |node| {
+            if let Some(code) = node.get("value").and_then(coded)
+                && !is_qualifier(code)
+                && !codes.iter().any(|held| held == code)
+            {
+                codes.push(code.to_owned());
+            }
+            match node.get("name").and_then(coded) {
+                Some(NOT_BEFORE) if before == Bound::Open => before = bound(node),
+                Some(NOT_AFTER) if after == Bound::Open => after = bound(node),
+                _ => {}
+            }
+        });
+        codes
+            .into_iter()
+            .map(|code| Self {
+                ordinal,
+                code,
+                validity: capability.get("time_validity").cloned(),
+                not_before: before,
+                not_after: after,
+                credentials: Some(credentials.clone()),
             })
-        })
-    else {
-        return Bound::Open;
-    };
+            .collect()
+    }
+}
+
+/// Calls `visit` on `value` and every object below it.
+pub(crate) fn walk<'a>(value: &'a Value, visit: &mut impl FnMut(&'a Value)) {
+    match value {
+        Value::Object(map) => {
+            visit(value);
+            for member in map.values() {
+                walk(member, visit);
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                walk(item, visit);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// The `(issuer, client_id)` of `value` when it is a `DV_IDENTIFIER` of type
+/// [`CLIENT_ID`] with an issuer and an id.
+fn client(value: &Value) -> Option<(String, String)> {
+    let text = |key: &str| value.get(key).and_then(Value::as_str);
+    (text("_type") == Some("DV_IDENTIFIER") && text("type") == Some(CLIENT_ID))
+        .then(|| Some((text("issuer")?.to_owned(), text("id")?.to_owned())))
+        .flatten()
+}
+
+/// The code of `value` when it is a `DV_CODED_TEXT` of [`TERMINOLOGY`].
+pub(crate) fn coded(value: &Value) -> Option<&str> {
+    let code = value.get("defining_code")?;
+    (value.get("_type").and_then(Value::as_str) == Some("DV_CODED_TEXT")
+        && code.get("terminology_id")?.get("value")?.as_str() == Some(TERMINOLOGY))
+    .then(|| code.get("code_string")?.as_str())
+    .flatten()
+}
+
+/// The bound the `DV_DATE_TIME` value of the element `element` names.
+fn bound(element: &Value) -> Bound {
     element
         .get("value")
         .and_then(|value| value.get("value"))
@@ -201,42 +215,31 @@ mod tests {
 
     use super::*;
 
-    fn capability(code: &str, items: &Value) -> Value {
-        json!({
-            "_type": "CAPABILITY", "archetype_node_id": "id6",
-            "name": {"_type": "DV_CODED_TEXT", "value": "x",
-                     "defining_code": {"code_string": code}},
-            "credentials": {"_type": "ITEM_TREE", "archetype_node_id": "id8", "items": items}
-        })
+    fn coded_text(code: &str, terminology: &str) -> Value {
+        json!({"_type": "DV_CODED_TEXT", "value": code,
+               "defining_code": {"terminology_id": {"value": terminology}, "code_string": code}})
     }
 
-    fn at(node: &str, value: &str) -> Value {
-        json!({"_type": "ELEMENT", "archetype_node_id": node,
-               "value": {"_type": "DV_DATE_TIME", "value": value}})
+    fn element(name: &Value, value: &Value) -> Value {
+        json!({"_type": "ELEMENT", "archetype_node_id": "at0001", "name": name, "value": value})
     }
 
     #[test]
-    fn the_client_selector_compiles() {
-        assert_eq!(CLIENT.path(), AGENT_CLIENT_PATH);
-    }
-
-    #[test]
-    fn an_agent_holds_its_client_identifiers_once_each() {
+    fn any_actor_holds_its_client_identifiers_once_each() {
         let identifier = |issuer: &str, id: &str, kind: &str| {
-            json!({"_type": "ELEMENT", "archetype_node_id": "id3",
+            json!({"_type": "ELEMENT", "archetype_node_id": "at9",
                    "value": {"_type": "DV_IDENTIFIER", "issuer": issuer, "id": id, "type": kind}})
         };
         let body = json!({
-            "_type": "AGENT", "archetype_node_id": "openEHR-DEMOGRAPHIC-AGENT.system.v1",
-            "details": {"archetype_node_id": "id2", "items": [
+            "_type": "ORGANISATION", "archetype_node_id": "openEHR-DEMOGRAPHIC-ORGANISATION.mine.v3",
+            "details": {"items": [{"items": [
                 identifier("https://idp", "lab", "client_id"),
                 identifier("https://idp", "lab", "client_id"),
-                identifier("https://idp", "LAB-1", "serial"),
-                identifier("https://other", "lab", "client_id")
-            ]}
+                identifier("https://idp", "LAB-1", "serial")
+            ]}]},
+            "identities": [{"details": {"items": [identifier("https://other", "lab", "client_id")]}}]
         });
-        let facts = GrantFacts::of(Kind::Agent, &body);
-        assert_eq!(facts.policy, Some(PolicyKind::Agent));
+        let facts = GrantFacts::of(Kind::Organisation, &body);
         assert_eq!(
             facts.clients,
             vec![
@@ -244,45 +247,38 @@ mod tests {
                 ("https://other".to_owned(), "lab".to_owned())
             ]
         );
-        assert_eq!(
-            GrantFacts::of(Kind::Person, &body).clients,
-            Vec::<(String, String)>::new(),
-            "only an AGENT holds a client"
-        );
+        assert_eq!(GrantFacts::of(Kind::Role, &body).clients.len(), 0);
     }
 
     #[test]
-    fn a_role_holds_each_capability_with_its_bounds() {
+    fn a_capability_grants_each_operation_code_anywhere_in_its_credentials() {
         let body = json!({
-            "_type": "ROLE", "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.privileged.v1",
+            "_type": "ROLE", "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.anything.v7",
             "capabilities": [
-                capability("at10", &json!([at("id9", "2026-12-05T22:00:00+01:00"),
-                                          at("id10.1", "2026-12-06T06:00:00")])),
-                capability("at12", &json!([at("id9", "not a time")])),
-                capability("at77", &json!([]))
+                {"_type": "CAPABILITY", "credentials": {"items": [
+                    {"items": [element(&json!({"value": "op"}), &coded_text("import_ehr", TERMINOLOGY))]},
+                    element(&json!({"value": "op"}), &coded_text("export_ehr_extract", TERMINOLOGY)),
+                    element(&json!({"value": "op"}), &coded_text("import_ehr", TERMINOLOGY)),
+                    element(&json!({"value": "other"}), &coded_text("import_ehr", "local")),
+                    element(&coded_text(NOT_BEFORE, TERMINOLOGY),
+                            &json!({"_type": "DV_DATE_TIME", "value": "2026-12-05T22:00:00+01:00"})),
+                    element(&coded_text(NOT_AFTER, TERMINOLOGY),
+                            &json!({"_type": "DV_DATE_TIME", "value": "not a time"})),
+                    element(&coded_text("template", TERMINOLOGY), &json!({"_type": "DV_TEXT", "value": "T.v1"}))
+                ]}},
+                {"_type": "CAPABILITY", "credentials": {"items": []}}
             ]
         });
         let facts = GrantFacts::of(Kind::Role, &body);
-        let kinds: Vec<&str> = facts.capabilities.iter().map(|c| c.kind.as_str()).collect();
-        assert_eq!(
-            kinds,
-            vec![
-                "privileged.subject_audit",
-                "privileged.identifier_reader",
-                "privileged:at77"
-            ]
-        );
+        let codes: Vec<&str> = facts.capabilities.iter().map(|c| c.code.as_str()).collect();
+        assert_eq!(codes, vec!["import_ehr", "export_ehr_extract"]);
         let first = &facts.capabilities[0];
+        assert_eq!(first.ordinal, 0);
         assert_eq!(
             first.not_before,
             Bound::At("2026-12-05T21:00:00Z".parse().expect("an instant"))
         );
-        assert_eq!(
-            first.not_after,
-            Bound::At("2026-12-06T06:00:00Z".parse().expect("an instant"))
-        );
-        assert_eq!(facts.capabilities[1].not_before, Bound::Unreadable);
-        assert_eq!(facts.capabilities[1].not_after, Bound::Open);
+        assert_eq!(first.not_after, Bound::Unreadable);
     }
 
     #[test]

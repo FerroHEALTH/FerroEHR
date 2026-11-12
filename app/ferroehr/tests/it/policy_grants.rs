@@ -1,15 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The policy grants (#5435) over a real PostgreSQL 18: a system client
-//! resolves to its `AGENT` by `(issuer, client_id)`, its grants are the
-//! capabilities of the policy `ROLE`s it performs that hold today by the
-//! `ROLE`'s and the `CAPABILITY`'s `time_validity` and now by the
-//! credentials' `Not before` and `Not after`, `[authz.grants] allowed` refuses
-//! a capability above it at commit and never honours a stored one, a change
-//! on one replica reaches another through its notification, and a refill
-//! rebuilds the rows from the versions. No openEHR spec gives a capability an
-//! authorization meaning: our own design.
+//! The policy grants (#5435) over a real PostgreSQL 18, every party built on
+//! a deployment's own archetypes with no template: a client resolves to the
+//! `ACTOR` carrying its `client_id` identifier, its grants are the operation
+//! codes of `ferroehr-operations` in the credentials of the `ROLE`s it
+//! performs that hold today by the `ROLE`'s and the `CAPABILITY`'s
+//! `time_validity` and now by the `not_before` and `not_after` elements,
+//! `[authz.grants] allowed` refuses an operation above it at commit and never
+//! honours a stored one, a change on one replica reaches another through its
+//! notification, and a refill rebuilds the rows from the versions. No openEHR
+//! spec gives a capability an authorization meaning: our own design.
 
 use std::collections::HashMap;
 use std::time::Duration;
@@ -21,8 +22,8 @@ use crate::fixtures::{if_match, object, written_vo};
 use ferroehr::config::FerroEhrConfig;
 use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
-use ferroehr::party_binding::grants::capabilities::{Actor, AgentState, Capabilities};
-use ferroehr::party_binding::grants::kind::{GrantCeiling, GrantKind};
+use ferroehr::party_binding::grants::capabilities::{Actor, Capabilities, ClientState};
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation, TERMINOLOGY};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::version_update::WriteRequest;
@@ -136,35 +137,42 @@ fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
 }
 
-fn coded(value: &str, code: &str) -> Value {
-    json!({ "_type": "DV_CODED_TEXT", "value": value,
+/// A `DV_CODED_TEXT` of the operation terminology.
+fn operation_code(code: &str) -> Value {
+    json!({ "_type": "DV_CODED_TEXT", "value": code,
             "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY },
                 "code_string": code } })
 }
 
+/// The `ARCHETYPED` of the deployment's own `archetype`, with no template.
 fn archetyped(archetype: &str) -> Value {
     json!({ "_type": "ARCHETYPED",
             "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
-            "template_id": { "_type": "TEMPLATE_ID", "value": format!("{archetype}.0.0") },
             "rm_version": "1.1.0" })
 }
 
-/// A system `AGENT` carrying the client identifier `client_id` of
-/// [`ISSUER`].
+/// A name identity of `name`.
+fn identities(name: &str) -> Value {
+    json!([{ "_type": "PARTY_IDENTITY", "archetype_node_id": "at0001", "name": text("name"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("details"),
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003", "name": text("name"),
+                        "value": text(name) }] } }])
+}
+
+/// An `AGENT` of the deployment's own archetype carrying the client
+/// identifier `client_id` of [`ISSUER`] deep in its details.
 fn agent(client_id: &str) -> Value {
-    let archetype = "openEHR-DEMOGRAPHIC-AGENT.system.v1";
+    let archetype = "openEHR-DEMOGRAPHIC-AGENT.integration_engine.v2";
     json!({
         "_type": "AGENT", "archetype_node_id": archetype,
-        "archetype_details": archetyped(archetype), "name": text("System agent"),
-        "details": { "_type": "ITEM_TREE", "archetype_node_id": "id2", "name": text("Identifiers"),
-            "items": [{ "_type": "ELEMENT", "archetype_node_id": "id3", "name": text("Identifier"),
-                "value": { "_type": "DV_IDENTIFIER", "issuer": ISSUER, "id": client_id,
-                           "type": "client_id" } }] },
-        "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "id4", "name": text("Name"),
-            "details": { "_type": "ITEM_TREE", "archetype_node_id": "id5", "name": text("Items"),
-                "items": [{ "_type": "ELEMENT", "archetype_node_id": "id6", "name": text("Name"),
-                            "value": text(client_id) }] } }]
+        "archetype_details": archetyped(archetype), "name": text("Integration engine"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0010", "name": text("details"),
+            "items": [{ "_type": "CLUSTER", "archetype_node_id": "at0011", "name": text("keys"),
+                "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0012", "name": text("client"),
+                    "value": { "_type": "DV_IDENTIFIER", "issuer": ISSUER, "id": client_id,
+                               "type": "client_id" } }] }] },
+        "identities": identities(client_id)
     })
 }
 
@@ -193,13 +201,28 @@ fn day(days: i64) -> String {
         .to_string()
 }
 
-/// One capability: its kind as `(value, code)`, the credentials' items, and
-/// its `time_validity`.
-fn capability(kind: (&str, &str), items: &[Value], validity: Option<Value>) -> Value {
+/// A credentials element whose name is the terminology's `code`, holding
+/// `value`.
+fn named(code: &str, value: &Value) -> Value {
+    json!({ "_type": "ELEMENT", "archetype_node_id": "at0030", "name": operation_code(code),
+            "value": value })
+}
+
+/// A capability granting `operations`, each an element of its own, with the
+/// further credentials items `items` and its `time_validity`.
+fn capability(operations: &[&str], items: &[Value], validity: Option<Value>) -> Value {
+    let mut all: Vec<Value> = operations
+        .iter()
+        .map(|code| {
+            json!({ "_type": "ELEMENT", "archetype_node_id": "at0021",
+                            "name": text("operation"), "value": operation_code(code) })
+        })
+        .collect();
+    all.extend_from_slice(items);
     let mut capability = json!({
-        "_type": "CAPABILITY", "archetype_node_id": "id6", "name": coded(kind.0, kind.1),
-        "credentials": { "_type": "ITEM_TREE", "archetype_node_id": "id8", "name": text("Grant"),
-                         "items": items }
+        "_type": "CAPABILITY", "archetype_node_id": "at0020", "name": text("grant"),
+        "credentials": { "_type": "ITEM_TREE", "archetype_node_id": "at0022", "name": text("terms"),
+                         "items": all }
     });
     if let Some(validity) = validity {
         capability["time_validity"] = validity;
@@ -207,31 +230,23 @@ fn capability(kind: (&str, &str), items: &[Value], validity: Option<Value>) -> V
     capability
 }
 
-/// A credentials element `node` named `name` holding `value`.
-fn element(node: &str, name: &str, value: &Value) -> Value {
-    json!({ "_type": "ELEMENT", "archetype_node_id": node, "name": text(name), "value": value })
-}
-
-/// The system client relay grant writing `template`.
-fn relay(template: &str, validity: Option<Value>) -> Value {
+/// The grant to commit compositions of `template`.
+fn writes(template: &str, validity: Option<Value>) -> Value {
     capability(
-        ("Relay", "at10"),
-        &[element("id9", "Template written", &text(template))],
+        &["commit_composition"],
+        &[named("template", &text(template))],
         validity,
     )
 }
 
-/// A policy `ROLE` of `concept` performed by the `AGENT` `performer`,
+/// A `ROLE` of the deployment's own archetype performed by `performer`,
 /// holding `capabilities`, with its own `time_validity`.
-fn role(concept: &str, performer: VoId, validity: Option<Value>, capabilities: &[Value]) -> Value {
-    let archetype = format!("openEHR-DEMOGRAPHIC-ROLE.{concept}.v1");
+fn role(performer: VoId, validity: Option<Value>, capabilities: &[Value]) -> Value {
+    let archetype = "openEHR-DEMOGRAPHIC-ROLE.legacy_migration.v1";
     let mut role = json!({
         "_type": "ROLE", "archetype_node_id": archetype,
-        "archetype_details": archetyped(&archetype), "name": text("Grant role"),
-        "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "id2", "name": text("Role name"),
-            "details": { "_type": "ITEM_TREE", "archetype_node_id": "id3", "name": text("Name"),
-                "items": [{ "_type": "ELEMENT", "archetype_node_id": "id4", "name": text("Full name"),
-                            "value": text(concept) }] } }],
+        "archetype_details": archetyped(archetype), "name": text("Legacy migration"),
+        "identities": identities("legacy migration"),
         "performer": { "_type": "PARTY_REF", "namespace": "demographic", "type": "AGENT",
                        "id": { "_type": "HIER_OBJECT_ID", "value": performer.to_string() } },
         "capabilities": capabilities
@@ -247,19 +262,19 @@ fn written(capabilities: &Capabilities) -> Vec<String> {
     let mut out: Vec<String> = capabilities
         .grants()
         .iter()
-        .flat_map(|grant| grant.credentials().texts("id9"))
+        .flat_map(|grant| grant.credentials().texts("template"))
         .map(str::to_owned)
         .collect();
     out.sort();
     out
 }
 
-/// The capabilities of the system client `client_id` on `svc`, after it read
-/// the grant rows.
+/// The capabilities of the client `client_id` on `svc`, after it read the
+/// grant rows.
 async fn of_client(svc: &FerroEhrService, client_id: &str) -> Capabilities {
     svc.grants().refresh().await.expect("the grants read");
     svc.grants().capabilities(
-        Actor::System {
+        Actor::Client {
             issuer: ISSUER,
             client_id,
         },
@@ -268,7 +283,7 @@ async fn of_client(svc: &FerroEhrService, client_id: &str) -> Capabilities {
 }
 
 #[tokio::test]
-async fn a_system_client_resolves_to_its_agent_by_issuer_and_client() {
+async fn a_client_resolves_to_the_actor_carrying_its_identifier() {
     let (_db, svc) = service().await;
     let (lab, _) = create(&svc, PartyKind::Agent, &agent("lab-relay"))
         .await
@@ -276,15 +291,15 @@ async fn a_system_client_resolves_to_its_agent_by_issuer_and_client() {
     create(
         &svc,
         PartyKind::Role,
-        &role("system_client", lab, None, &[relay("Lab.v1", None)]),
+        &role(lab, None, &[writes("Lab.v1", None)]),
     )
     .await
     .expect("the ROLE commits");
     let granted = of_client(&svc, "lab-relay").await;
-    let named = granted.agent().expect("the client names its AGENT");
+    let named = granted.client().expect("the client names its AGENT");
     assert_eq!(named.party, lab.0);
-    assert_eq!(named.state, AgentState::Complete);
-    assert!(granted.holds(GrantKind::SystemClientRelay));
+    assert_eq!(named.state, ClientState::Complete);
+    assert!(granted.holds(Operation::CommitComposition));
     assert_eq!(written(&granted), vec!["Lab.v1".to_owned()]);
     assert_eq!(
         svc.grants()
@@ -297,13 +312,63 @@ async fn a_system_client_resolves_to_its_agent_by_issuer_and_client() {
     for (issuer, client_id) in [(ISSUER, "lab"), ("https://other.example", "lab-relay")] {
         let none = svc
             .grants()
-            .capabilities(Actor::System { issuer, client_id }, jiff::Timestamp::now());
+            .capabilities(Actor::Client { issuer, client_id }, jiff::Timestamp::now());
         assert_eq!(none, Capabilities::default(), "{issuer} {client_id}");
     }
     let refused = create(&svc, PartyKind::Agent, &agent("lab-relay"))
         .await
         .expect_err("a second AGENT cannot name the client");
     assert!(matches!(refused, ServiceError::Conflict(_)), "{refused:?}");
+}
+
+#[tokio::test]
+async fn a_deployments_own_archetypes_grant_by_operation_code() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = replica(&db.pool(), GrantCeiling::new(Operation::ALL)).await;
+    let (migration, _) = create(&svc, PartyKind::Agent, &agent("legacy-migration"))
+        .await
+        .expect("the AGENT commits");
+    let nested = json!({ "_type": "CLUSTER", "archetype_node_id": "at0040", "name": text("scope"),
+        "items": [
+            { "_type": "ELEMENT", "archetype_node_id": "at0041", "name": text("may"),
+              "value": operation_code("export_ehr_extract") },
+            named("subject_namespace", &text("nl.legacy-his.patients"))
+        ] });
+    let migrates = capability(&["import_ehr"], &[nested], None);
+    let elsewhere = json!({ "_type": "ELEMENT", "archetype_node_id": "at0042",
+        "name": text("operation"),
+        "value": { "_type": "DV_CODED_TEXT", "value": "import_ehr_extract",
+                   "defining_code": { "_type": "CODE_PHRASE",
+                       "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
+                       "code_string": "import_ehr_extract" } } });
+    let other_terminology = capability(&[], &[elsewhere], None);
+    create(
+        &svc,
+        PartyKind::Role,
+        &role(migration, None, &[migrates, other_terminology]),
+    )
+    .await
+    .expect("the ROLE commits");
+    let granted = of_client(&svc, "legacy-migration").await;
+    let mut operations: Vec<Operation> = granted
+        .grants()
+        .iter()
+        .map(ferroehr::party_binding::grants::capabilities::Grant::operation)
+        .collect();
+    operations.sort();
+    assert_eq!(
+        operations,
+        vec![Operation::ImportEhr, Operation::ExportEhrExtract],
+        "only the codes of the operation terminology grant, wherever they sit"
+    );
+    let import = granted
+        .of(Operation::ImportEhr)
+        .next()
+        .expect("the import grant");
+    assert_eq!(
+        import.credentials().texts("subject_namespace"),
+        vec!["nl.legacy-his.patients"]
+    );
 }
 
 #[tokio::test]
@@ -347,12 +412,7 @@ async fn only_a_role_and_capability_valid_today_grant() {
         create(
             &svc,
             PartyKind::Role,
-            &role(
-                "system_client",
-                lab,
-                role_validity,
-                &[relay(template, validity)],
-            ),
+            &role(lab, role_validity, &[writes(template, validity)]),
         )
         .await
         .unwrap_or_else(|e| panic!("{template} commits: {e}"));
@@ -364,31 +424,32 @@ async fn only_a_role_and_capability_valid_today_grant() {
             .to_string()
     };
     let bounded = |template: &str, before: Option<String>, after: Option<String>| {
-        let mut items = vec![element("id9", "Template written", &text(template))];
-        for (node, name, at) in [("id15", "Not before", before), ("id16", "Not after", after)] {
+        let mut items = vec![named("template", &text(template))];
+        for (code, at) in [("not_before", before), ("not_after", after)] {
             if let Some(at) = at {
-                items.push(element(
-                    node,
-                    name,
+                items.push(named(
+                    code,
                     &json!({ "_type": "DV_DATE_TIME", "value": at }),
                 ));
             }
         }
-        capability(("Relay", "at10"), &items, None)
+        capability(&["commit_composition"], &items, None)
     };
-    for capability in [
-        bounded("Instant.current", Some(instant(-1)), Some(instant(1))),
-        bounded("Instant.future", Some(instant(1)), None),
-        bounded("Instant.expired", None, Some(instant(-1))),
-    ] {
-        create(
-            &svc,
-            PartyKind::Role,
-            &role("system_client", lab, None, &[capability]),
-        )
-        .await
-        .expect("a bounded ROLE commits");
-    }
+    create(
+        &svc,
+        PartyKind::Role,
+        &role(
+            lab,
+            None,
+            &[
+                bounded("Instant.current", Some(instant(-1)), Some(instant(1))),
+                bounded("Instant.future", Some(instant(1)), None),
+                bounded("Instant.expired", None, Some(instant(-1))),
+            ],
+        ),
+    )
+    .await
+    .expect("the bounded ROLE commits");
     assert_eq!(
         written(&of_client(&svc, "lab").await),
         vec![
@@ -401,7 +462,7 @@ async fn only_a_role_and_capability_valid_today_grant() {
 }
 
 #[tokio::test]
-async fn a_capability_change_and_an_inactive_agent_apply_on_the_next_read() {
+async fn a_capability_change_and_an_inactive_client_apply_on_the_next_read() {
     let (_db, svc) = service().await;
     let (lab, lab_uid) = create(&svc, PartyKind::Agent, &agent("lab"))
         .await
@@ -409,16 +470,15 @@ async fn a_capability_change_and_an_inactive_agent_apply_on_the_next_read() {
     let (grant, uid) = create(
         &svc,
         PartyKind::Role,
-        &role("system_client", lab, None, &[relay("Lab.v1", None)]),
+        &role(lab, None, &[writes("Lab.v1", None)]),
     )
     .await
     .expect("the ROLE commits");
     assert_eq!(written(&of_client(&svc, "lab").await), vec!["Lab.v1"]);
     let ended = role(
-        "system_client",
         lab,
         Some(dates(None, Some(&day(-1)))),
-        &[relay("Lab.v1", None)],
+        &[writes("Lab.v1", None)],
     );
     update(&svc, PartyKind::Role, (grant, &uid), &ended, "532")
         .await
@@ -435,59 +495,50 @@ async fn a_capability_change_and_an_inactive_agent_apply_on_the_next_read() {
     .expect("the AGENT is set inactive");
     let inactive = of_client(&svc, "lab").await;
     assert_eq!(
-        inactive.agent().map(|agent| agent.state),
-        Some(AgentState::Inactive)
+        inactive.client().map(|client| client.state),
+        Some(ClientState::Inactive)
     );
 }
 
 #[tokio::test]
-async fn a_capability_above_the_ceiling_is_refused_at_commit() {
+async fn an_operation_above_the_ceiling_is_refused_at_commit() {
     let (_db, svc) = service().await;
     let (lab, _) = create(&svc, PartyKind::Agent, &agent("lab"))
         .await
         .expect("the AGENT commits");
-    let refused = create(
-        &svc,
-        PartyKind::Role,
-        &role("privileged", lab, None, &[audit()]),
-    )
-    .await
-    .expect_err("the default ceiling admits no privilege");
-    assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
-    let text = refused.to_string();
-    assert!(
-        text.contains("privileged.subject_audit") && text.contains("[authz.grants] allowed"),
-        "{text}"
-    );
-    let both = [
-        relay("Lab.v1", None),
-        capability(("Device", "at11"), &[], None),
-    ];
+    for code in ["import_ehr", "import_everything"] {
+        let refused = create(
+            &svc,
+            PartyKind::Role,
+            &role(lab, None, &[capability(&[code], &[], None)]),
+        )
+        .await
+        .expect_err("the default ceiling admits commit_composition only");
+        assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
+        let text = refused.to_string();
+        assert!(
+            text.contains(code) && text.contains("[authz.grants] allowed"),
+            "{text}"
+        );
+    }
     create(
         &svc,
         PartyKind::Role,
-        &role("system_client", lab, None, &both),
+        &role(lab, None, &[writes("Lab.v1", None)]),
     )
     .await
-    .expect("both system client kinds are in the default ceiling");
-    let granted = of_client(&svc, "lab").await;
-    assert!(granted.holds(GrantKind::SystemClientRelay));
-    assert!(granted.holds(GrantKind::SystemClientDevice));
-}
-
-/// The subject audit privilege.
-fn audit() -> Value {
-    capability(
-        ("Subject audit", "at10"),
-        &[element("id11", "Authorisation reference", &text("CHG-1"))],
-        None,
-    )
+    .expect("commit_composition is in the default ceiling");
+    assert!(
+        of_client(&svc, "lab")
+            .await
+            .holds(Operation::CommitComposition)
+    );
 }
 
 #[tokio::test]
-async fn a_stored_capability_above_the_ceiling_is_never_honoured() {
+async fn a_stored_operation_above_the_ceiling_is_never_honoured() {
     let db = testkit::db().await.expect("testkit database");
-    let wide = replica(&db.pool(), GrantCeiling::new(GrantKind::ALL)).await;
+    let wide = replica(&db.pool(), GrantCeiling::new(Operation::ALL)).await;
     let narrow = replica(&db.pool(), GrantCeiling::default()).await;
     let (lab, _) = create(&wide, PartyKind::Agent, &agent("lab"))
         .await
@@ -495,11 +546,15 @@ async fn a_stored_capability_above_the_ceiling_is_never_honoured() {
     create(
         &wide,
         PartyKind::Role,
-        &role("privileged", lab, None, &[audit()]),
+        &role(lab, None, &[capability(&["read_subject_audit"], &[], None)]),
     )
     .await
     .expect("the wide ceiling admits the privilege");
-    assert!(of_client(&wide, "lab").await.holds(GrantKind::SubjectAudit));
+    assert!(
+        of_client(&wide, "lab")
+            .await
+            .holds(Operation::ReadSubjectAudit)
+    );
     assert_eq!(
         of_client(&narrow, "lab").await.grants(),
         [],
@@ -530,7 +585,7 @@ async fn a_change_on_one_replica_reaches_another_through_its_notification() {
     create(
         &writer,
         PartyKind::Role,
-        &role("system_client", lab, None, &[relay("Lab.v1", None)]),
+        &role(lab, None, &[writes("Lab.v1", None)]),
     )
     .await
     .expect("the ROLE commits");
@@ -546,7 +601,7 @@ async fn a_change_on_one_replica_reaches_another_through_its_notification() {
         .await
         .expect("the notified read");
     let granted = reader.grants().capabilities(
-        Actor::System {
+        Actor::Client {
             issuer: ISSUER,
             client_id: "lab",
         },
@@ -564,13 +619,13 @@ async fn a_refill_rebuilds_the_grants_from_the_versions() {
     create(
         &svc,
         PartyKind::Role,
-        &role("system_client", lab, None, &[relay("Lab.v1", None)]),
+        &role(lab, None, &[writes("Lab.v1", None)]),
     )
     .await
     .expect("the ROLE commits");
-    assert!(of_client(&svc, "lab").await.agent().is_some());
+    assert!(of_client(&svc, "lab").await.client().is_some());
     for statement in [
-        "DELETE FROM party.binding_agent",
+        "DELETE FROM party.binding_client",
         "DELETE FROM party.binding_capability",
     ] {
         sqlx::query(statement)
@@ -579,14 +634,14 @@ async fn a_refill_rebuilds_the_grants_from_the_versions() {
             .expect("the rows go");
     }
     assert!(
-        of_client(&svc, "lab").await.agent().is_some(),
+        of_client(&svc, "lab").await.client().is_some(),
         "the copy held stays"
     );
     svc.refill_binding(Duration::from_secs(60))
         .await
-        .expect("the unmapped refill rebuilds the grants");
+        .expect("the refill rebuilds the grants");
     let granted = of_client(&svc, "lab").await;
-    assert_eq!(granted.agent().map(|agent| agent.party), Some(lab.0));
+    assert_eq!(granted.client().map(|client| client.party), Some(lab.0));
     assert_eq!(written(&granted), vec!["Lab.v1"]);
 }
 
@@ -604,27 +659,27 @@ async fn a_store_that_cannot_answer_is_unavailable() {
 fn the_grant_ceiling_is_read_from_the_file_and_the_environment() {
     assert_eq!(
         config("").authz.grants.allowed,
-        vec![GrantKind::SystemClientRelay, GrantKind::SystemClientDevice]
+        vec![Operation::CommitComposition]
     );
     assert_eq!(
-        config("[authz.grants]\nallowed = [\"privileged.import\"]\n")
+        config("[authz.grants]\nallowed = [\"import_ehr\"]\n")
             .authz
             .grants
             .allowed,
-        vec![GrantKind::Import]
+        vec![Operation::ImportEhr]
     );
     let env = HashMap::from([(
         "FERROEHR__AUTHZ__GRANTS__ALLOWED".to_owned(),
-        "data_migration,privileged.subject_audit".to_owned(),
+        "export_ehr_extract,read_subject_audit".to_owned(),
     )]);
     let from_env = ferroehr::config::assemble(None, &env, &[]).expect("assembles");
     assert_eq!(
         from_env.authz.grants.allowed,
-        vec![GrantKind::DataMigration, GrantKind::SubjectAudit]
+        vec![Operation::ExportEhrExtract, Operation::ReadSubjectAudit]
     );
     let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp file");
-    file.write_str("[authz.grants]\nallowed = [\"privileged.everything\"]\n")
+    file.write_str("[authz.grants]\nallowed = [\"import_everything\"]\n")
         .expect("write");
     ferroehr::config::assemble(Some(file.path()), &HashMap::new(), &[])
-        .expect_err("an unknown kind is refused");
+        .expect_err("an unknown operation is refused");
 }

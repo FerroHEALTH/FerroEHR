@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Row I/O for the grant rows: `binding_agent`, `binding_capability` and the
+//! Row I/O for the grant rows: `binding_client`, `binding_capability` and the
 //! revision that moves with both.
 //!
-//! A commit of an `AGENT` or a `ROLE` replaces the rows of that party with the
+//! A commit of an `ACTOR` or a `ROLE` replaces the rows of that party with the
 //! ones its new head holds, in its own transaction; a change moves the
 //! revision and notifies [`CHANNEL`], which PostgreSQL delivers to every
 //! listening replica when the transaction commits
@@ -24,7 +24,6 @@ use uuid::Uuid;
 
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants::derive::{Bound, GrantFacts};
-use crate::party_binding::policy::PolicyKind;
 use crate::storage::error::StorageError;
 use crate::versioning::Kind;
 
@@ -34,7 +33,7 @@ pub const CHANNEL: &str = "ferroehr_policy_grants";
 /// The `version_lifecycle_state` code of a logically deleted head.
 const DELETED: &str = "523";
 
-/// The head of one `AGENT` or `ROLE` as the grant rows read it.
+/// The head of one party as the grant rows read it.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct GrantHead<'a> {
     /// The party's container.
@@ -56,18 +55,21 @@ impl GrantHead<'_> {
 
 /// Replaces the grant rows of `head`, a party of `kind`, on its commit
 /// transaction `tx`; moves the revision and notifies when they changed.
-/// Every other kind holds none.
+/// An `ACTOR` holds client rows and a `ROLE` capability rows; every other
+/// kind holds none.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure, the unique violation of
-/// `uq_binding_agent_client` included.
+/// `uq_binding_client` included.
 pub(crate) async fn write(
     tx: &mut PgConnection,
     kind: Kind,
     head: GrantHead<'_>,
 ) -> Result<(), StorageError> {
     let changed = match kind {
-        Kind::Agent => write_agent(tx, head).await?,
+        Kind::Agent | Kind::Person | Kind::Organisation | Kind::Group => {
+            write_clients(tx, head).await?
+        }
         Kind::Role => write_role(tx, head).await?,
         _ => false,
     };
@@ -78,18 +80,15 @@ pub(crate) async fn write(
     Ok(())
 }
 
-/// Replaces the client rows of the `AGENT` `head`; whether any row went or
+/// Replaces the client rows of the `ACTOR` `head`; whether any row went or
 /// came.
-async fn write_agent(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool, StorageError> {
-    let gone = sqlx::query("DELETE FROM binding_agent WHERE party_id = $1")
+async fn write_clients(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool, StorageError> {
+    let gone = sqlx::query("DELETE FROM binding_client WHERE party_id = $1")
         .bind(head.vo_id)
         .execute(&mut *tx)
         .await?
         .rows_affected();
-    let Some(facts) = head
-        .live()
-        .filter(|facts| facts.grants.policy == Some(PolicyKind::Agent))
-    else {
+    let Some(facts) = head.live().filter(|facts| !facts.grants.clients.is_empty()) else {
         return Ok(gone > 0);
     };
     let (issuers, clients): (Vec<&str>, Vec<&str>) = facts
@@ -99,7 +98,7 @@ async fn write_agent(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool,
         .map(|(issuer, client)| (issuer.as_str(), client.as_str()))
         .unzip();
     let came = sqlx::query(
-        "INSERT INTO binding_agent (party_id, issuer, client_id, lifecycle_state) \
+        "INSERT INTO binding_client (party_id, issuer, client_id, lifecycle_state) \
          SELECT $1, t.issuer, t.client_id, $4 \
          FROM unnest($2::text[], $3::text[]) AS t(issuer, client_id)",
     )
@@ -123,7 +122,7 @@ async fn write_role(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool, 
         .rows_affected();
     let Some(facts) = head
         .live()
-        .filter(|facts| matches!(facts.grants.policy, Some(PolicyKind::Role(_))))
+        .filter(|facts| !facts.grants.capabilities.is_empty())
     else {
         return Ok(gone > 0);
     };
@@ -133,21 +132,23 @@ async fn write_role(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool, 
     let columns = CapabilityColumns::of(&facts.grants);
     let came = sqlx::query(
         "INSERT INTO binding_capability \
-             (role_id, ordinal, performer_id, kind, lifecycle_state, role_validity, validity, \
-              not_before, not_after, credentials) \
-         SELECT $1, (t.ord - 1)::integer, $2, t.kind, $3, party.binding_validity($4::jsonb), \
+             (role_id, ordinal, operation, performer_id, lifecycle_state, role_validity, \
+              validity, not_before, not_after, credentials) \
+         SELECT $1, t.ordinal, t.operation, $2, $3, party.binding_validity($4::jsonb), \
                 CASE WHEN t.unreadable THEN 'empty'::daterange \
                      ELSE party.binding_validity(t.validity) END, \
                 t.not_before, t.not_after, t.credentials \
-         FROM unnest($5::text[], $6::jsonb[], $7::boolean[], $8::timestamptz[], \
-                     $9::timestamptz[], $10::jsonb[]) WITH ORDINALITY \
-              AS t(kind, validity, unreadable, not_before, not_after, credentials, ord)",
+         FROM unnest($5::integer[], $6::text[], $7::jsonb[], $8::boolean[], \
+                     $9::timestamptz[], $10::timestamptz[], $11::jsonb[]) \
+              AS t(ordinal, operation, validity, unreadable, not_before, not_after, \
+                   credentials)",
     )
     .bind(head.vo_id)
     .bind(performer)
     .bind(head.lifecycle_state)
     .bind(facts.validity.as_ref())
-    .bind(&columns.kind)
+    .bind(&columns.ordinal)
+    .bind(&columns.operation)
     .bind(&columns.validity)
     .bind(&columns.unreadable)
     .bind(&columns.not_before)
@@ -161,7 +162,8 @@ async fn write_role(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool, 
 
 /// The capabilities of a `ROLE` as the arrays the insert binds.
 struct CapabilityColumns<'a> {
-    kind: Vec<&'a str>,
+    ordinal: Vec<i32>,
+    operation: Vec<&'a str>,
     validity: Vec<Option<&'a Value>>,
     unreadable: Vec<bool>,
     not_before: Vec<Option<jiff_sqlx::Timestamp>>,
@@ -177,7 +179,8 @@ impl<'a> CapabilityColumns<'a> {
         };
         let capabilities = &facts.capabilities;
         Self {
-            kind: capabilities.iter().map(|c| c.kind.as_str()).collect(),
+            ordinal: capabilities.iter().map(|c| c.ordinal).collect(),
+            operation: capabilities.iter().map(|c| c.code.as_str()).collect(),
             validity: capabilities.iter().map(|c| c.validity.as_ref()).collect(),
             unreadable: capabilities
                 .iter()
@@ -213,7 +216,7 @@ async fn revise(tx: &mut PgConnection) -> Result<(), StorageError> {
 /// [`StorageError::Database`] on a driver failure.
 pub(crate) async fn clear(tx: &mut PgConnection) -> Result<(), StorageError> {
     for statement in [
-        "DELETE FROM binding_agent",
+        "DELETE FROM binding_client",
         "DELETE FROM binding_capability",
     ] {
         sqlx::query(statement).execute(&mut *tx).await?;
@@ -250,7 +253,7 @@ pub(crate) async fn revision(conn: &mut PgConnection) -> Result<i64, StorageErro
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub(crate) async fn erase(tx: &mut PgConnection, vo_ids: &[Uuid]) -> Result<(), StorageError> {
-    let agents = sqlx::query("DELETE FROM binding_agent WHERE party_id = ANY($1)")
+    let clients = sqlx::query("DELETE FROM binding_client WHERE party_id = ANY($1)")
         .bind(vo_ids)
         .execute(&mut *tx)
         .await?
@@ -262,16 +265,16 @@ pub(crate) async fn erase(tx: &mut PgConnection, vo_ids: &[Uuid]) -> Result<(), 
     .execute(&mut *tx)
     .await?
     .rows_affected();
-    if agents > 0 || capabilities > 0 {
+    if clients > 0 || capabilities > 0 {
         revise(tx).await?;
         super::live::note_change();
     }
     Ok(())
 }
 
-/// One stored client identifier of a system `AGENT`.
+/// One stored client identifier of an `ACTOR`.
 #[derive(Debug, Clone)]
-pub(crate) struct AgentRow {
+pub(crate) struct ClientRow {
     pub(crate) party_id: Uuid,
     pub(crate) issuer: String,
     pub(crate) client_id: String,
@@ -283,7 +286,7 @@ pub(crate) struct AgentRow {
 pub(crate) struct CapabilityRow {
     pub(crate) role_id: Uuid,
     pub(crate) performer_id: Uuid,
-    pub(crate) kind: String,
+    pub(crate) operation: String,
     pub(crate) lifecycle_state: String,
     /// The `ROLE`'s dates; `None` when they are empty.
     pub(crate) role_dates: Option<Dates>,
@@ -313,7 +316,7 @@ impl Dates {
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Loaded {
     pub(crate) revision: i64,
-    pub(crate) agents: Vec<AgentRow>,
+    pub(crate) clients: Vec<ClientRow>,
     pub(crate) capabilities: Vec<CapabilityRow>,
 }
 
@@ -327,15 +330,15 @@ pub(crate) async fn load(conn: &mut PgConnection) -> Result<Loaded, StorageError
         .execute(&mut *tx)
         .await?;
     let revision = revision(&mut tx).await?;
-    let mut agents = Vec::new();
+    let mut clients = Vec::new();
     for row in sqlx::query(
-        "SELECT party_id, issuer, client_id, lifecycle_state FROM binding_agent \
+        "SELECT party_id, issuer, client_id, lifecycle_state FROM binding_client \
          ORDER BY issuer, client_id",
     )
     .fetch_all(&mut *tx)
     .await?
     {
-        agents.push(AgentRow {
+        clients.push(ClientRow {
             party_id: row.try_get("party_id")?,
             issuer: row.try_get("issuer")?,
             client_id: row.try_get("client_id")?,
@@ -344,7 +347,7 @@ pub(crate) async fn load(conn: &mut PgConnection) -> Result<Loaded, StorageError
     }
     let mut capabilities = Vec::new();
     for row in sqlx::query(
-        "SELECT role_id, performer_id, kind, lifecycle_state, \
+        "SELECT role_id, performer_id, operation, lifecycle_state, \
                 isempty(role_validity) AS role_empty, \
                 lower(role_validity) AS role_lower, upper(role_validity) AS role_upper, \
                 isempty(validity) AS empty, lower(validity) AS lower, upper(validity) AS upper, \
@@ -376,7 +379,7 @@ pub(crate) async fn load(conn: &mut PgConnection) -> Result<Loaded, StorageError
         capabilities.push(CapabilityRow {
             role_id: row.try_get("role_id")?,
             performer_id: row.try_get("performer_id")?,
-            kind: row.try_get("kind")?,
+            operation: row.try_get("operation")?,
             lifecycle_state: row.try_get("lifecycle_state")?,
             role_dates: dates("role_empty", "role_lower", "role_upper")?,
             dates: dates("empty", "lower", "upper")?,
@@ -388,7 +391,7 @@ pub(crate) async fn load(conn: &mut PgConnection) -> Result<Loaded, StorageError
     tx.commit().await?;
     Ok(Loaded {
         revision,
-        agents,
+        clients,
         capabilities,
     })
 }

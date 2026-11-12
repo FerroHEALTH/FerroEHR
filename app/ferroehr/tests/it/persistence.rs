@@ -135,8 +135,8 @@ async fn migrations_apply_cleanly_and_idempotently() {
     assert_eq!(
         tables("party").await,
         [
-            "binding_agent",
             "binding_capability",
+            "binding_client",
             "binding_grant_revision",
             "binding_group_revision",
             "binding_identifier",

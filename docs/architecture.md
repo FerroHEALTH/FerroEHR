@@ -505,29 +505,46 @@ matched by `PolicyKind::id_pattern`, a test pinned to `PolicyKind::of`.
 `ACCESS_CONTROL_SETTINGS` is "Currently implementation dependent" and the
 Demographic API defines no access rule for its operations.
 
-**The grant rows and the read path** (`party_binding::grants`, #5435). The
-binding side table gains two relations (migration `party/0033`):
-`binding_agent`, one row per client identifier of a system `AGENT` head
-that is not deleted, the `DV_IDENTIFIER` of type `client_id` at
-`/details[id2]/items[id3]`, unique per `(issuer, client_id)` so a second
-`AGENT` naming a client is `409` at its commit; and `binding_capability`,
-one row per `CAPABILITY` of a policy `ROLE` head that is not deleted, with
-its performer, its kind, the `ROLE`'s and the `CAPABILITY`'s
-`time_validity` as date ranges (absent is every date, a bound that does
-not read is none), the credentials' `Not before` and `Not after` instants
-(a `DV_DATE_TIME` without an offset reads in UTC, one that does not read
-makes the capability hold on no date), and the credentials as written.
-They are written in each `AGENT` and `ROLE` commit's own transaction from
-the body the commit holds, replaced per party, and rebuilt from the versions
-by `ferroehr party-binding refill`, which with no party mapping configured
-rebuilds these rows alone; a boot fills them once if no change has moved
-their revision yet. A grant is in force for a request when the `AGENT` and
-the `ROLE` heads are `complete` or `incomplete`, both date ranges hold the
-request's date in UTC (the zone every `DV_DATE` is read in), the instants
-hold the request's instant, and the ceiling admits its kind. The `ROLE`'s
-`performer` alone ties a grant to its party: a demographic `CONTRIBUTION`
-cannot carry an `AGENT` and the `ROLE` that names it (the ids are minted at
-commit), so the `AGENT`'s `roles` list is not required. **Our own design.**
+**The grant rows and the read path** (`party_binding::grants`, #5435). By
+the owner's correction on #5433, FerroEHR reads permission from coded
+content and never recognises a grant by archetype or template id, so a
+deployment models its parties from any archetypes. The contract is a
+terminology of our own, `ferroehr-operations`
+(`party_binding::grants::operation`): a `CAPABILITY` grants an operation when
+its `credentials` hold, at any depth, an element whose value is a
+`DV_CODED_TEXT` of that terminology with an operation code
+(`commit_composition`, `import_ehr`, `import_ehr_extract`,
+`export_ehr_extract`, `federated_person_access`,
+`federated_organisation_access`, `read_subject_audit`, `access_service`,
+`read_identifiers`); elements named by the qualifier codes `not_before` and
+`not_after` bound it finer than a day, and `template`, `facility` and
+`subject_namespace` scope it; `acts_for` codes the acts-for relationship.
+That is the RM's `ITEM_STRUCTURE` with a terminology binding, which any
+modeller produces (RM `data_types` `DV_CODED_TEXT`, `CODE_PHRASE`). A client
+is any `ACTOR` carrying a `DV_IDENTIFIER` of type `client_id` in its
+`details` or `identities`, whose issuer is the token issuer (§Party
+Identification). **Our own design.**
+
+The binding side table gains two relations (migration `party/0033`):
+`binding_client`, one row per client identifier of an `ACTOR` head that is
+not deleted, unique per `(issuer, client_id)`, so a second party naming a
+client is `409` at its commit; and `binding_capability`, one row per
+operation a `CAPABILITY` of a `ROLE` head grants, with its performer, the
+`ROLE`'s and the `CAPABILITY`'s `time_validity` as date ranges (absent is
+every date, a bound that does not read is none), the `not_before` and
+`not_after` instants (a `DV_DATE_TIME` without an offset reads in UTC, one
+that does not read makes the capability hold on no date), and the
+credentials as written. They are written in each party commit's own
+transaction from the body the commit holds, replaced per party, and rebuilt
+from the versions by `ferroehr party-binding refill`; a boot fills them once
+if no change has moved their revision yet. A grant is in force for a request
+when the client and the `ROLE` heads are `complete` or `incomplete`, both
+date ranges hold the request's date in UTC (the zone every `DV_DATE` is read
+in), the instants hold the request's instant, and the ceiling admits the
+operation. The `ROLE`'s `performer` alone ties a grant to its party: a
+demographic `CONTRIBUTION` cannot carry an `AGENT` and the `ROLE` that names
+it (the ids are minted at commit), so the performer's `roles` list is not
+required. **Our own design.**
 
 The request path adds no transaction: each replica keeps the rows in memory
 (`LiveGrants`) after the pattern of the admin registers below, listening on
@@ -540,32 +557,28 @@ the caller's next request on that replica runs under the change; another
 replica does from its first request after the notification. While the
 listener is not connected every request that resolves a caller reads the
 revision. A request resolves its caller after authentication: a system
-client (`CallerKind::System`) by its token's issuer and `client_id` to the
-`AGENT`, a caller the login binding bound by its party, anyone else to no
-grants and no read; a copy that must be read and cannot be is `503`.
-Nothing decides a request on a grant yet: the consumers of #5433 read
-`Capabilities::current()`, which holds the caller's grants for the
-duration of the request, each a `GrantKind` with its `ROLE` and credentials
-read by the archetype's node ids. A per-request read without a cache, which
-the program first named, would add a transaction to every request, which
-the performance gate's transactions-per-request measure refuses (#5459).
+client (`CallerKind::System`) by its token's issuer and `client_id`, a
+caller the login binding bound by its party, anyone else to no grants and no
+read; a copy that must be read and cannot be is `503`. Nothing decides a
+request on a grant yet: the consumers of #5433 read
+`Capabilities::current()`, which holds the caller's grants for the duration
+of the request, each an `Operation` with its `ROLE` and credentials read by
+the codes of their elements' names. A per-request read without a cache,
+which the program first named, would add a transaction to every request,
+which the performance gate's transactions-per-request measure refuses
+(#5459).
 
-**The grant ceiling.** `[authz.grants] allowed` bounds the kinds of grant
-the party store may hold, so a compromised administrator account cannot
-grant more than the operator allows. A kind is the policy `ROLE`'s kind
-with the capability's coded name (`system_client.relay`,
-`system_client.device`, `data_migration`, `federation_partner.person`,
-`federation_partner.organisation`, `privileged.subject_audit`,
-`privileged.access_service`, `privileged.identifier_reader`,
-`privileged.import`; a specialised code counts as the code it
-specialises). A `ROLE` commit carrying a capability the ceiling does not
-admit, or one of a code the contract does not define, is `403` naming the
-kind and the key; a stored one, such as one committed before the ceiling
-was narrowed, is never honoured and is logged when the rows are read. The
-default admits the two system client kinds, which reach only the templates
-the grant names: a migration, a federation agreement and every privilege
-reach beyond one system's own writes, so the operator admits each by name.
-It is the one key this program adds. **Our own design.**
+**The grant ceiling.** `[authz.grants] allowed` bounds the operations the
+party store may grant, so a compromised administrator account cannot grant
+more than the operator allows. A `ROLE` commit with a capability coding an
+operation the ceiling does not admit, or a code of the terminology that
+names no operation, is `403` naming the code and the key; a stored one, such
+as one committed before the ceiling was narrowed, is never honoured and is
+logged when the rows are read. The default admits `commit_composition`
+alone, which reaches only the templates the grant names: an import, an
+export, a federation agreement and every privilege reach beyond one system's
+own writes, so the operator admits each by name. It is the one key this
+program adds. **Our own design.**
 
 **Break-glass stays in the configuration.** Emergency access (EHDS Art.
 11(5)) must work when the party store does not answer, so

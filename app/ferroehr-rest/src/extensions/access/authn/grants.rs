@@ -6,7 +6,7 @@
 //! request run inside them.
 //!
 //! A system client is resolved by the issuer of its token and its
-//! `client_id` to the system `AGENT` carrying that client identifier, and a
+//! `client_id` to the `ACTOR` carrying that client identifier, and a
 //! caller the login binding bound to a party by that party; every other
 //! caller has none and reads nothing. The copy is read only when a
 //! notification or a lost listener asks for it, so a request adds no
@@ -49,7 +49,7 @@ pub(super) async fn resolve(
         .and_then(|bound| bound.party.id().parse::<uuid::Uuid>().ok());
     let actor = match (caller.kind(), caller.issuer(), caller.client_id(), bound) {
         (CallerKind::System, Some(issuer), Some(client_id), _) => {
-            Actor::System { issuer, client_id }
+            Actor::Client { issuer, client_id }
         }
         (_, _, _, Some(party)) => Actor::Party(party),
         _ => return Ok(Arc::default()),

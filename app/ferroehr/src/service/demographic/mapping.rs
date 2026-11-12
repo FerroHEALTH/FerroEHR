@@ -357,7 +357,7 @@ impl FerroEhrService {
     #[must_use]
     pub fn with_grant_ceiling(
         self,
-        ceiling: crate::party_binding::grants::kind::GrantCeiling,
+        ceiling: crate::party_binding::grants::operation::GrantCeiling,
     ) -> Self {
         self.grants.set_ceiling(ceiling);
         self

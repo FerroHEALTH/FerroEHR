@@ -9,7 +9,7 @@
 //! grant, so the next request on every replica decides under the change. A
 //! read is one indexed read of the revision, and the rows only when the
 //! revision moved. Which grants hold is judged at each request on its own
-//! date and instant, and a grant of a kind `[authz.grants] allowed` does not
+//! date and instant, and a grant of an operation `[authz.grants] allowed` does not
 //! admit is never honoured. No openEHR spec governs operational policy: our
 //! own design.
 
@@ -22,8 +22,8 @@ use std::sync::{Arc, PoisonError, RwLock};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::party_binding::grants::capabilities::{Actor, Agent, AgentState, Capabilities, Grant};
-use crate::party_binding::grants::kind::{GrantCeiling, GrantKind};
+use crate::party_binding::grants::capabilities::{Actor, Capabilities, Client, ClientState, Grant};
+use crate::party_binding::grants::operation::{GrantCeiling, Operation};
 use crate::party_binding::grants::store::{self, CHANNEL, CapabilityRow, Loaded};
 use crate::policy_register::listen::Listened;
 use crate::storage::error::StorageError;
@@ -73,8 +73,8 @@ impl GrantsUnavailable {
 struct Held {
     /// The revision read; `None` before the first read.
     revision: Option<i64>,
-    /// Each system `AGENT` by `(issuer, client_id)`.
-    agents: BTreeMap<(String, String), Agent>,
+    /// Each client `ACTOR` by `(issuer, client_id)`.
+    clients: BTreeMap<(String, String), Client>,
     /// The capabilities of each performer.
     capabilities: BTreeMap<Uuid, Vec<CapabilityRow>>,
 }
@@ -192,25 +192,25 @@ impl LiveGrants {
         let above: Vec<&str> = loaded
             .capabilities
             .iter()
-            .map(|row| row.kind.as_str())
-            .filter(|kind| !ceiling.allows_name(kind))
+            .map(|row| row.operation.as_str())
+            .filter(|code| !ceiling.allows_code(code))
             .collect();
         if !above.is_empty() {
             tracing::warn!(
                 count = above.len(),
-                kinds = %above.join(", "),
+                operations = %above.join(", "),
                 "stored grants are above [authz.grants] allowed and are not honoured"
             );
         }
-        let agents = loaded
-            .agents
+        let clients = loaded
+            .clients
             .into_iter()
             .map(|row| {
-                let agent = Agent {
+                let client = Client {
                     party: row.party_id,
-                    state: AgentState::of(&row.lifecycle_state),
+                    state: ClientState::of(&row.lifecycle_state),
                 };
-                ((row.issuer, row.client_id), agent)
+                ((row.issuer, row.client_id), client)
             })
             .collect();
         let mut capabilities: BTreeMap<Uuid, Vec<CapabilityRow>> = BTreeMap::new();
@@ -219,30 +219,30 @@ impl LiveGrants {
         }
         *self.held.write().unwrap_or_else(PoisonError::into_inner) = Arc::new(Held {
             revision: Some(loaded.revision),
-            agents,
+            clients,
             capabilities,
         });
     }
 
     /// The capabilities of `actor` at `now`, from the copy held: the
-    /// grants of the policy `ROLE`s it performs that hold on the date of
-    /// `now` in UTC and at `now`, of a kind the ceiling admits.
+    /// operations the `ROLE`s it performs grant that hold on the date of
+    /// `now` in UTC and at `now`, of an operation the ceiling admits.
     #[must_use]
     pub fn capabilities(&self, actor: Actor<'_>, now: jiff::Timestamp) -> Capabilities {
         let held = self.held();
-        let (agent, performer) = match actor {
-            Actor::System { issuer, client_id } => {
-                let Some(agent) = held
-                    .agents
+        let (client, performer) = match actor {
+            Actor::Client { issuer, client_id } => {
+                let Some(client) = held
+                    .clients
                     .get(&(issuer.to_owned(), client_id.to_owned()))
                     .copied()
                 else {
                     return Capabilities::default();
                 };
-                if !agent.state.grants() {
-                    return Capabilities::new(Some(agent), Vec::new());
+                if !client.state.grants() {
+                    return Capabilities::new(Some(client), Vec::new());
                 }
-                (Some(agent), agent.party)
+                (Some(client), client.party)
             }
             Actor::Party(party) => (None, party),
         };
@@ -254,33 +254,33 @@ impl LiveGrants {
             .into_iter()
             .flatten()
             .filter_map(|row| {
-                let kind = in_force(row, &ceiling, today, now)?;
+                let operation = in_force(row, &ceiling, today, now)?;
                 Some(Grant::new(
-                    kind,
+                    operation,
                     row.role_id,
                     row.credentials.clone().map(Arc::new),
                 ))
             })
             .collect();
-        Capabilities::new(agent, grants)
+        Capabilities::new(client, grants)
     }
 }
 
-/// The kind of the stored capability `row` when it is in force on `today` and
+/// The operation of the stored capability `row` when it is in force on `today` and
 /// at `now` under `ceiling`.
 fn in_force(
     row: &CapabilityRow,
     ceiling: &GrantCeiling,
     today: jiff::civil::Date,
     now: jiff::Timestamp,
-) -> Option<GrantKind> {
-    let kind = GrantKind::named(&row.kind).filter(|kind| ceiling.allows(*kind))?;
+) -> Option<Operation> {
+    let operation = Operation::of(&row.operation).filter(|operation| ceiling.allows(*operation))?;
     let live = matches!(row.lifecycle_state.as_str(), "532" | "553");
     let dated = row.role_dates.is_some_and(|dates| dates.holds(today))
         && row.dates.is_some_and(|dates| dates.holds(today));
     let timed = row.not_before.is_none_or(|before| before <= now)
         && row.not_after.is_none_or(|after| now <= after);
-    (live && dated && timed).then_some(kind)
+    (live && dated && timed).then_some(operation)
 }
 
 #[cfg(test)]
@@ -292,11 +292,11 @@ mod tests {
         text.parse().expect("a date")
     }
 
-    fn row(kind: &str) -> CapabilityRow {
+    fn row(code: &str) -> CapabilityRow {
         CapabilityRow {
             role_id: Uuid::nil(),
             performer_id: Uuid::nil(),
-            kind: kind.to_owned(),
+            operation: code.to_owned(),
             lifecycle_state: "532".to_owned(),
             role_dates: Some(Dates {
                 lower: None,
@@ -314,13 +314,13 @@ mod tests {
 
     #[test]
     fn a_grant_holds_within_its_dates_and_instants_under_the_ceiling() {
-        let ceiling = GrantCeiling::new(GrantKind::ALL);
+        let ceiling = GrantCeiling::new(Operation::ALL);
         let now: jiff::Timestamp = "2026-12-02T12:00:00Z".parse().expect("an instant");
         let today = date("2026-12-02");
-        let relay = row("system_client.relay");
+        let relay = row("commit_composition");
         assert_eq!(
             in_force(&relay, &ceiling, today, now),
-            Some(GrantKind::SystemClientRelay)
+            Some(Operation::CommitComposition)
         );
         assert_eq!(
             in_force(&relay, &ceiling, date("2026-12-03"), now),
@@ -330,7 +330,7 @@ mod tests {
         assert_eq!(
             in_force(&relay, &GrantCeiling::new([]), today, now),
             None,
-            "a kind the ceiling does not admit is never honoured"
+            "an operation the ceiling does not admit is never honoured"
         );
         let mut timed = relay.clone();
         timed.not_before = Some("2026-12-02T13:00:00Z".parse().expect("an instant"));
@@ -345,7 +345,7 @@ mod tests {
         inactive.lifecycle_state = "800".to_owned();
         assert_eq!(in_force(&inactive, &ceiling, today, now), None);
         assert_eq!(
-            in_force(&row("system_client:at99"), &ceiling, today, now),
+            in_force(&row("import_everything"), &ceiling, today, now),
             None
         );
     }
