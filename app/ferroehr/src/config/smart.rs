@@ -36,19 +36,10 @@ pub struct SmartConfig {
     /// Serve the `/.well-known/smart-configuration` discovery document
     /// (SMART App Launch 2.x §Conformance; default `false`). The document is
     /// built from the metadata of one `[auth]` issuer that serves a user
-    /// launch: [`Self::described_issuer`], else the one issuer that is not of
+    /// launch: `[auth] described_issuer`, else the one issuer that is not of
     /// kind `machines` and whose metadata is available. Several such issuers
     /// and no `described_issuer`, or none, refuse the start.
     pub discovery: bool,
-
-    /// The `[auth]` issuer the discovery document describes: an issuer of kind
-    /// `persons`, `patients` or `federation` whose metadata is read from it,
-    /// introspected, or supplied by [`Self::issuer_metadata_file`]. A
-    /// `machines` issuer signs client credentials tokens only, so it serves no
-    /// user launch. Required when more than one issuer could be described. It
-    /// renders with any userinfo masked.
-    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
-    pub described_issuer: Option<SecretUrl>,
 
     /// The RFC 8414 §2 authorization-server metadata of the `[auth]` issuer
     /// it names, whose key set is a `jwks_file` and carries none: a JSON

@@ -49,6 +49,7 @@ The section keys:
 | `scopeless_subjects` | list of `{ issuer, sub }` | `[]` | The subjects whose token, when it carries no resource scope of either the SMART on openEHR or the SMART on FHIR grammar, meets every SMART on openEHR requirement. Only a system (app-only) caller of that issuer is admitted by an entry. A token that carries resource scopes gets only its scopes, and the allowlist reaches neither the ADMIN API nor the DEMOGRAPHIC API, which need the product scope. A string entry refuses the start. |
 | `capabilities` | list of string | `[]` | SMART capabilities the discovery document adds: one SMART App Launch or the SMART on openEHR draft lists, or a full URI. |
 | `scopes_supported` | list of string | `[]` | The scopes the discovery document lists. Empty, it lists the scopes the route table honours. |
+| `described_issuer` | string | unset | The issuer the discovery document describes: one of kind `persons`, `patients` or `federation` whose metadata FerroEHR has, read from it, introspected, or supplied by [`[auth.smart] issuer_metadata_file`](#authsmart). Read only with `[auth.smart] discovery = true`, where naming an unknown issuer, a `machines` issuer or one without metadata is a boot error. Required with discovery when more than one issuer could be described. It renders with any userinfo masked. See [the described issuer](#the-described-issuer). |
 | `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the bearer clients in `[auth.smart] demographic_clients`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
 
 The keys `audience`, `algorithms`, `token_profile`, `clock_skew_seconds`,
@@ -1010,7 +1011,6 @@ whose grants count for what. See [SMART App Launch](../smart-app-launch.md).
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `discovery` | bool | `false` | Serve `/.well-known/smart-configuration`. It is built from the metadata of one `[auth]` issuer, the [described issuer](#the-described-issuer), so it needs an issuer whose metadata names a `token_endpoint` (SMART App Launch 2.2.0, Conformance, §Metadata). |
-| `described_issuer` | string | unset | The `[auth]` issuer the discovery document describes: one of kind `persons`, `patients` or `federation` whose metadata FerroEHR has, read from it, introspected, or supplied by `issuer_metadata_file`. Naming an unknown issuer, a `machines` issuer or one without metadata is a boot error. Required with `discovery = true` when more than one issuer could be described. It renders with any userinfo masked. |
 | `issuer_metadata_file` | path | unset | A JSON file holding the RFC 8414 §2 metadata of the `[auth]` issuer it names, whose key set is a `jwks_file`, read at boot. It must name an `[auth]` issuer, wherever it stands in the list, repeat no member name, and every endpoint it names must be `https` (a loopback host excepted); the discovery document takes its `token_endpoint` and the other endpoints from it. Set for an issuer whose metadata is read from the issuer, it is a boot error. |
 | `platform_base_url` | string | unset ⇒ the REST root | The path the discovery document hangs off, e.g. `/gateway/v1`. |
 | `public_base_url` | string | **required with `discovery`** | The server's externally reachable origin (e.g. `https://cdr.example.com`), from which the discovery document's absolute `services.*.baseUrl` values are built. |
@@ -1052,16 +1052,20 @@ it, or when `issuer_metadata_file` supplies it. An issuer read from a
 With `discovery = true`, the start is refused unless exactly one issuer is
 described:
 
-- `described_issuer` set: it must name an eligible issuer, else the start is
-  refused, naming the key and why.
-- `described_issuer` unset: the one eligible issuer is described. With more
-  than one, the start is refused, naming them and `described_issuer`. With
-  none, as when the only issuer with metadata is a `machines` issuer, the start
-  is refused, saying no issuer can be described.
+- `[auth] described_issuer` set: it must name an eligible issuer, else the
+  start is refused, naming the key and why.
+- `[auth] described_issuer` unset: the one eligible issuer is described. With
+  more than one, the start is refused, naming them and `described_issuer`.
+  With none, as when the only issuer with metadata is a `machines` issuer, the
+  start is refused, saying no issuer can be described.
+
+With `discovery = false`, no document is described and `described_issuer` is
+not read.
 
 The order of the `[[auth.issuer]]` tables never decides. SMART does not say
-which of several trusted issuers a resource server describes, so this rule is
-FerroEHR's own design.
+which of several trusted issuers a resource server describes. The rule is the
+FerroHEALTH family's own design, shared by every product through
+`ferrohealth-smart`, and `described_issuer` is the same `[auth]` key in each.
 
 ## `[management]`
 
