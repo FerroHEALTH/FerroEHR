@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The default demographic definitions of `deploy/definitions/` (#5428)
-//! under the `[authz.party_binding]` example the book documents, read from
-//! the book page itself so the files and the documentation cannot drift.
+//! under the default party mapping (#5462) and the `[authz.party_binding]`
+//! example the book documents, read from the book page itself so the files,
+//! the defaults and the documentation cannot drift.
 //!
-//! The set is loaded as `ferroehr definitions load` stores it, the mapping is
-//! judged against it as boot judges it, and a SCIM User, a Group with that
-//! User as its member, and a representation relationship are then written
-//! and read through it: the User's `PERSON` and `ROLE`, the member's inline
+//! The set is seeded as boot seeds it, the mapping is judged against it as
+//! boot judges it, and a SCIM User, a Group with that User as its member, and
+//! a representation relationship are then written and read through it: the User's `PERSON` and `ROLE`, the member's inline
 //! membership `PARTY_RELATIONSHIP` to the `GROUP`, and a representation
 //! `PARTY_RELATIONSHIP` whose coded name maps to a `subject_relationship`
 //! code (RM demographic `master02-demographic_package.adoc` §Party
@@ -17,7 +17,6 @@
 use std::sync::Arc;
 
 use ferroehr::service::FerroEhrService;
-use ferroehr::service::definition::load::{Loaded, SourceFormat};
 use ferroehr::service::demographic::precondition::Precondition;
 use ferroehr::service::demographic::template::TemplateFit;
 use ferroehr::service::demographic::types::PartyKind;
@@ -30,16 +29,6 @@ use serde_json::{Value, json};
 
 use super::{CLIENT, GROUPS, LOGIN, OTHER_LOGIN, call, config, created};
 use crate::common;
-
-/// The default set, each file under `deploy/definitions/` in the order
-/// `ferroehr definitions load` takes it.
-const SHIPPED_SET: [&str; 5] = [
-    "professional/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls",
-    "professional/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls",
-    "care-team/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls",
-    "care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls",
-    "representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls",
-];
 
 /// The interface form of the representation archetype's id, which each
 /// representation's `archetype_node_id` carries.
@@ -57,56 +46,69 @@ fn repo_file(relative: &str) -> String {
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{} is readable: {e}", path.display()))
 }
 
-/// The worked `[authz.party_binding]` example of the book's authentication
-/// page: the TOML block that maps the representation.
-fn documented_example() -> String {
+/// The TOML block of the book's authentication page that holds `marker`.
+fn documented_block(marker: &str) -> String {
     let page = repo_file("website/book/src/installation/config-auth.md");
     page.split("```toml\n")
         .skip(1)
         .filter_map(|block| block.split("```").next())
-        .find(|block| block.contains("[authz.party_binding.representation]"))
-        .expect("the page documents the representation mapping")
+        .find(|block| block.contains(marker))
+        .unwrap_or_else(|| panic!("the page documents a block holding {marker:?}"))
         .to_owned()
 }
 
-/// The harness configuration with its party mapping replaced by the
-/// documented example.
-fn documented_config() -> ferroehr_rest::config::AppConfig {
+/// The `[authz.party_binding]` table of `mapping`, with a provider.
+fn party_binding(mapping: &str) -> ferroehr::config::binding::PartyBindingConfig {
     use assert_fs::prelude::FileWriteStr as _;
 
     let toml = format!(
-        "[authz.party_binding]\nprovider = {{ issuer = \"urn:oid:2.999\", id = \"1\" }}\n\n{}",
-        documented_example()
+        "[authz.party_binding]\nprovider = {{ issuer = \"urn:oid:2.999\", id = \"1\" }}\n\n{mapping}"
     );
     let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("a temp file");
-    file.write_str(&toml).expect("the example is written");
-    let assembled =
-        ferroehr::config::assemble(Some(file.path()), &std::collections::HashMap::new(), &[])
-            .expect("the documented example assembles");
+    file.write_str(&toml).expect("the mapping is written");
+    ferroehr::config::assemble(Some(file.path()), &std::collections::HashMap::new(), &[])
+        .expect("the mapping assembles")
+        .authz
+        .party_binding
+}
+
+/// The harness configuration with its party mapping replaced by the
+/// documented Microsoft Entra example, which keys the binding on the object
+/// id and keeps every other section's default.
+fn documented_config() -> ferroehr_rest::config::AppConfig {
     let mut config = config();
-    config.party_binding = assembled.authz.party_binding;
+    config.party_binding = party_binding(&documented_block("oidc = \"name\""));
     config
 }
 
-/// A service over `pool` with the default set loaded and the documented
-/// mapping installed and judged, as `serve` does at boot.
+/// The harness configuration with no mapping key and no group issuer: its
+/// persons log in under the default key type, and its clients' Groups take
+/// the group issuer derived from their `binding_issuer`.
+fn zero_config() -> ferroehr_rest::config::AppConfig {
+    let mut config = config();
+    config.party_binding = party_binding("");
+    for table in &mut config.auth.shared.party {
+        "login".clone_into(&mut table.identifier_type);
+        table.group_claim.clear();
+        table.group_identifier_issuer.clear();
+    }
+    config
+}
+
+/// A service over `pool` with the default definitions seeded and the
+/// mapping of `config` installed and judged, as `serve` does at boot.
 async fn booted(
     config: &ferroehr_rest::config::AppConfig,
     pool: &sqlx::PgPool,
 ) -> Arc<FerroEhrService> {
-    let store = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool));
-    for file in SHIPPED_SET {
-        let source = repo_file(&format!("deploy/definitions/{file}"));
-        let loaded = store
-            .definition_load(SourceFormat::Adl2, &source)
-            .await
-            .unwrap_or_else(|e| panic!("{file} loads: {e:?}"));
-        assert!(matches!(loaded, Loaded::Stored(_)), "{file}: {loaded:?}");
-    }
+    FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
+        .seed_default_definitions()
+        .await
+        .expect("the boot seeds the default definitions");
     let sections = config.party_binding.sections();
     let mapping = sections
         .binding_mapping(&[LOGIN.to_owned(), OTHER_LOGIN.to_owned()], "ADMIN")
-        .expect("the documented mapping compiles");
+        .expect("the mapping compiles");
     let service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
         .with_mapped_party_templates(sections.mapped_templates())
         .with_binding_mapping(mapping);
@@ -114,10 +116,7 @@ async fn booted(
         .party_mapping_errors(&sections)
         .await
         .expect("the store answers");
-    assert!(
-        errors.is_empty(),
-        "boot refuses the documented mapping: {errors:?}"
-    );
+    assert!(errors.is_empty(), "boot refuses the mapping: {errors:?}");
     service
         .take_binding_lease(uuid::Uuid::now_v7())
         .await
@@ -326,5 +325,100 @@ async fn the_documented_mapping_boots_on_the_default_definitions_and_serves_user
             Some("254")
         )],
         "at10 maps to 254|parent| of the openEHR subject_relationship group"
+    );
+}
+
+/// The default mapping the book prints is the one an empty configuration
+/// has.
+#[test]
+fn the_book_prints_the_default_mapping() {
+    let printed = party_binding(&documented_block("[authz.party_binding.patient]"));
+    let empty = party_binding("");
+    assert_eq!(
+        (
+            &printed.person,
+            &printed.professional_role,
+            &printed.group,
+            &printed.membership,
+            &printed.representation,
+            &printed.patient,
+        ),
+        (
+            &empty.person,
+            &empty.professional_role,
+            &empty.group,
+            &empty.membership,
+            &empty.representation,
+            &empty.patient,
+        )
+    );
+}
+
+/// A configuration with no mapping key and no group issuer boots on the
+/// seeded default definitions and serves a SCIM User, a Group with that User
+/// as its member, and a representation, with the Group's `externalId` under
+/// the issuer derived from the client's `binding_issuer`.
+#[tokio::test]
+async fn an_empty_configuration_boots_and_serves_users_groups_and_representation() {
+    let config = zero_config();
+    let (_db, pool) = common::migrated_pool().await;
+    let service = booted(&config, &pool).await;
+    ferroehr_rest::scim::endpoint::check(&config).expect("the endpoint can be served");
+    let app = common::router_with(config, Arc::clone(&service)).await;
+    let key = "clinician-7";
+    let user = provision_user(&app, key).await;
+    let group = provision_group(&app, &user).await;
+    let subject = represent(&service, &user).await;
+
+    let today = jiff::Timestamp::now()
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .date()
+        .to_string();
+    let derived = format!("{LOGIN}/groups");
+    let found = service
+        .party_source("demographic")
+        .read(LOGIN, "login", key, Some(&derived), &today)
+        .await
+        .expect("the source answers");
+    let Lookup::Parties(records) = &found else {
+        panic!("one party, got {found:?}");
+    };
+    assert_eq!(records.len(), 1, "{found:?}");
+    let record = &records[0];
+    assert_eq!(
+        record.party(),
+        &PartyRef::new("demographic", "PERSON", user.as_str())
+    );
+    assert_eq!(
+        record.markers(),
+        Markers {
+            professional: true,
+            representative: true,
+        }
+    );
+    let groups: Vec<(&PartyRef, &str)> = record
+        .memberships()
+        .iter()
+        .map(|m| (m.group(), m.identifier()))
+        .collect();
+    assert_eq!(
+        groups,
+        [(
+            &PartyRef::new("demographic", "GROUP", group.as_str()),
+            "ward-3"
+        )],
+        "the Group's externalId is under {derived}"
+    );
+    let represents: Vec<(&PartyRef, Option<&str>)> = record
+        .represents()
+        .iter()
+        .map(|r| (r.subject(), r.relationship()))
+        .collect();
+    assert_eq!(
+        represents,
+        [(
+            &PartyRef::new("demographic", "PERSON", subject.as_str()),
+            Some("254")
+        )]
     );
 }

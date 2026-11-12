@@ -3,7 +3,8 @@
 
 //! The template layer of a demographic write.
 //!
-//! A party of a mapped template, a `PARTY_RELATIONSHIP` of the mapped
+//! A party of a mapped template (a professional's or a patient's `PERSON`,
+//! the professional `ROLE`, a `GROUP`), a `PARTY_RELATIONSHIP` of the mapped
 //! membership archetype, and a policy party of any template on a policy
 //! archetype, is validated against its operational template.
 //!
@@ -55,9 +56,9 @@ const RELATIONSHIP: &str = "PARTY_RELATIONSHIP";
 /// Each entry is an id the definition store resolves: an OPT 1.4 template id,
 /// or the id of an ADL 2 template or archetype, which the store compiles to
 /// its OPT2. A party is of a mapped template when its
-/// `archetype_details.template_id` names a person or group entry; a
-/// `PARTY_RELATIONSHIP` is a membership when its `archetype_details.archetype_id`
-/// is the root archetype of the membership definition. Ids compare in their
+/// `archetype_details.template_id` names a person, role, group or patient
+/// entry; a `PARTY_RELATIONSHIP` is a membership when its
+/// `archetype_details.archetype_id` is the root archetype of the membership definition. Ids compare in their
 /// BASE §Composite Identifiers and Case canonical form, as the store keys them.
 #[derive(Debug, Clone, Default)]
 pub struct MappedPartyTemplates {
@@ -65,6 +66,7 @@ pub struct MappedPartyTemplates {
     role: Option<String>,
     group: Option<String>,
     membership: Option<String>,
+    patient: Option<String>,
     policy: bool,
 }
 
@@ -97,6 +99,13 @@ impl MappedPartyTemplates {
         self
     }
 
+    /// Sets the template a patient's `PERSON` is written under.
+    #[must_use]
+    pub fn with_patient_template(mut self, template_id: impl Into<String>) -> Self {
+        self.patient = Some(template_id.into());
+        self
+    }
+
     /// Validates every policy party ([`crate::party_binding::policy`]),
     /// recognised by its archetype, against its own template.
     #[must_use]
@@ -112,6 +121,7 @@ impl MappedPartyTemplates {
             .iter()
             .chain(&self.role)
             .chain(&self.group)
+            .chain(&self.patient)
             .any(|mapped| canonical_key(mapped) == key)
     }
 }

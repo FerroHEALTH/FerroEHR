@@ -154,31 +154,30 @@ enforces NetworkPolicy**. Check yours; several do not.
 
 ## Demographic definitions and the party mapping
 
-`definitions.files` defaults to FerroEHR's default demographic definitions:
-the professional `PERSON` and `ROLE`, a care-team `GROUP`, and the membership
-and representation `PARTY_RELATIONSHIP` archetypes, which the `definitions`
-init container stores before the server starts. Setting the list replaces
-it, so a deployment that loads its own templates lists those.
+The server stores FerroEHR's default demographic definitions as it boots,
+each one whose id the definition store does not hold, and with no mapping
+key set `config.authz.party_binding` maps them: the professional `PERSON`
+and `ROLE`, a care-team `GROUP`, the membership and representation
+`PARTY_RELATIONSHIP` archetypes and the patient `PERSON`. SCIM Users,
+Groups and representation work with no mapping key. A deployment with
+templates of its own sets the mapping section that names them and lists
+the files in `definitions.files`, which the `definitions` init container
+stores before the server starts; the list is empty by default.
 
-The party mapping under `config.authz.party_binding` is yours, and the chart
-ships none. A mapping that uses the whole default set, with SCIM Groups and
-representation, adds these tables beside its `person` and
-`professional_role` (each client's `config.auth.party` table also needs a
-`group_claim` and a `group_identifier_issuer`):
+A deployment whose people log in under another identifier type sets the
+`person` section, whose key carries that type:
 
 ```yaml
 config:
   authz:
     party_binding:
-      group:
-        template_id: openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0
-        external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
-        display_name: "/identities[id4]/details[id5]/items[id6]"
-      membership:
-        archetype_id: openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1
-      representation:
-        archetype_id: openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1
-        relationship_codes: { at10: "254", at11: "264" }
+      person:
+        template:
+          - template_id: openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0
+            default: true
+            key: { path: "/details[id2]/items[id3]", type: uuid }
+            user_name: { path: "/details[id2]/items[id3]", type: scim_user_name }
+            external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
 ```
 
 Set the mapping before the first start: the binding side table is filled

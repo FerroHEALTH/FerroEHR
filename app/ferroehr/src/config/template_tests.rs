@@ -73,6 +73,18 @@ fn template_declares(key: &str) -> bool {
     })
 }
 
+/// Whether the template declares `key` as a key line whose value is an
+/// inline table: a map key the generator writes as `key = { … }`.
+fn template_declares_inline_table(key: &str) -> bool {
+    DEFAULT_TEMPLATE.lines().any(|line| {
+        let line = line.trim_start();
+        let line = line.strip_prefix("#?").map_or(line, str::trim_start);
+        line.strip_prefix(key)
+            .and_then(|rest| rest.trim_start().strip_prefix('='))
+            .is_some_and(|value| value.trim_start().starts_with('{'))
+    })
+}
+
 /// Every field the default config SERIALIZES must be a key in the template.
 ///
 /// Total for concrete fields and needs no hand-maintained list: it walks the
@@ -87,6 +99,9 @@ fn template_declares_every_serialized_field() {
         };
         for (key, child) in map {
             match child {
+                // A map key's value is an inline table, `key = { … }`: its
+                // entries are the default's data, never keys of the schema.
+                serde_json::Value::Object(_) if template_declares_inline_table(key) => {}
                 serde_json::Value::Object(_) => walk(child, missing),
                 // An absent optional serializes to null, so this walk cannot
                 // see it at all — that class is the other test's job. An

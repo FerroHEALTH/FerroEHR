@@ -103,8 +103,9 @@ pub struct CheckArgs {
 /// installed.
 ///
 /// The mapping is the templates a mapped party is validated against and the
-/// mapping the side table is derived under; the policy parties are
-/// recognised by archetype whether a mapping is configured or not.
+/// mapping the side table is derived under: the shipped default definitions
+/// unless the configuration names its own; the policy parties are
+/// recognised by archetype either way.
 ///
 /// # Errors
 /// A selector path that does not compile, which the configuration check
@@ -127,18 +128,6 @@ pub fn install(
         logins,
     ));
     let sections = config.authz.party_binding.sections();
-    if sections.is_empty() {
-        // NOTE: the policy parties are recognised by archetype, so they are guarded with no party mapping too.
-        let mapping = ferroehr::party_binding::BindingMapping::default()
-            .with_admin_role(&config.authz.rbac.admin_role)
-            .with_policy();
-        return Ok(service
-            .with_mapped_party_templates(
-                ferroehr::service::demographic::template::MappedPartyTemplates::default()
-                    .with_policy(),
-            )
-            .with_binding_mapping(mapping));
-    }
     let mapping = sections
         .binding_mapping(&key_issuers, &config.authz.rbac.admin_role)
         .context("compiling [authz.party_binding]")?;
@@ -147,12 +136,12 @@ pub fn install(
         .with_binding_mapping(mapping))
 }
 
-/// Seeds the default policy definitions, judges the mapping against its
-/// templates, prepares the side table and takes this replica's lease,
-/// renewed in the background until it is released.
+/// Seeds the default policy and demographic definitions, judges the mapping
+/// against its templates, prepares the side table and takes this replica's
+/// lease, renewed in the background until it is released.
 ///
 /// # Errors
-/// A default policy definition the definition store refuses, a template the
+/// A default definition the definition store refuses, a template the
 /// mapping cannot use, a table filled under another mapping, a value two
 /// parties carry, or a party store failure.
 pub async fn prepare(
@@ -160,9 +149,9 @@ pub async fn prepare(
     config: &FerroEhrConfig,
 ) -> anyhow::Result<Option<Held>> {
     service
-        .seed_policy_definitions()
+        .seed_default_definitions()
         .await
-        .context("seeding the default policy definitions")?;
+        .context("seeding the default definitions")?;
     let errors = service
         .party_mapping_errors(&config.authz.party_binding.sections())
         .await?;

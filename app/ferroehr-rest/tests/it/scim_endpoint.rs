@@ -44,7 +44,7 @@ fn binding() -> PartyBindingConfig {
         identifier_type: kind.to_owned(),
     };
     PartyBindingConfig {
-        person: PersonSection {
+        person: Some(PersonSection {
             template: vec![PersonTemplate {
                 template_id: "FerroEHR professional".to_owned(),
                 key: selector("guid"),
@@ -53,7 +53,7 @@ fn binding() -> PartyBindingConfig {
                 ..PersonTemplate::default()
             }],
             ..PersonSection::default()
-        },
+        }),
         professional_role: Some(RoleSection {
             template_id: "FerroEHR professional role".to_owned(),
         }),
@@ -214,8 +214,10 @@ async fn a_declared_client_holding_its_scope_reads_the_discovery_documents() {
         ids,
         [
             "urn:ietf:params:scim:schemas:core:2.0:User",
-            "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User"
-        ]
+            "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User",
+            "urn:ietf:params:scim:schemas:core:2.0:Group"
+        ],
+        "the group and membership sections the mapping leaves unset default to the shipped ones"
     );
     let (status, _, body) = get(
         &app,

@@ -212,10 +212,19 @@ fn a_party_table_whose_identifier_type_no_template_key_carries_is_refused() {
     assert!(
         text.contains(
             "the [[auth.party]] table of \"https://idp.example/realms/staff\" looks logins up \
+             under identifier_type \"guid\", which no person template's key carries: the person \
+             templates' keys are of the types {\"login\"}"
+        ),
+        "the default person template's key is of the type login: {text}"
+    );
+    let text = refusal(&format!("{}\n[authz.party_binding.person]\n", full()));
+    assert!(
+        text.contains(
+            "the [[auth.party]] table of \"https://idp.example/realms/staff\" looks logins up \
              under identifier_type \"guid\", which no person template's key carries: no \
              [[authz.party_binding.person.template]] is declared"
         ),
-        "{text}"
+        "an empty person section maps no person: {text}"
     );
     let text = refusal(&bound(&full()).replacen("type = \"guid\" }", "type = \"login\" }", 1));
     assert!(
@@ -229,6 +238,45 @@ fn a_party_table_whose_identifier_type_no_template_key_carries_is_refused() {
         .expect("assembles")
         .validate()
         .expect("a table whose type a template's key carries loads");
+}
+
+/// A section a deployment sets replaces that section's default whole, and
+/// every section it leaves out keeps the shipped default.
+#[test]
+fn an_explicit_section_overrides_its_default_and_leaves_the_others() {
+    let config = assemble(&format!(
+        "{}\n[authz.party_binding.group]\ntemplate_id = \"own-team\"\nexternal_id = \
+         {{ path = \"/details[id2]/items[id3]\", type = \"team\" }}\n",
+        bound(&full())
+    ))
+    .expect("assembles");
+    let binding = &config.authz.party_binding;
+    let default = ferroehr::config::binding::PartyBindingConfig::default();
+    let group = binding.group.as_ref().expect("the group section is set");
+    assert_eq!(group.template_id, "own-team");
+    assert_eq!(
+        group.display_name, None,
+        "a key the set section leaves out takes no default"
+    );
+    assert_eq!(
+        binding.person().template[0].template_id,
+        "FerroEHR professional"
+    );
+    assert!(
+        binding.person().attribute.is_empty(),
+        "the person section is replaced whole, its default attributes with it"
+    );
+    assert_eq!(
+        binding
+            .professional_role
+            .as_ref()
+            .map(|role| role.template_id.as_str()),
+        Some("FerroEHR professional role")
+    );
+    assert_eq!(binding.membership, default.membership);
+    assert_eq!(binding.representation, default.representation);
+    assert_eq!(binding.patient, default.patient);
+    assert_ne!(binding.group, default.group);
 }
 
 #[test]

@@ -15,7 +15,7 @@
 #
 # What you must set
 #
-# This file lists 913 keys. A deployment that holds real data sets the 10
+# This file lists 916 keys. A deployment that holds real data sets the 10
 # below; every other key is optional and runs on the built-in default its line
 # shows, or stays unset where its note says so.
 #
@@ -1384,11 +1384,12 @@ provisional_report_after = "30d"
 # The binding key the user's `PERSON` carries. Optional (trust).
 #? key = ""
 
-# The person templates and attributes of the shared party mapping. Every
-# template and archetype the mapping names must be stored before boot; FerroEHR
-# ships a default set the book's "Default demographic definitions" page lists,
-# and a deployment may load its own.
-[authz.party_binding.person]
+# The person templates and attributes of the shared party mapping. Each mapping
+# section defaults to FerroEHR's default demographic definitions, which every
+# boot stores when no definition of their id is stored (the book's "Default
+# demographic definitions" page); a deployment with templates of its own sets
+# the section, and stores its templates before boot.
+#? [authz.party_binding.person]
 
 # `[authz.party_binding.person.template]`, one per template a professional's
 # `PERSON` may use.
@@ -1440,37 +1441,47 @@ provisional_report_after = "30d"
 
 # The professional `ROLE` template.
 #? [authz.party_binding.professional_role]
-# An operational template rooted at `ROLE`. Optional (infrastructure).
-#? template_id = ""
+# An operational template rooted at `ROLE`. Optional.
+#? template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
 
 # The provisioned `GROUP` template.
 #? [authz.party_binding.group]
-# An operational template rooted at `GROUP`. Optional (infrastructure).
-#? template_id = ""
-# The path of the group's `displayName`, a `DV_TEXT` in `identities`. Optional,
-# unset by default (infrastructure).
-#? display_name = ""
+# An operational template rooted at `GROUP`. Optional.
+#? template_id = "openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0"
+# The path of the group's `displayName`, a `DV_TEXT` in `identities`. Optional.
+#? display_name = "/identities[id4]/details[id5]/items[id6]"
 
 # The group's `externalId`.
 #? [authz.party_binding.group.external_id]
 # The openEHR path. Optional (infrastructure).
-#? path = ""
+#? path = "/details[id2]/items[id3]"
 # The `DV_IDENTIFIER.type`. Optional (infrastructure).
-#? type = ""
+#? type = "scim_external_id"
 
 # The membership `PARTY_RELATIONSHIP` archetype.
 #? [authz.party_binding.membership]
-# A `PARTY_RELATIONSHIP` archetype. Optional (infrastructure).
-#? archetype_id = ""
+# A `PARTY_RELATIONSHIP` archetype. Optional.
+#? archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
 
 # The representation `PARTY_RELATIONSHIP` archetype.
 #? [authz.party_binding.representation]
 # A `PARTY_RELATIONSHIP` archetype whose `source` is the representative and
-# whose `target` is the subject. Optional (infrastructure).
-#? archetype_id = ""
+# whose `target` is the subject. Optional.
+#? archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1"
 # Each relationship type code of the archetype, mapped to a code of the openEHR
-# `subject_relationship` group. Optional (infrastructure).
-#? relationship_codes = {}
+# `subject_relationship` group. Optional.
+#? relationship_codes = { at10 = "254", at11 = "264" }
+
+# The patient's `PERSON` template.
+#? [authz.party_binding.patient]
+# An operational template rooted at `PERSON`: the subject of an EHR and the
+# target of a representation. Optional.
+#? template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0"
+# The path of the `ELEMENT` holding the patient's identifiers, each a
+# `DV_IDENTIFIER` in `details` of any type and issuer. Optional.
+#? identifier = "/details[id2]/items[id3]"
+# The path of the patient's name, a `DV_TEXT` in `identities`. Optional.
+#? name = "/identities[id6]/details[id7]/items[id8]"
 
 # What FerroEHR does for each `persons` issuer beyond the lookup
 # (`[authz.party_binding.issuer]`): just-in-time creation.

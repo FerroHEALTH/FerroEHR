@@ -16,7 +16,7 @@
 #     after scan-and-tag moved `:latest`, with the tag's version supplied.
 #   - `.github/workflows/sandbox-reseed.yml`: verb `wipe`, then verb
 #     `deploy` with `same-release`: the deploy brings the CDR up after the
-#     wipe, its definitions one-shot first (#5406).
+#     wipe (#5406).
 #
 # WHY an action and not a reusable workflow: the deploy key and the host key
 # are `hosted` ENVIRONMENT secrets, and environment secrets are not available
@@ -37,11 +37,10 @@ inputs:
   verb:
     description: >-
       What the restricted key is asked to run: `deploy` (pull + install the
-      posture + recreate, the definitions one-shot before the CDR) or `wipe`
-      (drop the CDR's schemas on the private database box, using the DSN the
-      app box already holds, the reseed's first step; #3015). The box's
-      `restart` verb starts the CDR alone, which a wiped definition store
-      refuses since party binding (#5406), so no caller names it.
+      posture + recreate) or `wipe` (drop the CDR's schemas on the private
+      database box, using the DSN the app box already holds, the reseed's
+      first step; #3015). The box's `restart` verb starts the CDR alone, and
+      no caller names it (#5406).
     required: false
     default: deploy
   expected-version:
