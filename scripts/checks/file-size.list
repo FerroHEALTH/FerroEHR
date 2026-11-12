@@ -69,7 +69,7 @@ crates/openehr-lang/src/v1_1/lexer/mod.rs 864
 crates/openehr-query/src/ast.rs 833
 crates/openehr-query/src/parser.rs 1568
 crates/openehr-query/src/visit.rs 894
-crates/openehr-sdt/src/flat/build.rs 2512
+crates/openehr-sdt/src/flat/build.rs 2466
 crates/openehr-sdt/src/flat/ctx.rs 895
 crates/openehr-sdt/src/flat/example.rs 1917
 crates/openehr-sdt/src/flat/map/data_values.rs 1049

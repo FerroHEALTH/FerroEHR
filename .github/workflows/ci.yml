@@ -805,6 +805,9 @@ jobs:
       - name: shellcheck / The release rewrite of the quickstart passes its check
         if: ${{ !cancelled() }}
         run: bash scripts/release/quickstart-compose.sh --self-test
+      - name: shellcheck / The release stages each default demographic definition with a checksum that verifies
+        if: ${{ !cancelled() }}
+        run: bash scripts/release/definition-assets.sh --self-test
       - name: shellcheck / The crate stamp writes one version into the nine manifests, their internal requirements and both locks, with or without git, and refuses an unknown crate set
         if: ${{ !cancelled() }}
         run: bash scripts/release/publish-crates.sh --self-test

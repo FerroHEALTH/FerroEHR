@@ -116,13 +116,41 @@ async fn a_source_the_upload_refuses_is_refused_and_not_stored() {
         .expect_err("nothing was stored");
 }
 
-/// The professional fixture set the lanes load, in its load order.
-const PROFESSIONAL: [&str; 2] = [
-    "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls",
-    "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls",
+/// The default demographic definitions, each under `deploy/definitions/` in
+/// the order the lanes load them, with the name of the compose config that
+/// carries its copy.
+const DEFAULT_SET: [(&str, &str); 5] = [
+    (
+        "professional/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls",
+        "ferroehr-definition-person",
+    ),
+    (
+        "professional/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls",
+        "ferroehr-definition-role",
+    ),
+    (
+        "care-team/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls",
+        "ferroehr-definition-group",
+    ),
+    (
+        "care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls",
+        "ferroehr-definition-membership",
+    ),
+    (
+        "representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls",
+        "ferroehr-definition-representation",
+    ),
 ];
 
-/// The mapping the lanes configure over the professional fixture set.
+/// The text of the default definition `file`.
+fn default_definition(file: &str) -> String {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../deploy/definitions")
+        .join(file);
+    std::fs::read_to_string(path).expect("the default definition is readable")
+}
+
+/// The mapping the lanes configure over the professional pair of the set.
 const PROFESSIONAL_MAPPING: &str = r#"
 [[auth.issuer]]
 issuer = "https://basic-users.ferroehr.invalid"
@@ -166,16 +194,13 @@ template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
 "#;
 
 #[tokio::test]
-async fn the_professional_fixtures_load_and_carry_the_lanes_mapping() {
+async fn the_default_definitions_load_and_carry_the_lanes_mapping() {
     use assert_fs::prelude::FileWriteStr as _;
 
     let (_db, svc) = crate::fixtures::service().await;
-    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../deploy/definitions/professional");
-    for file in PROFESSIONAL {
-        let source = std::fs::read_to_string(dir.join(file)).expect("the fixture is readable");
+    for (file, _) in DEFAULT_SET {
         let loaded = svc
-            .definition_load(SourceFormat::Adl2, &source)
+            .definition_load(SourceFormat::Adl2, &default_definition(file))
             .await
             .unwrap_or_else(|e| panic!("{file} loads: {e:?}"));
         assert!(matches!(loaded, Loaded::Stored(_)), "{loaded:?}");
@@ -201,32 +226,53 @@ fn repo_yaml(relative: &str) -> serde_norway::Value {
     serde_norway::from_str(&text).expect("the YAML file parses")
 }
 
-/// The copies of the professional fixture set the quickstart, the hosted
-/// sandbox and the Helm CI values carry are the files of `deploy/definitions/professional/`, so a
-/// lane loads what `the_professional_fixtures_load_and_carry_the_lanes_mapping`
-/// checks.
+/// The copies of the default set the quickstart, the hosted sandbox and the
+/// Helm chart's default `definitions.files` carry are the files of
+/// `deploy/definitions/`, in their order, so a lane loads what
+/// `the_default_definitions_load_and_carry_the_lanes_mapping` checks.
 #[test]
-fn the_lanes_carry_the_professional_fixtures_unchanged() {
-    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../deploy/definitions/professional");
-    let source = |file: &str| std::fs::read_to_string(dir.join(file)).expect("readable");
+fn the_lanes_carry_the_default_definitions_unchanged() {
     for path in ["docker-compose.yml", "deploy/hosted/docker-compose.yml"] {
         let compose = repo_yaml(path);
-        for (config, file) in [
-            ("ferroehr-definition-person", PROFESSIONAL[0]),
-            ("ferroehr-definition-role", PROFESSIONAL[1]),
-        ] {
+        for (file, config) in DEFAULT_SET {
             assert_eq!(
                 compose["configs"][config]["content"].as_str(),
-                Some(source(file).as_str()),
+                Some(default_definition(file).as_str()),
                 "the config {config} of {path} is a copy of {file}"
             );
         }
+        let loaded: Vec<&str> = compose["services"]["ferroehr-definitions"]["command"]
+            .as_sequence()
+            .expect("the one-shot has a command")
+            .iter()
+            .filter_map(serde_norway::Value::as_str)
+            .skip(2)
+            .collect();
+        let mounted: Vec<(&str, &str)> = compose["services"]["ferroehr-definitions"]["configs"]
+            .as_sequence()
+            .expect("the one-shot mounts configs")
+            .iter()
+            .filter_map(|entry| Some((entry["source"].as_str()?, entry["target"].as_str()?)))
+            .collect();
+        let in_order: Vec<&str> = loaded
+            .iter()
+            .map(|target| {
+                mounted
+                    .iter()
+                    .find(|(_, mount)| mount == target)
+                    .map_or("", |(source, _)| *source)
+            })
+            .collect();
+        assert_eq!(
+            in_order,
+            DEFAULT_SET.map(|(_, config)| config),
+            "{path} loads the default set in its order"
+        );
     }
-    let helm = repo_yaml("deploy/helm/ci/basic-auth-values.yaml");
+    let helm = repo_yaml("deploy/helm/ferroehr/values.yaml");
     let files = helm["definitions"]["files"]
         .as_sequence()
-        .expect("the Helm CI values load definitions");
+        .expect("the chart loads definitions by default");
     let carried: Vec<(&str, &str)> = files
         .iter()
         .map(|entry| {
@@ -236,14 +282,19 @@ fn the_lanes_carry_the_professional_fixtures_unchanged() {
             )
         })
         .collect();
-    let expected: Vec<String> = PROFESSIONAL.iter().map(|file| source(file)).collect();
+    let expected: Vec<(String, String)> = DEFAULT_SET
+        .iter()
+        .map(|(file, _)| {
+            let name = file.rsplit('/').next().expect("a file name");
+            (name.to_owned(), default_definition(file))
+        })
+        .collect();
     assert_eq!(
         carried,
-        PROFESSIONAL
+        expected
             .iter()
-            .zip(&expected)
-            .map(|(file, text)| (*file, text.as_str()))
+            .map(|(name, text)| (name.as_str(), text.as_str()))
             .collect::<Vec<_>>(),
-        "the Helm CI values load the fixture set in its order"
+        "the chart's default definitions.files is the default set in its order"
     );
 }

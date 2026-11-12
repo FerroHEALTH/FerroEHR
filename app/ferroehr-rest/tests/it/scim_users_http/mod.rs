@@ -29,6 +29,7 @@ use serde_json::{Value, json};
 
 use crate::common;
 
+mod default_definitions;
 mod entra;
 mod groups;
 mod groups_entra;

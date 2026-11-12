@@ -23,7 +23,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), but from EVERY source — this policy narrows ports, NOT sources (networkPolicy.ingressAllowAll=true). Set networkPolicy.ingressFrom for a PHI workload.
   labels:
-    helm.sh/chart: ferroehr-25.0.1
+    helm.sh/chart: ferroehr-25.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -51,7 +51,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-25.0.1
+    helm.sh/chart: ferroehr-25.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -72,7 +72,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-25.0.1
+    helm.sh/chart: ferroehr-25.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -101,7 +101,7 @@ kind: Secret
 metadata:
   name: ferroehr-env
   labels:
-    helm.sh/chart: ferroehr-25.0.1
+    helm.sh/chart: ferroehr-25.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -120,7 +120,7 @@ kind: Secret
 metadata:
   name: ferroehr-config
   labels:
-    helm.sh/chart: ferroehr-25.0.1
+    helm.sh/chart: ferroehr-25.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -150,7 +150,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-25.0.1
+    helm.sh/chart: ferroehr-25.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -309,7 +309,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr-definitions
   labels:
-    helm.sh/chart: ferroehr-25.0.1
+    helm.sh/chart: ferroehr-25.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -464,6 +464,170 @@ data:
             >
         >
     
+  openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls: |
+    archetype (adl_version=2.0.6; rm_release=1.1.0)
+        openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0
+    
+    language
+        original_language = <[ISO_639-1::en]>
+    
+    description
+        original_author = <
+            ["name"] = <"FerroEHR">
+            ["organisation"] = <"Cadasto B.V.">
+        >
+        lifecycle_state = <"unmanaged">
+        details = <
+            ["en"] = <
+                language = <[ISO_639-1::en]>
+                purpose = <"A team of healthcare professionals, such as a care team or a department, whose members are the professionals' PERSONs. A SCIM Group is provisioned as one.">
+                use = <"Adapted from the openEHR CKM archetypes the derived_from entry names: the team's identifiers in details and its name in identities, every element optional so a team provisioned with only a name is complete. Each member's PERSON holds a membership PARTY_RELATIONSHIP to the team.">
+                copyright = <"© openEHR Foundation">
+            >
+        >
+        other_details = <
+            ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+            ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0, openEHR-DEMOGRAPHIC-PARTY_IDENTITY.organisation_name.v0 (openEHR CKM)">
+        >
+    
+    definition
+        GROUP[id1] matches {
+            details matches {
+                ITEM_TREE[id2] matches {
+                    items matches {
+                        ELEMENT[id3] occurrences matches {0..*} matches {
+                            value matches { DV_IDENTIFIER[id7] }
+                        }
+                    }
+                }
+            }
+            identities matches {
+                PARTY_IDENTITY[id4] matches {
+                    details matches {
+                        ITEM_TREE[id5] matches {
+                            items matches {
+                                ELEMENT[id6] occurrences matches {0..1} matches {
+                                    value matches { DV_TEXT[id8] }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    
+    terminology
+        term_definitions = <
+            ["en"] = <
+                ["id1"] = <text = <"Care team"> description = <"A team of healthcare professionals.">>
+                ["id2"] = <text = <"Identifiers"> description = <"The identifiers of the team.">>
+                ["id3"] = <text = <"Identifier"> description = <"An identifier of the team, such as the external id of a provisioned group.">>
+                ["id4"] = <text = <"Name"> description = <"The name the team is known by.">>
+                ["id5"] = <text = <"Items"> description = <"The structure of the name.">>
+                ["id6"] = <text = <"Name"> description = <"The name of the team as it is displayed.">>
+            >
+        >
+    
+  openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls: |
+    archetype (adl_version=2.0.6; rm_release=1.1.0)
+        openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0
+    
+    language
+        original_language = <[ISO_639-1::en]>
+    
+    description
+        original_author = <
+            ["name"] = <"FerroEHR">
+            ["organisation"] = <"Cadasto B.V.">
+        >
+        lifecycle_state = <"unmanaged">
+        details = <
+            ["en"] = <
+                language = <[ISO_639-1::en]>
+                purpose = <"The membership of a person in a team: a PARTY_RELATIONSHIP from the member's PERSON, its source, to the team's GROUP, its target.">
+                use = <"Held in the member's PERSON.relationships. Adapted from the PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline: its details and type of relationship, here the member's role in the team, optional.">
+                copyright = <"© openEHR Foundation">
+            >
+        >
+        other_details = <
+            ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+            ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0 (openEHR CKM)">
+        >
+    
+    definition
+        PARTY_RELATIONSHIP[id1] matches {
+            details matches {
+                ITEM_TREE[id2] occurrences matches {0..1} matches {
+                    items matches {
+                        ELEMENT[id3] occurrences matches {0..1} matches {
+                            value matches { DV_TEXT[id4] }
+                        }
+                    }
+                }
+            }
+        }
+    
+    terminology
+        term_definitions = <
+            ["en"] = <
+                ["id1"] = <text = <"Membership"> description = <"The membership of a person in a team.">>
+                ["id2"] = <text = <"Details"> description = <"The details of the membership.">>
+                ["id3"] = <text = <"Role in the team"> description = <"The role the member holds in the team.">>
+            >
+        >
+    
+  openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls: |
+    archetype (adl_version=2.0.6; rm_release=1.1.0)
+        openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0
+    
+    language
+        original_language = <[ISO_639-1::en]>
+    
+    description
+        original_author = <
+            ["name"] = <"FerroEHR">
+            ["organisation"] = <"Cadasto B.V.">
+        >
+        lifecycle_state = <"unmanaged">
+        details = <
+            ["en"] = <
+                language = <[ISO_639-1::en]>
+                purpose = <"The relationship a representative acts through: a PARTY_RELATIONSHIP from the representative's PERSON, its source, to the PERSON of the subject they act for, its target.">
+                use = <"Held in the representative's PERSON.relationships, with time_validity bounding when it holds. Its name is its type, coded from the value set ac1, and each type maps to a code of the openEHR subject_relationship group. Adapted from the PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline: its type of relationship, coded.">
+                copyright = <"© openEHR Foundation">
+            >
+        >
+        other_details = <
+            ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+            ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0 (openEHR CKM)">
+        >
+    
+    definition
+        PARTY_RELATIONSHIP[id1] matches {
+            name matches {
+                DV_CODED_TEXT[id2] matches {
+                    defining_code matches {[ac1]}
+                }
+            }
+        }
+    
+    terminology
+        term_definitions = <
+            ["en"] = <
+                ["id1"] = <text = <"Representation"> description = <"The relationship of a representative to the subject they act for.">>
+                ["id2"] = <text = <"Type of representation"> description = <"The type of the relationship, which is its name.">>
+                ["ac1"] = <text = <"Types of representation"> description = <"The types of relationship a representative acts through.">>
+                ["at10"] = <text = <"Parent"> description = <"The representative is a parent of the subject.">>
+                ["at11"] = <text = <"Guardian"> description = <"The representative is a legal guardian of the subject.">>
+            >
+        >
+        value_sets = <
+            ["ac1"] = <
+                id = <"ac1">
+                members = <"at10", "at11">
+            >
+        >
+    
 
 ---
 # Source: ferroehr/templates/service.yaml
@@ -472,7 +636,7 @@ kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-25.0.1
+    helm.sh/chart: ferroehr-25.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -502,7 +666,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-25.0.1
+    helm.sh/chart: ferroehr-25.1.0
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.7.0"
@@ -529,7 +693,7 @@ spec:
         # volume while every pod kept running on the value it read at startup.
         checksum/config: c9626d7d8ebe4a2bb43f7fe09c5b8f5a028fc6b8970ff735dd86ef348efd4f6a
         # A changed definition list rolls the pods, so the init container loads it.
-        checksum/definitions: b0e2806bd267d9ed99e5fbf53ab1b3a4bd1d4e616a5cd7627296c22e87bed415
+        checksum/definitions: 3755fd863c9f72a1eb98519a38f76b4769be6b893a23ca13c76471c8bbcdfcf4
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr
@@ -573,6 +737,9 @@ spec:
             - load
             - "/etc/ferroehr-definitions/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls"
             - "/etc/ferroehr-definitions/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls"
+            - "/etc/ferroehr-definitions/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls"
+            - "/etc/ferroehr-definitions/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls"
+            - "/etc/ferroehr-definitions/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls"
           env:
             # The server reads the file FERROEHR_CONFIG names and searches for
             # none, so the mounted ferroehr.toml is named here.
