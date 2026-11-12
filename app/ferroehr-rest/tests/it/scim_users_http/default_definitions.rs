@@ -33,7 +33,7 @@ use crate::common;
 
 /// The default set, each file under `deploy/definitions/` in the order
 /// `ferroehr definitions load` takes it.
-const DEFAULT_SET: [&str; 5] = [
+const SHIPPED_SET: [&str; 5] = [
     "professional/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls",
     "professional/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls",
     "care-team/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls",
@@ -95,7 +95,7 @@ async fn booted(
     pool: &sqlx::PgPool,
 ) -> Arc<FerroEhrService> {
     let store = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool));
-    for file in DEFAULT_SET {
+    for file in SHIPPED_SET {
         let source = repo_file(&format!("deploy/definitions/{file}"));
         let loaded = store
             .definition_load(SourceFormat::Adl2, &source)
