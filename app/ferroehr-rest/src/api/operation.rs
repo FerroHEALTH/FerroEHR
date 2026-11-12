@@ -268,6 +268,7 @@ static OPERATIONS: &[Operation] = operations! {
     "organisation_tags_get" => Read, Clinical, None, Skip, Demographic, None;
     "organisation_tags_update" => Update, Clinical, None, Skip, Demographic, None;
     "organisation_update" => Update, Clinical, None, Skip, Demographic, None;
+    "party_reverse_relationships_get" => Read, None, None, Skip, Demographic, None;
     "person_create" => Create, Clinical, None, Skip, Demographic, None;
     "person_delete" => Delete, Clinical, None, Skip, Demographic, None;
     "person_get" => Read, Clinical, None, Skip, Demographic, None;

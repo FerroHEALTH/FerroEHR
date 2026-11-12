@@ -65,6 +65,7 @@ const EXTENSION_ROOTS: &[&str] = &[
     "/admin/template",
     "/definition/archetype",
     "/definition/artefact",
+    "/demographic/party",
     "/demographic/party_relationship",
     "/demographic/versioned_party_relationship",
     "/message",
