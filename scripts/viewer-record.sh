@@ -110,7 +110,9 @@ else
     deploy/definitions/professional/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls \
     deploy/definitions/care-team/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls \
     deploy/definitions/care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls \
-    deploy/definitions/representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls
+    deploy/definitions/representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls \
+    deploy/definitions/patient/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls \
+    deploy/definitions/provider/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls
   echo "── starting ferroehr on $CDR_URL"
   env "${SERVER_ENV[@]}" "$ROOT/target/debug/ferroehr" >"$WORK/ferroehr.log" 2>&1 &
   SERVER_PID=$!

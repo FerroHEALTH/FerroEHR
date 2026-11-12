@@ -22,6 +22,7 @@ pub mod check;
 pub(crate) mod derive;
 pub mod fill;
 pub mod lookup;
+pub mod policy;
 pub mod protect;
 pub mod provisioned;
 mod rows;
@@ -398,6 +399,8 @@ pub struct BindingMapping {
     /// The role whose holder may write a protected party
     /// ([`protect`]), compared case-insensitively.
     admin_role: Option<String>,
+    /// Whether the policy parties are recognised and guarded.
+    policy: bool,
 }
 
 impl BindingMapping {
@@ -473,6 +476,20 @@ impl BindingMapping {
     pub fn with_admin_role(mut self, role: impl Into<String>) -> Self {
         self.admin_role = Some(role.into());
         self
+    }
+
+    /// Returns this mapping recognising the policy parties ([`policy`]) by
+    /// their archetypes, which the protection then guards.
+    #[must_use]
+    pub fn with_policy(mut self) -> Self {
+        self.policy = true;
+        self
+    }
+
+    /// Whether the mapping recognises the policy parties.
+    #[must_use]
+    pub fn names_policy(&self) -> bool {
+        self.policy
     }
 
     /// The binding-key selector of the person template `template_id`, in any
@@ -590,6 +607,15 @@ impl BindingMapping {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_policy_moves_no_digest() {
+        assert_eq!(
+            BindingMapping::default().with_policy().digest(),
+            BindingMapping::default().digest(),
+            "the policy derives no row, so it moves no digest"
+        );
+    }
 
     #[test]
     fn a_path_parses_into_its_steps_and_reads_the_element_value() {

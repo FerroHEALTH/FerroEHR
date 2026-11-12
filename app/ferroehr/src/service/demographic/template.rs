@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The template layer of a demographic write: a party of a mapped template, or
-//! a `PARTY_RELATIONSHIP` of the mapped membership archetype, is validated
-//! against its operational template.
+//! The template layer of a demographic write.
+//!
+//! A party of a mapped template, a `PARTY_RELATIONSHIP` of the mapped
+//! membership archetype, and a policy party of any template on a policy
+//! archetype, is validated against its operational template.
 //!
 //! The shared party mapping (SCIM, just-in-time creation and the login
 //! binding) names the templates its `PERSON`s and `GROUP`s are written under
@@ -63,6 +65,7 @@ pub struct MappedPartyTemplates {
     role: Option<String>,
     group: Option<String>,
     membership: Option<String>,
+    policy: bool,
 }
 
 impl MappedPartyTemplates {
@@ -91,6 +94,14 @@ impl MappedPartyTemplates {
     #[must_use]
     pub fn with_membership_archetype(mut self, archetype_id: impl Into<String>) -> Self {
         self.membership = Some(archetype_id.into());
+        self
+    }
+
+    /// Validates every policy party ([`crate::party_binding::policy`]),
+    /// recognised by its archetype, against its own template.
+    #[must_use]
+    pub fn with_policy(mut self) -> Self {
+        self.policy = true;
         self
     }
 
@@ -237,22 +248,32 @@ impl FerroEhrService {
         rm_type: &str,
         body: &Value,
     ) -> Result<Option<Arc<WebTemplate>>, ServiceError> {
+        let archetype_id = body
+            .pointer("/archetype_details/archetype_id/value")
+            .and_then(Value::as_str);
+        let template_id = body
+            .pointer("/archetype_details/template_id/value")
+            .and_then(Value::as_str);
+        if self.party_templates.policy
+            && let Some(archetype) = archetype_id
+            && crate::party_binding::policy::PolicyKind::of(archetype).is_some()
+        {
+            // NOTE: AM `ADL2/master09.01-spec_overview.adoc` §Specialisation, a policy party conforms to its own template.
+            return Ok(Some(
+                self.web_template(template_id.unwrap_or(archetype)).await?,
+            ));
+        }
         if rm_type == RELATIONSHIP {
             let Some(membership) = &self.party_templates.membership else {
                 return Ok(None);
             };
             let wt = self.web_template(membership).await?;
-            let is_membership = body
-                .pointer("/archetype_details/archetype_id/value")
-                .and_then(Value::as_str)
+            let is_membership = archetype_id
                 .zip(wt.tree.node_id.as_deref())
                 .is_some_and(|(id, root)| canonical_key(id) == canonical_key(root));
             return Ok(is_membership.then_some(wt));
         }
-        match body
-            .pointer("/archetype_details/template_id/value")
-            .and_then(Value::as_str)
-        {
+        match template_id {
             Some(template_id) if self.party_templates.names(template_id) => {
                 Ok(Some(self.web_template(template_id).await?))
             }

@@ -224,7 +224,7 @@ fn error_kind(body: &str) -> Value {
 /// does, leaves the query result and the export, and comes back on a lift.
 #[tokio::test]
 async fn a_restricted_composition_reads_as_absent_until_lifted() {
-    let (_db, _pool, app) = app().await;
+    let (_db, _pool, app) = Box::pin(app()).await;
     let ehr = ehr(&app).await;
     let kept = commit(&app, &ehr).await;
     let hidden = commit(&app, &ehr).await;
@@ -309,7 +309,7 @@ async fn a_restricted_composition_reads_as_absent_until_lifted() {
 /// population query; the admin still reads the register.
 #[tokio::test]
 async fn a_restricted_ehr_reads_as_absent() {
-    let (_db, _pool, app) = app().await;
+    let (_db, _pool, app) = Box::pin(app()).await;
     let ehr = ehr(&app).await;
     let vo = commit(&app, &ehr).await;
     mark(&app, &ehr, None, false).await;
@@ -396,7 +396,7 @@ async fn a_restricted_ehr_reads_as_absent() {
 /// data, and that access carries the emergency mark; either alone does not.
 #[tokio::test]
 async fn only_an_emergency_access_reads_restricted_data_and_is_marked() {
-    let (_db, pool, app) = app().await;
+    let (_db, pool, app) = Box::pin(app()).await;
     let ehr = ehr(&app).await;
     let vo = commit(&app, &ehr).await;
     mark(&app, &ehr, Some(&vo), false).await;
@@ -445,7 +445,7 @@ async fn only_an_emergency_access_reads_restricted_data_and_is_marked() {
 /// reading an access restriction.
 #[tokio::test]
 async fn a_malformed_id_is_refused_on_every_restriction_route() {
-    let (_db, _pool, app) = app().await;
+    let (_db, _pool, app) = Box::pin(app()).await;
     let ehr = ehr(&app).await;
     let cases = [
         (

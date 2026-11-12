@@ -14,13 +14,13 @@ description
         ["en"] = <
             language = <[ISO_639-1::en]>
             purpose = <"The professional ROLE a healthcare professional's PERSON performs, which makes the person bindable.">
-            use = <"Adapted from the openEHR CKM archetype the derived_from entry names, with its name the only content and that optional.">
+            use = <"Adapted from the openEHR CKM archetypes the derived_from entry names: its name, optional, and its capabilities, each the professional credentials of the performer, its registrations and qualifications, as the CKM CAPABILITY archetype records them.">
             copyright = <"© openEHR Foundation">
         >
     >
     other_details = <
         ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-        ["derived_from"] = <"openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0, openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0 (openEHR CKM)">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0 (openEHR CKM 1013.1.482, modified 2019-08-09), openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0 (openEHR CKM 1013.1.477, modified 2019-08-09), openEHR-DEMOGRAPHIC-CAPABILITY.individual_credentials.v0 (openEHR CKM 1013.1.824, modified 2019-08-08)">
     >
 
 definition
@@ -38,6 +38,67 @@ definition
                 }
             }
         }
+        capabilities matches {
+            CAPABILITY[id6] occurrences matches {0..*} matches {
+                credentials matches {
+                    ITEM_TREE[id7] matches {
+                        items matches {
+                            ELEMENT[id8] occurrences matches {0..1} matches {
+                                value matches { DV_TEXT[id30] }
+                            }
+                            ELEMENT[id9] occurrences matches {0..1} matches {
+                                value matches { DV_BOOLEAN[id31] }
+                            }
+                            CLUSTER[id10] occurrences matches {0..*} matches {
+                                items matches {
+                                    ELEMENT[id11] occurrences matches {1} matches {
+                                        value matches { DV_TEXT[id32] }
+                                    }
+                                    ELEMENT[id12] occurrences matches {1} matches {
+                                        value matches { DV_TEXT[id33] }
+                                    }
+                                    ELEMENT[id13] occurrences matches {1} matches {
+                                        value matches {
+                                            DV_CODED_TEXT[id34] matches {
+                                                defining_code matches {[ac1]}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[id14] occurrences matches {0..1} matches {
+                                        value matches { DV_INTERVAL<DV_DATE>[id35] }
+                                    }
+                                    ELEMENT[id15] occurrences matches {0..1} matches {
+                                        value matches { DV_TEXT[id36] }
+                                    }
+                                    ELEMENT[id16] occurrences matches {0..1} matches {
+                                        value matches { DV_TEXT[id37] }
+                                    }
+                                }
+                            }
+                            CLUSTER[id17] occurrences matches {0..*} matches {
+                                items matches {
+                                    ELEMENT[id18] occurrences matches {1} matches {
+                                        value matches { DV_TEXT[id38] }
+                                    }
+                                    ELEMENT[id19] occurrences matches {0..1} matches {
+                                        value matches { DV_TEXT[id39] }
+                                    }
+                                    ELEMENT[id20] occurrences matches {1} matches {
+                                        value matches { DV_TEXT[id40] }
+                                    }
+                                    ELEMENT[id21] occurrences matches {0..1} matches {
+                                        value matches { DV_TEXT[id41] }
+                                    }
+                                    ELEMENT[id22] occurrences matches {0..1} matches {
+                                        value matches { DV_DATE[id42] }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
 terminology
@@ -47,5 +108,37 @@ terminology
             ["id2"] = <text = <"Role name"> description = <"The name of the role.">>
             ["id3"] = <text = <"Name"> description = <"The structure of the name.">>
             ["id4"] = <text = <"Full name"> description = <"The name of the role as it is written in full.">>
+            ["id6"] = <text = <"Professional credentials"> description = <"The professional credentials of the performer.">>
+            ["id7"] = <text = <"Details"> description = <"The details of the credentials.">>
+            ["id8"] = <text = <"Field of practice"> description = <"The field the performer identifies as their field of practice, for which they hold the qualifications and registration it requires.">>
+            ["id9"] = <text = <"Primary field of practice"> description = <"Whether this is the performer's primary field of practice.">>
+            ["id10"] = <text = <"Registration"> description = <"A registration of the performer with a registering body.">>
+            ["id11"] = <text = <"Registration ID"> description = <"The identifier of the registration.">>
+            ["id12"] = <text = <"Registering body"> description = <"The body that holds the registration.">>
+            ["id13"] = <text = <"Registration status"> description = <"The status of the registration.">>
+            ["id14"] = <text = <"Period"> description = <"The period the registration holds.">>
+            ["id15"] = <text = <"State"> description = <"The state or province of the registration.">>
+            ["id16"] = <text = <"Country"> description = <"The country of the registration.">>
+            ["id17"] = <text = <"Qualification"> description = <"A qualification of the performer.">>
+            ["id18"] = <text = <"Qualification name"> description = <"The name of the qualification.">>
+            ["id19"] = <text = <"Qualification level"> description = <"The level of the qualification.">>
+            ["id20"] = <text = <"Issuing institution"> description = <"The institution that issued the qualification.">>
+            ["id21"] = <text = <"Issuing institution country"> description = <"The country of the issuing institution.">>
+            ["id22"] = <text = <"Qualification year"> description = <"The date the qualification was obtained.">>
+            ["ac1"] = <text = <"Registration statuses"> description = <"The statuses of a registration.">>
+            ["at10"] = <text = <"Active/Full registration"> description = <"The registration is active and full.">>
+            ["at11"] = <text = <"Limited registration"> description = <"The registration is limited.">>
+            ["at12"] = <text = <"Student registration"> description = <"The registration is a student's.">>
+            ["at13"] = <text = <"Suspended registration"> description = <"The registration is suspended.">>
+            ["at14"] = <text = <"Terminated registration"> description = <"The registration is terminated.">>
+            ["at15"] = <text = <"Nullified"> description = <"The registration is nullified.">>
+            ["at16"] = <text = <"Pending"> description = <"The registration is pending.">>
+            ["at17"] = <text = <"Inactive registration"> description = <"The registration is inactive.">>
+        >
+    >
+    value_sets = <
+        ["ac1"] = <
+            id = <"ac1">
+            members = <"at10", "at11", "at12", "at13", "at14", "at15", "at16", "at17">
         >
     >

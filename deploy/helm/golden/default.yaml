@@ -385,7 +385,7 @@ data:
         >
         other_details = <
             ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-            ["derived_from"] = <"openEHR-DEMOGRAPHIC-PERSON.person.v0, openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v0, openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0, openEHR-DEMOGRAPHIC-ADDRESS.electronic_communication.v0 (openEHR CKM)">
+            ["derived_from"] = <"openEHR-DEMOGRAPHIC-PERSON.person.v0 (openEHR CKM 1013.1.479, modified 2022-01-20), openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v0 (openEHR CKM 1013.1.470, modified 2018-12-20), openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0 (openEHR CKM 1013.1.477, modified 2019-08-09), openEHR-DEMOGRAPHIC-ADDRESS.electronic_communication.v0 (openEHR CKM 1013.1.486, modified 2019-08-08)">
         >
     
     definition
@@ -401,6 +401,12 @@ data:
             }
             identities matches {
                 PARTY_IDENTITY[id4] matches {
+                    name matches {
+                        DV_TEXT[id18]
+                        DV_CODED_TEXT[id19] matches {
+                            defining_code matches {[ac1]}
+                        }
+                    }
                     details matches {
                         ITEM_TREE[id5] matches {
                             items matches {
@@ -422,11 +428,25 @@ data:
                 CONTACT[id9] occurrences matches {0..1} matches {
                     addresses matches {
                         ADDRESS[id10] matches {
+                            name matches {
+                                DV_TEXT[id20]
+                                DV_CODED_TEXT[id21] matches {
+                                    defining_code matches {[ac2]}
+                                }
+                            }
                             details matches {
                                 ITEM_TREE[id11] matches {
                                     items matches {
                                         ELEMENT[id12] occurrences matches {0..1} matches {
                                             value matches { DV_TEXT[id17] }
+                                        }
+                                        ELEMENT[id22] occurrences matches {0..1} matches {
+                                            value matches {
+                                                DV_TEXT[id23]
+                                                DV_CODED_TEXT[id24] matches {
+                                                    defining_code matches {[ac3]}
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -452,6 +472,40 @@ data:
                 ["id10"] = <text = <"Electronic communication"> description = <"An electronic address of the person.">>
                 ["id11"] = <text = <"Electronic communication details"> description = <"The structure of the address.">>
                 ["id12"] = <text = <"Email address"> description = <"The work email address of the person.">>
+                ["id22"] = <text = <"Usage"> description = <"What the address is used for.">>
+                ["ac1"] = <text = <"Name usages"> description = <"The usages of a person's name.">>
+                ["ac2"] = <text = <"Electronic address types"> description = <"The types of an electronic address.">>
+                ["ac3"] = <text = <"Address usages"> description = <"What an address is used for.">>
+                ["at20"] = <text = <"Reporting name"> description = <"Reporting name.">>
+                ["at21"] = <text = <"Newborn name"> description = <"Newborn name.">>
+                ["at22"] = <text = <"Professional or business name"> description = <"Professional or business name.">>
+                ["at23"] = <text = <"Maiden name"> description = <"Maiden name.">>
+                ["at24"] = <text = <"Legal name"> description = <"Legal name.">>
+                ["at25"] = <text = <"Other name"> description = <"Other name.">>
+                ["at30"] = <text = <"Telephone"> description = <"Telephone.">>
+                ["at31"] = <text = <"Fax"> description = <"Fax.">>
+                ["at32"] = <text = <"Mobile"> description = <"Mobile.">>
+                ["at33"] = <text = <"Pager"> description = <"Pager.">>
+                ["at34"] = <text = <"E-mail"> description = <"E-mail.">>
+                ["at35"] = <text = <"URL"> description = <"URL.">>
+                ["at40"] = <text = <"Personal"> description = <"Personal.">>
+                ["at41"] = <text = <"Business"> description = <"Business.">>
+                ["at42"] = <text = <"Personal/Business"> description = <"Personal/Business.">>
+                ["at43"] = <text = <"Other use"> description = <"Other use.">>
+            >
+        >
+        value_sets = <
+            ["ac1"] = <
+                id = <"ac1">
+                members = <"at20", "at21", "at22", "at23", "at24", "at25">
+            >
+            ["ac2"] = <
+                id = <"ac2">
+                members = <"at30", "at31", "at32", "at33", "at34", "at35">
+            >
+            ["ac3"] = <
+                id = <"ac3">
+                members = <"at40", "at41", "at42", "at43">
             >
         >
     
@@ -472,13 +526,13 @@ data:
             ["en"] = <
                 language = <[ISO_639-1::en]>
                 purpose = <"The professional ROLE a healthcare professional's PERSON performs, which makes the person bindable.">
-                use = <"Adapted from the openEHR CKM archetype the derived_from entry names, with its name the only content and that optional.">
+                use = <"Adapted from the openEHR CKM archetypes the derived_from entry names: its name, optional, and its capabilities, each the professional credentials of the performer, its registrations and qualifications, as the CKM CAPABILITY archetype records them.">
                 copyright = <"© openEHR Foundation">
             >
         >
         other_details = <
             ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-            ["derived_from"] = <"openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0, openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0 (openEHR CKM)">
+            ["derived_from"] = <"openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0 (openEHR CKM 1013.1.482, modified 2019-08-09), openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0 (openEHR CKM 1013.1.477, modified 2019-08-09), openEHR-DEMOGRAPHIC-CAPABILITY.individual_credentials.v0 (openEHR CKM 1013.1.824, modified 2019-08-08)">
         >
     
     definition
@@ -496,6 +550,67 @@ data:
                     }
                 }
             }
+            capabilities matches {
+                CAPABILITY[id6] occurrences matches {0..*} matches {
+                    credentials matches {
+                        ITEM_TREE[id7] matches {
+                            items matches {
+                                ELEMENT[id8] occurrences matches {0..1} matches {
+                                    value matches { DV_TEXT[id30] }
+                                }
+                                ELEMENT[id9] occurrences matches {0..1} matches {
+                                    value matches { DV_BOOLEAN[id31] }
+                                }
+                                CLUSTER[id10] occurrences matches {0..*} matches {
+                                    items matches {
+                                        ELEMENT[id11] occurrences matches {1} matches {
+                                            value matches { DV_TEXT[id32] }
+                                        }
+                                        ELEMENT[id12] occurrences matches {1} matches {
+                                            value matches { DV_TEXT[id33] }
+                                        }
+                                        ELEMENT[id13] occurrences matches {1} matches {
+                                            value matches {
+                                                DV_CODED_TEXT[id34] matches {
+                                                    defining_code matches {[ac1]}
+                                                }
+                                            }
+                                        }
+                                        ELEMENT[id14] occurrences matches {0..1} matches {
+                                            value matches { DV_INTERVAL<DV_DATE>[id35] }
+                                        }
+                                        ELEMENT[id15] occurrences matches {0..1} matches {
+                                            value matches { DV_TEXT[id36] }
+                                        }
+                                        ELEMENT[id16] occurrences matches {0..1} matches {
+                                            value matches { DV_TEXT[id37] }
+                                        }
+                                    }
+                                }
+                                CLUSTER[id17] occurrences matches {0..*} matches {
+                                    items matches {
+                                        ELEMENT[id18] occurrences matches {1} matches {
+                                            value matches { DV_TEXT[id38] }
+                                        }
+                                        ELEMENT[id19] occurrences matches {0..1} matches {
+                                            value matches { DV_TEXT[id39] }
+                                        }
+                                        ELEMENT[id20] occurrences matches {1} matches {
+                                            value matches { DV_TEXT[id40] }
+                                        }
+                                        ELEMENT[id21] occurrences matches {0..1} matches {
+                                            value matches { DV_TEXT[id41] }
+                                        }
+                                        ELEMENT[id22] occurrences matches {0..1} matches {
+                                            value matches { DV_DATE[id42] }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     
     terminology
@@ -505,6 +620,38 @@ data:
                 ["id2"] = <text = <"Role name"> description = <"The name of the role.">>
                 ["id3"] = <text = <"Name"> description = <"The structure of the name.">>
                 ["id4"] = <text = <"Full name"> description = <"The name of the role as it is written in full.">>
+                ["id6"] = <text = <"Professional credentials"> description = <"The professional credentials of the performer.">>
+                ["id7"] = <text = <"Details"> description = <"The details of the credentials.">>
+                ["id8"] = <text = <"Field of practice"> description = <"The field the performer identifies as their field of practice, for which they hold the qualifications and registration it requires.">>
+                ["id9"] = <text = <"Primary field of practice"> description = <"Whether this is the performer's primary field of practice.">>
+                ["id10"] = <text = <"Registration"> description = <"A registration of the performer with a registering body.">>
+                ["id11"] = <text = <"Registration ID"> description = <"The identifier of the registration.">>
+                ["id12"] = <text = <"Registering body"> description = <"The body that holds the registration.">>
+                ["id13"] = <text = <"Registration status"> description = <"The status of the registration.">>
+                ["id14"] = <text = <"Period"> description = <"The period the registration holds.">>
+                ["id15"] = <text = <"State"> description = <"The state or province of the registration.">>
+                ["id16"] = <text = <"Country"> description = <"The country of the registration.">>
+                ["id17"] = <text = <"Qualification"> description = <"A qualification of the performer.">>
+                ["id18"] = <text = <"Qualification name"> description = <"The name of the qualification.">>
+                ["id19"] = <text = <"Qualification level"> description = <"The level of the qualification.">>
+                ["id20"] = <text = <"Issuing institution"> description = <"The institution that issued the qualification.">>
+                ["id21"] = <text = <"Issuing institution country"> description = <"The country of the issuing institution.">>
+                ["id22"] = <text = <"Qualification year"> description = <"The date the qualification was obtained.">>
+                ["ac1"] = <text = <"Registration statuses"> description = <"The statuses of a registration.">>
+                ["at10"] = <text = <"Active/Full registration"> description = <"The registration is active and full.">>
+                ["at11"] = <text = <"Limited registration"> description = <"The registration is limited.">>
+                ["at12"] = <text = <"Student registration"> description = <"The registration is a student's.">>
+                ["at13"] = <text = <"Suspended registration"> description = <"The registration is suspended.">>
+                ["at14"] = <text = <"Terminated registration"> description = <"The registration is terminated.">>
+                ["at15"] = <text = <"Nullified"> description = <"The registration is nullified.">>
+                ["at16"] = <text = <"Pending"> description = <"The registration is pending.">>
+                ["at17"] = <text = <"Inactive registration"> description = <"The registration is inactive.">>
+            >
+        >
+        value_sets = <
+            ["ac1"] = <
+                id = <"ac1">
+                members = <"at10", "at11", "at12", "at13", "at14", "at15", "at16", "at17">
             >
         >
     
@@ -531,7 +678,7 @@ data:
         >
         other_details = <
             ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-            ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0, openEHR-DEMOGRAPHIC-PARTY_IDENTITY.organisation_name.v0 (openEHR CKM)">
+            ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0 (openEHR CKM 1013.1.475, modified 2019-08-09), openEHR-DEMOGRAPHIC-PARTY_IDENTITY.organisation_name.v0 (openEHR CKM 1013.1.476, modified 2019-08-09)">
         >
     
     definition
@@ -595,7 +742,7 @@ data:
         >
         other_details = <
             ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-            ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0 (openEHR CKM)">
+            ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0 (openEHR CKM 1013.1.475, modified 2019-08-09)">
         >
     
     definition
@@ -637,13 +784,13 @@ data:
             ["en"] = <
                 language = <[ISO_639-1::en]>
                 purpose = <"The relationship a representative acts through: a PARTY_RELATIONSHIP from the representative's PERSON, its source, to the PERSON of the subject they act for, its target.">
-                use = <"Held in the representative's PERSON.relationships, with time_validity bounding when it holds. Its name is its type, coded from the value set ac1, and each type maps to a code of the openEHR subject_relationship group. Adapted from the PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline: its type of relationship, coded.">
+                use = <"Held in the representative's PERSON.relationships, with time_validity bounding when it holds. Its name is its type, coded from the value set ac1, and each type maps to a code of the openEHR subject_relationship group. Adapted from the person-to-person PARTY_RELATIONSHIP the openEHR CKM archetypes the derived_from entry names constrain inline (person.v0 at0004, personal relationships, and person-patient.v0 at0004.1, personal relationship): its type of relationship, coded.">
                 copyright = <"© openEHR Foundation">
             >
         >
         other_details = <
             ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-            ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0 (openEHR CKM)">
+            ["derived_from"] = <"openEHR-DEMOGRAPHIC-PERSON.person.v0 (openEHR CKM 1013.1.479, modified 2022-01-20), openEHR-DEMOGRAPHIC-PERSON.person-patient.v0 (openEHR CKM 1013.1.821, modified 2019-08-09)">
         >
     
     definition
@@ -669,6 +816,453 @@ data:
             ["ac1"] = <
                 id = <"ac1">
                 members = <"at10", "at11">
+            >
+        >
+    
+  openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls: |
+    archetype (adl_version=2.0.6; rm_release=1.1.0)
+        openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0
+    
+    language
+        original_language = <[ISO_639-1::en]>
+    
+    description
+        original_author = <
+            ["name"] = <"FerroEHR">
+            ["organisation"] = <"Cadasto B.V.">
+        >
+        lifecycle_state = <"unmanaged">
+        details = <
+            ["en"] = <
+                language = <[ISO_639-1::en]>
+                purpose = <"A patient's PERSON: the subject of an EHR, and the target of a representation relationship.">
+                use = <"Its patient identifiers, date of birth and sex in details, its names in identities named by their usage, a postal and an electronic address, and its relationships to personal contacts, third-party payers and healthcare providers, each payer and provider with the patient identifiers it issues. Adapted from the openEHR CKM archetypes the derived_from entry names.">
+                copyright = <"© openEHR Foundation">
+            >
+        >
+        other_details = <
+            ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+            ["derived_from"] = <"openEHR-DEMOGRAPHIC-PERSON.person-patient.v0 (openEHR CKM 1013.1.821, modified 2019-08-09), openEHR-DEMOGRAPHIC-PERSON.person.v0 (openEHR CKM 1013.1.479, modified 2022-01-20), openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v0 (openEHR CKM 1013.1.470, modified 2018-12-20), openEHR-DEMOGRAPHIC-CLUSTER.person_birth_data_iso.v0 (openEHR CKM 1013.1.491, modified 2025-09-02), openEHR-DEMOGRAPHIC-CLUSTER.person_additional_data_iso.v0 (openEHR CKM 1013.1.503, modified 2019-08-12), openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0 (openEHR CKM 1013.1.477, modified 2019-08-09), openEHR-DEMOGRAPHIC-ADDRESS.address.v0 (openEHR CKM 1013.1.484, modified 2019-08-08), openEHR-DEMOGRAPHIC-ADDRESS.electronic_communication.v0 (openEHR CKM 1013.1.486, modified 2019-08-08)">
+        >
+    
+    definition
+        PERSON[id1] matches {
+            details matches {
+                ITEM_TREE[id2] matches {
+                    items matches {
+                        ELEMENT[id3] occurrences matches {0..*} matches {
+                            value matches { DV_IDENTIFIER[id40] }
+                        }
+                        ELEMENT[id4] occurrences matches {0..1} matches {
+                            value matches { DV_DATE[id41] }
+                        }
+                        ELEMENT[id5] occurrences matches {0..1} matches {
+                            value matches {
+                                DV_CODED_TEXT[id42] matches {
+                                    defining_code matches {[ac1]}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            identities matches {
+                PARTY_IDENTITY[id6] matches {
+                    name matches {
+                        DV_TEXT[id43]
+                        DV_CODED_TEXT[id44] matches {
+                            defining_code matches {[ac2]}
+                        }
+                    }
+                    details matches {
+                        ITEM_TREE[id7] matches {
+                            items matches {
+                                ELEMENT[id8] occurrences matches {0..1} matches {
+                                    value matches { DV_TEXT[id45] }
+                                }
+                                ELEMENT[id9] occurrences matches {0..1} matches {
+                                    value matches { DV_TEXT[id46] }
+                                }
+                                ELEMENT[id10] occurrences matches {0..1} matches {
+                                    value matches { DV_TEXT[id47] }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            contacts matches {
+                CONTACT[id11] occurrences matches {0..*} matches {
+                    addresses matches {
+                        ADDRESS[id12] matches {
+                            name matches {
+                                DV_TEXT[id53]
+                                DV_CODED_TEXT[id54] matches {
+                                    defining_code matches {[ac3]}
+                                }
+                            }
+                            details matches {
+                                ITEM_TREE[id13] matches {
+                                    items matches {
+                                        ELEMENT[id14] occurrences matches {0..*} matches {
+                                            value matches { DV_TEXT[id48] }
+                                        }
+                                        ELEMENT[id15] occurrences matches {0..1} matches {
+                                            value matches { DV_TEXT[id49] }
+                                        }
+                                        ELEMENT[id16] occurrences matches {0..1} matches {
+                                            value matches { DV_TEXT[id50] }
+                                        }
+                                        ELEMENT[id17] occurrences matches {0..1} matches {
+                                            value matches { DV_TEXT[id51] }
+                                        }
+                                        ELEMENT[id18] occurrences matches {0..1} matches {
+                                            value matches { DV_TEXT[id52] }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        ADDRESS[id19] matches {
+                            name matches {
+                                DV_TEXT[id55]
+                                DV_CODED_TEXT[id56] matches {
+                                    defining_code matches {[ac4]}
+                                }
+                            }
+                            details matches {
+                                ITEM_TREE[id20] matches {
+                                    items matches {
+                                        ELEMENT[id21] occurrences matches {0..1} matches {
+                                            value matches {
+                                                DV_TEXT[id57]
+                                                DV_CODED_TEXT[id58] matches {
+                                                    defining_code matches {[ac5]}
+                                                }
+                                            }
+                                        }
+                                        ELEMENT[id22] occurrences matches {1} matches {
+                                            value matches { DV_TEXT[id59] }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            relationships matches {
+                PARTY_RELATIONSHIP[id23] occurrences matches {0..*} matches {
+                    details matches {
+                        ITEM_TREE[id24] matches {
+                            items matches {
+                                ELEMENT[id25] occurrences matches {0..1} matches {
+                                    value matches { DV_TEXT[id60] }
+                                }
+                            }
+                        }
+                    }
+                }
+                PARTY_RELATIONSHIP[id26] occurrences matches {0..*} matches {
+                    details matches {
+                        ITEM_TREE[id27] matches {
+                            items matches {
+                                ELEMENT[id28] occurrences matches {0..*} matches {
+                                    value matches { DV_IDENTIFIER[id61] }
+                                }
+                            }
+                        }
+                    }
+                }
+                PARTY_RELATIONSHIP[id29] occurrences matches {0..*} matches {
+                    details matches {
+                        ITEM_TREE[id30] matches {
+                            items matches {
+                                ELEMENT[id31] occurrences matches {0..*} matches {
+                                    value matches { DV_IDENTIFIER[id62] }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    
+    terminology
+        term_definitions = <
+            ["en"] = <
+                ["id1"] = <text = <"Patient"> description = <"A person who receives care: the subject of an EHR.">>
+                ["id2"] = <text = <"Details"> description = <"The identifiers and the demographic data of the patient.">>
+                ["id3"] = <text = <"Patient identifier"> description = <"An identifier of the patient issued by an organisation or the state, such as a national patient identifier.">>
+                ["id4"] = <text = <"Date of birth"> description = <"The date the patient was born.">>
+                ["id5"] = <text = <"Sex"> description = <"The sex of the patient, as recorded for administration.">>
+                ["id6"] = <text = <"Name"> description = <"A name of the patient, named by its usage.">>
+                ["id7"] = <text = <"Name structure"> description = <"The structure of the name.">>
+                ["id8"] = <text = <"Full name"> description = <"The name as it is written in full.">>
+                ["id9"] = <text = <"Given name"> description = <"The given name.">>
+                ["id10"] = <text = <"Family name"> description = <"The family name.">>
+                ["id11"] = <text = <"Contact"> description = <"A way to reach the patient.">>
+                ["id12"] = <text = <"Postal address"> description = <"A postal or residential address.">>
+                ["id13"] = <text = <"Address details"> description = <"The structure of the address.">>
+                ["id14"] = <text = <"Address line"> description = <"A line of the address, the street and number first.">>
+                ["id15"] = <text = <"Postal code"> description = <"The postal code.">>
+                ["id16"] = <text = <"Suburb/town/locality"> description = <"The town or locality.">>
+                ["id17"] = <text = <"State/territory/province"> description = <"The state, territory or province.">>
+                ["id18"] = <text = <"Country"> description = <"The country.">>
+                ["id19"] = <text = <"Electronic address"> description = <"An electronic address, its type its name.">>
+                ["id20"] = <text = <"Components"> description = <"The structure of the electronic address.">>
+                ["id21"] = <text = <"Usage"> description = <"What the address is used for.">>
+                ["id22"] = <text = <"Details"> description = <"The address itself, such as an e-mail address or a telephone number.">>
+                ["id23"] = <text = <"Personal relationship"> description = <"A relationship of the patient to a personal contact, such as a relative.">>
+                ["id24"] = <text = <"Relationship details"> description = <"The details of the personal relationship.">>
+                ["id25"] = <text = <"Type of relationship"> description = <"The type of the personal relationship.">>
+                ["id26"] = <text = <"Third-party payer"> description = <"The relationship of the patient to a third-party payer, such as an insurer.">>
+                ["id27"] = <text = <"Payer details"> description = <"The details of the relationship to the payer.">>
+                ["id28"] = <text = <"Payer patient identifier"> description = <"An identifier the payer issued to the patient.">>
+                ["id29"] = <text = <"Healthcare provider"> description = <"The relationship of the patient to a healthcare provider organisation or an individual provider.">>
+                ["id30"] = <text = <"Provider details"> description = <"The details of the relationship to the provider.">>
+                ["id31"] = <text = <"Provider patient identifier"> description = <"An identifier the provider issued to the patient.">>
+                ["ac1"] = <text = <"Sexes"> description = <"The sexes a patient is recorded with.">>
+                ["ac2"] = <text = <"Name usages"> description = <"The usages of a person's name.">>
+                ["ac3"] = <text = <"Address types"> description = <"The types of a postal address.">>
+                ["ac4"] = <text = <"Electronic address types"> description = <"The types of an electronic address.">>
+                ["ac5"] = <text = <"Address usages"> description = <"What an address is used for.">>
+                ["at10"] = <text = <"Male"> description = <"Male.">>
+                ["at11"] = <text = <"Female"> description = <"Female.">>
+                ["at12"] = <text = <"Intersex or indeterminate"> description = <"Intersex or indeterminate.">>
+                ["at13"] = <text = <"Not declared/inadequately described"> description = <"Not declared or inadequately described.">>
+                ["at20"] = <text = <"Reporting name"> description = <"The name used for reporting.">>
+                ["at21"] = <text = <"Newborn name"> description = <"The name of a newborn before a name is given.">>
+                ["at22"] = <text = <"Professional or business name"> description = <"The name used in professional or business life.">>
+                ["at23"] = <text = <"Maiden name"> description = <"The family name before a change at marriage.">>
+                ["at24"] = <text = <"Legal name"> description = <"The name registered by law.">>
+                ["at25"] = <text = <"Other name"> description = <"Another name.">>
+                ["at30"] = <text = <"Business"> description = <"A business address.">>
+                ["at31"] = <text = <"Mailing or postal"> description = <"A mailing or postal address.">>
+                ["at32"] = <text = <"Temporary accommodation"> description = <"A temporary address.">>
+                ["at33"] = <text = <"Residential"> description = <"A residential address.">>
+                ["at34"] = <text = <"No fixed address"> description = <"The party has no fixed address.">>
+                ["at35"] = <text = <"Unknown/not stated/inadequately described"> description = <"The type is not known.">>
+                ["at40"] = <text = <"Telephone"> description = <"A telephone number.">>
+                ["at41"] = <text = <"Fax"> description = <"A fax number.">>
+                ["at42"] = <text = <"Mobile"> description = <"A mobile telephone number.">>
+                ["at43"] = <text = <"Pager"> description = <"A pager number.">>
+                ["at44"] = <text = <"E-mail"> description = <"An e-mail address.">>
+                ["at45"] = <text = <"URL"> description = <"A web address.">>
+                ["at50"] = <text = <"Personal"> description = <"For personal use.">>
+                ["at51"] = <text = <"Business"> description = <"For business use.">>
+                ["at52"] = <text = <"Personal/Business"> description = <"For personal and business use.">>
+                ["at53"] = <text = <"Other use"> description = <"For another use.">>
+            >
+        >
+        value_sets = <
+            ["ac1"] = <
+                id = <"ac1">
+                members = <"at10", "at11", "at12", "at13">
+            >
+            ["ac2"] = <
+                id = <"ac2">
+                members = <"at20", "at21", "at22", "at23", "at24", "at25">
+            >
+            ["ac3"] = <
+                id = <"ac3">
+                members = <"at30", "at31", "at32", "at33", "at34", "at35">
+            >
+            ["ac4"] = <
+                id = <"ac4">
+                members = <"at40", "at41", "at42", "at43", "at44", "at45">
+            >
+            ["ac5"] = <
+                id = <"ac5">
+                members = <"at50", "at51", "at52", "at53">
+            >
+        >
+    
+  openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls: |
+    archetype (adl_version=2.0.6; rm_release=1.1.0)
+        openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0
+    
+    language
+        original_language = <[ISO_639-1::en]>
+    
+    description
+        original_author = <
+            ["name"] = <"FerroEHR">
+            ["organisation"] = <"Cadasto B.V.">
+        >
+        lifecycle_state = <"unmanaged">
+        details = <
+            ["en"] = <
+                language = <[ISO_639-1::en]>
+                purpose = <"A healthcare provider's ORGANISATION: the provider a system acts for, and a federation partner.">
+                use = <"Identified by a DV_IDENTIFIER in details, such as the Dutch URA, with its names in identities named by their usage and a postal and an electronic address. An acts-for relationship targets it, and a federation partner's ROLE names it as performer. Adapted from the openEHR CKM archetypes the derived_from entry names.">
+                copyright = <"© openEHR Foundation">
+            >
+        >
+        other_details = <
+            ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+            ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0 (openEHR CKM 1013.1.475, modified 2019-08-09), openEHR-DEMOGRAPHIC-PARTY_IDENTITY.organisation_name.v0 (openEHR CKM 1013.1.476, modified 2019-08-09), openEHR-DEMOGRAPHIC-CLUSTER.person_identifier-provider.v0 (openEHR CKM 1013.1.833, modified 2019-08-12), openEHR-DEMOGRAPHIC-ADDRESS.address-provider.v0 (openEHR CKM 1013.1.499, modified 2019-08-08), openEHR-DEMOGRAPHIC-ADDRESS.electronic_communication-provider.v0 (openEHR CKM 1013.1.487, modified 2019-08-08)">
+        >
+    
+    definition
+        ORGANISATION[id1] matches {
+            details existence matches {1} matches {
+                ITEM_TREE[id2] matches {
+                    items matches {
+                        ELEMENT[id3] occurrences matches {1..*} matches {
+                            value matches { DV_IDENTIFIER[id30] }
+                        }
+                    }
+                }
+            }
+            identities matches {
+                PARTY_IDENTITY[id4] matches {
+                    name matches {
+                        DV_TEXT[id31]
+                        DV_CODED_TEXT[id32] matches {
+                            defining_code matches {[ac1]}
+                        }
+                    }
+                    details matches {
+                        ITEM_TREE[id5] matches {
+                            items matches {
+                                ELEMENT[id6] occurrences matches {1} matches {
+                                    value matches { DV_TEXT[id33] }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            contacts matches {
+                CONTACT[id7] occurrences matches {0..*} matches {
+                    addresses matches {
+                        ADDRESS[id8] matches {
+                            name matches {
+                                DV_TEXT[id39]
+                                DV_CODED_TEXT[id40] matches {
+                                    defining_code matches {[ac2]}
+                                }
+                            }
+                            details matches {
+                                ITEM_TREE[id9] matches {
+                                    items matches {
+                                        ELEMENT[id10] occurrences matches {0..*} matches {
+                                            value matches { DV_TEXT[id34] }
+                                        }
+                                        ELEMENT[id11] occurrences matches {0..1} matches {
+                                            value matches { DV_TEXT[id35] }
+                                        }
+                                        ELEMENT[id12] occurrences matches {0..1} matches {
+                                            value matches { DV_TEXT[id36] }
+                                        }
+                                        ELEMENT[id13] occurrences matches {0..1} matches {
+                                            value matches { DV_TEXT[id37] }
+                                        }
+                                        ELEMENT[id14] occurrences matches {0..1} matches {
+                                            value matches { DV_TEXT[id38] }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        ADDRESS[id15] matches {
+                            name matches {
+                                DV_TEXT[id41]
+                                DV_CODED_TEXT[id42] matches {
+                                    defining_code matches {[ac3]}
+                                }
+                            }
+                            details matches {
+                                ITEM_TREE[id16] matches {
+                                    items matches {
+                                        ELEMENT[id17] occurrences matches {0..1} matches {
+                                            value matches {
+                                                DV_TEXT[id43]
+                                                DV_CODED_TEXT[id44] matches {
+                                                    defining_code matches {[ac4]}
+                                                }
+                                            }
+                                        }
+                                        ELEMENT[id18] occurrences matches {1} matches {
+                                            value matches { DV_TEXT[id45] }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    
+    terminology
+        term_definitions = <
+            ["en"] = <
+                ["id1"] = <text = <"Healthcare provider"> description = <"An organisation that provides healthcare: the provider a system acts for, or a federation partner.">>
+                ["id2"] = <text = <"Identifiers"> description = <"The identifiers of the provider.">>
+                ["id3"] = <text = <"Provider identifier"> description = <"An identifier of the provider issued by an organisation or the state, such as the Dutch URA.">>
+                ["id4"] = <text = <"Name"> description = <"A name of the provider, named by its usage.">>
+                ["id5"] = <text = <"Items"> description = <"The structure of the name.">>
+                ["id6"] = <text = <"Name"> description = <"The name.">>
+                ["id7"] = <text = <"Contact"> description = <"A way to reach the provider.">>
+                ["id8"] = <text = <"Postal address"> description = <"A postal or residential address.">>
+                ["id9"] = <text = <"Address details"> description = <"The structure of the address.">>
+                ["id10"] = <text = <"Address line"> description = <"A line of the address, the street and number first.">>
+                ["id11"] = <text = <"Postal code"> description = <"The postal code.">>
+                ["id12"] = <text = <"Suburb/town/locality"> description = <"The town or locality.">>
+                ["id13"] = <text = <"State/territory/province"> description = <"The state, territory or province.">>
+                ["id14"] = <text = <"Country"> description = <"The country.">>
+                ["id15"] = <text = <"Electronic address"> description = <"An electronic address, its type its name.">>
+                ["id16"] = <text = <"Components"> description = <"The structure of the electronic address.">>
+                ["id17"] = <text = <"Usage"> description = <"What the address is used for.">>
+                ["id18"] = <text = <"Details"> description = <"The address itself, such as an e-mail address or a telephone number.">>
+                ["ac1"] = <text = <"Organisation name usages"> description = <"The usages of an organisation's name.">>
+                ["ac2"] = <text = <"Address types"> description = <"The types of a postal address.">>
+                ["ac3"] = <text = <"Electronic address types"> description = <"The types of an electronic address.">>
+                ["ac4"] = <text = <"Address usages"> description = <"What an address is used for.">>
+                ["at10"] = <text = <"Organisational unit/section/division name"> description = <"The name of a unit, section or division.">>
+                ["at11"] = <text = <"Service location name"> description = <"The name of a service location.">>
+                ["at12"] = <text = <"Business name"> description = <"The business name.">>
+                ["at13"] = <text = <"Locally used name"> description = <"A name used locally.">>
+                ["at14"] = <text = <"Abbreviated name"> description = <"An abbreviation of the name.">>
+                ["at15"] = <text = <"Enterprise name"> description = <"The name of the enterprise.">>
+                ["at16"] = <text = <"Other"> description = <"Another name.">>
+                ["at17"] = <text = <"Unknown"> description = <"The usage is not known.">>
+                ["at20"] = <text = <"Business"> description = <"A business address.">>
+                ["at21"] = <text = <"Mailing or postal"> description = <"A mailing or postal address.">>
+                ["at22"] = <text = <"Temporary accommodation"> description = <"A temporary address.">>
+                ["at23"] = <text = <"Residential"> description = <"A residential address.">>
+                ["at24"] = <text = <"No fixed address"> description = <"The party has no fixed address.">>
+                ["at25"] = <text = <"Unknown/not stated/inadequately described"> description = <"The type is not known.">>
+                ["at30"] = <text = <"Telephone"> description = <"A telephone number.">>
+                ["at31"] = <text = <"Fax"> description = <"A fax number.">>
+                ["at32"] = <text = <"Mobile"> description = <"A mobile telephone number.">>
+                ["at33"] = <text = <"Pager"> description = <"A pager number.">>
+                ["at34"] = <text = <"E-mail"> description = <"An e-mail address.">>
+                ["at35"] = <text = <"URL"> description = <"A web address.">>
+                ["at40"] = <text = <"Personal"> description = <"For personal use.">>
+                ["at41"] = <text = <"Business"> description = <"For business use.">>
+                ["at42"] = <text = <"Personal/Business"> description = <"For personal and business use.">>
+                ["at43"] = <text = <"Other use"> description = <"For another use.">>
+            >
+        >
+        value_sets = <
+            ["ac1"] = <
+                id = <"ac1">
+                members = <"at10", "at11", "at12", "at13", "at14", "at15", "at16", "at17">
+            >
+            ["ac2"] = <
+                id = <"ac2">
+                members = <"at20", "at21", "at22", "at23", "at24", "at25">
+            >
+            ["ac3"] = <
+                id = <"ac3">
+                members = <"at30", "at31", "at32", "at33", "at34", "at35">
+            >
+            ["ac4"] = <
+                id = <"ac4">
+                members = <"at40", "at41", "at42", "at43">
             >
         >
     
@@ -884,7 +1478,7 @@ spec:
         # volume while every pod kept running on the value it read at startup.
         checksum/config: 6319f5b2950cba0cdc04b899a4b3e1ecfde6b04657e4f9aba7b97a8df442e6e7
         # A changed definition list rolls the pods, so the init container loads it.
-        checksum/definitions: 3755fd863c9f72a1eb98519a38f76b4769be6b893a23ca13c76471c8bbcdfcf4
+        checksum/definitions: 4d7d3c3122070825e003121b5b92efb2dbdbf0eab07a7e694bbb93e089c8fecb
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr
@@ -931,6 +1525,8 @@ spec:
             - "/etc/ferroehr-definitions/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls"
             - "/etc/ferroehr-definitions/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls"
             - "/etc/ferroehr-definitions/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls"
+            - "/etc/ferroehr-definitions/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls"
+            - "/etc/ferroehr-definitions/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls"
           env:
             # The server reads the file FERROEHR_CONFIG names and searches for
             # none, so the mounted ferroehr.toml is named here.

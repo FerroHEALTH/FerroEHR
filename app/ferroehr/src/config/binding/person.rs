@@ -434,8 +434,8 @@ impl Sections<'_> {
     }
 
     /// Returns the mapping the side table is derived under, with the key
-    /// selectors held to `key_issuers` and the protected parties writable by
-    /// `admin_role`.
+    /// selectors held to `key_issuers`, the built-in policy parties
+    /// recognised, and the protected parties writable by `admin_role`.
     ///
     /// # Errors
     /// [`SelectorError`] when a selector path does not compile, which
@@ -490,11 +490,11 @@ impl Sections<'_> {
                 representation.relationship_codes.clone(),
             );
         }
-        Ok(mapping)
+        Ok(mapping.with_policy())
     }
 
     /// Returns the definitions a demographic write of a mapped node is
-    /// validated against.
+    /// validated against, the built-in policy definitions included.
     #[must_use]
     pub fn mapped_templates(&self) -> MappedPartyTemplates {
         let mut templates = MappedPartyTemplates::default();
@@ -510,7 +510,7 @@ impl Sections<'_> {
         if let Some(membership) = self.membership {
             templates = templates.with_membership_archetype(membership.archetype_id.clone());
         }
-        templates
+        templates.with_policy()
     }
 }
 

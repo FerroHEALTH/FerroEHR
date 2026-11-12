@@ -24,12 +24,14 @@ archetype. Both are adaptations of the CKM archetypes their
 `other_details["derived_from"]` names, written for FerroEHR. The sources are
 the CKM ADL 1.4 exports vendored verbatim under `corpus/archetypes/ckm/adl14/`
 by `scripts/vendor/ckm-archetypes.sh` (provenance in
-`corpus/archetypes/ckm/PROVENANCE.md`):
+`corpus/archetypes/ckm/PROVENANCE.md`). Every source is a v0 draft that can change without a new id, so
+`other_details["derived_from"]` names each with its CKM citeable id and
+its modification time.
 
-| Definition | CKM sources |
+| Definition | CKM sources (CKM id, modified) |
 |---|---|
-| GROUP | `openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0`, `openEHR-DEMOGRAPHIC-PARTY_IDENTITY.organisation_name.v0` |
-| Membership | `openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0` (its inline `PARTY_RELATIONSHIP`) |
+| GROUP | `openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0` (1013.1.475, 2019-08-09), `openEHR-DEMOGRAPHIC-PARTY_IDENTITY.organisation_name.v0` (1013.1.476, 2019-08-09) |
+| Membership | `openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0` (1013.1.475, 2019-08-09; its inline `PARTY_RELATIONSHIP`) |
 
 ## What changed from the sources
 

@@ -340,7 +340,7 @@ Kubernetes: `>=1.36.0-0`
 | database.party.migrateExistingSecretKey | string | `"FERROEHR__DATABASE__PARTY__MIGRATE_URL"` | Key WITHIN migrateExistingSecret holding that DSN. Mounted as a file. |
 | database.party.url | string | `""` | Inline party DSN (DEV/TEST ONLY). Ignored when `party.existingSecret` is set. |
 | database.url | string | `""` | Inline DSN (DEV/TEST ONLY — lands in a chart-managed Secret). Leave empty and use existingSecret in production. Ignored when existingSecret is set. |
-| definitions.files | list | FerroEHR's five default demographic definitions (the book's "Default demographic definitions" page) | The definitions to load, in order: each `name` a file name ending in `.opt` (an OPT 1.4 template) or `.adls` (an ADL 2 archetype or template, its parents and slot fillers first) and its `content`. |
+| definitions.files | list | FerroEHR's seven default demographic definitions (the book's "Default demographic definitions" page) | The definitions to load, in order: each `name` a file name ending in `.opt` (an OPT 1.4 template) or `.adls` (an ADL 2 archetype or template, its parents and slot fillers first) and its `content`. |
 | extraEnv | list | `[]` | Extra raw env vars (list of {name,value} or {name,valueFrom}). Escape hatch for anything not surfaced above (array-valued keys via comma-separated values, one-off FERROEHR_* overrides). |
 | extraEnvFrom | list | `[]` | Extra envFrom sources (configMapRef/secretRef). |
 | extraVolumeMounts | list | `[]` | Mounts for extraVolumes, in the server container. |
