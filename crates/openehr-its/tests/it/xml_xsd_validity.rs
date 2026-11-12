@@ -139,12 +139,12 @@ const V2: Bundle = Bundle {
 };
 
 /// The vendored schema root.
-fn schemas_root() -> PathBuf {
+pub(crate) fn schemas_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("schemas/xml")
 }
 
 /// A scratch directory for the driver schemas and serialized documents.
-fn scratch() -> PathBuf {
+pub(crate) fn scratch() -> PathBuf {
     let dir = std::env::temp_dir().join(format!("openehr-its-xsd-gate-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("create scratch dir");
     dir
@@ -183,7 +183,7 @@ fn write_driver(bundle: &Bundle, name: &str, roots: &[(&str, &str)]) -> PathBuf 
 
 /// The outcome of one `xmllint --schema` run.
 #[derive(Debug)]
-enum Outcome {
+pub(crate) enum Outcome {
     /// The document validates against the bundle.
     Valid,
     /// The schema set itself failed to compile; carries the diagnostics.
@@ -193,7 +193,7 @@ enum Outcome {
 }
 
 /// Run `xmllint --noout --schema <driver> <document>` and classify the result.
-fn xmllint(driver: &Path, document: &Path) -> Outcome {
+pub(crate) fn xmllint(driver: &Path, document: &Path) -> Outcome {
     let out = Command::new("xmllint")
         .arg("--noout")
         .arg("--schema")

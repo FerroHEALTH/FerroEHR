@@ -849,6 +849,7 @@ fn aql_sql_with(
         limit,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     ferroehr::aql::sql::build(&ir, params, &ctx).expect("the AQL lowers to SQL")
 }

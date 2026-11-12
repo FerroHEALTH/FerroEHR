@@ -394,10 +394,11 @@ pub(crate) async fn check_read(
     }
 }
 
-/// Whether the running request may write a protected party: a write with no
+/// Whether the running request is an administrator's: a request with no
 /// request committer is the server's own, and a request whose roles hold the
-/// mapping's administrator role is an administrator's.
-fn administrator(mapping: &BindingMapping) -> bool {
+/// mapping's administrator role is an administrator's. It writes a protected
+/// party, and it reads a policy party through the Demographic API and AQL.
+pub(crate) fn administrator(mapping: &BindingMapping) -> bool {
     if crate::versioning::committer::current_committer().is_none() {
         return true;
     }
