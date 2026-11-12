@@ -207,12 +207,14 @@ archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
 archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1"
 relationship_codes = { at10 = "254", at11 = "264" }
 
+# The URL clients reach the server at, which every SCIM location names.
+[server]
+public_base_url = "http://localhost:8080"
+
 # The SCIM endpoint the lanes provision their persons through. The client
 # below provisions the three Basic users; an overlay that adds a persons
 # issuer adds its own client (index 1), since no two share a binding_issuer.
 [auth.scim]
-public_base_url = "http://localhost:8080"
-
 [[auth.scim.client]]
 issuer = "https://scim.ferroehr.invalid"
 client_id = "basic-users"

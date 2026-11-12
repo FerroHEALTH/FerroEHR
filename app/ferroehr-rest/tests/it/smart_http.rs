@@ -66,9 +66,10 @@ fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
         ..common::api_config(false)
     };
     cfg.auth.smart.discovery = smart_enabled;
-    cfg.auth.smart.public_base_url = Some(ferrohealth_secret::secret_url::SecretUrl::new(
-        "https://cdr.example.com",
-    ));
+    cfg.public_root = Some(
+        ferroehr::config::server::PublicRoot::new("https://cdr.example.com", "")
+            .expect("a public root"),
+    );
     if patient_bound {
         cfg.auth.smart.patient_issuers =
             vec![ferrohealth_secret::secret_url::SecretUrl::new(issuer)];
@@ -119,6 +120,32 @@ fn capabilities(doc: &Value) -> Vec<&str> {
 }
 
 // ── discovery ─────────────────────────────────────────────────────────────────
+
+/// The document's `baseUrl` hangs off the one public URL of `[server]`, after
+/// the mount path the server serves every route under (#5465).
+#[tokio::test]
+async fn discovery_names_the_base_url_under_the_server_s_public_url_and_mount_path() {
+    let issuer = issuer().await;
+    let mut config = config(&issuer.uri(), true, false);
+    let server = ferroehr::config::server::ServerConfig {
+        shared: ferrohealth_server::section::ServerSection {
+            base_path: ferrohealth_server::section::BasePath::new("/ehr").expect("a mount path"),
+            ..config.server.clone()
+        },
+        public_base_url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
+            "https://gw.example/cdr",
+        )),
+    };
+    config.public_root = server.public_root();
+    config.server = server.shared;
+    let (_pg, app) = common::app(config).await;
+    let (status, doc) = common::send_json(&app, get(&format!("/ehr{DISCOVERY}"), None)).await;
+    assert_eq!(status, StatusCode::OK, "{doc}");
+    assert_eq!(
+        doc["services"]["org.openehr.rest"]["baseUrl"],
+        format!("https://gw.example/cdr/ehr{BASE}")
+    );
+}
 
 #[tokio::test]
 async fn discovery_serves_absolute_base_urls_and_the_enforced_capabilities() {

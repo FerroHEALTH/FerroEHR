@@ -38,7 +38,10 @@ pub struct SmartConfig {
     /// built from the metadata of one `[auth]` issuer that serves a user
     /// launch: `[auth] described_issuer`, else the one issuer that is not of
     /// kind `machines` and whose metadata is available. Several such issuers
-    /// and no `described_issuer`, or none, refuse the start.
+    /// and no `described_issuer`, or none, refuse the start. master04
+    /// §Services makes every `services.*.baseUrl` an "Absolute URL to the
+    /// root of the API (required)", so the document needs `[server]
+    /// public_base_url`.
     pub discovery: bool,
 
     /// The RFC 8414 §2 authorization-server metadata of the `[auth]` issuer
@@ -53,13 +56,6 @@ pub struct SmartConfig {
     /// (`/ferroehr/rest`). A leading path segment is honoured, e.g.
     /// `/gateway/v1` → `/gateway/v1/.well-known/smart-configuration`.
     pub platform_base_url: Option<SecretUrl>,
-
-    /// The server's externally reachable origin (scheme + host [+ port]), e.g.
-    /// `https://cdr.example.com`. master04 §Services makes every `services.*`
-    /// entry's `baseUrl` an "Absolute URL to the root of the API (required)",
-    /// so the document prefixes this origin onto the served base paths.
-    /// Required when [`Self::discovery`] is set.
-    pub public_base_url: Option<SecretUrl>,
 
     /// Episode context (master09 §Experimental: Episode Context), advertised
     /// only: `episode_launch = true` adds `context-openehr-episode` to the
@@ -104,46 +100,27 @@ pub struct SmartConfig {
 impl SmartConfig {
     /// Boot validation.
     ///
-    /// No URL this section holds carries `userinfo`, whether or not the
-    /// document is served: it is published to every application. When the
-    /// document is served, `public_base_url` is an absolute `http(s)` origin
-    /// (master04 §Services types `baseUrl` as an "Absolute URL … (required)").
+    /// `platform_base_url` carries no `userinfo`, whether or not the document
+    /// is served: it is published to every application.
     ///
     /// # Errors
     /// A message naming the offending key; it never quotes a credential.
     pub fn validate(&self) -> Result<(), String> {
-        for (key, value) in [
-            (
-                "auth.smart.platform_base_url",
-                self.platform_base_url.as_ref(),
-            ),
-            ("auth.smart.public_base_url", self.public_base_url.as_ref()),
-        ] {
-            let Some(raw) = value else { continue };
-            // NOTE: no openEHR spec governs this — our own design; a value that
-            // does not parse as an absolute URL has no authority, so no userinfo.
-            let Ok(url) = Url::parse(raw.expose().trim()) else {
-                continue;
-            };
-            if !url.username().is_empty() || url.password().is_some() {
-                return Err(format!(
-                    "{key} must carry no userinfo: the discovery document publishes it to \
-                     every application, so a credential in it would be served to anyone"
-                ));
-            }
-        }
-        if self.discovery {
-            let origin = self.public_base_url.as_ref().map_or("", SecretUrl::expose);
-            let absolute = Url::parse(origin.trim())
-                .is_ok_and(|url| matches!(url.scheme(), "http" | "https") && url.has_host());
-            if !absolute {
-                return Err(
-                    "auth.smart.public_base_url (an absolute http(s) origin, e.g. \
-                     'https://cdr.example.com') is required when auth.smart.discovery = true — \
-                     master04 §Services makes every services.*.baseUrl an absolute URL"
-                        .to_owned(),
-                );
-            }
+        let Some(raw) = &self.platform_base_url else {
+            return Ok(());
+        };
+        // NOTE: no openEHR spec governs this — our own design; a value that
+        // does not parse as an absolute URL has no authority, so no userinfo.
+        let Ok(url) = Url::parse(raw.expose().trim()) else {
+            return Ok(());
+        };
+        if !url.username().is_empty() || url.password().is_some() {
+            return Err(
+                "auth.smart.platform_base_url must carry no userinfo: the discovery document \
+                 publishes it to every application, so a credential in it would be served to \
+                 anyone"
+                    .to_owned(),
+            );
         }
         Ok(())
     }
@@ -158,7 +135,6 @@ mod tests {
         let c = SmartConfig::default();
         assert!(!c.discovery);
         assert!(c.platform_base_url.is_none());
-        assert!(c.public_base_url.is_none());
         assert!(!c.episode_launch);
         assert_eq!(c.backend_clients, Vec::<String>::new());
         assert_eq!(c.patient_issuers, Vec::<SecretUrl>::new());
@@ -169,21 +145,16 @@ mod tests {
     /// A published URL carrying `userinfo` is refused whether or not the
     /// document is served, and the refusal never quotes the credential.
     #[test]
-    fn userinfo_in_any_published_url_is_refused() {
-        let leaky = SecretUrl::new("https://as:hunter2@as.example/x");
-        let setters: [fn(&mut SmartConfig, SecretUrl); 2] = [
-            |c, v| c.platform_base_url = Some(v),
-            |c, v| c.public_base_url = Some(v),
-        ];
-        for set in setters {
-            let mut c = SmartConfig::default();
-            set(&mut c, leaky.clone());
-            let err = c
-                .validate()
-                .expect_err("userinfo is refused while disabled");
-            assert!(err.contains("must carry no userinfo"), "{err}");
-            assert!(!err.contains("hunter2"), "{err}");
-        }
+    fn userinfo_in_the_published_platform_url_is_refused() {
+        let c = SmartConfig {
+            platform_base_url: Some(SecretUrl::new("https://as:hunter2@as.example/x")),
+            ..SmartConfig::default()
+        };
+        let err = c
+            .validate()
+            .expect_err("userinfo is refused while disabled");
+        assert!(err.contains("must carry no userinfo"), "{err}");
+        assert!(!err.contains("hunter2"), "{err}");
         // A bare-path platform base holds no authority.
         let c = SmartConfig {
             platform_base_url: Some(SecretUrl::new("/gateway/v1")),
@@ -193,18 +164,12 @@ mod tests {
     }
 
     #[test]
-    fn a_served_document_requires_an_absolute_origin() {
-        let mut c = SmartConfig {
-            discovery: true,
-            ..SmartConfig::default()
-        };
-        assert!(c.validate().is_err());
-        c.public_base_url = Some(SecretUrl::new("/ferroehr"));
+    fn the_table_takes_no_public_base_url() {
+        let refused = toml::from_str::<SmartConfig>("public_base_url = \"https://cdr.example.com\"")
+            .expect_err("the key is unknown");
         assert!(
-            c.validate().is_err(),
-            "a relative origin is no absolute URL"
+            refused.to_string().contains("unknown field `public_base_url`"),
+            "{refused}"
         );
-        c.public_base_url = Some(SecretUrl::new("https://cdr.example.com"));
-        assert!(c.validate().is_ok());
     }
 }

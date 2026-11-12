@@ -66,10 +66,12 @@ impl Users {
         map: UserMap,
         schema: ResourceSchema,
         scim: &ferroehr::config::scim::ScimConfig,
+        base_url: &str,
     ) -> Result<Self, String> {
         let listing = Listing::new(
             schema,
             scim,
+            base_url,
             urn::CORE_USER,
             &["userName", "externalId", "id"],
         )?;

@@ -68,10 +68,12 @@ impl Groups {
         map: GroupMap,
         schema: ResourceSchema,
         scim: &ferroehr::config::scim::ScimConfig,
+        base_url: &str,
     ) -> Result<Self, String> {
         let listing = Listing::new(
             schema,
             scim,
+            base_url,
             urn::CORE_GROUP,
             &["displayName", "externalId", "id"],
         )?;

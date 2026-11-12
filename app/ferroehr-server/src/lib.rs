@@ -175,7 +175,7 @@ pub(crate) async fn dispatch(cli: Cli) -> anyhow::Result<()> {
     match cli.command {
         Some(Command::Common(Common::Healthcheck)) => {
             let loaded = ferroehr::config::load(config, set)?;
-            let outcome = healthcheck(&loaded.server).await;
+            let outcome = healthcheck(&loaded.server.shared).await;
             anyhow::ensure!(outcome.exit_code() == 0, "healthcheck: {outcome}");
             Ok(())
         }
@@ -1095,7 +1095,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         request_log: RequestLog::new(&config.telemetry.logged_query_parameters)
             .with_metrics(&telemetry.telemetry().meter(telemetry::metrics::SCOPE))
             .with_recorder(usage_window)
-            .serving_tls(config.server.tls.is_some()),
+            .serving_tls(config.server.shared.tls.is_some()),
         // NOTE: no specification governs this: our own design; each check keeps
         // the one-second bound the probes have always had.
         health: Registry::new(indicators).with_timeout(Duration::from_secs(1)),

@@ -411,7 +411,7 @@ impl DeploymentPosture {
         } else if !config.authz.rbac.enabled {
             gaps.push(DeploymentGap::RbacOff);
         }
-        let plaintext_main = config.server.tls.is_none() && !binds_loopback(config.server.listen);
+        let plaintext_main = config.server.shared.tls.is_none() && !binds_loopback(config.server.shared.listen);
         let plaintext_management = config.management.enabled && config.management.listen.is_some();
         if plaintext_main || plaintext_management {
             gaps.push(DeploymentGap::PlaintextListener);

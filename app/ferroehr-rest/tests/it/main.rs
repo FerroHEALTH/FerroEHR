@@ -81,6 +81,7 @@ mod demographic_refusals_http;
 mod demographic_tags_http;
 mod demographic_template_http;
 mod directory_http;
+mod dpop_public_url;
 mod dpop_replay;
 mod ehds_person_inserted_http;
 mod ehr_access_gate;

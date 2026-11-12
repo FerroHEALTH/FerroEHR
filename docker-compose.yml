@@ -943,9 +943,11 @@ configs:
       audience = ["ferroehr-scim"]
       token_types = ["JWT"]
 
-      [auth.scim]
+      # The URL clients reach the server at, which every SCIM location names.
+      [server]
       public_base_url = "http://localhost:8080"
 
+      [auth.scim]
       [[auth.scim.client]]
       issuer = "http://localhost:8180/quickstart"
       client_id = "quickstart-scim"
@@ -1122,9 +1124,11 @@ configs:
       audience = ["ferroehr-scim"]
       token_types = ["JWT"]
 
-      [auth.scim]
+      # The URL clients reach the server at, which every SCIM location names.
+      [server]
       public_base_url = "http://localhost:8080"
 
+      [auth.scim]
       [[auth.scim.client]]
       issuer = "http://localhost:8180/quickstart"
       client_id = "quickstart-scim"
