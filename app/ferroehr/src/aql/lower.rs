@@ -39,9 +39,11 @@ use crate::versioning::Kind;
 /// the five concrete `PARTY` classes, the abstract `PARTY` and `ACTOR` over
 /// the concrete classes the RM model lists below them (RM demographic
 /// `master02-demographic_package.adoc` §Class Descriptions), and a standalone
-/// `PARTY_RELATIONSHIP` container. No openEHR spec governs AQL over a
-/// demographic repository (QUERY master03 §FROM names only clinical
-/// classes): our own design.
+/// `PARTY_RELATIONSHIP` container. QUERY `AQL/master03-syntax.adoc` §Query
+/// structure, FROM admits any class the RM defines ("All the classes
+/// referenced by the `FROM` clause should be defined by the RM") and names
+/// clinical classes only as examples; the demographic semantics are our own
+/// design.
 fn demographic_kinds(rm_type: &str) -> Option<Vec<Kind>> {
     let class = model::class(rm_type)?;
     class

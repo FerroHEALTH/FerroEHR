@@ -207,7 +207,6 @@ mod tests {
         let tight = ProfilingConfig {
             max_duration: ferrohealth_config::units::Duration::from_secs(5),
             max_frequency: 50,
-            ..ProfilingConfig::default()
         };
         let p = plan(&FlamegraphParams::default(), tight).expect("defaults must plan");
         assert_eq!(p.seconds, 5);

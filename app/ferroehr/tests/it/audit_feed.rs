@@ -28,7 +28,6 @@ fn config(arr_url: &str) -> AuditConfig {
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..StoreConfig::default()
         },
         fhir_feed: Some(FhirFeedConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
@@ -40,7 +39,6 @@ fn config(arr_url: &str) -> AuditConfig {
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
             },
             poll_interval: ferrohealth_config::units::Duration::from_millis(100),
-            ..FhirFeedConfig::default()
         }),
         ..AuditConfig::default()
     }

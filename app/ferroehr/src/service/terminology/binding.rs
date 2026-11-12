@@ -234,7 +234,6 @@ mod tests {
             } else {
                 crate::service::terminology::config::OnError::Accept
             },
-            ..TerminologyServerConfig::default()
         };
         let server = FhirTerminologyProvider::new(&cfg).expect("build the terminology client");
         let db = testkit::db().await.expect("testkit database");

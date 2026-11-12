@@ -330,9 +330,6 @@ pub struct AuthzConfig {
     /// period and an access rule may name (`[[authz.origin]]`, EHDS Annex II
     /// 3.4).
     pub origin: Vec<crate::origins::RegisteredOrigin>,
-    /// Retired in v5.7.0: the `[authz.professional]` table, refused at load.
-    #[serde(skip_serializing)]
-    pub professional: ferrohealth_config::removed::Removed,
 }
 
 /// A boot-time authorization-configuration error — a hard error that must
@@ -550,7 +547,6 @@ mod tests {
                         url: SecretUrl::new("http://pdp:3001/exec"),
                         ..RemoteConfig::default().endpoint
                     },
-                    ..RemoteConfig::default()
                 },
                 ..base.clone()
             },
@@ -568,7 +564,6 @@ mod tests {
                         url: SecretUrl::new("http://pdp:3001/exec/"),
                         ..RemoteConfig::default().endpoint
                     },
-                    ..RemoteConfig::default()
                 },
                 ..base
             },
@@ -592,7 +587,6 @@ mod tests {
                         url: SecretUrl::new("http://pdp:3001/exec/"),
                         ..RemoteConfig::default().endpoint
                     },
-                    ..RemoteConfig::default()
                 },
                 policy,
                 ..AbacConfig::default()
@@ -730,9 +724,5 @@ mod tests {
             default.abac.patient_namespace
         );
         assert_eq!(parsed.abac.check_directory, default.abac.check_directory);
-        assert_eq!(
-            parsed.abac.remote.request_timeout_ms,
-            default.abac.remote.request_timeout_ms
-        );
     }
 }

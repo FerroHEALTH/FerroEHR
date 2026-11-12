@@ -39,7 +39,6 @@ fn server_cfg(base: &str, oauth: Option<OauthSection>) -> TerminologyServerConfi
             ..ferrohealth_smart::config::endpoint::EndpointSection::default()
         },
         on_error: ferroehr::service::terminology::config::OnError::Accept,
-        ..TerminologyServerConfig::default()
     }
 }
 
