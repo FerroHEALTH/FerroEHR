@@ -13,7 +13,6 @@
 //! default** with only the local store active: compliance out of the box,
 //! nothing leaves the node.
 
-use ferrohealth_config::removed::Removed;
 use ferrohealth_config::units::{ByteSize, Duration};
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::endpoint::EndpointSection;
@@ -89,18 +88,6 @@ pub struct StoreConfig {
     /// A run that found damage is always followed by a full pass.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub full_verify_interval: Duration,
-    /// Retired in v5.7.0: refused at load, naming `retention`.
-    #[serde(skip_serializing)]
-    pub retention_days: Removed,
-    /// Retired in v5.7.0: refused at load, naming `retention`.
-    #[serde(skip_serializing)]
-    pub retention_years: Removed,
-    /// Retired in v5.7.0: refused at load, naming `verify_interval`.
-    #[serde(skip_serializing)]
-    pub verify_interval_seconds: Removed,
-    /// Retired in v5.7.0: refused at load, naming `full_verify_interval`.
-    #[serde(skip_serializing)]
-    pub full_verify_interval_seconds: Removed,
 }
 
 impl Default for StoreConfig {
@@ -114,10 +101,6 @@ impl Default for StoreConfig {
             // unreported; a week bounds it for older records.
             verify_interval: Duration::from_hours(1),
             full_verify_interval: Duration::from_days(7),
-            retention_days: Removed::default(),
-            retention_years: Removed::default(),
-            verify_interval_seconds: Removed::default(),
-            full_verify_interval_seconds: Removed::default(),
         }
     }
 }
@@ -209,33 +192,6 @@ pub struct SyslogConfig {
     pub spool_max_size: ByteSize,
     /// `[audit.syslog.retry]`: the wait between two delivery attempts.
     pub retry: SinkRetry,
-    /// Retired in v5.7.0: refused at load, naming `[audit.syslog.tls] trust_roots_file`.
-    #[serde(skip_serializing)]
-    pub tls_ca_file: Removed,
-    /// Retired in v5.7.0: refused at load, naming `[audit.syslog.tls] client_identity_file`.
-    #[serde(skip_serializing)]
-    pub tls_identity_cert_file: Removed,
-    /// Retired in v5.7.0: refused at load, naming `[audit.syslog.tls] client_identity_file`.
-    #[serde(skip_serializing)]
-    pub tls_identity_key_file: Removed,
-    /// Retired in v5.7.0: refused at load, naming the table's presence.
-    #[serde(skip_serializing)]
-    pub enabled: Removed,
-    /// Retired in v5.7.0: refused at load, naming `url`.
-    #[serde(skip_serializing)]
-    pub host: Removed,
-    /// Retired in v5.7.0: refused at load, naming `url`.
-    #[serde(skip_serializing)]
-    pub port: Removed,
-    /// Retired in v5.7.0: refused at load, naming `spool_max_events`.
-    #[serde(skip_serializing)]
-    pub spool_max_messages: Removed,
-    /// Retired in v5.7.0: refused at load, naming `spool_max_size`.
-    #[serde(skip_serializing)]
-    pub spool_max_bytes: Removed,
-    /// Retired in v5.7.0: refused at load, naming `retry.max_backoff`.
-    #[serde(skip_serializing)]
-    pub retry_max_ms: Removed,
 }
 
 impl Default for SyslogConfig {
@@ -250,15 +206,6 @@ impl Default for SyslogConfig {
             spool_max_events: 100_000,
             spool_max_size: ByteSize::from_mib(256),
             retry: SinkRetry::default(),
-            tls_ca_file: Removed::default(),
-            tls_identity_cert_file: Removed::default(),
-            tls_identity_key_file: Removed::default(),
-            enabled: Removed::default(),
-            host: Removed::default(),
-            port: Removed::default(),
-            spool_max_messages: Removed::default(),
-            spool_max_bytes: Removed::default(),
-            retry_max_ms: Removed::default(),
         }
     }
 }
@@ -314,21 +261,6 @@ pub struct FhirFeedConfig {
     /// 100 ms is waited.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub poll_interval: Duration,
-    /// Retired in v5.7.0: refused at load, naming the table's presence.
-    #[serde(skip_serializing)]
-    pub enabled: Removed,
-    /// Retired in v5.7.0: refused at load, naming `poll_interval`.
-    #[serde(skip_serializing)]
-    pub poll_interval_ms: Removed,
-    /// Retired in v5.7.0: refused at load, naming `endpoint.retry.max_backoff`.
-    #[serde(skip_serializing)]
-    pub retry_max_ms: Removed,
-    /// Retired in v5.7.0: refused at load, naming `endpoint.url`.
-    #[serde(skip_serializing)]
-    pub url: Removed,
-    /// Retired in v5.7.0: refused at load, naming `endpoint.credentials.oauth`.
-    #[serde(skip_serializing)]
-    pub oauth: Removed,
 }
 
 impl Default for FhirFeedConfig {
@@ -344,11 +276,6 @@ impl Default for FhirFeedConfig {
                 ..EndpointSection::default()
             },
             poll_interval: Duration::from_secs(2),
-            enabled: Removed::default(),
-            poll_interval_ms: Removed::default(),
-            retry_max_ms: Removed::default(),
-            url: Removed::default(),
-            oauth: Removed::default(),
         }
     }
 }

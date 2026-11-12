@@ -239,9 +239,6 @@ pub enum ConfigError {
     /// The tree read but one of its values is refused.
     #[error("{0}")]
     Invalid(String),
-    /// Keys v5.6 read and v5.7.0 retired, each named with its replacement.
-    #[error(transparent)]
-    Retired(#[from] crate::retired::RetiredKeys),
     /// `[oidc]` or `[session]` is refused.
     #[error(transparent)]
     Session(Box<ferrohealth_session::config::ConfigError>),
@@ -292,25 +289,8 @@ pub fn load(path: Option<&Path>, sets: &[(String, String)]) -> Result<ViewerConf
         .collect();
     let viewer_loader = loader()?;
     sweep(&viewer_loader, &environment)?;
-    refuse_retired(viewer_loader.load_with::<toml::Table>(path, sets))?;
     let loaded = viewer_loader.load_with::<ViewerConfig>(path, sets)?;
     finish(loaded.settings().clone())
-}
-
-/// Refuses every key v5.6 read and v5.7.0 retired that the merged tree sets,
-/// which the typed load would refuse only as unknown.
-fn refuse_retired(
-    tree: Result<
-        ferrohealth_config::loader::Loaded<toml::Table>,
-        ferrohealth_config::error::ConfigError,
-    >,
-) -> Result<(), ConfigError> {
-    // NOTE: no specification governs this: our own design; a tree that does not
-    // merge is refused by the typed load that follows, with its position.
-    let Ok(tree) = tree else {
-        return Ok(());
-    };
-    Ok(crate::retired::refuse(tree.settings())?)
 }
 
 /// Refuses every variable under `FERROEHR_VIEWER_` that is neither an
@@ -340,7 +320,6 @@ pub fn load_sources(
 ) -> Result<ViewerConfig, ConfigError> {
     let viewer_loader = loader()?;
     sweep(&viewer_loader, env)?;
-    refuse_retired(viewer_loader.load_sources::<toml::Table>(file, None, env))?;
     let loaded = viewer_loader.load_sources::<ViewerConfig>(file, None, env)?;
     finish(loaded.settings().clone())
 }
@@ -522,6 +501,26 @@ mod tests {
             load_sources(None, &both).unwrap().telemetry.filter.as_str(),
             "error"
         );
+    }
+
+    /// A key the viewer's sections do not read is unknown and refuses the
+    /// start, naming the key, whatever release once read it.
+    #[test]
+    fn an_unknown_key_of_each_section_refuses_the_start() {
+        for (text, key) in [
+            ("[server]\nbody_limit_bytes = 1\n", "body_limit_bytes"),
+            ("[oidc]\nca_file = \"x\"\n", "ca_file"),
+            ("[session]\nidle_timeout_s = 60\n", "idle_timeout_s"),
+            ("[cdr]\nrequest_timeout_secs = 30\n", "request_timeout_secs"),
+        ] {
+            let refused = load_sources(Some(text), &BTreeMap::new())
+                .expect_err(text)
+                .to_string();
+            assert!(
+                refused.contains(&format!("unknown field `{key}`")),
+                "{text}: {refused}"
+            );
+        }
     }
 
     #[test]

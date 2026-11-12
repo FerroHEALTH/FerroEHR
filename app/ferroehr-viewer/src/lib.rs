@@ -61,7 +61,6 @@ pub mod paging;
 pub mod posted;
 pub mod prefs;
 pub mod request;
-pub mod retired;
 pub mod routes;
 pub mod scope;
 pub mod server;
