@@ -275,10 +275,7 @@ impl FerroEhrService {
     /// create/update path and the CONTRIBUTION path so neither can bypass
     /// validation.
     ///
-    /// The demographic arms (party roots + `PARTY_RELATIONSHIP`) dispatch to
-    /// the demographic register (`service/demographic/`). A party root is
-    /// judged against its version container, so its writes call
-    /// [`Self::demographic_commit_check`] with it; here it is an internal fault.
+    /// Demographic arms go to [`Self::demographic_commit_check`]; a party needs its container.
     ///
     /// The clinical arms additionally run the data-minimisation pass
     /// ([`crate::privacy`]) — the subject-reference rule, the identified-party

@@ -167,13 +167,10 @@ impl FerroEhrService {
         // Keep the served bytes for the in-memory representation, unless the
         // commit rewrites the body (then the fresh read is the stored form).
         let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
+        let create = Change::create_allocated(allocated, support::kind_of(kind), body, envelope);
         let committed = self
             .commit_one(&self.demographic_pool, Mode::Transaction, async move |_| {
-                Ok(Write::new(
-                    None,
-                    Change::create_allocated(allocated, support::kind_of(kind), body, envelope),
-                    audit,
-                ))
+                Ok(Write::new(None, create, audit))
             })
             .await?;
         match repr_body {
