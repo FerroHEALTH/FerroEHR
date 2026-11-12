@@ -210,7 +210,7 @@ async fn prepare_body(
     let origins = crate::versioning::origins::origins(&ctx.direct_origin, &canonical);
     let canonical_text = Some(canonical_body_text(&canonical)?);
     let content_digest = content_digest(&canonical)?;
-    let party_facts = kind.is_party().then(|| {
+    let party_facts = kind.is_demographic().then(|| {
         Box::new(crate::party_binding::derive::Facts::of(
             kind,
             &canonical,

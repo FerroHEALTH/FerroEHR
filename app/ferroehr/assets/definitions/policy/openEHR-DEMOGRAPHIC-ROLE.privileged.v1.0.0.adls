@@ -48,6 +48,9 @@ definition
                 credentials matches {
                     ITEM_TREE[id8] matches {
                         items matches {
+                            ELEMENT[id90] occurrences matches {1..*} matches {
+                                value matches { DV_CODED_TEXT[id91] }
+                            }
                             ELEMENT[id9] occurrences matches {0..1} matches {
                                 value matches { DV_DATE_TIME[id30] }
                             }
@@ -74,6 +77,7 @@ terminology
             ["id6"] = <text = <"Privilege"> description = <"One privilege the performer holds.">>
             ["id7"] = <text = <"Kind"> description = <"The kind of the grant, which is the name of the capability.">>
             ["id8"] = <text = <"Grant"> description = <"What the capability grants, held in its credentials.">>
+            ["id90"] = <text = <"Operation"> description = <"An operation the capability grants, a code of FerroEHR's operation terminology ferroehr-operations.">>
             ["id9"] = <text = <"Not before"> description = <"The instant before which the grant does not hold, for a bound finer than the day of time_validity.">>
             ["id10"] = <text = <"Not after"> description = <"The instant after which the grant does not hold, for a bound finer than the day of time_validity.">>
             ["id11"] = <text = <"Authorisation reference"> description = <"The reference of the decision that authorised the grant, such as a change ticket or a processing agreement.">>

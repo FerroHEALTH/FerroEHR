@@ -7,10 +7,25 @@
 //! services (`docs/law/eu/ehds/text.html`), each published for the request by
 //! `crate::system_log::access_context`. No openEHR spec governs any of them:
 //! our own design/extension.
+//!
+//! A demographic query by a caller who is no administrator also leaves out
+//! every version of a party that ever had a policy version
+//! ([`crate::party_binding::policy_mark`]), the rule the Demographic API read gate
+//! applies (`party_binding::protect::check_read`). The commit that writes a
+//! policy version marks the party's head row, nothing clears the mark, and
+//! the predicate is one column of the head row every versioned-object source
+//! reaches by its primary key ([`super::head::bind_head`]), so every root, an
+//! `OR` branch's included, and every node a query reaches through `CONTAINS`
+//! or a path, which belongs to its root's version, is covered; counts, paging
+//! and aggregates see only what the caller may read. No openEHR spec governs
+//! who reads a party, and QUERY master03 §FROM gives semantics to the clinical
+//! repository only: our own design.
 
 use sea_query::{Alias, Expr, ExprTrait as _, Query};
 
+use super::PolicyParties;
 use super::expr::col;
+use crate::aql::ir::QueryDomain;
 use crate::db::iden::{Ehr, VoHead};
 
 /// The alias of the `ehr` row the opt-out probe reads.
@@ -27,11 +42,15 @@ pub(super) struct Gates {
     /// The Art. 10 opt-out: no object or EHR of an opted-out EHR contributes a
     /// row.
     opted_out: bool,
+    /// A demographic query leaves the policy parties out: no party whose
+    /// head carries the policy mark contributes a row.
+    policy_parties_hidden: bool,
 }
 
 impl Gates {
-    /// The gates the current request publishes.
-    pub(super) fn current() -> Self {
+    /// The gates the current request publishes for a query of `domain`
+    /// that reads the policy parties as `policy_parties` says.
+    pub(super) fn current(domain: QueryDomain, policy_parties: PolicyParties) -> Self {
         use crate::system_log::access_context::{
             access_delay_enforced, access_opt_out_enforced, access_restriction_enforced,
         };
@@ -39,12 +58,18 @@ impl Gates {
             access_restricted: access_restriction_enforced(),
             person_withheld: access_delay_enforced(),
             opted_out: access_opt_out_enforced(),
+            policy_parties_hidden: domain == QueryDomain::Demographic
+                && policy_parties == PolicyParties::Hidden,
         }
     }
 
     /// The predicates on the head row `h` of one versioned object.
     pub(super) fn on_head(self, h: &str) -> Vec<Expr> {
         let mut predicates = Vec::new();
+        // NOTE: our own design, only an administrator reads any version of a marked party.
+        if self.policy_parties_hidden {
+            predicates.push(col(h, VoHead::PolicyPartyAt).is_null());
+        }
         // NOTE: EHDS Art. 8, an object under an access restriction contributes no row.
         if self.access_restricted {
             predicates.push(col(h, VoHead::AccessRestrictedAt).is_null());

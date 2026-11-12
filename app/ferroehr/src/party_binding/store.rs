@@ -131,7 +131,7 @@ pub(crate) async fn reindex_committed(
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
     if committed.kind == Kind::PartyRelationship {
-        return crate::party_binding::protect::check(tx, ctx.binding, committed, None).await;
+        return crate::party_binding::protect::check(tx, ctx.binding, committed, facts).await;
     }
     if crate::versioning::committer::person_commits() {
         // NOTE: RM common master04 §Audit Details, PARTY_SELF names the record
@@ -190,11 +190,35 @@ pub(crate) async fn reindex_stored(
     reindex_heads(tx, mapping, kind, vec![head]).await
 }
 
+/// What an import does after it lands the versions of `vo_id` of `kind`, on
+/// `tx`: marks a demographic object one of whose versions is a policy party
+/// ([`crate::party_binding::policy_mark::mark_stored`]), and brings a
+/// party's reverse-relationship index and side-table rows to its stored head
+/// ([`reindex_stored`]).
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub(crate) async fn reindex_imported(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    kind: Kind,
+    vo_id: VoId,
+) -> Result<(), StorageError> {
+    if kind.is_demographic() {
+        crate::party_binding::policy_mark::mark_stored(tx, Some(vo_id)).await?;
+    }
+    if kind.is_party() {
+        reindex_stored(tx, mapping, kind, vo_id).await?;
+    }
+    Ok(())
+}
+
 /// Rebuilds the reverse-relationship index and the side-table rows of the
 /// party `vo_id`, whose stored kind is `kind`, loaded from an archive on `tx`.
 ///
 /// A `ROLE` loaded after its `PERSON` rebuilds that `PERSON`'s rows, so the
-/// rows do not depend on the order the archive holds the parties in.
+/// rows do not depend on the order the archive holds the parties in. A party
+/// with a policy version is marked ([`crate::party_binding::policy_mark::mark_stored`]).
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -204,6 +228,7 @@ pub(crate) async fn reindex_loaded(
     kind: &str,
     vo_id: VoId,
 ) -> Result<(), StorageError> {
+    crate::party_binding::policy_mark::mark_stored(tx, Some(vo_id)).await?;
     match Kind::from_type(kind) {
         Some(kind) => reindex_stored(tx, mapping, kind, vo_id).await,
         None => party_reverse::replace(tx, vo_id, &[]).await,
@@ -253,10 +278,13 @@ async fn reindex_heads(
 ///
 /// Every row goes, and the rows of every party head come back, the
 /// tombstones of the deleted `PERSON`s included, as the commits wrote them.
+/// Every party with a policy version gets the mark it lacks
+/// ([`crate::party_binding::policy_mark::mark_stored`]); no mark is cleared.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(), StorageError> {
+    crate::party_binding::policy_mark::mark_stored(tx, None).await?;
     for statement in [
         "DELETE FROM binding_identifier",
         "DELETE FROM binding_membership",
